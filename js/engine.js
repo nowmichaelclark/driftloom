@@ -152,6 +152,20 @@ export class Engine {
     this.synth.setCharacterLevel(character.level ?? 1);
     this.pumpAmount = character.pump ?? 0;
     this.synth.setEchoTime((60 / spec.bpm) * 0.75);
+    // Prototypes (ears batch two), off unless a page sets globalThis.PROTO.
+    const P = globalThis.PROTO || {};
+    if (P.arc && this.synth.startArc) this.synth.startArc(this.ctx.currentTime + 0.05, P.arcPeriod || 120);
+    this._glassRng = new Rng(((spec.seed ^ 0x6a55e) >>> 0) || 1);
+    this._stabRng = new Rng(((spec.seed ^ 0x57ab) >>> 0) || 1);
+    // In a sparse loop the bells shouldn't outweigh the chords they come
+    // from: fewer than one chord a bar scales them down.
+    {
+      const bars = Math.max(1, this.base.totalSteps / (this.base.stepsPerBar || 16));
+      const hits = this.base.tracks.chords.filter((e) => e.vel).length;
+      this._glassScale = Math.min(1, hits / bars);
+    }
+    this._organAt = -1;
+    if (P.wash && this.synth.startWash) this.synth.startWash(this.ctx.currentTime + 0.05, 20);
     for (const [layer, muted] of Object.entries(spec.mutes || {})) {
       this.synth.setMute(layer, muted);
     }
@@ -340,7 +354,7 @@ export class Engine {
     const spbNow = p.stepsPerBar || 16;
     if (abs % spbNow === 0) {
       const quiet = this._isSilentBar(abs);
-      if (quiet && !this.tailsDucked) {
+      if (quiet && !this.tailsDucked && !(globalThis.PROTO || {}).floorDrop) {
         this.synth.fadeTails(time);
         this.tailsDucked = true;
       } else if (!quiet && this.tailsDucked) {
@@ -417,6 +431,62 @@ export class Engine {
             this._play(t + slip + i * 0.011, () => this.synth.voice(e.voice, n, t + slip + i * 0.011, e.dur * sd, e.vel * spread,
               this.synth.channels.chords.gain, { vowel: e.vowel, detune: e.detune }));
           });
+        }
+      }
+    }
+    // Prototype: glass keys. On a chord's first beat, now and then, two or
+    // three of its notes ring out high (E5-G6) as a soft FM bell, a dotted
+    // eighth apart.
+    if ((globalThis.PROTO || {}).glass && !mutes.chords) {
+      const s = at('chords');
+      const g = this._glassRng;
+      for (const e of p.tracks.chords) {
+        if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
+        if (!g.chance(0.55)) continue;
+        const count = g.chance(0.5) ? 3 : 2;
+        const pcs = e.notes.slice().sort((a, b) => a - b);
+        const start = g.int(0, pcs.length - 1);
+        for (let i = 0; i < count; i++) {
+          let m = pcs[(start + i) % pcs.length];
+          while (m < 76) m += 12;
+          while (m > 91) m -= 12;
+          const at = t + i * 3 * sd;
+          const vel = 0.62 * this._glassScale * (1 - i * 0.18);
+          this._play(at, () => this.synth.fm(m, at, Math.max(0.6, 2.5 * sd), vel,
+            { ratio: 3.5, index: 150, decay: 1.8, attack: 0.003, detune: 3, cost: 6, out: this.synth.channels.texture.gain }));
+        }
+      }
+    }
+    // Prototypes: dub stabs on the offbeats after a chord, and an organ
+    // held under each chord until the harmony moves.
+    const PR = globalThis.PROTO || {};
+    if ((PR.dubStab || PR.organ) && !mutes.chords) {
+      const s = at('chords');
+      const len = cyc.chords || p.totalSteps;
+      for (const e of p.tracks.chords) {
+        if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
+        if (PR.dubStab) {
+          const sr = this._stabRng;
+          const notes = e.notes.slice(0, 3).map((n) => { let m = n; while (m > 72) m -= 12; while (m < 57) m += 12; return m; });
+          for (const [off, chance] of [[2, 0.6], [10, 0.35]]) {
+            if (!sr.chance(chance)) continue;
+            const at = t + off * sd;
+            this._play(at, () => this.synth.dubStab(notes, at, 0.8));
+          }
+        }
+        if (PR.organ) {
+          const key = e.notes.join();
+          if (key !== this._organKey || abs >= this._organUntil) {
+            // Held until the next chord event with other notes, or the loop's end.
+            let next = len;
+            for (const o of p.tracks.chords) {
+              if (o.step > s && o.vel && o.notes && o.notes.join() !== key) { next = Math.min(next, o.step); }
+            }
+            const steps = next - s;
+            this._organKey = key;
+            this._organUntil = abs + steps;
+            this._play(t, () => this.synth.organ(e.notes, t, steps * sd, 0.9));
+          }
         }
       }
     }

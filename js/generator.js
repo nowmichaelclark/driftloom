@@ -621,8 +621,13 @@ function genHarmony(spec, vary = null, besides = null) {
   const events = [];
   let prevVoicing = null;
 
+  // Prototype (ears batch two): long chords -- each chord held for about
+  // eight seconds (two to four bars by tempo) instead of one slot.
+  const hold = (globalThis.PROTO || {}).longChords
+    ? Math.max(1, Math.min(4 * chordsPerBar, Math.ceil(8 / ((spb * 60 / spec.bpm / 4) / chordsPerBar))))
+    : 1;
   for (let s = 0; s < slotCount; s++) {
-    const chord = shape[s % shape.length];
+    const chord = shape[Math.floor(s / hold) % shape.length];
     const degree = stepDegree(chord);
     // A spelled chord is built, sevenths and ninths too, in its own scale.
     const steps = typeof chord === 'number' ? scale : spelledSteps(scale, chord);
@@ -816,10 +821,13 @@ function genBass(spec, harmony) {
   const octaveShift = r.chance(0.25) ? -12 : 0;
   const events = [];
 
+  // Prototype (ears batch two): the round-bass register, an octave
+  // higher at the bottom and never the extra octave down.
+  const RB = (globalThis.PROTO || {}).roundBass;
   const place = (step, dur, midi, vel, glide = false) => {
-    let m = midi + octaveShift;
-    while (m > 52) m -= 12;
-    while (m < 28) m += 12;
+    let m = midi + (RB ? 0 : octaveShift);
+    while (m > (RB ? 57 : 52)) m -= 12;
+    while (m < (RB ? 36 : 28)) m += 12;
     events.push({ step: step % total, dur, midi: m, vel, glide, voice });
   };
 
@@ -2702,7 +2710,10 @@ export function drift(pattern, rng, amount) {
   }
   // And now and then the whole thing stops. Unpredictable, over a loop you
   // already know, which is the part a fixed rest can never give you.
-  if (rng.chance(0.1 * a)) {
+  // Prototype (ears batch two): a floor drop instead -- kick and bass
+  // step out, everything else plays on -- and three times as often.
+  const FD = (globalThis.PROTO || {}).floorDrop;
+  if (rng.chance((FD ? 0.35 : 0.1) * a)) {
     const spb = pattern.stepsPerBar || 16;
     const bars = Math.max(1, Math.floor(p.totalSteps / spb));
     if (bars >= 4) {
@@ -2713,12 +2724,16 @@ export function drift(pattern, rng, amount) {
       const from = start * spb;
       const to = (start + span) * spb;
       for (const layer of Object.keys(p.tracks)) {
+        if (FD && layer !== 'bass' && layer !== 'drums') continue;
         for (const e of p.tracks[layer]) {
+          if (FD && layer === 'drums' && !['kick', 'softkick', 'frame'].includes(e.inst)) continue;
           if (e.step >= from && e.step < to) e.vel = 0;
         }
       }
-      p.driftSilentBars = [];
-      for (let k = 0; k < span; k++) p.driftSilentBars.push(start + k);
+      if (!FD) {
+        p.driftSilentBars = [];
+        for (let k = 0; k < span; k++) p.driftSilentBars.push(start + k);
+      }
     }
   }
 
