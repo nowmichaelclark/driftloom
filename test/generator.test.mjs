@@ -865,5 +865,42 @@ console.log('\nVibes (queue item 38a)');
   check('hushed loops have drums less often than plain ones', drumsOn(corpus(['hushed'])) < drumsOn(plain) - 0.1);
 }
 
+
+// ---------------------------------------------------------------------
+console.log('\nBorrowed bright modes (queue item 36)');
+{
+  const BORROWED = { cinder: ['ionian', 'mixolydian'], shatter: ['lydian', 'mixolydian'] };
+  let notGlad = 0;
+  let wrong = 0;
+  const glad = { cinder: 0, shatter: 0 };
+  const borrowed = { cinder: 0, shatter: 0 };
+  let cinderIonian = null;
+  let shatterLydian = null;
+  for (let s = 1; s < 60000; s++) {
+    const spec = newSpec(s);
+    for (const p of ['cinder', 'shatter']) {
+      if ((spec.mix[p] || 0) < 0.999) continue;
+      const isBorrowed = BORROWED[p].includes(spec.scale);
+      if (spec.feel.lift <= 0.66) {
+        notGlad++;
+        if (isBorrowed) wrong++;
+      } else {
+        glad[p]++;
+        if (isBorrowed) borrowed[p]++;
+      }
+      if (p === 'cinder' && spec.scale === 'ionian' && !cinderIonian) cinderIonian = spec;
+      if (p === 'shatter' && spec.scale === 'lydian' && !shatterLydian) shatterLydian = spec;
+    }
+  }
+  check('a cinder or shatter loop that is not glad never borrows a bright mode', notGlad > 200 && wrong === 0, `${wrong} of ${notGlad}`);
+  check('a glad cinder loop sometimes does', borrowed.cinder > 0, `${borrowed.cinder} of ${glad.cinder}`);
+  check('a glad shatter loop sometimes does', borrowed.shatter > 0, `${borrowed.shatter} of ${glad.shatter}`);
+  for (const [label, spec] of [['a cinder loop in ionian', cinderIonian], ['a shatter loop in lydian', shatterLydian]]) {
+    const back = spec && decodeSong(encodeSong(spec));
+    check(`${label} encodes and decodes to the same notes`, !!spec && back.scale === spec.scale
+      && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks));
+  }
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

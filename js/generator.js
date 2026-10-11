@@ -7,7 +7,7 @@
 // random streams never moved.
 
 import { Rng, randomSeed, seedName } from './rng.js';
-import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted } from './theory.js';
+import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted, GLAD_FROM } from './theory.js';
 import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
@@ -161,7 +161,7 @@ export function newSpec(seed = randomSeed(), selection = null) {
       ? Math.max(gait.bpm[0], Math.min(gait.bpm[1], tempo))
       : Math.max(32, Math.min(190, tempo)),
     root: r.int(0, 11),
-    scale: r.weighted(moodWeighted(c.scales, feel.lift)
+    scale: r.weighted(moodWeighted(withBorrowed(c.scales, mix, feel.lift), feel.lift)
       .map(([k, w]) => [k, w * vibeLean(v, 'modes', k)])),
     bars,
     stepsPerBar,
@@ -217,6 +217,34 @@ export function newSpec(seed = randomSeed(), selection = null) {
     };
   }
   return spec;
+}
+
+// Borrowed bright modes (queue item 36). A profile whose own pool holds no
+// bright mode (cinder, shatter) may name some to borrow when the loop is
+// glad: weight 0 at GLAD_FROM and below, growing with the lift above it to
+// BORROW at the top, scaled by the profile's share of the mix like the rest
+// of the blended pool, before `moodWeighted` tilts it like any other mode.
+// A loop that is not glad gets the pool exactly as it was, so its draw is
+// unchanged; a share code writes the mode down, so an existing loop keeps
+// its own. The word recipes (vibes) reach it the same way, through the
+// lift their feel targets set.
+const BORROW = 1.2;
+function withBorrowed(pool, mix, lift) {
+  const glad = Math.max(0, lift - GLAD_FROM) / (1 - GLAD_FROM);
+  if (!glad) return pool;
+  let total = 0;
+  for (const w of Object.values(mix)) if (w > 0) total += w;
+  if (!total) return pool;
+  const extra = new Map();
+  for (const [k, w] of Object.entries(mix)) {
+    const borrowed = CHARACTERS[resolveKey(k)] && CHARACTERS[resolveKey(k)].borrowedBright;
+    if (!borrowed || !(w > 0)) continue;
+    for (const mode of borrowed) extra.set(mode, (extra.get(mode) || 0) + BORROW * glad * (w / total));
+  }
+  if (!extra.size) return pool;
+  const out = pool.map(([k, w]) => [k, w + (extra.get(k) || 0)]);
+  for (const [k, w] of extra) if (!pool.some(([m]) => m === k)) out.push([k, w]);
+  return out;
 }
 
 export function characterOf(spec) {

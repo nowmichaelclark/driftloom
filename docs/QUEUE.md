@@ -1515,6 +1515,11 @@ code with item 34 (or reads `--dials <file.json>`) and, per word:
 
 ## 36. Two mode decisions: reflective may be neutral; cinder and shatter may be bright
 
+**Reflective: skipped (Mikey, 2026-10-11).** "Reflective already reaches
+the in-between modes about half the time, which is what I wanted." The
+measurement (Notes from Claude Code, below) found reflective loops 53.8% in
+the neutral band already, so only the cinder and shatter half is built.
+
 Two decisions from Mikey (2026-10-11) on what #107 (item 16) did to the
 mode draw. A generator change for **new loops only**: a share code writes
 its mode down, so every existing code, and every `/rank` trial, renders
@@ -1786,6 +1791,12 @@ Mikey decides this line:
   mixolydian yet (the generic shapes would play), so the build adds
   I-IV-V-I and I-V (mixolydian's V spelled major), the Andalusian sets
   staying in their own modes.
+  **Decided (Mikey, same day):** skip the reflective half; build cinder
+  and shatter only. Built without new cinder progressions after all: some
+  cinder-led blends are already in ionian or mixolydian (borrowed from
+  their partners), and progressions written for those modes would change
+  how their codes play. A bright cinder loop plays the general shapes, on a
+  major tonic, as those blends always have.
 
 ## Done
 
@@ -2197,3 +2208,8 @@ Mikey decides this line:
   (`test/dial-scale.json`), with `--yardsticks` and `--ears`. Nothing to
   hear; the energy dial separates Mikey's energy words more clearly than
   tempo or notes per second alone.
+- #176, fitting the words and word albums (item 35), tools only:
+  https://f1ab99d4-driftloom.nowmichaelclark.workers.dev (the app as v87).
+  `node tools/ranks.mjs <export> --fit` and `node tools/wordalbum.mjs`. On
+  the 181 trials the fit does not beat base rates yet (32% against 39%);
+  word albums are the way to firm the regions up. Nothing to hear.
