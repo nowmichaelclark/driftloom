@@ -6,7 +6,7 @@ await p.goto('file://'+path.resolve(file));
 const L=(r,g,b)=>{const f=c=>{c/=255;return c<=0.03928?c/12.92:((c+0.055)/1.055)**2.4}; return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b);};
 const CR=(a,b)=>{const x=L(...a),y=L(...b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
 const themes=await p.evaluate(()=>[...document.querySelectorAll('.phone')].map(ph=>[...ph.classList].find(c=>c.startsWith('t-'))));
-const kinds=[['mini','.layer:nth-child(2) .btn-roll'],['switch','.layer:nth-child(3) .btn-on'],['prev','.row-1 .btn:first-child'],['play','.btn-play'],['next','.row-1 .btn:last-child'],['lib','.row-2 .btn:first-child'],['save','.row-2 .btn:last-child'],['now','.row-3 .btn:first-child'],['sound','.row-3 .btn:last-child']];
+const kinds=[['mini','.layer:nth-child(2) .btn-roll'],['switch','.layer:nth-child(3) .btn-on'],['prev','.row-1 .btn:first-child'],['play','.btn-play'],['next','.row-1 .btn:last-child'],['lib','.row-2 .btn:first-child'],['save','.row-2 .btn:last-child'],['now','.row-3 .btn:first-child'],['sound','.row-3 .btn-sound']];
 const out=[]; let worst=99;
 await p.keyboard.press('Tab');
 for (const th of themes) { if(only && th!==only) continue; const row=[th];

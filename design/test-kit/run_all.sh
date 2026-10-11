@@ -18,3 +18,8 @@ run "Reduced motion" env SHALLOW=1 node motion.mjs "$F"
 run "Alternating info lines: timing, holds, takeover" node rot.mjs "$F"
 run "Forced colours (writes out/fc_*.png)" node fc.mjs "$F" out/fc dark
 run "Reflow at 1280 / 640 / 320" node zoom.mjs "$F"
+run "v17 views: 7 states x 51 sizes x plain/spacing (page audit)" node views.mjs "$F"
+run "v17 views: text, marks, focus rings, keyboard + ARIA" node views_a11y.mjs "$F"
+run "v17 Buttons-zone icons, Layers view" node icons.mjs "$F" layers
+run "v17 Buttons-zone icons, Library view (Library latched)" node icons.mjs "$F" lib:albums
+run "v17 light-theme glint" node glint.mjs "$F"

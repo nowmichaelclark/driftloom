@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v83';
+const CACHE = 'driftloom-v84';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -17,6 +17,11 @@ const CACHE = 'driftloom-v83';
 const FILES = [
   './',
   './css/style.css',
+  // The two typefaces of design v17, so the app looks the same offline.
+  './fonts/inter-500.woff2',
+  './fonts/inter-600.woff2',
+  './fonts/inter-700.woff2',
+  './fonts/space-grotesk-600.woff2',
   './js/main.js',
   './js/ui.js',
   './js/clock.js',
@@ -24,6 +29,7 @@ const FILES = [
   './js/media.js',
   './js/share.js',
   './js/cover.js',
+  './js/library.js',
   // Only the FLAC: it is the one every current browser plays, so it is the
   // one the media element picks, and precaching the WAV beside it cost 240
   // KB of a first visit for a file that never played. The WAV stays in the
