@@ -345,35 +345,33 @@ Stated decisions, not inferences. Dated where the date matters.
 
 ### Start here (for the next brain)
 
-- **Where it is:** `main` at v82. With `?engine=rust` the whole sound
-  path runs in the Rust core, hardened by item 31b (#161: it falls back
-  to JavaScript if it fails, Diagnostics says why, its compressors start
-  warm). Without the flag the JavaScript synth plays as before.
-  Brain-verified through item 31b (Session 13).
-- **Heard (2026-10-11):** the "Rust, all voices" album, with the core
-  on, **on his phone**: "it sounded great!" And **Depth two**: all four
-  developing 16-bar loops "go somewhere"; of the two simple ones, one
-  goes somewhere and one loops, which he welcomes ("nice to have long
-  loops that sound like they're looping sometimes"). Item 17's 16-bar
-  form holds; keep the depth share as it is.
-- **Decided (2026-10-11):** mono only, for now (see "The engine"). The
-  ears' stereo item is dropped; #152 (the ears prototypes) is closed,
-  its branch `ears/prototypes` kept as reference for rebuilding sounds.
-- **Queued:** item 32, the core by default (the flag's last step, with
-  the follow-ups from the 31b check). Session 14, hands, Sonnet 5.5 at
-  high effort.
-- **Waiting on Mikey:** nothing blocking. For his own time: the word
-  rankings (`/rank`), the open decisions, the iPhone check.
-- **Then, in order:** (1) item 32; (2) the ears-approved sounds, built
-  in the core one at a time with the refusal and level checks:
-  roundBass, glass, floorDrop, arc (Mikey liked them as clips; the
-  prototypes lost old sounds in the live app, likely the voice budget);
-  dubStab, organ, wash and longChords wait on his verdict; (3) the
-  engine-excellence candidates under "The engine"; (4) the generator's
-  port when the words settle; the word rankings are still the words'
-  bottleneck.
-- **Read** "The engine" under Mikey's decisions first: it changes how
-  every Rust item is judged from here.
+- **Where it is:** `main` at v84. The Rust core is Driftloom's engine
+  and plays by default (item 32, #164, v83); the JavaScript synth is the
+  fallback and `?engine=js`. The core's gate is its own baseline
+  (`node tools/baseline.mjs`). The Design v17 UI is in the app (#166,
+  v84, from the Painter sessions). **Not brain-verified:** #164 and #166
+  (Mikey chose to save tokens; a Haiku rerun of item 32's checks can
+  catch up when convenient). Brain-verified through item 31b.
+- **Heard (2026-10-11):** "Rust, all voices" on his phone, "it sounded
+  great!"; Depth two, the 16-bar form holds (see the log).
+- **Decided (2026-10-11):** mono only, for now (see "The engine").
+- **Next: the words (roadmap 19).** Mikey ranks loops on `/rank` in
+  bulk (hundreds of trials, exported as `.jsonl`), then a lean brain
+  session fits them. First **item 33**: more words on `/rank`, the
+  candidates he picks (small; hands, Sonnet 5.5, medium).
+- **For the words brain:** read "Getting oriented", "What Mikey has
+  decided", this State, ROADMAP.md item 19 and `docs/MOODS.md`; skip
+  QUEUE.md's history. Run `tools/ranks.mjs` on the attached export
+  rather than reading raw lines. Open decisions to settle with him in a
+  line each: which candidate words (if item 33 didn't settle it);
+  reflective leaning brighter since #107; whether cinder and shatter
+  may take a bright mode when a word calls for one. End by writing the
+  queue items for the hands.
+- **Then, in order:** the words' queue items; the ears-approved sounds,
+  built in the core one at a time (roundBass, glass, floorDrop, arc;
+  dubStab, organ, wash and longChords wait on his verdict); the
+  engine-excellence candidates under "The engine"; the generator's port
+  when the words settle.
 
 ### The log
 
@@ -796,6 +794,10 @@ repeatability; and 31b's +3% render on full is unexplained.
 **Mikey decided: mono only** (see "The engine"), and closed #152.
 
 **Next:** Session 14, hands, **Sonnet 5.5, high**: item 32.
+
+**Later on 2026-10-11:** item 32 merged (#164, v83) and the Design v17
+UI (#166, v84); neither brain-verified yet. Mikey chose the words next,
+with ranking in bulk: item 33 widens `/rank`'s pool first.
 
 ## History
 
