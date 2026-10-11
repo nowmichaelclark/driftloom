@@ -19,6 +19,11 @@
 //              starved of CPU): the ticks queue up and arrive together.
 //   freeze     the page frozen (Page.setWebLifecycleState) for the stall's
 //              length, where Chromium allows it.
+//   jumps      no stall: Next, Previous and Pause then Play, from the media
+//              keys (the same calls the lock screen's and a headset's
+//              buttons make), each checked for acting at once: how long
+//              until the new loop's first note, and how many of the old
+//              loop's notes still due more than 0.4 s on.
 //
 // What is counted, per stall pattern (each from its own start to 4 s after
 // its last stall), as the listener has it:
@@ -40,7 +45,8 @@
 //                playoutStats): the audio thread itself ran late.
 //
 // Options:
-//   --loops <names>     shatter,cinder (default), from tools/perf.mjs's set
+//   --loops <names>     shatter,cinder (default), hollow, undertow, from
+//                       tools/perf.mjs's set
 //   --engines <list>    core,js                              (default both)
 //   --throttle <list>   CPU slowdown factors                 (default 4,6)
 //   --lengths <list>    stall lengths in seconds        (default 0.5,1,2,5)
@@ -65,6 +71,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOOPS = {
   shatter: { name: 'shatter-glein-fei', code: 'DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-V4G0' },
   cinder: { name: 'cinder-da-yoan', code: 'DL1-0C076-20110-60H1R-PE1MF-FVF35-ZPPA7-DDQPN-9D5MS-SBK94-FAREY-9KW08-EZW10-CDR3S-2QAD0-WEFGB-00000-0006S-3R' },
+  hollow: { name: 'hollow-laith-hu', code: 'DL1-0C04J-2R00G-60ZHQ-01BZP-630Q2-3DP7M-GV3HF-3QTSE-RFHKD-SP413-ABM10-87G5Q-000V1-RW061-8Y02P-G6CYN-M2J71-49H00-00000-041D0' },
   undertow: { name: 'undertow-vith-glour', code: 'DL1-0C066-0R240-80QFF-STBB1-S7BSN-XARZ1-AG3PA-793NP-FN4X2-HKYN6-DS210-9T420-Y3G51-WD020-7ZR2W-BGV5B-5G000-08000-04001-00080-00000-2B5R' },
 };
 
@@ -204,7 +211,7 @@ const INSTRUMENT = `(() => {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   document.addEventListener('DOMContentLoaded', () => { Math.random = native; }, { once: true });
-  const S = window.__stalls = { ctx: null, ticks: [], dropped: 0, until: 0, plan: null, notes: [], starts: [], windows: [] };
+  const S = window.__stalls = { ctx: null, ticks: [], dropped: 0, until: 0, plan: null, notes: [], starts: [], windows: [], cancels: [] };
   // Each stall, on the context's clock, from its start to its end.
   S.window = (ms) => { if (S.ctx) S.windows.push([S.ctx.currentTime, S.ctx.currentTime + ms / 1000]); };
   const RealCtx = window.AudioContext;
@@ -244,6 +251,7 @@ const INSTRUMENT = `(() => {
   const post = MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage = function (m, ...rest) {
     if (m && m.type === 'note' && S.ctx) S.notes.push([m.time, S.ctx.currentTime]);
+    if (m && m.type === 'cancel' && S.ctx) S.cancels.push(S.ctx.currentTime);
     return post.call(this, m, ...rest);
   };
   const start = AudioScheduledSourceNode.prototype.start;
@@ -377,6 +385,41 @@ async function measure(tab, engine, { label, run, settle = 4000, control = null 
   };
 }
 
+// Next, Previous, and Pause then Play 0.6 s later, from the media keys:
+// when the first note decided after the key is due (the new loop, or the
+// music again), and how many notes handed over before the key are still
+// due more than 0.4 s after it and not cancelled (what plays out first).
+async function jumps(tab, engine) {
+  const rows = [];
+  const key = (code) => tab.evaluate(`document.body.dispatchEvent(new KeyboardEvent('keydown', { code: '${code}', bubbles: true })), true`);
+  for (const [label, codes] of [['next', ['MediaNextTrack']], ['previous', ['MediaPreviousTrack']], ['pause, play', ['MediaPlayPause', 'MediaPlayPause']]]) {
+    await sleep(5000);
+    const mark = await tab.evaluate('window.__stalls.mark()');
+    const t = mark.ctx;
+    let at = t;
+    for (let i = 0; i < codes.length; i++) {
+      if (i) {
+        await sleep(600);
+        // Play's own first notes are posted as the key is handled.
+        at = await tab.evaluate('window.__stalls.ctx.currentTime');
+      }
+      await key(codes[i]);
+    }
+    await sleep(3000);
+    const all = await tab.evaluate(`(() => { const S = window.__stalls; return { notes: S.notes, starts: S.starts, cancels: S.cancels }; })()`);
+    const events = engine === 'core' ? all.notes : all.starts;
+    const before = events.slice(0, engine === 'core' ? mark.notes : mark.starts);
+    const after = events.slice(engine === 'core' ? mark.notes : mark.starts);
+    const resumed = codes.length > 1 ? at : t;
+    const cancelled = engine === 'core' && all.cancels.some((c) => c >= t);
+    const left = cancelled ? 0 : before.filter(([time]) => time > resumed + 0.4).length;
+    const first = after.filter(([, handed]) => handed >= resumed).map(([time]) => time).sort((x, y) => x - y)[0];
+    rows.push({ label: `jump: ${label}`, firstNoteMs: first != null ? Math.round((first - resumed) * 1000) : null, oldLeft: left });
+    log(`  ${label}: first note ${rows[rows.length - 1].firstNoteMs} ms after, old notes still to play ${left}`);
+  }
+  return rows;
+}
+
 async function session(opts, chromePath, loop, engine, throttle) {
   const b = await launch(chromePath);
   const rows = [];
@@ -401,7 +444,8 @@ async function session(opts, chromePath, loop, engine, throttle) {
     rows.push(control);
     const base = { loop: name, engine, throttle };
     log(`  control: worst note gap ${control.worstGap} s, ${control.notes} notes, late ticks ${control.lateTicks}`);
-    for (const mode of opts.modes) {
+    if (opts.modes.includes('jumps')) for (const r of await jumps(tab, engine)) rows.push({ ...base, ...r });
+    for (const mode of opts.modes.filter((m) => m !== 'jumps')) {
       for (const len of opts.lengths) {
         const ms = len * 1000;
         const patterns = mode === 'ticks'
@@ -456,11 +500,17 @@ function log(s) { process.stderr.write(`${s}\n`); }
 function table(rows) {
   const head = ['loop', 'engine', 'cpu', 'stall', 'longest gap ms', 'late ticks', 'worst late ms', 'late notes', 'silent s', 'fill-ins'];
   const out = [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`];
+  const jumped = rows.filter((r) => r.label && r.label.startsWith('jump'));
+  rows = rows.filter((r) => !jumped.includes(r));
   for (const r of rows) {
     const cells = r.error
       ? [r.loop, r.engine, `${r.throttle}x`, r.label, r.error, '', '', '', '', '']
       : [r.loop, r.engine, `${r.throttle}x`, r.label, r.gapMs, r.lateTicks, r.worstLateMs, r.lateNotes, r.silentS ?? '-', r.fills ?? '-'];
     out.push(`| ${cells.join(' | ')} |`);
+  }
+  if (jumped.length) {
+    out.push('', '| loop | engine | cpu | key | first note after, ms | old notes still to play |', '|---|---|---|---|---|---|');
+    for (const r of jumped) out.push(`| ${r.loop} | ${r.engine} | ${r.throttle}x | ${r.label.slice(6)} | ${r.firstNoteMs ?? '-'} | ${r.oldLeft} |`);
   }
   return out.join('\n');
 }

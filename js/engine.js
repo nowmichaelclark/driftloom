@@ -15,6 +15,13 @@ import { Clock } from './clock.js';
 // gap between wake-ups or the audio runs dry.
 const LOOKAHEAD_VISIBLE = 0.3;
 const LOOKAHEAD_HIDDEN = 3.0;
+// On the Rust core, hidden, further still (queue item 39). A phone with its
+// screen off can starve the page for seconds at a time -- a tester's Pixel
+// paused from the lock screen seconds late, and glitched until it did --
+// and notes the core already holds play on through that whatever the main
+// thread is doing. Pause, Next and Previous cancel them (see `_cut`), so
+// they still act as soon as the page runs.
+const LOOKAHEAD_HIDDEN_CORE = 8.0;
 const TICK_VISIBLE = 50;
 const TICK_HIDDEN = 250;
 
@@ -39,7 +46,7 @@ const TICK_HIDDEN = 250;
 // locked phone holding the clock back for longer than that -- a throttled
 // worker, a parked CPU, a frozen renderer -- made notes arrive late: the
 // skips and glitches with the screen off (queue item 39). So on the core
-// every note goes over as soon as it is decided, the whole 3 s ahead.
+// every note goes over as soon as it is decided, the whole lookahead ahead.
 const BUILD_TICKS = 4;
 
 // A chord's level, spread across its voicing so a five-note chord is not
@@ -192,7 +199,8 @@ export class Engine {
   }
 
   get lookahead() {
-    return this.hidden ? LOOKAHEAD_HIDDEN : LOOKAHEAD_VISIBLE;
+    if (!this.hidden) return LOOKAHEAD_VISIBLE;
+    return this.synth.queuesAhead ? LOOKAHEAD_HIDDEN_CORE : LOOKAHEAD_HIDDEN;
   }
 
   // Called when the page is shown or hidden, so the tick rate follows.
