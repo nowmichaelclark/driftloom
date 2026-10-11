@@ -261,6 +261,9 @@ export const CHARACTERS = {
       ['hirajoshi', 1.5], ['wholeTone', 1.2], ['phrygianDominant', 1.5],
       ['dorian', 1.2],
     ],
+    // Borrowed bright modes (queue item 36), as cinder's: bright and still
+    // restless, and only when the loop is glad.
+    borrowedBright: ['lydian', 'mixolydian'],
     drums: 1,
     hatDensity: [0.5, 1],
     chordVoices: [['prepared', 3], ['keys', 2], ['pad', 1.5]],
@@ -472,6 +475,11 @@ export const CHARACTERS = {
       ['phrygianDominant', 3], ['harmonicMinor', 2.5], ['aeolian', 2], ['dorian', 1.5],
       ['phrygian', 1.5],
     ],
+    // Borrowed bright modes (queue item 36): weight 0 unless the loop is
+    // glad (its lift above GLAD_FROM), growing with it. Flamenco's own major
+    // forms, the alegrias ("joys"), and the village fiesta docs/MOODS.md
+    // imagines for merry on cinder. See `withBorrowed` in the generator.
+    borrowedBright: ['ionian', 'mixolydian'],
     // 0.95 so that drums play in about nine loops in ten of those cinder
     // leads: the rest of a blend pulls the figure down (89% measured).
     drums: 0.95,

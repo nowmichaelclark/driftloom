@@ -137,7 +137,7 @@ export const SCALE_BRIGHTNESS = {
 // This is the only place the mood picks a mode, and it runs once, when a
 // loop is made. A share code writes its mode down, so a loop that already
 // exists keeps the mode it has.
-const GLAD_FROM = 0.66;
+export const GLAD_FROM = 0.66;
 const GLAD_TILT = 20;
 const INWARD_FROM = 0.5;
 const INWARD_PULL = 20;
