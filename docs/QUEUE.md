@@ -2156,3 +2156,9 @@ Mikey decides this line:
   (plain loops stay format 3), `stats.mjs --vibes` / `--vibe-each`. Listen
   for nothing yet (no button until 38b); every existing loop and code is
   unchanged.
+- #174, the Vibes key and view (item 38b, v87),
+  https://11c2216a-driftloom.nowmichaelclark.workers.dev: "vibes" at the top
+  left of Now Playing opens every vibe in two columns; picked ones steer
+  every new loop (Next, a loop ending, the first loop on opening), and a
+  vibe loop's details show its vibes and weights. Listen for: pick a few,
+  press Next a few times, and say which loops fit the vibes and which don't.
