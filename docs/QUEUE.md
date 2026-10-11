@@ -1294,8 +1294,8 @@ people will use this app.
 is hidden, `engine.js` decides 3 s ahead but holds each note in `pending`
 and hands it over only `buildAhead` before it sounds (about four tick gaps,
 at least 0.3 s). That window was made for the JavaScript synth, where a
-built voice costs the audio thread from the moment it is wired (#
-perf-baseline, "a hidden tab costs more"). Since item 32 the **core**
+built voice costs the audio thread from the moment it is wired
+(`docs/perf-baseline.md`, "a hidden tab costs the audio thread more"). Since item 32 the **core**
 plays, and the window still applies: a note reaches the worklet a few
 tenths of a second before it is due. If a locked phone delays the clock
 worker's ticks by more than that (a throttled worker, a CPU parked on a
