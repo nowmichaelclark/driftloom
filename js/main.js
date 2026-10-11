@@ -402,10 +402,11 @@ function saveQuick() {
 // outline with a dot when the saved loop has been changed since.
 function updateSaveButton() {
   const kept = isSaved();
+  // The key's icon stays put (only Play and the Sound / Layers switch
+  // change theirs); its name says whether this loop is saved.
   const b = ui.el('saveBtn');
-  ui.setIcon(b, kept ? (isChanged() ? 'savedChanged' : 'saved') : 'save');
-  b.classList.toggle('saved', kept);
-  b.setAttribute('aria-label', kept ? 'Saved: albums and sharing' : 'Save and share');
+  ui.setIcon(b, 'saveShare');
+  b.setAttribute('aria-label', kept ? (isChanged() ? 'Saved, changed since: save or share' : 'Saved: save or share') : 'Save or share');
 }
 
 // ------------------------------------------------------------ viewport
@@ -421,9 +422,6 @@ function setView(view) {
   if (!visiting) state.lastView = view;
   if (view === 'sounds' || view === 'layers') state.lastEdit = view;
   for (const v of document.querySelectorAll('.view')) v.hidden = v.dataset.view !== view;
-  ui.el('libraryBtn').setAttribute('aria-pressed', String(view === 'library'));
-  ui.el('saveBtn').setAttribute('aria-pressed', String(view === 'save'));
-  ui.el('nowBtn').setAttribute('aria-pressed', String(view === 'now'));
   // The switch shows where it goes, not where you are: from Sound it offers
   // Layers, from Layers it offers Sound, and from anywhere else it offers
   // whichever of the two you used last.
@@ -454,23 +452,30 @@ function renderNow() {
   if (pl && pl.ids.length) {
     ui.el('nowAlbumName').textContent = pl.title;
     const n = pl.ids.length;
-    ui.el('nowDots').textContent = n <= 12
-      ? Array.from({ length: n }, (_, i) => (i === pl.index ? '●' : '○')).join(' ')
-      : `${pl.index + 1} of ${n}`;
+    const dots = ui.el('nowDots');
+    dots.hidden = n > 12;
+    dots.innerHTML = n <= 12
+      ? Array.from({ length: n }, (_, i) => (i === pl.index ? '<i class="on"></i>' : '<i></i>')).join('')
+      : '';
+    ui.el('nowOf').textContent = `${pl.index + 1}\u00a0of\u00a0${n}`;
   }
 
-  ui.el('nowNext').textContent = `Next: ${nextName()}`;
+  const next = ui.el('nowNext');
+  next.textContent = 'Next: ';
+  const b = document.createElement('b');
+  b.textContent = nextName();
+  next.appendChild(b);
 
   const action = ui.el('nowAction');
   if (pl && pl.ids.length) {
     action.hidden = false;
-    action.textContent = 'Leave album';
+    action.textContent = 'leave album';
     action.onclick = leaveAlbum;
   } else if (state.lastAlbum) {
     const album = store.loadAlbums().find((a) => a.id === state.lastAlbum.albumId);
     action.hidden = !album;
     if (album) {
-      action.textContent = `Back to ${album.title}`;
+      action.textContent = `back to ${album.title}`;
       action.onclick = () => playAlbum(album.id, state.lastAlbum.index);
     }
   } else {
@@ -767,7 +772,7 @@ function togglePlay() {
 function setPlayButton(playing) {
   renderNow();
   const b = ui.el('playBtn');
-  b.setAttribute('aria-pressed', String(playing));
+  ui.el('app').classList.toggle('playing', playing);
   b.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   b.title = playing ? 'Pause' : 'Play';
   ui.setIcon(b, playing ? 'pause' : 'play');
@@ -881,6 +886,75 @@ async function pasteCode() {
   }
 }
 
+// --------------------------------------------------------------- themes
+
+// The nine themes of design v17. The theme is one of the two settings
+// (the other is Lighter on processor); it is kept in prefs and applied
+// before first paint by the script at the top of index.html.
+const THEMES = [
+  ['t-dawn', 'dawn', 'Dawn', '#f0dccc'], ['t-ember', 'ember', 'Ember', '#c86a80'],
+  ['t-tidal', 'tidal', 'Tidal', '#78b8c4'], ['t-dark', 'dark', 'Dark', '#121218'],
+  ['t-amoled', 'amoled', 'AMOLED', '#000000'], ['t-nightlight', 'nightlight', 'Night Light', '#1a0e04'],
+  ['t-nocturne', 'nocturne', 'Nocturne', '#160830'], ['t-abyss', 'abyss', 'Abyss', '#0e1e24'],
+  ['t-olive', 'olive', 'Olive', '#9c9642'],
+];
+const DEFAULT_THEME = 't-nocturne';
+
+function currentTheme() {
+  const t = store.getPrefs().theme;
+  return THEMES.some((x) => x[0] === t) ? t : DEFAULT_THEME;
+}
+
+function applyTheme(cls, save = true) {
+  const app = ui.el('app');
+  for (const t of THEMES) app.classList.remove(t[0]);
+  app.classList.add(cls);
+  const th = THEMES.find((t) => t[0] === cls);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && th) meta.content = th[3];
+  if (save) store.setPrefs({ theme: cls });
+  ui.el('themeName').textContent = th ? th[2] : '';
+  for (const sw of document.querySelectorAll('#themes .sw')) {
+    const on = sw.dataset.theme === cls;
+    sw.setAttribute('aria-checked', String(on));
+    sw.tabIndex = on ? 0 : -1;
+  }
+  requestAnimationFrame(() => ui.fitName());
+}
+
+function initThemes() {
+  const host = ui.el('themes');
+  host.innerHTML = '';
+  for (const [cls, key, label] of THEMES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sw';
+    b.setAttribute('role', 'radio');
+    b.dataset.theme = cls;
+    b.setAttribute('aria-label', label);
+    b.innerHTML = `<span class="sw-art sw-${key}" aria-hidden="true"><span class="sw-card"><i></i><i></i><i></i><b></b></span></span>`
+      + `<span class="sw-check" aria-hidden="true">${ui.icon('check')}</span>`;
+    b.addEventListener('click', () => applyTheme(cls));
+    b.addEventListener('keydown', (e) => {
+      const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (!dir) return;
+      e.preventDefault();
+      const i = THEMES.findIndex((t) => t[0] === cls);
+      const next = THEMES[(i + dir + THEMES.length) % THEMES.length][0];
+      applyTheme(next);
+      host.querySelector(`[data-theme="${next}"]`).focus();
+    });
+    host.appendChild(b);
+  }
+  applyTheme(currentTheme(), false);
+}
+
+function setLiteSwitch(on) {
+  const b = ui.el('liteMode');
+  b.setAttribute('aria-checked', String(on));
+  b.firstElementChild.textContent = on ? 'on' : 'off';
+}
+
 // ---------------------------------------------------------------- boot
 
 function wire() {
@@ -891,6 +965,9 @@ function wire() {
   ui.setIcon(ui.el('nextBtn'), 'next');
   ui.setIcon(ui.el('libraryBtn'), 'library');
   ui.setIcon(ui.el('nowBtn'), 'now');
+  ui.setIcon(ui.el('saveBtn'), 'saveShare');
+  for (const n of document.querySelectorAll('[data-ico]')) n.innerHTML = ui.icon(n.dataset.ico);
+  initThemes();
   setPlayButton(false);
   store.ensureAlbums();
   updateSaveButton();
@@ -982,6 +1059,13 @@ function wire() {
       if (state.synth) state.synth.setTone(state.spec.tone);
     });
   }
+  for (const [id, d] of [['trimDown', -5], ['trimUp', 5]]) {
+    ui.el(id).addEventListener('click', () => {
+      const r = ui.el('playheadSync');
+      r.value = String(Math.max(-200, Math.min(200, (parseInt(r.value, 10) || 0) + d)));
+      r.dispatchEvent(new Event('input'));
+    });
+  }
   ui.el('playheadSync').addEventListener('input', (e) => {
     const ms = parseInt(e.target.value, 10);
     ui.el('syncVal').textContent = `${ms} ms`;
@@ -994,8 +1078,9 @@ function wire() {
     store.setPrefs({ volume: parseFloat(e.target.value) });
   });
 
-  ui.el('liteMode').addEventListener('change', (e) => {
-    state.lite = e.target.checked;
+  ui.el('liteMode').addEventListener('click', () => {
+    state.lite = !state.lite;
+    setLiteSwitch(state.lite);
     store.setPrefs({ lite: state.lite });
     if (state.synth) buildAudio();
   });
@@ -1031,9 +1116,7 @@ function wire() {
   };
 
   ui.el('diagRefresh').addEventListener('click', renderDiag);
-  document.querySelector('.diag').addEventListener('toggle', (e) => {
-    if (e.target.open) renderDiag();
-  });
+  ui.el('goAdvanced').addEventListener('click', renderDiag);
   ui.el('diagReset').addEventListener('click', () => {
     if (state.engine) state.engine.clearMetrics();
     renderDiag();
@@ -1134,7 +1217,7 @@ function wire() {
   const cores = navigator.hardwareConcurrency || 4;
   const prefs = store.getPrefs();
   state.lite = prefs.lite ?? cores <= 4;
-  ui.el('liteMode').checked = state.lite;
+  setLiteSwitch(state.lite);
   // Drift was a switch plus an amount; the amount was never kept, so an old
   // "on" comes back at the default distance.
   const wander = prefs.drift === false ? 0 : (prefs.driftAmount ?? 1);

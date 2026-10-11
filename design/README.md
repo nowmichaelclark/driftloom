@@ -8,6 +8,7 @@ One self-contained HTML file showing the same phone screen in nine color themes,
 
 - **Current file:** `driftloom_v17_library.html`.
 - **State:** the 12-session platform-compliance roadmap is complete (WCAG 2.2 AA, iOS HIG, Material 3). v15 was a design pass from Mikey; v16 (Painter session 2) reworked the light themes; v17 (Painter session 3) added the Library and Now Playing views, Olive's wine-and-rust notes and a glint on the light-theme playhead. The design is **not locked yet**; Mikey reviews each version by eye.
+- **In the app (Painter session 4, 2026-10-11):** v17 is ported into `index.html`, `css/style.css` (the spec's stylesheet lifted section by section), `js/ui.js` and `js/library.js`, on top of PR #153's logic. Deliberate departures: no LEDs or latched look on the bottom keys (they only change icons: Play, and the Sound / Layers switch), and Row 3 is two keys as in #153. Not yet re-measured with the test kit.
 - **Relation to PR #153:** #153 (the first one-screen UI, Painter session 1) stays open on purpose until this new UI is finished and brought into the app.
 
 ## Where things are in the HTML

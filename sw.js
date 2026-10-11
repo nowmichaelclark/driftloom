@@ -17,6 +17,11 @@ const CACHE = 'driftloom-v84';
 const FILES = [
   './',
   './css/style.css',
+  // The two typefaces of design v17, so the app looks the same offline.
+  './fonts/inter-500.woff2',
+  './fonts/inter-600.woff2',
+  './fonts/inter-700.woff2',
+  './fonts/space-grotesk-600.woff2',
   './js/main.js',
   './js/ui.js',
   './js/clock.js',

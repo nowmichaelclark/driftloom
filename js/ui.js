@@ -231,58 +231,65 @@ function setLines(lines) {
 
 // -------------------------------------------------------------- layers
 
-// Each layer shows one bar at sixteenth resolution. Showing the whole loop
-// at once would squash a four-bar pattern into unreadable slivers on a
-// phone, so the view follows the playhead bar by bar instead.
+// Each layer shows one bar at sixteenth resolution, as a row of dots (the
+// v17 design): a quiet guide dot on every step, a note where one sounds, a
+// bigger note for an accent. The playhead's column gets a halo on every
+// layer that is on. Showing the whole loop at once would squash a four-bar
+// pattern into slivers on a phone, so the rows follow the playhead bar by
+// bar instead.
+let columns = [];
+
 export function buildLayers(handlers, steps = STEPS_PER_BAR) {
   const host = el('layerList');
   host.innerHTML = '';
   const cells = {};
-  cursors = [];
+  columns = Array.from({ length: steps }, () => []);
 
   for (const layer of LAYERS) {
+    const label = LAYER_LABELS[layer];
     const row = document.createElement('div');
     row.className = 'layer';
     row.dataset.layer = layer;
 
-    const name = document.createElement('span');
-    name.className = 'layer-name';
-    name.textContent = LAYER_LABELS[layer];
+    const name = document.createElement('div');
+    name.className = 'lbl';
+    name.id = `lbl-${layer}`;
+    name.textContent = label;
 
     const grid = document.createElement('div');
-    grid.className = 'grid';
+    grid.className = 'pattern';
+    grid.setAttribute('role', 'img');
+    grid.setAttribute('aria-label', `${label} pattern`);
     grid.style.gridTemplateColumns = `repeat(${steps}, 1fr)`;
-    grid.style.setProperty('--steps', steps);
-    const boxes = [];
+    const dots = [];
     for (let i = 0; i < steps; i++) {
-      const b = document.createElement('b');
-      grid.appendChild(b);
-      boxes.push(b);
+      const d = document.createElement('span');
+      grid.appendChild(d);
+      dots.push(d);
+      columns[i].push(d);
     }
-    cells[layer] = boxes;
-    // The cursor is one box laid over the row and slid along it, rather
-    // than an outline switched on and off cell by cell. Sliding it is a
-    // transform, which the compositor does without repainting anything.
-    const cursor = document.createElement('i');
-    cursor.className = 'cursor';
-    grid.appendChild(cursor);
-    cursors.push(cursor);
+    cells[layer] = dots;
 
     const reroll = document.createElement('button');
-    reroll.className = 'icon';
+    reroll.type = 'button';
+    reroll.className = 'btn-roll';
     reroll.textContent = 'roll';
-    reroll.title = `Re-roll ${LAYER_LABELS[layer].toLowerCase()}`;
+    reroll.setAttribute('aria-label', `Roll ${label}`);
     reroll.addEventListener('click', () => handlers.onReroll(layer));
 
     const mute = document.createElement('button');
-    mute.className = 'icon mute';
-    mute.textContent = 'on';
-    mute.title = `Mute ${LAYER_LABELS[layer].toLowerCase()}`;
+    mute.type = 'button';
+    mute.className = 'btn-on';
+    mute.setAttribute('role', 'switch');
+    mute.setAttribute('aria-checked', 'true');
+    mute.setAttribute('aria-labelledby', name.id);
+    mute.innerHTML = '<span aria-hidden="true">on</span>';
     mute.addEventListener('click', () => handlers.onMute(layer));
 
     row.append(name, grid, reroll, mute);
     host.appendChild(row);
   }
+  lastCursor = -1;
   return cells;
 }
 
@@ -305,49 +312,51 @@ function stepsForBar(pattern, layer, bar) {
 export function renderGrids(cells, pattern, bar, mutes) {
   for (const layer of LAYERS) {
     const vels = stepsForBar(pattern, layer, bar);
-    const boxes = cells[layer];
-    for (let i = 0; i < boxes.length; i++) {
+    const dots = cells[layer];
+    let notes = 0;
+    for (let i = 0; i < dots.length; i++) {
       const v = vels[i];
-      const want = v ? (v > 0.55 ? 'hit strong' : 'hit') : '';
-      // Only the cells that change. Writing a class, even the same one,
-      // marks the cell for style and paint.
-      if (boxes[i].className !== want) boxes[i].className = want;
+      if (v) notes++;
+      const on = !!v;
+      const big = v > 0.55;
+      // Only the dots that change. Writing a class, even the same one,
+      // marks the element for style and paint.
+      if (dots[i].classList.contains('on') !== on) dots[i].classList.toggle('on', on);
+      if (dots[i].classList.contains('big') !== big) dots[i].classList.toggle('big', big);
     }
     const row = document.querySelector(`.layer[data-layer="${layer}"]`);
-    row.classList.toggle('muted', !!mutes[layer]);
-    row.querySelectorAll('.icon')[1].textContent = mutes[layer] ? 'off' : 'on';
+    const off = !!mutes[layer];
+    row.classList.toggle('dim', off);
+    const sw = row.querySelector('.btn-on');
+    const want = off ? 'false' : 'true';
+    if (sw.getAttribute('aria-checked') !== want) {
+      sw.setAttribute('aria-checked', want);
+      sw.firstChild.textContent = off ? 'off' : 'on';
+    }
+    const pat = row.querySelector('.pattern');
+    pat.setAttribute('aria-label', `${LAYER_LABELS[layer]} pattern: ${notes} ${notes === 1 ? 'note' : 'notes'} in ${dots.length} steps`);
   }
 }
 
 let lastCursor = -1;
-let cursors = [];
 
 export function resetCursor() {
   lastCursor = -1;
 }
 
-// Only the cell being left and the cell being entered change. The old
-// version rewrote every cell in every layer on every step -- well over a
-// hundred class writes several times a second, each one forcing a style
-// recalculation, which is enough to make the playhead visibly drag on a
-// phone.
-//
-// Nothing here repaints. A light's lit colour and glow are its own
-// pseudo-element switched on and off by opacity, with no fade, and the
-// layer cursors slide by transform; both run on the compositor. The old
-// background-colour fade repainted the whole page on every frame it ran,
-// and at a sixteenth's pace it was always running.
+// Only the column being left and the column being entered change: the lit
+// cell on the card, and the halo on each layer's dot in that column. The
+// lit colour and glow are pseudo-elements and shadows switched by class,
+// with no fade, so a step is a handful of class writes.
 export function moveCursor(lights, cells, index) {
   if (index === lastCursor) return;
-  if (lastCursor >= 0 && lights[lastCursor]) lights[lastCursor].classList.remove('on');
-  if (index >= 0 && lights[index]) lights[index].classList.add('on');
-  for (const c of cursors) {
-    if (index < 0) {
-      c.style.opacity = '0';
-    } else {
-      c.style.transform = `translateX(calc(${index} * (100% + 2px)))`;
-      c.style.opacity = '1';
-    }
+  if (lastCursor >= 0) {
+    if (lights[lastCursor]) lights[lastCursor].classList.remove('on');
+    if (columns[lastCursor]) for (const d of columns[lastCursor]) d.classList.remove('at');
+  }
+  if (index >= 0) {
+    if (lights[index]) lights[index].classList.add('on');
+    if (columns[index]) for (const d of columns[index]) d.classList.add('at');
   }
   lastCursor = index;
 }
@@ -384,40 +393,41 @@ export function download(blob, filename) {
 // --------------------------------------------------------------- icons
 
 // Line icons on a 24-unit grid, drawn in the button's text color so the
-// panel's palette decides how they look, not the icon. Anything marked
-// `solid` is filled instead of stroked.
+// theme decides how they look, not the icon. Anything marked `solid` is
+// filled instead of stroked. The transport and view keys are the v17
+// design's own glyphs.
 const ICONS = {
-  prev: '<path class="solid" d="M19 20 9 12l10-8z"/><path d="M5 19V5"/>',
-  next: '<path class="solid" d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>',
-  play: '<path class="solid" d="M7 4.5v15l12.5-7.5z"/>',
-  pause: '<rect class="solid" x="6" y="4.5" width="4" height="15" rx="1"/>'
-    + '<rect class="solid" x="14" y="4.5" width="4" height="15" rx="1"/>',
-  // Books on a shelf: what Library looks like everywhere else.
-  library: '<path d="M4 4v16"/><path d="M8 7v13"/><path d="M12 5v15"/><path d="m16 6 4 14"/>',
-  // A record: what is playing now.
-  now: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M7.5 12a4.5 4.5 0 0 1 4.5-4.5"/>',
-  check: '<path d="M20 6 9 17l-5-5"/>',
+  prev: '<polygon class="solid" points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>',
+  next: '<polygon class="solid" points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>',
+  play: '<polygon class="solid" stroke-width="1" points="7 4 20 12 7 20"/>',
+  pause: '<rect class="solid" stroke-width="1" x="6.5" y="4" width="4" height="16" rx="1"/>'
+    + '<rect class="solid" stroke-width="1" x="13.5" y="4" width="4" height="16" rx="1"/>',
+  // Books on a shelf, one leaning.
+  library: '<path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/>',
+  // A bookmark with an arrow out of it: save, or send it on.
+  saveShare: '<path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/>',
+  // A note whose flag is a wave: what is playing now.
+  now: '<circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/>',
+  nowMark: '<circle class="solid" cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
-  // Save is a bookmark, as in most apps now, not a floppy disk: with a plus
-  // while the loop is not saved, filled once it is, and outlined with a dot
-  // when the saved loop has been changed since.
-  save: '<path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M12 7.5v6"/><path d="M9 10.5h6"/>',
-  saved: '<path class="solid" d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/>',
   bookmark: '<path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/>',
-  savedChanged: '<path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><circle class="solid" cx="12" cy="10" r="2.4"/>',
   // Three joined dots: the share mark phones already use.
   share: '<circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/>'
     + '<path d="m8.3 13.3 7.4 4.4"/><path d="m15.7 6.3-7.4 4.4"/>',
-  sounds: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-  layers: '<path d="M12 2.5 2.5 7.25 12 12l9.5-4.75z"/><path d="m2.5 16.75 9.5 4.75 9.5-4.75"/><path d="m2.5 12 9.5 4.75L21.5 12"/>',
-  left: '<path d="m15 18-6-6 6-6"/>',
-  right: '<path d="m9 18 6-6-6-6"/>',
+  // Three sliders: the sound controls.
+  sounds: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>'
+    + '<circle class="solid" cx="9" cy="6" r="2"/><circle class="solid" cx="15" cy="12" r="2"/><circle class="solid" cx="7" cy="18" r="2"/>',
+  layers: '<path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>',
+  left: '<path d="m14.5 6-6 6 6 6"/>',
+  right: '<path d="m9.5 6 6 6-6 6"/>',
 };
 
 export function icon(name) {
-  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+  const body = ICONS[name].replace(/class="solid"/g, 'fill="currentColor"');
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 }
 
 // Only rewrites when the icon actually changes, since it is called on every
