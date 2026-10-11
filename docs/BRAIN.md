@@ -206,6 +206,10 @@ Stated decisions, not inferences. Dated where the date matters.
   #107 is okay, and it can also sit in the middle of the mode axis.
 - **Cinder and shatter may take a bright mode when a word calls for
   one** (2026-10-11). Both built in queue item 36.
+- **Word albums** (2026-10-11, his idea after 181 rankings): one word at
+  a time, "Is this playlist heartwarming? Which songs are not?" The brain
+  guesses loops for a word and mixes in a couple it expects not to fit.
+  The five-word ranking rests; its answers stay the base for the fit.
 - The old branches stay: he likes looking back on them.
 
 **The engine (Mikey, 2026-10-10)** -- the direction from here.
@@ -363,21 +367,25 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
-- **Next: the words (roadmap 19).** Item 33 (#168, v85) put pool 3 on
-  `/rank`; Mikey has ranked 41 trials (Session 16 read them, `docs/MOODS.md`)
-  and is ranking more. **Queued (Session 16): items 34-36** -- the ten
-  dials measured per loop (`tools/dials.mjs`), the words fitted from his
-  answers (`ranks.mjs --fit`), and the two mode decisions (reflective may
-  be neutral; cinder and shatter may be bright). Hands: **34 and 35 on
-  Opus 5.5, high** (measurement design, judgment); **36 on Sonnet 5.5,
-  high**. Mikey attaches his latest export to the hands session.
-- **For the next words brain** (after 34-35 merge and a few hundred
-  trials): read "Getting oriented", "What Mikey has decided", this State,
-  ROADMAP.md item 19 and `docs/MOODS.md`; skip QUEUE.md's history. Run
-  `node tools/ranks.mjs <export> --fit` rather than reading raw lines.
-  Judge the leave-one-out check first: if the fit isn't clearly above
-  chance, the regions aren't real yet. Then: which words have regions,
-  which never fit (drop or keep), and the first recipes as data
+- **Next: the words (roadmap 19).** Mikey ranked 181 trials on `/rank`
+  (pool 3, v85; findings in `docs/MOODS.md`), then proposed **word
+  albums**. Out for listening: the pilots "Heartwarming?" and "Joyful?"
+  (`docs/ALBUMS.md`), picked by the brain's scratch scoring on spec
+  features; the decoys are the two tracks in each whose chords have no
+  major third. **Queued (Session 16): items 34-37** -- the ten dials
+  (`tools/dials.mjs`), the fit and a word-album builder (`ranks.mjs
+  --fit`, `tools/wordalbum.mjs`), the two mode decisions, and word albums
+  answered on `/rank`. Hands: **34 and 35 on Opus 5.5, high**; **36 and
+  37 on Sonnet 5.5, high**. Mikey attaches his 181-trial export.
+- **For the next words brain:** read "Getting oriented", "What Mikey has
+  decided", this State, ROADMAP.md item 19 and `docs/MOODS.md`; skip
+  QUEUE.md's history. Score the pilots from Mikey's answers first: guesses
+  that fit against decoys that didn't. If guessing works, item 37 stands;
+  if not, drop it and say why. Then run `node tools/ranks.mjs <export>
+  --fit` (judge it against base rates, not chance), and send word albums
+  built with `tools/wordalbum.mjs`: the words he cares about first (the
+  heart words), and words whose regions are close to real. A word no
+  album can hit is a word the generator can't make yet: its recipe
   (roadmap 19, step 2). Build item 36's album from its PR's listed loops.
 - **Then, in order:** the words' queue items; the ears-approved sounds,
   built in the core one at a time (roundBass, glass, floorDrop, arc;
@@ -821,6 +829,13 @@ loop placed on the ten dials, which nothing measures yet, so the queue
 gets the tools first. **Mikey decided:** reflective may also be neutral;
 cinder and shatter may take a bright mode when a word calls for one.
 Queued items 34 (dials), 35 (the fit) and 36 (the two mode decisions).
+Then Mikey ranked 181 trials in all: nothing fit 3%; steady, cool,
+wistful and zany fit nearly every loop, heartwarming and joyful almost
+none; the energy words follow tempo and drums clearly, but a scratch fit
+on spec features (32% top word) did not beat base rates (38%). Mikey
+proposed **word albums** instead of more five-word trials; the brain sent
+two pilots and queued 37 (answering them on `/rank`), with 35 gaining the
+album builder and an honest check against base rates.
 
 ## History
 

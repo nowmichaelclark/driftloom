@@ -334,28 +334,47 @@ comfy, restful, soothing, foggy and minimal by room; intricate by edge;
 enthusiastic by energy; silly, strange, goofy, experimental and refreshing
 by tang and oddness. Move any that sit wrong.
 
-**Pool 3, first 41 trials (seeds 19000-19038, v85, full quality,
-2026-10-11).** 39 answered, 2 hidden repeats, no skips; median 28 s a
-trial (about two a minute). Each word was shown 2-5 times: far too few to
-fit anything, so impressions only, and votes, not verdicts.
-- **Nothing tapped on 3 of 39 (8%)**, against 8 of 20 in batch 1: one word
-  per map and the bigger pool work.
-- He reaches for **air** (a word tapped in 59% of trials) and **motion**
-  (56%) over shimmer (44%), color (36%) and flavor (31%).
-- Tapped every time shown: crisp (5 of 5), steady (3, first every time),
-  soothing (2, first both times), spacious, minimal, hypnotic, bouncy
-  (3 of 3), cool, wistful, bright, frosty, zany, strange (2 of 2).
-- Not tapped yet: happy (0 of 3), peaceful, reflective, merry, comforting,
-  heartwarming, golden, warm, wondrous; hushed, meditative, reverent;
-  nimble; silly, mysterious, experimental, spicy, sweet, tart, zesty.
-  Batch 1 said the same of the heart words: what a loop does reaches him
-  before what it feels like. Too early to drop any.
-- Repeats: 2 pairs, 9 of 10 fits / doesn't-fit answers agreed; one pair
-  agreed exactly (nothing fit, both times), the other kept its words but
-  moved crisp from first to last.
-- Next: more trials (every word at least 10 times takes about 180, item
-  33's simulation), then the fit (queue items 34-35: the dials measured
-  per loop, and each word's region fitted from his answers).
+**Pool 3, 181 trials (seeds 19000-19173, v85, full quality,
+2026-10-11).** 173 answered, 1 skip, 7 hidden repeats; median 34 s a
+trial. Every word shown 8-23 times (shimmer's eight words twice as often
+as color's nineteen). Votes, not verdicts.
+- **Nothing fit on 5 of 173 (3%)**, against 8 of 20 in batch 1.
+- **Words that fit nearly every loop:** steady (12 of 12, first 10
+  times), cool (10/10), zany (10/10), wistful (9/9), strange (9/10),
+  minimal (7/8), hypnotic (12/14), soft (18/23). They can't tell one loop
+  from another: they describe Driftloom itself.
+- **Words that almost never fit:** heartwarming (0/8), joyful (1/10),
+  booming (2/21), warm (2/10), starry (2/10), spicy (2/11), goofy (2/10),
+  chiming (4/23), twinkling (4/21), intricate (5/22). Joyful is one of
+  the eight mood labels the app shows today.
+- **Where the signal is already clear** (the brain's scratch check against
+  what a song code carries, not the dials): the energy words line up with
+  tempo, notes per second and drums -- energetic, bouncy, lively,
+  enthusiastic, adventurous and nimble up; cozy, tiptoeing, meditative,
+  peaceful, soothing and foggy down. Happy and sunny go with bright modes
+  and high lift; reflective with darker modes and few major chords; tender
+  with brighter modes and warmth; serene with long notes and no drums.
+- **But not yet enough to predict him:** fitted word by word on those
+  features and tested on each trial left out, the top word matched his
+  first tap 32% of the time, while knowing only how often each word fits
+  in general gets 38% (chance is 20%). About ten answers per word, spread
+  over five words a trial, is too thin to place each word on ten dials.
+- **Repeats:** 7 pairs; 80% of fits / doesn't-fit answers agreed, the same
+  first word 4 times in 7. That is the ceiling any fit can reach: his own
+  day-to-day agreement.
+
+**A better test: word albums (Mikey, 2026-10-11).** "Maybe you make
+albums for me where you try to guess what different words are. E.g. 'Is
+this playlist heartwarming? Which songs are not?'" One word at a time, the
+brain guesses which loops fit it and mixes in a couple it expects not to,
+and Mikey says which don't fit. It asks him a much easier question than
+ordering five words, puts many answers on one word at once, and tests the
+brain's understanding directly: a guess that keeps missing means the
+brain hasn't heard the word yet. It also answers whether the catalog can
+make a word at all, which is what recipes are for (roadmap 19, steps 1-3).
+The five-word ranking rests; its 181 trials stay the base for the fit.
+Pilots: "Heartwarming?" and "Joyful?" (`docs/ALBUMS.md`), the two heart
+words that almost never fit.
 
 ## Decided (Mikey, 2026-10-11)
 
