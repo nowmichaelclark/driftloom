@@ -4,7 +4,7 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
-## "Heartwarming?" and "Joyful?" (2026-10-11, on v85 or later) -- the first word albums
+## "Heartwarming?" and "Joyful?" (2026-10-11, on v85 or later) -- the first word albums; heard 2026-10-11
 
 Mikey's idea for the words (`docs/MOODS.md`, "A better test: word
 albums"). Eight loops each, about 40 seconds a track. The brain picked
@@ -13,6 +13,13 @@ not to fit. **For each track, say: fits, doesn't fit, or not sure.** If a
 track fits a different word better, name it if one comes to mind
 (optional). Both words almost never fit in the ranking test, so "none of
 them" is a useful answer too.
+
+**Heard (Mikey, 2026-10-11).** Heartwarming: 1 not really; 2 yes,
+definitely; 3 no; 4 yeah, mostly; 5 yes and no; 6 yes; 7 yes; 8 "it almost
+starts to feel like it will be heartwarming, but it's really not."
+Joyful: 1 yeah, kind of; 2 a bit, but not really; 3 no; 4 yeah, kind of;
+5 yes; 6 not really, "a hint of joy though"; 7 no; 8 unanswered. What the
+brain took from them is in `docs/VIBES.md` (the first recipes).
 
 Heartwarming?
 

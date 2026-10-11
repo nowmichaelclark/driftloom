@@ -376,6 +376,21 @@ The five-word ranking rests; its 181 trials stay the base for the fit.
 Pilots: "Heartwarming?" and "Joyful?" (`docs/ALBUMS.md`), the two heart
 words that almost never fit.
 
+**The pilots worked.** Words that fit almost no random loop in the
+ranking test (heartwarming 0 of 8, joyful 1 of 10) fit about half of the
+brain's guesses: heartwarming 3 yes, 1 mixed and 2 no of 6 guesses, and
+one of its 2 decoys fit too; joyful 1 yes, 2 "kind of", 1 "a bit" and 2
+no of 6 guesses, its one answered decoy "not really". So the catalog can
+make these words, guessing finds them, and the misses say what the word
+is not (heartwarming isn't about major chords; joyful needs pace and a
+singing lead, not a stab).
+
+**Vibes (Mikey, 2026-10-11).** The words go into the app now, as
+**vibes**: a listener picks any number on the Now Playing screen, and every
+new loop leans toward up to five of them in shifting amounts (queue item
+38; recipes in `docs/VIBES.md`). Tuning moves there: Mikey picks vibes and
+sends the loops that fit well or badly.
+
 ## Decided (Mikey, 2026-10-11)
 
 - **Reflective** leaning brighter since #107 is okay, and reflective can

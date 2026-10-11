@@ -77,7 +77,10 @@ everything a session needs.
 - Credentials: Mikey pastes a GitHub token in the session's opening
   message. With it the brain commits and merges **docs-only** changes --
   `docs/*.md`, `ROADMAP.md`, `README.md` -- through small PRs it merges
-  itself. Code stays with the hands. Never write the token into a file, a
+  itself. Once item 38a lands, also **`js/vibes.js`** (the vibe recipes,
+  data only; bump `BUILD` and `CACHE` with it, and merge only when CI is
+  green: a test checks every recipe's names). Brain's call, Session 16,
+  so tuning a vibe is an edit rather than a hands session. Code stays with the hands. Never write the token into a file, a
   commit, memory, Project knowledge, or a brief. Mikey manages his own
   tokens. Commits are authored as
   `Mikey <162073748+nowmichaelclark@users.noreply.github.com>` (Kruu
@@ -210,6 +213,13 @@ Stated decisions, not inferences. Dated where the date matters.
   a time, "Is this playlist heartwarming? Which songs are not?" The brain
   guesses loops for a word and mixes in a couple it expects not to fit.
   The five-word ranking rests; its answers stay the base for the fit.
+- **Vibes in the app** (2026-10-11, top priority): the words are called
+  vibes; a **Vibes** key on Now Playing opens a scrolling two-column list
+  with Close and Clear All; pick any number; each new loop leans toward up
+  to five of them, weights shifting loop to loop (one vibe alone at 50%
+  or more). All 71 pool-3 words. A real feature, and the tuning tool: he
+  picks vibes and sends loops that fit well or don't. Queue item 38;
+  recipes in `docs/VIBES.md`. A Painter session can refine the look.
 - The old branches stay: he likes looking back on them.
 
 **The engine (Mikey, 2026-10-10)** -- the direction from here.
@@ -367,26 +377,21 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
-- **Next: the words (roadmap 19).** Mikey ranked 181 trials on `/rank`
-  (pool 3, v85; findings in `docs/MOODS.md`), then proposed **word
-  albums**. Out for listening: the pilots "Heartwarming?" and "Joyful?"
-  (`docs/ALBUMS.md`), picked by the brain's scratch scoring on spec
-  features; the decoys are the two tracks in each whose chords have no
-  major third. **Queued (Session 16): items 34-37** -- the ten dials
-  (`tools/dials.mjs`), the fit and a word-album builder (`ranks.mjs
-  --fit`, `tools/wordalbum.mjs`), the two mode decisions, and word albums
-  answered on `/rank`. Hands: **34 and 35 on Opus 5.5, high**; **36 and
-  37 on Sonnet 5.5, high**. Mikey attaches his 181-trial export.
-- **For the next words brain:** read "Getting oriented", "What Mikey has
-  decided", this State, ROADMAP.md item 19 and `docs/MOODS.md`; skip
-  QUEUE.md's history. Score the pilots from Mikey's answers first: guesses
-  that fit against decoys that didn't. If guessing works, item 37 stands;
-  if not, drop it and say why. Then run `node tools/ranks.mjs <export>
-  --fit` (judge it against base rates, not chance), and send word albums
-  built with `tools/wordalbum.mjs`: the words he cares about first (the
-  heart words), and words whose regions are close to real. A word no
-  album can hit is a word the generator can't make yet: its recipe
-  (roadmap 19, step 2). Build item 36's album from its PR's listed loops.
+- **Next: Vibes (queue item 38), Mikey's top priority.** The words go
+  into the app as vibes (see "The words"); recipes for all 71 drafted in
+  `docs/VIBES.md`. Hands: **Session 17, Opus 5.5, high**, 38a then 38b;
+  Mikey attaches his two screenshots. Then items 34-36 (Sonnet 5.5 can
+  take 36; 34-35 Opus); 37 is on hold.
+- **The pilot word albums worked** (`docs/MOODS.md`): about half of the
+  brain's guesses fit words that fit almost no random loop. Their
+  verdicts went into the heartwarming and joyful recipes.
+- **For the next words brain** (after 38 merges): read "Getting
+  oriented", "What Mikey has decided", this State, ROADMAP.md item 19,
+  `docs/MOODS.md` and `docs/VIBES.md`; skip QUEUE.md's history. Check 38
+  against its brief; run `stats.mjs --vibe-each` and fix any vibe that
+  does nothing or the wrong thing; then tune from the loops Mikey sends
+  (codes carry their vibes), editing `js/vibes.js` directly. Item 36's
+  album from its PR's list when it lands.
 - **Then, in order:** the words' queue items; the ears-approved sounds,
   built in the core one at a time (roundBass, glass, floorDrop, arc;
   dubStab, organ, wash and longChords wait on his verdict); the
@@ -836,6 +841,11 @@ on spec features (32% top word) did not beat base rates (38%). Mikey
 proposed **word albums** instead of more five-word trials; the brain sent
 two pilots and queued 37 (answering them on `/rank`), with 35 gaining the
 album builder and an honest check against base rates.
+Mikey heard both pilots the same evening: about half the guesses fit
+(details in `docs/MOODS.md`). He then asked for the words in the app as
+**vibes**, his top priority, with a sketch: queued as item 38 ahead of
+34-37 (37 on hold), and the brain drafted all 71 recipes in
+`docs/VIBES.md` (names checked against the generator's).
 
 ## History
 
