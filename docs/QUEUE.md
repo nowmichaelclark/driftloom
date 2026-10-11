@@ -1809,6 +1809,7 @@ Mikey decides this line:
   the way: a block handed to the core twice made the pads, leads and basses
   spike 20-40 times their level (never seen in play); time now only goes
   forward. `.wasm` 158,959 bytes (+17); core memory unchanged.
-- #PR, more words on `/rank` (v85), pool 3: 39 more words (71 in all), one
-  group per map. Listen for nothing; rank as before. Check that new words
+- #168, more words on `/rank` (v85),
+  https://f8df3b08-driftloom.nowmichaelclark.workers.dev/rank.html: pool 3, 39
+  more words (71 in all), one group per map. Listen for nothing; rank as before. Check that new words
   turn up often at first and that Export writes `"pool": 3`.
