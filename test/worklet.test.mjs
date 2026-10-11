@@ -113,5 +113,30 @@ console.log('\nWhich block the worklet renders');
     blocks.join() === [100, 101, 102, 103, 200, 201].map((b) => b * QUANTUM).join(), blocks.join());
 }
 
+console.log('\nNotes handed over ahead (queue item 39)');
+
+// The loudest sample from `from` to `to` seconds, a kalimba note handed
+// over for 0.5 s and, if `cancel`, everything waiting dropped at once.
+function loudest(cancel, from, to) {
+  const { processor } = make();
+  processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [], draws: null });
+  if (cancel) processor.receive({ type: 'cancel' });
+  let peak = 0;
+  for (let b = 0; b * QUANTUM < to * RATE; b++) {
+    globalThis.currentFrame = b * QUANTUM;
+    const outputs = [[new Float32Array(QUANTUM)]];
+    processor.process(Array.from({ length: 5 }, () => []), outputs);
+    if (b * QUANTUM >= from * RATE) for (const x of outputs[0][0]) peak = Math.max(peak, Math.abs(x));
+  }
+  return peak;
+}
+
+{
+  const kept = loudest(false, 0.5, 1);
+  const cancelled = loudest(true, 0.5, 1);
+  check('a note handed over ahead sounds at its time', kept > 0.01, String(kept));
+  check('and cancelled before it starts, it never does', cancelled === 0, String(cancelled));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

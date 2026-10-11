@@ -92,6 +92,9 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'damp':
         if (core) core.dl_damp(m.channel, m.time);
         return;
+      case 'cancel':
+        if (core) core.dl_cancel();
+        return;
       case 'param':
         if (core) core.dl_param(m.id, m.op, m.value, m.time, m.tau);
         return;

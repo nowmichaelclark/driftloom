@@ -168,6 +168,12 @@ pub extern "C" fn dl_clear() {
     core().clear();
 }
 
+/// Drop every note still waiting to start (queue item 39).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_cancel() {
+    core().cancel();
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_late() -> u32 {
     core().late()

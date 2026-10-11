@@ -613,6 +613,24 @@ export class Synth {
     return this.core && !this.core.failed ? this.core : null;
   }
 
+  // Whether a note can be handed over as soon as it is decided (queue item
+  // 39): the core queues it and it costs nothing until it starts, where a
+  // JavaScript voice is rendered from the moment it is built.
+  get queuesAhead() {
+    return !!this._coreMix();
+  }
+
+  // The music jumped (Pause, Next, Previous): the notes handed to the core
+  // that have not started yet are dropped, and the ducks their kicks asked
+  // for let go. What is sounding carries on, or fades with the kill gain.
+  cancelAhead(now = this.ctx.currentTime) {
+    const core = this._coreMix();
+    if (!core) return;
+    core.cancel();
+    core.param(MIX.pump, HOLD, 0, now);
+    core.param(MIX.pump, LINEAR, 1, now + 0.24);
+  }
+
   _mixState() {
     return this._asked;
   }

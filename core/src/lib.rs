@@ -534,6 +534,15 @@ impl Core {
         self.arena_at = 0;
     }
 
+    /// Drop every note still waiting for its start time, and leave the ones
+    /// sounding as they are: the host handed notes over ahead of their time
+    /// and the music has jumped since (Pause, Next or Previous, queue item
+    /// 39). The draws they kept in the arena go with them.
+    pub fn cancel(&mut self) {
+        self.waiting = 0;
+        self.staged = 0;
+    }
+
     /// Room for the draws of the sung note the host sends next, `len` of
     /// them, in the order the JavaScript voice draws them: for each singer
     /// the choir's spread (a choir only), the scoop's start and end, how
@@ -1454,6 +1463,28 @@ mod tests {
         assert_eq!(core.busy(), 0);
         let out = core.process(0);
         assert!(out.iter().flatten().all(|&x| x == 0.0));
+    }
+
+    #[test]
+    fn cancel_drops_the_waiting_notes_and_keeps_the_sounding_ones() {
+        let mut core = boxed();
+        core.note(KALIMBA, MELODY, 0.0, 60.0, 0.5, 0.5, STRIKE | BODY, NO);
+        core.note(KALIMBA, CHORDS, 1.0, 60.0, 0.5, 0.5, STRIKE | BODY, NO);
+        render(&mut core, 2);
+        assert_eq!(core.busy(), 2);
+        core.cancel();
+        assert_eq!(core.busy(), 1);
+        assert!(core.process(256).iter().flatten().any(|&x| x != 0.0));
+        // Past the second note's start: it never sounds, and nothing is
+        // counted dropped.
+        render(&mut core, (2.0 * RATE) as usize / QUANTUM);
+        assert_eq!(core.busy(), 0);
+        assert_eq!(core.dropped(), 0);
+        // The queue takes notes again.
+        assert_eq!(
+            core.note(KALIMBA, MELODY, 3.0, 60.0, 0.5, 0.5, STRIKE, NO),
+            Taken::OnTime
+        );
     }
 
     // A choir note's draws, each singer's: the spread, the scoop's two,

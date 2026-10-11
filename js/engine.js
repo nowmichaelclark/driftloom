@@ -32,6 +32,14 @@ const TICK_HIDDEN = 250;
 // second the window widens to match, back to 3 s. Visible, the lookahead
 // is already shorter than the window and every note is built at once, as
 // before.
+//
+// That reason is the JavaScript synth's, and only it keeps the window. On
+// the Rust core a note handed over waits in its queue at no cost until it
+// starts, and handing it over a few tenths of a second ahead meant that a
+// locked phone holding the clock back for longer than that -- a throttled
+// worker, a parked CPU, a frozen renderer -- made notes arrive late: the
+// skips and glitches with the screen off (queue item 39). So on the core
+// every note goes over as soon as it is decided, the whole 3 s ahead.
 const BUILD_TICKS = 4;
 
 // A chord's level, spread across its voicing so a five-note chord is not
@@ -90,6 +98,12 @@ export class Engine {
     this.pending = [];
     this.tickGap = null;
     this.lastTick = null;
+    // A track that ran its length asked for the next one (onTrackEnd): that
+    // load follows on from what is decided, where any other cuts it short.
+    this.handover = false;
+    // What happened while the page was last hidden, for Diagnostics (queue
+    // item 39): from when it was hidden until it was shown again.
+    this.spell = null;
     this.visualQueue = [];
     this.visualOffset = 0;   // optional manual trim, normally zero
     this.latency = null;     // measured, smoothed, seconds
@@ -144,6 +158,10 @@ export class Engine {
   }
 
   load(spec, { keepPosition = false } = {}) {
+    // Next, Previous or a loop picked while playing: what the old loop has
+    // decided ahead does not play out first.
+    if (this.playing && !keepPosition && !this.handover) this._cut();
+    this.handover = false;
     this.spec = spec;
     this.base = render(spec);
     this.live = this.driftOn ? drift(this.base, this.driftRng, this.driftAmount) : this.base;
@@ -179,7 +197,41 @@ export class Engine {
 
   // Called when the page is shown or hidden, so the tick rate follows.
   retune() {
+    if (this.hidden) this._beginSpell();
+    else this._endSpell();
     if (this.playing) this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
+  }
+
+  // The engine's part of the "while hidden" report: the longest the clock
+  // went without a tick, and the late ticks.
+  _beginSpell() {
+    if (this.spell && this.spell.open) return;
+    this.spell = { open: true, from: performance.now(), to: null, worstGapMs: 0, lateTicks: 0, worstLateMs: 0, ticks: 0 };
+  }
+
+  _endSpell() {
+    const s = this.spell;
+    if (!s || !s.open) return;
+    const now = performance.now();
+    // A clock held back until the page came back is a gap too.
+    if (this.playing && this.lastTick != null) s.worstGapMs = Math.max(s.worstGapMs, Math.round(now - this.lastTick));
+    s.open = false;
+    s.to = now;
+  }
+
+  // Everything decided ahead of a visible page's lookahead, dropped: the
+  // notes not yet handed over, and on the core the ones that have been but
+  // have not started. The next step is decided from now, as on Play. A
+  // visible page has nothing that far ahead, so nothing changes there.
+  _cut() {
+    const now = this.ctx.currentTime;
+    if (!this.spec || this.nextStepTime <= now + LOOKAHEAD_VISIBLE + this.stepDur) return;
+    this.pending = [];
+    this.synth.cancelAhead(now);
+    this.synth.restoreTails(now);
+    this.tailsDucked = false;
+    this.visualQueue = [];
+    this.nextStepTime = now + 0.08;
   }
 
   start() {
@@ -193,8 +245,12 @@ export class Engine {
 
   stop() {
     this.playing = false;
+    this.handover = false;
     this.clock.stop();
     this.pending = [];
+    // Handed to the core ahead and not started: a Play soon after must not
+    // hear them on top of its own.
+    this.synth.cancelAhead();
     this.lastTick = null;
     this.visualQueue = [];
     this.synth.silence();
@@ -241,10 +297,10 @@ export class Engine {
   }
 
   // Build a voice now if its note is close enough, otherwise queue it.
-  // Visible, every voice is built at once, exactly as before; whatever a
+  // Visible, or on the core, every voice is built at once; whatever a
   // hidden spell left queued goes first, so the order holds.
   _play(time, build) {
-    if (!this.hidden || !this.pending) {
+    if (!this.hidden || !this.pending || this.synth.queuesAhead) {
       if (this.pending && this.pending.length) for (const p of this.pending.splice(0)) p.build();
       build();
     } else if (this.pending.length || time > this.ctx.currentTime + this.buildAhead) {
@@ -273,6 +329,11 @@ export class Engine {
       // Quick to widen when ticks slow down, slow to narrow again.
       this.tickGap = this.tickGap == null || gap > this.tickGap ? gap : this.tickGap * 0.9 + gap * 0.1;
     }
+    const spell = this.spell && this.spell.open ? this.spell : null;
+    if (spell) {
+      spell.ticks++;
+      if (this.lastTick != null) spell.worstGapMs = Math.max(spell.worstGapMs, Math.round(now - this.lastTick));
+    }
     this.lastTick = now;
     this._flush();
     // If the next step was already due before we woke up, the queue ran dry
@@ -281,6 +342,10 @@ export class Engine {
     if (behind > 0) {
       this.lateTicks++;
       this.worstLateMs = Math.max(this.worstLateMs, Math.round(behind * 1000));
+      if (spell) {
+        spell.lateTicks++;
+        spell.worstLateMs = Math.max(spell.worstLateMs, Math.round(behind * 1000));
+      }
       // Do not try to catch up by cramming the missed steps in at once;
       // that turns a gap into a burst. Skip to now and carry on.
       if (behind > 0.25) this.nextStepTime = this.ctx.currentTime + 0.02;
@@ -307,7 +372,10 @@ export class Engine {
       if (this.onLoop) this.onLoop(this.loopCount);
       // A track with a set length hands over once it has run its passes.
       const limit = this.spec && this.spec.playFor;
-      if (limit && this.loopCount >= limit && this.onTrackEnd) this.onTrackEnd();
+      if (limit && this.loopCount >= limit && this.onTrackEnd) {
+        this.handover = true;
+        this.onTrackEnd();
+      }
     }
   }
 

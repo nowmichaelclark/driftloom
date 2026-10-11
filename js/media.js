@@ -40,6 +40,14 @@ export class MediaBridge {
     this.mode = 'pending';
     this.lastError = '';
     this.handlersSet = 0;
+    // Told of every change in what the phone is told is playing: the
+    // session's state as the app sets it, and the keepalive element stopping
+    // or starting (Diagnostics' "while hidden", queue item 39).
+    this.onchange = null;
+  }
+
+  _changed(what) {
+    if (this.onchange) this.onchange(what);
   }
 
   attach(sourceNode) {
@@ -64,6 +72,8 @@ export class MediaBridge {
       this.audio.volume = 1;
       this.audio.setAttribute('playsinline', '');
       this.audio.style.display = 'none';
+      this.audio.addEventListener('pause', () => this._changed('keepalive paused'));
+      this.audio.addEventListener('playing', () => this._changed('keepalive playing'));
       document.body.appendChild(this.audio);
       this.audio.load();
       this.mode = 'ready';
@@ -104,6 +114,7 @@ export class MediaBridge {
   // The element is in the document, so dropping the reference is not enough
   // to stop it: every rebuild left another keepalive loop in the DOM.
   dispose() {
+    this.onchange = null;
     if (!this.audio) return;
     try { this.audio.pause(); } catch { /* nothing playing */ }
     try { this.audio.removeAttribute('src'); this.audio.load(); } catch { /* fine */ }
@@ -152,6 +163,7 @@ export class MediaBridge {
     try {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
     } catch { /* older browser */ }
+    this._changed(`session ${playing ? 'playing' : 'paused'}`);
   }
 
   report() {
