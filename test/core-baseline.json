@@ -2143,7 +2143,7 @@
    "asked": {
     "drums": 4692,
     "bass": 1685,
-    "chords": 5540,
+    "chords": 5545,
     "melody": 2854,
     "texture": 318
    },
@@ -2162,14 +2162,14 @@
    "asked": {
     "drums": 4692,
     "bass": 1685,
-    "chords": 5540,
+    "chords": 5545,
     "melody": 2854,
     "texture": 318
    },
    "refused": {
     "drums": 0,
     "bass": 10,
-    "chords": 3632,
+    "chords": 3637,
     "melody": 48,
     "texture": 144
    },

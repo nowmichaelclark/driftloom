@@ -161,8 +161,7 @@ export function newSpec(seed = randomSeed(), selection = null) {
       ? Math.max(gait.bpm[0], Math.min(gait.bpm[1], tempo))
       : Math.max(32, Math.min(190, tempo)),
     root: r.int(0, 11),
-    scale: r.weighted(moodWeighted(withBorrowed(c.scales, mix, feel.lift), feel.lift)
-      .map(([k, w]) => [k, w * vibeLean(v, 'modes', k)])),
+    scale: drawScale(r, seed, c, mix, feel.lift, v),
     bars,
     stepsPerBar,
     swing: inBand(c.swing, vibePull(v, (rec) => rec.swing, r.f())),
@@ -223,28 +222,46 @@ export function newSpec(seed = randomSeed(), selection = null) {
 // bright mode (cinder, shatter) may name some to borrow when the loop is
 // glad: weight 0 at GLAD_FROM and below, growing with the lift above it to
 // BORROW at the top, scaled by the profile's share of the mix like the rest
-// of the blended pool, before `moodWeighted` tilts it like any other mode.
-// A loop that is not glad gets the pool exactly as it was, so its draw is
-// unchanged; a share code writes the mode down, so an existing loop keeps
-// its own. The word recipes (vibes) reach it the same way, through the
-// lift their feel targets set.
+// of the blended pool, and tilted by `moodWeighted` like any other mode.
+//
+// Drawn in two steps so only a loop that borrows changes: a stream of its
+// own decides whether to borrow, with the borrowed modes' share of the
+// whole pool as its chance, and picks which; the loop's own draw is then
+// made over its own pool exactly as before, and kept unless it borrowed.
+// The odds are those of one draw over the merged pool. A share code writes
+// the mode down, so an existing loop keeps its own; the word recipes
+// (vibes) reach the borrowing through the lift their feel targets set.
 const BORROW = 1.2;
-function withBorrowed(pool, mix, lift) {
+const BORROW_SALT = 0x42524954;
+function borrowedPool(mix, lift) {
   const glad = Math.max(0, lift - GLAD_FROM) / (1 - GLAD_FROM);
-  if (!glad) return pool;
+  if (!glad) return [];
   let total = 0;
   for (const w of Object.values(mix)) if (w > 0) total += w;
-  if (!total) return pool;
+  if (!total) return [];
   const extra = new Map();
   for (const [k, w] of Object.entries(mix)) {
-    const borrowed = CHARACTERS[resolveKey(k)] && CHARACTERS[resolveKey(k)].borrowedBright;
-    if (!borrowed || !(w > 0)) continue;
-    for (const mode of borrowed) extra.set(mode, (extra.get(mode) || 0) + BORROW * glad * (w / total));
+    const c = CHARACTERS[resolveKey(k)];
+    if (!c || !c.borrowedBright || !(w > 0)) continue;
+    for (const mode of c.borrowedBright) extra.set(mode, (extra.get(mode) || 0) + BORROW * glad * (w / total));
   }
-  if (!extra.size) return pool;
-  const out = pool.map(([k, w]) => [k, w + (extra.get(k) || 0)]);
-  for (const [k, w] of extra) if (!pool.some(([m]) => m === k)) out.push([k, w]);
-  return out;
+  return [...extra];
+}
+
+function drawScale(r, seed, c, mix, lift, v) {
+  const lean = (pool) => moodWeighted(pool, lift).map(([k, w]) => [k, w * vibeLean(v, 'modes', k)]);
+  const own = lean(c.scales);
+  const drawn = r.weighted(own);
+  const borrowed = borrowedPool(mix, lift);
+  if (!borrowed.length) return drawn;
+  // A borrowed mode the pool already holds adds to that entry's weight, as
+  // one merged pool would: its extra share is what is borrowed.
+  const extra = lean(borrowed);
+  const ownTotal = own.reduce((a, [, w]) => a + w, 0);
+  const extraTotal = extra.reduce((a, [, w]) => a + w, 0);
+  const b = new Rng(((seed ^ BORROW_SALT) >>> 0) || 23);
+  if (!b.chance(extraTotal / (ownTotal + extraTotal))) return drawn;
+  return b.weighted(extra);
 }
 
 export function characterOf(spec) {
