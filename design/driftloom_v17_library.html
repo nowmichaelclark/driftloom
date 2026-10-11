@@ -3,15 +3,264 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Driftloom — Spec + Nine Themes (v16 · light themes)</title>
+<title>Driftloom — Spec + Nine Themes (v17 · Library + Now Playing)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <!--
   ============================================================
-  DRIFTLOOM UI MOCKUPS — SESSION HANDOVER  (v16)
+  DRIFTLOOM UI MOCKUPS — SESSION HANDOVER  (v17)
   ============================================================
+
+  ------------------------------------------------------------
+  v17 · LIBRARY + NOW PLAYING (Painter session 3, Mikey's notes)
+  ------------------------------------------------------------
+  Scope: the Dynamic zone's Library and Now Playing views (their
+  contents from PR #153, the look from v16), two rule changes,
+  Olive's notes, and a glint on the light-theme playhead. App code
+  untouched. Layers is unchanged and is still what every phone
+  shows first; the gallery's new View control, or the phone's own
+  Library / Now playing keys, switch views.
+
+  RULE CHANGES (Mikey)
+   1. Scrolling is allowed in exactly two places, both inside the
+      Dynamic zone: the Library's lists (Albums, an album's tracks,
+      Loops) and the Advanced page. Each scroller is a .scroll. The
+      skeleton zones never move and nothing else scrolls: More and
+      Now Playing fit at every text size.
+   2. Two settings are allowed: Theme, and Lighter on processor.
+      Everything else is still one behavior for everybody.
+
+  1. VIEW KEYS. Library and Now playing are toggle keys
+     (aria-pressed). While their view is up the key stays pressed
+     in (sunk 2px, darker, shadow turned inward) and a small LED on
+     it is lit; press it again to go back. Away from Layers, Row 3
+     gains the Layers key (the spec's eight-button layout); pressing
+     it hides it, so focus moves to the Layers group, never to
+     nothing. Layers icon: three stacked planes.
+     The LED: in the dark themes a bright dot (the lamp hue) in a
+     dark ring; in the light themes the keys are mid-tone glass,
+     so it is built like a panel LED, a bright core in a dark
+     bezel (the bezel is the key's own icon colour). In the light
+     themes the pressed-in key is tinted by the lamp hue (lit from
+     inside), not greyed: grey read as "disabled" (review).
+     DECISION FOR MIKEY: when the Layers key appears, Row 3's keys
+     narrow and Sound moves under the thumb (51-96% of the row's
+     width -> 35-65%). That is the spec's layout, but a platform
+     reviewer would object to keys moving. Alternative: show the
+     Layers key always and let it latch like Library / Now playing,
+     so nothing ever moves.
+  2. LIBRARY. Tabs Albums · Loops · More ("All loops" in #153;
+     "Loops" fits the groove at 200%). The tab bar is a recessed
+     groove with one raised key for the selected tab, plus a lit
+     LED on it, so "selected" is shape + light + bolder word, not
+     shade alone (APG tabs: arrows, Home / End, automatic). The
+     groove (48px) is the drawn shape the three tabs share, as in an
+     iOS segmented control; the raised key inside it is 4px smaller
+     all round. The tablist is named "Library sections" (the region
+     is "Library").
+     A NAME is capitalized (Albums, Rainy Afternoons, Advanced);
+     an ACTION is a lowercase word on a key (play, move, share),
+     like roll and on / off. Row keys use the layer keys' word
+     size and cap.
+     Albums: "new album" and "paste a code" keys, then one row per
+     album (built-ins first): square art (a 2x2 mosaic of its
+     loops' covers, as #153's albumArt draws it; content, so the
+     same in every theme, never rounded), name, "N loops", and a
+     "play" key. Rows are bounded by the layer rows' rules, 52px
+     (so the fourth row shows part-way at 100%).
+     The playing album and loop carry the Now playing key's glyph
+     in the lamp hue, plus words ("playing 3 of 8"; "now playing"
+     for screen readers): never colour alone.
+     An album: back key and name in the head row (the name drops
+     below the key when it will not fit beside it), art + count,
+     three keys (stop album · add loops · share), the tracks
+     (number, name, key · bpm, "move", "remove"), and "delete
+     album" at the end of the list, where a destructive action
+     belongs. Destructive keys ask twice with no popup (#153): the
+     first press re-words the key ("delete it and 2 loops only
+     here?"; a track's "remove" says "sure?") and rings it; its
+     accessible name changes to start with those words and say what
+     a second press does, and a polite status line says it too
+     (review: the name used to stay the same, a WCAG 2.5.3 failure).
+     It disarms after 4 s.
+     Loops: every loop, name and key · bpm · album. Tap a row to
+     play it (#153's openSaved); nothing is edited here, editing
+     happens in albums. (Inert in the mockup, like Next.)
+  3. MORE + ADVANCED. More never scrolls: the THEME heading with
+     the current theme's name, nine swatches (a radio group, APG
+     pattern: arrows move and choose), and one wide key into
+     Advanced ("Files, processor, diagnostics" under its name;
+     accessible name "Advanced", the hint is its description).
+     Each swatch is a small scene of its theme (backdrop, a glass
+     card with three of its notes, its Play colour), generated
+     from the theme blocks; the chosen one has a 2.5px ring in the
+     phone's text colour and a check badge. In this mockup,
+     choosing a swatch really re-skins that phone (reload to put
+     the gallery back).
+     "Advanced" kept as the name: it is what iOS and Android call
+     the page most people never need, and it says so.
+     Advanced (scrolls): back key + title; PROCESSOR first (the
+     only setting on the page; it was below the fold at 100%,
+     review): "Lighter on processor" with the layer rows' on / off
+     key (latched when off) and a plain hint of what it costs ("a
+     busy loop may play a few notes fewer"; #153 turns it on by
+     default on phones with four cores or fewer); FILES (back up
+     all, restore, copy backup, paste backup); DIAGNOSTICS: the
+     report, playhead
+     trim as − / + keys (5 ms steps, ±200, no slider), refresh /
+     copy / reset counters; KEYBOARD: #153's shortcut colophon.
+  4. NOW PLAYING. Calm and centred, #153's contents: the album
+     and where you are in it (dots + "3 of 8"), the time left in
+     big Space Grotesk ("−4:12", capped at 72px like the name),
+     a bar whose lit fill ends in a bead built like the lit
+     playhead cell, "Next: sumi" just under it, and "leave album"
+     at the bottom, a thumb's reach from the buttons. The fill is
+     one solid lamp colour (--mark; a gradient's lighter top stop
+     dipped under 3:1, review) and the rail is quiet (7% of the
+     text colour), so the fill clears 3:1 at every row.
+     Static in the mockup: nothing ticks.
+  5. SCROLLERS. A .scroll reaches the panel's glass edges, so its
+     scrollbar sits on the edge and its hairlines run edge to edge;
+     a hairline appears at the top or bottom only while there is
+     more to see past it (script: updateScrollEdges). Lists are
+     sized so a row is cut part-way at 100%, which says "more".
+     4px top padding and scroll-padding-block: 8px keep a focus
+     ring off both edges when focus scrolls a key into view.
+     Each .scroll is position: relative, so the hidden screen-
+     reader text inside it lives in the scroller. Before the
+     review it stretched the Dynamic panel itself (scrollHeight
+     674 / 317), which scrollIntoView could then scroll. The audit
+     now flags any zone, panel, view, pane or page that can scroll
+     (confirmed: it flags all nine phones with the fix undone).
+  6. TEXT SIZE + SPACING (WCAG 1.4.4, 1.4.12). Lists and Advanced
+     grow and scroll. More and Now Playing cannot, so like the
+     Info card their text is capped at 1.5x (the meta's cap), and
+     a fit guard (fitViews, called from fitAll and on every view /
+     tab / page change) measures what the caps cannot predict:
+       More: 5-across swatches; then its text cap steps from 1.5x
+       toward 1x, never below its 100% size (Session 11's meta
+       rule). The container step (<= 17.5em) also goes 5-across.
+       Now Playing: tighter gaps; then the time steps 56 / 48 /
+       40px, as the name steps down. The middle block is "safe
+       center", so it can only overflow downward, where the guard
+       measures it.
+       Tabs: the word cap steps toward 1x if a word would break.
+     At <= 17.5em, rows with keys put the keys under the text and
+     Playhead trim puts − / + under its label. An album's name in
+     the head row is capped at 1.29x like the track name (review:
+     at 200% plus spacing the head took 154px). No word is ever
+     broken mid-word (a hyphen break is fine); the audit checks.
+     The WCAG 1.4.12 override adds 2em under every <p>, so the
+     Now Playing lines (labels and values, not paragraphs) are
+     divs; Advanced's hints are real paragraphs and scroll.
+  7. OLIVE: WINE AND RUST (Mikey's call). Notes #4d7a1b #98193c
+     #a1581b #104f18 #81631a (leaf, wine, rust, forest, gold).
+     The family widens to its warm neighbours; still no cool hue.
+     Measured (nontext.mjs ALLON=1, HIDEFIRST=1): light rows
+     3.55-3.57:1, deep rows 5.65 and 6.33:1. Mean OKLCH chroma
+     0.099 -> 0.123. Neighbouring rows, OKLab x100, v16 -> v17:
+       normal 12.3 -> 14.3   protan 11.6 -> 9.8   deutan 11.9 -> 8.6
+       tritan 11.8 -> 9.4    gray   12.3 -> 10.4
+     Normal vision gains; the simulations lose a little but every
+     neighbouring pair stays above Dawn's tritan 6.3, and every
+     note clears 3:1 under every simulation (worst 3.30).
+  8. A GLINT ON THE LIGHT-THEME LAMP. v16's solid lamp is
+     unchanged (it is what clears 3:1). On top: a four-point star
+     with a soft white bloom at the lamp's upper left, where a
+     highlight sits on a glass bead. It twinkles slowly while
+     playing (4.2 s; opacity 0.5-1, scale 0.7-1; no rotation, no
+     flash), goes out with the lamp when paused (the Pause key is
+     the WCAG 2.2.2 stop), is still under reduced motion, and is
+     gone in forced colours. It is 11px, set into the lamp's corner
+     so its spikes end at the ring (the review found the first,
+     13px version poked through the ring like a nick). At its
+     brightest it changes 10-16% of the lamp's fill (13-17%
+     counting any visible change) and 0-1% of its ring
+     (glint.mjs); under reduced motion it rests at that brightest
+     state. So 83% or more of the lamp stays the 3:1 colour. nontext.mjs measures
+     the lamp with the glint hidden (GLINT=1 shows it): the v16
+     lamp numbers reproduce exactly. Dark themes have no glint.
+
+  MEASURED (test kit, Chromium 141, real fonts)
+   - views.mjs: 7 states (Albums, an album, Loops, More, Advanced,
+     Now Playing, Layers) x 51 text sizes (100-200%) x plain /
+     WCAG 1.4.12 spacing, through the page's own auditPhones():
+     714 audits x 9 phones, 0 issues. The audit now also checks,
+     for the view that is up: nothing outside the Dynamic panel
+     except inside a .scroll, More and Now Playing never overflow
+     and their pieces never overlap, every key 48 x 48 or more,
+     no text under 11px or wider than its box, no word broken
+     mid-word. Zones 205 / ~319 / 240 at every size.
+   - Text contrast, every new kind of text x 9 themes, from
+     pixels (views_a11y.mjs text): all 4.5:1 or more. Two under
+     5: Dawn's unselected tab word 4.67 and track number 4.69 (the
+     file's floor is Dawn dim, 4.65); the rest 5.3-16.0.
+   - Non-text (views_a11y.mjs marks), 3:1 needed, worst per mark:
+       selected-tab LED vs its key           4.57 (Tidal)
+       now-playing glyph vs panel            3.49 (Tidal)
+       swatch edge vs panel                  3.60 (Olive)
+       chosen-swatch ring vs panel           9.53 (Olive)
+       progress fill vs rail / vs panel,
+         worst device row of the bar         3.59 / 4.12 (Tidal)
+       latched key: LED core vs bezel        5.03 (Dawn, light themes)
+       latched key: LED bezel vs key         4.41 (Ember, light themes)
+       latched key: LED vs key, dark themes  7.91 (Dark)
+   - Buttons-zone icons (icons.mjs): every key but Play 4.08:1 or
+     more, latched or not (worst: Sound in Ember's Library view;
+     Ember's latched Library 4.14).
+   - Focus rings on every new kind of control x 9 themes
+     (views_a11y.mjs rings): all 3:1 or more, worst 3.81 (Tidal's
+     Layers key); Olive's latched Library 3.97 (two-colour ring).
+   - Keyboard + ARIA (views_a11y.mjs keys): see expected output.
+   - Reduced motion: 0 of 20,304 boxes in the phones transition or
+     animate (motion.mjs; the twinkle included).
+   - Forced colours: LEDs, the bead, the dots and the progress
+     fill are redrawn in system colours (Highlight / GrayText);
+     the selected tab gets a 2px Highlight outline; swatches and
+     album art keep their colours like images; the glint is gone.
+   - Every v16 number reproduces (run_all.sh) apart from Olive's
+     notes and the usual run-to-run noise.
+
+  FOUND, NOT CAUSED BY v17: THE PLAY GLYPH IS UNDER 3:1. Measured
+  for the first time (icons.mjs, the words.mjs method): the white
+  Play / Pause glyph against the Play key is under 3:1 in four
+  themes: 2.05 (Dawn), 2.71 (Tidal), 2.78 (Olive), 2.88 (Night
+  Light); Ember is 3.13. The glyph crosses the key's light upper
+  half. Same in v16 as
+  shipped; untouched here because the Play key is the signature
+  key and Mikey judges it by eye. First item for the next session.
+
+  INDEPENDENT REVIEW. An agent that had not seen the work audited
+  v17 with the kit and eleven scripts of its own. First verdict:
+  not ready. Blockers, both fixed and re-measured: the armed
+  "remove" key kept its old name (WCAG 2.5.3), and the hidden
+  screen-reader text let the Dynamic panel itself scroll.
+  Should-fix, all done: focus rings clipped at a scroller's bottom
+  edge (scroll-padding); the progress gradient under 3:1 in its
+  top rows (solid fill); the only setting below the fold
+  (Processor first); album rows too tall to show a fourth row
+  (52px); an album's name too tall at 200% plus spacing (capped);
+  grey, "disabled"-looking latched keys (lamp tint); the glint's
+  nick in the ring (smaller, set in); Now Playing's gap (Next joins
+  the bar); the kit's broken GLINT=1, its keyboard evidence taken
+  from the wrong phone, its bar measured on the centre line only;
+  and stale docs. Left for Mikey: Row 3 moving when Layers
+  appears (item 1). The reviewer reproduced the 714-audit matrix,
+  text contrast, marks, rings, Olive and its colour-blind table,
+  the glint's behaviour, forced colours, and a Layers-view pixel
+  diff against v16 that differs only at the new LEDs and Olive's
+  notes.
+
+  NOT BUILT YET (#153 has them): the Sound and Save views; "add
+  loops" (pick loops into an album) and "move" (pick an album);
+  naming a new album (no popup allowed: create "New album" and
+  rename it in place, as the card renames a loop); the Info card
+  showing the album while one is open (#153 does this); real data
+  behind every key that changes something (inert, like Previous /
+  Next). Safari / Firefox / real screen readers still wait for the
+  design lock.
 
   ------------------------------------------------------------
   v16 · LIGHT THEMES (Painter session 2, Mikey's notes)
@@ -858,7 +1107,9 @@
                viewport unit. Geometry of the locked skeleton stays
                px. (Replaces the old viewport font-scale rule,
                which was never implemented.)
-  No scroll.   Nothing may scroll inside the phone, ever.
+  Scroll.      Only inside the Dynamic zone, in two places: the
+               Library's lists and the Advanced page (v17, Mikey).
+               Nothing else scrolls; the zones never move.
   No popups.   Nothing may open a modal, drawer, or over-sheet.
 
   Three zones, always in this vertical order:
@@ -866,7 +1117,8 @@
                   playhead. The cover MUST stay square and large
                   enough to read; this zone cannot shrink.
     2. Dynamic  — flexes to fill (~319px). Shows whichever view is
-                  active: layers (shown here), library, sound, etc.
+                  active: Layers, Library or Now Playing (v17);
+                  Sound and Save are still unbuilt.
                   Cannot shrink below ~300px.
     3. Buttons  — 240px. Fixed three-row grid, rows flex 1.25 : 1 : 1.
 
@@ -929,6 +1181,10 @@
   on/off work; the other six are named and focusable but do
   nothing yet (their views are unbuilt). The play button has a
   press state (see PLAY / PAUSE above).
+  v17: Library and Now playing work (toggles, aria-pressed,
+  latched with a lit LED while their view is up), and the Layers
+  key exists (hidden on Layers). Previous, Next, Save and Sound
+  are still inert.
 
   ------------------------------------------------------------
   THE ICON SET  (started departing from stock Feather in v4)
@@ -948,6 +1204,11 @@
   Changed in v16:
     Previous, Next → the triangle is filled (currentColor), like
                   Play / Pause. The end bar stays a 2px stroke.
+
+  Added in v17:
+    Layers      → three stacked planes (stroke, like the rest).
+    LED         → a 6-7px lamp on Library / Now playing and on the
+                  selected Library tab; lit = you are there.
 
   Still stock (candidates for a later pass):
     Play                  — transport, standard, probably fine.
@@ -1096,7 +1357,13 @@
   WHAT NOT TO DO
   ------------------------------------------------------------
 
-  - No scrolling anywhere.
+  - Do not scroll anything except the Library's lists and the
+    Advanced page, both inside the Dynamic zone (v17, Mikey). A
+    new scroller is a .scroll; More and Now Playing must fit at
+    every text size and spacing, and the audit checks they do.
+  - Do not add a setting. Two are allowed: Theme, and Lighter on
+    processor (v17, Mikey). Everything else is one behavior for
+    everybody.
   - No popups, modals, drawers, or over-sheets.
   - Do not separate cover art from the info card.
   - Do not shrink the info zone below 205px.
@@ -1149,7 +1416,8 @@
   - Do not use pure black in the standard Dark theme. That is
     AMOLED's job.
   - Do not introduce blue into the Night Light palette.
-  - Do not introduce a cool hue into Olive.
+  - Do not introduce a cool hue into Olive. (Since v17 its notes
+    may use the swatch's warm neighbours, wine and rust.)
   - Do not use pure white text on AMOLED. Off-white prevents
     halation while keeping contrast high.
   - Do not round the cover art.
@@ -1197,9 +1465,64 @@
   - Do not raise the name cap above 36px or the meta cap above 15px
     without re-running the audit. An 8-character name only fits one
     line up to 36px. (Session 5 decision.)
+  - Do not open a popup to confirm or to ask for a name. A
+    destructive key asks twice by re-wording itself ("delete it
+    and 2 loops only here?"); naming happens in place. (v17.)
+  - Do not capitalize an action or lowercase a name. Names (tabs,
+    albums, Advanced) are capitalized; actions are lowercase
+    words on keys, like roll and on / off. (v17.)
+  - Do not mark "now playing" or "selected" with colour alone.
+    The marker is a glyph plus words; a selected tab is a raised
+    key plus a lit LED plus a bolder word. (v17.)
+  - Do not put a deep LED with a pale ring on a mid-tone key; it
+    cannot reach 3:1. On the light themes' Buttons zone it is a
+    bright core in a dark bezel. (v17.)
+  - Do not let a list row's button bleed toward a key beside it:
+    the key paints over the row's focus ring. (v17.)
+  - Do not break a word mid-word anywhere in the views; let the
+    line wrap between words, move keys under the text, or step a
+    capped size down toward its 100% size. (v17.)
+  - Do not mark up a label or a value as <p>: the WCAG 1.4.12
+    override adds 2em under every paragraph. (v17.)
+  - Do not move the light-theme glint over more of the lamp, or
+    let it twinkle while paused or under reduced motion. The lamp
+    is what clears 3:1; the glint is decoration on top. (v17.)
 
   ------------------------------------------------------------
-  EDITING NOTES  (v14 additions first)
+  EDITING NOTES  (v17 additions first)
+  ------------------------------------------------------------
+  - CSS: "v17 · VIEWS IN THE DYNAMIC ZONE" sits after the nine
+    theme blocks, just before COVER CORNERS. It holds the per-theme
+    --mark / --led-glow / --led-core, the light/dark groups
+    (--groove-*, --latched-*, --np-fill, --check-ink, --press-tint),
+    the keys (.vkey), LEDs, tabs, scrollers, rows, album art
+    (.art-1..9), More, Advanced, Now Playing, the view keys in the
+    Buttons zone, the text-size steps, reduced motion and forced
+    colours for all of it, then the swatches (.sw-<theme>).
+  - The swatches are generated from the theme blocks (backdrop,
+    glass, n1-n3, Play colour). If a theme changes, re-generate
+    them (the session's gen/swatches.py logic: read each theme's
+    main block, copy those six values) or edit the .sw-<theme>
+    block by hand to match.
+  - CSS: "v17 · LIGHT-THEME PLAYHEAD: A GLINT ON THE LAMP" sits
+    just before SESSION 10 · FORCED COLOURS. The star is an inline
+    SVG data URI on .playhead i.on::before.
+  - Script: "v17 · VIEWS" sits before TEXT-SIZE REVIEW + AUDIT. It
+    builds the Library and Now Playing views into every phone from
+    one set of mock data (ids prefixed p1..p9), and wires the view
+    keys, tabs, theme radios, pages, switch, trim and ask-twice
+    keys. fitAll() now also calls fitViews(); auditPhones() checks
+    the view that is up; wordsWhole(el) is on window.
+  - Review hooks on window: setView(phone, 'layers'|'library'|
+    'now'), libGo(phone, tab, page), applyTheme(phone, cls),
+    updateScrollEdges(), fitViews(phone). The gallery's View
+    control uses them; so does the test kit.
+  - The view keys are .btn-lib, .btn-now, .btn-layers (hidden on
+    Layers) and .btn-sound. Select keys by class, not position:
+    Row 3's last child is now the hidden Layers key.
+
+  ------------------------------------------------------------
+  EDITING NOTES  (v14 additions)
   ------------------------------------------------------------
   - New CSS blocks, in order, before PLAY / PAUSE: SESSION 5 ·
     DYNAMIC TYPE, SESSION 10 · FORCED COLOURS, SESSION 7 · NATIVE
@@ -2180,6 +2503,37 @@
   }
 
   /* ============================================================
+     v17 · LIGHT-THEME PLAYHEAD: A GLINT ON THE LAMP
+     Mikey asked for the lit cell to read more like a light. v16's
+     solid lamp stays exactly as it was (it is what clears 3:1);
+     on top of it sits a glint: a small four-point star with a
+     soft white bloom at the lamp's upper left, where a highlight
+     sits on a glass bead. It overlaps the lamp and its ring, so it
+     reads against the saturated fill, not the pale panel.
+     It twinkles slowly (4.2 s: brightens over 1.6 s, fades over
+     2.6 s, opacity 0.5 to 1 and scale 0.7 to 1, no rotation, no
+     flash), only while playing. Paused, it goes out with the lamp.
+     Under reduced motion it is still, at full size. In forced
+     colours it is gone (the lamp is Highlight there). Decoration:
+     it is never the only sign of anything.
+     ============================================================ */
+  @keyframes dl-twinkle {
+    0%, 100% { opacity: 0.5; transform: scale(0.7); }
+    38%      { opacity: 1;   transform: scale(1); }
+  }
+  body :where(.t-dawn, .t-ember, .t-tidal, .t-olive).phone .playhead i.on::before {
+    content: ''; position: absolute; z-index: 1; pointer-events: none;
+    width: 11px; height: 11px; left: -1.5px; top: -5.5px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.95'/%3E%3Cstop offset='.32' stop-color='%23fff' stop-opacity='.5'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='13' cy='13' r='9' fill='url%28%23g%29'/%3E%3Cpath d='M13 1C13.8 9.4 16.6 12.2 25 13 16.6 13.8 13.8 16.6 13 25 12.2 16.6 9.4 13.8 1 13 9.4 12.2 12.2 9.4 13 1Z' fill='%23fff'/%3E%3C/svg%3E") center / contain no-repeat;
+    animation: dl-twinkle 4.2s ease-in-out infinite;
+    transition: opacity 180ms ease;
+  }
+  body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; }
+  @media (forced-colors: active) {
+    body .phone .playhead i.on::before { display: none; }
+  }
+
+  /* ============================================================
      SESSION 10 · FORCED COLOURS  (Windows High Contrast / Contrast
      Themes)
      The browser repaints everything in the user's system colours.
@@ -2981,11 +3335,14 @@
     --playhead-beat: rgba(44,42,16,0.62);   /* Session 12: beat cells to 3:1 */
     --playhead-on: linear-gradient(180deg, #c9bc48, #8a7c14);
     --playhead-on-shadow: 0 0 10px rgba(180,160,50,0.8);
-    /* v16 — leaf, bronze, gold, forest, olive: every hue stays
-       inside the swatch's family (OKLCH 60-143 around the swatch's
-       105; Session 4 rule). Light rows 3.7-3.8:1, deep 6.3-6.7:1.
-       v15's were #3a3810 #7a4210 #3a5a10 #8a6818 #4e4a28. */
-    --n1: #60741b; --n2: #6a3c0f; --n3: #83641a; --n4: #194a0c; --n5: #6c6618;
+    /* v17 — leaf, wine, rust, forest, gold (Mikey's call): the
+       swatch's family widened to its warm neighbors, wine and rust,
+       so Olive gets real pop. Still no cool hue. Rows alternate
+       light and deep as in the other light themes (measured in
+       the v17 notes).
+       v16's in-family set was #60741b #6a3c0f #83641a #194a0c
+       #6c6618; v15's #3a3810 #7a4210 #3a5a10 #8a6818 #4e4a28. */
+    --n1: #4d7a1b; --n2: #98193c; --n3: #a1581b; --n4: #104f18; --n5: #81631a;
     --halo-inner: rgba(255,253,235,0.7);
     --n-glow: rgba(180,160,60,0.5);
     --btn-mini-bg: linear-gradient(180deg, rgba(255,250,228,0.72), rgba(245,238,205,0.46));
@@ -3039,6 +3396,695 @@
   .t-olive .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
 
   /* ============================================================
+     v17 · VIEWS IN THE DYNAMIC ZONE  (Painter session 3)
+     The Dynamic zone now holds three views: Layers (unchanged),
+     Library and Now Playing. Contents follow PR #153; the look is
+     the v16 language: glass panel, rules between rows, small
+     glass keys with lowercase action words, every key recesses.
+       - A NAME is capitalized (Albums, Rainy Afternoons, Advanced).
+         An ACTION is a lowercase word on a key (play, move, share),
+         like roll and on / off.
+       - Album art is content, the same in every theme, and square
+         like the cover (never rounded).
+       - Where you are is a key held down with its LED lit: the
+         selected Library tab is a raised key with a lit LED in a
+         recessed groove (iOS segmented control, Material's 3:1
+         state indicator), and the Library / Now playing keys in
+         the Buttons zone stay pressed in with their LED lit while
+         their view is up.
+     SCROLLING (v17 rule change): only two kinds of place scroll,
+     both inside this zone: the Library's lists (Albums, an album's
+     tracks, Loops) and the Advanced page. Each scroller is a
+     .scroll. The skeleton zones never move and nothing else
+     scrolls: More and Now Playing fit at every text size.
+     ============================================================ */
+  /* One accent per theme for marks drawn on the panel: the
+     now-playing marker, a lit LED, the progress fill. Each is the
+     theme's lamp hue at 3:1 or more against its panel (measured:
+     Dawn 4.21, Ember 3.65, Tidal 3.46, Olive 4.16, dark themes
+     7.2 and up). */
+  .t-dawn       { --mark: #b25400; --led-glow: 0 0 5px 1px rgba(255,140,30,0.55); }
+  .t-ember      { --mark: #a80052; --led-glow: 0 0 5px 1px rgba(255,50,130,0.5); }
+  .t-tidal      { --mark: #006e72; --led-glow: 0 0 5px 1px rgba(0,190,190,0.55); }
+  .t-olive      { --mark: #745a00; --led-glow: 0 0 5px 1px rgba(230,190,20,0.6); }
+  .t-dark       { --mark: #7ab8f0; --led-glow: 0 0 6px 1px rgba(90,150,220,0.7); }
+  .t-amoled     { --mark: #60d0f0; --led-glow: 0 0 6px 1px rgba(80,200,240,0.7); }
+  .t-nightlight { --mark: #ffb860; --led-glow: 0 0 6px 1px rgba(255,160,60,0.7); }
+  .t-nocturne   { --mark: #ffc070; --led-glow: 0 0 6px 1px rgba(255,180,90,0.7); }
+  .t-abyss      { --mark: #f0a868; --led-glow: 0 0 6px 1px rgba(232,152,88,0.7); }
+  .t-dawn, .t-ember, .t-tidal, .t-olive {
+    --groove-bg: color-mix(in srgb, var(--text-primary) 9%, transparent);
+    --groove-shade: color-mix(in srgb, var(--text-primary) 28%, transparent);
+    --led-ring: rgba(255,255,255,0.9);
+    --np-fill: var(--mark);
+    --check-ink: #ffffff;
+    --press-tint: color-mix(in srgb, var(--text-primary) 9%, transparent);
+    /* Pressed in and lit from inside: the lamp hue, not grey. */
+    --latched-bg: linear-gradient(180deg, color-mix(in srgb, var(--mark) 20%, rgba(255,255,255,0.46)), color-mix(in srgb, var(--mark) 14%, rgba(255,255,255,0.34)));
+    --latched-shade: color-mix(in srgb, var(--text-primary) 40%, transparent);
+  }
+  .t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
+    --groove-bg: rgba(0,0,0,0.3);
+    --groove-shade: rgba(0,0,0,0.6);
+    --led-ring: rgba(0,0,0,0.55);
+    --np-fill: var(--mark);
+    --check-ink: #101014;
+    --press-tint: rgba(255,255,255,0.07);
+    --latched-bg: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.36));
+    --latched-shade: rgba(0,0,0,0.7);
+  }
+
+  .phone [hidden] { display: none !important; }
+  /* The Session 7 reset strips font and spacing only (every older
+     control draws its own fill). These new buttons draw nothing of
+     their own at rest, so they also lose the browser's fill and
+     border. */
+  .phone :where(.lrow-main, .tab, .sw) { background: transparent; border: 0; }
+  /* Screen-reader-only text (commas between items, "now playing"). */
+  .phone .vh {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+  .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .phone .layers:focus, .view :focus:not(:focus-visible) { outline: none; }
+  .phone .layers:focus-visible, .phone .view :is(.hero-title, .page-title):focus-visible {
+    outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: -2px; border-radius: 8px;
+  }
+
+  /* ---------- keys inside the Dynamic zone ----------------------
+     The layer row's mini key, widened for a word: 48px tall at the
+     least, glass fill, lowercase word, recesses when pressed. */
+  .vkey {
+    min-width: 48px; min-height: 48px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 4px 12px; border-radius: 10px;
+    border: 1px solid var(--btn-mini-border);
+    background: var(--btn-mini-bg);
+    color: var(--btn-mini-text);
+    box-shadow: var(--btn-mini-shadow);
+    font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+    line-height: 1.2; letter-spacing: 0.005em;
+    transition: transform 90ms cubic-bezier(.3,.8,.4,1), box-shadow 90ms ease, filter 90ms ease;
+  }
+  /* Row keys use the layer rows' word size and cap, so they read as
+     the same family as roll and on / off. */
+  .vkey.word { font-size: min(0.6875rem, 18px); padding: 4px 8px; border-radius: 8px; }
+  .vkey svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .vkey:active,
+  .lrow-main:active,
+  .sw:active {
+    transform: translateY(1px);
+    filter: brightness(0.94);
+  }
+  .vkey:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,255,255,0.14); }
+  /* An "off" switch stays pressed in, like a layer's off key. */
+  .vkey[role="switch"][aria-checked="false"] {
+    transform: translateY(1px);
+    background: var(--btn-off-bg);
+    border-color: var(--btn-off-border);
+    box-shadow: inset 0 2px 5px var(--btn-off-shade), inset 0 -1px 0 rgba(255,255,255,0.12);
+    color: var(--btn-off-text);
+  }
+  .vkey[role="switch"] { width: 48px; padding: 0; flex: 0 0 auto; }
+  /* A destructive key asks twice. Armed, it reads "sure?" and
+     carries a ring in the primary text colour (not colour alone). */
+  .vkey.armed { box-shadow: inset 0 0 0 2px var(--text-primary); color: var(--text-primary); }
+
+  /* ---------- an LED: lit on the key that says where you are ---- */
+  .led {
+    width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto;
+    background: color-mix(in srgb, var(--text-primary) 22%, transparent);
+    position: relative;
+  }
+  [aria-selected="true"] > .led,
+  [aria-pressed="true"] > .led {
+    background: var(--mark);
+    box-shadow: 0 0 0 1.5px var(--led-ring), var(--led-glow);
+  }
+
+  /* ---------- Library tabs: a recessed groove, one raised key ---- */
+  .tabs {
+    flex: 0 0 auto;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 2px 0 8px; border-radius: 12px;
+    background: var(--groove-bg);
+    box-shadow: inset 0 1px 3px var(--groove-shade), inset 0 -1px 0 rgba(255,255,255,0.14);
+  }
+  .tab {
+    position: relative; isolation: isolate;
+    min-height: 48px; min-width: 0;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 4px 6px; border-radius: 12px;
+    font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+    line-height: 1.15; color: var(--text-secondary);
+    transition: filter 90ms ease;
+  }
+  .tab::before {
+    content: ''; position: absolute; inset: 4px; z-index: -1;
+    border-radius: 9px; border: 1px solid transparent;
+  }
+  .tab[aria-selected="true"] { color: var(--text-primary); font-weight: 700; }
+  .tab[aria-selected="true"]::before {
+    background: var(--btn-mini-bg);
+    border-color: var(--btn-mini-border);
+    box-shadow: var(--btn-mini-shadow);
+  }
+  .tab:active { filter: brightness(0.94); }
+  /* The groove never scrolls or grows much, so tab words are capped
+     at 1.5x like the Info meta, and step down toward 1x (never
+     below) if a word still will not fit its third (fit guard). */
+  .tab { font-size: min(0.75rem, calc(12px * var(--tcap, 1.5))); }
+  .tab-word { overflow-wrap: normal; }
+
+  /* ---------- panes, pages, scrollers --------------------------- */
+  .pane, .page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  /* The scroller reaches the panel's edges, so its hairlines run
+     edge to edge (like an iOS bar) and its scrollbar sits on the
+     glass edge. The hairlines are borders, outside the scrolled
+     content, and only take a colour while there is more to see
+     past that edge. */
+  /* position: relative makes the scroller (not the panel) the box
+     its hidden screen-reader text (.vh, absolute) lives in;
+     otherwise that text stretches the Dynamic panel, which could
+     then be scrolled by scrollIntoView (review, v17).
+     scroll-padding keeps a focused key's ring clear of both edges
+     when focus scrolls it into view. */
+  .scroll {
+    position: relative;
+    flex: 1; min-height: 0;
+    overflow-x: hidden; overflow-y: auto;
+    scroll-padding-block: 8px;
+    overscroll-behavior: contain;
+    margin: 0 -14px; padding: 4px 14px 6px;
+    border-top: 1px solid transparent; border-bottom: 1px solid transparent;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-primary) 40%, transparent) transparent;
+  }
+  .scroll.more-up { border-top-color: var(--rule); }
+  .scroll.more-down { border-bottom-color: var(--rule); }
+
+  /* ---------- list rows ------------------------------------------ */
+  .lrows { display: flex; flex-direction: column; }
+  .lrow {
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .lrow:last-child { border-bottom: 0; }
+  .lrow-main {
+    flex: 1; min-width: 0; min-height: 56px;
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 -6px; padding: 6px;
+    border-radius: 10px; text-align: left;
+    transition: transform 90ms cubic-bezier(.3,.8,.4,1), background-color 90ms ease, filter 90ms ease;
+  }
+  /* It bleeds 6px past the text so its pressed tint has room, but
+     never toward a key beside it, or the key would cover its focus
+     ring. */
+  .lrow-main:not(:last-child) { margin-right: 0; }
+  .lrow-main:active { background-color: var(--press-tint); }
+  @media (hover: hover) { .lrow-main:hover { background-color: var(--press-tint); } }
+  /* 52px: at 100% the fourth album shows about half its art, which
+     says "there is more" (review, v17). */
+  .lrows .lrow-main { min-height: 52px; }
+  .lrow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .lrow-title {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600;
+    line-height: 1.25; color: var(--text-primary);
+    overflow-wrap: break-word; min-width: 0;
+  }
+  .lrow-title > span { min-width: 0; }
+  .lrow-meta {
+    font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+    line-height: 1.35; color: var(--text-secondary);
+  }
+  .lrow-meta .sep { white-space: normal; }
+  .trk {
+    flex: 0 0 auto; min-width: 1.1em; text-align: right;
+    font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+    color: var(--text-dim); font-variant-numeric: tabular-nums;
+  }
+  /* Now playing: the Now playing key's own glyph, in the lamp hue.
+     Shape and words ("now playing" for screen readers, "playing
+     3 of 8" in the meta) carry it too, never colour alone. */
+  .now-mark { width: 14px; height: 14px; flex: 0 0 auto; color: var(--mark); }
+  .lrow.current .lrow-title { color: var(--text-primary); }
+  .row-keys { display: flex; gap: 6px; flex: 0 0 auto; }
+
+  /* Album art: content, so the same in every theme. Square like
+     the cover. A hairline and a soft drop keep it off the glass. */
+  .art {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22), 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .art.big { width: 48px; height: 48px; }
+
+  /* The first row of Albums: two action keys side by side. */
+  .lib-actions {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+    padding: 2px 0 10px; border-bottom: 1px solid var(--rule);
+  }
+
+  /* ---------- a page inside a tab (an album, Advanced) ----------- */
+  /* The name sits beside the back key when it fits on one line;
+     otherwise it drops below the key and wraps between words. */
+  .page-head {
+    flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+    margin-bottom: 8px; min-width: 0;
+  }
+  .back { padding-left: 6px; gap: 4px; flex: 0 0 auto; }
+  .back svg { width: 16px; height: 16px; }
+  .page-title {
+    font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 700;
+    color: var(--text-primary); margin: 0; min-width: 0; overflow-wrap: break-word;
+    flex: 1 1 auto;
+  }
+  /* An album page: the name sits in the head row beside the back
+     key, so the first tracks show without scrolling. Art, count
+     and the three everyday keys above the tracks; delete album at
+     the end of the list, where a destructive action belongs. */
+  .hero {
+    display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px 12px;
+    align-items: center; padding: 2px 0 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero-title {
+    font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+    font-size: min(1.0625rem, 22px); line-height: 1.15; letter-spacing: -0.01em;
+  }
+  .hero-meta {
+    font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+    line-height: 1.35; color: var(--text-secondary); margin: 0;
+  }
+  .hero-keys {
+    grid-column: 1 / -1;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  }
+  .hero-keys .vkey { padding: 4px 6px; }
+  .end-keys { display: flex; padding: 10px 0 4px; border-top: 1px solid var(--rule); }
+  .end-keys .vkey { flex: 1; }
+
+  /* ---------- More: theme picker + one way into Advanced ---------- */
+  .more { gap: 8px; }
+  .more-head {
+    flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    font-family: 'Inter', sans-serif; line-height: 1.3;
+  }
+  .sec {
+    font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);
+    margin: 0;
+  }
+  /* More and Now Playing never scroll, so like the Info card their
+     text follows the size setting up to 1.5x and then stops (the
+     meta's cap, Session 5). Lists and Advanced scroll and are not
+     capped. */
+  .more .sec { font-size: min(0.6875rem, calc(11px * var(--cap, 1.5))); }
+  .theme-name { font-size: min(0.75rem, calc(12px * var(--cap, 1.5))); font-weight: 700; color: var(--text-primary); }
+  .themes {
+    flex: 0 0 auto;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 48px; gap: 6px;
+  }
+  /* Each swatch is a little scene of its theme: the backdrop, a
+     glass card with three of its notes, and its Play colour. It is
+     a preview, so it keeps its own colours in every theme (and in
+     forced colours, like an image). A 1px edge in the phone's own
+     text colour keeps every swatch apart from the panel. */
+  .sw {
+    position: relative; min-height: 48px; border-radius: 10px; overflow: hidden;
+    transition: transform 90ms cubic-bezier(.3,.8,.4,1), filter 90ms ease;
+  }
+  .sw-art { position: absolute; inset: 0; border-radius: inherit; }
+  .sw::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 62%, transparent);
+  }
+  .sw[aria-checked="true"]::after {
+    box-shadow: inset 0 0 0 2.5px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--check-ink) 70%, transparent);
+  }
+  .sw-card {
+    position: absolute; left: 14%; right: 14%; top: 27%; bottom: 27%;
+    display: flex; align-items: center; gap: 3px; padding: 0 5px;
+    border-radius: 5px; background: var(--sw-glass); border: 1px solid var(--sw-edge);
+  }
+  .sw-card i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+  .sw-card i:nth-child(1) { background: var(--sw-a); }
+  .sw-card i:nth-child(2) { background: var(--sw-b); }
+  .sw-card i:nth-child(3) { background: var(--sw-c); }
+  .sw-card b { margin-left: auto; width: 13px; height: 7px; border-radius: 2.5px; background: var(--sw-play); }
+  .sw-check {
+    position: absolute; top: 4px; right: 4px; width: 16px; height: 16px;
+    border-radius: 50%; display: none; align-items: center; justify-content: center;
+    background: var(--text-primary); color: var(--check-ink);
+    box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--check-ink) 70%, transparent);
+  }
+  .sw-check svg { width: 10px; height: 10px; }
+  .sw[aria-checked="true"] .sw-check { display: flex; }
+
+  /* The way into Advanced: a wide key, name on the left, what is
+     in there in quieter words, a chevron at the right. */
+  .go {
+    flex: 0 0 auto; width: 100%; justify-content: space-between; text-align: left;
+    padding: 6px 10px 6px 14px; gap: 10px;
+  }
+  .go-text { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 1px; min-width: 0; }
+  .go-name { font-size: min(0.75rem, calc(12px * var(--cap, 1.5))); font-weight: 700; color: var(--text-primary); }
+  .go-hint { font-size: min(0.6875rem, calc(11px * var(--cap, 1.5))); font-weight: 500; color: var(--text-secondary); }
+  .go { font-size: min(0.75rem, calc(12px * var(--cap, 1.5))); }
+
+  /* ---------- Advanced ------------------------------------------- */
+  .adv-sec { padding: 10px 0 12px; border-bottom: 1px solid var(--rule); }
+  .adv-sec:last-child { border-bottom: 0; }
+  .adv-sec:first-child { padding-top: 2px; }
+  .hint {
+    font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+    line-height: 1.45; color: var(--text-secondary); margin: 4px 0 8px;
+  }
+  .keys2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .keys3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .keys3 .vkey { padding: 4px 4px; }
+  .setrow { display: flex; align-items: center; gap: 12px; }
+  .setrow-text { flex: 1; min-width: 0; }
+  .setrow-name {
+    display: block; font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600;
+    line-height: 1.3; color: var(--text-primary);
+  }
+  .setrow .hint { margin: 2px 0 0; }
+  .diag {
+    margin: 0 0 8px; padding: 8px 10px; border-radius: 8px;
+    background: var(--groove-bg);
+    box-shadow: inset 0 1px 3px var(--groove-shade);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem; line-height: 1.5;
+    color: var(--text-primary); white-space: pre-line; overflow-wrap: break-word;
+  }
+  .trim { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .trim .setrow-text { flex: 1; }
+  .trim-val {
+    font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700;
+    color: var(--text-primary); font-variant-numeric: tabular-nums;
+    min-width: 3.6em; text-align: center;
+  }
+  .trim .vkey { width: 48px; padding: 0; font-size: 1rem; }
+  .colophon {
+    font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+    line-height: 1.5; color: var(--text-secondary); margin: 4px 0 0;
+  }
+
+  /* ---------- Now Playing ---------------------------------------
+     Calm and centred: the album and where you are in it, how long
+     is left, how far through, what Next does, and the one action a
+     thumb's reach from the buttons. Nothing scrolls. */
+  .v-now { align-items: stretch; text-align: center; padding: 4px 0 2px; }
+  .np-top { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .np-album {
+    margin: 0; font-family: 'Inter', sans-serif; font-size: min(0.8125rem, 19.5px); font-weight: 700;
+    line-height: 1.25; color: var(--text-primary); overflow-wrap: break-word;
+  }
+  .np-pos { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .np-dots { display: flex; align-items: center; gap: 5px; }
+  .np-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--guide-dot); display: block; }
+  .np-dots i.on { width: 8px; height: 8px; background: var(--mark); box-shadow: 0 0 0 1.5px var(--led-ring), var(--led-glow); }
+  .np-of {
+    font-family: 'Inter', sans-serif; font-size: min(0.6875rem, 16.5px); font-weight: 600;
+    color: var(--text-secondary); font-variant-numeric: tabular-nums;
+  }
+  /* "safe": if it ever overflows, it overflows downward, where the
+     fit guard can measure it, never up over the album line. */
+  .np-mid { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: safe center; gap: 12px; }
+  .np-time {
+    margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+    /* Large text, capped like the track name (1.29x). */
+    font-size: min(3.5rem, 72px); line-height: 1; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; color: var(--text-primary);
+  }
+  /* The bar: a quiet rail (decorative, like the off-beat playhead
+     cells, so the lit fill stands out from it at 3:1) and a
+     lit fill in the lamp's colours, ending in a lit bead built like
+     the lit playhead cell (fill, light ring, same-hue halo). */
+  .np-bar { position: relative; height: 6px; margin: 0 4px; border-radius: 3px; background: color-mix(in srgb, var(--text-primary) 7%, transparent); }
+  .np-bar i {
+    position: absolute; left: 0; top: 0; bottom: 0; width: var(--p); border-radius: inherit;
+    background: var(--np-fill);
+  }
+  .np-bar i::after {
+    content: ''; position: absolute; right: -5px; top: 50%; width: 10px; height: 10px;
+    margin-top: -5px; border-radius: 50%; background: var(--np-fill);
+    box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)), var(--led-glow);
+  }
+  .np-next {
+    flex: 0 0 auto; margin: 4px 0 0; font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px);
+    font-weight: 500; line-height: 1.35; color: var(--text-secondary); overflow-wrap: break-word;
+  }
+  .np-next b { color: var(--text-primary); font-weight: 700; }
+  .np-action { flex: 0 0 auto; width: 100%; font-size: min(0.75rem, 18px); }
+  /* Fit steps, measured by the fit guard (script) when the caps
+     are not enough, e.g. under user text spacing: More takes the
+     five-across swatch grid; Now Playing tightens its gaps, then
+     steps the time down (56, 48, 40px), as the name steps down.
+     If More still cannot fit (large text plus user spacing), its
+     text cap (--cap) steps from 1.5x toward 1x, never below the
+     100% size, like the Info meta. */
+  .v-now.fit-tight .np-mid { gap: 6px; }
+  .v-now.fit-tight .np-next { margin-top: 0; }
+  /* Paused, the bead goes dark like the lit cell; the bar stays. */
+  .phone:not(.playing) .np-bar i::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
+
+  /* ---------- Buttons zone: the view keys ------------------------
+     Library and Now playing are toggles (aria-pressed). While their
+     view is up the key stays pressed in (sunk 2px, darker, shadow
+     turned inward) and its LED is lit. The Layers key only appears
+     away from Layers, so Row 3 holds three keys there. */
+  .zone-buttons .btn { position: relative; }
+  .zone-buttons .btn > .led { position: absolute; top: 8px; right: 10px; }
+  /* In the light themes these keys are mid-tone glass, where a deep
+     LED with a pale ring cannot reach 3:1. So, like a real panel
+     LED, it is a bright lit core in a dark bezel: the bezel is the
+     key's own icon colour (3.75:1 or more against the latched key,
+     measured) and the core is far brighter than the bezel. */
+  .t-dawn  { --led-core: #ff9a2e; }
+  .t-ember { --led-core: #ff5aa0; }
+  .t-tidal { --led-core: #22dcd4; }
+  .t-olive { --led-core: #f4d630; }
+  :where(.t-dawn, .t-ember, .t-tidal, .t-olive) .zone-buttons .btn[aria-pressed="true"] > .led {
+    width: 7px; height: 7px; top: 7.5px; right: 9.5px;
+    background: var(--led-core);
+    box-shadow: 0 0 0 1.5px var(--btn-text), 0 0 6px 2px color-mix(in srgb, var(--led-core) 70%, transparent);
+  }
+  .zone-buttons .btn[aria-pressed="false"] > .led { background: color-mix(in srgb, var(--btn-text) 24%, transparent); }
+  .phone .zone-buttons .btn[aria-pressed="true"] {
+    transform: translateY(2px);
+    background: var(--latched-bg);
+    box-shadow: inset 0 3px 6px var(--latched-shade), inset 0 -1px 0 rgba(255,255,255,0.14);
+  }
+  .phone .zone-buttons .btn[aria-pressed="true"]:focus-visible {
+    box-shadow: 0 0 0 2px var(--focus-ring-inner, transparent), inset 0 3px 6px var(--latched-shade), inset 0 -1px 0 rgba(255,255,255,0.14);
+  }
+
+  /* ---------- Text size: steps for the new views -----------------
+     Same steps as Session 5 (container queries in ems). Lists just
+     grow and scroll; More and Now Playing must still fit. */
+  .more.fit-five .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .more.fit-five .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+  .more.fit-five .sw-card i:nth-child(3) { display: none; }
+  .more.fit-five .sw-card b { width: 9px; }
+  @container phone (max-width: 17.5em) {
+    .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+    .sw-card i:nth-child(3) { display: none; }
+    .sw-card b { width: 9px; }
+    .trim { flex-wrap: wrap; }
+    .trim .setrow-text { flex-basis: 100%; }
+    .trim .trim-val { flex: 1; }
+    .hero-keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero-keys .vkey:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .keys3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* Rows with keys put the keys under the text, so a long name
+       keeps the full width and never breaks mid-word. */
+    .lrow.track, .lrow.album { flex-wrap: wrap; row-gap: 0; }
+    .lrow.track .lrow-main, .lrow.album .lrow-main { flex-basis: 100%; }
+    .lrow.track .row-keys, .lrow.album > .vkey { margin: 0 0 8px auto; }
+  }
+  @container phone (max-width: 15.5em) {
+    .v-now .np-mid { gap: 8px; }
+    .go-hint { flex-basis: 100%; }
+  }
+
+  /* ---------- Reduced motion -------------------------------------
+     The global rule (SESSION 6) already stops every transition and
+     animation. These keys also lose their 1–2px drop; the darker
+     fill and inward shadow stay. */
+  @media (prefers-reduced-motion: reduce) {
+    .phone .vkey:active, .phone .lrow-main:active, .phone .sw:active,
+    .phone .vkey[role="switch"][aria-checked="false"],
+    .phone .zone-buttons .btn[aria-pressed="true"] { transform: none !important; }
+  }
+  body.sim-reduced-motion .phone .vkey:active,
+  body.sim-reduced-motion .phone .lrow-main:active,
+  body.sim-reduced-motion .phone .sw:active,
+  body.sim-reduced-motion .phone .vkey[role="switch"][aria-checked="false"],
+  body.sim-reduced-motion .phone .zone-buttons .btn[aria-pressed="true"] { transform: none !important; }
+
+  /* ---------- Forced colours (Session 10 rules, new marks) -------
+     LEDs, the now-playing bead and dots, and the progress fill are
+     background colours, so they opt out and are redrawn in system
+     colours. Swatches and album art are pictures of colour, so
+     they keep their own colours, like images. */
+  @media (forced-colors: active) {
+    .led, .np-dots, .np-bar, .sw-art, .art, .sw-check { forced-color-adjust: none; }
+    .led { background: GrayText; box-shadow: none; }
+    [aria-selected="true"] > .led, [aria-pressed="true"] > .led { background: Highlight; box-shadow: none; }
+    .zone-buttons .btn[aria-pressed="false"] > .led { background: GrayText; }
+    .tab::before { border-color: transparent; }
+    .tab[aria-selected="true"]::before { border: 2px solid Highlight; }
+    /* "body .phone" outranks the light themes' bezelled LED. */
+    body .phone .zone-buttons .btn[aria-pressed="true"] > .led { background: Highlight; box-shadow: none; }
+    body .phone .zone-buttons .btn[aria-pressed="false"] > .led { background: GrayText; box-shadow: none; }
+    .np-dots i { background: GrayText; box-shadow: none; }
+    .np-dots i.on { background: Highlight; }
+    .np-bar { background: GrayText; }
+    .np-bar i, .np-bar i::after { background: Highlight; box-shadow: none; }
+    .sw::after { box-shadow: inset 0 0 0 1px CanvasText; forced-color-adjust: none; }
+    .sw[aria-checked="true"]::after { box-shadow: inset 0 0 0 3px Highlight; }
+    .sw-check { background: Highlight; color: HighlightText; box-shadow: none; }
+    .now-mark { color: Highlight; }
+    .vkey.armed { outline: 2px solid Highlight; }
+    .phone .zone-buttons .btn[aria-pressed="true"] { border: 2px solid Highlight; }
+  }
+  /* Album art stand-ins (content, theme-independent): each album
+     is a 2x2 mosaic of four of its loops' covers, as PR #153's
+     albumArt draws it. */
+  .art-1 {
+    background:
+      radial-gradient(circle at 38% 36%, #ffe2c8 0%, #f08a7a 42%, #9a3a5a 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #fff0c0 0%, #f0b850 42%, #a86020 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #ffd8e0 0%, #e070a0 42%, #7a2a6a 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #ffe8b0 0%, #e89a60 42%, #8a4030 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-2 {
+    background:
+      radial-gradient(circle at 38% 36%, #e8eef4 0%, #98a8c0 42%, #4a5a78 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #eef0e8 0%, #a8b0a0 42%, #5a6458 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #e0e8f0 0%, #8098b8 42%, #3a4a68 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f0ece8 0%, #b0a8a0 42%, #605850 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-3 {
+    background:
+      radial-gradient(circle at 38% 36%, #d8f0f8 0%, #6aa8c8 42%, #24486a 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #e0ecf4 0%, #8aa0c0 42%, #3a4a70 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #d0ece8 0%, #5aa0a0 42%, #1e4a50 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #e8eef8 0%, #90a8d0 42%, #344a78 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-4 {
+    background:
+      radial-gradient(circle at 38% 36%, #fff4e0 0%, #f8c890 42%, #c87850 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #fff0e8 0%, #f4b0a0 42%, #b8606a 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #fff8d8 0%, #f0d080 42%, #b08840 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #fff0f0 0%, #f0b8c0 42%, #a86878 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-5 {
+    background:
+      radial-gradient(circle at 38% 36%, #eef0d8 0%, #b0b878 42%, #5a6a30 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f0ecd8 0%, #c8b080 42%, #7a6038 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #e4f0dc 0%, #98b088 42%, #486040 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f4f0dc 0%, #c0b888 42%, #6a6440 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-6 {
+    background:
+      radial-gradient(circle at 38% 36%, #e4f8e8 0%, #88c898 42%, #2a6a48 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f0f8dc 0%, #b8d880 42%, #5a7a28 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #dcf4ec 0%, #78c0a8 42%, #24604c 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #fff8e0 0%, #e8d090 42%, #8a7038 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-7 {
+    background:
+      radial-gradient(circle at 38% 36%, #ffe8b0 0%, #e89040 42%, #3a1a48 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #d8d0ff 0%, #6a60d0 42%, #1a1448 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #e8c8ff 0%, #9a58c8 42%, #2a1048 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #c8e8ff 0%, #4a80c8 42%, #101a40 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-8 {
+    background:
+      radial-gradient(circle at 38% 36%, #ece4ff 0%, #a890d8 42%, #3a2a68 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f0e8f8 0%, #c0a0d0 42%, #4a3060 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #e0e8ff 0%, #8890d0 42%, #2a3068 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f8e8f4 0%, #d0a0c8 42%, #5a3058 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  .art-9 {
+    background:
+      radial-gradient(circle at 38% 36%, #ffe0c8 0%, #f07850 42%, #8a2a1a 100%) 0 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #fff4c0 0%, #f0c040 42%, #8a6010 100%) 100% 0 / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #ffe8d0 0%, #e89060 42%, #7a3a20 100%) 0 100% / 50% 50% no-repeat,
+      radial-gradient(circle at 38% 36%, #f8f0c8 0%, #d8b850 42%, #6a5418 100%) 100% 100% / 50% 50% no-repeat;
+  }
+  /* Theme swatches. Each copies its theme's backdrop, glass, first
+     three notes and Play colour (generated from the theme blocks;
+     re-generate if a theme changes). */
+  .sw-dawn {
+    --sw-glass: rgba(255,255,255,0.52);
+    --sw-edge: rgba(255,255,255,0.78);
+    --sw-a: #e33120; --sw-b: #1457da; --sw-c: #23886c;
+    --sw-play: linear-gradient(180deg, #ffd8a0 0%, #e8a040 48%, #b87820 50%, #d08830 100%);
+    background: radial-gradient(60% 45% at 30% 15%, #ffdcc0 0%, transparent 55%), radial-gradient(55% 40% at 78% 25%, #d8b8d8 0%, transparent 60%), radial-gradient(70% 45% at 20% 85%, #b8d0d8 0%, transparent 60%), radial-gradient(60% 40% at 88% 78%, #ffd8c8 0%, transparent 55%), linear-gradient(170deg, #f8e4d0 0%, #e8d0dc 50%, #d0dce0 100%);
+  }
+  .sw-ember {
+    --sw-glass: linear-gradient(180deg, rgba(255,238,224,0.72), rgba(255,222,208,0.66));
+    --sw-edge: rgba(255,215,190,0.62);
+    --sw-a: #c6243c; --sw-b: #651cae; --sw-c: #ab3918;
+    --sw-play: linear-gradient(180deg, #ffb878 0%, #e85878 48%, #a02858 50%, #c03868 100%);
+    background: radial-gradient(55% 45% at 25% 15%, #ffb070 0%, transparent 60%), radial-gradient(50% 40% at 78% 22%, #e85890 0%, transparent 60%), radial-gradient(65% 50% at 20% 82%, #7a2878 0%, transparent 65%), radial-gradient(60% 45% at 88% 85%, #c84878 0%, transparent 60%), radial-gradient(40% 22% at 50% 4%, #ffd0a0 0%, transparent 75%), linear-gradient(180deg, #e89878 0%, #b85888 45%, #4a1858 100%);
+  }
+  .sw-tidal {
+    --sw-glass: linear-gradient(180deg, rgba(228,246,248,0.72), rgba(208,236,240,0.64));
+    --sw-edge: rgba(210,235,240,0.66);
+    --sw-a: #145492; --sw-b: #207d6f; --sw-c: #6230c1;
+    --sw-play: linear-gradient(180deg, #b8e8e0 0%, #38a0a8 48%, #0a6878 50%, #187888 100%);
+    background: radial-gradient(55% 45% at 28% 15%, #b8e0da 0%, transparent 55%), radial-gradient(50% 40% at 78% 24%, #88bcc4 0%, transparent 60%), radial-gradient(75% 55% at 22% 82%, #2a7890 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #68a8b4 0%, transparent 55%), linear-gradient(170deg, #c8e8e0 0%, #78b8c4 45%, #285a78 100%);
+  }
+  .sw-dark {
+    --sw-glass: linear-gradient(180deg, rgba(40,40,48,0.85), rgba(28,28,34,0.92));
+    --sw-edge: rgba(255,255,255,0.18);
+    --sw-a: #6aaed6; --sw-b: #7ec8a0; --sw-c: #b8a0d8;
+    --sw-play: linear-gradient(180deg, #5a9ad0 0%, #3a78b0 48%, #1e5a88 50%, #2a6a98 100%);
+    background: radial-gradient(55% 45% at 28% 18%, #1e1e28 0%, transparent 60%), radial-gradient(50% 40% at 78% 25%, #1a1a24 0%, transparent 60%), radial-gradient(65% 50% at 22% 82%, #16161e 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #1a1a22 0%, transparent 55%), linear-gradient(170deg, #18181e 0%, #121218 50%, #0e0e14 100%);
+  }
+  .sw-amoled {
+    --sw-glass: linear-gradient(180deg, rgba(20,20,24,0.7), rgba(10,10,14,0.85));
+    --sw-edge: rgba(255,255,255,0.16);
+    --sw-a: #40b0e0; --sw-b: #60d0b0; --sw-c: #8090e0;
+    --sw-play: linear-gradient(180deg, #ff5cb4 0%, #ff1f92 48%, #c4006e 50%, #d80c7a 100%);
+    background: #000000;
+  }
+  .sw-nightlight {
+    --sw-glass: linear-gradient(180deg, rgba(60,35,20,0.6), rgba(40,20,10,0.75));
+    --sw-edge: rgba(255,180,120,0.28);
+    --sw-a: #e08040; --sw-b: #d06030; --sw-c: #c88050;
+    --sw-play: linear-gradient(180deg, #e8a860 0%, #d08040 48%, #a05820 50%, #b06828 100%);
+    background: radial-gradient(55% 45% at 28% 18%, #3a2010 0%, transparent 60%), radial-gradient(50% 40% at 78% 25%, #2a1808 0%, transparent 60%), radial-gradient(65% 50% at 22% 82%, #1e1006 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #2a160a 0%, transparent 55%), linear-gradient(170deg, #2a1808 0%, #1a0e04 50%, #100800 100%);
+  }
+  .sw-nocturne {
+    --sw-glass: linear-gradient(180deg, rgba(58,32,88,0.55), rgba(28,14,52,0.72));
+    --sw-edge: rgba(180,140,230,0.36);
+    --sw-a: #c878e8; --sw-b: #e878b8; --sw-c: #78b8e8;
+    --sw-play: linear-gradient(180deg, #c878e8 0%, #a048c8 48%, #7828a0 50%, #8838b0 100%);
+    background: radial-gradient(55% 45% at 26% 16%, #6a3aa8 0%, transparent 60%), radial-gradient(50% 40% at 76% 22%, #b04898 0%, transparent 60%), radial-gradient(60% 45% at 20% 82%, #3a1a6a 0%, transparent 65%), radial-gradient(55% 42% at 86% 84%, #7a3aa0 0%, transparent 60%), radial-gradient(35% 20% at 52% 6%, #d878b8 0%, transparent 75%), linear-gradient(175deg, #241046 0%, #160830 50%, #0a0420 100%);
+  }
+  .sw-abyss {
+    --sw-glass: linear-gradient(180deg, rgba(28,44,48,0.85), rgba(15,27,31,0.9));
+    --sw-edge: rgba(140,210,190,0.28);
+    --sw-a: #8fd8b8; --sw-b: #68b8a0; --sw-c: #58a8b8;
+    --sw-play: linear-gradient(180deg, #2e8a80 0%, #1e6a62 48%, #144a46 50%, #1a5652 100%);
+    background: radial-gradient(55% 45% at 28% 18%, #16323a 0%, transparent 60%), radial-gradient(50% 40% at 78% 25%, #142a30 0%, transparent 60%), radial-gradient(65% 50% at 22% 82%, #0e2228 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #122830 0%, transparent 55%), linear-gradient(170deg, #142830 0%, #0e1e24 50%, #081418 100%);
+  }
+  .sw-olive {
+    --sw-glass: linear-gradient(180deg, rgba(255,250,228,0.70), rgba(248,242,208,0.62));
+    --sw-edge: rgba(255,252,232,0.8);
+    --sw-a: #4d7a1b; --sw-b: #98193c; --sw-c: #a1581b;
+    --sw-play: linear-gradient(180deg, #cfc458 0%, #9a9430 48%, #6e6a18 50%, #7d7922 100%);
+    background: radial-gradient(70% 45% at 50% 0%, rgba(255,250,200,0.18) 0%, transparent 65%), radial-gradient(80% 50% at 50% 100%, rgba(50,46,8,0.20) 0%, transparent 70%), #9c9642;
+  }
+
+  /* ============================================================
      COVER CORNERS
      ============================================================ */
   .phone .cover { border-radius: 0; }
@@ -3069,9 +4115,9 @@
 <main>
 
 <header class="masthead">
-  <div class="eyebrow">Driftloom · spec + nine · v16</div>
+  <div class="eyebrow">Driftloom · spec + nine · v17</div>
   <h1>The skeleton, locked.<br>Nine weathers, refined.<br>Every word, readable.</h1>
-  <p>Same loop in every frame — <em>me-kei</em>, 53% Tide / 47% Glade. Same three-zone skeleton. Notes come in three kinds: small, big, and halo. Halos appear only where the playhead column matches, and never on a faded layer. Three light weathers, three dark, two dark twins, and a ninth pulled from a single uploaded colour swatch. <em>New in v16:</em> the light themes' notes are jewel tones that pop, and neighboring rows stay apart for color-blind eyes; their lit playhead cell is a solid lamp with a light ring and a soft halo, and Previous / Next have filled triangles. <em>From v15:</em> every button sinks into the screen when pressed, an off layer's key stays pressed in, and the info text is 11px. At big text sizes the info lines now take turns in their usual places instead of disappearing. Try Text size 200% and watch the card. Tap the play button: it sinks like a key, the halos and the lit playhead both go, and both come back.</p>
+  <p>Same loop in every frame — <em>me-kei</em>, 53% Tide / 47% Glade. Same three-zone skeleton. Notes come in three kinds: small, big, and halo. Halos appear only where the playhead column matches, and never on a faded layer. Three light weathers, three dark, two dark twins, and a ninth pulled from a single uploaded colour swatch. <em>New in v17:</em> the Library and Now Playing views. Tap the bookshelf key (or pick a view above) to open the Library: albums and loops scroll, More picks a theme (try it: the phone re-skins), and Advanced holds files, the processor switch and diagnostics. The wavy-flag key opens Now Playing. Olive's notes are wine and rust now, and the light themes' playhead lamp has a slow, gentle glint. <em>From v16:</em> the light themes' notes are jewel tones that pop, and neighboring rows stay apart for color-blind eyes; their lit playhead cell is a solid lamp with a light ring and a soft halo, and Previous / Next have filled triangles. <em>From v15:</em> every button sinks into the screen when pressed, an off layer's key stays pressed in, and the info text is 11px. At big text sizes the info lines now take turns in their usual places instead of disappearing. Try Text size 200% and watch the card. Tap the play button: it sinks like a key, the halos and the lit playhead both go, and both come back.</p>
 </header>
 
 <div class="sim-toggle">
@@ -3097,6 +4143,16 @@
     <label><input type="radio" name="text-size" value="130"><span>130%</span></label>
     <label><input type="radio" name="text-size" value="150"><span>150%</span></label>
     <label><input type="radio" name="text-size" value="200"><span>200%</span></label>
+  </div>
+  <div class="size-ctl" role="radiogroup" aria-label="View review">
+    <span class="size-ctl-title">View</span>
+    <label><input type="radio" name="view-mode" value="layers" checked><span>Layers</span></label>
+    <label><input type="radio" name="view-mode" value="lib:albums"><span>Albums</span></label>
+    <label><input type="radio" name="view-mode" value="lib:albums:album"><span>An album</span></label>
+    <label><input type="radio" name="view-mode" value="lib:loops"><span>Loops</span></label>
+    <label><input type="radio" name="view-mode" value="lib:more"><span>More</span></label>
+    <label><input type="radio" name="view-mode" value="lib:more:advanced"><span>Advanced</span></label>
+    <label><input type="radio" name="view-mode" value="now"><span>Now Playing</span></label>
   </div>
   <p class="audit" id="audit" role="status" aria-live="polite"></p>
   <p class="sim-note">
@@ -3221,6 +4277,20 @@
 </section>
 
 <section class="handover">
+  <h2>v17 · Library and Now Playing <span class="done">done</span></h2>
+  <p><b>Two new views in the middle of the screen.</b> The bookshelf key opens the <em>Library</em> and the wavy-flag key opens <em>Now Playing</em>. While a view is up, its key stays pressed in and a little LED on it is lit, like a key on a tape deck; press it again to go back. Away from Layers, the bottom row gains a Layers key, so you can always get back.</p>
+  <p><b>Library.</b> Three tabs in a recessed groove: Albums, Loops and More. The chosen tab is a raised key with its LED lit. Albums and Loops scroll up and down; each album shows its art, its name, how many loops, and a <em>play</em> key, and the one playing is marked with the Now Playing note. Opening an album shows its loops with <em>move</em> and <em>remove</em> keys, and <em>delete album</em> waits at the bottom of the list. Nothing pops up: a key that deletes asks twice by changing its own words. Names are capitalized and actions are lowercase words, like <em>roll</em> and <em>on / off</em>.</p>
+  <p><b>More and Advanced.</b> More is the theme picker: nine little scenes, one per theme, with a check on yours (in this mockup, tapping one really re-skins the phone). Below it, one key leads to <em>Advanced</em>, which scrolls and holds backups, the <em>Lighter on processor</em> switch (the same on / off key as the layers) and Diagnostics. Most people never need it, and its name says so.</p>
+  <p><b>Now Playing.</b> The album and where you are in it, the time left in big numbers, a bar that ends in a little lit bead like the playhead's lamp, what Next will play, and <em>leave album</em> at the bottom where your thumb is.</p>
+  <p><b>The two rule changes.</b> Scrolling happens in exactly two places, both in the middle zone: the Library's lists and the Advanced page. Theme and Lighter on processor are the only settings. Everything else still behaves the same for everybody.</p>
+  <p><b>Big text and text spacing.</b> Every view was checked at 51 text sizes from 100% to 200%, with and without the WCAG text-spacing override: nothing spills out, nothing overlaps, no word is broken in the middle, and every key is at least 48 × 48. The two pages that never scroll (More and Now Playing) cap their text at 1.5× like the info card and tighten themselves in steps when they must.</p>
+  <p><b>Olive and the glint.</b> Olive's notes are leaf, wine, rust, forest and gold, so they pop like the other light themes' (still no cool colour). The light themes' lit playhead cell keeps its solid lamp, which is what passes the contrast test, and gains a small star glint that twinkles slowly while playing, stops when paused, and holds still if you have reduced motion on.</p>
+  <p><b>Found along the way.</b> The white Play / Pause glyph measures under 3:1 against the Play key in four themes (Dawn 2.05, Tidal 2.71, Olive 2.78, Night Light 2.88). It has been that way since before v16 and was never measured. Left alone for Mikey's eye; it is the first thing to look at next.</p>
+  <p><b>Independent review.</b> A reviewer that had not seen the work checked everything with its own scripts. It found two real problems, both fixed: a delete key that changed its words but not its name for screen readers, and hidden screen-reader text that let the middle panel itself scroll. It also asked for a handful of polish fixes, all done: Processor now comes first on Advanced, pressed-in keys glow in the theme's lamp colour instead of going grey, the glint no longer nicks the lamp's ring, and the progress bar is one solid colour.</p>
+  <p><b>One decision for you.</b> When the Layers key appears, the other two keys on the bottom row get narrower, so Sound moves under your thumb. That is what the spec asked for. The alternative is to show the Layers key all the time and let it stay pressed in on Layers, like Library and Now Playing, so no key ever moves.</p>
+</section>
+
+<section class="handover">
   <h2>v16 · Light themes <span class="done">done</span></h2>
   <p><b>The notes pop now.</b> In Dawn, Ember, Tidal and Olive the notes had been darkened until they were readable, which made them muddy. A dark dot can't glow on a light panel, so these get their energy from color instead: jewel tones (coral, cobalt, emerald, orchid and violet in Dawn; ruby, violet, vermilion, plum and royal blue in Ember; ocean, sea teal, violet, reef coral and cerulean in Tidal; leaf, bronze, gold, forest and olive in Olive, which stays inside its swatch's family and so gains the least). Each one is close to as saturated as a screen can show at a darkness that still clears 3:1. Every note measures 3.56:1 or better.</p>
   <p><b>Kind to color-blind eyes.</b> The rows alternate between a lighter jewel tone and a deeper one, so two neighboring rows differ in lightness as well as hue. Under simulated red-green color blindness, neighboring rows are now well apart in all four themes; in v15, Bass and Keys were nearly identical in Dawn, Tidal and Olive. Two honest limits: rare blue-yellow color blindness (tritanopia) separates Dawn's neighbors a little less than v15 did, and rows that are not next to each other can still look alike. Every row has its label, so color is never the only cue.</p>
@@ -3293,6 +4363,23 @@
     </div>
 
     <div class="spec-table">
+      <h3>Library + Now Playing <span class="new">· new in v17</span></h3>
+      <table>
+        <tr><td>Scrolls</td><td>Library lists · Advanced · nothing else</td></tr>
+        <tr><td>Settings</td><td>Theme · Lighter on processor · nothing else</td></tr>
+        <tr><td>View keys</td><td>Library · Now playing: aria-pressed · latched 2px · LED lit</td></tr>
+        <tr><td>Layers key</td><td>Row 3, only away from Layers · focus → Layers group</td></tr>
+        <tr><td>Tabs</td><td>groove · raised key + LED · APG tabs · 48px</td></tr>
+        <tr><td>List row</td><td>52px · rules · art 44 square · word keys 48</td></tr>
+        <tr><td>Theme picker</td><td>radio group · 3 × 3 (5-across from ~121%) · 48px</td></tr>
+        <tr><td>Fixed pages</td><td>More, Now Playing: text capped 1.5× · fit guard steps</td></tr>
+        <tr><td>Text (worst)</td><td>4.67:1 · Dawn tab word</td></tr>
+        <tr><td>Marks (worst)</td><td>3.49:1 · Tidal now-playing glyph</td></tr>
+        <tr><td>Rings (worst)</td><td>3.81:1 · Tidal Layers key</td></tr>
+        <tr><td>Olive notes</td><td>wine & rust · light 3.55–3.57 · deep 5.65–6.33</td></tr>
+        <tr><td>Glint</td><td>light themes · 4.2 s · playing only · still under reduced motion</td></tr>
+      </table>
+
       <h3>Design pass <span class="new">· new in v15</span></h3>
       <table>
         <tr><td>Light-theme lit cell</td><td><s>LED: hot centre · deep edge · aura</s> → v16 solid lamp</td></tr>
@@ -3575,12 +4662,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -3675,12 +4763,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -3775,12 +4864,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -3885,12 +4975,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -3985,12 +5076,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -4085,12 +5177,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -4195,12 +5288,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -4295,12 +5389,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -4395,12 +5490,13 @@
           <button type="button" class="btn" aria-label="Next"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
         </div>
         <div class="row row-2">
-          <button type="button" class="btn" aria-label="Library"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
+          <button type="button" class="btn btn-lib" aria-label="Library" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v15"/><path d="M10.5 4v15"/><path d="M15 5.2 17.6 19"/><path d="M4 20h16"/></svg></button>
           <button type="button" class="btn" aria-label="Save or share"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 21 12 17 6.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2z"/><path d="M12 15V9"/><path d="m9.2 11.8 2.8-2.8 2.8 2.8"/></svg></button>
         </div>
         <div class="row row-3">
-          <button type="button" class="btn" aria-label="Now playing"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
-          <button type="button" class="btn" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-now" aria-label="Now playing" aria-pressed="false"><span class="led" aria-hidden="true"></span><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg></button>
+          <button type="button" class="btn btn-sound" aria-label="Sound"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg></button>
+          <button type="button" class="btn btn-layers" aria-label="Layers" hidden><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></button>
         </div>
       </div>
     </div>
@@ -4510,6 +5606,457 @@
   }
 
   /* ============================================================
+     v17 · VIEWS  (Library, Now Playing)
+     The Layers view is static markup in each phone. The Library and
+     Now Playing views are built here from one set of mock data, so
+     all nine phones show the same library (the gallery shows "the
+     same loop in every frame"). Contents follow PR #153.
+     Mock story: the phone is playing the album Rainy Afternoons,
+     track 3 of 8, which is me-kei.
+     Keys that would change data (play, move, share, back up …) are
+     named and focusable and do nothing, like Previous / Next.
+     ============================================================ */
+  (function () {
+    var NB = ' ';
+    var THEMES = [
+      ['t-dawn', 'dawn', 'Dawn', 'Dawn Glass'], ['t-ember', 'ember', 'Ember', 'Ember Glass'],
+      ['t-tidal', 'tidal', 'Tidal', 'Tidal Glass'], ['t-dark', 'dark', 'Dark', 'Dark Glass'],
+      ['t-amoled', 'amoled', 'AMOLED', 'AMOLED Glass'], ['t-nightlight', 'nightlight', 'Night Light', 'Night Light Glass'],
+      ['t-nocturne', 'nocturne', 'Nocturne', 'Ember Nocturne'], ['t-abyss', 'abyss', 'Abyss', 'Tidal Abyss'],
+      ['t-olive', 'olive', 'Olive', 'Olive Glass']
+    ];
+    /* Albums, built-ins first (PR #153's album rule). */
+    var ALBUMS = [
+      { t: 'Favorite Loops', n: 14, art: 1 },
+      { t: 'Imported Loops', n: 3, art: 2 },
+      { t: 'Rainy Afternoons', n: 8, art: 3, playing: 3 },
+      { t: 'Slow Mornings', n: 6, art: 4 },
+      { t: 'Study Hours', n: 11, art: 5 },
+      { t: 'Garden Tea', n: 4, art: 6 },
+      { t: 'Night Drive', n: 5, art: 7 },
+      { t: 'Before Sleep', n: 9, art: 8 },
+      { t: 'Kitchen Radio', n: 7, art: 9 }
+    ];
+    /* The open album's tracks (Rainy Afternoons). */
+    var TRACKS = [
+      ['tovasu', 'F Dorian', 78], ['lorin-ah', 'D Aeolian', 84], ['me-kei', 'Bb Mixolydian', 93],
+      ['sumi', 'C Lydian', 72], ['pellow', 'G Ionian', 88], ['ondine', 'E Aeolian', 66],
+      ['kiraka', 'A Dorian', 96], ['huvel', 'Eb Ionian', 80]
+    ];
+    /* Every loop, wherever it lives (read-only list). */
+    var LOOPS = [
+      ['me-kei', 'Bb Mixolydian', 93, 'Rainy Afternoons +1'], ['amberline', 'D Dorian', 76, 'Favorite Loops'],
+      ['bolo-ra', 'G Mixolydian', 102, 'Kitchen Radio'], ['huvel', 'Eb Ionian', 80, 'Rainy Afternoons'],
+      ['kiraka', 'A Dorian', 96, 'Rainy Afternoons +2'], ['lorin-ah', 'D Aeolian', 84, 'Rainy Afternoons'],
+      ['mauna', 'F Lydian', 70, 'Before Sleep'], ['ondine', 'E Aeolian', 66, 'Rainy Afternoons'],
+      ['pellow', 'G Ionian', 88, 'Rainy Afternoons'], ['sumi', 'C Lydian', 72, 'Rainy Afternoons +1'],
+      ['teshi', 'A Mixolydian', 90, 'Study Hours'], ['tovasu', 'F Dorian', 78, 'Rainy Afternoons'],
+      ['wrennick', 'C Ionian', 84, 'Garden Tea'], ['yenna', 'Bb Lydian', 68, 'Imported Loops']
+    ];
+    var ICON = {
+      left: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg>',
+      right: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg>',
+      check: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+      /* The Now playing key's own glyph: a note whose flag is a wave. */
+      now: '<svg class="now-mark" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6" fill="currentColor"/><path d="M9.1 17V5.5"/><path d="M9.1 5.5c1.5-2 3-2 4.5 0s3 2 4.5 0"/></svg>'
+    };
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+    /* " · " between items: the dot is hidden from screen readers and
+       a comma is read instead; the no-break space keeps the dot on
+       the line before it (v14 rule). */
+    var SEP = '<span class="sep" aria-hidden="true">' + NB + '· </span><span class="vh">, </span>';
+    function plural(n, w) { return n + NB + w + (n === 1 ? '' : 's'); }
+    function keyOf(k, bpm) { return esc(k) + SEP + bpm + NB + 'bpm'; }
+
+    function albumRow(a) {
+      var cur = !!a.playing;
+      var meta = plural(a.n, 'loop') + (cur ? SEP + 'playing ' + a.playing + NB + 'of' + NB + a.n : '');
+      return '<div class="lrow album' + (cur ? ' current' : '') + '" role="listitem">' +
+        '<button type="button" class="lrow-main" data-open="album"' + (cur ? '' : ' data-inert') + '>' +
+          '<span class="art art-' + a.art + '" aria-hidden="true"></span>' +
+          '<span class="lrow-text"><span class="lrow-title">' + (cur ? ICON.now : '') + '<span>' + esc(a.t) + '</span>' + (cur ? '<span class="vh">, now playing</span>' : '') + '</span>' +
+          '<span class="lrow-meta">' + meta + '</span></span>' +
+        '</button>' +
+        '<button type="button" class="vkey word" aria-label="Play ' + esc(a.t) + '">play</button>' +
+      '</div>';
+    }
+    function trackRow(t, i) {
+      var cur = i === 2;
+      return '<div class="lrow track' + (cur ? ' current' : '') + '" role="listitem">' +
+        '<button type="button" class="lrow-main">' +
+          '<span class="trk" aria-hidden="true">' + (i + 1) + '</span>' +
+          '<span class="lrow-text"><span class="lrow-title">' + (cur ? ICON.now : '') + '<span><span class="vh">' + (i + 1) + '. </span>' + esc(t[0]) + '</span>' + (cur ? '<span class="vh">, now playing</span>' : '') + '</span>' +
+          '<span class="lrow-meta">' + keyOf(t[1], t[2]) + '</span></span>' +
+        '</button>' +
+        '<span class="row-keys">' +
+          '<button type="button" class="vkey word" aria-label="Move ' + esc(t[0]) + ' to another album">move</button>' +
+          '<button type="button" class="vkey word" data-arm="remove" aria-label="Remove ' + esc(t[0]) + ' from Rainy Afternoons" data-armed-label="sure? Press again to remove ' + esc(t[0]) + ' from Rainy Afternoons">remove</button>' +
+        '</span>' +
+      '</div>';
+    }
+    function loopRow(l) {
+      var cur = l[0] === 'me-kei';
+      return '<div class="lrow' + (cur ? ' current' : '') + '" role="listitem">' +
+        '<button type="button" class="lrow-main">' +
+          '<span class="lrow-text"><span class="lrow-title">' + (cur ? ICON.now : '') + '<span>' + esc(l[0]) + '</span>' + (cur ? '<span class="vh">, now playing</span>' : '') + '</span>' +
+          '<span class="lrow-meta">' + keyOf(l[1], l[2]) + SEP + esc(l[3]).replace(' +', NB + '+') + '</span></span>' +
+        '</button>' +
+      '</div>';
+    }
+    function swatch(th, mine) {
+      var on = th[0] === mine;
+      return '<button type="button" role="radio" class="sw" data-theme="' + th[0] + '" aria-checked="' + on + '" tabindex="' + (on ? 0 : -1) + '" aria-label="' + esc(th[2]) + '">' +
+        '<span class="sw-art sw-' + th[1] + '" aria-hidden="true"><span class="sw-card"><i></i><i></i><i></i><b></b></span></span>' +
+        '<span class="sw-check" aria-hidden="true">' + ICON.check + '</span></button>';
+    }
+
+    function build(P, mine) {
+      var cur = THEMES.filter(function (t) { return t[0] === mine; })[0];
+      var tab = function (k, word, sel) {
+        return '<button type="button" role="tab" class="tab" id="' + P + '-tab-' + k + '" aria-controls="' + P + '-pane-' + k + '" aria-selected="' + sel + '" tabindex="' + (sel ? 0 : -1) + '" data-tab="' + k + '">' +
+          '<span class="led" aria-hidden="true"></span><span class="tab-word">' + word + '</span></button>';
+      };
+      return '' +
+      '<div class="view v-library" data-v="library" role="region" aria-label="Library" hidden>' +
+        '<span class="vh" role="status" aria-live="polite" data-live></span>' +
+        '<div class="tabs" role="tablist" aria-label="Library sections">' + tab('albums', 'Albums', true) + tab('loops', 'Loops', false) + tab('more', 'More', false) + '</div>' +
+
+        '<div class="pane" id="' + P + '-pane-albums" role="tabpanel" aria-labelledby="' + P + '-tab-albums">' +
+          '<div class="page" data-page="albums">' +
+            '<div class="scroll">' +
+              '<div class="lib-actions"><button type="button" class="vkey">new album</button><button type="button" class="vkey">paste a code</button></div>' +
+              '<div class="lrows" role="list" aria-label="Albums">' + ALBUMS.map(albumRow).join('') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="page" data-page="album" hidden>' +
+            '<div class="page-head"><button type="button" class="vkey back" data-back="albums" aria-label="Back to Albums">' + ICON.left + 'Albums</button><h4 class="page-title hero-title" tabindex="-1">Rainy Afternoons</h4></div>' +
+            '<div class="scroll">' +
+              '<div class="hero"><span class="art art-3 big" aria-hidden="true"></span>' +
+                '<p class="hero-meta">' + plural(8, 'loop') + SEP + 'playing 3' + NB + 'of' + NB + '8</p>' +
+                '<div class="hero-keys"><button type="button" class="vkey">stop album</button><button type="button" class="vkey">add loops</button><button type="button" class="vkey">share</button></div>' +
+              '</div>' +
+              '<div class="lrows tracks" role="list" aria-label="Loops in Rainy Afternoons">' + TRACKS.map(trackRow).join('') + '</div>' +
+              '<div class="end-keys"><button type="button" class="vkey" data-arm="delete" data-armed="delete it and 2' + NB + 'loops only here?" data-armed-label="delete it and 2 loops only here? Press again to delete Rainy Afternoons">delete album</button></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="pane" id="' + P + '-pane-loops" role="tabpanel" aria-labelledby="' + P + '-tab-loops" hidden>' +
+          '<div class="page" data-page="loops"><div class="scroll"><div class="lrows loops" role="list" aria-label="All loops">' + LOOPS.map(loopRow).join('') + '</div></div></div>' +
+        '</div>' +
+
+        '<div class="pane" id="' + P + '-pane-more" role="tabpanel" aria-labelledby="' + P + '-tab-more" hidden>' +
+          '<div class="page more" data-page="more">' +
+            '<div class="more-head"><h4 class="sec" id="' + P + '-theme-lbl">Theme</h4><span class="theme-name">' + esc(cur[2]) + '</span></div>' +
+            '<div class="themes" role="radiogroup" aria-labelledby="' + P + '-theme-lbl">' + THEMES.map(function (t) { return swatch(t, mine); }).join('') + '</div>' +
+            '<button type="button" class="vkey go" data-go="advanced" aria-labelledby="' + P + '-go" aria-describedby="' + P + '-go-hint"><span class="go-text"><span class="go-name" id="' + P + '-go">Advanced</span><span class="go-hint" id="' + P + '-go-hint">Files, processor, diagnostics</span></span>' + ICON.right + '</button>' +
+          '</div>' +
+          '<div class="page" data-page="advanced" hidden>' +
+            '<div class="page-head"><button type="button" class="vkey back" data-back="more" aria-label="Back to More">' + ICON.left + 'More</button><h4 class="page-title" tabindex="-1">Advanced</h4></div>' +
+            '<div class="scroll">' +
+              '<section class="adv-sec" aria-labelledby="' + P + '-proc"><h5 class="sec" id="' + P + '-proc">Processor</h5>' +
+                '<div class="setrow"><div class="setrow-text"><span class="setrow-name" id="' + P + '-lite">Lighter on processor</span>' +
+                  '<p class="hint" id="' + P + '-lite-hint">Uses less of the phone, so older ones keep up. A busy loop may play a few notes fewer. Starts on for phones with four cores or fewer.</p></div>' +
+                  '<button type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="' + P + '-lite" aria-describedby="' + P + '-lite-hint"><span aria-hidden="true">off</span></button></div>' +
+              '</section>' +
+              '<section class="adv-sec" aria-labelledby="' + P + '-files"><h5 class="sec" id="' + P + '-files">Files</h5>' +
+                '<p class="hint">Your loops and albums live on this device. A backup is one file with all of them.</p>' +
+                '<div class="keys2"><button type="button" class="vkey">back up all</button><button type="button" class="vkey">restore</button><button type="button" class="vkey">copy backup</button><button type="button" class="vkey">paste backup</button></div>' +
+              '</section>' +
+              '<section class="adv-sec" aria-labelledby="' + P + '-diag"><h5 class="sec" id="' + P + '-diag">Diagnostics</h5>' +
+                '<p class="hint">If something misbehaves, play for a minute with the screen off, come back, then copy this and send it over.</p>' +
+                '<pre class="diag" aria-label="Diagnostics report">build 82' + NB + '· cache v82\ncores 8' + NB + '· lighter off\naudio 48' + NB + 'kHz' + NB + '· latency 21' + NB + 'ms\nlate steps 0' + NB + '· underruns 0\nscreen off 0' + NB + 'min</pre>' +
+                '<div class="trim"><div class="setrow-text"><span class="setrow-name" id="' + P + '-trim">Playhead trim</span><span class="hint">Normally leave at zero</span></div>' +
+                  '<button type="button" class="vkey" data-trim="-5" aria-label="Earlier by 5 ms" aria-describedby="' + P + '-trim ' + P + '-trimv">−</button>' +
+                  '<span class="trim-val" id="' + P + '-trimv" aria-live="polite">0' + NB + 'ms</span>' +
+                  '<button type="button" class="vkey" data-trim="5" aria-label="Later by 5 ms" aria-describedby="' + P + '-trim ' + P + '-trimv">+</button></div>' +
+                '<div class="keys3"><button type="button" class="vkey">refresh</button><button type="button" class="vkey">copy</button><button type="button" class="vkey">reset counters</button></div>' +
+              '</section>' +
+              '<section class="adv-sec" aria-labelledby="' + P + '-keys"><h5 class="sec" id="' + P + '-keys">Keyboard</h5>' +
+                '<p class="colophon">Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1' + NB + 'to' + NB + '5' + NB + 're-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>' +
+              '</section>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="view v-now" data-v="now" role="region" aria-label="Now playing" hidden>' +
+        '<div class="np-top"><div class="np-album">Rainy Afternoons</div>' +
+          '<div class="np-pos"><span class="np-dots" aria-hidden="true"><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span><span class="np-of"><span class="vh">Loop </span>3' + NB + 'of' + NB + '8</span></div></div>' +
+        '<div class="np-mid">' +
+          '<div class="np-time"><span aria-hidden="true">−4:12</span><span class="vh">4 minutes 12 seconds left</span></div>' +
+          '<div class="np-bar" role="progressbar" aria-label="Through this loop" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30" aria-valuetext="30%"><i style="--p:30%"></i></div>' +
+          '<div class="np-next">Next: <b>sumi</b></div>' +
+        '</div>' +
+        '<button type="button" class="vkey np-action">leave album</button>' +
+      '</div>';
+    }
+
+    /* ---------- fit guard for the two pages that never scroll ------
+       Same idea as the INFO FIT GUARD: the container steps and caps
+       predict most sizes; this measures what they cannot see (user
+       text spacing, a fallback font) and takes the first step that
+       fits. Runs whenever a view or page is shown, and from fitAll. */
+    function fitViews(phone) {
+      var more = phone.querySelector('.page.more');
+      if (more && !more.closest('[hidden]')) {
+        more.classList.remove('fit-five');
+        more.style.removeProperty('--cap');
+        if (more.scrollHeight > more.clientHeight + 0.5) more.classList.add('fit-five');
+        /* Still too tall (large text AND user spacing): its text steps
+           down toward its own 100% size, never below it, as the Info
+           meta does (Session 11). */
+        for (var c = 1.45; c > 0.99 && more.scrollHeight > more.clientHeight + 0.5; c -= 0.05) {
+          more.style.setProperty('--cap', c.toFixed(2));
+        }
+      }
+      var tabs = phone.querySelector('.tabs');
+      if (tabs && !tabs.closest('[hidden]')) {
+        tabs.style.removeProperty('--tcap');
+        for (var tc = 1.45; tc > 0.99 && !wordsWhole(tabs); tc -= 0.05) tabs.style.setProperty('--tcap', tc.toFixed(2));
+      }
+      var now = phone.querySelector('.v-now');
+      if (now && !now.hidden) {
+        var t = now.querySelector('.np-time'), mid = now.querySelector('.np-mid');
+        var steps = [[false, ''], [true, ''], [true, '56px'], [true, '48px'], [true, '40px']];
+        for (var k = 0; k < steps.length; k++) {
+          now.classList.toggle('fit-tight', steps[k][0]);
+          t.style.fontSize = steps[k][1];
+          if (now.scrollHeight <= now.clientHeight + 0.5 && mid.scrollHeight <= mid.clientHeight + 0.5) break;
+        }
+      }
+    }
+    window.fitViews = fitViews;
+    /* True if no word in el is split across lines or wider than its
+       box. Used by the fit guard and by auditPhones(). */
+    function wordsWhole(el) {
+      var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), n;
+      while ((n = walker.nextNode())) {
+        if (n.parentNode.closest('.vh, [hidden], pre')) continue;
+        var box = n.parentNode.getBoundingClientRect();
+        /* A break at a hyphen ("lock-screen") is a normal line break. */
+        var re = /[^\s\u00a0\-]+/g, m;
+        while ((m = re.exec(n.data))) {
+          var rg = document.createRange(); rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length);
+          var rects = Array.prototype.filter.call(rg.getClientRects(), function (r) { return r.width > 0; });
+          if (rects.length > 1) return false;
+          if (rects.length && (rects[0].right > box.right + 1 || rects[0].left < box.left - 1)) return false;
+        }
+      }
+      return true;
+    }
+    window.wordsWhole = wordsWhole;
+
+    /* ---------- scroll edges: a hairline only where there is more */
+    function edges(sc) {
+      if (!sc || !sc.clientHeight) return;
+      sc.classList.toggle('more-up', sc.scrollTop > 0.5);
+      sc.classList.toggle('more-down', sc.scrollTop + sc.clientHeight < sc.scrollHeight - 0.5);
+    }
+    function edgesIn(root) { root.querySelectorAll('.scroll').forEach(edges); }
+    window.updateScrollEdges = function () { document.querySelectorAll('.phone').forEach(edgesIn); };
+
+    function show(el, on) { if (el) el.hidden = !on; }
+
+    function setView(phone, v) {
+      var cur = phone.dataset.view || 'layers';
+      if (v === cur) return;
+      if (cur !== 'library') phone.dataset.backView = cur;
+      phone.dataset.view = v;
+      show(phone.querySelector('.layers'), v === 'layers');
+      show(phone.querySelector('.v-library'), v === 'library');
+      show(phone.querySelector('.v-now'), v === 'now');
+      phone.querySelector('.btn-lib').setAttribute('aria-pressed', v === 'library');
+      phone.querySelector('.btn-now').setAttribute('aria-pressed', v === 'now');
+      phone.querySelector('.btn-layers').hidden = v === 'layers';
+      fitViews(phone);
+      edgesIn(phone);
+    }
+    function setTab(phone, k, focus) {
+      phone.querySelectorAll('.tab').forEach(function (t) {
+        var on = t.dataset.tab === k;
+        t.setAttribute('aria-selected', on);
+        t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+        show(document.getElementById(t.getAttribute('aria-controls')), on);
+      });
+      fitViews(phone);
+      edgesIn(phone);
+    }
+    /* A page inside a tab: an album, or Advanced. Focus moves to the
+       new page's heading; going back returns it to the key that
+       opened the page. */
+    function openPage(phone, from, to, opener, focus) {
+      var pane = phone.querySelector('[data-page="' + from + '"]').parentNode;
+      show(pane.querySelector('[data-page="' + from + '"]'), false);
+      var page = pane.querySelector('[data-page="' + to + '"]');
+      show(page, true);
+      page._opener = opener || null;
+      fitViews(phone);
+      edgesIn(phone);
+      if (focus) { var h = page.querySelector('[tabindex="-1"]'); if (h) h.focus(); }
+    }
+    function goBack(phone, page, focus) {
+      var pane = page.parentNode;
+      var back = page.querySelector('[data-back]').dataset.back;
+      show(page, false);
+      show(pane.querySelector('[data-page="' + back + '"]'), true);
+      edgesIn(phone);
+      if (focus && page._opener) page._opener.focus();
+    }
+    function applyTheme(phone, cls) {
+      var th = THEMES.filter(function (t) { return t[0] === cls; })[0];
+      THEMES.forEach(function (t) { phone.classList.remove(t[0]); });
+      phone.classList.add(cls);
+      phone.setAttribute('aria-label', th[3] + ' mockup');
+      phone.querySelectorAll('.sw').forEach(function (s) {
+        var on = s.dataset.theme === cls;
+        s.setAttribute('aria-checked', on);
+        s.tabIndex = on ? 0 : -1;
+      });
+      phone.querySelector('.theme-name').textContent = th[2];
+    }
+
+    document.querySelectorAll('.phone').forEach(function (phone, n) {
+      var mine = THEMES.filter(function (t) { return phone.classList.contains(t[0]); })[0][0];
+      var P = 'p' + (n + 1);
+      phone.querySelector('.dynamic-inner').insertAdjacentHTML('beforeend', build(P, mine));
+      phone.dataset.view = 'layers';
+      var layers = phone.querySelector('.layers');
+      layers.tabIndex = -1;
+
+      /* Buttons zone: Library and Now playing toggle their view; a
+         second press goes back to where you were. Layers only shows
+         away from Layers; pressing it hides it, so focus moves to the
+         Layers view itself (focus is never dropped). */
+      phone.querySelector('.btn-lib').addEventListener('click', function () {
+        setView(phone, phone.dataset.view === 'library' ? (phone.dataset.backView || 'layers') : 'library');
+      });
+      phone.querySelector('.btn-now').addEventListener('click', function () {
+        setView(phone, phone.dataset.view === 'now' ? 'layers' : 'now');
+      });
+      phone.querySelector('.btn-layers').addEventListener('click', function () {
+        setView(phone, 'layers');
+        layers.focus();
+      });
+
+      /* Tabs: the APG tabs pattern, automatic activation. */
+      var tabs = Array.prototype.slice.call(phone.querySelectorAll('.tab'));
+      tabs.forEach(function (t, i) {
+        t.addEventListener('click', function () { setTab(phone, t.dataset.tab, false); });
+        t.addEventListener('keydown', function (e) {
+          var j = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+          if (j === undefined) return;
+          e.preventDefault();
+          setTab(phone, tabs[(j + tabs.length) % tabs.length].dataset.tab, true);
+        });
+      });
+
+      /* Theme: the APG radio-group pattern. Arrows move and choose.
+         Choosing a theme re-skins this phone, live. */
+      var radios = Array.prototype.slice.call(phone.querySelectorAll('.sw'));
+      radios.forEach(function (r, i) {
+        r.addEventListener('click', function () { applyTheme(phone, r.dataset.theme); });
+        r.addEventListener('keydown', function (e) {
+          var step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+          if (!step) return;
+          e.preventDefault();
+          var next = radios[(i + step + radios.length) % radios.length];
+          applyTheme(phone, next.dataset.theme);
+          next.focus();
+        });
+      });
+
+      /* Pages. Only the playing album opens in this mockup. */
+      phone.querySelectorAll('[data-open="album"]:not([data-inert])').forEach(function (b) {
+        b.addEventListener('click', function (e) { openPage(phone, 'albums', 'album', b, true); });
+      });
+      phone.querySelector('[data-go="advanced"]').addEventListener('click', function (e) {
+        openPage(phone, 'more', 'advanced', e.currentTarget, true);
+      });
+      phone.querySelectorAll('[data-back]').forEach(function (b) {
+        b.addEventListener('click', function (e) { goBack(phone, b.closest('.page'), true); });
+      });
+
+      /* The Lighter on processor switch: the layer rows' on / off key. */
+      phone.querySelectorAll('.v-library .vkey[role="switch"]').forEach(function (s) {
+        s.addEventListener('click', function () {
+          var on = s.getAttribute('aria-checked') !== 'true';
+          s.setAttribute('aria-checked', on);
+          s.querySelector('span').textContent = on ? 'on' : 'off';
+        });
+      });
+      /* Playhead trim: ±5 ms, -200 to 200 (PR #153's range). */
+      phone.querySelectorAll('[data-trim]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var out = b.parentNode.querySelector('.trim-val');
+          var v = Math.max(-200, Math.min(200, (parseInt(out.dataset.v || '0', 10)) + parseInt(b.dataset.trim, 10)));
+          out.dataset.v = v;
+          out.textContent = (v < 0 ? '−' : '') + Math.abs(v) + NB + 'ms';
+        });
+      });
+      /* Destructive keys ask twice (PR #153). Armed for 4 seconds.
+         Armed, the key's visible words AND its accessible name change
+         (the name starts with the visible words, WCAG 2.5.3), and a
+         polite status line says what a second press will do. */
+      var live = phone.querySelector('[data-live]');
+      phone.querySelectorAll('[data-arm]').forEach(function (b) {
+        var word = b.textContent, label = b.getAttribute('aria-label'), timer;
+        function disarm() {
+          b.classList.remove('armed'); b.textContent = word;
+          if (label) b.setAttribute('aria-label', label); else b.removeAttribute('aria-label');
+          if (live) live.textContent = '';
+        }
+        b.addEventListener('click', function () {
+          clearTimeout(timer);
+          if (!b.classList.contains('armed')) {
+            b.classList.add('armed');
+            b.textContent = b.dataset.armed || 'sure?';
+            b.setAttribute('aria-label', b.dataset.armedLabel);
+            if (live) live.textContent = b.dataset.armedLabel.replace(/^[^?]*\? /, '') + '.';
+            timer = setTimeout(disarm, 4000);
+          } else { disarm(); }
+        });
+      });
+      phone.querySelectorAll('.scroll').forEach(function (sc) {
+        sc.addEventListener('scroll', function () { edges(sc); }, { passive: true });
+      });
+    });
+
+    /* Review hooks (gallery and test kit only). */
+    window.setView = function (phone, v) { setView(phone, v); };
+    window.libGo = function (phone, tab, page) {
+      setView(phone, 'library');
+      setTab(phone, tab, false);
+      phone.querySelectorAll('.v-library .page').forEach(function (p) {
+        var k = p.dataset.page;
+        if (k === 'album' || k === 'advanced') p.hidden = k !== page;
+        if (k === 'albums') p.hidden = page === 'album';
+        if (k === 'more') p.hidden = page === 'advanced';
+      });
+      fitViews(phone);
+      edgesIn(phone);
+    };
+    window.applyTheme = applyTheme;
+    var viewRadios = document.querySelectorAll('input[name="view-mode"]');
+    viewRadios.forEach(function (r) {
+      r.addEventListener('change', function (e) {
+        var v = e.target.value;
+        document.querySelectorAll('.phone').forEach(function (ph) {
+          if (v === 'layers' || v === 'now') { setView(ph, v); return; }
+          var m = v.split(':');
+          window.libGo(ph, m[1], m[2] || '');
+        });
+        if (typeof showAudit === 'function') showAudit();
+      });
+    });
+    if ('ResizeObserver' in window) {
+      var ro = new ResizeObserver(function () { window.updateScrollEdges(); });
+      document.querySelectorAll('.phone .scroll').forEach(function (sc) { ro.observe(sc); if (sc.firstElementChild) ro.observe(sc.firstElementChild); });
+    }
+  })();
+
+  /* ============================================================
      TEXT-SIZE REVIEW + AUDIT  (Session 5)
      The radios set the root font size, which is the same thing a
      user's text-size setting does. All phone text is rem, and the
@@ -4546,7 +6093,54 @@
       var zi = box(ph.querySelector('.zone-info')).height, zb = box(ph.querySelector('.zone-buttons')).height;
       if (Math.abs(zi - 205) > 0.6 || Math.abs(zb - 240) > 0.6) flag('a locked zone changed height');
       if (ph.scrollHeight > ph.clientHeight + 0.5) flag('phone scrolls');
+      /* v17 — the Library and Now Playing views. Only a .scroll may
+         hold more than it shows; everything else must fit inside
+         the Dynamic panel. Every key is drawn at 48 x 48 or more,
+         and no text is under 11px or wider than its own box. */
+      var dyn = ph.querySelector('.dynamic-inner'), dr = box(dyn);
+      var view = ph.querySelector('.view:not([hidden])');
+      if (view) {
+        view.querySelectorAll('*').forEach(function (e) {
+          if (e.closest('[hidden]') || e.closest('.vh')) return;
+          var inScroll = e.closest('.scroll');
+          var r = box(e); if (!r.width && !r.height) return;
+          if (!inScroll && (r.bottom > dr.bottom + 0.5 || r.top < dr.top - 0.5)) flag('view content outside the Dynamic zone');
+          if (r.right > dr.right + 0.5 || r.left < dr.left - 0.5) flag('view content wider than the Dynamic zone');
+          if (e.matches('button') && (r.width < 47.9 || r.height < 47.9)) flag('target under 48 x 48');
+          var own = Array.prototype.some.call(e.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); });
+          if (own) {
+            if (parseFloat(getComputedStyle(e).fontSize) < 10.9) flag('text below 11px');
+            var rg = document.createRange(); rg.selectNodeContents(e);
+            Array.prototype.forEach.call(rg.getClientRects(), function (t) {
+              if (t.width && (t.right > r.right + 1 || t.left < r.left - 1)) flag('text wider than its box');
+            });
+          }
+        });
+        if (!window.wordsWhole(view)) flag('a word broken mid-word');
+        /* On the pages that never scroll, no two pieces may overlap. */
+        var parts = view.querySelectorAll('.np-album, .np-pos, .np-time, .np-bar, .np-next, .np-action, .more-head, .themes, .go, .tabs');
+        for (var i = 0; i < parts.length; i++) for (var j = i + 1; j < parts.length; j++) {
+          if (parts[i].closest('[hidden]') || parts[j].closest('[hidden]')) continue;
+          var a = box(parts[i]), c = box(parts[j]);
+          if (a.left < c.right - 0.5 && c.left < a.right - 0.5 && a.top < c.bottom - 0.5 && c.top < a.bottom - 0.5) flag('pieces overlap');
+        }
+        view.querySelectorAll('.page:not([hidden]), .v-now').forEach(function (pg) {
+          if (pg.closest('[hidden]')) return;
+          if (!pg.querySelector('.scroll') && pg.scrollHeight > pg.clientHeight + 0.5) flag('a page that must not scroll overflows');
+        });
+      }
+      /* Only a .scroll may hold more than it shows: never the panel,
+         a zone, a view, a pane or a page (review, v17). */
+      ph.querySelectorAll('.zone-info, .zone-dynamic, .dynamic-inner, .zone-buttons, .view, .pane, .page, .tabs').forEach(function (z) {
+        if (z.closest('[hidden]')) return;
+        if (z.scrollHeight > z.clientHeight + 0.5 && getComputedStyle(z).overflowY !== 'visible') flag('a box that must not scroll can scroll');
+        if (z.scrollTop > 0) flag('a box that must not scroll is scrolled');
+      });
+      ph.querySelectorAll('.zone-buttons .btn:not([hidden])').forEach(function (b) {
+        var r = box(b); if (r.width < 47.9 || r.height < 47.9) flag('target under 48 x 48');
+      });
       ph.querySelectorAll('.layer').forEach(function (L) {
+        if (L.closest('[hidden]')) return;   /* v17: another view is up */
         var lbl = L.querySelector('.lbl'), lr = box(L);
         if (lbl.scrollWidth > lbl.clientWidth + 0.5) flag('layer label clipped');
         Array.prototype.forEach.call(L.children, function (c) {
@@ -4706,7 +6300,7 @@
     });
     if (cut) phone.classList.add('fit-stack');
   }
-  function fitAll() { document.querySelectorAll('.phone').forEach(function (ph) { fitLayers(ph); fitInfo(ph); }); }
+  function fitAll() { document.querySelectorAll('.phone').forEach(function (ph) { fitLayers(ph); fitInfo(ph); if (window.fitViews) window.fitViews(ph); }); }
   window.fitAll = fitAll;
 
   /* ============================================================
@@ -4774,7 +6368,7 @@
     var fitObs = new ResizeObserver(queueFit);
     /* .meta too (Session 12): above 130% the name is capped, so
        only the meta and labels change size. */
-    document.querySelectorAll('.phone .name, .phone .info-row, .phone .meta, .phone .layer .lbl').forEach(function (el) { fitObs.observe(el); });
+    document.querySelectorAll('.phone .name, .phone .info-row, .phone .meta, .phone .layer .lbl, .phone .more-head, .phone .np-album').forEach(function (el) { fitObs.observe(el); });
   }
 
   function showAudit() {

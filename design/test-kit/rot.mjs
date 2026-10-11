@@ -29,7 +29,7 @@ await p.click('.t-dawn .btn-play'); const pz=await shown(); await p.mouse.move(5
 await p.click('.t-dawn .btn-play');
 console.log('aria (200%):\n'+(await p.locator('.t-dawn .info-inner').ariaSnapshot()));
 const cover=await p.evaluate(()=>{const n=document.querySelector('.t-dawn .name').getBoundingClientRect(); const e=document.elementFromPoint(n.x+5,n.y+5); return e.className;}); console.log('element under the name:', cover);
-  const tabs=await p.evaluate(()=>[...document.querySelectorAll('.t-dawn button')].filter(b=>!b.hidden).length);
+  const tabs=await p.evaluate(()=>[...document.querySelectorAll('.t-dawn button')].filter(b=>b.checkVisibility()).length);
 console.log('focusable buttons in Dawn at 200%:', tabs);
 await p.check('input[name="text-size"][value="100"]'); await p.waitForTimeout(100);
 console.log('back to 100%: next button', await btnState(), '| lines', await shown());
