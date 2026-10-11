@@ -8,8 +8,8 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: whatever the brain queues after item 32 (the
-ears-approved new instruments are waiting, "Later, not queued"). A new
+standing rules). Next: item 33, more words on `/rank` (the
+ears-approved new instruments wait behind it, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
@@ -1239,6 +1239,40 @@ Driftloom's engine. One PR (split into a/b if cleaner), next version.
 - **Mono stays** (Mikey, 2026-10-11): one output channel.
 - **Docs:** the README intro, the `core.js` header, `NOTES.md`, and the
   Done line.
+
+## 33. More words on the ranking page (`/rank`)
+
+The words (roadmap 19) wait on Mikey's rankings, and he wants to rank
+hundreds of loops in one go so the next brain session has data to fit.
+A small item: data in `rank.html`, no generator or synth change.
+
+- **Add the candidate words Mikey names** in the session's opening
+  message, from `docs/MOODS.md`, "Candidate words". Add only the ones he
+  names; if he names none, stop and ask. Each goes in the group the
+  brain assigned (one group per map, as `GROUPS` explains):
+  - color: bright, sunny, sunlit, moonlit, starry, twilight, dusky,
+    hopeful, magical, enchanted, wondrous, triumphant, wistful,
+    nostalgic, bittersweet
+  - shimmer: tinkling, chiming, hazy
+  - air: hushed, snug, homey, sleepy, drowsy, lulling, tranquil,
+    reverent, meditative
+  - motion: lilting, jaunty, sprightly, nimble, skipping, tiptoeing,
+    hypnotic, adventurous
+  - flavor: tangy, zesty, tart, mischievous, cheeky, plucky, mysterious
+- **Bump `POOL_VERSION` to 3**, so the saved answers say which pool a
+  trial came from. Saved answers from pools 1 and 2 must still load,
+  export and count toward the balance (a new word is shown more often
+  until it catches up; check that this still holds).
+- **Report the balance:** with the final pool, how many trials until
+  every word has been shown at least 5 times, and at least 10 (simulate
+  from Mikey's answers so far being empty, and from 20 pool-1 answers).
+  A big group spreads its words thin, so say which group is slowest.
+- **Keep the trial as it is** (five words, one per group, the hidden
+  repeats). Don't change the loops (`START_SEED`, `newSpec`).
+- **Checks:** the page loads and plays a trial (core and `?engine=js`),
+  Export writes the new words and the pool, the tests pass. Bump BUILD
+  and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
+  results" as pool 3.
 
 ## Later, not queued
 
