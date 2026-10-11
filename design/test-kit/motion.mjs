@@ -7,6 +7,6 @@ async function press(sel){ const el=await p.$(sel); await el.scrollIntoViewIfNee
 const all=async()=>p.evaluate(()=>{let moving=0, n=0; document.querySelectorAll('.phone *').forEach(e=>{for(const pe of [null,'::before','::after']){const c=getComputedStyle(e,pe); n++; if(c.transitionDuration.split(',').some(d=>parseFloat(d)>0)||c.animationName!=='none') moving++;}}); return `${moving} of ${n} boxes in the phones transition/animate`;});
 for (const [label,fn] of [['no preference',async()=>p.emulateMedia({reducedMotion:'no-preference'})],['prefers-reduced-motion: reduce',async()=>p.emulateMedia({reducedMotion:'reduce'})],['gallery sim switch',async()=>{await p.emulateMedia({reducedMotion:'no-preference'}); await p.check('#motion-mode');}]]) {
   await fn();
-  console.log(label.padEnd(32), '| play press:', await press('.t-dawn .btn-play'), '| roll press:', await press('.t-dawn .btn-roll'), '| library press:', await press('.t-dawn .row-2 .btn'), '| off key at rest:', await p.evaluate(()=>getComputedStyle(document.querySelector('.t-dawn .layer.dim .btn-on')).transform), '|', await all());
+  console.log(label.padEnd(32), '| play press:', await press('.t-dawn .btn-play'), '| roll press:', await press('.t-dawn .btn-roll'), '| save press:', await press('.t-dawn .row-2 .btn:last-child'), '| off key at rest:', await p.evaluate(()=>getComputedStyle(document.querySelector('.t-dawn .layer.dim .btn-on')).transform), '|', await all());
 }
 await b.close();
