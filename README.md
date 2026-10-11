@@ -57,7 +57,7 @@ confirm what you are actually running; bump `BUILD` in `js/main.js` and
 | S | save the current one to Favorite Loops |
 | 1–5 | re-roll drums, bass, keys, melody, air |
 
-The screen is one page that never scrolls: the **card** at the top shows
+The screen is one page that never scrolls (the Vibes list aside): the **card** at the top shows
 what is playing (tap its name to rename it), the **viewport** in the middle,
 and the **buttons** at the bottom: previous, play and next (Next past the
 newest loop makes a new one); Library and Save; Now Playing and the switch
@@ -66,6 +66,10 @@ between Layers and Sound.
 - **Now Playing** is the calm view: time left (counting down, with a minus)
   or time playing (endless loops), album position,
   what Next will do, and Leave album / Back to album at its bottom edge.
+  **Vibes**, at its top left, opens the list of vibes (cozy, joyful,
+  misty...): pick any number, and every new loop leans toward up to five
+  of them, the loop's details showing which and how much. The loop playing,
+  albums and saved loops are left as they are. Clear all to go back.
 - **Save** is saving and sharing. A saved loop always lives in at least one
   album: tap Favorite Loops (or any album) to save it there. Taking a loop
   out of its last album deletes it. A saved loop that has changed since

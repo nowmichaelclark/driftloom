@@ -49,6 +49,13 @@ function mixParts(spec) {
 }
 
 function feelParts(spec) {
+  // A loop drawn with vibes (queue item 38b) shows what it was steered by,
+  // weights included, in place of the mood line. Steered, not measured:
+  // the honest share of the sound comes with the dials (items 34-35).
+  if (spec.vibes && Object.keys(spec.vibes).length) {
+    const parts = asMixParts(spec.vibes, (k) => k);
+    if (parts.length) return parts;
+  }
   if (spec.feelMix && Object.keys(spec.feelMix).length) {
     return asMixParts(spec.feelMix, moodWord);
   }

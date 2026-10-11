@@ -1,4 +1,4 @@
-import { newSpec, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
+import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
 import { ENGINE, loadCore, fetchCore, coreUnsupported } from './core.js';
 import { Engine } from './engine.js';
@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v86';
+const BUILD = 'v87';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -26,6 +26,7 @@ import { drawCover } from './cover.js';
 import * as store from './storage.js';
 import * as ui from './ui.js';
 import * as library from './library.js';
+import { VIBE_IDS } from './vibes.js';
 
 const state = {
   ctx: null,
@@ -43,6 +44,9 @@ const state = {
   view: 'now',
   lastView: 'now',
   lastEdit: 'layers',
+  // The listener's vibes (queue item 38b), in VIBE_IDS order. Every new
+  // loop leans toward them; saved in the prefs.
+  vibes: [],
   // The album most recently left, so Now Playing can offer the way back.
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
@@ -433,8 +437,63 @@ function setView(view) {
   if (view === 'library') library.render();
   if (view === 'save') library.renderSave();
   if (view === 'now') renderNow();
+  if (view === 'vibes') renderVibes();
   refreshCard();
   store.setPrefs({ view: state.lastView, edit: state.lastEdit });
+}
+
+// ----------------------------------------------------------------- vibes
+
+// Queue item 38b. The Vibes key on Now Playing opens this view in its
+// place; Close goes back. No limit on how many: past five, each new loop
+// picks five of them (generator.js, `newSpec`).
+function renderVibes() {
+  const list = ui.el('vibesList');
+  if (!list.children.length) {
+    for (const id of VIBE_IDS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'vkey vb-key';
+      b.dataset.vibe = id;
+      const led = document.createElement('span');
+      led.className = 'led';
+      led.setAttribute('aria-hidden', 'true');
+      const word = document.createElement('span');
+      word.className = 'vb-word';
+      word.textContent = id;
+      b.append(led, word);
+      b.addEventListener('click', () => toggleVibe(id));
+      list.appendChild(b);
+    }
+  }
+  const on = new Set(state.vibes);
+  for (const b of list.children) b.setAttribute('aria-pressed', on.has(b.dataset.vibe) ? 'true' : 'false');
+  const n = state.vibes.length;
+  ui.el('vibesCount').textContent = n ? `${n} for new loops` : 'none: new loops as usual';
+  ui.el('vibesClear').disabled = !n;
+  updateVibesKey();
+}
+
+function setVibes(list) {
+  state.vibes = vibeSelection(list);
+  store.setPrefs({ vibes: state.vibes });
+  if (state.view === 'vibes') renderVibes();
+  else updateVibesKey();
+  // Next's name may be "something new" either way; nothing else changes
+  // until the next new loop.
+}
+
+function toggleVibe(id) {
+  setVibes(state.vibes.includes(id) ? state.vibes.filter((v) => v !== id) : [...state.vibes, id]);
+}
+
+// The key says how many are picked, so Now Playing shows that new loops
+// are leaning without opening the view.
+function updateVibesKey() {
+  const n = state.vibes.length;
+  const b = ui.el('vibesBtn');
+  b.textContent = n ? `vibes \u00b7 ${n}` : 'vibes';
+  b.setAttribute('aria-label', n ? `Vibes, ${n} picked` : 'Vibes');
 }
 
 // ----------------------------------------------------------- now playing
@@ -745,6 +804,14 @@ function advancePlaylist(step) {
 
 // ------------------------------------------------------------- actions
 
+// Every new loop is drawn here, so every new loop leans toward the vibes:
+// Next at the end of the history (also a loop ending, and the N key), Play
+// before any loop exists, and the first loop when the app opens. Not the
+// loop playing, an album's tracks, a saved loop, history or a re-roll.
+function newSpec() {
+  return drawSpec(undefined, state.vibes);
+}
+
 function togglePlay() {
   ensureAudio();
   if (!state.engine.spec) {
@@ -990,6 +1057,10 @@ function wire() {
     exportMidi: (spec) => exportMidi(cloneSpec(spec)),
   });
 
+  ui.el('vibesBtn').addEventListener('click', () => setView('vibes'));
+  ui.el('vibesClose').addEventListener('click', () => setView('now'));
+  ui.el('vibesClear').addEventListener('click', () => setVibes([]));
+
   ui.el('libraryBtn').addEventListener('click', () => {
     setView(state.view === 'library' ? state.lastView : 'library');
   });
@@ -1216,6 +1287,8 @@ function wire() {
 
   const cores = navigator.hardwareConcurrency || 4;
   const prefs = store.getPrefs();
+  state.vibes = vibeSelection(prefs.vibes);
+  updateVibesKey();
   state.lite = prefs.lite ?? cores <= 4;
   setLiteSwitch(state.lite);
   // Drift was a switch plus an amount; the amount was never kept, so an old
