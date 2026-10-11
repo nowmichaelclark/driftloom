@@ -39,6 +39,8 @@ jobs:
         run: node test/generator.test.mjs
       - name: Dials tests
         run: node test/dials.test.mjs
+      - name: Word fit and word album tests
+        run: node test/fit.test.mjs
       # Playwright pinned to the version whose Chromium the baseline was
       # rendered with; the tool is a dependency of the tools, not the app.
       - name: Chromium, for the baseline

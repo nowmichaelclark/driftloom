@@ -1758,6 +1758,35 @@ Mikey decides this line:
   against this build), 20 a side, had 0 against 0. Not chased, per the
   brief; the pooled rate for this build is 5 of 60 runs.
 
+- **Item 36: stopped before building, for a decision on reflective
+  (2026-10-11, the hands' Session 17).** Measured first, as the item asks:
+  10,000 fresh loops whose top mood is reflective (128,471 drawn), by the
+  item's own bands: dark 4.9%, inward 32.3%, **neutral 53.8%**, bright
+  9.0%. Modes: dorian 31.0%, aeolian 14.4%, kumoi 10.4%, minor pentatonic
+  9.8%, mixolydian 4.6%, hirajoshi 4.1%, akebono 3.9%, insen 3.3%,
+  whole-tone 3.0%, ionian 3.0%, the rest under 3%. The bands put dorian
+  (0.46) and kumoi (0.52) in neutral, while the item counts them as inward
+  ("a reflective loop is inward (dorian, kumoi, minor pentatonic, insen)"),
+  so the aim can't be read one way:
+  - **as the bands are written,** reflective already reaches the neutral
+    modes more than half the time and inward is not the largest; widening
+    the pull would push neutral further from "inward still the largest";
+  - **with dorian and kumoi as inward** (the edge at about 0.53), inward is
+    about 81% and neutral about 6% (mixolydian, ritusen), which is the
+    item's premise, and widening toward the 0.53-0.75 modes is the change.
+
+  Which reading? Below `INWARD_FROM` it is mostly reflective, not only:
+  of the whole draw, 7,939 reflective-topped loops against 523 comforting,
+  403 peaceful and 171 soothing, so a change there touches those a little
+  too. The other half is
+  ready to build: loops all cinder or all shatter are never in a bright
+  mode today (0% of 2,452 and 1,591 glad ones), while blends led by them
+  borrow brightness from their partners already (46% of glad loops 50-80%
+  cinder, 34% shatter). Cinder has no progressions for ionian or
+  mixolydian yet (the generic shapes would play), so the build adds
+  I-IV-V-I and I-V (mixolydian's V spelled major), the Andalusian sets
+  staying in their own modes.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -2162,3 +2191,9 @@ Mikey decides this line:
   every new loop (Next, a loop ending, the first loop on opening), and a
   vibe loop's details show its vibes and weights. Listen for: pick a few,
   press Next a few times, and say which loops fit the vibes and which don't.
+- #175, the ten dials (item 34), tools only:
+  https://6cf10684-driftloom.nowmichaelclark.workers.dev (the app as v87).
+  `node tools/dials.mjs <export|codes>`, scaled to the catalog
+  (`test/dial-scale.json`), with `--yardsticks` and `--ears`. Nothing to
+  hear; the energy dial separates Mikey's energy words more clearly than
+  tempo or notes per second alone.
