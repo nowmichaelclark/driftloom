@@ -37,6 +37,8 @@ jobs:
         run: node test/core-host.test.mjs
       - name: Generator tests
         run: node test/generator.test.mjs
+      - name: Dials tests
+        run: node test/dials.test.mjs
       # Playwright pinned to the version whose Chromium the baseline was
       # rendered with; the tool is a dependency of the tools, not the app.
       - name: Chromium, for the baseline
