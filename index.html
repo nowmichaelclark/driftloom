@@ -17,7 +17,7 @@
 
 <!-- One screen, three zones (design v17): Info on top, the Dynamic zone in
      the middle (the one thing being worked on), Buttons at the bottom.
-     Nothing scrolls the page; only the Library's lists and Advanced scroll,
+     Nothing scrolls the page; only the Library's lists, Advanced and the Vibes list scroll,
      inside the Dynamic zone. -->
 <main id="app" class="phone">
 <!-- The theme is applied before first paint, so the screen never flashes
@@ -50,9 +50,15 @@
 
       <!-- Now Playing: how long is left, where you are, what Next does. -->
       <div id="viewNow" class="view v-now" data-view="now" role="region" aria-label="Now playing" hidden>
-        <div id="nowAlbum" class="np-top" hidden>
-          <div id="nowAlbumName" class="np-album"></div>
-          <div class="np-pos"><span id="nowDots" class="np-dots" aria-hidden="true"></span><span id="nowOf" class="np-of"></span></div>
+        <!-- Vibes at the top left, left of an album's title row (queue
+             item 38b); the album stays centred between the key and a
+             spacer as wide as the key. -->
+        <div class="np-head">
+          <button id="vibesBtn" type="button" class="vkey np-vibes">vibes</button>
+          <div id="nowAlbum" class="np-top" hidden>
+            <div id="nowAlbumName" class="np-album"></div>
+            <div class="np-pos"><span id="nowDots" class="np-dots" aria-hidden="true"></span><span id="nowOf" class="np-of"></span></div>
+          </div>
         </div>
         <div class="np-mid">
           <div id="nowBig" class="np-time">0:00</div>
@@ -60,6 +66,18 @@
           <div id="nowNext" class="np-next"></div>
         </div>
         <button id="nowAction" type="button" class="vkey np-action" hidden></button>
+      </div>
+
+      <!-- Vibes: every vibe, two columns, tap to pick. The one view that
+           scrolls whole (there are many); its header row stays put, Close
+           where the Vibes key was. -->
+      <div id="viewVibes" class="view v-vibes" data-view="vibes" role="region" aria-label="Vibes" hidden>
+        <div class="vb-head">
+          <button id="vibesClose" type="button" class="vkey np-vibes">close</button>
+          <span id="vibesCount" class="vb-count" aria-live="polite"></span>
+          <button id="vibesClear" type="button" class="vkey">clear all</button>
+        </div>
+        <div id="vibesList" class="vb-list" role="group" aria-label="Vibes for new loops"></div>
       </div>
 
       <div id="viewSounds" class="view v-sounds" data-view="sounds" role="region" aria-label="Sound" hidden>

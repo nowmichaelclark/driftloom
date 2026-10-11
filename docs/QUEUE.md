@@ -2150,3 +2150,9 @@ Mikey decides this line:
   https://f8df3b08-driftloom.nowmichaelclark.workers.dev/rank.html: pool 3, 39
   more words (71 in all), one group per map. Listen for nothing; rank as before. Check that new words
   turn up often at first and that Export writes `"pool": 3`.
+- #173, vibes in the generator (item 38a, v86),
+  https://29ea8635-driftloom.nowmichaelclark.workers.dev: 71 recipes in
+  `js/vibes.js`, `newSpec(seed, vibes)`, share format 4 for vibe loops
+  (plain loops stay format 3), `stats.mjs --vibes` / `--vibe-each`. Listen
+  for nothing yet (no button until 38b); every existing loop and code is
+  unchanged.
