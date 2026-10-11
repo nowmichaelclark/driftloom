@@ -25,6 +25,7 @@ import { SCALES } from './theory.js';
 import { CHARACTERS, resolveKey } from './characters.js';
 import { codeForMood, moodForCode } from './moods.js';
 import { seedName } from './rng.js';
+import { VIBES, VIBE_IDS } from './vibes.js';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const DECODE_MAP = (() => {
@@ -35,7 +36,16 @@ const DECODE_MAP = (() => {
   return m;
 })();
 
-export const FORMAT = 3;
+// The newest format this build reads and writes. Format 4 (queue item 38a)
+// appends a loop's vibes; a loop without vibes is still written as format 3,
+// so every code already in circulation, every saved album and every `/rank`
+// answer keeps the exact string it had.
+export const FORMAT = 4;
+const PLAIN_FORMAT = 3;
+
+function hasVibes(spec) {
+  return !!(spec && spec.vibes && Object.keys(spec.vibes).some((k) => VIBE_IDS.indexOf(k) >= 0));
+}
 
 // Frozen orderings. These must never be reordered or codes already written
 // down stop meaning what they meant; append only.
@@ -90,7 +100,7 @@ class Reader {
 
 // ---------------------------------------------------------------- spec <-> bytes
 
-function writeSpec(w, spec) {
+function writeSpec(w, spec, version = FORMAT) {
   // The generated name falls out of the seed, so it only costs bytes when
   // the user has renamed the loop.
   const generated = seedName(spec.seed >>> 0);
@@ -151,6 +161,20 @@ function writeSpec(w, spec) {
   // Track length, so a shared album keeps its pacing. Two bytes since
   // format 3: a two-bar loop can now be set to run for more than a day.
   w.u16(Math.max(0, Math.min(65535, spec.playFor || 0)));
+
+  // Format 4: the vibes it was steered by (count; id and weight each), then
+  // the strength. A count of zero is a loop without vibes in an album that
+  // has some.
+  if (version >= 4) {
+    const vibes = spec.vibes || {};
+    const ids = Object.keys(vibes).filter((k) => VIBE_IDS.indexOf(k) >= 0);
+    w.u8(ids.length);
+    for (const k of ids) {
+      w.u8(VIBE_IDS.indexOf(k));
+      w.unit(vibes[k]);
+    }
+    if (ids.length) w.unit(spec.vibeStrength ?? 0.7);
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -210,6 +234,23 @@ function readSpec(r, version = FORMAT) {
   if (r.done) spec.playFor = null;
   else if (version < 3) spec.playFor = r.u8() || null;
   else spec.playFor = r.u16() || null;
+
+  if (version >= 4) {
+    const count = r.u8();
+    if (count) {
+      const vibes = {};
+      for (let i = 0; i < count; i++) {
+        const key = VIBE_IDS[r.u8()];
+        const weight = r.unit();
+        if (key && VIBES[key]) vibes[key] = weight;
+      }
+      const strength = r.unit();
+      if (Object.keys(vibes).length) {
+        spec.vibes = vibes;
+        spec.vibeStrength = strength;
+      }
+    }
+  }
   return spec;
 }
 
@@ -288,8 +329,9 @@ export const ALBUM_PREFIX = 'DLA1-';
 
 export function encodeSong(spec) {
   const w = new Writer();
-  w.u8(FORMAT);
-  writeSpec(w, spec);
+  const version = hasVibes(spec) ? FORMAT : PLAIN_FORMAT;
+  w.u8(version);
+  writeSpec(w, spec, version);
   return wrap(SONG_PREFIX, Uint8Array.from(w.bytes));
 }
 
@@ -303,10 +345,11 @@ export function decodeSong(code) {
 
 export function encodeAlbum(title, specs) {
   const w = new Writer();
-  w.u8(FORMAT);
+  const version = specs.some(hasVibes) ? FORMAT : PLAIN_FORMAT;
+  w.u8(version);
   w.str(title || 'Untitled', 40);
   w.u16(specs.length);
-  for (const spec of specs) writeSpec(w, spec);
+  for (const spec of specs) writeSpec(w, spec, version);
   return wrap(ALBUM_PREFIX, Uint8Array.from(w.bytes));
 }
 

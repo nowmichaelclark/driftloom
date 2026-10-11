@@ -87,6 +87,9 @@ driftloom offline audio measurement
   --refusals [code] count voice-budget refusals per layer
   --endings         check that every note of every voice fades out
   --retire          check that letting a finished voice go changes nothing
+  --vibe-mix        draw each loop with 1, 3, 5 or 10 random vibes in
+                    turn (queue item 38a), for the loudness report and
+                    --refusals
   --profile <id>    keep only loops that profile leads, drawing from the
                     same corpus until --n of them are in
   --engine <e>      'rust' or 'js': which synth plays. 'rust' is the Rust
@@ -272,6 +275,9 @@ function parseArgs(argv) {
           ? String(next) : 'corpus';
         break;
       }
+      case '--vibe-mix':
+        opts.vibeMix = true;
+        break;
       case '--profile':
         opts.profile = value();
         if (!CHARACTERS[opts.profile]) fail(`no profile called '${opts.profile}'`);
@@ -595,18 +601,26 @@ const CORPUS = `
 function leadOf(spec) {
   return Object.entries(spec.mix || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || '?';
 }
-function drawCorpus(seed, n, profile) {
+// --vibe-mix (queue item 38a): each loop drawn with a random selection of
+// 1, 3, 5 or 10 vibes in turn, from a stream of its own, so the loops'
+// seeds are the corpus's own.
+function vibeMixFor(seed, i) {
+  const r = new Rng(((seed ^ 0x56494245) + Math.imul(i + 1, 0x9e3779b1)) >>> 0 || 1);
+  return r.shuffle(VIBE_IDS).slice(0, [1, 3, 5, 10][i % 4]);
+}
+function drawCorpus(seed, n, profile, vibeMix = false) {
   const master = new Rng(seed);
   const specs = [];
   // Capped, so a profile that never leads cannot spin forever.
   for (let tries = 0; specs.length < n && tries < n * 1000; tries++) {
-    const spec = newSpec(master.seed32());
+    const spec = newSpec(master.seed32(), vibeMix ? vibeMixFor(seed, tries) : null);
     if (!profile || leadOf(spec) === profile) specs.push(spec);
   }
   return specs;
 }
 `;
-const ledBy = (opts) => (opts.profile ? `, loops led by ${opts.profile}` : '');
+const ledBy = (opts) => (opts.profile ? `, loops led by ${opts.profile}` : '')
+  + (opts.vibeMix ? ', with 1, 3, 5 or 10 random vibes' : '');
 
 const PAGE = `<!doctype html><meta charset="utf-8"><title>measure</title>
 <script type="module">
@@ -615,6 +629,7 @@ import { Synth } from '/js/synth.js';
 import { loadCore, MIX, SET } from '/js/core.js';
 import { newSpec, characterOf, render, metreOf } from '/js/generator.js';
 import { Rng, mulberry32 } from '/js/rng.js';
+import { VIBE_IDS } from '/js/vibes.js';
 
 const LAYERS = ${JSON.stringify(LAYERS)};
 ${PAGE_HELPERS}
@@ -717,7 +732,7 @@ async function chainMakeup(opts) {
 window.measure = async (opts) => {
   // The whole corpus is drawn, so a slice of it (see inPages) is the same
   // loops it always was.
-  const specs = drawCorpus(opts.seed || 1, opts.n, opts.profile).slice(opts.from ?? 0, opts.to ?? opts.n);
+  const specs = drawCorpus(opts.seed || 1, opts.n, opts.profile, opts.vibeMix).slice(opts.from ?? 0, opts.to ?? opts.n);
 
   const tasks = specs.map((spec) => async () => {
     // Render whole passes of whatever this loop is, so a slow twenty-four
@@ -1874,6 +1889,7 @@ import { Engine } from '/js/engine.js';
 import { Synth } from '/js/synth.js';
 import { loadCore, MIX, SET } from '/js/core.js';
 import { newSpec } from '/js/generator.js';
+import { VIBE_IDS } from '/js/vibes.js';
 import { decodeSong } from '/js/share.js';
 import { Rng, mulberry32 } from '/js/rng.js';
 
@@ -1951,7 +1967,7 @@ window.refusalsOne = async (o) => {
 
 window.refusalsCorpus = async (o) => {
   const rows = [];
-  for (const spec of drawCorpus(o.seed, o.n, o.profile).slice(o.from ?? 0, o.to ?? o.n)) {
+  for (const spec of drawCorpus(o.seed, o.n, o.profile, o.vibeMix).slice(o.from ?? 0, o.to ?? o.n)) {
     const r = await runOne(spec, o.quality, o.rate, o.engine);
     rows.push({
       name: spec.name, seed: spec.seed,
@@ -2766,7 +2782,7 @@ function ranges(n, size) {
 
 if (counting) {
   const corpus = opts.refusals === 'corpus';
-  const o = { n: opts.n, seed: opts.seed, quality: opts.quality, rate: opts.rate, profile: opts.profile, engine: opts.engine };
+  const o = { n: opts.n, seed: opts.seed, quality: opts.quality, rate: opts.rate, profile: opts.profile, engine: opts.engine, vibeMix: opts.vibeMix };
   const data = corpus
     ? (await inPages('refusalsCorpus', ranges(opts.n, 20).map((r) => ({ ...o, ...r })))).flat()
     : await page.evaluate((o) => window.refusalsOne(o), { code: opts.refusals, rate: opts.rate, engine: opts.engine });
