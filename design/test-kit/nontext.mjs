@@ -2,7 +2,7 @@ import { chromium } from 'playwright'; import path from 'path'; import fs from '
 const file=process.argv[2], outJson=process.argv[3];
 const b=await chromium.launch(); const p=await (await b.newContext({viewport:{width:1500,height:1000}, deviceScaleFactor:2})).newPage();
 await p.route('**/*', r=>r.request().url().startsWith('file://')?r.continue():r.abort());
-await p.goto('file://'+path.resolve(file)); if(process.env.SHALLOW) await p.addStyleTag({content:'.masthead,section.handover,.spec,.section-title{display:none !important}'+(process.env.HIDEFIRST?'.gallery:has(.t-dawn),.gallery:has(.t-dark){display:none !important}':'')}); await p.addStyleTag({content:process.env.GLINT?'':'.phone .playhead i.on::before{display:none !important}'}); if(process.env.ALLON) await p.evaluate(()=>document.querySelectorAll('.layer.dim').forEach(l=>l.classList.remove('dim')));
+await p.goto('file://'+path.resolve(file)); if(process.env.SHALLOW) await p.addStyleTag({content:'.masthead,section.handover,.spec,.section-title{display:none !important}'+(process.env.HIDEFIRST?'.gallery:has(.t-dawn),.gallery:has(.t-dark){display:none !important}':'')}); if(!process.env.GLINT) await p.addStyleTag({content:'.phone .playhead i.on::before{display:none !important}'}); if(process.env.ALLON) await p.evaluate(()=>document.querySelectorAll('.layer.dim').forEach(l=>l.classList.remove('dim')));
 const L=(c)=>{const f=v=>{v/=255;return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4}; return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]);};
 const CR=(a,b)=>{const x=L(a),y=L(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);};
 const themes=await p.evaluate(()=>[...document.querySelectorAll('.phone')].map(ph=>[...ph.classList].find(c=>c.startsWith('t-'))));

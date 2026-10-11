@@ -42,12 +42,24 @@
      The LED: in the dark themes a bright dot (the lamp hue) in a
      dark ring; in the light themes the keys are mid-tone glass,
      so it is built like a panel LED, a bright core in a dark
-     bezel (the bezel is the key's own icon colour).
+     bezel (the bezel is the key's own icon colour). In the light
+     themes the pressed-in key is tinted by the lamp hue (lit from
+     inside), not greyed: grey read as "disabled" (review).
+     DECISION FOR MIKEY: when the Layers key appears, Row 3's keys
+     narrow and Sound moves under the thumb (51-96% of the row's
+     width -> 35-65%). That is the spec's layout, but a platform
+     reviewer would object to keys moving. Alternative: show the
+     Layers key always and let it latch like Library / Now playing,
+     so nothing ever moves.
   2. LIBRARY. Tabs Albums · Loops · More ("All loops" in #153;
      "Loops" fits the groove at 200%). The tab bar is a recessed
      groove with one raised key for the selected tab, plus a lit
      LED on it, so "selected" is shape + light + bolder word, not
-     shade alone (APG tabs: arrows, Home / End, automatic).
+     shade alone (APG tabs: arrows, Home / End, automatic). The
+     groove (48px) is the drawn shape the three tabs share, as in an
+     iOS segmented control; the raised key inside it is 4px smaller
+     all round. The tablist is named "Library sections" (the region
+     is "Library").
      A NAME is capitalized (Albums, Rainy Afternoons, Advanced);
      an ACTION is a lowercase word on a key (play, move, share),
      like roll and on / off. Row keys use the layer keys' word
@@ -56,7 +68,8 @@
      album (built-ins first): square art (a 2x2 mosaic of its
      loops' covers, as #153's albumArt draws it; content, so the
      same in every theme, never rounded), name, "N loops", and a
-     "play" key. Rows are bounded by the layer rows' rules, 56px.
+     "play" key. Rows are bounded by the layer rows' rules, 52px
+     (so the fourth row shows part-way at 100%).
      The playing album and loop carry the Now playing key's glyph
      in the lamp hue, plus words ("playing 3 of 8"; "now playing"
      for screen readers): never colour alone.
@@ -66,9 +79,15 @@
      (number, name, key · bpm, "move", "remove"), and "delete
      album" at the end of the list, where a destructive action
      belongs. Destructive keys ask twice with no popup (#153): the
-     first press re-words the key to say what will happen ("delete
-     it and 2 loops only here?") and rings it; it disarms after 4 s.
-     Loops: every loop, read-only, name and key · bpm · album.
+     first press re-words the key ("delete it and 2 loops only
+     here?"; a track's "remove" says "sure?") and rings it; its
+     accessible name changes to start with those words and say what
+     a second press does, and a polite status line says it too
+     (review: the name used to stay the same, a WCAG 2.5.3 failure).
+     It disarms after 4 s.
+     Loops: every loop, name and key · bpm · album. Tap a row to
+     play it (#153's openSaved); nothing is edited here, editing
+     happens in albums. (Inert in the mockup, like Next.)
   3. MORE + ADVANCED. More never scrolls: the THEME heading with
      the current theme's name, nine swatches (a radio group, APG
      pattern: arrows move and choose), and one wide key into
@@ -82,28 +101,39 @@
      the gallery back).
      "Advanced" kept as the name: it is what iOS and Android call
      the page most people never need, and it says so.
-     Advanced (scrolls): back key + title; FILES (back up all,
-     restore, copy backup, paste backup); PROCESSOR: "Lighter on
-     processor" with the layer rows' on / off key (latched when
-     off) and a plain hint of what it costs ("a busy loop may play
-     a few notes fewer"; #153 turns it on by default on phones
-     with four cores or fewer); DIAGNOSTICS: the report, playhead
+     Advanced (scrolls): back key + title; PROCESSOR first (the
+     only setting on the page; it was below the fold at 100%,
+     review): "Lighter on processor" with the layer rows' on / off
+     key (latched when off) and a plain hint of what it costs ("a
+     busy loop may play a few notes fewer"; #153 turns it on by
+     default on phones with four cores or fewer); FILES (back up
+     all, restore, copy backup, paste backup); DIAGNOSTICS: the
+     report, playhead
      trim as − / + keys (5 ms steps, ±200, no slider), refresh /
      copy / reset counters; KEYBOARD: #153's shortcut colophon.
   4. NOW PLAYING. Calm and centred, #153's contents: the album
      and where you are in it (dots + "3 of 8"), the time left in
      big Space Grotesk ("−4:12", capped at 72px like the name),
      a bar whose lit fill ends in a bead built like the lit
-     playhead cell, "Next: sumi", and "leave album" at the bottom,
-     a thumb's reach from the buttons. The rail is quiet (7% of
-     the text colour) so the fill stands out from it at 3:1.
+     playhead cell, "Next: sumi" just under it, and "leave album"
+     at the bottom, a thumb's reach from the buttons. The fill is
+     one solid lamp colour (--mark; a gradient's lighter top stop
+     dipped under 3:1, review) and the rail is quiet (7% of the
+     text colour), so the fill clears 3:1 at every row.
      Static in the mockup: nothing ticks.
   5. SCROLLERS. A .scroll reaches the panel's glass edges, so its
      scrollbar sits on the edge and its hairlines run edge to edge;
      a hairline appears at the top or bottom only while there is
      more to see past it (script: updateScrollEdges). Lists are
      sized so a row is cut part-way at 100%, which says "more".
-     4px top padding keeps a focus ring off the scroll edge.
+     4px top padding and scroll-padding-block: 8px keep a focus
+     ring off both edges when focus scrolls a key into view.
+     Each .scroll is position: relative, so the hidden screen-
+     reader text inside it lives in the scroller. Before the
+     review it stretched the Dynamic panel itself (scrollHeight
+     674 / 317), which scrollIntoView could then scroll. The audit
+     now flags any zone, panel, view, pane or page that can scroll
+     (confirmed: it flags all nine phones with the fix undone).
   6. TEXT SIZE + SPACING (WCAG 1.4.4, 1.4.12). Lists and Advanced
      grow and scroll. More and Now Playing cannot, so like the
      Info card their text is capped at 1.5x (the meta's cap), and
@@ -118,7 +148,9 @@
        measures it.
        Tabs: the word cap steps toward 1x if a word would break.
      At <= 17.5em, rows with keys put the keys under the text and
-     Playhead trim puts − / + under its label. No word is ever
+     Playhead trim puts − / + under its label. An album's name in
+     the head row is capped at 1.29x like the track name (review:
+     at 200% plus spacing the head took 154px). No word is ever
      broken mid-word (a hyphen break is fine); the audit checks.
      The WCAG 1.4.12 override adds 2em under every <p>, so the
      Now Playing lines (labels and values, not paragraphs) are
@@ -141,9 +173,13 @@
      playing (4.2 s; opacity 0.5-1, scale 0.7-1; no rotation, no
      flash), goes out with the lamp when paused (the Pause key is
      the WCAG 2.2.2 stop), is still under reduced motion, and is
-     gone in forced colours. At its brightest it covers 11-15% of
-     the lamp's fill and 1-2% of its ring (glint.mjs), so 85% or
-     more of the lamp stays the 3:1 colour. nontext.mjs measures
+     gone in forced colours. It is 11px, set into the lamp's corner
+     so its spikes end at the ring (the review found the first,
+     13px version poked through the ring like a nick). At its
+     brightest it changes 10-16% of the lamp's fill (13-17%
+     counting any visible change) and 0-1% of its ring
+     (glint.mjs); under reduced motion it rests at that brightest
+     state. So 83% or more of the lamp stays the 3:1 colour. nontext.mjs measures
      the lamp with the glint hidden (GLINT=1 shows it): the v16
      lamp numbers reproduce exactly. Dark themes have no glint.
 
@@ -166,14 +202,16 @@
        now-playing glyph vs panel            3.49 (Tidal)
        swatch edge vs panel                  3.60 (Olive)
        chosen-swatch ring vs panel           9.53 (Olive)
-       progress fill vs rail / vs panel      3.21 / 3.64 (Tidal)
+       progress fill vs rail / vs panel,
+         worst device row of the bar         3.59 / 4.12 (Tidal)
        latched key: LED core vs bezel        5.03 (Dawn, light themes)
-       latched key: LED bezel vs key         3.93 (Ember, light themes)
+       latched key: LED bezel vs key         4.41 (Ember, light themes)
        latched key: LED vs key, dark themes  7.91 (Dark)
-   - Buttons-zone icons (icons.mjs): every key but Play 3.75:1 or
-     more, latched or not (worst: Ember's latched Library 3.75).
+   - Buttons-zone icons (icons.mjs): every key but Play 4.08:1 or
+     more, latched or not (worst: Sound in Ember's Library view;
+     Ember's latched Library 4.14).
    - Focus rings on every new kind of control x 9 themes
-     (views_a11y.mjs rings): all 3:1 or more, worst 3.82 (Tidal's
+     (views_a11y.mjs rings): all 3:1 or more, worst 3.81 (Tidal's
      Layers key); Olive's latched Library 3.97 (two-colour ring).
    - Keyboard + ARIA (views_a11y.mjs keys): see expected output.
    - Reduced motion: 0 of 20,304 boxes in the phones transition or
@@ -187,11 +225,33 @@
 
   FOUND, NOT CAUSED BY v17: THE PLAY GLYPH IS UNDER 3:1. Measured
   for the first time (icons.mjs, the words.mjs method): the white
-  Play / Pause glyph against the Play key is 2.05 (Dawn), 2.71
-  (Tidal), 2.78 (Olive), 2.88 (Night Light), 3.13 (Ember). The
-  glyph crosses the key's light upper half. Same in v16 as
+  Play / Pause glyph against the Play key is under 3:1 in four
+  themes: 2.05 (Dawn), 2.71 (Tidal), 2.78 (Olive), 2.88 (Night
+  Light); Ember is 3.13. The glyph crosses the key's light upper
+  half. Same in v16 as
   shipped; untouched here because the Play key is the signature
   key and Mikey judges it by eye. First item for the next session.
+
+  INDEPENDENT REVIEW. An agent that had not seen the work audited
+  v17 with the kit and eleven scripts of its own. First verdict:
+  not ready. Blockers, both fixed and re-measured: the armed
+  "remove" key kept its old name (WCAG 2.5.3), and the hidden
+  screen-reader text let the Dynamic panel itself scroll.
+  Should-fix, all done: focus rings clipped at a scroller's bottom
+  edge (scroll-padding); the progress gradient under 3:1 in its
+  top rows (solid fill); the only setting below the fold
+  (Processor first); album rows too tall to show a fourth row
+  (52px); an album's name too tall at 200% plus spacing (capped);
+  grey, "disabled"-looking latched keys (lamp tint); the glint's
+  nick in the ring (smaller, set in); Now Playing's gap (Next joins
+  the bar); the kit's broken GLINT=1, its keyboard evidence taken
+  from the wrong phone, its bar measured on the centre line only;
+  and stale docs. Left for Mikey: Row 3 moving when Layers
+  appears (item 1). The reviewer reproduced the 714-audit matrix,
+  text contrast, marks, rings, Olive and its colour-blind table,
+  the glint's behaviour, forced colours, and a Layers-view pixel
+  diff against v16 that differs only at the new LEDs and Olive's
+  notes.
 
   NOT BUILT YET (#153 has them): the Sound and Save views; "add
   loops" (pick loops into an album) and "move" (pick an album);
@@ -2463,7 +2523,7 @@
   }
   body :where(.t-dawn, .t-ember, .t-tidal, .t-olive).phone .playhead i.on::before {
     content: ''; position: absolute; z-index: 1; pointer-events: none;
-    width: 13px; height: 13px; left: -3px; top: -7.5px;
+    width: 11px; height: 11px; left: -1.5px; top: -5.5px;
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.95'/%3E%3Cstop offset='.32' stop-color='%23fff' stop-opacity='.5'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='13' cy='13' r='9' fill='url%28%23g%29'/%3E%3Cpath d='M13 1C13.8 9.4 16.6 12.2 25 13 16.6 13.8 13.8 16.6 13 25 12.2 16.6 9.4 13.8 1 13 9.4 12.2 12.2 9.4 13 1Z' fill='%23fff'/%3E%3C/svg%3E") center / contain no-repeat;
     animation: dl-twinkle 4.2s ease-in-out infinite;
     transition: opacity 180ms ease;
@@ -3376,17 +3436,18 @@
     --groove-bg: color-mix(in srgb, var(--text-primary) 9%, transparent);
     --groove-shade: color-mix(in srgb, var(--text-primary) 28%, transparent);
     --led-ring: rgba(255,255,255,0.9);
-    --np-fill: var(--lit-fill);
+    --np-fill: var(--mark);
     --check-ink: #ffffff;
     --press-tint: color-mix(in srgb, var(--text-primary) 9%, transparent);
-    --latched-bg: linear-gradient(180deg, color-mix(in srgb, var(--text-primary) 13%, rgba(255,255,255,0.38)), color-mix(in srgb, var(--text-primary) 9%, rgba(255,255,255,0.3)));
+    /* Pressed in and lit from inside: the lamp hue, not grey. */
+    --latched-bg: linear-gradient(180deg, color-mix(in srgb, var(--mark) 20%, rgba(255,255,255,0.46)), color-mix(in srgb, var(--mark) 14%, rgba(255,255,255,0.34)));
     --latched-shade: color-mix(in srgb, var(--text-primary) 40%, transparent);
   }
   .t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
     --groove-bg: rgba(0,0,0,0.3);
     --groove-shade: rgba(0,0,0,0.6);
     --led-ring: rgba(0,0,0,0.55);
-    --np-fill: var(--playhead-on);
+    --np-fill: var(--mark);
     --check-ink: #101014;
     --press-tint: rgba(255,255,255,0.07);
     --latched-bg: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.36));
@@ -3502,9 +3563,17 @@
      glass edge. The hairlines are borders, outside the scrolled
      content, and only take a colour while there is more to see
      past that edge. */
+  /* position: relative makes the scroller (not the panel) the box
+     its hidden screen-reader text (.vh, absolute) lives in;
+     otherwise that text stretches the Dynamic panel, which could
+     then be scrolled by scrollIntoView (review, v17).
+     scroll-padding keeps a focused key's ring clear of both edges
+     when focus scrolls it into view. */
   .scroll {
+    position: relative;
     flex: 1; min-height: 0;
     overflow-x: hidden; overflow-y: auto;
+    scroll-padding-block: 8px;
     overscroll-behavior: contain;
     margin: 0 -14px; padding: 4px 14px 6px;
     border-top: 1px solid transparent; border-bottom: 1px solid transparent;
@@ -3534,7 +3603,9 @@
   .lrow-main:not(:last-child) { margin-right: 0; }
   .lrow-main:active { background-color: var(--press-tint); }
   @media (hover: hover) { .lrow-main:hover { background-color: var(--press-tint); } }
-  .lrows.loops .lrow-main { min-height: 52px; }
+  /* 52px: at 100% the fourth album shows about half its art, which
+     says "there is more" (review, v17). */
+  .lrows .lrow-main { min-height: 52px; }
   .lrow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .lrow-title {
     display: flex; align-items: center; gap: 6px;
@@ -3599,7 +3670,7 @@
   }
   .hero-title {
     font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
-    font-size: 1.0625rem; line-height: 1.15; letter-spacing: -0.01em;
+    font-size: min(1.0625rem, 22px); line-height: 1.15; letter-spacing: -0.01em;
   }
   .hero-meta {
     font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
@@ -3762,7 +3833,7 @@
     box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)), var(--led-glow);
   }
   .np-next {
-    flex: 0 0 auto; margin: 0 0 10px; font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px);
+    flex: 0 0 auto; margin: 4px 0 0; font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px);
     font-weight: 500; line-height: 1.35; color: var(--text-secondary); overflow-wrap: break-word;
   }
   .np-next b { color: var(--text-primary); font-weight: 700; }
@@ -3775,7 +3846,7 @@
      text cap (--cap) steps from 1.5x toward 1x, never below the
      100% size, like the Info meta. */
   .v-now.fit-tight .np-mid { gap: 6px; }
-  .v-now.fit-tight .np-next { margin-bottom: 6px; }
+  .v-now.fit-tight .np-next { margin-top: 0; }
   /* Paused, the bead goes dark like the lit cell; the bar stays. */
   .phone:not(.playing) .np-bar i::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
 
@@ -4214,7 +4285,9 @@
   <p><b>The two rule changes.</b> Scrolling happens in exactly two places, both in the middle zone: the Library's lists and the Advanced page. Theme and Lighter on processor are the only settings. Everything else still behaves the same for everybody.</p>
   <p><b>Big text and text spacing.</b> Every view was checked at 51 text sizes from 100% to 200%, with and without the WCAG text-spacing override: nothing spills out, nothing overlaps, no word is broken in the middle, and every key is at least 48 × 48. The two pages that never scroll (More and Now Playing) cap their text at 1.5× like the info card and tighten themselves in steps when they must.</p>
   <p><b>Olive and the glint.</b> Olive's notes are leaf, wine, rust, forest and gold, so they pop like the other light themes' (still no cool colour). The light themes' lit playhead cell keeps its solid lamp, which is what passes the contrast test, and gains a small star glint that twinkles slowly while playing, stops when paused, and holds still if you have reduced motion on.</p>
-  <p><b>Found along the way.</b> The white Play / Pause glyph measures under 3:1 against the Play key in five themes (Dawn 2.05, Tidal 2.71, Olive 2.78, Night Light 2.88). It has been that way since before v16 and was never measured. Left alone for Mikey's eye; it is the first thing to look at next.</p>
+  <p><b>Found along the way.</b> The white Play / Pause glyph measures under 3:1 against the Play key in four themes (Dawn 2.05, Tidal 2.71, Olive 2.78, Night Light 2.88). It has been that way since before v16 and was never measured. Left alone for Mikey's eye; it is the first thing to look at next.</p>
+  <p><b>Independent review.</b> A reviewer that had not seen the work checked everything with its own scripts. It found two real problems, both fixed: a delete key that changed its words but not its name for screen readers, and hidden screen-reader text that let the middle panel itself scroll. It also asked for a handful of polish fixes, all done: Processor now comes first on Advanced, pressed-in keys glow in the theme's lamp colour instead of going grey, the glint no longer nicks the lamp's ring, and the progress bar is one solid colour.</p>
+  <p><b>One decision for you.</b> When the Layers key appears, the other two keys on the bottom row get narrower, so Sound moves under your thumb. That is what the spec asked for. The alternative is to show the Layers key all the time and let it stay pressed in on Layers, like Library and Now Playing, so no key ever moves.</p>
 </section>
 
 <section class="handover">
@@ -4297,12 +4370,12 @@
         <tr><td>View keys</td><td>Library · Now playing: aria-pressed · latched 2px · LED lit</td></tr>
         <tr><td>Layers key</td><td>Row 3, only away from Layers · focus → Layers group</td></tr>
         <tr><td>Tabs</td><td>groove · raised key + LED · APG tabs · 48px</td></tr>
-        <tr><td>List row</td><td>56px (loops 52) · rules · art 44 square · word keys 48</td></tr>
+        <tr><td>List row</td><td>52px · rules · art 44 square · word keys 48</td></tr>
         <tr><td>Theme picker</td><td>radio group · 3 × 3 (5-across from ~121%) · 48px</td></tr>
         <tr><td>Fixed pages</td><td>More, Now Playing: text capped 1.5× · fit guard steps</td></tr>
         <tr><td>Text (worst)</td><td>4.67:1 · Dawn tab word</td></tr>
-        <tr><td>Marks (worst)</td><td>3.21:1 · Tidal progress fill vs rail</td></tr>
-        <tr><td>Rings (worst)</td><td>3.82:1 · Tidal Layers key</td></tr>
+        <tr><td>Marks (worst)</td><td>3.49:1 · Tidal now-playing glyph</td></tr>
+        <tr><td>Rings (worst)</td><td>3.81:1 · Tidal Layers key</td></tr>
         <tr><td>Olive notes</td><td>wine & rust · light 3.55–3.57 · deep 5.65–6.33</td></tr>
         <tr><td>Glint</td><td>light themes · 4.2 s · playing only · still under reduced motion</td></tr>
       </table>
@@ -5617,7 +5690,7 @@
         '</button>' +
         '<span class="row-keys">' +
           '<button type="button" class="vkey word" aria-label="Move ' + esc(t[0]) + ' to another album">move</button>' +
-          '<button type="button" class="vkey word" data-arm="remove" aria-label="Remove ' + esc(t[0]) + ' from Rainy Afternoons">remove</button>' +
+          '<button type="button" class="vkey word" data-arm="remove" aria-label="Remove ' + esc(t[0]) + ' from Rainy Afternoons" data-armed-label="sure? Press again to remove ' + esc(t[0]) + ' from Rainy Afternoons">remove</button>' +
         '</span>' +
       '</div>';
     }
@@ -5645,7 +5718,8 @@
       };
       return '' +
       '<div class="view v-library" data-v="library" role="region" aria-label="Library" hidden>' +
-        '<div class="tabs" role="tablist" aria-label="Library">' + tab('albums', 'Albums', true) + tab('loops', 'Loops', false) + tab('more', 'More', false) + '</div>' +
+        '<span class="vh" role="status" aria-live="polite" data-live></span>' +
+        '<div class="tabs" role="tablist" aria-label="Library sections">' + tab('albums', 'Albums', true) + tab('loops', 'Loops', false) + tab('more', 'More', false) + '</div>' +
 
         '<div class="pane" id="' + P + '-pane-albums" role="tabpanel" aria-labelledby="' + P + '-tab-albums">' +
           '<div class="page" data-page="albums">' +
@@ -5662,7 +5736,7 @@
                 '<div class="hero-keys"><button type="button" class="vkey">stop album</button><button type="button" class="vkey">add loops</button><button type="button" class="vkey">share</button></div>' +
               '</div>' +
               '<div class="lrows tracks" role="list" aria-label="Loops in Rainy Afternoons">' + TRACKS.map(trackRow).join('') + '</div>' +
-              '<div class="end-keys"><button type="button" class="vkey" data-arm="delete" data-armed="delete it and 2' + NB + 'loops only here?">delete album</button></div>' +
+              '<div class="end-keys"><button type="button" class="vkey" data-arm="delete" data-armed="delete it and 2' + NB + 'loops only here?" data-armed-label="delete it and 2 loops only here? Press again to delete Rainy Afternoons">delete album</button></div>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -5680,14 +5754,14 @@
           '<div class="page" data-page="advanced" hidden>' +
             '<div class="page-head"><button type="button" class="vkey back" data-back="more" aria-label="Back to More">' + ICON.left + 'More</button><h4 class="page-title" tabindex="-1">Advanced</h4></div>' +
             '<div class="scroll">' +
-              '<section class="adv-sec" aria-labelledby="' + P + '-files"><h5 class="sec" id="' + P + '-files">Files</h5>' +
-                '<p class="hint">Your loops and albums live on this device. A backup is one file with all of them.</p>' +
-                '<div class="keys2"><button type="button" class="vkey">back up all</button><button type="button" class="vkey">restore</button><button type="button" class="vkey">copy backup</button><button type="button" class="vkey">paste backup</button></div>' +
-              '</section>' +
               '<section class="adv-sec" aria-labelledby="' + P + '-proc"><h5 class="sec" id="' + P + '-proc">Processor</h5>' +
                 '<div class="setrow"><div class="setrow-text"><span class="setrow-name" id="' + P + '-lite">Lighter on processor</span>' +
                   '<p class="hint" id="' + P + '-lite-hint">Uses less of the phone, so older ones keep up. A busy loop may play a few notes fewer. Starts on for phones with four cores or fewer.</p></div>' +
                   '<button type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="' + P + '-lite" aria-describedby="' + P + '-lite-hint"><span aria-hidden="true">off</span></button></div>' +
+              '</section>' +
+              '<section class="adv-sec" aria-labelledby="' + P + '-files"><h5 class="sec" id="' + P + '-files">Files</h5>' +
+                '<p class="hint">Your loops and albums live on this device. A backup is one file with all of them.</p>' +
+                '<div class="keys2"><button type="button" class="vkey">back up all</button><button type="button" class="vkey">restore</button><button type="button" class="vkey">copy backup</button><button type="button" class="vkey">paste backup</button></div>' +
               '</section>' +
               '<section class="adv-sec" aria-labelledby="' + P + '-diag"><h5 class="sec" id="' + P + '-diag">Diagnostics</h5>' +
                 '<p class="hint">If something misbehaves, play for a minute with the screen off, come back, then copy this and send it over.</p>' +
@@ -5699,7 +5773,7 @@
                 '<div class="keys3"><button type="button" class="vkey">refresh</button><button type="button" class="vkey">copy</button><button type="button" class="vkey">reset counters</button></div>' +
               '</section>' +
               '<section class="adv-sec" aria-labelledby="' + P + '-keys"><h5 class="sec" id="' + P + '-keys">Keyboard</h5>' +
-                '<p class="colophon">Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1' + NB + 'to' + NB + '5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>' +
+                '<p class="colophon">Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1' + NB + 'to' + NB + '5' + NB + 're-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>' +
               '</section>' +
             '</div>' +
           '</div>' +
@@ -5712,8 +5786,8 @@
         '<div class="np-mid">' +
           '<div class="np-time"><span aria-hidden="true">−4:12</span><span class="vh">4 minutes 12 seconds left</span></div>' +
           '<div class="np-bar" role="progressbar" aria-label="Through this loop" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30" aria-valuetext="30%"><i style="--p:30%"></i></div>' +
+          '<div class="np-next">Next: <b>sumi</b></div>' +
         '</div>' +
-        '<div class="np-next">Next: <b>sumi</b></div>' +
         '<button type="button" class="vkey np-action">leave album</button>' +
       '</div>';
     }
@@ -5921,15 +5995,27 @@
           out.textContent = (v < 0 ? '−' : '') + Math.abs(v) + NB + 'ms';
         });
       });
-      /* Destructive keys ask twice (PR #153). Armed for 4 seconds. */
+      /* Destructive keys ask twice (PR #153). Armed for 4 seconds.
+         Armed, the key's visible words AND its accessible name change
+         (the name starts with the visible words, WCAG 2.5.3), and a
+         polite status line says what a second press will do. */
+      var live = phone.querySelector('[data-live]');
       phone.querySelectorAll('[data-arm]').forEach(function (b) {
-        var word = b.textContent, timer;
+        var word = b.textContent, label = b.getAttribute('aria-label'), timer;
+        function disarm() {
+          b.classList.remove('armed'); b.textContent = word;
+          if (label) b.setAttribute('aria-label', label); else b.removeAttribute('aria-label');
+          if (live) live.textContent = '';
+        }
         b.addEventListener('click', function () {
           clearTimeout(timer);
-          if (b.classList.toggle('armed')) {
+          if (!b.classList.contains('armed')) {
+            b.classList.add('armed');
             b.textContent = b.dataset.armed || 'sure?';
-            timer = setTimeout(function () { b.classList.remove('armed'); b.textContent = word; }, 4000);
-          } else { b.textContent = word; }
+            b.setAttribute('aria-label', b.dataset.armedLabel);
+            if (live) live.textContent = b.dataset.armedLabel.replace(/^[^?]*\? /, '') + '.';
+            timer = setTimeout(disarm, 4000);
+          } else { disarm(); }
         });
       });
       phone.querySelectorAll('.scroll').forEach(function (sc) {
@@ -6043,6 +6129,13 @@
           if (!pg.querySelector('.scroll') && pg.scrollHeight > pg.clientHeight + 0.5) flag('a page that must not scroll overflows');
         });
       }
+      /* Only a .scroll may hold more than it shows: never the panel,
+         a zone, a view, a pane or a page (review, v17). */
+      ph.querySelectorAll('.zone-info, .zone-dynamic, .dynamic-inner, .zone-buttons, .view, .pane, .page, .tabs').forEach(function (z) {
+        if (z.closest('[hidden]')) return;
+        if (z.scrollHeight > z.clientHeight + 0.5 && getComputedStyle(z).overflowY !== 'visible') flag('a box that must not scroll can scroll');
+        if (z.scrollTop > 0) flag('a box that must not scroll is scrolled');
+      });
       ph.querySelectorAll('.zone-buttons .btn:not([hidden])').forEach(function (b) {
         var r = box(b); if (r.width < 47.9 || r.height < 47.9) flag('target under 48 x 48');
       });

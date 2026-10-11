@@ -25,11 +25,11 @@ for (const th of light) { const el=await p.$('.'+th+' .playhead i.on'); await el
   const clip={x:bb.x-6,y:bb.y-8,width:bb.width+12,height:bb.height+16};
   const A=PNG.sync.read(await p.screenshot({clip})); const tag=await p.addStyleTag({content:`.${th} .playhead i.on::before{display:none !important}`}); const B=PNG.sync.read(await p.screenshot({clip})); await tag.evaluate(t=>t.remove());
   // ring band: 0..2px outside the lamp (lamp = cell grown 2px top and bottom)
-  let ring=0, hit=0, fill=0, fhit=0; const L={x:6,y:6,w:bb.width,h:bb.height+4};
+  let ring=0, hit=0, fill=0, fhit=0, fhit10=0; const L={x:6,y:6,w:bb.width,h:bb.height+4};
   for(let y=0;y<A.height;y++)for(let x=0;x<A.width;x++){ const cx=x/2, cy=y/2; const dx=Math.max(L.x-cx,cx-(L.x+L.w),0), dy=Math.max(L.y-cy,cy-(L.y+L.h),0); const d=Math.max(dx,dy);
     const i=(y*A.width+x)*4; const diff=Math.abs(A.data[i]-B.data[i])+Math.abs(A.data[i+1]-B.data[i+1])+Math.abs(A.data[i+2]-B.data[i+2]);
-    if(d>0.25&&d<=2){ring++; if(diff>30) hit++;} if(d===0){fill++; if(diff>30) fhit++;} }
-  console.log(th.padEnd(13),`at its brightest the glint changes ${(hit/ring*100).toFixed(0)}% of the ring and ${(fhit/fill*100).toFixed(0)}% of the lamp's fill`);
+    if(d>0.25&&d<=2){ring++; if(diff>30) hit++;} if(d===0){fill++; if(diff>30) fhit++; if(diff>10) fhit10++;} }
+  console.log(th.padEnd(13),`at its brightest the glint changes ${(hit/ring*100).toFixed(0)}% of the ring and ${(fhit/fill*100).toFixed(0)}% of the lamp's fill (${(fhit10/fill*100).toFixed(0)}% counting any visible change)`);
 }
 const r=await page({reducedMotion:'reduce'}); const a=await st(r,'t-dawn'); console.log('reduced motion: anim', a.anim, 'opacity', a.op);
 const f=await page({}, {forcedColors:'active'}); const fc=await st(f,'t-dawn'); console.log('forced colours: display', fc.display);

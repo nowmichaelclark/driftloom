@@ -82,9 +82,11 @@ if (!only || only==='marks') {
         if (sel) ring=Math.min(ring,best); else worstEdge=Math.min(worstEdge,best); }
       out.push('swatch edge '+worstEdge.toFixed(2)+' ring '+ring.toFixed(2)); }
     await state(th,'now');
-    { const bar=await p.$(`.phone.${th} .np-bar`); const S=await shot(bar,8); const y=S.bb.y+S.bb.height/2;
-      const fill=px(S,S.bb.x+S.bb.width*0.12,y), rail=px(S,S.bb.x+S.bb.width*0.75,y), panel=px(S,S.bb.x+S.bb.width*0.12,S.bb.y-6);
-      out.push('fill/rail '+CR(fill,rail).toFixed(2)+' fill/panel '+CR(fill,panel).toFixed(2)); }
+    { const bar=await p.$(`.phone.${th} .np-bar`); const S=await shot(bar,8); let fr=99, fp=99;
+      // every device row of the 6px bar (skipping the rounded ends): fill vs rail at the same row, fill vs the panel just above
+      for (let dy=0.25; dy<S.bb.height-0.5; dy+=0.5) { const y=S.bb.y+dy; const fill=px(S,S.bb.x+S.bb.width*0.12,y), rail=px(S,S.bb.x+S.bb.width*0.75,y), panel=px(S,S.bb.x+S.bb.width*0.12,S.bb.y-6);
+        fr=Math.min(fr,CR(fill,rail)); fp=Math.min(fp,CR(fill,panel)); }
+      out.push('fill/rail '+fr.toFixed(2)+' fill/panel '+fp.toFixed(2)+' (worst row)'); }
     await state(th,'lib:albums');
     { const k=await p.$(`.phone.${th} .btn-lib`); const S=await shot(k,0); const led=await k.$('.led'); const lb=await led.boundingBox();
       const c=[lb.x+lb.width/2, lb.y+lb.height/2]; const core=px(S,...c), fill=px(S,c[0]-16,c[1]+10);
@@ -120,6 +122,7 @@ if (!only || only==='rings') {
 // ---------------------------------------------------------------- keys
 if (!only || only==='keys') {
   console.log('\nKEYBOARD + ARIA (Dawn)');
+  await p.evaluate(()=>document.querySelectorAll('.phone').forEach(ph=>setView(ph,'layers')));
   const q=s=>p.$(`.phone.t-dawn ${s}`);
   const act=()=>p.evaluate(()=>{const a=document.activeElement; return (a.getAttribute('role')||a.tagName.toLowerCase())+':'+(a.getAttribute('aria-label')||a.textContent.trim()).slice(0,40);});
   await state('t-dawn','layers');
@@ -138,7 +141,9 @@ if (!only || only==='keys') {
   await (await q('[data-trim="5"]')).focus(); await p.keyboard.press('Enter'); await p.keyboard.press('Enter'); console.log('trim + twice ->', await p.evaluate(()=>document.querySelector('.t-dawn .trim-val').textContent));
   await (await q('.page[data-page="advanced"] .back')).focus(); await p.keyboard.press('Enter'); console.log('Back -> focus', await act());
   await (await q('.tab[data-tab="albums"]')).click(); await (await q('.lrow.current .lrow-main')).focus(); await p.keyboard.press('Enter'); console.log('Open album -> focus', await act());
-  await (await q('.end-keys .vkey')).focus(); await p.keyboard.press('Enter'); console.log('delete album, first press ->', await act());
+  await (await q('.end-keys .vkey')).focus(); await p.keyboard.press('Enter'); console.log('delete album, first press ->', await act(), '| status line:', await p.evaluate(()=>document.querySelector('.t-dawn [data-live]').textContent));
+  await (await q('.lrow.track:nth-child(4) [data-arm]')).focus(); await p.keyboard.press('Enter'); console.log('remove, first press -> visible', await p.evaluate(()=>document.activeElement.textContent), '| name:', await p.evaluate(()=>document.activeElement.getAttribute('aria-label')), '| status line:', await p.evaluate(()=>document.querySelector('.t-dawn [data-live]').textContent));
+  await p.waitForTimeout(4200); console.log('4 s later -> visible', await p.evaluate(()=>document.activeElement.textContent), '| name:', await p.evaluate(()=>document.activeElement.getAttribute('aria-label')), '| status line: "'+await p.evaluate(()=>document.querySelector('.t-dawn [data-live]').textContent)+'"');
   await (await q('.page[data-page="album"] .back')).focus(); await p.keyboard.press('Enter'); console.log('Back -> focus', await act());
   await (await q('.btn-layers')).focus(); await p.keyboard.press('Enter'); console.log('Layers key -> view', await p.evaluate(()=>document.querySelector('.t-dawn').dataset.view), '| Layers key hidden', await p.evaluate(()=>document.querySelector('.t-dawn .btn-layers').hidden), '| focus', await act());
   await (await q('.btn-now')).focus(); await p.keyboard.press('Space'); console.log('Now playing via Space -> view', await p.evaluate(()=>document.querySelector('.t-dawn').dataset.view));
