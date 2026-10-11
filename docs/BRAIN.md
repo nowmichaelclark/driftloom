@@ -200,6 +200,12 @@ Stated decisions, not inferences. Dated where the date matters.
   join.
 - **Listening tests don't ask him to describe tracks freely** (too
   abstract). The word-ranking test (queue item 19) is the tool.
+- **Pool 3** (2026-10-11): 39 of the candidate words joined `/rank`
+  (71 in all; `docs/MOODS.md`). He ranks in bulk and exports.
+- **Reflective may be neutral** (2026-10-11): leaning brighter since
+  #107 is okay, and it can also sit in the middle of the mode axis.
+- **Cinder and shatter may take a bright mode when a word calls for
+  one** (2026-10-11). Both built in queue item 36.
 - The old branches stay: he likes looking back on them.
 
 **The engine (Mikey, 2026-10-10)** -- the direction from here.
@@ -345,7 +351,7 @@ Stated decisions, not inferences. Dated where the date matters.
 
 ### Start here (for the next brain)
 
-- **Where it is:** `main` at v84. The Rust core is Driftloom's engine
+- **Where it is:** `main` at v85 (pool 3 on `/rank`, #168). The Rust core is Driftloom's engine
   and plays by default (item 32, #164, v83); the JavaScript synth is the
   fallback and `?engine=js`. The core's gate is its own baseline
   (`node tools/baseline.mjs`). The Design v17 UI is in the app (#166,
@@ -354,19 +360,25 @@ Stated decisions, not inferences. Dated where the date matters.
   catch up when convenient). Brain-verified through item 31b.
 - **Heard (2026-10-11):** "Rust, all voices" on his phone, "it sounded
   great!"; Depth two, the 16-bar form holds (see the log).
-- **Decided (2026-10-11):** mono only, for now (see "The engine").
-- **Next: the words (roadmap 19).** Mikey ranks loops on `/rank` in
-  bulk (hundreds of trials, exported as `.jsonl`), then a lean brain
-  session fits them. First **item 33**: more words on `/rank`, the
-  candidates he picks (small; hands, Sonnet 5.5, medium).
-- **For the words brain:** read "Getting oriented", "What Mikey has
-  decided", this State, ROADMAP.md item 19 and `docs/MOODS.md`; skip
-  QUEUE.md's history. Run `tools/ranks.mjs` on the attached export
-  rather than reading raw lines. Open decisions to settle with him in a
-  line each: which candidate words (if item 33 didn't settle it);
-  reflective leaning brighter since #107; whether cinder and shatter
-  may take a bright mode when a word calls for one. End by writing the
-  queue items for the hands.
+- **Decided (2026-10-11):** mono only, for now (see "The engine");
+  reflective may be neutral; cinder and shatter may be bright when a
+  word calls for it (see "The words").
+- **Next: the words (roadmap 19).** Item 33 (#168, v85) put pool 3 on
+  `/rank`; Mikey has ranked 41 trials (Session 16 read them, `docs/MOODS.md`)
+  and is ranking more. **Queued (Session 16): items 34-36** -- the ten
+  dials measured per loop (`tools/dials.mjs`), the words fitted from his
+  answers (`ranks.mjs --fit`), and the two mode decisions (reflective may
+  be neutral; cinder and shatter may be bright). Hands: **34 and 35 on
+  Opus 5.5, high** (measurement design, judgment); **36 on Sonnet 5.5,
+  high**. Mikey attaches his latest export to the hands session.
+- **For the next words brain** (after 34-35 merge and a few hundred
+  trials): read "Getting oriented", "What Mikey has decided", this State,
+  ROADMAP.md item 19 and `docs/MOODS.md`; skip QUEUE.md's history. Run
+  `node tools/ranks.mjs <export> --fit` rather than reading raw lines.
+  Judge the leave-one-out check first: if the fit isn't clearly above
+  chance, the regions aren't real yet. Then: which words have regions,
+  which never fit (drop or keep), and the first recipes as data
+  (roadmap 19, step 2). Build item 36's album from its PR's listed loops.
 - **Then, in order:** the words' queue items; the ears-approved sounds,
   built in the core one at a time (roundBass, glass, floorDrop, arc;
   dubStab, organ, wash and longChords wait on his verdict); the
@@ -798,6 +810,17 @@ repeatability; and 31b's +3% render on full is unexplained.
 **Later on 2026-10-11:** item 32 merged (#164, v83) and the Design v17
 UI (#166, v84); neither brain-verified yet. Mikey chose the words next,
 with ranking in bulk: item 33 widens `/rank`'s pool first.
+
+**Session 16 (brain, Opus 5.5, 2026-10-11), the words, roadmap 19 only.**
+Item 33 merged (#168, v85; not brain-verified, by Mikey's choice: no
+verifying other merged items this session). Read Mikey's first 41 pool-3
+trials with `ranks.mjs` (findings in `docs/MOODS.md`): nothing fit 8% of
+the time (was 40%); he reaches for air and motion words, seldom the heart
+words; 2-5 shows a word, far too few to fit. The fit needs every ranked
+loop placed on the ten dials, which nothing measures yet, so the queue
+gets the tools first. **Mikey decided:** reflective may also be neutral;
+cinder and shatter may take a bright mode when a word calls for one.
+Queued items 34 (dials), 35 (the fit) and 36 (the two mode decisions).
 
 ## History
 

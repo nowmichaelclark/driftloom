@@ -933,6 +933,11 @@ The process:
    fit the word?", and "which word fits this track?" blind.
 4. Tune, then widen to more words.
 
+Where it stands (2026-10-11): the ranking test (`/rank`, pool 3, 71
+words) is collecting Mikey's answers; queue items 34-35 measure each
+loop on the ten dials and fit each word's region from them, so the
+recipes can come from his ears rather than the brain's drafts.
+
 This is generator work, so it happens before the generator moves to Rust
 (item 16's timing); the vocabulary will be part of what the Rust
 generator carries.

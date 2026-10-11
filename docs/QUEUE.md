@@ -8,8 +8,8 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: nothing queued (the ears-approved new
-instruments wait, "Later, not queued"), so the brain writes the next item. A new
+standing rules). Next: **items 34-36, the words** (the ears-approved new
+instruments wait, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
@@ -24,6 +24,13 @@ how the port was proven; from item 31b on, the core may do better where
 better is possible (judged by measurement and Mikey's ears), and
 nulling against JavaScript is a safety net until the core is the
 default, not a goal. See `docs/BRAIN.md`, "The engine".
+
+**The words, from here (brain, Session 16, 2026-10-11):** items 34-36.
+34 and 35 are tools only (no sound changes) and let the next words brain
+fit Mikey's rankings; 36 is a small generator change from two decisions he
+made. Do them in order. Mikey is ranking on `/rank` meanwhile: nothing in
+these items may change what an existing song code renders, because every
+ranking is tied to its code.
 
 ## Standing rules, for every item
 
@@ -1273,6 +1280,174 @@ A small item: data in `rank.html`, no generator or synth change.
   Export writes the new words and the pool, the tests pass. Bump BUILD
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
+
+## 34. The ten dials, measured: `tools/dials.mjs` (measure only)
+
+Mikey's rankings say which words fit which loops; to turn that into word
+regions on the maps, every ranked loop needs a position on the ten dials
+(`docs/MOODS.md`, "Dials" and "Maps and clouds"). Item 19 left this as
+"a later item"; this is it. A tool, no app change: `BUILD` and `CACHE` stay
+as they are; the balance lock and the core baseline don't move.
+
+- **Input:** a `/rank` export (`.jsonl`; measure each distinct `code`
+  once) or song codes on the command line. Decode with `decodeSong`, then
+  `render(spec)` as `stats.mjs` does, so the dials are measured on the
+  pattern as heard: after entry schedules and gaps, with no wander (`/rank`
+  plays the loop as composed, `driftOn = false`).
+- **The ten dials, 0 to 1,** each from the loop's own notes, and each
+  documented in a comment at its function: what it counts and why that is
+  the dial. Starting points; where the brain is vague, the hands' call:
+
+  | dial | low end -- high end | measure from |
+  |---|---|---|
+  | lift | inward -- bright | the mode's `SCALE_BRIGHTNESS`, and the share of chord time on chords with a major third |
+  | energy | still -- lively | tempo, sounding onsets per second over all layers, drum hits per bar |
+  | warmth | cool -- warm | the spec's tone warmth and where its voices sit in the spectrum (from figures already measured per voice, or a spectral centroid with `--audio`, below) |
+  | room | close -- wide | tone space, chord spread (lowest to highest note), the tune's span |
+  | ground | floating -- grounded | share of beats with a kick or bass onset; notes tied over the beat pull it down |
+  | edge | soft -- crisp | the voices' attacks (struck and plucked against sustained), median note length, the 2-5 kHz share with `--audio` |
+  | height | low -- high | sounding-weighted median pitch of melody and texture |
+  | bounce | flowing -- springy | dotted and syncopated onsets, short notes, melodic leaps of a fourth or more |
+  | tang | sweet -- tart | chord time with added seconds, a b9 or a semitone cluster, against plain triads |
+  | oddness | familiar -- strange | the mode (whole-tone, hirajoshi, phrygian: far from ionian), tritone and augmented steps in the tune, how rare the loop's pairing of voices is in the catalog |
+
+- **Scaled by the catalog:** map each dial's raw value to its percentile
+  in a fixed corpus (2,000 loops at `stats.mjs`'s default seed, written to
+  a small JSON in `test/` so the scale doesn't move between runs), so 0.5
+  is the catalog median. Print the raw values too. When a later generator
+  change moves the corpus, regenerating the scale is a deliberate step
+  (`--write-scale`), like the balance lock's.
+- **A cloud, not only a point:** per bar wherever the dial means something
+  bar by bar (lift, energy, ground, height, bounce and tang at least), each
+  bar weighted by how much sounds in it; the loop's point is the weighted
+  mean. Per layer is welcome for height and edge if it is cheap. Say which
+  dials stay loop-wide and why.
+- **Audio is optional** (`--audio`): the score dials need no rendering. If
+  warmth and edge read better from audio (through `measure.mjs`'s pipeline,
+  on the core), add it behind the flag and report which reads better, and
+  what it costs.
+- **Output:** a table (a row a loop, ten columns) and `--json` with the raw
+  values, the scaled values and the per-bar clouds, keyed by code.
+- **Yardsticks, reported in the PR:**
+  - Deterministic: the same code twice, the same numbers.
+  - Fast: the time for 41 codes and for 500 (score dials only).
+  - **Ten different dials:** over the 2,000-loop corpus, the 10x10
+    correlation table. Flag any pair above 0.7; if two dials measure the
+    same thing, say so and propose the fix rather than shipping twins.
+  - **Face validity:** each dial's mean by profile (shatter and cinder high
+    on energy, haven and vapor low, and so on), and lift against
+    `feel.lift` (it should rise with it). Report anything that surprises.
+  - **Mikey's first 41 trials** (2026-10-11, v85, seeds 19000-19038; see
+    `docs/MOODS.md`, ranking results): measure them and put the table in
+    the PR. Mikey attaches his export to the hands session; without it,
+    regenerate the codes as `/rank` does (`newSpec(19000 + n)` on v85, `encodeSong`) and check the first
+    against his export's:
+    `DL1-0C07C-1R60G-60789-DFZDM-QV19C-NRNCG-FKYW6-B9P0G-ENS6B-KR001-53G0G-8YC3G-R0G3Y-W10HC-XZDMW-6WC00-00000-04CK0`.
+- Tests in `test/`: a still loop low on energy and a fast one high,
+  percentiles inside 0..1, determinism. Tests three times.
+
+## 35. Fitting the words: `tools/ranks.mjs --fit` (measure only)
+
+With the dials (item 34), Mikey's answers can place the words. Votes, not
+verdicts (his words: "I might have selected different options on a
+different day"), so the fit is soft and says how sure it is. A tool, no
+app change.
+
+- **`node tools/ranks.mjs <file.jsonl> --fit`** measures each distinct
+  code with item 34 (or reads `--dials <file.json>`) and, per word, over
+  the answered, non-repeat trials that showed it:
+  - **fits** (tapped) against **doesn't fit** (shown, untapped). A tap
+    weighs less the later it came (first 1, then 0.8, 0.6, 0.5, 0.4 -- the
+    hands may tune this; say what they chose);
+  - per dial: the weighted mean of the fits, of the doesn't-fits, and their
+    standardized difference, with an 80% bootstrap interval (trials
+    resampled 1,000 times, seeded);
+  - the word's **region**: on the dials whose interval stays clear of
+    zero, a center (the fits' weighted mean) and a spread (their weighted
+    SD); every other dial "doesn't care". A word shown fewer than 8 times
+    prints "too few" and gets no region.
+- **An honest check of the whole fit:** leave one trial out at a time, fit
+  from the rest, then order that trial's five words by how close the loop
+  sits to each word's region. Report how often the top word is Mikey's
+  first tap (chance is 20%), and the rank agreement over the words he
+  tapped. If this isn't clearly above chance, the regions aren't real yet,
+  and the report says so in its first line.
+- **Repeats:** keep the existing agreement report; add, per word, how
+  often its fits / doesn't-fit answer flipped between a trial and its
+  repeat (how much the day's mood moves it).
+- **Output:** a readable report (by group; region dials first) and
+  `--json` for the brain: per word, the counts, the per-dial figures and
+  the region. Pools 1-3 all count (a word is a word whichever pool showed
+  it); say per pool how many trials there were.
+- Run it on Mikey's latest export (he attaches it to the hands session;
+  if he hasn't, ask once, then go on with the synthetic test below) and
+  put the report in the PR, knowing that at a few dozen trials it will
+  mostly say "too few". The point is that the next words brain runs one
+  command on several hundred trials.
+- Tests: in a synthetic export where one word is always tapped on loops
+  high on one dial, that word must get a region on that dial and nothing
+  else; a word tapped at random must get none. Tests three times.
+
+## 36. Two mode decisions: reflective may be neutral; cinder and shatter may be bright
+
+Two decisions from Mikey (2026-10-11) on what #107 (item 16) did to the
+mode draw. A generator change for **new loops only**: a share code writes
+its mode down, so every existing code, and every `/rank` trial, renders
+exactly as before.
+
+- **Reflective:** "reflective leaning brighter since #107 is okay, but
+  reflective can also be neutral." Below `INWARD_FROM` the inward pull
+  centers on 0.4 and all but rules out every mode above about 0.6, so a
+  reflective loop is inward (dorian, kumoi, minor pentatonic, insen) and
+  rarely in the middle of the axis. Widen it so reflective loops also reach
+  the **neutral** modes -- the middle of `SCALE_BRIGHTNESS`, about 0.44 to
+  0.75 (whole-tone, dorian, akebono, kumoi, ritusen, mixolydian) -- while
+  the darkest (phrygian, harmonic minor, phrygian dominant) stay pulled
+  away as now and the glad end (yo and up, 0.82 and over) stays rare. How
+  (the pull's center, its width, or both) is the hands' call.
+  **Measure first, then after:** for 10,000 fresh loops whose top mood is
+  reflective, the share of each mode and of four bands: dark (0.2 and
+  under), inward (0.21-0.43), neutral (0.44-0.75), bright (0.76 and up).
+  Aim: neutral up to roughly a third or more; inward still the largest or
+  close to it; dark no higher than today; bright under about 10%. The
+  other seven moods' tables must not move beyond noise (check that only
+  reflective reaches below `INWARD_FROM` in practice).
+- **Cinder and shatter:** "cinder and shatter may take a bright mode when a
+  word calls for one." Their pools hold no bright mode, so a happy cinder
+  or shatter loop is never bright. Today the words that call for
+  brightness are the glad moods (`feel.lift` above `GLAD_FROM`: joyful,
+  happy, enthusiastic, refreshing); later the word recipes call the same
+  hook. Give a profile an optional list of **borrowed bright modes**,
+  weight 0 unless the glad tilt is on and growing with it as the tilt
+  does:
+  - **cinder:** ionian and mixolydian -- flamenco's own major forms (the
+    alegrías, literally "joys") and the village fiesta `docs/MOODS.md`
+    imagines for *merry* on cinder;
+  - **shatter:** lydian and mixolydian -- bright and still restless.
+
+  Cinder's progressions spell chords for its minor-ish modes (the
+  Andalusian cadence's major V; the added F over the E chord, which
+  stays). In a borrowed major mode, check what each progression becomes:
+  keep the Andalusian moves and the added F in the modes they belong to,
+  and give a bright cinder loop progressions on a major tonic (I-IV-V,
+  I-V), the 6/8 strum and hand kit unchanged. Whatever is chosen, write it
+  down **for Mikey's ears**. No other profile changes.
+  Report: the share of glad cinder and shatter loops (top mood joyful,
+  happy or enthusiastic) in a bright mode, before and after; and the same
+  over all cinder and shatter loops (it should stay small: brightness only
+  where a word calls for it).
+- **Share codes:** a cinder loop in ionian and a shatter loop in lydian
+  encode and decode (every mode is in `SCALES`, so they should).
+- **Checks:** the balance lock will move a little: report which figures
+  and by how much, re-baseline at `--n 10000`, and say so. The core
+  baseline: if any of its loops re-draw, `--update` and say which and why;
+  if they are fixed codes, it passes unchanged. If item 34's dial scale
+  (`test/`) moves, regenerate it and say so. Refusals on full and lite for
+  40 new glad cinder and shatter loops and 40 new reflective ones. Tests
+  three times. Bump `BUILD` and `CACHE`.
+- **For the album:** list in the PR 6 new reflective loops in neutral
+  modes and 6 glad cinder and shatter loops in bright modes (seeds and
+  codes), so the brain can build the listening album from them directly.
 
 ## Later, not queued
 

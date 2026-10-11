@@ -333,3 +333,34 @@ are the hands' call: warm, cool, heartwarming and comforting by warmth;
 comfy, restful, soothing, foggy and minimal by room; intricate by edge;
 enthusiastic by energy; silly, strange, goofy, experimental and refreshing
 by tang and oddness. Move any that sit wrong.
+
+**Pool 3, first 41 trials (seeds 19000-19038, v85, full quality,
+2026-10-11).** 39 answered, 2 hidden repeats, no skips; median 28 s a
+trial (about two a minute). Each word was shown 2-5 times: far too few to
+fit anything, so impressions only, and votes, not verdicts.
+- **Nothing tapped on 3 of 39 (8%)**, against 8 of 20 in batch 1: one word
+  per map and the bigger pool work.
+- He reaches for **air** (a word tapped in 59% of trials) and **motion**
+  (56%) over shimmer (44%), color (36%) and flavor (31%).
+- Tapped every time shown: crisp (5 of 5), steady (3, first every time),
+  soothing (2, first both times), spacious, minimal, hypnotic, bouncy
+  (3 of 3), cool, wistful, bright, frosty, zany, strange (2 of 2).
+- Not tapped yet: happy (0 of 3), peaceful, reflective, merry, comforting,
+  heartwarming, golden, warm, wondrous; hushed, meditative, reverent;
+  nimble; silly, mysterious, experimental, spicy, sweet, tart, zesty.
+  Batch 1 said the same of the heart words: what a loop does reaches him
+  before what it feels like. Too early to drop any.
+- Repeats: 2 pairs, 9 of 10 fits / doesn't-fit answers agreed; one pair
+  agreed exactly (nothing fit, both times), the other kept its words but
+  moved crisp from first to last.
+- Next: more trials (every word at least 10 times takes about 180, item
+  33's simulation), then the fit (queue items 34-35: the dials measured
+  per loop, and each word's region fitted from his answers).
+
+## Decided (Mikey, 2026-10-11)
+
+- **Reflective** leaning brighter since #107 is okay, and reflective can
+  also be **neutral** (the middle of the mode axis), not only inward.
+- **Cinder and shatter may take a bright mode when a word calls for one**
+  (borrowed modes their pools don't have, used only when the word is a
+  bright one). Queue item 36 builds both.
