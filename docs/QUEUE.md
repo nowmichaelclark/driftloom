@@ -2191,3 +2191,9 @@ Mikey decides this line:
   every new loop (Next, a loop ending, the first loop on opening), and a
   vibe loop's details show its vibes and weights. Listen for: pick a few,
   press Next a few times, and say which loops fit the vibes and which don't.
+- #175, the ten dials (item 34), tools only:
+  https://6cf10684-driftloom.nowmichaelclark.workers.dev (the app as v87).
+  `node tools/dials.mjs <export|codes>`, scaled to the catalog
+  (`test/dial-scale.json`), with `--yardsticks` and `--ears`. Nothing to
+  hear; the energy dial separates Mikey's energy words more clearly than
+  tempo or notes per second alone.
