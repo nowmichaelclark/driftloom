@@ -8,7 +8,7 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: **items 34-36, the words** (the ears-approved new
+standing rules). Next: **items 34-37, the words** (the ears-approved new
 instruments wait, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
@@ -25,10 +25,10 @@ better is possible (judged by measurement and Mikey's ears), and
 nulling against JavaScript is a safety net until the core is the
 default, not a goal. See `docs/BRAIN.md`, "The engine".
 
-**The words, from here (brain, Session 16, 2026-10-11):** items 34-36.
-34 and 35 are tools only (no sound changes) and let the next words brain
-fit Mikey's rankings; 36 is a small generator change from two decisions he
-made. Do them in order. Mikey is ranking on `/rank` meanwhile: nothing in
+**The words, from here (brain, Session 16, 2026-10-11):** items 34-37.
+34 and 35 are tools only (no sound changes): the dials, the fit, and a
+word-album builder; 36 is a small generator change from two decisions
+Mikey made; 37 lets him answer word albums on `/rank`. Do them in order. Mikey is ranking on `/rank` meanwhile: nothing in
 these items may change what an existing song code renders, because every
 ranking is tied to its code.
 
@@ -1330,63 +1330,88 @@ as they are; the balance lock and the core baseline don't move.
   values, the scaled values and the per-bar clouds, keyed by code.
 - **Yardsticks, reported in the PR:**
   - Deterministic: the same code twice, the same numbers.
-  - Fast: the time for 41 codes and for 500 (score dials only).
+  - Fast: the time for 181 codes and for 500 (score dials only).
   - **Ten different dials:** over the 2,000-loop corpus, the 10x10
     correlation table. Flag any pair above 0.7; if two dials measure the
     same thing, say so and propose the fix rather than shipping twins.
   - **Face validity:** each dial's mean by profile (shatter and cinder high
     on energy, haven and vapor low, and so on), and lift against
     `feel.lift` (it should rise with it). Report anything that surprises.
-  - **Mikey's first 41 trials** (2026-10-11, v85, seeds 19000-19038; see
-    `docs/MOODS.md`, ranking results): measure them and put the table in
-    the PR. Mikey attaches his export to the hands session; without it,
-    regenerate the codes as `/rank` does (`newSpec(19000 + n)` on v85, `encodeSong`) and check the first
-    against his export's:
-    `DL1-0C07C-1R60G-60789-DFZDM-QV19C-NRNCG-FKYW6-B9P0G-ENS6B-KR001-53G0G-8YC3G-R0G3Y-W10HC-XZDMW-6WC00-00000-04CK0`.
+  - **Checked against Mikey's ears:** his 181-trial export (2026-10-11,
+    v85, seeds 19000-19173; he attaches it to the hands session). The
+    brain's scratch check found the energy words separating cleanly on
+    tempo, notes per second and drums (energetic, bouncy, lively,
+    enthusiastic, adventurous and nimble up; cozy, tiptoeing, meditative,
+    peaceful, soothing and foggy down), and happy and sunny against
+    reflective on mode brightness. The energy and lift dials must show the
+    same, at least as clearly; report the fits' and doesn't-fits' means
+    for those words. Without the export, regenerate the codes as `/rank`
+    does (`newSpec(19000 + n)` on v85, `encodeSong`) and check the first
+    against
+    `DL1-0C07C-1R60G-60789-DFZDM-QV19C-NRNCG-FKYW6-B9P0G-ENS6B-KR001-53G0G-8YC3G-R0G3Y-W10HC-XZDMW-6WC00-00000-04CK0`;
+    the taps need the export.
 - Tests in `test/`: a still loop low on energy and a fast one high,
   percentiles inside 0..1, determinism. Tests three times.
 
-## 35. Fitting the words: `tools/ranks.mjs --fit` (measure only)
+## 35. Fitting the words, and building word albums (measure only)
 
-With the dials (item 34), Mikey's answers can place the words. Votes, not
-verdicts (his words: "I might have selected different options on a
-different day"), so the fit is soft and says how sure it is. A tool, no
-app change.
+With the dials (item 34), Mikey's answers can place the words, and the
+brain can guess loops for a word. Votes, not verdicts (his words: "I might
+have selected different options on a different day"), so the fit is soft
+and says how sure it is. Tools, no app change. Since Mikey's 181 trials
+(`docs/MOODS.md`), the test is moving to **word albums**: one word, about
+eight loops, "which of these don't fit?" (item 37). The fit feeds the
+guesses, and the albums' answers feed the fit.
 
-- **`node tools/ranks.mjs <file.jsonl> --fit`** measures each distinct
-  code with item 34 (or reads `--dials <file.json>`) and, per word, over
-  the answered, non-repeat trials that showed it:
-  - **fits** (tapped) against **doesn't fit** (shown, untapped). A tap
-    weighs less the later it came (first 1, then 0.8, 0.6, 0.5, 0.4 -- the
-    hands may tune this; say what they chose);
-  - per dial: the weighted mean of the fits, of the doesn't-fits, and their
-    standardized difference, with an 80% bootstrap interval (trials
-    resampled 1,000 times, seeded);
-  - the word's **region**: on the dials whose interval stays clear of
-    zero, a center (the fits' weighted mean) and a spread (their weighted
-    SD); every other dial "doesn't care". A word shown fewer than 8 times
-    prints "too few" and gets no region.
-- **An honest check of the whole fit:** leave one trial out at a time, fit
-  from the rest, then order that trial's five words by how close the loop
-  sits to each word's region. Report how often the top word is Mikey's
-  first tap (chance is 20%), and the rank agreement over the words he
-  tapped. If this isn't clearly above chance, the regions aren't real yet,
-  and the report says so in its first line.
-- **Repeats:** keep the existing agreement report; add, per word, how
-  often its fits / doesn't-fit answer flipped between a trial and its
-  repeat (how much the day's mood moves it).
-- **Output:** a readable report (by group; region dials first) and
-  `--json` for the brain: per word, the counts, the per-dial figures and
-  the region. Pools 1-3 all count (a word is a word whichever pool showed
-  it); say per pool how many trials there were.
-- Run it on Mikey's latest export (he attaches it to the hands session;
-  if he hasn't, ask once, then go on with the synthetic test below) and
-  put the report in the PR, knowing that at a few dozen trials it will
-  mostly say "too few". The point is that the next words brain runs one
-  command on several hundred trials.
-- Tests: in a synthetic export where one word is always tapped on loops
-  high on one dial, that word must get a region on that dial and nothing
-  else; a word tapped at random must get none. Tests three times.
+**(a) `node tools/ranks.mjs <file.jsonl> --fit`** measures each distinct
+code with item 34 (or reads `--dials <file.json>`) and, per word:
+- **fits** against **doesn't fit**, from the five-word trials (tapped
+  against shown but untapped; a tap weighs less the later it came: 1, 0.8,
+  0.6, 0.5, 0.4, tunable, say what was chosen) and from word-album answers
+  (item 37: fits / doesn't fit; "not sure" left out);
+- per dial: the weighted means of both, their standardized difference, and
+  an 80% bootstrap interval (trials resampled 1,000 times, seeded);
+- the word's **region**, kept lean: only the dials whose interval stays
+  clear of zero, and **at most three** unless the data clearly carries
+  more; a center and a spread on each; every other dial "doesn't care".
+  Fewer than 8 answers: "too few", no region.
+- **Words that fit almost everything or almost nothing** (90%+ or 10%-
+  of the times shown, with 8 or more answers) are listed apart: no
+  region, because they don't tell loops apart (steady, cool, wistful and
+  zany fit nearly every loop in his 181; heartwarming and joyful almost
+  none).
+- **The honest check, against the right baselines:** leave one trial out
+  at a time, fit from the rest, order that trial's five words by how
+  likely each is to fit the loop, and count how often the top word is
+  his first tap. Report it next to (1) chance, 20%; (2) **base rates
+  alone** -- each word's overall fit rate, ignoring the loop, which got
+  38% on the 181 trials, while the brain's scratch fit on spec features
+  got 32%; and (3) his own repeats' agreement on the first word (4 of 7).
+  A fit that doesn't beat base rates says so in its first line.
+- Repeats: keep the agreement report; add, per word, how often its fits /
+  doesn't-fit answer flipped.
+- Output: a readable report by group, region dials first, and `--json`
+  for the brain. Pools 1-3 and albums all count; say how many of each.
+
+**(b) `node tools/wordalbum.mjs`** builds a word album for the brain:
+- `--word <w>` and a **target**: the word's fitted region from (a), or
+  dial ranges written by the brain (`--target "warmth>0.7,lift 0.55-0.8,
+  energy<0.5"`), so the brain can guess where the data is thin.
+- Draws a fresh corpus (`--n 3000`, seeded), measures it with item 34,
+  and picks `--guesses 6` loops closest to the target and `--decoys 2`
+  far from it on its main dials, each from a different profile where it
+  can, 4 bars or longer, `playFor` set to about 40 seconds; shuffled.
+- Prints the album code (`encodeAlbum`, title "<Word>?"), the key (track,
+  guess or decoy, profile, mode, tempo, the target dials' values) and
+  the `/rank` link for item 37.
+- `--seed` makes it reproducible; the key is derivable by re-running it,
+  so nobody writes it into `docs/ALBUMS.md`.
+
+- Run (a) on the 181-trial export and put the report in the PR. Tests:
+  in a synthetic export where one word is always tapped on loops high on
+  one dial, that word gets a region on that dial and nothing else; a word
+  tapped at random gets none; `wordalbum.mjs` with a target picks loops
+  inside it and decoys outside. Tests three times.
 
 ## 36. Two mode decisions: reflective may be neutral; cinder and shatter may be bright
 
@@ -1448,6 +1473,39 @@ exactly as before.
 - **For the album:** list in the PR 6 new reflective loops in neutral
   modes and 6 glad cinder and shatter loops in bright modes (seeds and
   codes), so the brain can build the listening album from them directly.
+
+## 37. Word albums on `/rank`: one word, "does it fit?"
+
+Mikey's idea (2026-10-11): "Is this playlist heartwarming? Which songs are
+not?" The brain sends a word album (item 35b); Mikey answers each track
+with one tap. The pilots, "Heartwarming?" and "Joyful?", went out as
+plain albums (`docs/ALBUMS.md`); **if the brain's State says the pilot
+didn't work, skip this item.**
+
+- **`rank.html?album=<DLA1 code>`** (the word from the album's title,
+  "Heartwarming?" -> heartwarming; `&word=` overrides): plays the album's
+  loops in order, each as composed (`driftOn = false`, as now), looping
+  until answered. Shows only the question, "Heartwarming?", and the track
+  number of the total; no profile, mood or title per track.
+- **Buttons:** Fits, Doesn't fit, Not sure; Undo goes back one. A track
+  can be answered while it plays; the next starts at once.
+- **Record** each answer as a line in the same export, so `ranks.mjs`
+  reads it with the rest: `trial`, `build`, `code`, `album` (the album
+  code's first block and the word, enough to tell albums apart), `track`,
+  `words: [word]`, `taps: [word]` for fits and `[]` for doesn't fit,
+  `answer: "fits" | "no" | "unsure"`, `seconds`, `quality`. Saved as
+  `/rank` saves now; Export and Clear as they are.
+- **`ranks.mjs`** counts album answers apart from the five-word trials
+  (per album: fits, doesn't fit, not sure), and `--fit` uses them (item
+  35a). The five-word trial stays as it is without `?album=`.
+- No hidden repeats in albums (they are short); no generator, synth or
+  share-code change; the balance lock doesn't move. The page plays the
+  core like the app (item 32's note: `/rank` still builds the JavaScript
+  `Synth`; wire it to the core here, with `?engine=js` as the fallback,
+  and say what changed). Bump `BUILD` and `CACHE`.
+- **Checks:** both pilot album codes in `docs/ALBUMS.md` open, play and
+  record on the core and `?engine=js`; an export holding both kinds of
+  line reads in `ranks.mjs`; tests three times.
 
 ## Later, not queued
 
