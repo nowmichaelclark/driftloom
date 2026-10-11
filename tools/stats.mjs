@@ -20,8 +20,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { newSpec, render, choirOf, STEPS_PER_BAR } from '../js/generator.js';
 import { Rng } from '../js/rng.js';
-import { SCALES } from '../js/theory.js';
+import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
 import { encodeSong } from '../js/share.js';
+import { VIBE_IDS } from '../js/vibes.js';
 
 // ------------------------------------------------------------ arguments
 
@@ -60,6 +61,10 @@ driftloom generation statistics
                       (comma-separated; --n of each, default 150)
   --depth             composition depth by loop length, for loops that
                       develop and loops that do not (default --n 3000)
+  --vibes <a,b,c>     draw the corpus with that vibe selection and
+                      compare it with no vibes        (default --n 2000)
+  --vibe-each         one line per vibe on its own, against no vibes
+                                                      (default --n 400)
   --write-baseline [file]  write the balance lock      (default ${BASELINE_DEFAULT})
   --check [file]      rerun the locked corpus against it; non-zero exit on a miss
   --help              this
@@ -83,6 +88,14 @@ driftloom generation statistics
   draws, and the flute alone under 2%, so rolling the dice in the app
   until one turns up is a poor use of an evening. Give it a voice name and
   it prints codes to paste straight in.
+
+  --vibes and --vibe-each are the brain's tuning tool for the vibes
+  (queue item 38a, js/vibes.js): what a selection does to the corpus, by
+  the figures a recipe leans on, before anyone listens. Both draw the same
+  seeds with and without the vibes, so the difference is the vibes alone.
+  Mode bands are item 36's, on SCALE_BRIGHTNESS: dark (0.2 and under),
+  inward (to 0.43), neutral (to 0.75), bright (0.76 and up). "12-step" is
+  6/8 and the waltz together, which is what the six8 lean moves.
 
   --drums reports how varied a profile's drums are, over --n loops it
   leads that have drums (150 unless --n is given), counting sounding hits
@@ -112,7 +125,7 @@ const LIFT_HIGH_DEFAULT = 0.78;
 function parseArgs(argv) {
   const opts = {
     n: 2000, seed: 1, liftLow: null, liftHigh: null, bucketed: false, quiz: null, voiceCodes: null,
-    writeBaseline: null, check: null, drums: null, nGiven: false,
+    writeBaseline: null, check: null, drums: null, nGiven: false, vibes: null, vibeEach: false,
   };
   for (let i = 0; i < argv.length; i++) {
     let arg = argv[i];
@@ -177,6 +190,17 @@ function parseArgs(argv) {
         break;
       case '--depth':
         opts.depth = true;
+        break;
+      case '--vibes': {
+        const list = text(null);
+        if (!list) fail('--vibes needs a comma-separated list of vibes');
+        opts.vibes = list.split(',').map((v) => v.trim()).filter(Boolean);
+        const unknown = opts.vibes.filter((v) => !VIBE_IDS.includes(v));
+        if (unknown.length) fail(`unknown vibe ${unknown.join(', ')}`);
+        break;
+      }
+      case '--vibe-each':
+        opts.vibeEach = true;
         break;
       case '--write-baseline':
         opts.writeBaseline = text(BASELINE_DEFAULT);
@@ -1066,6 +1090,145 @@ function depthTable(opts) {
   return out.join('\n');
 }
 
+
+// ------------------------------------------------------------ --vibes
+
+const MODE_BANDS = [['dark', 0.2], ['inward', 0.43], ['neutral', 0.75], ['bright', Infinity]];
+function modeBand(scale) {
+  const b = SCALE_BRIGHTNESS[scale] ?? 0.5;
+  return MODE_BANDS.find(([, top]) => b <= top + 1e-9)[0];
+}
+
+// The figures a recipe leans on, for one loop. Rendered, so drums and the
+// melody voice are what plays, not what the pool offered.
+function vibeRecord(spec) {
+  const p = render(spec);
+  let profile = null;
+  let best = -1;
+  for (const [key, weight] of Object.entries(spec.mix || {})) {
+    if (weight > best) { best = weight; profile = key; }
+  }
+  return {
+    profile,
+    band: modeBand(spec.scale),
+    bpm: spec.bpm,
+    drums: p.tracks.drums.some((e) => e.vel > 0),
+    twelve: spec.stepsPerBar === 12,
+    bars: spec.bars,
+    voice: p.tracks.melody.some((e) => e.vel > 0) ? p.meta.melodyVoice : null,
+    vibes: spec.vibes || null,
+    strength: spec.vibeStrength ?? null,
+  };
+}
+
+function vibeCorpus(opts, selection, n) {
+  const master = new Rng(opts.seed || 1);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(vibeRecord(newSpec(master.seed32(), selection)));
+  return out;
+}
+
+function quantile(sorted, q) {
+  if (!sorted.length) return NaN;
+  const i = (sorted.length - 1) * q;
+  const lo = Math.floor(i);
+  return sorted[lo] + (sorted[Math.min(lo + 1, sorted.length - 1)] - sorted[lo]) * (i - lo);
+}
+
+function vibeSummary(recs) {
+  const n = recs.length;
+  const share = (f) => recs.filter(f).length / n;
+  const counts = (key) => {
+    const m = new Map();
+    for (const r of recs) if (r[key] != null) m.set(r[key], (m.get(r[key]) || 0) + 1);
+    return m;
+  };
+  const bpms = recs.map((r) => r.bpm).sort((a, b) => a - b);
+  return {
+    n,
+    profiles: counts('profile'),
+    bands: Object.fromEntries(MODE_BANDS.map(([b]) => [b, share((r) => r.band === b)])),
+    bpmMedian: quantile(bpms, 0.5),
+    bpmIqr: quantile(bpms, 0.75) - quantile(bpms, 0.25),
+    drums: share((r) => r.drums),
+    twelve: share((r) => r.twelve),
+    bars: counts('bars'),
+    long: share((r) => r.bars >= 8),
+    voices: counts('voice'),
+    sung: recs.filter((r) => r.voice).length,
+  };
+}
+
+const p1 = (v) => `${(v * 100).toFixed(1)}%`;
+function topOf(map, total, k) {
+  return [...map].sort((a, b) => b[1] - a[1]).slice(0, k).map(([name, c]) => `${name} ${p1(c / total)}`);
+}
+
+function vibesReport(opts) {
+  const n = opts.nGiven ? opts.n : 2000;
+  const base = vibeSummary(vibeCorpus(opts, null, n));
+  const recs = vibeCorpus(opts, opts.vibes, n);
+  const with_ = vibeSummary(recs);
+  const out = [''];
+  out.push(`driftloom vibes: ${opts.vibes.join(', ')} -- ${n} loops, corpus seed ${opts.seed || 1}`);
+  out.push('');
+  out.push(line('', ['no vibes', 'with vibes']));
+  out.push(rule(2));
+  const profiles = [...new Set([...base.profiles.keys(), ...with_.profiles.keys()])]
+    .sort((a, b) => (with_.profiles.get(b) || 0) - (with_.profiles.get(a) || 0));
+  out.push('  lead profile');
+  for (const k of profiles) out.push(line(`  ${k}`, [p1((base.profiles.get(k) || 0) / n), p1((with_.profiles.get(k) || 0) / n)]));
+  out.push('  mode band');
+  for (const [b] of MODE_BANDS) out.push(line(`  ${b}`, [p1(base.bands[b]), p1(with_.bands[b])]));
+  out.push(line('tempo median (bpm)', [base.bpmMedian.toFixed(0), with_.bpmMedian.toFixed(0)]));
+  out.push(line('tempo spread (IQR, bpm)', [base.bpmIqr.toFixed(0), with_.bpmIqr.toFixed(0)]));
+  out.push(line('drums on', [p1(base.drums), p1(with_.drums)]));
+  out.push(line('12-step (6/8 and 3/4)', [p1(base.twelve), p1(with_.twelve)]));
+  out.push('  bars');
+  for (const b of [...new Set([...base.bars.keys(), ...with_.bars.keys()])].sort((a, b2) => a - b2)) {
+    out.push(line(`  ${b}`, [p1((base.bars.get(b) || 0) / n), p1((with_.bars.get(b) || 0) / n)]));
+  }
+  out.push('  top melody voices (share of loops with a melody)');
+  const voices = [...with_.voices].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k]) => k);
+  for (const k of voices) {
+    out.push(line(`  ${k}`, [p1((base.voices.get(k) || 0) / base.sung), p1((with_.voices.get(k) || 0) / with_.sung)]));
+  }
+  // What each loop was actually steered by: how often a vibe was among its
+  // five, and its mean weight when it was.
+  out.push('');
+  out.push('  realized weights');
+  out.push(line('', ['in loops', 'mean weight']));
+  for (const v of opts.vibes) {
+    const hits = recs.filter((r) => r.vibes && r.vibes[v] != null);
+    const mw = hits.length ? hits.reduce((a, r) => a + r.vibes[v], 0) / hits.length : NaN;
+    out.push(line(`  ${v}`, [p1(hits.length / n), Number.isFinite(mw) ? p1(mw) : '-']));
+  }
+  const st = recs.map((r) => r.strength).filter((x) => x != null);
+  out.push(line('strength (mean)', ['', (st.reduce((a, b) => a + b, 0) / st.length).toFixed(2)]));
+  out.push('');
+  return out.join('\n');
+}
+
+function vibeEachReport(opts) {
+  const n = opts.nGiven ? opts.n : 400;
+  const head = ['top profile', 'dark', 'inward', 'neutral', 'bright', 'bpm', 'iqr', 'drums', '12-step', '8+ bars', 'top melody'];
+  const row = (label, s) => {
+    const [tp] = topOf(s.profiles, s.n, 1);
+    const [tv] = topOf(s.voices, s.sung, 1);
+    return `| ${label} | ${tp || '-'} | ${MODE_BANDS.map(([b]) => p1(s.bands[b])).join(' | ')} | ${s.bpmMedian.toFixed(0)} | ${s.bpmIqr.toFixed(0)} | ${p1(s.drums)} | ${p1(s.twelve)} | ${p1(s.long)} | ${tv || '-'} |`;
+  };
+  const out = [''];
+  out.push(`driftloom, each vibe on its own -- ${n} loops each, corpus seed ${opts.seed || 1}`);
+  out.push('(a lone vibe has weight 100%; the strength is drawn per loop, 0.5 to 0.9)');
+  out.push('');
+  out.push(`| vibe | ${head.join(' | ')} |`);
+  out.push(`|---|${head.map(() => '---').join('|')}|`);
+  out.push(row('(no vibes)', vibeSummary(vibeCorpus(opts, null, n))));
+  for (const v of VIBE_IDS) out.push(row(v, vibeSummary(vibeCorpus(opts, [v], n))));
+  out.push('');
+  return out.join('\n');
+}
+
 // ----------------------------------------------------------------- main
 
 const opts = parseArgs(process.argv.slice(2));
@@ -1087,6 +1250,16 @@ if (opts.drums) {
 
 if (opts.depth) {
   console.log(depthTable(opts));
+  process.exit(0);
+}
+
+if (opts.vibes) {
+  console.log(vibesReport(opts));
+  process.exit(0);
+}
+
+if (opts.vibeEach) {
+  console.log(vibeEachReport(opts));
   process.exit(0);
 }
 

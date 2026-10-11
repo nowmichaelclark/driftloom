@@ -10,7 +10,9 @@ import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
 import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/moods.js';
-import { encodeSong, decodeSong } from '../js/share.js';
+import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
+import { VIBES, VIBE_IDS } from '../js/vibes.js';
+import { CHARACTERS } from '../js/characters.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -697,6 +699,171 @@ check('stutter rolls keep their sub-step timing', (() => {
   }
   return false;
 })());
+
+
+// ---------------------------------------------------------------------
+console.log('\nVibes (queue item 38a)');
+
+// The recipes are data the brain edits by hand, so every field and every
+// name is checked here: a typo would otherwise lean nothing, silently.
+{
+  const known = { profiles: new Set(Object.keys(CHARACTERS)), modes: new Set(Object.keys(SCALES)) };
+  const poolOf = { melody: 'melodyVoices', chords: 'chordVoices', bass: 'bassVoices', bassStyle: 'bassStyles', texture: 'textures' };
+  for (const [field, pool] of Object.entries(poolOf)) {
+    known[field] = new Set();
+    for (const c of Object.values(CHARACTERS)) for (const [n] of c[pool] || []) known[field].add(n);
+  }
+  const TARGETS = { feel: ['lift', 'energy', 'warmth'], tone: ['warmth', 'space', 'wobble'] };
+  const SCALARS = ['tempo', 'swing'];
+  const NUMBER_LEANS = ['six8', 'long', 'drums', 'hats', 'rests', 'bigChords'];
+  const bad = [];
+  const unit = (x) => typeof x === 'number' && x >= 0 && x <= 1;
+  const lean = (x) => typeof x === 'number' && x > 0 && Number.isFinite(x);
+  for (const [id, rec] of Object.entries(VIBES)) {
+    if (!rec || typeof rec !== 'object') { bad.push(`${id}: not a recipe`); continue; }
+    for (const [field, value] of Object.entries(rec)) {
+      if (TARGETS[field]) {
+        for (const [k, t] of Object.entries(value)) {
+          if (!TARGETS[field].includes(k)) bad.push(`${id}.${field}.${k}: unknown`);
+          else if (!unit(t)) bad.push(`${id}.${field}.${k}: ${t} not in 0..1`);
+        }
+      } else if (SCALARS.includes(field)) {
+        if (!unit(value)) bad.push(`${id}.${field}: ${value} not in 0..1`);
+      } else if (NUMBER_LEANS.includes(field)) {
+        if (!lean(value)) bad.push(`${id}.${field}: ${value} not a positive number`);
+      } else if (known[field]) {
+        for (const [name, m] of Object.entries(value)) {
+          if (!known[field].has(name)) bad.push(`${id}.${field}.${name}: unknown name`);
+          else if (!lean(m)) bad.push(`${id}.${field}.${name}: ${m} not a positive number`);
+        }
+      } else {
+        bad.push(`${id}.${field}: unknown field`);
+      }
+    }
+  }
+  check('every vibe recipe names only known fields, profiles, modes, voices, textures and bass styles', bad.length === 0, bad.slice(0, 8).join('; '));
+  const ids = new Set(VIBE_IDS);
+  check('VIBE_IDS holds every vibe once, and nothing else',
+    ids.size === VIBE_IDS.length && VIBE_IDS.every((id) => VIBES[id]) && Object.keys(VIBES).every((id) => ids.has(id)),
+    `${VIBE_IDS.length} ids, ${Object.keys(VIBES).length} recipes`);
+  check('71 vibes, every pool-3 word', VIBE_IDS.length === 71);
+}
+
+// No vibes is today's loop, draw for draw: the spec, the render and the code.
+{
+  const master = new Rng(0x56494245);
+  let differ = 0;
+  let first = '';
+  for (let i = 0; i < 1000; i++) {
+    const seed = master.seed32();
+    const plain = newSpec(seed);
+    const a = JSON.stringify(plain);
+    for (const sel of [[], null, undefined, ['not-a-vibe']]) {
+      if (JSON.stringify(newSpec(seed, sel)) !== a) { differ++; if (!first) first = `${seed} ${JSON.stringify(sel)}`; }
+    }
+    if (i < 200 && JSON.stringify(render(newSpec(seed, []))) !== JSON.stringify(render(plain))) differ++;
+    if (plain.vibes || plain.vibeStrength != null) differ++;
+  }
+  check('with no vibes the spec is exactly today\'s (1,000 seeds)', differ === 0, first);
+  // /rank's first loop of Mikey's 181 (v85), so every ranking still names its loop.
+  check('a loop without vibes keeps its code string (format 3)',
+    encodeSong(newSpec(19000)) === 'DL1-0C07C-1R60G-60789-DFZDM-QV19C-NRNCG-FKYW6-B9P0G-ENS6B-KR001-53G0G-8YC3G-R0G3Y-W10HC-XZDMW-6WC00-00000-04CK0');
+}
+
+// The draw: up to five, weights sharing 100% with each at least 5%, a
+// strength in 0.5..0.9; from its own stream, deterministic, tap order free.
+{
+  const problems2 = [];
+  const fifthWeights = new Set();
+  const pickedSets = new Set();
+  for (let s = 1; s <= 400; s++) {
+    for (const n of [1, 3, 5, 10]) {
+      const sel = VIBE_IDS.slice(s % 50, (s % 50) + n);
+      const spec = newSpec(s, sel);
+      const ws = Object.values(spec.vibes);
+      const sum = ws.reduce((a, b) => a + b, 0);
+      if (ws.length !== Math.min(5, n)) problems2.push(`${s}/${n}: ${ws.length} vibes`);
+      if (n === 1 && ws[0] !== 1) problems2.push(`${s}: lone weight ${ws[0]}`);
+      if (Math.abs(sum - 1) > 0.01) problems2.push(`${s}/${n}: sum ${sum}`);
+      if (ws.some((w) => w < 0.05)) problems2.push(`${s}/${n}: below 5%`);
+      if (!(spec.vibeStrength >= 0.5 && spec.vibeStrength <= 0.9)) problems2.push(`${s}/${n}: strength ${spec.vibeStrength}`);
+      if (Object.keys(spec.vibes).some((k) => !sel.includes(k))) problems2.push(`${s}/${n}: a vibe not selected`);
+      if (ws.some((w) => Math.round(w * 255) !== w * 255)) problems2.push(`${s}/${n}: off the q8 grid`);
+      if (n === 5) fifthWeights.add(spec.vibes[sel[4]]);
+      if (n === 10) pickedSets.add(Object.keys(spec.vibes).join());
+      if (n === 3 && JSON.stringify(newSpec(s, sel.slice().reverse())) !== JSON.stringify(spec)) problems2.push(`${s}: tap order matters`);
+    }
+  }
+  check('vibe draws: up to five, weights share 100% (each at least 5%), strength 0.5-0.9', problems2.length === 0, problems2.slice(0, 5).join('; '));
+  check('with more than five selected, each loop picks a new five', pickedSets.size > 300, `${pickedSets.size} distinct of 400`);
+  check('a vibe\'s weight moves from loop to loop', Math.min(...fifthWeights) <= 0.1 && Math.max(...fifthWeights) >= 0.5,
+    `${Math.min(...fifthWeights)}..${Math.max(...fifthWeights)}`);
+  const sel = ['cozy', 'joyful', 'misty'];
+  check('the same seed and selection give the same loop', JSON.stringify(newSpec(77, sel)) === JSON.stringify(newSpec(77, sel)));
+  // The loop's own stream does not move: the layer seeds are its last draws.
+  check('vibes leave the loop\'s own draws tied to its seed',
+    JSON.stringify(newSpec(77, sel).layerSeeds) === JSON.stringify(newSpec(77).layerSeeds));
+}
+
+// Share codes: a vibe loop round-trips to an identical render; old formats
+// read with no vibes; an album carries them.
+{
+  let mismatched = 0;
+  let first = '';
+  for (let s = 1; s <= 150; s++) {
+    const sel = VIBE_IDS.filter((_, i) => (i * 7 + s) % 11 === 0);
+    const spec = newSpec(s * 101, sel);
+    const code = encodeSong(spec);
+    const back = decodeSong(code);
+    // Every note, as a plain loop's code already does (swing and tone go
+    // through the code's 1/255 grid, which the notes never see); and the
+    // code is a fixed point, so it renders the same wherever it is opened.
+    if (JSON.stringify(back.vibes) !== JSON.stringify(spec.vibes) || back.vibeStrength !== spec.vibeStrength
+      || JSON.stringify(render(back).tracks) !== JSON.stringify(render(spec).tracks)
+      || encodeSong(back) !== code) {
+      mismatched++;
+      if (!first) first = code;
+    }
+  }
+  check('a vibe loop\'s code round-trips to an identical render (150 loops)', mismatched === 0, first);
+  const vibeCode = encodeSong(newSpec(5, ['cozy']));
+  check('a vibe loop is written as format 4, a plain one as format 3',
+    vibeCode.slice(4, 6) === '0G' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+  check('a format-3 code reads with no vibes', decodeSong(encodeSong(newSpec(5))).vibes === undefined);
+  const album = decodeAlbum(encodeAlbum('Mixed', [newSpec(8), newSpec(9, ['spicy', 'merry'])]));
+  check('an album carries its tracks\' vibes as they are',
+    album.specs[0].vibes === undefined && JSON.stringify(album.specs[1].vibes) === JSON.stringify(newSpec(9, ['spicy', 'merry']).vibes));
+}
+
+// The leans and targets reach the loop, each the way its recipe says.
+{
+  const N = 600;
+  const corpus = (sel) => Array.from({ length: N }, (_, i) => newSpec(1000 + i, sel));
+  const share = (specs, f) => specs.filter(f).length / specs.length;
+  const mean = (specs, f) => specs.reduce((a, s) => a + f(s), 0) / specs.length;
+  const plain = corpus(null);
+  const energetic = corpus(['energetic']);
+  const still = corpus(['still']);
+  check('energetic loops are quicker, still loops slower', mean(energetic, (s) => s.bpm) > mean(plain, (s) => s.bpm) + 5
+    && mean(still, (s) => s.bpm) < mean(plain, (s) => s.bpm) - 5,
+    `${mean(still, (s) => s.bpm).toFixed(1)} / ${mean(plain, (s) => s.bpm).toFixed(1)} / ${mean(energetic, (s) => s.bpm).toFixed(1)}`);
+  check('skipping loops are 6/8 more often', share(corpus(['skipping']), (s) => s.stepsPerBar === 12) > share(plain, (s) => s.stepsPerBar === 12) + 0.1);
+  check('bright loops sit in brighter modes', mean(corpus(['bright']), (s) => SCALE_BRIGHTNESS[s.scale]) > mean(plain, (s) => SCALE_BRIGHTNESS[s.scale]) + 0.05);
+  check('a vibe leans the render-time pools through characterOf', (() => {
+    const sp = newSpec(42, ['chiming']);
+    const c = characterOf(sp);
+    const bare = characterOf({ ...sp, vibes: undefined });
+    const w = (pool, k) => (pool.find(([n]) => n === k) || [0, 0])[1];
+    return w(bare.textures, 'chime') > 0 && w(c.textures, 'chime') > w(bare.textures, 'chime')
+      && w(c.melodyVoices, 'bell') >= w(bare.melodyVoices, 'bell');
+  })());
+  check('characterOf without vibes is the plain blend, untouched', (() => {
+    const sp = newSpec(42);
+    return JSON.stringify(characterOf(sp)) === JSON.stringify(characterOf({ ...sp, vibes: {} }));
+  })());
+  const drumsOn = (specs) => share(specs.slice(0, 300), (s) => render(s).tracks.drums.some((e) => e.vel > 0));
+  check('hushed loops have drums less often than plain ones', drumsOn(corpus(['hushed'])) < drumsOn(plain) - 0.1);
+}
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

@@ -10,6 +10,7 @@ import { Rng, randomSeed, seedName } from './rng.js';
 import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted } from './theory.js';
 import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
+import { VIBES, VIBE_IDS } from './vibes.js';
 
 export const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 export const LAYER_LABELS = {
@@ -33,8 +34,12 @@ export const VOWEL_KEYS = ['a', 'e', 'o', 'u'];
 
 // ---------------------------------------------------------------- spec
 
-export function newSpec(seed = randomSeed()) {
+export function newSpec(seed = randomSeed(), selection = null) {
   const r = new Rng(seed);
+  // The listener's vibes (queue item 38a), drawn from a stream of their own
+  // so the loop's own draws below are the same ones either way. With none
+  // selected nothing below changes at all: every hook is a no-op.
+  const v = drawVibes(seed, selection);
 
   // A loop's identity is a weight across profiles, not a choice between
   // them. Draw a few, give each an exponential weight and normalise: that
@@ -55,7 +60,7 @@ export function newSpec(seed = randomSeed()) {
     // Floored well above zero so the quiet profiles stay genuinely
     // reachable: the point is to make adventure possible, not to trade one
     // narrow band of output for another.
-    return [k, wt * Math.max(0.28, 1 + drive * (mid - 0.45) * 2.5)];
+    return [k, wt * Math.max(0.28, 1 + drive * (mid - 0.45) * 2.5) * vibeLean(v, 'profiles', k)];
   });
   const howMany = r.weighted([[1, 2.2], [2, 4], [3, 2.6], [4, 1.2]]);
   const mix = {};
@@ -71,7 +76,7 @@ export function newSpec(seed = randomSeed()) {
   const total = Object.values(mix).reduce((a, b) => a + b, 0);
   for (const k of Object.keys(mix)) mix[k] = q8(mix[k] / total);
 
-  const c = blendMix(mix);
+  const c = vibedCharacter(blendMix(mix), v);
 
   // Feeling is three dials, not one slider. Independent axes let a loop be
   // glad and unhurried at once, or hushed and restless, instead of sliding
@@ -121,7 +126,10 @@ export function newSpec(seed = randomSeed()) {
   }
   for (const axisName of ['lift', 'energy', 'warmth']) {
     const [lo, hi] = c.feel[axisName];
-    feel[axisName] = q8(Math.max(lo, Math.min(hi, feel[axisName])));
+    // A vibe pulls the feel before the profiles clamp it: words bend a
+    // profile, they do not take it somewhere it cannot go.
+    const pulled = vibePull(v, (rec) => rec.feel && rec.feel[axisName], feel[axisName]);
+    feel[axisName] = q8(Math.max(lo, Math.min(hi, pulled)));
   }
   // How closely the layers agree with the loop's centre. Low values let a
   // bright melody sit over a settled accompaniment.
@@ -134,7 +142,7 @@ export function newSpec(seed = randomSeed()) {
   // above and the tempo draw below are still made, and simply overruled.
   const gait = gaitFor(seed, c);
   if (gait) stepsPerBar = gait.stepsPerBar;
-  const tempoDraw = r.f();
+  const tempoDraw = vibePull(v, (rec) => rec.tempo, r.f());
   const band = gait ? gait.bpm : c.bpm;
   const tempo = Math.round(band[0] + tempoDraw * (band[1] - band[0])
     + (feel.lift - 0.5) * 5 + (feel.energy - 0.5) * 10);
@@ -153,10 +161,11 @@ export function newSpec(seed = randomSeed()) {
       ? Math.max(gait.bpm[0], Math.min(gait.bpm[1], tempo))
       : Math.max(32, Math.min(190, tempo)),
     root: r.int(0, 11),
-    scale: r.weighted(moodWeighted(c.scales, feel.lift)),
+    scale: r.weighted(moodWeighted(c.scales, feel.lift)
+      .map(([k, w]) => [k, w * vibeLean(v, 'modes', k)])),
     bars,
     stepsPerBar,
-    swing: r.range(c.swing[0], c.swing[1]),
+    swing: inBand(c.swing, vibePull(v, (rec) => rec.swing, r.f())),
     layerSeeds: {
       drums: r.seed32(),
       bass: r.seed32(),
@@ -174,6 +183,17 @@ export function newSpec(seed = randomSeed()) {
       wobble: r.range(c.tone.wobble[0], c.tone.wobble[1]),
     },
   };
+  if (v) {
+    for (const k of ['warmth', 'space', 'wobble']) {
+      const set = vibePull(v, (rec) => rec.tone && rec.tone[k], spec.tone[k]);
+      if (set !== spec.tone[k]) {
+        const [lo, hi] = c.tone[k];
+        spec.tone[k] = Math.max(lo, Math.min(hi, set));
+      }
+    }
+    spec.vibes = v.vibes;
+    spec.vibeStrength = v.strength;
+  }
 
   if (c.polymeter) {
     const cycles = r.shuffle(POLY_CYCLES);
@@ -200,12 +220,164 @@ export function newSpec(seed = randomSeed()) {
 }
 
 export function characterOf(spec) {
-  if (spec.mix) return blendMix(spec.mix);
+  const v = vibesOf(spec);
+  if (spec.mix) {
+    if (!v) return blendMix(spec.mix);
+    // Render asks for the character a few dozen times a loop; a vibe loop's
+    // is worked out once (and must not be changed by whoever asks, as a lone
+    // profile's never could be: it is the CHARACTERS entry itself).
+    const key = `${Object.entries(spec.mix).map(([k, w]) => `${k}:${w}`).join()}#${vibeKey(v)}`;
+    let c = vibedCharacters.get(key);
+    if (!c) {
+      c = vibedCharacter(blendMix(spec.mix), v);
+      if (vibedCharacters.size >= 64) vibedCharacters.delete(vibedCharacters.keys().next().value);
+      vibedCharacters.set(key, c);
+    }
+    return c;
+  }
   // Saves from before profiles became weights.
   const mix = {};
   mix[resolveKey(spec.character || 'dust')] = 1 - (spec.blend || 0);
   if (spec.character2 && spec.blend) mix[resolveKey(spec.character2)] = spec.blend;
-  return blendMix(mix);
+  return vibedCharacter(blendMix(mix), v);
+}
+
+// ------------------------------------------------------------- vibes
+
+// Queue item 38a. A listener picks vibes (js/vibes.js holds the recipes,
+// docs/VIBES.md says how one works); each new loop takes up to five of them
+// with weights that share 100%, and a strength. Everything here transforms
+// weights and positions the generator already has. Nothing draws from the
+// loop's own stream, so a vibe loop's other draws stay tied to its seed, and
+// a loop without vibes is exactly the loop it always was.
+//
+// Two places read them. `newSpec` applies what it draws and writes down
+// (profiles, feel, tempo, modes, metre, bars, swing, tone); everything that
+// is drawn at render time from the profile pools (voices, bass style,
+// texture, drums, hats, rests, chord sizes) is leaned in `characterOf`, so
+// a code renders the same everywhere: the vibes travel in the share code.
+const VIBE_SALT = 0x56494245;
+// At most this many vibes steer one loop; past it, each loop picks afresh.
+const VIBE_MAX = 5;
+// Each of two to five vibes gets at least this share.
+const VIBE_FLOOR = 0.05;
+const VIBE_STRENGTH = [0.5, 0.9];
+
+// The listener's selection, in the frozen order: known names only, each
+// once, and the order they were tapped in does not change the loop.
+export function vibeSelection(selection) {
+  if (!selection) return [];
+  const list = Array.isArray(selection) ? selection : Object.keys(selection);
+  const set = new Set(list);
+  return VIBE_IDS.filter((id) => set.has(id) && VIBES[id]);
+}
+
+function drawVibes(seed, selection) {
+  const chosen = vibeSelection(selection);
+  if (!chosen.length) return null;
+  const r = new Rng(((seed ^ VIBE_SALT) >>> 0) || 19);
+  const picked = chosen.length <= VIBE_MAX
+    ? chosen
+    : vibeSelection(r.shuffle(chosen).slice(0, VIBE_MAX));
+  // One vibe is the whole loop. Two to five share it: the floor each, and a
+  // Dirichlet draw (normalised exponentials) over the rest, so the fifth may
+  // be 5% one loop and 70% the next.
+  const draws = picked.map(() => -Math.log(1 - r.f() * 0.999));
+  const total = draws.reduce((a, b) => a + b, 0);
+  const spare = 1 - VIBE_FLOOR * picked.length;
+  const vibes = {};
+  picked.forEach((id, i) => {
+    vibes[id] = picked.length === 1 ? 1 : q8(VIBE_FLOOR + spare * (draws[i] / total));
+  });
+  return { vibes, strength: q8(r.range(VIBE_STRENGTH[0], VIBE_STRENGTH[1])) };
+}
+
+// What a spec says it was steered by, or null. Unknown names (a recipe
+// renamed since) are left out rather than guessed at.
+function vibesOf(spec) {
+  if (!spec || !spec.vibes) return null;
+  const vibes = {};
+  for (const [id, w] of Object.entries(spec.vibes)) if (VIBES[id] && w > 0) vibes[id] = w;
+  if (!Object.keys(vibes).length) return null;
+  return { vibes, strength: spec.vibeStrength ?? 0.7 };
+}
+
+// A target: the draw moves part-way toward the weighted mean of the vibes
+// that set it, by strength times their summed weight. A vibe that does not
+// set it leaves its share of the draw where it was.
+function vibePull(v, get, value) {
+  if (!v) return value;
+  let weight = 0;
+  let sum = 0;
+  for (const [id, w] of Object.entries(v.vibes)) {
+    const t = get(VIBES[id]);
+    if (t == null) continue;
+    weight += w;
+    sum += w * t;
+  }
+  if (!weight) return value;
+  const pull = Math.min(1, v.strength * weight);
+  return value + (sum / weight - value) * pull;
+}
+
+// A lean: a multiplier on one of the generator's own weights, each vibe's
+// raised to its strength times its weight, so a vibe at 5% barely moves it
+// and a lone vibe at full strength moves it all the way. `name` picks an
+// entry of a pool lean (`melody: { harp: 2 }`); without it the lean is a
+// single number (`drums: 1.5`).
+function vibeLean(v, field, name = null) {
+  if (!v) return 1;
+  let m = 1;
+  for (const [id, w] of Object.entries(v.vibes)) {
+    const lean = VIBES[id][field];
+    const value = name == null ? lean : lean && lean[name];
+    if (typeof value === 'number' && value > 0) m *= Math.pow(value, v.strength * w);
+  }
+  return m;
+}
+
+// A position in a band (0 its low end, 1 its high end) back to a value.
+function inBand([lo, hi], u) {
+  return lo + u * (hi - lo);
+}
+
+const vibedCharacters = new Map();
+function vibeKey(v) {
+  return `${v.strength}|${Object.entries(v.vibes).map(([k, w]) => `${k}:${w}`).join()}`;
+}
+
+const LEAN_POOLS = [
+  ['melodyVoices', 'melody'], ['chordVoices', 'chords'], ['bassVoices', 'bass'],
+  ['bassStyles', 'bassStyle'], ['textures', 'texture'],
+];
+
+// The profile blend with every render-time lean applied. A copy: a single
+// profile's blend is the shared CHARACTERS entry itself.
+function vibedCharacter(c, v) {
+  if (!v) return c;
+  const t = {};
+  for (const field of ['six8', 'long', 'bigChords', 'drums', 'hats', 'rests']) t[field] = vibeLean(v, field);
+  const out = { ...c };
+  for (const [key, field] of LEAN_POOLS) {
+    if (out[key]) out[key] = out[key].map(([k, w]) => [k, w * vibeLean(v, field, k)]);
+  }
+  // The single-number leans, each on the weights it names.
+  if (out.stepsPerBar) out.stepsPerBar = out.stepsPerBar.map(([n, w]) => [n, n === 12 ? w * t.six8 : w]);
+  if (out.gaits) out.gaits = out.gaits.map((g) => (g.stepsPerBar === 12 ? { ...g, weight: g.weight * t.six8 } : g));
+  if (out.bars) out.bars = out.bars.map(([n, w]) => [n, n >= 8 ? w * t.long : w]);
+  if (out.chordSize) out.chordSize = out.chordSize.map(([n, w]) => [n, n >= 4 ? w * t.bigChords : w]);
+  // A chance has two weights, yes and no; leaning the yes is leaning the
+  // odds, so 2 makes a kit twice as likely against none and never past
+  // certain.
+  if (out.drums != null && t.drums !== 1) {
+    const odds = (out.drums / Math.max(1e-6, 1 - out.drums)) * t.drums;
+    out.drums = out.drums >= 1 ? 1 : odds / (1 + odds);
+  }
+  // Hat density and the tune's rests are scales already (genDrums and
+  // genMelody clamp what comes out), so the lean multiplies them.
+  if (out.hatDensity) out.hatDensity = [out.hatDensity[0] * t.hats, out.hatDensity[1] * t.hats];
+  if (out.restBar != null) out.restBar *= t.rests;
+  return out;
 }
 
 // Named regions of the feeling space, in (lift, energy, warmth). They live

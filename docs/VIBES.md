@@ -34,6 +34,37 @@ it, toward their weighted mean target. A lean multiplies by
 vibe at full strength moves it all the way. Words bend a profile; the
 profile's own ranges still clamp the feel and tone.
 
+## As built (queue item 38a, v86)
+
+`js/vibes.js` is the source from v86 on; the block below is the copy it
+started from. Where the brief left a reading open, the hands took these
+(the brain may change any of them):
+
+- **A lean multiplies only what a pool already holds.** `melody: { harp: 2 }`
+  on a loop whose profiles draw no harp does nothing: a vibe tilts a
+  profile's own choices and never brings in a voice, mode or texture it
+  lacks. The `profiles` lean is the way to reach a profile's voices.
+- **`drums` leans the odds** of a kit (yes against no), so 2 makes a kit
+  twice as likely against none and never more than certain. `hats` and
+  `rests` multiply the profile's hat density and `restBar`, which the
+  generator already scales and clamps.
+- **`six8` leans every 12-step metre**, 6/8 and the waltz (3/4) alike, in
+  the step-count pool and in a lead profile's gaits.
+- **`tone` targets** pull the drawn value and then clamp to the blend's own
+  range for that dial, so a vibe cannot take a profile's sound outside
+  what it allows. `feel` targets pull before the clamp to the profiles'
+  feel ranges (as the brief says), `tempo` and `swing` the draw's place
+  in its band.
+- **Targets with weights:** strength x the summed weights of the vibes
+  that set the target, capped at 1, toward their weighted mean.
+- **Share codes:** a loop with vibes is written as format 4; a loop
+  without is still written as format 3, so no code in circulation, no
+  saved album and no `/rank` answer changes its string.
+- **The tuning tool:** `node tools/stats.mjs --vibes a,b,c` (one
+  selection against none) and `--vibe-each` (a line per vibe);
+  `measure.mjs --vibe-mix` draws its corpus with 1, 3, 5 or 10 random
+  vibes for the loudness and refusal checks.
+
 ## The first recipes (brain, Session 16, 2026-10-11)
 
 Drafts. Sources: the pilot recipes in `docs/MOODS.md`, Mikey's 181
