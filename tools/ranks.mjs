@@ -17,13 +17,21 @@
 // words reshuffled. For each pair where both were answered: the same first
 // word (or none tapped both times), the same words tapped, the same order,
 // and word by word, the share of the five that got the same fits / doesn't
-// fit answer.
+// fit answer, and per word how often its answer flipped.
+//
+// --fit (queue item 35a) fits the words to the ten dials instead of the
+// tables: see tools/fit.mjs. --dials <file.json> reads the dials from
+// tools/dials.mjs --json rather than measuring each code; --json <out>
+// writes the fit for the brain; --boot <n> sets the bootstrap (1000).
 
 import fs from 'node:fs';
 
-const file = process.argv[2];
+const argv = process.argv.slice(2);
+const flag = (name) => argv.includes(name);
+const valueOf = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : null; };
+const file = argv.find((a, i) => !a.startsWith('--') && !['--dials', '--json', '--boot'].includes(argv[i - 1]));
 if (!file) {
-  console.error('usage: node tools/ranks.mjs <file.jsonl>');
+  console.error('usage: node tools/ranks.mjs <file.jsonl> [--fit [--dials <file.json>] [--json <out>] [--boot <n>]]');
   process.exit(2);
 }
 
@@ -38,6 +46,15 @@ fs.readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
 });
 
 const pct = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : '-');
+
+if (flag('--fit')) {
+  const { fitReport } = await import('./fitreport.mjs');
+  console.log(await fitReport(trials, {
+    dials: valueOf('--dials'), json: valueOf('--json'),
+    boot: valueOf('--boot') != null ? Number(valueOf('--boot')) : undefined,
+  }));
+  process.exit(0);
+}
 
 const skips = trials.filter((t) => t.skip);
 const repeats = trials.filter((t) => t.repeatOf);
@@ -115,17 +132,32 @@ function table(list, withGroup) {
   }
 }
 
+// Word-album answers (item 37) are not five-word trials: counted apart.
+const albumLines = answered.filter((t) => t.album || t.answer);
+if (albumLines.length) {
+  console.log(`\n=== word albums: ${albumLines.length} answers ===`);
+  const by = new Map();
+  for (const t of albumLines) {
+    const key = typeof t.album === 'object' ? JSON.stringify(t.album) : `${t.album ?? '?'}`;
+    if (!by.has(key)) by.set(key, { word: t.words[0], fits: 0, no: 0, unsure: 0 });
+    const r = by.get(key);
+    if (t.answer === 'fits') r.fits++; else if (t.answer === 'no') r.no++; else r.unsure++;
+  }
+  for (const [key, r] of by) console.log(`  ${r.word.padEnd(14)} fits ${r.fits}, doesn't fit ${r.no}, not sure ${r.unsure}  (${key})`);
+}
+
 // Trials without a "pool" field are pool 1.
-const pools = [...new Set(answered.map((t) => t.pool ?? 1))].sort();
+const fiveWord = answered.filter((t) => !(t.album || t.answer));
+const pools = [...new Set(fiveWord.map((t) => t.pool ?? 1))].sort();
 for (const v of pools) {
-  const list = answered.filter((t) => (t.pool ?? 1) === v);
+  const list = fiveWord.filter((t) => (t.pool ?? 1) === v);
   const nothing = list.filter((t) => !t.taps.length).length;
   console.log(`\n=== pool ${v}: ${list.length} answered, nothing tapped on ${nothing} (${pct(nothing, list.length)}) ===`);
   table(list, true);
 }
 if (pools.length > 1) {
   console.log('\n=== all pools together ===');
-  table(answered, true);
+  table(fiveWord, true);
 }
 console.log('(place: mean position when tapped, 1 = most like the loop; groups are the maps color, shimmer, air, motion, flavor)');
 
@@ -140,6 +172,7 @@ console.log(`\nrepeats: ${pairs.length} answered pairs`
   + (repeats.length > pairs.length ? ` (${repeats.length - pairs.length} left out: a skip or a missing original)` : ''));
 if (pairs.length) {
   let first = 0, set = 0, same = 0, fit = 0, fitOf = 0, rebuilt = 0;
+  const flips = new Map();
   for (const [a, b] of pairs) {
     if ((a.taps[0] ?? null) === (b.taps[0] ?? null)) first++;
     const sa = new Set(a.taps);
@@ -149,6 +182,9 @@ if (pairs.length) {
     for (const w of a.words) {
       fitOf++;
       if (sa.has(w) === sb.has(w)) fit++;
+      if (!flips.has(w)) flips.set(w, [0, 0]);
+      flips.get(w)[1]++;
+      if (sa.has(w) !== sb.has(w)) flips.get(w)[0]++;
     }
     if (a.code !== b.code) rebuilt++;
     console.log(`  #${a.trial} ${a.taps.join(' > ') || '(none)'}  |  #${b.trial} ${b.taps.join(' > ') || '(none)'}`);
@@ -158,4 +194,6 @@ if (pairs.length) {
   console.log(`same order        ${same}/${pairs.length} ${pct(same, pairs.length)}`);
   console.log(`word fits agree   ${fit}/${fitOf} ${pct(fit, fitOf)}`);
   if (rebuilt) console.log(`(${rebuilt} replayed under a build whose code came out different: not quite the same loop)`);
+  const flipped = [...flips].sort((x, y) => y[1][0] / y[1][1] - x[1][0] / x[1][1] || x[0].localeCompare(y[0]));
+  console.log('per word, fits / doesn\'t fit flipped: ' + flipped.map(([w, [f, n]]) => `${w} ${f}/${n}`).join(', '));
 }
