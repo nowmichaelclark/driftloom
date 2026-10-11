@@ -55,14 +55,20 @@ console.log(`nothing tapped on ${none} of ${answered.length} (${pct(none, answer
 
 // ------------------------------------------------------------------ words
 
-// The pool-2 groups, as in rank.html (the maps: color, shimmer, air,
+// The pool-3 groups, as in rank.html (the maps: color, shimmer, air,
 // motion, flavor). Pool 1 had no groups, but every pool-1 word sits in one.
 const GROUPS = {
-  color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful'],
-  shimmer: ['twinkling', 'crisp', 'velvety', 'booming', 'soft'],
-  air: ['floating', 'airy', 'intimate', 'cozy', 'spacious', 'serene', 'misty', 'steady'],
-  motion: ['bouncy', 'swaying', 'lively', 'energetic', 'still', 'flowing'],
-  flavor: ['sour', 'sweet', 'spicy', 'quirky', 'zany'],
+  color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful',
+    'bright', 'sunny', 'starry', 'wondrous', 'triumphant', 'wistful', 'warm', 'cool',
+    'heartwarming', 'comforting'],
+  shimmer: ['twinkling', 'crisp', 'velvety', 'booming', 'soft', 'chiming', 'hazy', 'intricate'],
+  air: ['floating', 'airy', 'intimate', 'cozy', 'spacious', 'serene', 'misty', 'steady',
+    'hushed', 'foggy', 'comfy', 'restful', 'soothing', 'reverent', 'meditative', 'minimal'],
+  motion: ['bouncy', 'swaying', 'lively', 'energetic', 'still', 'flowing',
+    'nimble', 'skipping', 'tiptoeing', 'hypnotic', 'adventurous', 'enthusiastic'],
+  flavor: ['sour', 'sweet', 'spicy', 'quirky', 'zany',
+    'tangy', 'zesty', 'tart', 'mischievous', 'cheeky', 'plucky', 'mysterious', 'silly',
+    'strange', 'goofy', 'experimental', 'refreshing'],
 };
 const groupOf = (w) => Object.keys(GROUPS).find((g) => GROUPS[g].includes(w)) ?? '?';
 

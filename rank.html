@@ -69,18 +69,25 @@ import { getPrefs } from './js/storage.js';
 // The brain's to change. A word added later is shown more often until it
 // has caught up with the rest; a word removed is simply no longer drawn.
 
-const POOL_VERSION = 2;
+const POOL_VERSION = 3;
 // One word from each group per trial, so five words never bunch on one
 // corner of the maps. The group names are the maps' (warmth x lift, edge x
 // height, room x ground, energy x bounce, tang x oddness) and are never
 // shown. Pool 1 (22 words, drawn at random) is in the saved answers of
-// trials without a "pool" field.
+// trials without a "pool" field. Pool 2 was the five groups' first
+// 32 words; pool 3 added Mikey's picks from docs/MOODS.md.
 const GROUPS = {
-  color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful'],
-  shimmer: ['twinkling', 'crisp', 'velvety', 'booming', 'soft'],
-  air: ['floating', 'airy', 'intimate', 'cozy', 'spacious', 'serene', 'misty', 'steady'],
-  motion: ['bouncy', 'swaying', 'lively', 'energetic', 'still', 'flowing'],
-  flavor: ['sour', 'sweet', 'spicy', 'quirky', 'zany'],
+  color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful',
+    'bright', 'sunny', 'starry', 'wondrous', 'triumphant', 'wistful', 'warm', 'cool',
+    'heartwarming', 'comforting'],
+  shimmer: ['twinkling', 'crisp', 'velvety', 'booming', 'soft', 'chiming', 'hazy', 'intricate'],
+  air: ['floating', 'airy', 'intimate', 'cozy', 'spacious', 'serene', 'misty', 'steady',
+    'hushed', 'foggy', 'comfy', 'restful', 'soothing', 'reverent', 'meditative', 'minimal'],
+  motion: ['bouncy', 'swaying', 'lively', 'energetic', 'still', 'flowing',
+    'nimble', 'skipping', 'tiptoeing', 'hypnotic', 'adventurous', 'enthusiastic'],
+  flavor: ['sour', 'sweet', 'spicy', 'quirky', 'zany',
+    'tangy', 'zesty', 'tart', 'mischievous', 'cheeky', 'plucky', 'mysterious', 'silly',
+    'strange', 'goofy', 'experimental', 'refreshing'],
 };
 // New loops are newSpec(START_SEED), newSpec(START_SEED + 1), ... so the
 // same run of loops comes back on any device.
