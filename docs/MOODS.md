@@ -316,3 +316,20 @@ fit anything; first impressions only.
   bouncy and crisp. Hints that lift alone doesn't make a loop sound
   happy -- what the dials and clouds are for.
 - Sour was tapped on harmonic minor (shatter) and mixolydian (tide).
+
+**Pool 3 (v85, 2026-10-11).** Mikey's picks from the candidate words, 39 new
+on top of pool 2's 32 (71 in all), one group per map:
+- color: bright, sunny, starry, wondrous, triumphant, wistful, warm, cool,
+  heartwarming, comforting
+- shimmer: chiming, hazy, intricate
+- air: hushed, foggy, comfy, restful, soothing, reverent, meditative, minimal
+- motion: nimble, skipping, tiptoeing, hypnotic, adventurous, enthusiastic
+- flavor: tangy, zesty, tart, mischievous, cheeky, plucky, mysterious, silly,
+  strange, goofy, experimental, refreshing
+
+Words he named that were already in the pool (happy, joyful, peaceful,
+reflective) were not added twice. Groups for words outside the brain's list
+are the hands' call: warm, cool, heartwarming and comforting by warmth;
+comfy, restful, soothing, foggy and minimal by room; intricate by edge;
+enthusiastic by energy; silly, strange, goofy, experimental and refreshing
+by tang and oddness. Move any that sit wrong.

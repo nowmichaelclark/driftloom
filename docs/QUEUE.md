@@ -4,12 +4,12 @@ Written by the brain for Claude Code, so building can carry on while Mikey
 has no time to listen (2026-09-25). Work top to bottom. Mikey's ears come
 later, in listening albums the brain builds from the Done list.
 
-**Status, 2026-10-11:** items 0-32 are done (13 stopped at its gate by
+**Status, 2026-10-11:** items 0-33 are done (13 stopped at its gate by
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: item 33, more words on `/rank` (the
-ears-approved new instruments wait behind it, "Later, not queued"). A new
+standing rules). Next: nothing queued (the ears-approved new
+instruments wait, "Later, not queued"), so the brain writes the next item. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
@@ -1809,3 +1809,6 @@ Mikey decides this line:
   the way: a block handed to the core twice made the pads, leads and basses
   spike 20-40 times their level (never seen in play); time now only goes
   forward. `.wasm` 158,959 bytes (+17); core memory unchanged.
+- #PR, more words on `/rank` (v85), pool 3: 39 more words (71 in all), one
+  group per map. Listen for nothing; rank as before. Check that new words
+  turn up often at first and that Export writes `"pool": 3`.
