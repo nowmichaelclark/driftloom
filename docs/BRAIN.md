@@ -377,6 +377,12 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
+- **Emergency (2026-10-12): queue item 39**, the music skips when a
+  tester's phone is locked (Pixel 9, GrapheneOS, installed app). The
+  brain's lead from the code: hidden, the core still gets each note only
+  a few tenths of a second ahead (the JavaScript synth's build window).
+  Hands: Opus 5.5, high. Mikey heard item 36's tracks (#177): "everything
+  is sounding great."
 - **Next: Vibes (queue item 38), Mikey's top priority.** The words go
   into the app as vibes (see "The words"); recipes for all 71 drafted in
   `docs/VIBES.md`. Hands: **Session 17, Opus 5.5, high**, 38a then 38b;

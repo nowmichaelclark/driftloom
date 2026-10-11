@@ -8,8 +8,8 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: **item 38, Vibes (top priority), then items
-34-37** (the ears-approved new
+standing rules). Next: **item 39, the lock-screen glitch (emergency)**;
+then what is left of 34-38 (the ears-approved new
 instruments wait, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
@@ -1282,6 +1282,68 @@ A small item: data in `rank.html`, no generator or synth change.
   Export writes the new words and the pool, the tests pass. Bump BUILD
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
+
+## 39. Emergency: music skips and glitches when the phone is locked
+
+**Before anything else.** A tester (Pixel 9, GrapheneOS, Driftloom
+installed with Chrome's "Install app") hears the music skip and glitch as
+soon as he locks his phone. Playing with the screen off is the main way
+people will use this app.
+
+**The brain's lead (Session 16, from the code; not tested):** when the page
+is hidden, `engine.js` decides 3 s ahead but holds each note in `pending`
+and hands it over only `buildAhead` before it sounds (about four tick gaps,
+at least 0.3 s). That window was made for the JavaScript synth, where a
+built voice costs the audio thread from the moment it is wired (#
+perf-baseline, "a hidden tab costs more"). Since item 32 the **core**
+plays, and the window still applies: a note reaches the worklet a few
+tenths of a second before it is due. If a locked phone delays the clock
+worker's ticks by more than that (a throttled worker, a CPU parked on a
+slow core, the renderer briefly frozen), notes arrive late and the core
+drops or slurs them: skips and glitches. The perf baseline that showed "no
+late ticks hidden" was measured on desktop Chromium before the core was
+the default.
+
+**Do:**
+1. **Reproduce first, on the core and on `?engine=js`.** In `perf.mjs`
+   (or a small harness beside it), hidden, with the CPU throttled (4x,
+   6x), stall the clock worker's ticks on purpose -- gaps of 0.5, 1, 2 and
+   5 s, now and then and back to back -- through a test-only hook that
+   doesn't ship (as `core-paths.mjs` injects its traps). Count what the
+   listener would hear: the core's `late` notes, the engine's
+   `lateTicks` and `worstLateMs`, and the audio itself (dropouts, notes
+   that never sound). Also, if Chromium allows it, freeze the page for a
+   few seconds (`Page.setWebLifecycleState`). Report the table before any
+   fix. If the lead is wrong, say what the harness shows instead and stop
+   to leave a note if the cause isn't clear.
+2. **Fix, the smallest change that clears it.** Candidates, in order:
+   - On the core, hand every decided note to the worklet as soon as it is
+     decided, hidden or not (no `pending` window): queued events cost the
+     core nothing until they sound -- check that, and that its queue has
+     room for several seconds of the busiest loops (shatter, cinder).
+   - If stalls longer than the 3 s lookahead are plausible on a locked
+     phone, widen the hidden lookahead on the core (say 8-10 s), and make
+     sure **Next, Previous and Pause from the lock screen or headphones
+     still act at once**: notes already handed to the core for the old
+     loop must be cancelled, not played out.
+   - Check the worklet's own headroom hidden at 4x and 6x on full and
+     lite: if render quanta run long (underruns), say so; that is a
+     different fix.
+   The JavaScript fallback keeps its window (its reason still holds).
+3. **A field report, because nobody here owns a Pixel with GrapheneOS.**
+   Diagnostics gets a short "while hidden" section that resets each time
+   the page is shown: how long it was hidden, the longest gap between
+   clock ticks, late notes on the core, late ticks, the AudioContext's
+   state changes, and whether the media session stayed `playing`. And a
+   **Copy diagnostics** key that copies the whole Diagnostics text, so a
+   tester can lock the phone for two minutes, unlock, copy and send it.
+4. **Checks:** the harness table after the fix (no late notes at the
+   stall lengths the fix claims to cover); `perf.mjs` hidden and visible
+   against `docs/perf-baseline.md` (cost must not regress); the core
+   baseline passes (no sound change); refusals, `--clicks` and
+   `--endings` on the core; tests three times. Bump `BUILD` and `CACHE`.
+   In the PR, say in plain words what a tester should do to confirm it on
+   his phone (the installed app updates itself from `main`).
 
 ## 38. Vibes: pick the words, hear them in every new loop (top priority)
 
