@@ -8,7 +8,8 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: **items 34-37, the words** (the ears-approved new
+standing rules). Next: **item 38, Vibes (top priority), then items
+34-37** (the ears-approved new
 instruments wait, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
@@ -25,7 +26,8 @@ better is possible (judged by measurement and Mikey's ears), and
 nulling against JavaScript is a safety net until the core is the
 default, not a goal. See `docs/BRAIN.md`, "The engine".
 
-**The words, from here (brain, Session 16, 2026-10-11):** items 34-37.
+**The words, from here (brain, Session 16, 2026-10-11):** item 38
+first (Vibes in the app, Mikey's top priority), then items 34-37.
 34 and 35 are tools only (no sound changes): the dials, the fit, and a
 word-album builder; 36 is a small generator change from two decisions
 Mikey made; 37 lets him answer word albums on `/rank`. Do them in order. Mikey is ranking on `/rank` meanwhile: nothing in
@@ -1281,6 +1283,104 @@ A small item: data in `rank.html`, no generator or synth change.
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
 
+## 38. Vibes: pick the words, hear them in every new loop (top priority)
+
+**Do this before items 34-37.** Mikey (2026-10-11): "I want to
+incorporate this into the app immediately." The mood words become
+**vibes** in the app: a listener picks some, and every new loop leans
+toward them. It is a real feature, and the tuning tool for the words: he
+picks vibes, listens, and sends the brain the loops that fit well or
+don't. Two PRs, in order, in one hands session.
+
+### 38a. The vibes in the generator (data, draw, share code)
+
+- **`js/vibes.js`:** copy the `VIBES` block from `docs/VIBES.md` as it is
+  (71 recipes, every pool-3 word), plus `VIBE_IDS`, the frozen order for
+  share codes: alphabetical today, append-only after. Data only, no logic
+  in that file: the brain edits it from now on (see "The words" in
+  `docs/BRAIN.md`), so a test must check every recipe's fields and names
+  (profiles, modes, voices, textures, bass styles: the brain's draft
+  passes such a check already) and fail on any unknown one.
+- **The per-loop draw:** `newSpec(seed, vibes)`, `vibes` the listener's
+  selection. **With none selected, the spec is exactly today's**: no extra
+  draws from the loop's stream; a test proves it on 1,000 seeds, and the
+  balance lock, the core baseline and `/rank` don't move. With a
+  selection, from a separate stream salted from the seed:
+  - up to five vibes: all of them if five or fewer, else five at random,
+    a new pick each loop;
+  - their weights: one vibe is 100%; two to five share 100% with each at
+    least 5% (a Dirichlet draw over the rest), so the fifth may be 5% one
+    loop and 70% the next;
+  - a strength, uniform 0.5 to 0.9.
+  The spec stores `vibes` (name -> weight) and `vibeStrength`, on the q8
+  grid like the rest.
+- **Applying them** as `docs/VIBES.md` says ("How a recipe works"):
+  targets pull a draw part-way (strength x the summed weights of the
+  vibes that set it, toward their weighted mean); leans multiply weights
+  by `value ^ (strength x weight)`. Where each lands:
+  - in `newSpec`: `profiles` on the profile pool; `feel` on the loop's
+    feel after the mood mixture and before the clamp to the profiles'
+    ranges; `tempo` on the tempo draw's place in its band; `modes` on the
+    scale weights after `moodWeighted`; `six8` on the 12-step metres (and
+    gaits); `long` on bar counts of 8 and up; `swing` on its band; `tone`
+    on the three tone draws (clamped to the blend's ranges).
+  - in `characterOf(spec)`, so a code renders the same everywhere:
+    `melody`, `chords`, `bass`, `bassStyle` and `texture` on those pools;
+    `drums` on the kit's chance; `hats` on hat density; `rests` on
+    `restBar`; `bigChords` on chord sizes of four and up.
+  - Transform weights and positions only; never add draws to the loop's
+    own stream, so a vibe loop's other draws stay tied to its seed.
+  - Vibes that pull against each other average for now; Mikey's shapes
+    over time (the helium balloon, `docs/MOODS.md`) come later.
+- **Share codes:** `FORMAT` 4 appends the vibes (count; id and weight
+  each; strength). Codes of formats 1-3 read with no vibes; a vibe loop's
+  code round-trips to an identical render (test). Albums carry them as is.
+- **A tuning tool for the brain:** `stats.mjs --vibes a,b,c` draws the
+  corpus with that selection and reports, against no vibes: profile
+  shares, mode bands (dark, inward, neutral, bright, as item 36), tempo
+  median and spread, drums on, 6/8 share, bar counts, the top melody
+  voices, and the realized weights. `stats.mjs --vibe-each`: one line per
+  vibe on its own (the same figures), so the brain can tune all 71
+  without ears first.
+- **Checks:** refusals on full and lite for 40 loops drawn with random
+  selections of 1, 3, 5 and 10 vibes; their loudness spread against the
+  catalog's (`measure.mjs`; vibes may lean toward louder profiles: report,
+  don't fix); render cost unchanged. Tests three times. Bump `BUILD` and
+  `CACHE`.
+
+### 38b. The Vibes button and view
+
+Mikey's sketch (two phone screenshots; he attaches them to the hands
+session): on the **Now Playing** view, a **Vibes** key at the top left of
+the view's panel -- where the red box is, left of an album's title row
+("Joyful?" and its dots when an album plays).
+
+- Tapping **Vibes** opens the **Vibes view** in the same panel (the
+  dynamic zone). The key becomes **Close** (same place); **Clear All**
+  sits at the top right and deselects every vibe. Close returns to Now
+  Playing.
+- The view: every vibe in `VIBE_IDS` order, as buttons in **two columns**
+  (the yellow rectangles), tap to select or deselect, the selected ones
+  clearly marked in every theme. **This view scrolls** (Mikey: views
+  usually don't, this one does because there are many vibes); its header
+  row (Close, Clear All) stays put.
+- **No limit on how many** are selected: past five, each new loop picks
+  five (38a). The selection is saved in the prefs and survives a reload.
+- **When it applies:** to every new loop drawn after the change (Next,
+  the next loop when one ends, anything else that calls `newSpec`; name
+  them in the PR). Not to the loop playing, an album's tracks or a saved
+  loop.
+- **The readout:** a loop with vibes shows them in the details, in the
+  same style the mood line has today ("100% enthusiastic"), weights
+  included, in place of the mood line; a loop without vibes shows the mood
+  line as now. (The weights are what the loop was steered by, not yet
+  measured from the sound; the honest measured share comes with the dials,
+  items 34-35. For Mikey's ears.)
+- Design v17's tokens and the nine themes; buttons sized for a thumb;
+  works at phone width. Keep it plain: a Painter session can refine it
+  later (Mikey). Screenshots in the PR on a phone-width viewport in two
+  themes, the view closed and open. Bump `BUILD` and `CACHE`.
+
 ## 34. The ten dials, measured: `tools/dials.mjs` (measure only)
 
 Mikey's rankings say which words fit which loops; to turn that into word
@@ -1475,6 +1575,10 @@ exactly as before.
   codes), so the brain can build the listening album from them directly.
 
 ## 37. Word albums on `/rank`: one word, "does it fit?"
+
+**On hold (Session 16): skip it unless the brain's State says otherwise.**
+Vibes in the app (item 38) may do this job better: Mikey picks a vibe and
+tells the brain which loops fit.
 
 Mikey's idea (2026-10-11): "Is this playlist heartwarming? Which songs are
 not?" The brain sends a word album (item 35b); Mikey answers each track
