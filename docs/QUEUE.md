@@ -2342,3 +2342,9 @@ Mikey decides this line:
   a bright cinder loop still sound like cinder (the strum, the hand kit, the
   6/8) with a glad face, and is bright shatter still restless? Six loops for
   the album are in the PR.
+- #180, the music with the screen off (item 39, v89),
+  https://83d25e19-driftloom.nowmichaelclark.workers.dev: the core holds 8 s
+  of notes while the page is hidden; Pause, Next and Previous from the lock
+  screen or headphones act at once. Listen for: lock the phone on a busy
+  loop for a few minutes; nothing skips or glitches, and Pause from the lock
+  screen stops it straight away.

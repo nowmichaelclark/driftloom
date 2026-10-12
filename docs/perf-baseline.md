@@ -444,3 +444,94 @@ Cost, A/B against v88 (`perf.mjs --ab`, shatter and cinder, full and lite,
 visible at 1x and 4x, hidden at 1x and 6x, 30 s windows): audio render,
 main thread and renderer CPU all within ±3%. No fill-ins on either side.
 A note waiting in the core costs a comparison per block.
+
+## Glitches with the screen on, per view (queue item 40, v90)
+
+A second tester's Pixel 10a (GrapheneOS, installed app) glitched most on
+the Library and on Save / Share, with the screen on. `node tools/views.mjs`
+reproduces it: the real app, visible, on a phone-sized screen, at 4x and 6x
+CPU throttle, full and lite, on the core, with 30 saved loops in 5 albums.
+It plays a busy loop (shatter) and a sung one (hollow) while it goes through
+the views, scrolls the long ones, opens albums, pastes a code and switches
+views quickly. It counts per view the main thread's long frames (Long
+Animation Frames, with the script that ran), the longest the clock went
+without a tick, the notes that reached the core late, the scheduler's late
+ticks (music skipped) and the audio device's fill-ins.
+
+On v89 the cause was the main thread, not the audio thread. Opening the
+Library was one task of 1.0 s at 4x and up to 2.2 s at 6x: every album's
+art was drawn at once, and each cover renders its noise fields at full cost
+whatever its size. Visible, the core was handed notes only 0.3 s ahead, so
+each opening skipped music (a late tick every time). Opening an album, the
+loop list or a pasted code redrew the playing loop's 320 px cover (170-400
+ms), and with the short queue those gave late notes. The audio device
+filled in twice in all 64 view runs, on Vibes, with nothing late: the
+audio thread itself was not the problem here.
+
+Worst over shatter and hollow, full and lite (v89 → v90):
+
+| view | cpu | longest task ms | longest tick gap ms | late notes | late ticks | fill-ins |
+|---|---|---|---|---|---|---|
+| now playing | 4x | 0 → 0 | 60 → 63 | 0 → 0 | 0 → 0 | 0 → 0 |
+| now playing | 6x | 0 → 0 | 74 → 67 | 0 → 0 | 0 → 0 | 0 → 0 |
+| vibes | 4x | 161 → 85 | 160 → 91 | 0 → 0 | 0 → 0 | 2 → 0 |
+| vibes | 6x | 65 → 121 | 155 → 171 | 0 → 0 | 0 → 0 | 0 → 0 |
+| library: albums | 4x | 1009 → 63 | 1066 → 114 | 0 → 0 | 4 → 0 | 0 → 0 |
+| library: albums | 6x | 2206 → 93 | 2298 → 163 | 0 → 0 | 4 → 0 | 0 → 0 |
+| library: an album open | 4x | 336 → 130 | 421 → 168 | 5 → 0 | 2 → 0 | 0 → 0 |
+| library: an album open | 6x | 332 → 188 | 395 → 254 | 10 → 0 | 4 → 0 | 0 → 0 |
+| library: every loop | 4x | 218 → 60 | 285 → 113 | 0 → 0 | 0 → 0 | 0 → 0 |
+| library: every loop | 6x | 405 → 103 | 477 → 153 | 3 → 0 | 1 → 0 | 0 → 0 |
+| save | 4x | 75 → 73 | 148 → 132 | 0 → 0 | 0 → 0 | 0 → 0 |
+| save | 6x | 92 → 149 | 185 → 237 | 0 → 0 | 0 → 0 | 0 → 0 |
+| share, a code pasted | 4x | 300 → 70 | 360 → 106 | 0 → 0 | 0 → 0 | 0 → 0 |
+| share, a code pasted | 6x | 332 → 86 | 362 → 141 | 13 → 0 | 2 → 0 | 0 → 0 |
+| switching quickly | 4x | 73 → 92 | 129 → 136 | 0 → 0 | 0 → 0 | 0 → 0 |
+| switching quickly | 6x | 124 → 148 | 156 → 172 | 0 → 0 | 0 → 0 | 0 → 0 |
+
+(Save at 6x and quick switching are single runs either side and within
+their spread; nothing was late in either.)
+
+What changed:
+
+- **A deep queue visible, on the core.** The core is handed notes 2 s
+  ahead with the page visible too (8 s hidden, as item 39 left it). The
+  JavaScript fallback keeps 0.3 s. A change that must be heard at once
+  (a mute or unmute, a re-roll, the tempo, wander) drops what the core
+  holds from 60 ms ahead (`Core::cancel_from`) and decides again from the
+  step sounding then. Notes asked for before that time were handed over
+  already and are kept, so nothing is doubled or missed. A vibe loop
+  (Next) is item 39's cut. The Sound sliders and the volume move the mix,
+  not queued notes, so they act at once as before. Measured from the key
+  on the audio clock (`views.mjs --changes`):
+
+  | change | v89 | v90, heard from |
+  |---|---|---|
+  | mute | 229-401 ms | 83-130 ms |
+  | unmute | 237-306 ms | 60-106 ms |
+  | re-roll | 303-682 ms | 83-121 ms |
+  | tempo | 291-398 ms | 60-83 ms |
+  | wander off / on | 253-588 ms | 60-83 ms |
+  | a vibe loop (Next) | 276-358 ms | 125-196 ms |
+
+  v89's figure is the first note decided after the key, about the 0.3 s
+  queue. A mute's channel gain moved at the key on both. A vibe loop's
+  start is what loading the new loop costs the page, then 0.08 s.
+- **Covers drawn once.** A cover's noise fields are kept and reused, so an
+  album's art in its row and on the card, or a cover drawn again, costs
+  only the cheap passes the second time, and the result is identical. The
+  playing loop's cover is copied back when the card returns to it. A new
+  loop's cover is drawn just after its first notes are handed over.
+- **Album art one album at a time.** In the lists each album's art is
+  drawn in a task of its own after the list is up, and ahead of time once
+  the music is playing, so the Library opens without drawing.
+- **Lists not rebuilt for nothing.** The Library and Save lists are built
+  again only when what they show changes, not every time a new loop
+  starts.
+- **Nothing animating in a hidden view.** The Layers grid follows the
+  music only while Layers is on screen.
+
+The blurred panels (Design v17's glass) sit over the page's still
+background, not over moving content, so they are not repainted each
+frame. The toast's blur is over the lists for its 2 s. Neither was
+touched, so the look is unchanged.
