@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v88';
+const BUILD = 'v89';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -63,6 +63,8 @@ const state = {
   core: null,
   coreAt: null,
   coreError: null,        // why it will not come, if it will not
+  // The last time the page was hidden, for Diagnostics (queue item 39).
+  away: null,
   history: [],            // array of specs (max 5)
   historyIndex: -1,       // current position in history
 };
@@ -83,6 +85,7 @@ function prepareAudio() {
   if (state.ctx) return;
   const Ctx = window.AudioContext || window.webkitAudioContext;
   state.ctx = new Ctx({ latencyHint: 'playback' });
+  state.ctx.addEventListener('statechange', () => awayEvent(`audio ${state.ctx.state}`));
   if (ENGINE !== 'rust') return;
   const ctx = state.ctx;
   const why = coreUnsupported();
@@ -129,6 +132,7 @@ function buildAudio() {
   // Route the mix through a media element so the phone gives us lock-screen
   // controls and stops treating us as an idle tab.
   state.media = new MediaBridge(state.ctx);
+  state.media.onchange = awayEvent;
   state.media.attach(state.synth.output);
   state.media.setHandlers({
     onPlay: () => { if (!state.engine.playing) togglePlay(); },
@@ -246,6 +250,75 @@ function loadSpec(spec, { keepPosition = false, id = null, pushToHistory = false
   if (pushToHistory) pushHistory(spec);
   updateHistoryButtons();
   syncMediaMetadata();
+}
+
+// ------------------------------------------------------- while hidden
+
+// A field report for the screen off (queue item 39), because nobody here
+// has the phones it goes wrong on. Begun each time the page is hidden and
+// kept as it stood when it is shown again, so a tester can lock the phone
+// for a couple of minutes, unlock, and copy it from Diagnostics: how long
+// it was hidden, the longest the clock went without a tick, the notes that
+// reached the core late, the scheduler's late ticks, the times the audio
+// device had to fill in (where the browser counts them: a starved audio
+// thread, not a starved page), and every change in the audio context's
+// state and in what the phone was told is playing.
+function coreLate() {
+  return state.synth && state.synth.core ? state.synth.core.late : null;
+}
+
+function fillIns() {
+  try {
+    const s = state.ctx && state.ctx.playoutStats;
+    return s && typeof s.fallbackFramesEvents === 'number' ? s.fallbackFramesEvents : null;
+  } catch {
+    return null;
+  }
+}
+
+function awayBegin() {
+  if (state.away && state.away.to === null) return;
+  state.away = {
+    from: performance.now(), to: null, late: coreLate(), lateTo: null, fills: fillIns(), fillsTo: null, events: [],
+    audio: state.ctx ? state.ctx.state : '-',
+    session: 'mediaSession' in navigator ? navigator.mediaSession.playbackState : '-',
+  };
+}
+
+function awayEnd() {
+  const a = state.away;
+  if (!a || a.to !== null) return;
+  a.to = performance.now();
+  a.lateTo = coreLate();
+  a.fillsTo = fillIns();
+}
+
+function awayEvent(what) {
+  const a = state.away;
+  if (!a || a.to !== null || a.events.length >= 20) return;
+  a.events.push(`${what} at ${((performance.now() - a.from) / 1000).toFixed(1)} s`);
+}
+
+function awayReport() {
+  const a = state.away;
+  if (!a) return ['while hidden: not hidden yet'];
+  const to = a.to ?? performance.now();
+  const s = state.engine && state.engine.spell;
+  const late = a.late != null && (a.lateTo ?? coreLate()) != null ? Math.max(0, (a.lateTo ?? coreLate()) - a.late) : '-';
+  const fills = a.fills != null && (a.fillsTo ?? fillIns()) != null ? Math.max(0, (a.fillsTo ?? fillIns()) - a.fills) : '-';
+  const events = a.events.filter((e) => /^audio /.test(e));
+  const media = a.events.filter((e) => !/^audio /.test(e));
+  return [
+    'while hidden (the last time):',
+    `hiddenFor: ${((to - a.from) / 1000).toFixed(1)} s`,
+    `hiddenWorstGapMs: ${s ? s.worstGapMs : '-'}`,
+    `hiddenLateNotes: ${late}`,
+    `hiddenLateTicks: ${s ? s.lateTicks : '-'}`,
+    `hiddenWorstLateMs: ${s ? s.worstLateMs : '-'}`,
+    `hiddenFillIns: ${fills}`,
+    `hiddenAudio: ${a.audio}${events.length ? `; ${events.join('; ')}` : ' throughout'}`,
+    `hiddenMedia: ${a.session}${media.length ? `; ${media.join('; ')}` : ' throughout'}`,
+  ];
 }
 
 // The lock screen and the headset notification read from here. Called on
@@ -1183,6 +1256,7 @@ function wire() {
     else lines.push('media: not built yet (press Play)');
     if (state.engine && state.engine.spec) push(state.engine.report());
     else lines.push('scheduler: not built yet (press Play)');
+    lines.push(...awayReport());
     ui.el('diagOut').textContent = lines.join('\n');
   };
 
@@ -1277,6 +1351,8 @@ function wire() {
   // The scheduler queues further ahead while hidden, so it has to be told
   // when that changes. Resume anything the system paused on the way out.
   document.addEventListener('visibilitychange', () => {
+    if (document.hidden) awayBegin();
+    else awayEnd();
     if (state.synth && state.ctx.state === 'suspended') state.ctx.resume();
     if (state.engine) state.engine.retune();
     if (document.visibilityState === 'visible' && state.media && state.engine

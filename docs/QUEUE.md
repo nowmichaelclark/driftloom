@@ -2275,3 +2275,11 @@ Mikey decides this line:
   `node tools/ranks.mjs <export> --fit` and `node tools/wordalbum.mjs`. On
   the 181 trials the fit does not beat base rates yet (32% against 39%);
   word albums are the way to firm the regions up. Nothing to hear.
+- #177, cinder and shatter may borrow bright modes when glad (item 36, v88;
+  reflective skipped by Mikey's decision),
+  https://75121fdf-driftloom.nowmichaelclark.workers.dev: a glad loop led by
+  cinder (ionian, mixolydian) or shatter (lydian, mixolydian) sometimes
+  borrows a bright mode; every existing code plays as before. Listen for: does
+  a bright cinder loop still sound like cinder (the strum, the hand kit, the
+  6/8) with a glad face, and is bright shatter still restless? Six loops for
+  the album are in the PR.

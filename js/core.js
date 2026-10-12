@@ -216,6 +216,12 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'damp', channel, time });
   }
 
+  // Every note handed over that has not started yet, dropped; the ones
+  // sounding carry on (queue item 39).
+  cancel() {
+    this.node.port.postMessage({ type: 'cancel' });
+  }
+
   // Resolves once the worklet has taken every message sent before it.
   flush() {
     const id = ++this._ping;

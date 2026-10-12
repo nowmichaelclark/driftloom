@@ -655,6 +655,20 @@ async function openTab(b, url, { seed, throttle }) {
 
 // Set a checkbox the way a listener would: click it only if it is wrong.
 async function setSwitch(tab, id, want) {
+  // Drift is no longer a switch but a distance (0 is off, 1 the default),
+  // set as a listener drags it.
+  if (id === 'driftToggle') {
+    await tab.eval(`(() => {
+      const el = document.getElementById('driftAmount');
+      const want = ${want ? 1 : 0};
+      if ((Number(el.value) > 0) !== (want > 0)) {
+        el.value = want;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      return true;
+    })()`);
+    return;
+  }
   const on = await tab.eval(`document.getElementById(${JSON.stringify(id)}).checked`);
   if (on !== want) await tab.eval(`document.getElementById(${JSON.stringify(id)}).click()`);
 }
