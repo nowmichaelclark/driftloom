@@ -2503,8 +2503,7 @@ Mikey decides this line:
   Share, scroll, open albums, paste a code: nothing skips; and a mute, a
   re-roll or a tempo change still lands at once.
 - #187, the Pixel 10a on v91 (item 41, v92),
-  https://ccr-54435bca-b8pp4k-driftloom.nowmichaelclark.workers.dev (the
-  branch's preview; no per-commit preview was posted): notes are never
+  https://8e345412-driftloom.nowmichaelclark.workers.dev: notes are never
   handed to the core later than it can play them, on a phone whose
   output runs far behind the clock; a note that still arrives more than
   30 ms late is left out instead of piling onto the next; every cover is
