@@ -1,8 +1,9 @@
 # The core: charter
 
 **Status: draft for Mikey's approval** (brain, Session 18, 2026-10-13).
-Nothing here is decided until he says so; his answers to the four
-questions at the end go in, then the brain writes the first phase into
+His first answers are in (2026-10-13: the building blocks, stereo, the
+JavaScript synth, the targets); one question is still open, at the end.
+Once it is answered, the brain writes the first phase into
 `docs/QUEUE.md`.
 
 The core is Driftloom's engine: the part users never see but developers
@@ -102,12 +103,30 @@ change cheap, not freeze the app.
   hand-written Rust blocks (oscillators, filters, envelopes, noise,
   formants, the reed, the bell) and small data recipes that wire and set
   them, like a synth's presets.
+- **The building blocks themselves are open to change** (Mikey,
+  2026-10-13): a developer, an AI agent or Mikey can add a block or make
+  a fundamental change to one without understanding the whole core.
+  Each block is one file behind one small shared interface (what it
+  takes in, what it puts out, its settings), registered in one list, and
+  comes with its own test kit: level, cost, tone, determinism, and a
+  null test against its previous version so a change is either proven
+  identical or flagged as a sound change for an A/B. Nothing else in the
+  core knows a block's insides.
+- **A catalogue of block ideas** before phase 4: what blocks could exist
+  (granular, modal resonators for bells and wood, waveguides for
+  strings and winds, wavefolding, a tape model, a spring or plate reverb,
+  a vocal tract...), which of today's blocks are worth changing, and what
+  each would open up musically -- written for Mikey to pick from, with
+  short clips where a sound can be shown. He doesn't need to know the
+  answer now; the design keeps every answer cheap.
 - Vibes, profiles, moods and voices are data too, in a plain-ASCII text
   form people can read and edit, compiled to a compact binary the core
   and the codes carry.
 - *Measure:* a new instrument or vibe ships as a recipe file with **no
   Rust change**, and CI checks every recipe (it parses, it stays within
   its level, cost and tone limits).
+- *Measure:* a new building block is **one new file plus one line** in
+  the list; its test kit runs without being written by hand.
 
 ### 6. Beautifully written
 
@@ -128,7 +147,8 @@ Freedom from Chromium is freedom to be better, not different by
 accident.
 
 - The balance lock holds (`stats.mjs --check`, rebuilt for the Rust
-  generator); the refusal and level checks hold; mono only.
+  generator); the refusal and level checks hold; the app plays mono
+  (promise 9).
 - Changes to sounds Mikey already likes go to **blind A/Bs**; new sounds
   to labeled albums. His ears are the acceptance test.
 - Improvements beyond Chromium (a warm reverb designed for this music,
@@ -153,6 +173,38 @@ accident.
 - Anything may break while in testing (2026-10-12): old codes are not
   protected.
 
+### 9. Stereo is possible; mono is the default
+
+Changed 2026-10-13 (Mikey; it replaces "mono only" of 2026-10-11). The
+app stays mono for now, and stereo comes much later. But the core is
+built so stereo can be added without rebuilding it, and with great care:
+stereo has endlessly many variables, and each should be easy for
+developers and users to tweak.
+
+- **The core renders to any channel layout** the host asks for: mono
+  today, stereo later (and more channels possible in principle). Mono is
+  not a stereo mix folded down; it is its own render, so the mono app
+  pays nothing for stereo existing.
+- **Space is data, like instruments.** Where a sound sits and how it
+  moves is a "space recipe", separate from the instrument: width of the
+  whole mix, per-instrument pan, whether a part moves this track and not
+  the next, how far, how fast and in what shape it moves, stereo echoes
+  and reverb, and whatever else gets thought up. Recipes give ranges, the
+  seed picks within them per track, so the variation is part of the
+  music and the code reproduces it.
+- **Every variable is a named setting** a developer or a user can turn,
+  layered: the core's defaults, a profile's or vibe's lean, the host's
+  (a game) and the listener's. Whether the app ever shows any of them is
+  Mikey's call later; today's app rule (theme and "lighter on processor"
+  the only settings) stands until he changes it.
+- **Guards:** a stereo render, folded to mono, must sound like the mono
+  render (measured: level and tone within stated limits), so stereo can
+  never hurt a phone speaker or a mono venue; and it must not double the
+  cost on a phone.
+- **Built in steps:** phase 1 makes the core channel-agnostic; much
+  later, an experimental stereo behind a flag (phase 8), never the app's
+  default until Mikey says so.
+
 ## The phases
 
 One phase at a time, each with a fresh hands session or several, each
@@ -167,7 +219,9 @@ one before it.
    export). Chromium parity retires as a goal; the JavaScript synth stays
    only as a fallback. *Done when:* the golden hashes match on every
    target, and Mikey hears no change on an album (a control album: it
-   should sound the same).
+   should sound the same). Also: the output layout becomes a host's
+   choice (one channel today), and today's blocks move behind the shared
+   block interface (promise 5), so phase 4 starts from a clean place.
 2. **The generator in Rust.** `generator.js`, vibes, moods and characters
    ported, with profiles and vibes as data. *Done when:* the balance lock
    and `stats.mjs` corpus numbers match the JavaScript generator's within
@@ -175,9 +229,14 @@ one before it.
    ears.
 3. **Off the page.** The whole core runs on the audio side; the page
    sends commands and draws events. The scheduler, the lookahead and the
-   JavaScript synth and generator are deleted. *Done when:* promise 1's
-   stall test is clean and the testers' phones report zero late notes.
-4. **Instruments as recipes.** The building blocks and the recipe format;
+   JavaScript synth and generator are retired at the end of this phase
+   (Mikey, 2026-10-13). If retiring the JavaScript synth earlier saves
+   work, it happens on its own branch, merged only when the replacement
+   is ready; `main` keeps the fallback until then. *Done when:* promise
+   1's stall test is clean and the testers' phones report zero late
+   notes.
+4. **Instruments as recipes.** First the catalogue of block ideas for
+   Mikey (promise 5). Then the building blocks and the recipe format;
    today's voices re-expressed as recipes where it fits (each proven to
    null against its Rust original, or A/B'd if it changes); then the
    ears-approved sounds (roundBass, glass, floorDrop, arc) as the first
@@ -191,13 +250,23 @@ one before it.
    test pass.
 7. **Better than Chromium.** The sound improvements, one item each, blind
    A/Bs where they touch what he likes.
+8. **Stereo, experimental** (much later; promise 9). Space recipes, the
+   layered settings, the mono-fold guard, behind a flag. The app stays
+   mono until Mikey decides otherwise.
 
 Then the platforms, each its own phase: Android on F-Droid (alpha/beta),
 itch.io desktop, later Google Play. iOS and macOS stay a recompile away.
 
 Promises 2 and 6 aren't a phase: every PR in every phase is held to them.
 
-## Questions for Mikey
+## Targets
+
+The numbers in promises 1 and 2 are agreed as starting targets (Mikey,
+2026-10-13). They move as the work teaches: the brain tells Mikey when a
+target looks wrong, or when aiming higher looks possible, with the
+measurement that says so.
+
+## Open question
 
 1. **Bit-identical everywhere?** Recommended: **yes** -- the same code
    makes the same samples on a phone, a PC and a hypothetical GameCube.
@@ -205,11 +274,8 @@ Promises 2 and 6 aren't a phase: every PR in every phase is held to them.
    tested), and it is also what makes `no_std` possible. The alternative:
    the same notes everywhere, and sound that matches only within one
    build (tiny differences, nobody could hear them).
-2. **Retire the JavaScript synth at the end of phase 3?** Recommended:
-   **yes**. Every browser from about 2021 on runs the core; keeping a
-   second engine in step doubles every change.
-3. **Promise 1's and 2's numbers** (worst block under 25% of its
-   deadline; under half of today's core's cost): fine as targets, or
-   aim higher?
-4. **Anything missing?** Something the core should promise that isn't
-   here, or a phase in the wrong order.
+
+Answered 2026-10-13: retire the JavaScript synth at the end of phase 3
+(earlier only on its own branch); the targets stand, to be revisited;
+the building blocks open to change (promise 5); stereo possible, mono
+the default (promise 9).
