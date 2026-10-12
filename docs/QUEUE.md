@@ -1319,12 +1319,17 @@ it):**
 2. **Stalls still beat the 2 s queue.** Library and Save / Share still
    block the main thread for 1.3-1.8 s on this phone (the harness, at 6x
    CPU throttle, saw 188 ms at most). Add the phone's ~0.6 s of buffer and
-   a 2 s queue is not enough. So the harness is not modelling this phone:
-   the likely gap is **graphics**, not CPU. The Pixel 10's chip moved to a
-   new GPU (Imagination, not Mali), and if Chrome there rasterizes or
-   composites in software, Design v17's blurred panels and the canvas
-   covers (`getImageData` / `putImageData` in `cover.js`) become very slow,
-   and every repaint under a blur (the clock, the playhead) gets expensive.
+   a 2 s queue is not enough. **Not software graphics:** the tester's
+   `chrome://gpu` (screenshot from Mikey) shows Canvas, Compositing,
+   Rasterization and WebGL all hardware accelerated, Vulkan on, but
+   **Multiple Raster Threads: Disabled** and Skia Graphite off. The brain's
+   new lead: `cover.js` reads pixels back with `getImageData` and writes
+   them with `putImageData`. On a **GPU-backed** canvas each readback
+   flushes the GPU and copies the image back to the CPU, which on some
+   drivers (this is a new GPU, Imagination in the Tensor G5) costs tens to
+   hundreds of ms per call, and covers do it per draw. A desktop harness
+   with a fast GPU (or none) never sees that cost. Raster work on one
+   thread also makes large blurred panels slower to repaint.
 3. **`dropped: 31`:** the core's queue or sung-draws arena was full when
    notes arrived, or every voice was busy. Find which, here.
 4. **`sw: installing`** while playing: check a service-worker update isn't
@@ -1333,8 +1338,14 @@ it):**
 **Do:**
 1. **Reproduce this phone, not a fast desktop.** Run the harness with a
    large audio buffer (Chromium's `--audio-buffer-size`, about 16384 frames)
-   and with software graphics (`--disable-gpu`, `--disable-gpu-compositing`,
-   no GPU rasterization), at 4x and 6x CPU throttle. Per view: long tasks
+   at 4x and 6x CPU throttle. For the stalls, find every pixel readback and
+   GPU flush on the main thread (`getImageData`, `putImageData`,
+   `toDataURL`, `toBlob`, `drawImage` from a canvas) and time them; also
+   try `--disable-features=CanvasOopRasterization` and a GPU-backed canvas
+   with readbacks (headless Chromium may need `--use-angle=swiftshader`
+   and `--enable-gpu-rasterization` to keep the canvas GPU-backed), so the
+   readback cost shows up. Software graphics (`--disable-gpu`) as a second
+   stress, not as a model of this phone. Per view: long tasks
    and what they are (a trace), tick gaps, late and dropped notes, and how
    far ahead of its time each note reached the core. Report the table
    before any fix; if it doesn't show what the field report shows, say so
@@ -1354,7 +1365,11 @@ it):**
    queue-full.
 4. **Take the heavy work off the main thread, for good.** Draw covers in a
    Worker with `OffscreenCanvas` (all of them, the playing loop's
-   included), so no cover ever blocks the page. Find what else is long in
+   included), so no cover ever blocks the page, and **never read pixels
+   back from a GPU canvas**: compute the cover's pixels in a typed array and
+   write them once, on a context made with `willReadFrequently: true` (a
+   CPU canvas) wherever a readback is unavoidable; hand finished covers to
+   the page as `ImageBitmap`s. Find what else is long in
    Library, Save / Share and Layers under software graphics and fix it.
    Where blur is the cost, give the blurred panels a cheaper equivalent when
    the GPU isn't doing the work (or always, if it can't be told apart): the
