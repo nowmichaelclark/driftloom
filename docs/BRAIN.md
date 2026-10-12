@@ -313,6 +313,15 @@ Stated decisions, not inferences. Dated where the date matters.
   URL-safe base64, 6; a Unicode alphabet such as base2048 or emoji, 10-11,
   so an eight-loop album of hand-picked seeds in about 25-30 symbols, not
   typeable but fun). Keep one plain, link-safe form whatever else exists.
+  **Decided (Mikey, 2026-10-12): codes never need reading aloud, but must
+  show correctly on almost any device of the last 30 years** (a DS, a PSP,
+  an old computer, "maybe some wild dev will want to port the core to
+  something like GameCube"). So **plain ASCII only**: no emoji, no other
+  Unicode. Brain's recommendation: the 64 link-safe characters
+  (`A-Z a-z 0-9 - _`), 6 bits each; the wider ASCII sets (base85, base91)
+  save only about 8% and carry characters that break links and Discord's
+  formatting. The same rule for everything the core emits (names, codes,
+  errors).
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
