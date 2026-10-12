@@ -4,15 +4,16 @@ Written by the brain for Claude Code, so building can carry on while Mikey
 has no time to listen (2026-09-25). Work top to bottom. Mikey's ears come
 later, in listening albums the brain builds from the Done list.
 
-**Status, 2026-10-11:** items 0-33 are done (13 stopped at its gate by
+**Status, 2026-10-12:** items 0-33 are done (13 stopped at its gate by
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Items 39 (#180) and 40 (#182, glitches on Library and
-Save / Share) are merged, each waiting on a tester's report (Diagnostics'
-"while hidden" and "views" sections). 38, 34, 35 and 36 are done.
-**Next: item 41 (urgent)**: the Pixel 10a tester still glitches on
-v91; 37 stays on hold. A new
+standing rules). Items 39 (#180), 40 (#182) and 41 (#187, the Pixel 10a
+on v91) are merged, each waiting on a tester's report (Diagnostics'
+"while hidden" and "views" sections; on v92 also `gpu`, the render-ahead
+and the late and dropped splits). 41's 1.3-1.8 s stalls were not
+reproduced here (Notes from Claude Code, below). 38, 34, 35 and 36 are
+done. **Next: the tester's v92 report;** 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
@@ -2501,3 +2502,13 @@ Mikey decides this line:
   the music). Listen for: play a busy loop, sit on Library and on Save /
   Share, scroll, open albums, paste a code: nothing skips; and a mute, a
   re-roll or a tempo change still lands at once.
+- #187, the Pixel 10a on v91 (item 41, v92),
+  https://ccr-54435bca-b8pp4k-driftloom.nowmichaelclark.workers.dev (the
+  branch's preview; no per-commit preview was posted): notes are never
+  handed to the core later than it can play them, on a phone whose
+  output runs far behind the clock; a note that still arrives more than
+  30 ms late is left out instead of piling onto the next; every cover is
+  drawn off the page. Listen for: on a phone with a long output delay, a
+  mute, re-roll or tempo change lands about half a second after the key
+  and nothing skips or bunches; on an ordinary one, as before. Nothing in
+  the sound itself changed.
