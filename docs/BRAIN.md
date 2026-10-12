@@ -284,6 +284,16 @@ Stated decisions, not inferences. Dated where the date matters.
   developer fee), but the core must make iOS and macOS easy if that
   changes. His first multi-platform app: the brain and hands carry as much
   of it as they can.
+- **For the charter (brain, 2026-10-12; Mikey's question):** a seed or
+  share code is a recipe, so "same seed, same music" holds only with the
+  same core version and the same data. Mikey asked whether a code could
+  carry a modder's new instrument to someone who doesn't have it. Since
+  Driftloom's instruments are synthesized, not sampled, an instrument as
+  **data** (a small patch description, not code) could be a few hundred
+  bytes and could travel inside the code or be named by it with a hash.
+  Instruments are Rust code today; making them data is a charter-level
+  choice. The code should at least say what it needs (core version, packs
+  with hashes) and degrade clearly when something is missing.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
