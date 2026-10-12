@@ -34,6 +34,12 @@ function runs(buffer, at, n) {
 // Core::note's answers (core/src/lib.rs, Taken).
 const LATE = 1;
 const FULL = 2;
+const MISSED = 4;
+// The causes Core::dropped_by counts, in its order.
+const CAUSES = 4;
+// How often the worklet says how early its notes arrive (queue item 41), in
+// seconds of audio.
+const REPORT_EVERY = 0.25;
 
 class DriftloomCore extends AudioWorkletProcessor {
   constructor(options) {
@@ -42,6 +48,17 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.core = null;
     this.views = null;
     this.taps = options.numberOfOutputs > 1;
+    // How notes arrive (queue item 41), since the last report: the furthest
+    // the core had rendered past the page's clock as it posted a note
+    // (`reach`), the least time to spare any note had (`early`, negative
+    // for a late one), and how far the core's count ran ahead of the
+    // context's own clock. And the late notes by why: the page handed it
+    // over after its time had passed (a stall), or ahead of it but behind
+    // what the core had already rendered (inside the buffer).
+    this.arrivals = { n: 0, reach: -Infinity, early: Infinity, lead: 0 };
+    this.lateStall = 0;
+    this.lateBuffer = 0;
+    this.reportAt = 0;
     try {
       const module = new WebAssembly.Module(options.processorOptions.bytes);
       this.core = new WebAssembly.Instance(module, {}).exports;
@@ -77,16 +94,23 @@ class DriftloomCore extends AudioWorkletProcessor {
           const at = core.dl_sung_draws(m.draws.length);
           if (at) new Float64Array(core.memory.buffer, at, m.draws.length).set(m.draws);
         }
+        const rendered = (this.next !== undefined ? this.next : currentFrame) / sampleRate;
+        const a = this.arrivals;
+        a.n++;
+        a.early = Math.min(a.early, m.time - rendered);
+        if (m.sent != null) a.reach = Math.max(a.reach, rendered - m.sent);
         const x = m.extra;
         const taken = core.dl_note(
           m.voice, m.channel, m.time, m.midi, m.dur, m.vel, m.parts,
           x[0] ?? NaN, x[1] ?? NaN, x[2] ?? NaN, x[3] ?? NaN, x[4] ?? NaN, x[5] ?? NaN, x[6] ?? NaN, x[7] ?? NaN,
           x[8] ?? NaN, x[9] ?? NaN, x[10] ?? NaN, x[11] ?? NaN,
         );
-        // Rare, so worth a message each: Diagnostics counts them.
-        if (taken === LATE || taken === FULL) {
-          this.port.postMessage({ type: 'counts', late: core.dl_late(), dropped: core.dl_dropped() });
+        if (taken === LATE || taken === MISSED) {
+          if (m.sent != null && m.sent < m.time) this.lateBuffer++;
+          else this.lateStall++;
         }
+        // Rare, so worth a message each: Diagnostics counts them.
+        if (taken === LATE || taken === FULL || taken === MISSED) this.port.postMessage(this.counts());
         return;
       }
       case 'damp':
@@ -117,10 +141,9 @@ class DriftloomCore extends AudioWorkletProcessor {
         // Every message before this one has been taken: the measure
         // harness waits for this before it renders.
         this.port.postMessage({
+          ...this.counts(),
           type: 'pong',
           id: m.id,
-          late: core ? core.dl_late() : 0,
-          dropped: core ? core.dl_dropped() : 0,
           busy: core ? core.dl_busy() : 0,
           // The compressors' `reduction`, in dB: the bus compressor's and
           // the ceiling's.
@@ -132,6 +155,37 @@ class DriftloomCore extends AudioWorkletProcessor {
         return;
       default:
     }
+  }
+
+  // The late and dropped notes so far, by kind.
+  counts() {
+    const core = this.core;
+    const by = [];
+    for (let c = 0; c < CAUSES; c++) by.push(core && core.dl_dropped_by ? core.dl_dropped_by(c) : 0);
+    return {
+      type: 'counts',
+      late: core ? core.dl_late() : 0,
+      missed: core && core.dl_missed ? core.dl_missed() : 0,
+      lateStall: this.lateStall,
+      lateBuffer: this.lateBuffer,
+      dropped: core ? core.dl_dropped() : 0,
+      droppedBy: by,
+    };
+  }
+
+  // How the notes since the last report arrived, every REPORT_EVERY
+  // seconds while any are arriving.
+  arrivalReport(block) {
+    const a = this.arrivals;
+    a.lead = Math.max(a.lead, block - currentFrame);
+    if (block < this.reportAt) return;
+    this.reportAt = block + Math.round(REPORT_EVERY * sampleRate);
+    if (!a.n) return;
+    this.port.postMessage({
+      type: 'arrivals', n: a.n, reach: a.reach === -Infinity ? null : a.reach, early: a.early,
+      lead: a.lead / sampleRate, rendered: block / sampleRate,
+    });
+    this.arrivals = { n: 0, reach: -Infinity, early: Infinity, lead: 0 };
   }
 
   process(inputs, outputs) {
@@ -172,6 +226,7 @@ class DriftloomCore extends AudioWorkletProcessor {
     // it counted late.
     const block = this.next !== undefined && this.next > currentFrame ? this.next : currentFrame;
     this.next = block + QUANTUM;
+    this.arrivalReport(block);
     const at = core.dl_process(block);
     // A run for each of the output's channels (one: the graph is mono).
     const out = outputs[0];

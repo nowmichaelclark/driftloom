@@ -32,6 +32,23 @@ const LOOKAHEAD_VISIBLE_CORE = 2.0;
 // A change is heard from this far ahead of the audio clock: room for the
 // cancel to reach the core before the first note it drops would start.
 const REDECIDE_LEAD = 0.06;
+// On the core, never closer than the render-ahead plus this (queue item
+// 41). The Pixel 10a's output runs about 0.45 s behind the clock and its
+// core rendered past the page's clock before notes handed over 60-80 ms
+// ahead reached it: they were late, started at once and bunched. The
+// core says how far past the clock it has rendered when notes land
+// (`CoreHost.ahead`), and a note is handed over no closer than that. A
+// change on such a phone is heard that much later: its own output delay.
+// The margin grows with it: the render-ahead swings by about a buffer's
+// worth (`node tools/views.mjs --buffer 0.37 --delay 400`), so a quarter of
+// it, and never less than this.
+const AHEAD_MARGIN = 0.05;
+const AHEAD_SHARE = 0.25;
+// And the queue, visible, deep enough for the longest recent stall plus
+// the render-ahead, with this to spare, up to the hidden depth. A stall
+// is remembered and forgotten at this many seconds a second.
+const STALL_MARGIN = 0.5;
+const STALL_EASE = 0.02;
 const TICK_VISIBLE = 50;
 const TICK_HIDDEN = 250;
 
@@ -132,6 +149,10 @@ export class Engine {
     this.decided = [];
     this.floor = -Infinity;
     this.redecides = 0;
+    // The longest recent stall (seconds), easing back down (queue item 41),
+    // counted only while the page is shown: hidden has its own queue.
+    this.recentStall = 0;
+    this.shownAt = 0;
     this.visualQueue = [];
     this.visualOffset = 0;   // optional manual trim, normally zero
     this.latency = null;     // measured, smoothed, seconds
@@ -225,14 +246,35 @@ export class Engine {
   }
 
   get lookahead() {
-    if (!this.hidden) return this.synth.queuesAhead ? LOOKAHEAD_VISIBLE_CORE : LOOKAHEAD_VISIBLE;
-    return this.synth.queuesAhead ? LOOKAHEAD_HIDDEN_CORE : LOOKAHEAD_HIDDEN;
+    if (!this.synth.queuesAhead) return this.hidden ? LOOKAHEAD_HIDDEN : LOOKAHEAD_VISIBLE;
+    if (this.hidden) return LOOKAHEAD_HIDDEN_CORE;
+    const deep = this.recentStall + this.ahead + STALL_MARGIN;
+    return Math.min(LOOKAHEAD_HIDDEN_CORE, Math.max(LOOKAHEAD_VISIBLE_CORE, deep));
+  }
+
+  // How far past the audio clock the core has already rendered by the time
+  // a note handed over now reaches it (queue item 41); 0 on the JavaScript
+  // synth, whose nodes start on the clock itself.
+  get ahead() {
+    if (!this.synth.queuesAhead) return 0;
+    const a = this.synth.renderAhead;
+    return typeof a === 'number' && Number.isFinite(a) ? a : 0;
+  }
+
+  // The soonest a note decided now may start: `least` ahead of the clock,
+  // and on the core never inside its render-ahead.
+  _soonest(least) {
+    const a = this.ahead;
+    return this.ctx.currentTime + (a > 0 ? Math.max(least, a + Math.max(AHEAD_MARGIN, a * AHEAD_SHARE)) : least);
   }
 
   // Called when the page is shown or hidden, so the tick rate follows.
   retune() {
     if (this.hidden) this._beginSpell();
-    else this._endSpell();
+    else {
+      this._endSpell();
+      this.shownAt = performance.now();
+    }
     if (this.playing) this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
   }
 
@@ -268,7 +310,7 @@ export class Engine {
     this.synth.restoreTails(now);
     this.tailsDucked = false;
     this.visualQueue = [];
-    this.nextStepTime = now + 0.08;
+    this.nextStepTime = this._soonest(0.08);
     // The new loop starts from when the page has finished loading it, not
     // from now: drawing and rendering it takes a slow phone a good part of
     // a second, and its first notes would be late. And it is decided then,
@@ -277,7 +319,7 @@ export class Engine {
     // position after loading it.)
     Promise.resolve().then(() => {
       if (!this.playing) return;
-      this.nextStepTime = this.ctx.currentTime + 0.08;
+      this.nextStepTime = this._soonest(0.08);
       this._tick();
     });
   }
@@ -302,7 +344,7 @@ export class Engine {
   // with swing, strums and rolls).
   _rewindPoint() {
     if (!this.playing || !this.spec || this.handover || !this.synth.queuesAhead) return null;
-    const from = this.ctx.currentTime + REDECIDE_LEAD;
+    const from = this._soonest(REDECIDE_LEAD);
     if (this.nextStepTime <= from) return null;
     const early = from - this.stepDur - 0.08;
     const index = this.decided.findIndex((d) => d.time >= early);
@@ -338,7 +380,7 @@ export class Engine {
     this.decided = [];
     this.floor = -Infinity;
     this.synth.unsilence();
-    this.nextStepTime = this.ctx.currentTime + 0.08;
+    this.nextStepTime = this._soonest(0.08);
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
     this._tick();
   }
@@ -365,7 +407,7 @@ export class Engine {
     return {
       clock: this.clock.usingWorker ? 'worker' : 'timer',
       hidden: this.hidden,
-      lookahead: this.lookahead,
+      lookahead: +this.lookahead.toFixed(2),
       redecides: this.redecides,
       ticks: this.totalTicks,
       lateTicks: this.lateTicks,
@@ -376,6 +418,26 @@ export class Engine {
       outputLatency: this.ctx.outputLatency ? +this.ctx.outputLatency.toFixed(4) : '-',
       measuredLatencyMs: this.latency === null ? '-' : Math.round(this.latency * 1000),
       timestampApi: typeof this.ctx.getOutputTimestamp === 'function' ? 'yes' : 'no',
+      ...this._aheadReport(),
+    };
+  }
+
+  // On the core (queue item 41): the render-ahead planned from now, as
+  // measured, and the most it has been; the least time any note had to spare as it reached
+  // the core (negative: one was late); how far the core's count has run
+  // past the context's clock; and the longest recent stall the queue is
+  // sized for.
+  _aheadReport() {
+    const c = this.synth.queuesAhead ? this.synth.core : null;
+    if (!c || typeof c !== 'object') return { renderAheadMs: '-' };
+    const ms = (x) => (Number.isFinite(x) ? Math.round(x * 1000) : '-');
+    return {
+      // Planned from (at least a render callback), and as measured.
+      renderAheadMs: `${ms(this.ahead)} (measured ${c.ahead == null ? '- no notes yet' : ms(c.ahead)})`,
+      worstRenderAheadMs: ms(c.worstAhead),
+      leastSpareMs: ms(c.earliest),
+      coreClockLeadMs: ms(c.clockLead),
+      recentStallMs: ms(this.recentStall),
     };
   }
 
@@ -449,12 +511,21 @@ export class Engine {
       spell.ticks++;
       if (this.lastTick != null) spell.worstGapMs = Math.max(spell.worstGapMs, Math.round(now - this.lastTick));
     }
-    if (this.lastTick != null) this.gapSince = Math.max(this.gapSince, now - this.lastTick);
+    if (this.lastTick != null) {
+      this.gapSince = Math.max(this.gapSince, now - this.lastTick);
+      // The longest recent stall, for the depth of the queue: up at once,
+      // down slowly.
+      const gap = (now - this.lastTick) / 1000;
+      const shown = !this.hidden && this.lastTick >= this.shownAt;
+      this.recentStall = Math.max(shown ? gap : 0, this.recentStall - STALL_EASE * gap);
+    }
     this.lastTick = now;
     this._flush();
     // If the next step was already due before we woke up, the queue ran dry
-    // and something audible was missed.
-    const behind = this.ctx.currentTime - this.nextStepTime;
+    // and something audible was missed. On the core it is due once it is
+    // inside the render-ahead: it could only arrive late.
+    const ahead = this.ahead;
+    const behind = this.ctx.currentTime + ahead - this.nextStepTime;
     if (behind > 0) {
       this.lateTicks++;
       this.lateTicksEver++;
@@ -464,8 +535,10 @@ export class Engine {
         spell.worstLateMs = Math.max(spell.worstLateMs, Math.round(behind * 1000));
       }
       // Do not try to catch up by cramming the missed steps in at once;
-      // that turns a gap into a burst. Skip to now and carry on.
-      if (behind > 0.25) this.nextStepTime = this.ctx.currentTime + 0.02;
+      // that turns a gap into a burst. Skip to now and carry on. On the
+      // core every one of them would be late (or left out), so it always
+      // skips, to the soonest a note can still be on time.
+      if (ahead > 0 || behind > 0.25) this.nextStepTime = this._soonest(0.02);
     }
     this._decide();
   }

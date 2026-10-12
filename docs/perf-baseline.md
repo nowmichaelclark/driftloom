@@ -542,3 +542,140 @@ main thread and renderer CPU all within ±4%, visible at 4x the main thread
 2-3% lighter. One run in 16 on each side had device fill-ins (2 and 1
 events). The core holding 2 s of notes visible costs the audio thread
 nothing that can be measured, as the 8 s hidden did in item 39.
+
+## The Pixel 10a on v91 (queue item 41, v92)
+
+The same tester's Pixel 10a (GrapheneOS, installed app, Chrome 155) still
+glitched on v91: `late: 1007`, `dropped: 31` in 1.5 minutes, 728 late notes
+in 50 s on Library and 78 in 2 s on Sound with no stall at all, and
+Library and Save / Share stalling the page for 1.3-1.8 s. Its output runs
+far behind the clock (`outputLatency: 0.448`, measured 600 ms) on a 21 ms
+render callback (`baseLatency: 0.0213`). Its `chrome://gpu`: hardware
+accelerated throughout, Vulkan on, one raster thread.
+
+`node tools/views.mjs` now models such a phone two ways, and reports per
+view the core's dropped notes, how far ahead of its time the closest note
+was handed over (and, from v92, how far ahead of what the core had
+rendered it arrived), and every canvas readback on the main thread:
+
+- `--buffer 0.37`: a large, bursty output. `--audio-buffer-size` does not
+  reach headless Chromium's output; a numeric `latencyHint` does: 8192-
+  frame callbacks (186 ms), 0.56 s output latency.
+- `--delay 400`: the core takes each message 400 ms of audio after it
+  arrives (`js/worklet.js` is served changed so), as on a phone whose
+  audio thread takes its messages late or whose core has run ahead of
+  the clock. On the audio thread, so the page's own work does not add to
+  it.
+- `--graphics default,gpu,software`: the canvas in software (headless's
+  default), GPU-backed on SwiftShader (so a readback flushes and copies
+  as on a GPU), or all graphics in software.
+
+**Before (v91), what it showed.** With the large buffer alone, late notes
+only after a cut (a pasted code: 4). With the delay too, every change
+that is heard at once -- mute, unmute, re-roll, tempo, wander, a vibe
+loop, a pasted code -- put notes into the core after their time, 3-14 a
+change, with the page never late: the field report's "late notes without
+a stall". The core started each at once, bunched. **The 1.3-1.8 s stalls
+did not show:** the longest task at 6x was 241 ms of rendering (on the
+GPU-backed canvas; 380 ms once, a third of it the harness's own clock
+hook), the covers were already drawn on `willReadFrequently` (CPU)
+canvases so no readback touched a GPU, and every readback on the page
+together came to at most 37 ms in a view. Nothing was dropped.
+
+**After (v92).** Late notes at the core, summed over shatter and hollow,
+full, with the large buffer and the 400 ms delay:
+
+| view | 4x | 6x |
+|---|---|---|
+| every view but Share | 0 → 0 | 0 → 0 |
+| share, a code pasted | 11 → 0 | 11 → 0 |
+
+| change | heard from, v91 | v92 | late notes |
+|---|---|---|---|
+| mute | 60 ms | 536-710 ms | 19 → 0 |
+| unmute | 60 ms | 549-795 ms | 19 → 0 |
+| re-roll | 60-225 ms | 540-742 ms | 28 → 0 |
+| tempo | 60 ms | 501-735 ms | 27 → 0 |
+| wander off | 60-69 ms | 537-627 ms | 29 → 0 |
+| wander on | 60 ms | 501-616 ms | 30 → 0 |
+| a vibe loop (Next) | 78-263 ms | 501-791 ms | 20 → 0 |
+
+v91's "60 ms" was a promise the core could not keep there: the notes
+landed after their time. On such a phone a change is now heard after its
+own output delay, as the item expected. With the large buffer and no
+delay (software graphics, full and lite) changes are heard 234-422 ms
+after the key, nothing late; on an ordinary output (no `--buffer`) 73-120
+ms (v90: 60-130), a vibe loop 124-161 ms, nothing late in any view.
+Nothing was dropped and no late ticks in any run.
+
+The view costs, worst over default, GPU-backed and software graphics,
+both loops, full and lite (v91 → v92):
+
+| view | cpu | longest task ms | longest tick gap ms | readbacks on the page (worst ms in a run) |
+|---|---|---|---|---|
+| now playing | 4x | 62 → 0 | 75 → 73 | 0 → 0 |
+| now playing | 6x | 216 → 359 | 194 → 268 | 0 → 0 |
+| vibes | 4x | 150 → 186 | 112 → 97 | 0 → 0 |
+| vibes | 6x | 239 → 189 | 156 → 126 | 0 → 0 |
+| library: albums | 4x | 195 → 192 | 110 → 98 | 140 (5) → 0 |
+| library: albums | 6x | 203 → 190 | 189 → 156 | 140 (9) → 0 |
+| library: an album open | 4x | 187 → 140 | 173 → 111 | 220 (27) → 0 |
+| library: an album open | 6x | 152 → 392 | 200 → 392 | 220 (37) → 0 |
+| library: every loop | 4x | 162 → 129 | 108 → 108 | 10 (1) → 0 |
+| library: every loop | 6x | 225 → 198 | 126 → 133 | 10 (1) → 0 |
+| save | 4x | 166 → 142 | 118 → 95 | 140 (7) → 0 |
+| save | 6x | 186 → 164 | 144 → 187 | 140 (13) → 0 |
+| share, a code pasted | 4x | 130 → 174 | 140 → 190 | 10 → 0 |
+| share, a code pasted | 6x | 139 → 112 | 131 → 162 | 10 (3) → 0 |
+| sounds | 4x | 225 → 271 | 121 → 116 | 0 → 0 |
+| sounds | 6x | 380 → 228 | 403 → 136 | 0 → 0 |
+| layers | 4x | 80 → 63 | 97 → 81 | 0 → 0 |
+| layers | 6x | 80 → 120 | 111 → 121 | 0 → 0 |
+| switching quickly | 4x | 95 → 120 | 120 → 112 | 0 → 0 |
+| switching quickly | 6x | 95 → 101 | 148 → 157 | 0 → 0 |
+
+The longest frames, before and after, are rendering on the emulated GPU
+(SwiftShader draws in software, and its frames swing): the 359 and 392 ms
+after are single frames of one session with no script in them. The
+script that opening an album ran went from 66-128 ms to 31-50 ms: its
+320 px art is drawn in the cover worker now, and no cover is drawn or
+read back on the page. With 2 s queued, none of these frames made a note
+late.
+
+What changed:
+
+- **Planned from what the core says** (`js/worklet.js`, `js/core.js`,
+  `js/engine.js`). The page stamps each note with its clock as it posts
+  it; the worklet says, four times a second, how far past that clock it
+  had already rendered when the notes landed (the render-ahead), and the
+  least time any note had to spare. The page plans from the worst of it
+  (easing down 20 ms a second), never less than the context's render
+  callback: a note is handed over no closer than the render-ahead plus a
+  quarter of it (at least 50 ms) -- Play, a cut, a change heard at once,
+  a late tick's skip -- and the visible queue is the longest recent
+  stall plus the render-ahead plus 0.5 s, 2 s at least and 8 s at most.
+  On an ordinary output that is the 2 s and the 60-70 ms as before.
+- **A note too late is left out** (`core/src/lib.rs`, `MISS`): more than
+  30 ms late, the core drops it rather than start it at once on top of
+  the notes on time; up to 30 ms it starts at once, as before. Counted
+  apart (`missed`). A sustained note joining partway was not built: every
+  voice starts on its own first block, and starting one mid-note means
+  each voice's first block done again, for notes that, with the above,
+  should no longer come.
+- **Covers off the main thread** (`js/cover-worker.js`, `js/covers.js`):
+  all of them, the playing loop's and the albums', drawn in a Worker on
+  an OffscreenCanvas and handed over as ImageBitmaps; identical to the
+  pixel (12 covers, 96 and 320 px, CPU and GPU canvases, 0 differ).
+- **Diagnostics:** late notes split (a stall / inside the buffer / left
+  out), dropped by cause, the render-ahead (planned, measured, worst),
+  the least time to spare, the core's count against the context's clock,
+  the GPU's name and whether it is real, the service worker's steps with
+  their times; per view, the same splits.
+
+Cost, A/B against v91 (`perf.mjs --ab`, shatter and cinder, full and
+lite, visible at 1x and 4x, hidden at 1x and 6x, 30 s windows): audio
+render and renderer CPU within ±3%; the main thread 1-5% busier in most
+pairs and once 9% (lite at 4x, 202 → 220 ms/s), which two more passes of
+that pair put at 191 → 190: noise. Hidden, about 1 ms/s more (the
+worklet's four reports a second). Device fill-ins in 1 run of 16 on v91
+(2 events), none on v92.

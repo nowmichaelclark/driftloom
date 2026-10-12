@@ -1,6 +1,6 @@
 import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, loadCore, fetchCore, coreUnsupported } from './core.js';
+import { ENGINE, loadCore, fetchCore, coreUnsupported, DROP_CAUSES } from './core.js';
 import { Engine } from './engine.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -9,11 +9,41 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v91';
+const BUILD = 'v92';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
 let swState = 'unsupported';
+// Every change in the service worker's state, with when it came (queue
+// item 41): a field report said `installing` while the music played, and
+// one word cannot tell a stuck install from a finished one.
+const swEvents = [];
+function swEvent(what) {
+  if (swEvents.length >= 12) swEvents.splice(1, 1);
+  swEvents.push(`${what} at ${(performance.now() / 1000).toFixed(1)} s`);
+}
+
+// The GPU the browser draws with, as WebGL names it, and whether that is
+// a real one (queue item 41). Asked once, on a context let go at once.
+let gpuInfo = null;
+function gpuReport() {
+  if (gpuInfo) return gpuInfo;
+  gpuInfo = { renderer: '-', accelerated: '-' };
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (!gl) {
+      gpuInfo = { renderer: 'no WebGL', accelerated: 'no' };
+      return gpuInfo;
+    }
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    const soft = /swiftshader|llvmpipe|software|softpipe|microsoft basic/i.test(renderer);
+    gpuInfo = { renderer, accelerated: soft ? 'no (software)' : 'yes' };
+    const lose = gl.getExtension('WEBGL_lose_context');
+    if (lose) lose.loseContext();
+  } catch { /* not in this browser */ }
+  return gpuInfo;
+}
 // Track length is chosen as a time, which is how anyone thinks of it, and
 // stored as passes (a track ends on a whole loop), worked out at this tempo
 // when the slider moves. The stops are curated: fine at the short end, where
@@ -22,7 +52,7 @@ const TRACK_TIMES = [
   0, 60, 120, 180, 300, 600, 900, 1200, 1800, 2700,
   3600, 5400, 7200, 10800, 14400, 21600, 28800, 43200, 86400,
 ];
-import { drawCover } from './cover.js';
+import { coverImage, paint } from './covers.js';
 import * as store from './storage.js';
 import * as ui from './ui.js';
 import * as library from './library.js';
@@ -267,6 +297,14 @@ function coreLate() {
   return state.synth && state.synth.core ? state.synth.core.late : null;
 }
 
+// The core's late and dropped notes by kind (queue item 41), for the views'
+// report; null without the core.
+function coreCounts() {
+  const c = state.synth && state.synth.core;
+  if (!c) return null;
+  return { late: c.late, stall: c.lateStall, buffer: c.lateBuffer, missed: c.missed, dropped: c.dropped, by: c.droppedBy.slice() };
+}
+
 function fillIns() {
   try {
     const s = state.ctx && state.ctx.playoutStats;
@@ -334,7 +372,11 @@ const views = { since: performance.now(), stats: {}, open: null, longTasks: fals
 
 function viewStats(view) {
   if (!views.stats[view]) {
-    views.stats[view] = { ms: 0, longTasks: 0, longestTask: 0, worstGapMs: 0, lateNotes: 0, lateTicks: 0, fillIns: null };
+    views.stats[view] = {
+      ms: 0, longTasks: 0, longestTask: 0, worstGapMs: 0, lateNotes: 0, lateTicks: 0, fillIns: null,
+      // Queue item 41: the late notes by why, and the dropped ones by cause.
+      lateStall: 0, lateBuffer: 0, missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0),
+    };
   }
   return views.stats[view];
 }
@@ -344,6 +386,7 @@ function viewStats(view) {
 function viewFlush(hiding = false) {
   const now = performance.now();
   const late = coreLate();
+  const counts = coreCounts();
   const fills = fillIns();
   const ticks = state.engine ? state.engine.lateTicksEver : 0;
   const gap = state.engine ? state.engine.takeGap() : 0;
@@ -355,8 +398,18 @@ function viewFlush(hiding = false) {
     if (late != null && o.late != null) v.lateNotes += Math.max(0, late - o.late);
     v.lateTicks += Math.max(0, ticks - o.ticks);
     if (fills != null && o.fills != null) v.fillIns = (v.fillIns || 0) + Math.max(0, fills - o.fills);
+    // A synth built again meanwhile starts its counts from zero: only what
+    // went up is counted.
+    const a = o.counts;
+    if (counts && a) {
+      v.lateStall += Math.max(0, counts.stall - a.stall);
+      v.lateBuffer += Math.max(0, counts.buffer - a.buffer);
+      v.missed += Math.max(0, counts.missed - a.missed);
+      v.dropped += Math.max(0, counts.dropped - a.dropped);
+      counts.by.forEach((n, i) => { v.droppedBy[i] += Math.max(0, n - (a.by[i] || 0)); });
+    }
   }
-  views.open = document.hidden ? null : { view: state.view, at: now, late, fills, ticks };
+  views.open = document.hidden ? null : { view: state.view, at: now, late, fills, ticks, counts };
 }
 
 function watchLongTasks() {
@@ -383,8 +436,11 @@ function viewsReport() {
   for (const name of names) {
     const v = views.stats[name];
     const long = views.longTasks ? `long tasks ${v.longTasks}${v.longTasks ? ` (longest ${v.longestTask} ms)` : ''}` : 'long tasks -';
+    const why = v.lateNotes ? ` (stall ${v.lateStall}, inside the buffer ${v.lateBuffer}; left out ${v.missed})` : '';
+    const dropped = v.dropped
+      ? ` (${DROP_CAUSES.map((c, i) => [c, v.droppedBy[i]]).filter(([, n]) => n).map(([c, n]) => `${c} ${n}`).join(', ')})` : '';
     lines.push(`  ${name}: ${clock(v.ms / 1000)} on screen, ${long}, longest tick gap ${v.worstGapMs} ms, `
-      + `late notes ${v.lateNotes}, late ticks ${v.lateTicks}, fill-ins ${v.fillIns ?? '-'}`);
+      + `late notes ${v.lateNotes}${why}, dropped ${v.dropped}${dropped}, late ticks ${v.lateTicks}, fill-ins ${v.fillIns ?? '-'}`);
   }
   return lines;
 }
@@ -413,53 +469,27 @@ function describeLength(passes, spec) {
   return ui.formatTime(passes * ui.passSeconds(spec));
 }
 
-// The covers drawn lately, by the loop they show: going back to one --
-// leaving an album, changing the Library's tab, a code for the loop that is
-// playing -- copies it instead of drawing it again, the biggest single job
-// the main thread had in those views (queue item 40).
-const covers = new Map();
-let coverTimer = null;
-
+// The playing loop's cover on the card. Drawn off the main thread
+// (js/covers.js, queue item 41) and kept there, so neither a new loop nor
+// going back to one -- leaving an album, changing the Library's tab, a code
+// for the loop that is playing -- holds the page; the card keeps the last
+// cover until the new one is in.
 function drawCoverFor(spec) {
   const canvas = ui.el('cover');
   if (!canvas || !spec) return;
-  const key = JSON.stringify(spec);
-  const kept = covers.get(key);
-  if (kept) {
-    canvas.width = kept.width;
-    canvas.height = kept.height;
-    canvas.getContext('2d').drawImage(kept, 0, 0);
-    return;
-  }
-  // Not drawn yet: a moment later, once the music has what it needs. A new
-  // loop's first notes are decided as the page finishes loading it, and a
-  // cover is a few hundred ms on a slow phone, heard as a late start
-  // (queue item 40). The card keeps the last cover until then.
-  clearTimeout(coverTimer);
-  coverTimer = setTimeout(() => {
-    coverTimer = null;
+  coverImage(spec, 320).then((image) => {
     // Gone by then: another loop, or an album on the card instead.
     if (state.spec !== spec || library.shownAlbum()) {
-      if (state.coverFor === spec) state.coverFor = null;
+      if (state.coverFor === spec && state.spec !== spec) state.coverFor = null;
       return;
     }
-    paintCover(canvas, spec, key);
-  }, 0);
-}
-
-function paintCover(canvas, spec, key) {
-  try {
-    drawCover(canvas, spec, 320);
-  } catch (err) {
+    canvas.width = 320;
+    canvas.height = 320;
+    paint(canvas, image);
+  }).catch((err) => {
     console.warn('Could not draw cover', err);
-    return;
-  }
-  const copy = document.createElement('canvas');
-  copy.width = canvas.width;
-  copy.height = canvas.height;
-  copy.getContext('2d').drawImage(canvas, 0, 0);
-  if (covers.size >= 12) covers.delete(covers.keys().next().value);
-  covers.set(key, copy);
+    if (state.coverFor === spec) state.coverFor = null;
+  });
 }
 
 // ---------------------------------------------------------------- card
@@ -474,10 +504,12 @@ function refreshCard() {
     const byId = new Map(store.loadAll().map((e) => [e.id, e]));
     const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
     const canvas = ui.el('cover');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 320;
-    canvas.height = 320;
-    ctx.drawImage(library.albumArt(album, specs, 320), 0, 0, 320, 320);
+    library.albumArt(album, specs, 320).then((image) => {
+      if (library.shownAlbum() !== albumId) return;
+      canvas.width = 320;
+      canvas.height = 320;
+      paint(canvas, image);
+    }).catch((err) => console.warn('Could not draw album art', err));
     state.coverFor = null;
     const pl = state.playlist;
     const playing = pl && pl.albumId === album.id
@@ -1371,7 +1403,9 @@ function wire() {
     lines.push(`standalone: ${window.matchMedia('(display-mode: standalone)').matches}`);
     // Registration failures are swallowed so they cannot break the app, which
     // means a dead service worker -- no offline mode -- is otherwise invisible.
-    lines.push(`sw: ${swState}`);
+    lines.push(`sw: ${swState}${swEvents.length ? ` (${swEvents.join('; ')})` : ''}`);
+    const gpu = gpuReport();
+    lines.push(`gpu: ${gpu.renderer}  accelerated: ${gpu.accelerated}`);
     lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}`);
     // Which synth plays the voices: the Rust core (with the notes that
     // arrived late and the ones that fell back to JS), or JS and why.
@@ -1542,11 +1576,19 @@ if (ENGINE === 'rust' && !coreUnsupported()) {
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   swState = 'registering';
   navigator.serviceWorker.register('sw.js').then((reg) => {
+    // Followed as it moves: the state shown is the newest worker's, and
+    // each step it takes is kept with its time.
+    const watched = new WeakSet();
     const track = () => {
       const w = reg.installing || reg.waiting || reg.active;
       swState = w ? w.state : 'registered';
+      if (w && !watched.has(w)) {
+        watched.add(w);
+        swEvent(w.state);
+        w.addEventListener('statechange', () => { swEvent(w.state); track(); });
+      }
     };
     track();
-    reg.addEventListener('updatefound', track);
+    reg.addEventListener('updatefound', () => { swEvent('update found'); track(); });
   }).catch((err) => { swState = `failed: ${err && err.message ? err.message : err}`; });
 }

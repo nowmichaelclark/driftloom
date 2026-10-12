@@ -130,13 +130,15 @@ export function findChrome(explicit) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function launch(chromePath) {
+// `args`: more Chromium switches (tools/views.mjs's graphics modes).
+export async function launch(chromePath, args = []) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'driftloom-stalls-'));
   const proc = spawn(chromePath, [
     '--headless=new', '--no-sandbox', '--remote-debugging-port=0', `--user-data-dir=${dir}`,
     '--no-first-run', '--no-default-browser-check', '--disable-extensions',
     '--disable-component-update', '--disable-sync', '--mute-audio',
     '--enable-blink-features=AudioContextPlayoutStats',
+    ...args,
     'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
   const wsUrl = await new Promise((resolve, reject) => {
@@ -181,7 +183,9 @@ const TYPES = {
   '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.wav': 'audio/wav',
   '.flac': 'audio/flac', '.png': 'image/png', '.wasm': 'application/wasm',
 };
-export function startServer(port) {
+// `transform(url, text)`: a file served changed (tools/views.mjs --delay
+// changes js/worklet.js), or null to serve it as it is.
+export function startServer(port, transform = null) {
   const server = http.createServer((req, res) => {
     let url = decodeURIComponent(req.url.split('?')[0]);
     if (url.endsWith('/')) url += 'index.html';
@@ -191,6 +195,8 @@ export function startServer(port) {
       return res.end('not found');
     }
     res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
+    const changed = transform && /\.(m?js|html)$/.test(file) ? transform(url, fs.readFileSync(file, 'utf8')) : null;
+    if (changed != null) return res.end(changed);
     return fs.createReadStream(file).pipe(res);
   });
   return new Promise((resolve, reject) => {

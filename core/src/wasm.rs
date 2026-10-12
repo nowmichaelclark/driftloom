@@ -185,9 +185,22 @@ pub extern "C" fn dl_late() -> u32 {
     core().late()
 }
 
+/// Notes that arrived more than `MISS` late and were left out (queue item
+/// 41).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_missed() -> u32 {
+    core().missed()
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_dropped() -> u32 {
     core().dropped()
+}
+
+/// Notes dropped for one cause; see `Core::dropped_by`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_dropped_by(cause: u32) -> u32 {
+    core().dropped_by(cause as usize)
 }
 
 #[unsafe(no_mangle)]
@@ -196,4 +209,6 @@ pub extern "C" fn dl_busy() -> u32 {
 }
 
 // Kept in step with `Taken`; the worklet reads these numbers.
-const _: () = assert!(Taken::Late as u32 == 1 && Taken::Full as u32 == 2);
+const _: () = assert!(
+    Taken::Late as u32 == 1 && Taken::Full as u32 == 2 && Taken::Missed as u32 == 4
+);

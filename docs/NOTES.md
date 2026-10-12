@@ -510,6 +510,7 @@ node tools/perf.mjs --ab <folder> --passes 2 # each run twice, <folder> and this
 node tools/perf.mjs --parts path            # walk the app, reading the output after each step
 node tools/stalls.mjs                        # hidden, the clock held back on purpose (queue item 39)
 node tools/views.mjs --changes               # visible, every view in turn, and how soon a change is heard (queue item 40)
+node tools/views.mjs --buffer 0.37 --graphics software,gpu   # a phone's large, bursty audio output; its graphics (queue item 41)
 ```
 
 `measure.mjs` renders offline, faster than real time; this plays the real
@@ -693,7 +694,12 @@ invents detail that was never drawn. And an **auto-levels** pass stretches to
 the 2nd and 98th percentiles, at full strength only when the picture really
 did come out flat, so deliberate restraint survives.
 
-About 25ms per cover.
+About 25ms per cover on a desktop, and a few hundred on a slow phone, so
+since queue item 41 every cover is drawn by a Worker on an OffscreenCanvas
+(`js/cover-worker.js`, through `js/covers.js`) and handed to the page as
+an ImageBitmap: the page only pastes it in, and never reads a pixel back.
+A browser without module workers or OffscreenCanvas draws on the main
+thread as before, a task per cover. The pictures are identical either way.
 
 **Albums get their own artwork**, built from the loops inside them, so it
 changes when the album changes and travels in the album code.
@@ -719,6 +725,23 @@ quality toggle) does not build another. `rust (loading)` is only for the
 moment before the core has arrived, and the `core:` line beneath says when
 it did (milliseconds after the page began): the core is loaded as the page
 loads, not on the first tap.
+
+Since queue item 41 `late` is split by why: `stall` (the page handed the
+note over after its time had passed) and `inside the buffer` (handed over
+ahead of its time, but the core had already rendered past it); `left out`
+are the late ones more than 30 ms late (`MISS`, `core/src/lib.rs`), which
+the core drops rather than start bunched with the notes on time. `dropped`
+is by cause: the queue of waiting notes full, no room for a sung note's
+draws, every voice busy, every sung voice busy. The scheduler's lines add
+`renderAheadMs`, how far past the page's clock the core had rendered when
+notes reached it (the page never hands a note over closer than that plus
+a quarter of it, at least 50 ms), its worst, `leastSpareMs` (the least time any note had to spare
+on arrival; negative, one was late), `coreClockLeadMs` (how far the core's
+own count has run past the context's clock) and `recentStallMs` (the
+longest recent stall, which the visible queue is sized to cover). `gpu`
+is the renderer WebGL names and whether it is a real GPU; `sw` lists each
+step the service worker took, with when. The views' report carries the
+same splits per view.
 
 ## The Rust core
 

@@ -148,5 +148,33 @@ function loudest(cancel, from, to) {
   check('cancelled from its time, it never does', from === 0, String(from));
 }
 
+console.log('\nHow notes arrive (queue item 41)');
+
+{
+  const { processor } = make();
+  for (let b = 0; b < 40; b++) call(processor, b * QUANTUM);
+  // The core has rendered 40 blocks (116 ms). A note the page posted at 50
+  // ms for 300 ms: on time, and the core was 66 ms past the page's clock.
+  const note = (time, sent) => processor.receive({
+    type: 'note', voice: 0, channel: 0, time, midi: 69, dur: 0.2, vel: 0.5, parts: 1, extra: [], draws: null, sent,
+  });
+  note(0.3, 0.05);
+  // Handed over ahead of its time (sent at 50 ms for 100 ms), but behind
+  // what the core had rendered: late, inside the buffer, and played.
+  note(0.1, 0.05);
+  // Handed over after its time (a stall), and more than 30 ms late: left
+  // out, and counted apart.
+  note(0.02, 0.06);
+  const counts = processor.sent.filter((m) => m.type === 'counts').pop();
+  check('late notes are split by why, and the one too late is left out',
+    counts && counts.late === 2 && counts.lateBuffer === 1 && counts.lateStall === 1 && counts.missed === 1 && counts.dropped === 0,
+    JSON.stringify(counts));
+  for (let b = 40; b < 160; b++) call(processor, b * QUANTUM);
+  const report = processor.sent.find((m) => m.type === 'arrivals');
+  check('the worklet reports how far past the page\'s clock it had rendered', report && Math.abs(report.reach - (40 * QUANTUM / RATE - 0.05)) < 1e-9,
+    JSON.stringify(report));
+  check('and the least time a note had to spare (negative: late)', report && report.early < -0.09 && report.n === 3);
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

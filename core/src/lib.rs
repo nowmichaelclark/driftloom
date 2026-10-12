@@ -126,7 +126,28 @@ pub enum Taken {
     Full = 2,
     /// Not a channel or a voice the core has. Dropped.
     Unknown = 3,
+    /// Its start time had been rendered more than `MISS` ago: too late to
+    /// play without bunching up with the notes on time. Dropped, and
+    /// counted apart (`Core::missed`).
+    Missed = 4,
 }
+
+/// How late a note may arrive and still play, at once (queue item 41). A
+/// late note starts at the next block, whole, so the later it is the more
+/// it bunches against the notes after it -- a burst of late notes, all
+/// starting together, was the Pixel 10a's glitch. A few tens of ms late is
+/// not heard as late; past that the note is left out (for Mikey's ears:
+/// a gap in a busy loop is quieter than a pile-up).
+pub const MISS: f64 = 0.03;
+
+/// Why a note was dropped (`Core::dropped_by`): the queue of waiting notes
+/// was full when it arrived; a sung note found no room for its draws; every
+/// voice was busy when it started; every sung voice was.
+pub const QUEUE_FULL: usize = 0;
+pub const NO_ROOM: usize = 1;
+pub const VOICES_BUSY: usize = 2;
+pub const SUNG_BUSY: usize = 3;
+const CAUSES: usize = 4;
 
 /// How many extra values a note carries. Fixed, so a note is a plain value
 /// and nothing allocates: the widest voice, the temple bell, sends ten
@@ -372,7 +393,8 @@ pub struct Core {
     /// Whether the master chain fits at this rate.
     master_ready: bool,
     late: u32,
-    dropped: u32,
+    missed: u32,
+    dropped: [u32; CAUSES],
 }
 
 impl Core {
@@ -403,7 +425,8 @@ impl Core {
             master: Master::new(),
             master_ready: false,
             late: 0,
-            dropped: 0,
+            missed: 0,
+            dropped: [0; CAUSES],
         }
     }
 
@@ -413,7 +436,8 @@ impl Core {
         self.rate = rate;
         self.next = 0;
         self.late = 0;
-        self.dropped = 0;
+        self.missed = 0;
+        self.dropped = [0; CAUSES];
         self.clear();
         let r = rate as f32;
         self.waves.build(r, &mut self.fft);
@@ -610,15 +634,36 @@ impl Core {
         self.noise.space()
     }
 
-    /// Notes that arrived after their start time had been rendered.
+    /// Notes that arrived after their start time had been rendered, the
+    /// missed ones included.
     pub fn late(&self) -> u32 {
         self.late
     }
 
-    /// Notes dropped: the queue was full when they arrived, or every voice
-    /// was busy when they started.
+    /// Notes that arrived more than `MISS` late, and were left out.
+    pub fn missed(&self) -> u32 {
+        self.missed
+    }
+
+    /// Notes dropped: the queue was full when they arrived, a sung note's
+    /// draws found no room, or every voice was busy when they started.
+    /// Missed notes are not among them.
     pub fn dropped(&self) -> u32 {
         self.dropped
+            .iter()
+            .fold(0u32, |sum, n| sum.saturating_add(*n))
+    }
+
+    /// Notes dropped for one cause (`QUEUE_FULL`, `NO_ROOM`, `VOICES_BUSY`,
+    /// `SUNG_BUSY`).
+    pub fn dropped_by(&self, cause: usize) -> u32 {
+        self.dropped.get(cause).copied().unwrap_or(0)
+    }
+
+    fn drop_for(&mut self, cause: usize) {
+        if let Some(n) = self.dropped.get_mut(cause) {
+            *n = n.saturating_add(1);
+        }
     }
 
     /// Notes sounding or waiting to.
@@ -630,7 +675,8 @@ impl Core {
     /// seconds on the host's clock, with the voice's own `parts` and
     /// `extra` values (see the voices, above). A note whose start has
     /// already been rendered starts at once: the whole of it, from its
-    /// first sample, at the start of the next block.
+    /// first sample, at the start of the next block -- unless it is more
+    /// than `MISS` late, when it is left out.
     #[allow(clippy::too_many_arguments)]
     pub fn note(
         &mut self,
@@ -658,21 +704,29 @@ impl Core {
         let mut time = time;
         let mut taken = Taken::OnTime;
         if osc::frame_at(time, rate) < self.next {
-            time = self.next as f64 / rate;
-            taken = Taken::Late;
+            let now = self.next as f64 / rate;
             self.late = self.late.saturating_add(1);
+            if now - time > MISS {
+                self.missed = self.missed.saturating_add(1);
+                return Taken::Missed;
+            }
+            time = now;
+            taken = Taken::Late;
         }
         let (draws, draw_count) = if sung_kind(voice).is_some() {
             let Some(at) = self.keep_draws(staged) else {
-                self.dropped = self.dropped.saturating_add(1);
+                self.drop_for(NO_ROOM);
                 return Taken::Full;
             };
             (at, staged)
         } else {
             (0, 0)
         };
+        if self.waiting >= QUEUE {
+            self.drop_for(QUEUE_FULL);
+            return Taken::Full;
+        }
         let Some(gap) = self.queue.get_mut(self.waiting) else {
-            self.dropped = self.dropped.saturating_add(1);
             return Taken::Full;
         };
         *gap = Waiting {
@@ -743,8 +797,11 @@ impl Core {
 
     // A waiting note's start has come: give it a voice.
     fn start(&mut self, w: Waiting) {
+        if self.slots.iter().all(|s| s.busy) {
+            self.drop_for(VOICES_BUSY);
+            return;
+        }
         let Some(slot) = self.slots.iter_mut().find(|s| !s.busy) else {
-            self.dropped = self.dropped.saturating_add(1);
             return;
         };
         let rate = self.rate;
@@ -956,7 +1013,9 @@ impl Core {
             VOWEL..=CHOIR => {
                 let kind = sung_kind(w.voice).unwrap_or(Kind3::Vowel);
                 let Some((i, v)) = self.sung.iter_mut().enumerate().find(|(_, v)| !v.busy) else {
-                    self.dropped = self.dropped.saturating_add(1);
+                    if let Some(n) = self.dropped.get_mut(SUNG_BUSY) {
+                        *n = n.saturating_add(1);
+                    }
                     return;
                 };
                 let draws = self
@@ -1245,6 +1304,27 @@ mod tests {
     }
 
     #[test]
+    fn a_note_more_than_a_miss_late_is_left_out_and_counted_apart() {
+        let mut core = boxed();
+        render(&mut core, 20);
+        // 20 blocks are 58 ms: a note due at 1 ms is 57 ms late.
+        assert_eq!(
+            core.note(KALIMBA, MELODY, 0.001, 69.0, 0.2, 0.8, STRIKE, NO),
+            Taken::Missed
+        );
+        // One a block late still plays.
+        let just = (20 * QUANTUM - QUANTUM) as f64 / RATE;
+        assert_eq!(
+            core.note(KALIMBA, MELODY, just, 69.0, 0.2, 0.8, STRIKE, NO),
+            Taken::Late
+        );
+        assert_eq!(core.late(), 2);
+        assert_eq!(core.missed(), 1);
+        assert_eq!(core.dropped(), 0);
+        assert_eq!(core.busy(), 1);
+    }
+
+    #[test]
     fn notes_wait_without_taking_voices() {
         let mut core = boxed();
         // Far more than there are voices, a second apart: each gets one.
@@ -1291,6 +1371,7 @@ mod tests {
             Taken::Full
         );
         assert_eq!(core.dropped(), 1);
+        assert_eq!(core.dropped_by(QUEUE_FULL), 1);
     }
 
     #[test]
@@ -1301,6 +1382,7 @@ mod tests {
         }
         core.process(0);
         assert_eq!(core.dropped(), 1);
+        assert_eq!(core.dropped_by(VOICES_BUSY), 1);
         assert_eq!(core.busy(), POOL);
     }
 
@@ -1569,6 +1651,7 @@ mod tests {
         assert!(core.sung_draws(sung::MAX_DRAWS + 1).is_empty());
         assert_eq!(core.note(HUM, MELODY, 0.1, 60.0, 0.4, 0.8, 0, NO), Taken::Full);
         assert_eq!(core.dropped(), 2);
+        assert_eq!(core.dropped_by(NO_ROOM), 2);
     }
 
     #[test]
