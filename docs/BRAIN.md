@@ -450,6 +450,8 @@ Stated decisions, not inferences. Dated where the date matters.
   reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
   late and dropped by cause) will say whether anything is left. If it
   calls for a fix, that comes before the core work.
+- **Charter drafted (Session 18): `docs/CORE.md`**, waiting on Mikey's
+  answers to its four questions.
 - **Next: the core** -- a new brain chat. Read **"The core"** under "What
   Mikey has decided" first: the number one priority, shoot for the moon,
   embeddable anywhere (game engines, mods, any OS or device, iOS and
@@ -469,6 +471,11 @@ Stated decisions, not inferences. Dated where the date matters.
   loops Mikey sends (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Session 18 (brain, Opus 5.5, 2026-10-13), the core.** Drafted the
+core charter, `docs/CORE.md`: eight promises, each with a measure, seven
+phases, four questions for Mikey. Waiting on his answers; then phase 1
+goes into the queue.
 
 **Session 16 (brain, 2026-10-11 to 10-12), the words, then the glitches.**
 Its State bullets, newest first, kept here as written:
