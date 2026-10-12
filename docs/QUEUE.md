@@ -13,7 +13,9 @@ on v91) are merged, each waiting on a tester's report (Diagnostics'
 "while hidden" and "views" sections; on v92 also `gpu`, the render-ahead
 and the late and dropped splits). 41's 1.3-1.8 s stalls were not
 reproduced here (Notes from Claude Code, below). 38, 34, 35 and 36 are
-done. **Next: the tester's v92 report;** 37 stays on hold. A new
+done. **Next: nothing queued for the hands.** A
+new brain chat writes the core charter (`docs/BRAIN.md`, "The core");
+the tester's v92 report may add one fix first. 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
