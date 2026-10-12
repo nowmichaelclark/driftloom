@@ -294,6 +294,18 @@ Stated decisions, not inferences. Dated where the date matters.
   Instruments are Rust code today; making them data is a charter-level
   choice. The code should at least say what it needs (core version, packs
   with hashes) and degrade clearly when something is missing.
+  **Mikey likes doing both** (2026-10-12): hand-written Rust building
+  blocks, and instruments as small data recipes (patches) that wire and
+  set them -- like a synth's presets.
+- **Shorter share codes** (Mikey, 2026-10-12): an album fills half a phone
+  screen in Discord; not tidy. Brain's proposal for the charter: with a
+  deterministic, versioned core, a loop's code is the version, the seed
+  and only what the listener changed (vibes, mutes, edits) -- about 10-16
+  characters; an album, a list of those (about 60 for eight loops, against
+  over a thousand now). Shared as a link, so Discord shows a tidy preview.
+  Explicit parameters were written down only so a code survived generator
+  changes; the version in the code does that job now that anything may
+  break.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
