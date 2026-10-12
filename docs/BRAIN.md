@@ -377,6 +377,14 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
+- **2026-10-12, afternoon:** items 39 (#180, v89) and 40 (#182, v90)
+  merged; both wait on the GrapheneOS testers' Diagnostics (the "while
+  hidden" and "views" sections; steps in the PRs). Item 40's cause was the
+  page's own work (Library drew every cover at once, 1-2 s on a slow
+  phone) against a 0.3 s queue; the core now gets 2 s visible, 8 s hidden.
+  The brain strengthened the vibes' profile and instrument leans (#183,
+  v91; `docs/VIBES.md`, tuning log). Nothing queued for the hands; 37 on
+  hold. Next: Mikey picks vibes and sends loops; the testers' reports.
 - **Urgent (2026-10-12): queue item 40**, glitches with the screen on,
   worst on Library and Save / Share (second tester, Pixel 10a,
   GrapheneOS). Lead: visible, the core still gets notes only 0.3 s ahead,
