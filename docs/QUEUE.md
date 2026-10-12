@@ -10,9 +10,10 @@ JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
 standing rules). Items 39 (#180) and 40 (#182, glitches on Library and
 Save / Share) are merged, each waiting on a tester's report (Diagnostics'
-"while hidden" and "views" sections). Next: item 37, word albums on
-`/rank` (38, 34, 35 and 36 are done; the ears-approved new instruments
-wait, "Later, not queued"). A new
+"while hidden" and "views" sections). 38, 34, 35 and 36 are done.
+**Next: nothing queued for the hands** -- item 37 stays on hold (Vibes
+cover it), and the ears-approved new instruments wait, "Later, not
+queued", until the testers' reports are in. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
