@@ -171,14 +171,18 @@ async function play(page) {
 // Diagnostics' engine line, as the page prints it.
 async function engineLine(page) {
   await page.evaluate(() => document.querySelector('.diag').setAttribute('open', ''));
-  await page.click('#diagRefresh');
+  // Diagnostics sits in the Advanced view, out of sight: its key, pressed
+  // by script as perf.mjs presses it.
+  await page.evaluate(() => document.getElementById('diagRefresh').click());
   const text = await page.textContent('#diagOut');
   return (text.split('\n').find((l) => l.startsWith('engine:')) || '').trim();
 }
 // Diagnostics' core line (when the core arrived), as the page prints it.
 async function coreLine(page) {
   await page.evaluate(() => document.querySelector('.diag').setAttribute('open', ''));
-  await page.click('#diagRefresh');
+  // Diagnostics sits in the Advanced view, out of sight: its key, pressed
+  // by script as perf.mjs presses it.
+  await page.evaluate(() => document.getElementById('diagRefresh').click());
   const text = await page.textContent('#diagOut');
   return (text.split('\n').find((l) => l.startsWith('core:')) || '').trim();
 }

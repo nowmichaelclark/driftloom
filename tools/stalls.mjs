@@ -53,6 +53,7 @@
 //   --modes <list>      ticks,main,freeze                    (default all)
 //   --each <n>          stalls per pattern                      (default 3)
 //   --quality <q>       full or lite                         (default full)
+//   --report            print Diagnostics once the tab is back in front
 //   --json <file>  --md <file>  --port <n>  --chrome <path>
 //
 // Chromium only, over the DevTools protocol (Playwright keeps every tab
@@ -95,6 +96,7 @@ function parseArgs(argv) {
       case '--port': o.port = Number(next()); break;
       case '--chrome': o.chrome = next(); break;
       case '--json': o.json = next(); break;
+      case '--report': o.report = true; break;
       case '--md': o.md = next(); break;
       case '--help': case '-h':
         console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n\n')[2]);
@@ -485,6 +487,12 @@ async function session(opts, chromePath, loop, engine, throttle) {
           log(`  ${row.label}: ${row.error ? row.error : `gap ${row.gapMs} ms, late ticks ${row.lateTicks} (worst ${row.worstLateMs} ms), late notes ${row.lateNotes}${row.coreLate != null ? ` (core ${row.coreLate})` : ''}, silent ${row.silentS} s, fill-ins ${row.fills}`}`);
         }
       }
+    }
+    if (opts.report) {
+      // Back in front, as a tester unlocking the phone: Diagnostics' text.
+      await b.send('Target.activateTarget', { targetId: tab.targetId });
+      await sleep(1500);
+      log((await tab.diagnostics()).text);
     }
     control.loop = name;
     control.engine = engine;

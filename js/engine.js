@@ -240,6 +240,17 @@ export class Engine {
     this.tailsDucked = false;
     this.visualQueue = [];
     this.nextStepTime = now + 0.08;
+    // The new loop starts from when the page has finished loading it, not
+    // from now: drawing and rendering it takes a slow phone a good part of
+    // a second, and its first notes would be late. And it is decided then,
+    // not on the next tick, which hidden can be a quarter of a second
+    // further on. (After the caller is done: a new loop resets its
+    // position after loading it.)
+    Promise.resolve().then(() => {
+      if (!this.playing) return;
+      this.nextStepTime = this.ctx.currentTime + 0.08;
+      this._tick();
+    });
   }
 
   start() {

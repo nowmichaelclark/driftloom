@@ -72,8 +72,14 @@ export class MediaBridge {
       this.audio.volume = 1;
       this.audio.setAttribute('playsinline', '');
       this.audio.style.display = 'none';
-      this.audio.addEventListener('pause', () => this._changed('keepalive paused'));
-      this.audio.addEventListener('playing', () => this._changed('keepalive playing'));
+      // 'playing' comes again each time the loop wraps; only the one after
+      // a pause is news.
+      let paused = false;
+      this.audio.addEventListener('pause', () => { paused = true; this._changed('keepalive paused'); });
+      this.audio.addEventListener('playing', () => {
+        if (paused) this._changed('keepalive playing');
+        paused = false;
+      });
       document.body.appendChild(this.audio);
       this.audio.load();
       this.mode = 'ready';
