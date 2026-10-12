@@ -207,7 +207,7 @@ const PHASES = [
     // plays again from where it lives, as a pasted code does. Tapped, so
     // the long frame can say what ran.
     await tab.evaluate(`(() => {
-      const code = ${'${JSON.stringify(LOOPS[loop].code)}'};
+      const code = ${JSON.stringify(LOOPS[loop].code)};
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => code, writeText: async () => {} } });
       return true;
     })()`);
@@ -341,7 +341,14 @@ async function session(opts, chromePath, loop, engine, throttle, quality) {
     if (engine === 'core' && !/^rust/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
     const rows = [];
     for (const ph of PHASES) {
-      const r = await phase(tab, engine, ph, loop);
+      let r;
+      try {
+        r = await phase(tab, engine, ph, loop);
+      } catch (err) {
+        log(`  ${ph.view}: failed: ${err.message}`);
+        rows.push({ loop: name, engine, throttle, quality, view: ph.view, error: err.message });
+        continue;
+      }
       rows.push({ loop: name, engine, throttle, quality, ...r });
       log(`  ${r.view}: long tasks ${r.longTasks} (longest ${r.longestMs} ms${r.what ? `, ${r.what}` : ''}), gap ${r.gapMs} ms, late notes ${r.lateNotes}${r.coreLate != null ? ` (core ${r.coreLate})` : ''}, late ticks ${r.lateTicks} (worst ${r.worstLateMs} ms), fill-ins ${r.fills}`);
     }
