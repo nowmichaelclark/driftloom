@@ -112,7 +112,7 @@ change cheap, not freeze the app.
   null test against its previous version so a change is either proven
   identical or flagged as a sound change for an A/B. Nothing else in the
   core knows a block's insides.
-- **A catalogue of block ideas** before phase 4: what blocks could exist
+- **A catalogue of block ideas** before phase 5: what blocks could exist
   (granular, modal resonators for bells and wood, waveguides for
   strings and winds, wavefolding, a tape model, a spring or plate reverb,
   a vocal tract...), which of today's blocks are worth changing, and what
@@ -254,7 +254,7 @@ one before it.
    target, and Mikey hears no change on an album (a control album: it
    should sound the same). Also: the output layout becomes a host's
    choice (one channel today), and today's blocks move behind the shared
-   block interface (promise 5), so phase 4 starts from a clean place.
+   block interface (promise 5), so phase 5 starts from a clean place.
 2. **The generator in Rust.** `generator.js`, vibes, moods and characters
    ported, with profiles and vibes as data. *Done when:* the balance lock
    and `stats.mjs` corpus numbers match the JavaScript generator's within
