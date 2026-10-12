@@ -117,10 +117,13 @@ console.log('\nNotes handed over ahead (queue item 39)');
 
 // The loudest sample from `from` to `to` seconds, a kalimba note handed
 // over for 0.5 s and, if `cancel`, everything waiting dropped at once.
+// With `cancel` a time, only what waits to start then or later (queue item
+// 40).
 function loudest(cancel, from, to) {
   const { processor } = make();
   processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [], draws: null });
-  if (cancel) processor.receive({ type: 'cancel' });
+  if (cancel === true) processor.receive({ type: 'cancel' });
+  else if (cancel !== false) processor.receive({ type: 'cancel', from: cancel });
   let peak = 0;
   for (let b = 0; b * QUANTUM < to * RATE; b++) {
     globalThis.currentFrame = b * QUANTUM;
@@ -136,6 +139,13 @@ function loudest(cancel, from, to) {
   const cancelled = loudest(true, 0.5, 1);
   check('a note handed over ahead sounds at its time', kept > 0.01, String(kept));
   check('and cancelled before it starts, it never does', cancelled === 0, String(cancelled));
+}
+
+{
+  const later = loudest(0.6, 0.5, 1);
+  const from = loudest(0.5, 0.5, 1);
+  check('cancelled from after its time, it sounds', later > 0.01, String(later));
+  check('cancelled from its time, it never does', from === 0, String(from));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

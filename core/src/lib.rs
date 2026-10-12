@@ -1494,7 +1494,7 @@ mod tests {
         core.note(KALIMBA, MELODY, 0.0, 60.0, 0.5, 0.5, STRIKE | BODY, NO);
         core.note(KALIMBA, CHORDS, 1.0, 60.0, 0.5, 0.5, STRIKE | BODY, NO);
         core.note(KALIMBA, CHORDS, 2.0, 64.0, 0.5, 0.5, STRIKE | BODY, NO);
-        core.note(KALIMBA, BASS, 3.0, 40.0, 0.5, 0.5, STRIKE | BODY, NO);
+        core.note(KALIMBA, MELODY, 3.0, 67.0, 0.5, 0.5, STRIKE | BODY, NO);
         render(&mut core, 2);
         assert_eq!(core.busy(), 4);
         // From 2 s: the notes at 2 and 3 go, the one at 1 waits on, and the

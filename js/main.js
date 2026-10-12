@@ -418,6 +418,7 @@ function describeLength(passes, spec) {
 // playing -- copies it instead of drawing it again, the biggest single job
 // the main thread had in those views (queue item 40).
 const covers = new Map();
+let coverTimer = null;
 
 function drawCoverFor(spec) {
   const canvas = ui.el('cover');
@@ -430,6 +431,23 @@ function drawCoverFor(spec) {
     canvas.getContext('2d').drawImage(kept, 0, 0);
     return;
   }
+  // Not drawn yet: a moment later, once the music has what it needs. A new
+  // loop's first notes are decided as the page finishes loading it, and a
+  // cover is a few hundred ms on a slow phone, heard as a late start
+  // (queue item 40). The card keeps the last cover until then.
+  clearTimeout(coverTimer);
+  coverTimer = setTimeout(() => {
+    coverTimer = null;
+    // Gone by then: another loop, or an album on the card instead.
+    if (state.spec !== spec || library.shownAlbum()) {
+      if (state.coverFor === spec) state.coverFor = null;
+      return;
+    }
+    paintCover(canvas, spec, key);
+  }, 0);
+}
+
+function paintCover(canvas, spec, key) {
   try {
     drawCover(canvas, spec, 320);
   } catch (err) {

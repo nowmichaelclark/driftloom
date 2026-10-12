@@ -253,7 +253,11 @@ export const INSTRUMENT = `(() => {
   const post = MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage = function (m, ...rest) {
     if (m && m.type === 'note' && S.ctx) S.notes.push([m.time, S.ctx.currentTime]);
-    if (m && m.type === 'cancel' && S.ctx) S.cancels.push(S.ctx.currentTime);
+    if (m && m.type === 'cancel' && S.ctx) {
+      S.cancels.push(S.ctx.currentTime);
+      // A cancel from a time (queue item 40): when it was sent, and the time.
+      if (m.from != null) (S.froms = S.froms || []).push([S.ctx.currentTime, m.from]);
+    }
     return post.call(this, m, ...rest);
   };
   const start = AudioScheduledSourceNode.prototype.start;

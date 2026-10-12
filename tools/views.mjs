@@ -268,20 +268,26 @@ async function phase(tab, engine, ph, loop) {
   };
 }
 
-// The changes that must be heard at once (queue item 40, step 2): from the
-// key (on the context's clock) to the first note handed over after it that
-// starts at or after the key, i.e. the first note decided anew. For a mute,
-// the channel's gain moves at once and nothing new needs deciding, so the
-// figure is how soon the layer is silent: the time of the gain change.
+// The changes that must be heard at once (queue item 40, step 2), from the
+// key (on the context's clock):
+//   heard from   when the music has the change: the time the core's queue is
+//                cut from and decided again (a cancel from a time); with
+//                none, the first note decided anew
+//   first note   the first note handed over after the key that starts after
+//                it, i.e. the first note decided anew (it waits for the
+//                loop's next note as well)
+// A mute's channel gain moves at the key besides, whatever the queue holds.
 async function changes(tab, engine, loop) {
   const rows = [];
   const at = () => tab.evaluate('window.__stalls.ctx.currentTime');
   const firstAfter = async (t0) => {
     await sleep(1500);
-    const S = await tab.evaluate('(() => { const S = window.__stalls; return { notes: S.notes, starts: S.starts, params: S.params || [] }; })()');
+    const S = await tab.evaluate('(() => { const S = window.__stalls; return { notes: S.notes, starts: S.starts, froms: S.froms || [] }; })()');
     const ev = engine === 'core' ? S.notes : S.starts;
     const fresh = ev.filter(([t, h]) => h >= t0 && t >= t0).map(([t]) => t).sort((a, b) => a - b);
-    return fresh.length ? Math.round((fresh[0] - t0) * 1000) : null;
+    const first = fresh.length ? Math.round((fresh[0] - t0) * 1000) : null;
+    const cut = S.froms.find(([sent]) => sent >= t0);
+    return { ms: cut ? Math.round((cut[1] - t0) * 1000) : first, first };
   };
   await go(tab, 'layers');
   await sleep(2000);
@@ -295,7 +301,7 @@ async function changes(tab, engine, loop) {
     await sleep(2500);
     const t0 = await at();
     try { await click(tab, sel); } catch (err) { rows.push({ label, error: err.message }); continue; }
-    rows.push({ label, ms: await firstAfter(t0) });
+    rows.push({ label, ...await firstAfter(t0) });
   }
   await go(tab, 'sounds');
   for (const [label, id, value] of [['tempo', 'bpm', null], ['wander off', 'driftAmount', 0], ['wander on', 'driftAmount', 1]]) {
@@ -304,7 +310,7 @@ async function changes(tab, engine, loop) {
     await tab.evaluate(`(() => { const r = document.getElementById(${JSON.stringify(id)});
       r.value = ${value == null ? 'String(parseInt(r.value, 10) + 12)' : JSON.stringify(String(value))};
       r.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
-    rows.push({ label, ms: await firstAfter(t0) });
+    rows.push({ label, ...await firstAfter(t0) });
   }
   // A vibe loop starting: pick a vibe, then Next makes a new loop.
   await go(tab, 'vibes');
@@ -313,8 +319,8 @@ async function changes(tab, engine, loop) {
   await sleep(2500);
   const t0 = await at();
   await click(tab, '#nextBtn');
-  rows.push({ label: 'a vibe loop (Next)', ms: await firstAfter(t0) });
-  for (const r of rows) log(`  change ${r.label}: ${r.error || `${r.ms} ms to the first new note`}`);
+  rows.push({ label: 'a vibe loop (Next)', ...await firstAfter(t0) });
+  for (const r of rows) log(`  change ${r.label}: ${r.error || `heard from ${r.ms} ms, first new note ${r.first} ms`}`);
   return rows.map((r) => ({ ...r, loop }));
 }
 
@@ -377,8 +383,8 @@ function table(rows) {
     out.push(`| ${cells.join(' | ')} |`);
   }
   if (changed.length) {
-    out.push('', '| loop | cpu | quality | change | first new note after, ms |', '|---|---|---|---|---|');
-    for (const r of changed) out.push(`| ${r.loop.replace(/-.*/, '')} | ${r.throttle}x | ${r.quality} | ${r.label} | ${r.error || r.ms} |`);
+    out.push('', '| loop | cpu | quality | change | heard from, ms | first new note, ms |', '|---|---|---|---|---|---|');
+    for (const r of changed) out.push(`| ${r.loop.replace(/-.*/, '')} | ${r.throttle}x | ${r.quality} | ${r.label} | ${r.error || r.ms} | ${r.first ?? '-'} |`);
   }
   return out.join('\n');
 }
