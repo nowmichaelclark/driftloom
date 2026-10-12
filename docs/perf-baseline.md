@@ -535,3 +535,10 @@ The blurred panels (Design v17's glass) sit over the page's still
 background, not over moving content, so they are not repainted each
 frame. The toast's blur is over the lists for its 2 s. Neither was
 touched, so the look is unchanged.
+
+Cost, A/B against v89 (`perf.mjs --ab`, shatter and cinder, full and lite,
+visible at 1x and 4x, hidden at 1x and 6x, 30 s windows): audio render,
+main thread and renderer CPU all within ±4%, visible at 4x the main thread
+2-3% lighter. One run in 16 on each side had device fill-ins (2 and 1
+events). The core holding 2 s of notes visible costs the audio thread
+nothing that can be measured, as the 8 s hidden did in item 39.

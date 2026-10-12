@@ -35,6 +35,8 @@ jobs:
         run: node test/worklet.test.mjs
       - name: Core host tests
         run: node test/core-host.test.mjs
+      - name: Scheduler tests
+        run: node test/engine.test.mjs
       - name: Generator tests
         run: node test/generator.test.mjs
       - name: Dials tests
