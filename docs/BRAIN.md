@@ -269,6 +269,18 @@ Stated decisions, not inferences. Dated where the date matters.
   same Rust core, with the web screens inside it; the website stays, on the
   same core. Chromium is not a requirement for the website (it plays in
   Firefox); the test tools use it.
+- **Anything may break** (Mikey, 2026-10-12): share codes, saved loops,
+  albums. "Breaking is how we learn. I'm playful and experimental." The app
+  stays in testing for a long time; even the F-Droid release is an alpha or
+  beta. So the port is proven step by step for the brain's own safety, not
+  to protect old codes.
+- **Platforms, each its own phase, after the core:** the native Android
+  app on F-Droid; later Google Play; **iPhone and other iOS devices are
+  wanted** (Mikey has no iOS device and has never built for it); an
+  **itch.io** desktop release for people who run it locally. His first
+  multi-platform app: the brain and hands carry as much of it as they can.
+  So the core is built host-agnostic from the start (web worklet, native
+  Android, iOS, desktop).
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
