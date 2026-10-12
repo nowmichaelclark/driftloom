@@ -155,3 +155,24 @@ export const VIBES = {
   zesty: { feel: { lift: 0.75, energy: 0.7 }, tone: { warmth: 0.35 }, modes: { lydian: 1.5, mixolydian: 1.5, dorian: 1.3 }, profiles: { bloom: 1.5, grove: 1.5, cinder: 1.5, wayfare: 1.3 }, melody: { whistle: 1.5, pluck: 1.5, marimba: 1.5 }, hats: 1.5 },
 };
 ```
+
+## Tuning log
+
+**v91 (brain, Session 16, 2026-10-12): profile and instrument leans
+strengthened.** `stats.mjs --vibe-each` on v90 showed the targets
+working (tempo, drums, mode brightness) but the leans on profiles and
+voices hardly moving anything: with a lone vibe, glade still led most
+vibes and fiddle most tunes, as with no vibes at all. A lean is applied as
+`value ^ (strength x weight)`, and a strength of 0.5-0.9 shrank the
+drafts' 1.5-3 to barely more than 1. So every `profiles` value was cubed
+and every `melody`, `chords`, `bass`, `bassStyle` and `texture` value
+raised to the 2.5th power (kept between 0.05 and 20); the targets, modes
+and the single-number leans are as drafted. `js/vibes.js` holds the
+numbers now; the block above is the first draft, kept for the record.
+After: each vibe on its own leads with its own profiles and voices --
+floating vapor and sine, frosty thaw and music box, cozy dust and rhodes,
+tender haven and rhodes, joyful a whistle a third of the time, zany bloom
+and moog, reverent hollow and hum, spicy cinder. Still mild: reflective,
+peaceful, sour, tart, soft and mysterious (no strong profile of their
+own); for Mikey's ears. Five vibes at once still average out, as built.
+Loops without vibes are unchanged (balance lock, tests).
