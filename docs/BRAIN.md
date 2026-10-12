@@ -253,6 +253,25 @@ Stated decisions, not inferences. Dated where the date matters.
   structure (one lane today) costs nothing and can stay, but nothing is
   built toward stereo: no ping-pong echoes, no panning, no width.
 
+**The core (Mikey, 2026-10-12)** -- the next phase.
+
+- **Now is the time to get the core right:** the part users never see but
+  developers do -- good for battery, fast, written beautifully,
+  immaculate. "There are still a lot of things I may want to do and change
+  with the app", so the core must make change easy, not freeze the app.
+- **The website must never glitch from screen work.** Notes are decided
+  and played away from the page's main thread, whatever the page is doing.
+- **The generator's Rust port no longer waits for the words.** "The words
+  will never fully settle, and I imagine I will still want to add more
+  sounds or profiles." Vibes, profiles and voices stay easy to change (data
+  where possible).
+- **A native Android app (F-Droid) is the likely later step**, from the
+  same Rust core, with the web screens inside it; the website stays, on the
+  same core. Chromium is not a requirement for the website (it plays in
+  Firefox); the test tools use it.
+- **A new brain chat for the core.** Before it: one more bug fix if the
+  Pixel 10a tester's report on #187 calls for one.
+
 **The platform**
 
 - **Old share codes, saved loops and albums may change or break** while the
@@ -268,7 +287,8 @@ Stated decisions, not inferences. Dated where the date matters.
   lives on as an audio export (roadmap 17).
 - **Rust:** the synth, then the generator, move to a host-agnostic Rust
   core (WebAssembly in an AudioWorklet for the web), in its own brain
-  chat. **Timing (2026-10-03): the synth ports now; the generator waits
+  chat. **(Superseded 2026-10-12: the generator no longer waits; see "The
+  core".)** **Timing (2026-10-03): the synth ports now; the generator waits
   until the words' draws stop moving.** Its case is
   portability, not speed (the performance baseline showed the fixable
   costs were elsewhere). The deliverable is the phone app; a native build
@@ -377,6 +397,13 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
+- **2026-10-12, late: item 41 (#187, v92)** -- notes now planned from the
+  phone's measured render-ahead, late notes past 30 ms dropped rather than
+  bunched, covers drawn in a Worker. The 1.3-1.8 s stalls on the Pixel
+  10a were **not reproduced** (the covers were already on CPU canvases;
+  the brain's readback lead was wrong); the tester's next Diagnostics will
+  say more. **Next: a new brain chat for the core** (see "The core");
+  before it, one more fix if that report calls for one.
 - **2026-10-12, evening: queue item 41 (urgent).** The Pixel 10a
   tester's Diagnostics on v91: late notes even with no stall (the Sound
   view: 67 ms gap, 78 late), and Library / Save stalls of 1.3-1.8 s
