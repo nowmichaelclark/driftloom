@@ -2022,6 +2022,47 @@ Mikey decides this line:
   their partners), and progressions written for those modes would change
   how their codes play. A bright cinder loop plays the general shapes, on a
   major tonic, as those blends always have.
+- **Item 41: what the harness reproduced, and what it did not
+  (2026-10-12, the hands).** The table came before any fix
+  (`docs/perf-baseline.md`, "The Pixel 10a on v91"). Read against the
+  brain's four points:
+  1. **Late notes without a stall: reproduced.** `--audio-buffer-size`
+     does not reach headless Chromium's output, but a numeric
+     `latencyHint` does (`views.mjs --buffer 0.37`: 186 ms callbacks, 0.56
+     s output latency). That alone made late notes only after a cut (a
+     pasted code: 4). Holding the core's messages 400 ms as well
+     (`--delay 400`: the worklet takes each message 400 ms of audio late,
+     so notes reach a core already past the page's clock) made every
+     mute, re-roll, tempo, wander change, new loop and pasted code put
+     3-14 notes into the core late, with no stall at all, as the tester's
+     `sounds` row shows. Fixed: none in any view or change after. **But the tester's phone says `baseLatency:
+     0.0213`, a 21 ms callback, so the bursty-buffer reading is not
+     confirmed for his phone;** 728 late notes in 50 s on Library means
+     nearly every note, which needs the core more than a second past the
+     page's clock. The new Diagnostics say which: `renderAheadMs`,
+     `leastSpareMs`, `coreClockLeadMs` (the worklet's count running past
+     the context's clock, as item 31b allows) and late notes split into
+     stall / inside the buffer. Whatever the cause, the page now plans
+     from what it measures, up to the 8 s queue.
+  2. **The 1.3-1.8 s stalls: not reproduced.** At 6x, under software
+     graphics and on a GPU-backed canvas (SwiftShader), the longest task
+     was 241 ms (rendering), and every pixel read on the main thread
+     together took 37 ms at most in a view; there was no GPU readback of
+     any size, because `cover.js` already drew on `willReadFrequently`
+     canvases. The covers are off the main thread now regardless (all of
+     them, in a Worker; 0 readbacks on the page), which removes the
+     biggest script in Library (opening an album ran 66-128 ms of script;
+     now 31-50 ms). If the phone still stalls for a second, the cause is
+     something this machine cannot show: the next Diagnostics, with
+     `gpu:` and the long tasks per view, are the way to find it. No blur
+     was changed: under software graphics no frame's rendering was long
+     enough to blame it.
+  3. **`dropped`:** not reproduced (0 everywhere); now split by cause in
+     Diagnostics.
+  4. **`sw: installing`:** the page set that word once, at
+     registration, and never again: a finished install still read
+     `installing`. It now follows the worker and lists each step with
+     its time.
 
 ## Done
 

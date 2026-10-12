@@ -92,6 +92,16 @@ export const TARGET = 2;
 export const CANCEL = 3;
 export const HOLD = 4;
 
+// Why the core dropped a note, in Core::dropped_by's order.
+export const DROP_CAUSES = ['queue full', 'no room for a sung note', 'voices busy', 'sung voices busy'];
+
+// The render-ahead (queue item 41): how far past the page's clock the core
+// has already rendered by the time a note posted now reaches it. Taken as
+// the worst of what the core reports, at once, and let back down only this
+// fast (seconds a second), so one quiet spell does not undo a phone's
+// buffer.
+const AHEAD_EASE = 0.02;
+
 const WASM_URL = new URL('./dlcore.wasm', import.meta.url);
 const WORKLET_URL = new URL('./worklet.js', import.meta.url);
 
@@ -153,6 +163,25 @@ export class CoreHost {
     this.noise = !!noise && noise.length <= CORE_NOISE_MAX;
     this.late = 0;
     this.dropped = 0;
+    // Queue item 41: the late notes left out (more than the core's MISS
+    // late), and the late ones by why (the page's stall, or a note handed
+    // over ahead of its time that still landed behind what the core had
+    // rendered); the dropped ones by cause (DROP_CAUSES).
+    this.missed = 0;
+    this.lateStall = 0;
+    this.lateBuffer = 0;
+    this.droppedBy = DROP_CAUSES.map(() => 0);
+    // The render-ahead, measured (null until notes have arrived), the most
+    // it has been, the least time any note had to spare when it reached
+    // the core, and how far the core's count has run past the context's
+    // clock.
+    this.ahead = null;
+    this.worstAhead = 0;
+    this.earliest = Infinity;
+    this.clockLead = 0;
+    this._aheadAt = 0;
+    // Called with each report of how notes arrive (`arrivals`).
+    this.onarrivals = null;
     // The compressors' gain reduction in dB, as of the last flush(); and
     // how hard the signal has pressed each since this node was built, the
     // deepest its curve has gone under the line.
@@ -207,7 +236,9 @@ export class CoreHost {
   // draws.
   // `draws` is a sung note's draws, as many as it made (Core::sung_draws).
   note(voice, channel, time, midi, dur, vel, parts, extra = NO_EXTRA, draws = null) {
-    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, draws });
+    // `sent`: the page's clock as it posts, so the worklet can say how far
+    // past it the core had already rendered when the note arrived.
+    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, draws, sent: this.ctx.currentTime });
   }
 
   // A new strum into `channel` at `time`: the last strum's nylon strings
@@ -247,7 +278,12 @@ export class CoreHost {
     if (m.type === 'counts' || m.type === 'pong') {
       this.late = m.late;
       this.dropped = m.dropped;
+      if (m.missed != null) this.missed = m.missed;
+      if (m.lateStall != null) this.lateStall = m.lateStall;
+      if (m.lateBuffer != null) this.lateBuffer = m.lateBuffer;
+      if (m.droppedBy) this.droppedBy = m.droppedBy;
     }
+    if (m.type === 'arrivals') this._arrivals(m);
     if (m.type === 'pong') {
       if (m.reduction) this.reduction = m.reduction;
       if (m.deepest) this.deepest = this.deepest.map((d, i) => Math.min(d, m.deepest[i]));
@@ -256,6 +292,21 @@ export class CoreHost {
       if (resolve) resolve(m);
     }
     if (m.type === 'failed') this._fail(m.message);
+  }
+
+  // How the last few notes reached the core: the render-ahead follows the
+  // worst at once and eases down slowly.
+  _arrivals(m) {
+    const now = this.ctx.currentTime;
+    if (m.reach != null && Number.isFinite(m.reach)) {
+      const eased = this.ahead == null ? 0 : Math.max(0, this.ahead - AHEAD_EASE * Math.max(0, now - this._aheadAt));
+      this.ahead = Math.max(eased, m.reach);
+      this._aheadAt = now;
+      this.worstAhead = Math.max(this.worstAhead, m.reach);
+    }
+    if (Number.isFinite(m.early)) this.earliest = Math.min(this.earliest, m.early);
+    if (Number.isFinite(m.lead)) this.clockLead = Math.max(this.clockLead, m.lead);
+    if (this.onarrivals) this.onarrivals(m);
   }
 
   // The core does not run, at load or while playing. Once: the synth hears

@@ -31,10 +31,11 @@ function check(label, condition, detail = '') {
 // Where each call carries its time, by the synth's own signatures.
 const TIME_AT = { drum: 1, bass: 1, pad: 1, voice: 2, texture: 2, damp: 1, duck: 0 };
 
-function stubSynth(queuesAhead) {
+function stubSynth(queuesAhead, renderAhead = null) {
   const calls = [];
   const target = {
     queuesAhead,
+    renderAhead,
     channels: { drums: { gain: 'drums' }, bass: { gain: 'bass' }, chords: { gain: 'chords' }, melody: { gain: 'melody' }, texture: { gain: 'texture' } },
   };
   const synth = new Proxy(target, {
@@ -51,9 +52,9 @@ function stubSynth(queuesAhead) {
   return { synth, calls };
 }
 
-function rig(queuesAhead, seed = 4242) {
+function rig(queuesAhead, seed = 4242, renderAhead = null) {
   const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
-  const { synth, calls } = stubSynth(queuesAhead);
+  const { synth, calls } = stubSynth(queuesAhead, renderAhead);
   const engine = new Engine(ctx, synth);
   const spec = newSpec(seed);
   spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
@@ -193,6 +194,47 @@ console.log('\nJumps and stops');
   const n = r.engine.decided.length;
   check('playing, a second back and two ahead is kept to go back to', n > 0 && r.engine.decided[0].time >= r.ctx.currentTime - 1.0001,
     `${n} kept, first ${r.engine.decided[0] && r.engine.decided[0].time}`);
+}
+
+console.log('\nA phone that renders far ahead of its clock (queue item 41)');
+{
+  // The Pixel 10a: the core had rendered about 0.6 s past the page's clock
+  // by the time a note reached it.
+  const r = rig(true, 4242, 0.6);
+  const first = Math.min(...notes(r.calls).map((c) => c.time));
+  // Its margin: a quarter of it (0.15 s).
+  check('Play: the first note is no closer than the render-ahead and its margin', first >= 0.75 - 0.03,
+    `first at ${first.toFixed(3)}`);
+  const { from, after } = change(r, 1.0, () => {
+    r.spec.mutes.melody = true;
+    r.engine.redecide();
+  });
+  check('a change is heard from the render-ahead and its margin, not 60 ms', from != null && Math.abs(from - 1.75) < 1e-6, `from ${from}`);
+  check('nothing decided again starts inside the render-ahead', notes(after).every((c) => c.time >= from));
+  check('the queue covers the render-ahead too', r.engine.lookahead >= 2 && r.engine.nextStepTime > 1.0 + 2 - 0.2,
+    `lookahead ${r.engine.lookahead}, next ${r.engine.nextStepTime}`);
+  // A stall: the queue deepens to cover it and the render-ahead.
+  r.engine.recentStall = 1.8;
+  check('after a 1.8 s stall the queue is deeper (stall + render-ahead + 0.5 s)', Math.abs(r.engine.lookahead - 2.9) < 1e-9,
+    `lookahead ${r.engine.lookahead}`);
+  r.engine.recentStall = 9;
+  check('but never deeper than the hidden queue', r.engine.lookahead === 8);
+  r.engine.recentStall = 0;
+  // A tick that wakes with the next step inside the render-ahead skips to
+  // the soonest it can still be on time, rather than handing over notes
+  // that could only be late.
+  const before = r.calls.length;
+  r.engine.nextStepTime = r.ctx.currentTime + 0.3;
+  r.engine._tick();
+  const late = notes(r.calls.slice(before)).filter((c) => c.time < r.ctx.currentTime + 0.6);
+  const soon = Math.min(...notes(r.calls.slice(before)).map((c) => c.time)) - r.ctx.currentTime;
+  check('and it goes on from the soonest it can be on time', soon >= 0.75 - 0.03 && soon < 0.75 + 0.2, `first after ${soon}`);
+  check('no note handed over inside the render-ahead after a late tick', late.length === 0, `${late.length} inside`);
+
+  const js = rig(false, 4242, 0.6);
+  const jsFirst = Math.min(...notes(js.calls).map((c) => c.time));
+  check('the JavaScript synth ignores it: Play at 80 ms as before', Math.abs(jsFirst - 0.08) < 0.02 && js.engine.lookahead === 0.3,
+    `first at ${jsFirst}`);
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

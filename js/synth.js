@@ -6,7 +6,7 @@ import { midiToFreq } from './theory.js';
 import {
   CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
-  MIX, SET, LINEAR, TARGET, CANCEL, HOLD,
+  MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES,
 } from './core.js';
 
 // The channels in the core's order (core/src/lib.rs): its inputs, its
@@ -622,6 +622,20 @@ export class Synth {
     return !!this._coreMix();
   }
 
+  // How far past the audio clock the core has already rendered when a note
+  // handed over now reaches it, as measured (queue item 41); null before
+  // any note has arrived, or without the core.
+  // Never less than the context's own render callback (`baseLatency`):
+  // the core renders a callback's worth at a time, so it can always be
+  // that far past the clock, whether or not the notes so far happened to
+  // land just after one (`node tools/views.mjs --buffer 0.37`).
+  get renderAhead() {
+    const core = this._coreMix();
+    if (!core) return null;
+    const callback = Number(this.ctx.baseLatency) || 0;
+    return Math.max(core.ahead != null ? core.ahead : 0, callback) || null;
+  }
+
   // The music jumped (Pause, Next, Previous): the notes handed to the core
   // that have not started yet are dropped, and the ducks their kicks asked
   // for let go. What is sounding carries on, or fades with the kill gain.
@@ -667,7 +681,10 @@ export class Synth {
         : `rust (loading)  fallback: ${this.fallbacks}`;
     }
     if (c.failed) return `js (fallback: ${c.failed})  fallback: ${this.fallbacks}`;
-    return `rust  late: ${c.late}  fallback: ${this.fallbacks}${c.dropped ? `  dropped: ${c.dropped}` : ''}`;
+    const late = c.late ? ` (stall ${c.lateStall}, inside the buffer ${c.lateBuffer}; left out ${c.missed})` : '';
+    const dropped = c.dropped
+      ? `  dropped: ${c.dropped} (${DROP_CAUSES.map((cause, i) => `${cause} ${c.droppedBy[i] || 0}`).join(', ')})` : '';
+    return `rust  late: ${c.late}${late}  fallback: ${this.fallbacks}${dropped}`;
   }
 
   _makeNoise(seconds) {

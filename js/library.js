@@ -14,7 +14,8 @@
 // Opening an album turns the card over to show the album; leaving the album
 // turns it back to whatever is playing.
 
-import { drawCover, albumCoverSpec } from './cover.js';
+import { albumCoverSpec } from './cover.js';
+import { coverImage, paint } from './covers.js';
 import { NOTE_NAMES, SCALES } from './theory.js';
 import * as store from './storage.js';
 import * as ui from './ui.js';
@@ -311,84 +312,39 @@ function mark(on, warn = false) {
 // Album art is drawn once per album contents and copied after that, so
 // re-rendering a list does not redraw noise fields every time.
 //
-// And in a list it is drawn one album at a time, a task each, after the
-// list is up: a Library's worth at once held the main thread for a second
-// and more on a slow phone, past what the music had queued (queue item
-// 40). A row's art comes in a moment after the row the first time; `warmArt`
-// draws them ahead, while nothing else is happening, so mostly it is there.
-const artCache = new Map();
-const artWaiting = new Map();
-let artTimer = null;
-
-function artKey(album, size) {
-  return `${album.title}|${album.ids.join(',')}|${size}`;
+// And it is drawn off the main thread (queue item 41; js/covers.js): a
+// Library's worth at once held the main thread for a second and more on a
+// slow phone, past what the music had queued (items 40 and 41). A row's art
+// comes in a moment after the row the first time; `warmArt` asks for them
+// ahead, so mostly it is there.
+function albumSpec(album, specs) {
+  return albumCoverSpec(album.title, specs.length ? specs : [
+    { seed: 1, feel: { lift: 0.5, energy: 0.3, warmth: 0.6 }, mix: { dust: 1 } },
+  ]);
 }
 
-function drawArt(album, specs, size) {
-  const src = document.createElement('canvas');
-  try {
-    drawCover(src, albumCoverSpec(album.title, specs.length ? specs : [
-      { seed: 1, feel: { lift: 0.5, energy: 0.3, warmth: 0.6 }, mix: { dust: 1 } },
-    ]), size);
-  } catch (err) {
-    console.warn('Could not draw album art', err);
-  }
-  if (artCache.size > 40) artCache.clear();
-  artCache.set(artKey(album, size), src);
-  return src;
-}
-
-// At once: the card's art.
+// The album's art at `size`: a promise of a picture to draw in.
 export function albumArt(album, specs, size = 96) {
-  return artCache.get(artKey(album, size)) || drawArt(album, specs, size);
+  return coverImage(albumSpec(album, specs), size);
 }
 
-function paintArt(canvas, src) {
-  canvas.getContext('2d').drawImage(src, 0, 0, canvas.width, canvas.height);
-}
-
-// Into `canvas` now if it is drawn, otherwise when its turn comes.
+// Into `canvas` once it is drawn.
 function artInto(canvas, album, specs, size = 96) {
-  const k = artKey(album, size);
-  const src = artCache.get(k);
-  if (src) {
-    if (canvas) paintArt(canvas, src);
-    return;
-  }
-  let w = artWaiting.get(k);
-  if (!w) {
-    w = { album, specs, size, canvases: [] };
-    artWaiting.set(k, w);
-  }
-  if (canvas) w.canvases.push(canvas);
-  artNext();
+  albumArt(album, specs, size).then((image) => {
+    if (canvas && canvas.isConnected) paint(canvas, image);
+  }).catch((err) => console.warn('Could not draw album art', err));
 }
 
-function artNext() {
-  if (artTimer || !artWaiting.size) return;
-  // Hidden, nothing is looking: the next time the page is shown.
-  if (document.hidden) {
-    artTimer = true;
-    document.addEventListener('visibilitychange', () => { artTimer = null; artNext(); }, { once: true });
-    return;
-  }
-  artTimer = setTimeout(() => {
-    artTimer = null;
-    if (!artWaiting.size) return;
-    if (document.hidden) { artNext(); return; }
-    const [k, w] = artWaiting.entries().next().value;
-    artWaiting.delete(k);
-    const src = artCache.get(k) || drawArt(w.album, w.specs, w.size);
-    for (const c of w.canvases) if (c.isConnected) paintArt(c, src);
-    artNext();
-  }, 0);
-}
-
-// Every album's art for the lists, drawn ahead, one a task.
+// Every album's art for the lists, asked for ahead. Hidden, nothing is
+// looking: the next time the page is shown.
 export function warmArt() {
+  if (document.hidden) {
+    document.addEventListener('visibilitychange', warmArt, { once: true });
+    return;
+  }
   const byId = loopsById();
   for (const album of listedAlbums(store.IMPORTED)) {
-    artInto(null, album, album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec));
+    albumArt(album, album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec)).catch(() => {});
   }
 }
 
