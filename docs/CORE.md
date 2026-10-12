@@ -1,10 +1,9 @@
 # The core: charter
 
 **Status: draft for Mikey's approval** (brain, Session 18, 2026-10-13).
-His first answers are in (2026-10-13: the building blocks, stereo, the
-JavaScript synth, the targets); one question is still open, at the end.
-Once it is answered, the brain writes the first phase into
-`docs/QUEUE.md`.
+Every question is answered (2026-10-13). Waiting on his OK for the whole,
+including the three games (promise 10); then it merges and the brain
+writes the first phase into `docs/QUEUE.md`.
 
 The core is Driftloom's engine: the part users never see but developers
 do. It decides the notes and makes the sound, and it is the same code in
@@ -72,10 +71,11 @@ core; `Math.random` leaves the sound path.
 - *Measure:* golden tests: a fixed set of codes render to stored hashes
   of their notes and their audio. Any change to a hash is deliberate and
   says so in its PR (like the balance lock).
-- *Across devices* -- see question 1. The recommendation is that the
-  hashes match on every target (wasm, x86-64, ARM phones, a 32-bit
-  big-endian build standing in for a GameCube-style port), which needs
-  the core's own math functions instead of each platform's.
+- **Across devices too** (Mikey, 2026-10-13): the hashes match on every
+  target (wasm, x86-64, ARM phones, a 32-bit big-endian build standing
+  in for a GameCube-style port). So the core carries its own math
+  functions (sine, exp, tanh and the rest) instead of each platform's,
+  which is also what lets it run with no standard library.
 
 ### 4. Embeddable anywhere
 
@@ -202,8 +202,41 @@ developers and users to tweak.
   never hurt a phone speaker or a mono venue; and it must not double the
   cost on a phone.
 - **Built in steps:** phase 1 makes the core channel-agnostic; much
-  later, an experimental stereo behind a flag (phase 8), never the app's
+  later, an experimental stereo behind a flag (phase 9), never the app's
   default until Mikey says so.
+
+### 10. Three real games prove it
+
+Mikey, 2026-10-13: if he, a solo developer, can put the core into three
+existing games seamlessly with Claude's help, it will be a breeze for
+anyone. So the measure of "embeddable anywhere" is three games, chosen
+to cover different languages, engines and ways in, all light enough for
+a modest laptop and running on several kinds of device:
+
+- **Open source: Luanti** (the voxel game engine formerly Minetest).
+  C++ engine, Lua mods; Windows, macOS, Linux and official Android builds
+  (F-Droid and Google Play too). Calm building and wandering, with
+  biomes, day and night, and weather to steer the music. Free, so
+  testers need nothing to try it. The way in: a small engine change that
+  hosts the core, plus a Lua API so any Luanti mod can steer the music.
+- **Source port: OpenRCT2** (RollerCoaster Tycoon 2, reimplemented).
+  C++; Windows, macOS, Linux and Android, on old hardware; GPLv3. A
+  chill management game: music by park area, time and weather, and the
+  rides' own music as a second test. Needs the original RCT2 data (cheap
+  on GOG or Steam). Alternative if Mikey prefers his favorite: Ship of
+  Harkinian (the Ocarina of Time port), which needs a copy of the game
+  dumped from his own cartridge.
+- **Traditional and easy to mod: Stardew Valley**, through SMAPI, its
+  standard mod loader. C#, so it proves the C header from a managed
+  language. Seasons, weather, time of day and places: exactly the music
+  roadmap 18 imagines, and a huge modding community.
+
+- *Measure:* in each game, the music follows the game (place, time,
+  weather) with no glitches and no measurable frame-time cost, the
+  integration fits in a small, readable change, and Mikey judges it
+  "seamless" from doing it himself with Claude's help. What was hard
+  goes back into the core and the guide, so the next developer never
+  meets it.
 
 ## The phases
 
@@ -235,22 +268,30 @@ one before it.
    is ready; `main` keeps the fallback until then. *Done when:* promise
    1's stall test is clean and the testers' phones report zero late
    notes.
-4. **Instruments as recipes.** First the catalogue of block ideas for
+4. **The first game: Luanti.** Pulled forward so a real game tests the
+   host API while it is still cheap to change: the minimal C header, a
+   native audio output, and steering (the game tells the core where,
+   when and what weather; the core leans its vibes). Earlier, from phase
+   1 on, the native command-line renderer and a tiny test host stand in
+   for a game in CI. *Done when:* Luanti plays Driftloom following
+   biome, time and weather on a laptop and an Android phone, with promise
+   1's no-glitch measure.
+5. **Instruments as recipes.** First the catalogue of block ideas for
    Mikey (promise 5). Then the building blocks and the recipe format;
    today's voices re-expressed as recipes where it fits (each proven to
    null against its Rust original, or A/B'd if it changes); then the
    ears-approved sounds (roundBass, glass, floorDrop, arc) as the first
    new instruments built only from recipes.
-5. **Codes, version 2.** Short codes, album seeds, recipe packs by hash,
+6. **Codes, version 2.** Short codes, album seeds, recipe packs by hash,
    plain links. Old codes stop working; that's fine.
-6. **The host kit.** The C header, the WAV export in the app (roadmap
-   17), a minimal example host for one game engine (the brain suggests
-   Godot: free, open, popular with indie and chill-game makers), the
-   guide. *Done when:* promise 4's C program and promise 6's fresh-session
-   test pass.
-7. **Better than Chromium.** The sound improvements, one item each, blind
+7. **The host kit and the other two games.** The finished C header, the
+   WAV export in the app (roadmap 17), the guide, then OpenRCT2 and
+   Stardew Valley, each done by Mikey with Claude's help and each lesson
+   fed back. *Done when:* promise 4's C program, promise 6's
+   fresh-session test and promise 10's three games pass.
+8. **Better than Chromium.** The sound improvements, one item each, blind
    A/Bs where they touch what he likes.
-8. **Stereo, experimental** (much later; promise 9). Space recipes, the
+9. **Stereo, experimental** (much later; promise 9). Space recipes, the
    layered settings, the mono-fold guard, behind a flag. The app stays
    mono until Mikey decides otherwise.
 
@@ -266,16 +307,13 @@ The numbers in promises 1 and 2 are agreed as starting targets (Mikey,
 target looks wrong, or when aiming higher looks possible, with the
 measurement that says so.
 
-## Open question
+## Answered (Mikey, 2026-10-13)
 
-1. **Bit-identical everywhere?** Recommended: **yes** -- the same code
-   makes the same samples on a phone, a PC and a hypothetical GameCube.
-   It costs the core its own sine, exp and tanh (a few hundred lines,
-   tested), and it is also what makes `no_std` possible. The alternative:
-   the same notes everywhere, and sound that matches only within one
-   build (tiny differences, nobody could hear them).
-
-Answered 2026-10-13: retire the JavaScript synth at the end of phase 3
-(earlier only on its own branch); the targets stand, to be revisited;
-the building blocks open to change (promise 5); stereo possible, mono
-the default (promise 9).
+- **Bit-identical everywhere: yes** (promise 3).
+- **The JavaScript synth retires at the end of phase 3**; earlier only
+  on its own branch, merged when the replacement is ready.
+- **The targets stand**, to be revisited (above).
+- **The building blocks are open to change** (promise 5).
+- **Stereo possible, mono the default** (promise 9).
+- **Three games prove the core** (promise 10); the first pulled forward
+  as phase 4. The picks are the brain's; Mikey may swap any.

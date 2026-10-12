@@ -338,6 +338,16 @@ Stated decisions, not inferences. Dated where the date matters.
   2026-10-13); earlier only on its own branch, merged when the
   replacement is ready. **The charter's targets stand**, to be revisited:
   the brain proposes changes, or higher aims, as measurements come in.
+- **Bit-identical everywhere** (Mikey, 2026-10-13): the same code makes
+  exactly the same samples on every device; the core carries its own
+  math.
+- **Three existing games prove the core** (Mikey, 2026-10-13): if he, a
+  solo dev, can put it into three games seamlessly with Claude's help,
+  it's a breeze for others. Light enough for his modest laptop, running
+  on various devices: one open source, one source port (like an Ocarina
+  of Time port or RollerCoaster Tycoon), one traditional, easy to mod.
+  Possibly one early, to test as we go. Brain's picks in `docs/CORE.md`
+  (promise 10): Luanti (first, phase 4), OpenRCT2, Stardew Valley.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
@@ -466,8 +476,8 @@ Stated decisions, not inferences. Dated where the date matters.
   reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
   late and dropped by cause) will say whether anything is left. If it
   calls for a fix, that comes before the core work.
-- **Charter drafted (Session 18): `docs/CORE.md`** (PR #196), one
-  question open (bit-identical everywhere).
+- **Charter drafted (Session 18): `docs/CORE.md`** (PR #196), every
+  question answered; waiting on Mikey's OK (and his view of the games).
 - **Next: the core** -- a new brain chat. Read **"The core"** under "What
   Mikey has decided" first: the number one priority, shoot for the moon,
   embeddable anywhere (game engines, mods, any OS or device, iOS and
@@ -492,7 +502,8 @@ Stated decisions, not inferences. Dated where the date matters.
 core charter, `docs/CORE.md` (PR #196, draft): promises each with a
 measure, phases, questions for Mikey. His answers (2026-10-13) added
 promise 9 (stereo possible, mono default) and open building blocks;
-still open: bit-identical everywhere. Then phase 1 goes into the queue.
+then bit-identical everywhere (yes) and three games (promise 10). All
+answered; waiting on his OK, then merge and phase 1 into the queue.
 
 **Session 16 (brain, 2026-10-11 to 10-12), the words, then the glitches.**
 Its State bullets, newest first, kept here as written:
