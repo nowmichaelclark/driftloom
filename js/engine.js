@@ -22,6 +22,16 @@ const LOOKAHEAD_HIDDEN = 3.0;
 // thread is doing. Pause, Next and Previous cancel them (see `_cut`), so
 // they still act as soon as the page runs.
 const LOOKAHEAD_HIDDEN_CORE = 8.0;
+// And on the core, visible, two seconds (queue item 40). The views that do
+// the most on the main thread (the Library and Save / Share, the covers
+// and lists drawn there) held the clock for up to a second on a slow phone
+// (`node tools/views.mjs`), past the 0.3 s the queue held, and the music
+// skipped. What used to need the short queue -- a mute, a re-roll, a tempo
+// heard at once -- now cancels what is queued and decides again (`redecide`).
+const LOOKAHEAD_VISIBLE_CORE = 2.0;
+// A change is heard from this far ahead of the audio clock: room for the
+// cancel to reach the core before the first note it drops would start.
+const REDECIDE_LEAD = 0.06;
 const TICK_VISIBLE = 50;
 const TICK_HIDDEN = 250;
 
@@ -99,6 +109,10 @@ export class Engine {
     this.lateTicks = 0;
     this.worstLateMs = 0;
     this.totalTicks = 0;
+    // For the report per view (queue item 40): late ticks never cleared,
+    // and the longest gap between ticks since it was last taken.
+    this.lateTicksEver = 0;
+    this.gapSince = 0;
     this.tailsDucked = false;
     // Notes decided but not yet built, in the order they were decided (see
     // BUILD_TICKS), and the measured gap between ticks.
@@ -111,6 +125,13 @@ export class Engine {
     // What happened while the page was last hidden, for Diagnostics (queue
     // item 39): from when it was hidden until it was shown again.
     this.spell = null;
+    // On the core, every step decided ahead, with where the scheduler stood
+    // before it (queue item 40): a change that must be heard at once goes
+    // back to the step sounding then and decides again. `floor`: notes asked
+    // for before it were handed over already and are kept.
+    this.decided = [];
+    this.floor = -Infinity;
+    this.redecides = 0;
     this.visualQueue = [];
     this.visualOffset = 0;   // optional manual trim, normally zero
     this.latency = null;     // measured, smoothed, seconds
@@ -168,6 +189,9 @@ export class Engine {
     // Next, Previous or a loop picked while playing: what the old loop has
     // decided ahead does not play out first.
     if (this.playing && !keepPosition && !this.handover) this._cut();
+    // A re-roll keeps its place: on the core, from the step sounding now,
+    // decided again with the new layer, not after the queue has run out.
+    const back = keepPosition ? this._rewindPoint() : null;
     this.handover = false;
     this.spec = spec;
     this.base = render(spec);
@@ -184,9 +208,11 @@ export class Engine {
       this.step = 0;
       this.absStep = 0;
       this.loopCount = 0;
+      this.decided = [];
     } else {
       this.step = this.step % this.base.totalSteps;
     }
+    if (back) this._redecideFrom(back, this.live);
     return this.base;
   }
 
@@ -199,7 +225,7 @@ export class Engine {
   }
 
   get lookahead() {
-    if (!this.hidden) return LOOKAHEAD_VISIBLE;
+    if (!this.hidden) return this.synth.queuesAhead ? LOOKAHEAD_VISIBLE_CORE : LOOKAHEAD_VISIBLE;
     return this.synth.queuesAhead ? LOOKAHEAD_HIDDEN_CORE : LOOKAHEAD_HIDDEN;
   }
 
@@ -227,14 +253,17 @@ export class Engine {
     s.to = now;
   }
 
-  // Everything decided ahead of a visible page's lookahead, dropped: the
-  // notes not yet handed over, and on the core the ones that have been but
-  // have not started. The next step is decided from now, as on Play. A
-  // visible page has nothing that far ahead, so nothing changes there.
+  // Everything decided ahead of the JavaScript synth's visible lookahead,
+  // dropped: the notes not yet handed over, and on the core the ones that
+  // have been but have not started. The next step is decided from now, as
+  // on Play. The JavaScript synth, visible, has nothing that far ahead, so
+  // nothing changes there.
   _cut() {
     const now = this.ctx.currentTime;
     if (!this.spec || this.nextStepTime <= now + LOOKAHEAD_VISIBLE + this.stepDur) return;
     this.pending = [];
+    this.decided = [];
+    this.floor = -Infinity;
     this.synth.cancelAhead(now);
     this.synth.restoreTails(now);
     this.tailsDucked = false;
@@ -253,9 +282,61 @@ export class Engine {
     });
   }
 
+  // A change that must be heard at once, with notes handed to the core
+  // seconds ahead (queue item 40): a mute, a re-roll, the tempo, wander.
+  // What the core holds from just ahead of now is dropped, and the
+  // scheduler goes back to the step sounding then and decides again from
+  // there with the change in. `live`: the pattern to decide with (wander
+  // switched off goes back to the loop as composed), else the one each step
+  // had. On the JavaScript synth there is nothing that far ahead to redo;
+  // false, and the change is heard as the next steps are decided, as ever.
+  redecide(live = null) {
+    const back = this._rewindPoint();
+    if (!back) return false;
+    this._redecideFrom(back, live);
+    return true;
+  }
+
+  // Where to decide again from: the first step whose notes can reach the
+  // time the change is heard from (a step's notes run up to a step after it,
+  // with swing, strums and rolls).
+  _rewindPoint() {
+    if (!this.playing || !this.spec || this.handover || !this.synth.queuesAhead) return null;
+    const from = this.ctx.currentTime + REDECIDE_LEAD;
+    if (this.nextStepTime <= from) return null;
+    const early = from - this.stepDur - 0.08;
+    const index = this.decided.findIndex((d) => d.time >= early);
+    if (index < 0) return null;
+    // Nothing to go back to before the first step kept: the loop in the
+    // queue began there (a track that ran its length handed over to the
+    // next, seconds ahead). The change is heard from where it starts, its
+    // first notes (graces run 0.07 s ahead) and on, and the old loop's last
+    // notes play as they were decided.
+    const first = this.decided[index];
+    const at = index === 0 && first.time > early ? Math.max(from, first.time - 0.08) : from;
+    return { ...first, index, from: at };
+  }
+
+  _redecideFrom(back, live) {
+    this.synth.cancelFrom(back.from);
+    this.floor = back.from;
+    this.step = back.step % this.base.totalSteps;
+    this.absStep = back.absStep;
+    this.loopCount = back.loopCount;
+    this.live = live || back.live;
+    this.tailsDucked = back.tailsDucked;
+    this.nextStepTime = back.time;
+    this.decided.length = back.index;
+    this.visualQueue = this.visualQueue.filter((v) => v.time < back.time);
+    this.redecides++;
+    this._decide();
+  }
+
   start() {
     if (this.playing || !this.spec) return;
     this.playing = true;
+    this.decided = [];
+    this.floor = -Infinity;
     this.synth.unsilence();
     this.nextStepTime = this.ctx.currentTime + 0.08;
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
@@ -267,6 +348,7 @@ export class Engine {
     this.handover = false;
     this.clock.stop();
     this.pending = [];
+    this.decided = [];
     // Handed to the core ahead and not started: a Play soon after must not
     // hear them on top of its own.
     this.synth.cancelAhead();
@@ -284,6 +366,7 @@ export class Engine {
       clock: this.clock.usingWorker ? 'worker' : 'timer',
       hidden: this.hidden,
       lookahead: this.lookahead,
+      redecides: this.redecides,
       ticks: this.totalTicks,
       lateTicks: this.lateTicks,
       worstLateMs: this.worstLateMs,
@@ -294,6 +377,16 @@ export class Engine {
       measuredLatencyMs: this.latency === null ? '-' : Math.round(this.latency * 1000),
       timestampApi: typeof this.ctx.getOutputTimestamp === 'function' ? 'yes' : 'no',
     };
+  }
+
+  // The longest gap between ticks since the last call, in ms; a clock held
+  // back right now counts up to now.
+  takeGap() {
+    const now = performance.now();
+    const open = this.playing && this.lastTick != null ? now - this.lastTick : 0;
+    const worst = Math.round(Math.max(this.gapSince, open));
+    this.gapSince = 0;
+    return worst;
   }
 
   clearMetrics() {
@@ -319,6 +412,9 @@ export class Engine {
   // Visible, or on the core, every voice is built at once; whatever a
   // hidden spell left queued goes first, so the order holds.
   _play(time, build) {
+    // Deciding again after a change: what is asked for before the change is
+    // heard was handed over already and plays as it was.
+    if (time < this.floor) return;
     if (!this.hidden || !this.pending || this.synth.queuesAhead) {
       if (this.pending && this.pending.length) for (const p of this.pending.splice(0)) p.build();
       build();
@@ -353,6 +449,7 @@ export class Engine {
       spell.ticks++;
       if (this.lastTick != null) spell.worstGapMs = Math.max(spell.worstGapMs, Math.round(now - this.lastTick));
     }
+    if (this.lastTick != null) this.gapSince = Math.max(this.gapSince, now - this.lastTick);
     this.lastTick = now;
     this._flush();
     // If the next step was already due before we woke up, the queue ran dry
@@ -360,6 +457,7 @@ export class Engine {
     const behind = this.ctx.currentTime - this.nextStepTime;
     if (behind > 0) {
       this.lateTicks++;
+      this.lateTicksEver++;
       this.worstLateMs = Math.max(this.worstLateMs, Math.round(behind * 1000));
       if (spell) {
         spell.lateTicks++;
@@ -369,9 +467,27 @@ export class Engine {
       // that turns a gap into a burst. Skip to now and carry on.
       if (behind > 0.25) this.nextStepTime = this.ctx.currentTime + 0.02;
     }
-    const horizon = this.ctx.currentTime + this.lookahead;
+    this._decide();
+  }
+
+  // Every step up to the lookahead, and on the core where each began.
+  _decide() {
+    const now = this.ctx.currentTime;
+    const horizon = now + this.lookahead;
+    const keep = this.synth.queuesAhead;
+    if (!keep) this.decided.length = 0;
+    // A second of what has sounded is plenty to go back to.
+    let old = 0;
+    while (old < this.decided.length && this.decided[old].time < now - 1) old++;
+    if (old) this.decided.splice(0, old);
     let guard = 0;
     while (this.nextStepTime < horizon && guard++ < 256) {
+      if (keep) {
+        this.decided.push({
+          time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount,
+          live: this.live, tailsDucked: this.tailsDucked,
+        });
+      }
       this._scheduleStep(this.step, this.nextStepTime);
       this._advance();
     }
@@ -427,12 +543,15 @@ export class Engine {
     const spbNow = p.stepsPerBar || 16;
     if (abs % spbNow === 0) {
       const quiet = this._isSilentBar(abs);
+      // Deciding again after a change, a bar line before it is heard was
+      // handed over already, as it was.
+      const kept = time < this.floor;
       if (quiet && !this.tailsDucked) {
-        this.synth.fadeTails(time);
+        if (!kept) this.synth.fadeTails(time);
         this.tailsDucked = true;
       } else if (!quiet && this.tailsDucked) {
         // Restore just before the bar starts, so the first note is not dry.
-        this.synth.restoreTails(Math.max(this.ctx.currentTime, time - 0.12));
+        if (!kept) this.synth.restoreTails(Math.max(this.ctx.currentTime, time - 0.12));
         this.tailsDucked = false;
       }
     }

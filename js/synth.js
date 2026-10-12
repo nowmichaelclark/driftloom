@@ -492,6 +492,8 @@ export class Synth {
     // What the mix was last asked for, to hand from one mix to the other:
     // and whether the output was last silenced (`silence`).
     this._asked = { tone: null, echo: null, mutes: {}, killed: false };
+    // The kicks' ducks handed to the core, the last second's (`cancelFrom`).
+    this._ducks = [];
     // Notes for a core voice that played in JS instead: the core had not
     // arrived, had failed, or does not serve the note's channel.
     this.fallbacks = 0;
@@ -627,8 +629,27 @@ export class Synth {
     const core = this._coreMix();
     if (!core) return;
     core.cancel();
+    this._ducks = [];
     core.param(MIX.pump, HOLD, 0, now);
     core.param(MIX.pump, LINEAR, 1, now + 0.24);
+  }
+
+  // A change that must be heard at once (queue item 40): the notes handed
+  // to the core for `from` or later are dropped, to be decided again, and
+  // the mix's own events from then on with them: the tails' fades (decided
+  // again with the notes) and the ducks, which let go there.
+  // A duck still letting go at `from` keeps its ramp: dropping the ramp's
+  // end would hold the mix down where it stood until the next kick.
+  cancelFrom(from) {
+    const core = this._coreMix();
+    if (!core) return;
+    core.cancel(from);
+    core.param(MIX.tails, CANCEL, 0, from);
+    core.param(MIX.pump, CANCEL, 0, from);
+    const kept = this._ducks.filter((d) => d.time < from);
+    const last = kept[kept.length - 1];
+    if (last && last.until >= from) core.param(MIX.pump, LINEAR, 1, last.until);
+    this._ducks = kept;
   }
 
   _mixState() {
@@ -1106,6 +1127,10 @@ export class Synth {
       core.param(MIX.pump, CANCEL, 0, time);
       core.param(MIX.pump, SET, Math.max(0.1, 1 - amount), time);
       core.param(MIX.pump, LINEAR, 1, time + recover);
+      // For `cancelFrom`: the ducks handed over, the last second's.
+      const old = this.ctx.currentTime - 1;
+      while (this._ducks.length && this._ducks[0].until < old) this._ducks.shift();
+      this._ducks.push({ time, until: time + recover });
       return;
     }
     const g = this.pumpBus.gain;

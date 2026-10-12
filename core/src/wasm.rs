@@ -174,6 +174,12 @@ pub extern "C" fn dl_cancel() {
     core().cancel();
 }
 
+/// Drop the notes waiting to start at `time` or later (queue item 40).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_cancel_from(time: f64) {
+    core().cancel_from(time);
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_late() -> u32 {
     core().late()

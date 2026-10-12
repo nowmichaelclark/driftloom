@@ -403,6 +403,25 @@ function renderField(layer, ramp, p) {
   return out.canvas;
 }
 
+// The fields are most of a cover's cost, and the same at any size, so the
+// ones drawn lately are kept: an album's art in its row and on the card,
+// or a loop's cover drawn again, cost only the cheap passes the second
+// time (queue item 40). A field depends only on what goes into it here,
+// and each caller gets a copy of its own, since the mask cuts into it.
+const fields = new Map();
+function fieldFor(layer, ramp, p) {
+  const key = JSON.stringify([p.seed, p.contrast, p.brightness, p.posterize, layer, ramp]);
+  let kept = fields.get(key);
+  if (!kept) {
+    kept = renderField(layer, ramp, p);
+    if (fields.size >= 32) fields.delete(fields.keys().next().value);
+    fields.set(key, kept);
+  }
+  const c = offscreen(FIELD, FIELD);
+  c.getContext('2d', { willReadFrequently: true }).drawImage(kept, 0, 0);
+  return c;
+}
+
 // Cut the field to a shape, leaving the rest of the canvas empty. This is
 // where the negative space comes from.
 function applyMask(canvas, p, index) {
@@ -638,7 +657,7 @@ export function drawCover(canvas, spec, size = 320) {
 
   p.layers.forEach((layer, i) => {
     const ramp = rotate(PALETTES[layer.palette] || PALETTES.mono, p.hueTurn, p.saturation);
-    const field = renderField(layer, ramp, p);
+    const field = fieldFor(layer, ramp, p);
     applyMask(field, p, i);
     ctx.globalCompositeOperation = layer.blend;
     ctx.globalAlpha = layer.alpha;

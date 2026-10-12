@@ -217,9 +217,10 @@ export class CoreHost {
   }
 
   // Every note handed over that has not started yet, dropped; the ones
-  // sounding carry on (queue item 39).
-  cancel() {
-    this.node.port.postMessage({ type: 'cancel' });
+  // sounding carry on (queue item 39). With `from`, only those asked for
+  // at that time or later (queue item 40).
+  cancel(from = null) {
+    this.node.port.postMessage(from == null ? { type: 'cancel' } : { type: 'cancel', from });
   }
 
   // Resolves once the worklet has taken every message sent before it.

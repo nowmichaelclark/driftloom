@@ -508,6 +508,8 @@ node tools/perf.mjs --query engine=js        # the JavaScript synth (the core is
 node tools/perf.mjs --ab-query engine=js     # each run twice, the core and then the JavaScript synth
 node tools/perf.mjs --ab <folder> --passes 2 # each run twice, <folder> and this one, first in turn
 node tools/perf.mjs --parts path            # walk the app, reading the output after each step
+node tools/stalls.mjs                        # hidden, the clock held back on purpose (queue item 39)
+node tools/views.mjs --changes               # visible, every view in turn, and how soon a change is heard (queue item 40)
 ```
 
 `measure.mjs` renders offline, faster than real time; this plays the real
