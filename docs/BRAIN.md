@@ -306,6 +306,13 @@ Stated decisions, not inferences. Dated where the date matters.
   Explicit parameters were written down only so a code survived generator
   changes; the version in the code does that job now that anything may
   break.
+  **No online server for albums** (Mikey, 2026-10-12): codes carry
+  everything. He'd like them shorter still. Levers, biggest first: fewer
+  bits (an album drawn from one album seed is a single seed; seeds sized to
+  what's needed); then a wider alphabet (base32's 5 bits a character;
+  URL-safe base64, 6; a Unicode alphabet such as base2048 or emoji, 10-11,
+  so an eight-loop album of hand-picked seeds in about 25-30 symbols, not
+  typeable but fun). Keep one plain, link-safe form whatever else exists.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
