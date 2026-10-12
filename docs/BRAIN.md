@@ -438,18 +438,41 @@ Stated decisions, not inferences. Dated where the date matters.
 
 ### Start here (for the next brain)
 
-- **Where it is:** `main` at v85 (pool 3 on `/rank`, #168). The Rust core is Driftloom's engine
-  and plays by default (item 32, #164, v83); the JavaScript synth is the
-  fallback and `?engine=js`. The core's gate is its own baseline
-  (`node tools/baseline.mjs`). The Design v17 UI is in the app (#166,
-  v84, from the Painter sessions). **Not brain-verified:** #164 and #166
-  (Mikey chose to save tokens; a Haiku rerun of item 32's checks can
-  catch up when convenient). Brain-verified through item 31b.
-- **Heard (2026-10-11):** "Rust, all voices" on his phone, "it sounded
-  great!"; Depth two, the 16-bar form holds (see the log).
-- **Decided (2026-10-11):** mono only, for now (see "The engine");
-  reflective may be neutral; cinder and shatter may be bright when a
-  word calls for it (see "The words").
+- **Where it is:** `main` at v92. The Rust core plays by default (the
+  JavaScript synth is the fallback, `?engine=js`); Vibes are in the app
+  (items 38a-b, v86-87; recipes in `js/vibes.js`, tuned once, v91); the
+  dials, the word fit and the word-album builder are tools (items 34-35);
+  cinder and shatter borrow bright modes when glad (item 36).
+- **Glitches on GrapheneOS phones (items 39-41, v89-v92):** the core now
+  gets notes 2-8 s ahead, planned from the phone's measured render-ahead;
+  late notes past 30 ms are dropped, not bunched; covers are drawn in a
+  Worker. **Open:** the Pixel 10a's 1.3-1.8 s main-thread stalls were never
+  reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
+  late and dropped by cause) will say whether anything is left. If it
+  calls for a fix, that comes before the core work.
+- **Next: the core** -- a new brain chat. Read **"The core"** under "What
+  Mikey has decided" first: the number one priority, shoot for the moon,
+  embeddable anywhere (game engines, mods, any OS or device, iOS and
+  macOS kept easy), notes decided and played away from the page so the
+  website never glitches from screen work, instruments as Rust building
+  blocks plus data recipes, short plain-ASCII share codes, anything may
+  break. **Start by drafting the core charter for Mikey's approval**: what
+  the core promises, how each promise is measured, and the phases. The
+  platforms (F-Droid, itch.io, later Google Play) are later phases of
+  their own.
+- **Not brain-verified** (Mikey chose to save tokens): #164 and #166, and
+  items 38-41's PRs (the hands' reports are in them).
+- **Waiting, not urgent:** item 37 (on hold; Vibes cover it); the
+  ears-approved sounds (roundBass, glass, floorDrop, arc; dubStab, organ,
+  wash and longChords wait on his verdict) -- under the charter they may
+  become the first instruments built as recipes; vibe tuning from the
+  loops Mikey sends (`js/vibes.js`, the brain's to edit).
+
+### The log
+
+**Session 16 (brain, 2026-10-11 to 10-12), the words, then the glitches.**
+Its State bullets, newest first, kept here as written:
+
 - **2026-10-12, late: item 41 (#187, v92)** -- notes now planned from the
   phone's measured render-ahead, late notes past 30 ms dropped rather than
   bunched, covers drawn in a Worker. The 1.3-1.8 s stalls on the Pixel
@@ -501,13 +524,7 @@ Stated decisions, not inferences. Dated where the date matters.
   does nothing or the wrong thing; then tune from the loops Mikey sends
   (codes carry their vibes), editing `js/vibes.js` directly. Item 36's
   album from its PR's list when it lands.
-- **Then, in order:** the words' queue items; the ears-approved sounds,
-  built in the core one at a time (roundBass, glass, floorDrop, arc;
-  dubStab, organ, wash and longChords wait on his verdict); the
-  engine-excellence candidates under "The engine"; the generator's port
-  when the words settle.
 
-### The log
 
 `main` at **v68**, deployed at the new address (see Session 5, below).
 No open PRs. Nothing is queued. Item 20
