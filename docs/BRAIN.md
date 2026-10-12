@@ -377,6 +377,13 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
+- **Urgent (2026-10-12): queue item 40**, glitches with the screen on,
+  worst on Library and Save / Share (second tester, Pixel 10a,
+  GrapheneOS). Lead: visible, the core still gets notes only 0.3 s ahead,
+  and those views are the heaviest on the main thread; or the audio
+  thread itself starves. Item 39 merged (#180, v89): the hidden lookahead
+  on the core is 8 s and Pause / Next / Previous cancel queued notes;
+  waiting on the first tester's Diagnostics. Hands: Opus 5.5, high.
 - **Emergency (2026-10-12): queue item 39**, the music skips when a
   tester's phone is locked (Pixel 9, GrapheneOS, installed app). The
   brain's lead from the code: hidden, the core still gets each note only

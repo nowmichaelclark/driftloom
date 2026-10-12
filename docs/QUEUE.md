@@ -8,8 +8,8 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: **item 39, the lock-screen glitch (emergency)**;
-then what is left of 34-38 (the ears-approved new
+standing rules). Next: **item 40, glitches on Library and Save / Share
+(urgent)**; item 39 is merged (#180), waiting on a tester's report (the ears-approved new
 instruments wait, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
@@ -1282,6 +1282,65 @@ A small item: data in `rank.html`, no generator or synth change.
   Export writes the new words and the pool, the tests pass. Bump BUILD
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
+
+## 40. Urgent: glitches with the screen on, worst on Library and Save/Share
+
+A second tester (Pixel 10a, GrapheneOS, installed app) hears the music
+glitch or clip, most often while he is on the **Library** (albums) or
+**Save / Share** view. Screen on, page visible: not item 39's case. Both
+testers use GrapheneOS; neither can send Diagnostics for about a day, so
+fix what the harness can find before they test again. Mikey: a music app
+must not glitch at all.
+
+**The brain's lead (from the code; not tested):** visible, the scheduler
+still hands notes to the core only `LOOKAHEAD_VISIBLE` (0.3 s) ahead.
+Library and Save / Share are the heaviest views on the main thread (cover
+art drawn per row, lists built, Design v17's blurs and glass over moving
+content), so a long task there (scrolling, opening an album, building the
+list, pasting a code) can hold the tick past 0.3 s and the notes arrive
+late. A second possibility: the views' drawing and compositing starve the
+audio thread itself (dropouts, heard as clicks or clipping) on a phone
+with fewer fast cores free. The two need different fixes; the harness
+tells them apart.
+
+**Do:**
+1. **Reproduce first,** visible, at 4x and 6x CPU throttle, full and
+   lite, on the core: play a busy loop and a sung loop while the harness
+   opens each view in turn (Now Playing, Vibes, Library with about 30
+   saved loops and 5 albums, an album open, Save / Share), scrolls the
+   long ones, opens an album, pastes a code, and switches views quickly.
+   Per view, record the main thread's long tasks (count, longest, what
+   they were), the longest tick gap, late notes on the core, late ticks,
+   and the audio device's fill-ins (item 39's counter). Report the table
+   before any fix. The `stalls.mjs` harness from #180 is the start.
+2. **Fix the late-notes path for good:** with the core, keep a deep queue
+   visible too (about 2 s, the hands' call from the table), and make every
+   change that must be heard at once -- mute, re-roll, tempo, the Sound
+   sliders if they reach queued notes, wander, a vibe loop starting --
+   cancel what is queued and re-decide (item 39's `cancelAhead`). Each such
+   change must still be heard within about 100 ms, as now: measure it. The
+   JavaScript fallback keeps 0.3 s.
+3. **Cut the views' main-thread cost** where the table points: covers drawn
+   once and cached, not redrawn per scroll or per open; lists built once
+   and updated, not rebuilt; nothing animating in views that are hidden;
+   blur or glass effects that repaint every frame over moving content
+   replaced by an equivalent that doesn't (keep the look; anything that
+   changes it visibly is noted for a Painter session, for Mikey's eyes).
+4. **If the audio thread itself drops out** with nothing late on the main
+   thread, say so plainly with the numbers, and what would help (lite
+   quality, a larger output buffer); stop and leave a note rather than
+   guess.
+5. **Field report, any view:** Diagnostics' report (item 39) covers the
+   visible page too: since the last copy, per view, the time spent there,
+   long tasks, the longest tick gap, late notes and dropouts. **copy**
+   copies it all.
+6. **Checks:** the table after the fix (no late notes in any view at 4x
+   and 6x; dropouts reported before and after); `perf.mjs` against the
+   baseline (no regression; record any win); the core baseline (no sound
+   change); refusals, `--clicks`, `--endings`; tests three times. Bump
+   `BUILD` and `CACHE`. In the PR, plain steps for the testers: play a
+   busy loop, sit on Library and on Save / Share for a few minutes,
+   scroll, open an album, then copy Diagnostics and send it.
 
 ## 39. Emergency: music skips and glitches when the phone is locked
 
