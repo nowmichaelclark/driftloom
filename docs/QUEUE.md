@@ -8,9 +8,11 @@ later, in listening albums the brain builds from the Done list.
 design): the Rust core is Driftloom's engine and plays by default; the
 JavaScript synth is the fallback (and `?engine=js`). The gate for a change
 to the core is now its own baseline, `node tools/baseline.mjs` (see the
-standing rules). Next: **item 40, glitches on Library and Save / Share
-(urgent)**; item 39 is merged (#180), waiting on a tester's report (the ears-approved new
-instruments wait, "Later, not queued"). A new
+standing rules). Items 39 (#180) and 40 (#182, glitches on Library and
+Save / Share) are merged, each waiting on a tester's report (Diagnostics'
+"while hidden" and "views" sections). Next: item 37, word albums on
+`/rank` (38, 34, 35 and 36 are done; the ears-approved new instruments
+wait, "Later, not queued"). A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
@@ -2348,3 +2350,11 @@ Mikey decides this line:
   screen or headphones act at once. Listen for: lock the phone on a busy
   loop for a few minutes; nothing skips or glitches, and Pause from the lock
   screen stops it straight away.
+- #182, glitches with the screen on (item 40, v90),
+  https://220a1cd7-driftloom.nowmichaelclark.workers.dev: visible, the core
+  holds 2 s of notes, and mute, re-roll, tempo and wander cancel and decide
+  again (heard 60-130 ms after the key); opening the Library no longer
+  draws every album's art at once (1-2 s on a slow phone, which skipped
+  the music). Listen for: play a busy loop, sit on Library and on Save /
+  Share, scroll, open albums, paste a code: nothing skips; and a mute, a
+  re-roll or a tempo change still lands at once.
