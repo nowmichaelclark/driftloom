@@ -274,13 +274,16 @@ Stated decisions, not inferences. Dated where the date matters.
   stays in testing for a long time; even the F-Droid release is an alpha or
   beta. So the port is proven step by step for the brain's own safety, not
   to protect old codes.
+- **The number one priority: an excellent, beautifully made core**
+  (Mikey, 2026-10-12). "Shoot for the moon." Take the time it needs. So
+  good and so well written that developers could put it in anything: any
+  game engine, any game mod, any operating system, any kind of device.
 - **Platforms, each its own phase, after the core:** the native Android
-  app on F-Droid; later Google Play; **iPhone and other iOS devices are
-  wanted** (Mikey has no iOS device and has never built for it); an
-  **itch.io** desktop release for people who run it locally. His first
-  multi-platform app: the brain and hands carry as much of it as they can.
-  So the core is built host-agnostic from the start (web worklet, native
-  Android, iOS, desktop).
+  app on F-Droid; later Google Play; an **itch.io** desktop release for
+  people who run it locally. **No iOS app for now** (Apple's yearly
+  developer fee), but the core must make iOS and macOS easy if that
+  changes. His first multi-platform app: the brain and hands carry as much
+  of it as they can.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
