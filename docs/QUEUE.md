@@ -11,9 +11,8 @@ to the core is now its own baseline, `node tools/baseline.mjs` (see the
 standing rules). Items 39 (#180) and 40 (#182, glitches on Library and
 Save / Share) are merged, each waiting on a tester's report (Diagnostics'
 "while hidden" and "views" sections). 38, 34, 35 and 36 are done.
-**Next: nothing queued for the hands** -- item 37 stays on hold (Vibes
-cover it), and the ears-approved new instruments wait, "Later, not
-queued", until the testers' reports are in. A new
+**Next: item 41 (urgent)**: the Pixel 10a tester still glitches on
+v91; 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
@@ -1285,6 +1284,93 @@ A small item: data in `rank.html`, no generator or synth change.
   Export writes the new words and the pool, the tests pass. Bump BUILD
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
+
+## 41. Urgent: the Pixel 10a still glitches on v91 -- what the field report shows
+
+Item 40 fixed what the harness could find; the tester's phone (Pixel 10a,
+GrapheneOS, installed app, Chrome 155) still glitches. His Diagnostics on
+v91, 1.5 minutes across views (Mikey has the full text; the figures that
+matter):
+
+| view | on screen | long tasks (longest) | longest tick gap | late notes |
+|---|---|---|---|---|
+| library | 0:50 | 8 (1338 ms) | 1366 ms | 728 |
+| save | 0:19 | 10 (1788 ms) | 1792 ms | 181 |
+| layers | 0:18 | 3 (632 ms) | 83 ms | 0 |
+| sounds | 0:02 | 0 | 67 ms | 78 |
+| now | 0:01 | 0 | 106 ms | 0 |
+
+Also: `late: 1007`, `dropped: 31`, `lookahead: 2`, `redecides: 0`,
+`outputLatency: 0.448`, `measuredLatencyMs: 600`, `baseLatency: 0.0213`,
+`sw: installing`, `fill-ins: -` in every view.
+
+**What the brain reads in it (Session 16; check each before relying on
+it):**
+1. **Late notes without any stall.** In `sounds` the longest tick gap was
+   67 ms and 78 notes still arrived late. So something besides the main
+   thread delays notes on this phone. The likely one: its audio output
+   runs on a large, bursty buffer (output latency 448 ms, measured 600 ms),
+   so the worklet takes its messages and renders in big chunks, and a note
+   handed over less than a chunk ahead is already in the past when it
+   lands. `REDECIDE_LEAD` (60 ms, used when a Sound slider, mute or re-roll
+   cancels and decides again) is far inside that. The core plays a late
+   note at once (`lib.rs`, `Taken::Late`), so late notes come out bunched:
+   the glitch.
+2. **Stalls still beat the 2 s queue.** Library and Save / Share still
+   block the main thread for 1.3-1.8 s on this phone (the harness, at 6x
+   CPU throttle, saw 188 ms at most). Add the phone's ~0.6 s of buffer and
+   a 2 s queue is not enough. So the harness is not modelling this phone:
+   the likely gap is **graphics**, not CPU. The Pixel 10's chip moved to a
+   new GPU (Imagination, not Mali), and if Chrome there rasterizes or
+   composites in software, Design v17's blurred panels and the canvas
+   covers (`getImageData` / `putImageData` in `cover.js`) become very slow,
+   and every repaint under a blur (the clock, the playhead) gets expensive.
+3. **`dropped: 31`:** the core's queue or sung-draws arena was full when
+   notes arrived, or every voice was busy. Find which, here.
+4. **`sw: installing`** while playing: check a service-worker update isn't
+   stuck (a precache fetch failing on the phone) or competing for the page.
+
+**Do:**
+1. **Reproduce this phone, not a fast desktop.** Run the harness with a
+   large audio buffer (Chromium's `--audio-buffer-size`, about 16384 frames)
+   and with software graphics (`--disable-gpu`, `--disable-gpu-compositing`,
+   no GPU rasterization), at 4x and 6x CPU throttle. Per view: long tasks
+   and what they are (a trace), tick gaps, late and dropped notes, and how
+   far ahead of its time each note reached the core. Report the table
+   before any fix; if it doesn't show what the field report shows, say so
+   and stop to leave a note.
+2. **Never hand the core a note it can't play on time.** Measure the
+   device's real render-ahead on the page (the core can report the time it
+   has rendered up to, or how early each note arrived) and plan from that,
+   not from `ctx.currentTime`: the re-decide lead becomes render-ahead plus
+   a margin, and the queue depth covers the longest recent stall plus
+   render-ahead, growing toward the hidden 8 s when the page stalls. A
+   change on this phone may then take about 0.6 s to be heard; that is its
+   own output delay, and nothing does better.
+3. **A late note must not bunch.** If one still arrives late, the core
+   drops it when it is more than a few tens of ms late (a sustained note
+   may join partway instead, if that sounds cleaner): measure both, choose,
+   and write it down for Mikey's ears. Count late-dropped apart from
+   queue-full.
+4. **Take the heavy work off the main thread, for good.** Draw covers in a
+   Worker with `OffscreenCanvas` (all of them, the playing loop's
+   included), so no cover ever blocks the page. Find what else is long in
+   Library, Save / Share and Layers under software graphics and fix it.
+   Where blur is the cost, give the blurred panels a cheaper equivalent when
+   the GPU isn't doing the work (or always, if it can't be told apart): the
+   same colors, a still pre-blurred background, no live blur. Any visible
+   change is noted for a Painter session.
+5. **Diagnostics:** add the GPU's renderer string (WebGL
+   `UNMASKED_RENDERER`, if available) and whether the page thinks graphics
+   are accelerated; the measured render-ahead; per view, late notes split
+   into "stall" and "arrived inside the buffer", and dropped notes split by
+   cause; and the service worker's state over time.
+6. **Checks:** the table after the fix, with the large buffer and software
+   graphics at 4x and 6x: no late notes, no bunching, nothing dropped for a
+   full queue, in every view. `perf.mjs` against the baseline; the core
+   baseline (a drop rule for late notes changes nothing on time); refusals,
+   `--clicks`, `--endings`; tests three times. Bump `BUILD` and `CACHE`.
+   In the PR, plain steps for the tester (as in #182).
 
 ## 40. Urgent: glitches with the screen on, worst on Library and Save/Share
 

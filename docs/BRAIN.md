@@ -377,6 +377,14 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Decided (2026-10-11):** mono only, for now (see "The engine");
   reflective may be neutral; cinder and shatter may be bright when a
   word calls for it (see "The words").
+- **2026-10-12, evening: queue item 41 (urgent).** The Pixel 10a
+  tester's Diagnostics on v91: late notes even with no stall (the Sound
+  view: 67 ms gap, 78 late), and Library / Save stalls of 1.3-1.8 s
+  against a 2 s queue on a phone with ~0.6 s of output buffer. Brain's
+  reading: notes handed over inside the device's render-ahead, and
+  software graphics making blur and canvas covers slow; the harness
+  modelled neither. Asked Mikey for the tester's `chrome://gpu`.
+  Hands: Opus 5.5, high.
 - **2026-10-12, afternoon:** items 39 (#180, v89) and 40 (#182, v90)
   merged; both wait on the GrapheneOS testers' Diagnostics (the "while
   hidden" and "views" sections; steps in the PRs). Item 40's cause was the
