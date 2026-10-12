@@ -403,3 +403,44 @@ ears, and each checkable with `measure.mjs` loudness and a blind A/B):
 Together 1, 2 and 4 would take the full graph from about 24 to about 17
 ms/s offline, what lite costs now, with the reverb, dynamics and the
 tape character still there.
+
+## Stalls while hidden (queue item 39, v89)
+
+A tester's Pixel 9 (GrapheneOS, installed app) skipped and glitched as soon
+as the screen went off. With the screen locked but on, it played fine, and
+a Pause from the lock screen took a few seconds to land, glitching until it
+did. That points to a phone that starves the page for seconds once the
+screen is off. "No late ticks hidden", above, was desktop Chromium before
+the core was the default.
+
+`node tools/stalls.mjs` reproduces it. It plays the real app hidden, at 4x
+and 6x CPU throttle, and holds the clock back on purpose: worker ticks
+dropped, the main thread kept busy, or the page frozen, for 0.5, 1, 2 and
+5 s, now and then and back to back. Shatter and cinder, full quality, the
+core and `?engine=js`.
+
+What the core did, before (v88) and after (v89):
+
+| stall | v88 late notes | v88 late ticks (music skipped) | v89 |
+|---|---|---|---|
+| 0.5 s, any kind | 0 | 0 | 0 |
+| 1 s | 0-2 | 0 | 0 |
+| 2 s, ticks or main thread | 32-72 | 0 | 0 |
+| 5 s, ticks or main thread | 36-138 | 3-4 (worst 2.0-2.2 s each) | 0 |
+| page frozen, up to 5 s | 0 | 0 | 0 |
+
+On v88 a hidden note reached the core only about a second before it was
+due, a window made for the JavaScript synth, so any stall longer than that
+made notes arrive late and bunched. On v89 the core takes every note as
+soon as it is decided, 8 s ahead when hidden. Pause, Next and Previous drop
+what it holds (`Core::cancel`), so the new loop (or the music again)
+starts 0.08 s after the page runs the key, with none of the old loop's
+notes left to play. Its first note came 77-740 ms after the key, depending
+on where the loop's first note falls. v88 played out up to a second of the
+old loop first. The JavaScript fallback keeps its window and its
+figures are unchanged. Its stalls of 2 s and longer still give late notes.
+
+Cost, A/B against v88 (`perf.mjs --ab`, shatter and cinder, full and lite,
+visible at 1x and 4x, hidden at 1x and 6x, 30 s windows): audio render,
+main thread and renderer CPU all within ±3%. No fill-ins on either side.
+A note waiting in the core costs a comparison per block.
