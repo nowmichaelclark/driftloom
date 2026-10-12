@@ -64,12 +64,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // From tools/perf.mjs's fixed set: the busiest loops.
-const LOOPS = {
+export const LOOPS = {
   shatter: { name: 'shatter-glein-fei', code: 'DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-V4G0' },
   cinder: { name: 'cinder-da-yoan', code: 'DL1-0C076-20110-60H1R-PE1MF-FVF35-ZPPA7-DDQPN-9D5MS-SBK94-FAREY-9KW08-EZW10-CDR3S-2QAD0-WEFGB-00000-0006S-3R' },
   hollow: { name: 'hollow-laith-hu', code: 'DL1-0C04J-2R00G-60ZHQ-01BZP-630Q2-3DP7M-GV3HF-3QTSE-RFHKD-SP413-ABM10-87G5Q-000V1-RW061-8Y02P-G6CYN-M2J71-49H00-00000-041D0' },
@@ -111,7 +111,7 @@ function parseArgs(argv) {
 
 // ------------------------------------------------------------- chromium
 
-function findChrome(explicit) {
+export function findChrome(explicit) {
   if (explicit) return explicit;
   const roots = [process.env.PLAYWRIGHT_BROWSERS_PATH, '/opt/pw-browsers', path.join(os.homedir(), '.cache', 'ms-playwright')].filter(Boolean);
   for (const root of roots) {
@@ -128,9 +128,9 @@ function findChrome(explicit) {
   return null;
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function launch(chromePath) {
+export async function launch(chromePath) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'driftloom-stalls-'));
   const proc = spawn(chromePath, [
     '--headless=new', '--no-sandbox', '--remote-debugging-port=0', `--user-data-dir=${dir}`,
@@ -181,7 +181,7 @@ const TYPES = {
   '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.wav': 'audio/wav',
   '.flac': 'audio/flac', '.png': 'image/png', '.wasm': 'application/wasm',
 };
-function startServer(port) {
+export function startServer(port) {
   const server = http.createServer((req, res) => {
     let url = decodeURIComponent(req.url.split('?')[0]);
     if (url.endsWith('/')) url += 'index.html';
@@ -203,7 +203,7 @@ function startServer(port) {
 
 // Runs before the page's own scripts; never shipped. The first loop is
 // seeded as tools/perf.mjs seeds it.
-const INSTRUMENT = `(() => {
+export const INSTRUMENT = `(() => {
   const native = Math.random;
   let a = 20260926;
   Math.random = function () {
@@ -275,7 +275,9 @@ const INSTRUMENT = `(() => {
 
 // --------------------------------------------------------------- one tab
 
-async function openTab(b, url, throttle) {
+// `sources`: more scripts to run before the page's, after the hook;
+// `setup(send)`: anything else to do before the page loads.
+export async function openTab(b, url, throttle, { sources = [], setup = null } = {}) {
   const { targetInfos } = await b.send('Target.getTargets');
   const target = targetInfos.find((t) => t.type === 'page');
   const { sessionId } = await b.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
@@ -288,6 +290,8 @@ async function openTab(b, url, throttle) {
   await send('Page.enable');
   await send('Runtime.enable');
   await send('Page.addScriptToEvaluateOnNewDocument', { source: INSTRUMENT });
+  for (const source of sources) await send('Page.addScriptToEvaluateOnNewDocument', { source });
+  if (setup) await setup(send);
   if (throttle > 1) await send('Emulation.setCPUThrottlingRate', { rate: throttle });
   await send('Page.navigate', { url });
   await evaluate(`new Promise((r) => (function wait() {
@@ -320,7 +324,7 @@ async function openTab(b, url, throttle) {
   return { send, evaluate, press, diagnostics, targetId: target.targetId };
 }
 
-async function loadCode(tab, code) {
+export async function loadCode(tab, code) {
   await tab.evaluate(`(() => {
     const code = ${JSON.stringify(code)};
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => code, writeText: async () => {} } });
@@ -547,4 +551,5 @@ async function main() {
   if (opts.md) fs.writeFileSync(opts.md, text);
 }
 
-await main();
+// tools/views.mjs borrows the pieces above; only a run of this file plays.
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) await main();

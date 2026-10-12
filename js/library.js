@@ -121,10 +121,28 @@ export function closeAlbum() {
 }
 
 // Called whenever something the lists show may have changed. Cheap when
-// neither view is on screen: it does nothing.
+// neither view is on screen: it does nothing. And a list that would come
+// out the same -- a new loop playing that is in none of them, say, every
+// time one starts -- is left as it is rather than built again (queue item
+// 40). A tap on the lists themselves always builds them.
 export function refresh() {
-  if (isVisible()) render();
-  if (saveVisible()) renderSave();
+  if (isVisible() && built.library !== shownKey()) render();
+  if (saveVisible() && built.save !== shownKey()) renderSave();
+}
+
+// What the lists show, as one string: what is stored, where the lists
+// stand, and what is playing.
+const built = { library: null, save: null };
+function shownKey() {
+  const st = lib.app.state;
+  const pl = st.playlist;
+  const spec = st.spec;
+  return JSON.stringify([
+    store.loadAll().map((e) => [e.id, e.spec.name, e.spec.root, e.spec.scale, e.spec.bpm]), store.loadAlbums(),
+    lib.tab, lib.albumId, lib.mode, lib.moving, lib.advanced, lib.saveTab, lib.armed && lib.armed.key,
+    st.currentId, pl ? [pl.albumId, pl.index, pl.ids.length] : null,
+    spec ? spec.name : null, spec ? lib.app.isSaved() && lib.app.isChanged() : null,
+  ]);
 }
 
 export function showShare() {
@@ -292,23 +310,86 @@ function mark(on, warn = false) {
 
 // Album art is drawn once per album contents and copied after that, so
 // re-rendering a list does not redraw noise fields every time.
+//
+// And in a list it is drawn one album at a time, a task each, after the
+// list is up: a Library's worth at once held the main thread for a second
+// and more on a slow phone, past what the music had queued (queue item
+// 40). A row's art comes in a moment after the row the first time; `warmArt`
+// draws them ahead, while nothing else is happening, so mostly it is there.
 const artCache = new Map();
-export function albumArt(album, specs, size = 96) {
-  const k = `${album.title}|${album.ids.join(',')}|${size}`;
-  let src = artCache.get(k);
-  if (!src) {
-    src = document.createElement('canvas');
-    try {
-      drawCover(src, albumCoverSpec(album.title, specs.length ? specs : [
-        { seed: 1, feel: { lift: 0.5, energy: 0.3, warmth: 0.6 }, mix: { dust: 1 } },
-      ]), size);
-    } catch (err) {
-      console.warn('Could not draw album art', err);
-    }
-    if (artCache.size > 40) artCache.clear();
-    artCache.set(k, src);
+const artWaiting = new Map();
+let artTimer = null;
+
+function artKey(album, size) {
+  return `${album.title}|${album.ids.join(',')}|${size}`;
+}
+
+function drawArt(album, specs, size) {
+  const src = document.createElement('canvas');
+  try {
+    drawCover(src, albumCoverSpec(album.title, specs.length ? specs : [
+      { seed: 1, feel: { lift: 0.5, energy: 0.3, warmth: 0.6 }, mix: { dust: 1 } },
+    ]), size);
+  } catch (err) {
+    console.warn('Could not draw album art', err);
   }
+  if (artCache.size > 40) artCache.clear();
+  artCache.set(artKey(album, size), src);
   return src;
+}
+
+// At once: the card's art.
+export function albumArt(album, specs, size = 96) {
+  return artCache.get(artKey(album, size)) || drawArt(album, specs, size);
+}
+
+function paintArt(canvas, src) {
+  canvas.getContext('2d').drawImage(src, 0, 0, canvas.width, canvas.height);
+}
+
+// Into `canvas` now if it is drawn, otherwise when its turn comes.
+function artInto(canvas, album, specs, size = 96) {
+  const k = artKey(album, size);
+  const src = artCache.get(k);
+  if (src) {
+    if (canvas) paintArt(canvas, src);
+    return;
+  }
+  let w = artWaiting.get(k);
+  if (!w) {
+    w = { album, specs, size, canvases: [] };
+    artWaiting.set(k, w);
+  }
+  if (canvas) w.canvases.push(canvas);
+  artNext();
+}
+
+function artNext() {
+  if (artTimer || !artWaiting.size) return;
+  // Hidden, nothing is looking: the next time the page is shown.
+  if (document.hidden) {
+    artTimer = true;
+    document.addEventListener('visibilitychange', () => { artTimer = null; artNext(); }, { once: true });
+    return;
+  }
+  artTimer = setTimeout(() => {
+    artTimer = null;
+    if (!artWaiting.size) return;
+    if (document.hidden) { artNext(); return; }
+    const [k, w] = artWaiting.entries().next().value;
+    artWaiting.delete(k);
+    const src = artCache.get(k) || drawArt(w.album, w.specs, w.size);
+    for (const c of w.canvases) if (c.isConnected) paintArt(c, src);
+    artNext();
+  }, 0);
+}
+
+// Every album's art for the lists, drawn ahead, one a task.
+export function warmArt() {
+  const byId = loopsById();
+  for (const album of listedAlbums(store.IMPORTED)) {
+    artInto(null, album, album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec));
+  }
 }
 
 function artFor(album, byId, big = false) {
@@ -318,7 +399,7 @@ function artFor(album, byId, big = false) {
   art.setAttribute('aria-hidden', 'true');
   art.width = 96;
   art.height = 96;
-  art.getContext('2d').drawImage(albumArt(album, specs), 0, 0, 96, 96);
+  artInto(art, album, specs);
   return art;
 }
 
@@ -354,6 +435,7 @@ function newAlbumThen(after) {
 // ------------------------------------------------------------- library
 
 export function render() {
+  built.library = shownKey();
   setTabState(document.querySelectorAll('[data-tab]'), lib.tab);
   const more = lib.tab === 'more';
   el('libMore').hidden = !more || lib.advanced;
@@ -552,6 +634,7 @@ function renderLoops() {
 // ----------------------------------------------------------------- save
 
 export function renderSave() {
+  built.save = shownKey();
   setTabState(document.querySelectorAll('[data-stab]'), lib.saveTab);
   const share = lib.saveTab === 'share';
   el('saveShare').hidden = !share;

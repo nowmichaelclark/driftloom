@@ -543,6 +543,29 @@ impl Core {
         self.staged = 0;
     }
 
+    /// Drop the notes still waiting whose time is `time` (seconds) or later,
+    /// and keep the rest, waiting or sounding: a change that must be heard
+    /// at once while notes are handed over seconds ahead (mute, re-roll,
+    /// tempo; queue item 40). The host decides again from `time` on, so the
+    /// two halves meet exactly, by the time each note was asked for.
+    pub fn cancel_from(&mut self, time: f64) {
+        let mut i = 0;
+        while i < self.waiting {
+            let Some(&w) = self.queue.get(i) else { break };
+            if w.time < time {
+                i += 1;
+                continue;
+            }
+            self.waiting -= 1;
+            if let Some(&last) = self.queue.get(self.waiting)
+                && let Some(gap) = self.queue.get_mut(i)
+            {
+                *gap = last;
+            }
+        }
+        self.staged = 0;
+    }
+
     /// Room for the draws of the sung note the host sends next, `len` of
     /// them, in the order the JavaScript voice draws them: for each singer
     /// the choir's spread (a choir only), the scoop's start and end, how
@@ -1463,6 +1486,24 @@ mod tests {
         assert_eq!(core.busy(), 0);
         let out = core.process(0);
         assert!(out.iter().flatten().all(|&x| x == 0.0));
+    }
+
+    #[test]
+    fn cancel_from_drops_only_the_waiting_notes_from_its_time() {
+        let mut core = boxed();
+        core.note(KALIMBA, MELODY, 0.0, 60.0, 0.5, 0.5, STRIKE | BODY, NO);
+        core.note(KALIMBA, CHORDS, 1.0, 60.0, 0.5, 0.5, STRIKE | BODY, NO);
+        core.note(KALIMBA, CHORDS, 2.0, 64.0, 0.5, 0.5, STRIKE | BODY, NO);
+        core.note(KALIMBA, BASS, 3.0, 40.0, 0.5, 0.5, STRIKE | BODY, NO);
+        render(&mut core, 2);
+        assert_eq!(core.busy(), 4);
+        // From 2 s: the notes at 2 and 3 go, the one at 1 waits on, and the
+        // one sounding sounds on.
+        core.cancel_from(2.0);
+        assert_eq!(core.busy(), 2);
+        render(&mut core, (5.0 * RATE) as usize / QUANTUM);
+        assert_eq!(core.busy(), 0);
+        assert_eq!(core.dropped(), 0);
     }
 
     #[test]

@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v89';
+const BUILD = 'v90';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -321,6 +321,80 @@ function awayReport() {
   ];
 }
 
+// ------------------------------------------------------- per view
+
+// A field report for the screen on (queue item 40): since Diagnostics was
+// last copied, for each view, how long it was on screen and what happened
+// meanwhile -- the main thread's long tasks (the page doing something for
+// more than 50 ms at a go), the longest the clock went without a tick, the
+// notes that reached the core late, the scheduler's late ticks (music
+// skipped) and the audio device's fill-ins (a starved audio thread). Hidden
+// time is the "while hidden" report's, not any view's.
+const views = { since: performance.now(), stats: {}, open: null, longTasks: false };
+
+function viewStats(view) {
+  if (!views.stats[view]) {
+    views.stats[view] = { ms: 0, longTasks: 0, longestTask: 0, worstGapMs: 0, lateNotes: 0, lateTicks: 0, fillIns: null };
+  }
+  return views.stats[view];
+}
+
+// What happened since the last call goes to the view that was on screen.
+// `hiding`: the page has just been hidden, and was on screen until now.
+function viewFlush(hiding = false) {
+  const now = performance.now();
+  const late = coreLate();
+  const fills = fillIns();
+  const ticks = state.engine ? state.engine.lateTicksEver : 0;
+  const gap = state.engine ? state.engine.takeGap() : 0;
+  const o = views.open;
+  if (o && (hiding || !document.hidden)) {
+    const v = viewStats(o.view);
+    v.ms += now - o.at;
+    v.worstGapMs = Math.max(v.worstGapMs, gap);
+    if (late != null && o.late != null) v.lateNotes += Math.max(0, late - o.late);
+    v.lateTicks += Math.max(0, ticks - o.ticks);
+    if (fills != null && o.fills != null) v.fillIns = (v.fillIns || 0) + Math.max(0, fills - o.fills);
+  }
+  views.open = document.hidden ? null : { view: state.view, at: now, late, fills, ticks };
+}
+
+function watchLongTasks() {
+  try {
+    if (!PerformanceObserver.supportedEntryTypes.includes('longtask')) return;
+    new PerformanceObserver((list) => {
+      if (document.hidden || !views.open) return;
+      const v = viewStats(views.open.view);
+      for (const t of list.getEntries()) {
+        v.longTasks++;
+        v.longestTask = Math.max(v.longestTask, Math.round(t.duration));
+      }
+    }).observe({ type: 'longtask' });
+    views.longTasks = true;
+  } catch { /* not in this browser */ }
+}
+
+function viewsReport() {
+  viewFlush();
+  const mins = ((performance.now() - views.since) / 60000).toFixed(1);
+  const lines = [`views (since the last copy, ${mins} min; on screen only):`];
+  const names = Object.keys(views.stats);
+  if (!names.length) lines.push('  nothing yet');
+  for (const name of names) {
+    const v = views.stats[name];
+    const long = views.longTasks ? `long tasks ${v.longTasks}${v.longTasks ? ` (longest ${v.longestTask} ms)` : ''}` : 'long tasks -';
+    lines.push(`  ${name}: ${clock(v.ms / 1000)} on screen, ${long}, longest tick gap ${v.worstGapMs} ms, `
+      + `late notes ${v.lateNotes}, late ticks ${v.lateTicks}, fill-ins ${v.fillIns ?? '-'}`);
+  }
+  return lines;
+}
+
+function viewsReset() {
+  views.stats = {};
+  views.since = performance.now();
+  viewFlush();
+}
+
 // The lock screen and the headset notification read from here. Called on
 // every load and again on Play, because the very first loop is put into the
 // engine while the audio graph is being built, before any load happens.
@@ -339,14 +413,35 @@ function describeLength(passes, spec) {
   return ui.formatTime(passes * ui.passSeconds(spec));
 }
 
+// The covers drawn lately, by the loop they show: going back to one --
+// leaving an album, changing the Library's tab, a code for the loop that is
+// playing -- copies it instead of drawing it again, the biggest single job
+// the main thread had in those views (queue item 40).
+const covers = new Map();
+
 function drawCoverFor(spec) {
   const canvas = ui.el('cover');
   if (!canvas || !spec) return;
+  const key = JSON.stringify(spec);
+  const kept = covers.get(key);
+  if (kept) {
+    canvas.width = kept.width;
+    canvas.height = kept.height;
+    canvas.getContext('2d').drawImage(kept, 0, 0);
+    return;
+  }
   try {
     drawCover(canvas, spec, 320);
   } catch (err) {
     console.warn('Could not draw cover', err);
+    return;
   }
+  const copy = document.createElement('canvas');
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  copy.getContext('2d').drawImage(canvas, 0, 0);
+  if (covers.size >= 12) covers.delete(covers.keys().next().value);
+  covers.set(key, copy);
 }
 
 // ---------------------------------------------------------------- card
@@ -397,6 +492,8 @@ function renderLoopWords() {
 // screen counts as saved.
 function savedChanged() {
   library.refresh();
+  // The albums' art, ready for the Library before it is opened.
+  library.warmArt();
   updateSaveButton();
   if (state.view === 'now') renderNow();
 }
@@ -494,7 +591,9 @@ function updateSaveButton() {
 const BASE_VIEWS = ['now', 'sounds', 'layers'];
 
 function setView(view) {
+  viewFlush();
   state.view = view;
+  if (views.open) views.open.view = view;
   const visiting = !BASE_VIEWS.includes(view);
   if (!visiting) state.lastView = view;
   if (view === 'sounds' || view === 'layers') state.lastEdit = view;
@@ -507,6 +606,9 @@ function setView(view) {
   ui.setIcon(vb, target);
   vb.setAttribute('aria-label', target === 'sounds' ? 'Show sound controls' : 'Show layers');
   vb.title = target === 'sounds' ? 'Sound' : 'Layers';
+  ui.setColumnsLive(view === 'layers');
+  const shownPattern = (state.engine && state.engine.live) || state.pattern;
+  if (view === 'layers' && state.spec && shownPattern) ui.renderGrids(cells, shownPattern, state.bar > 0 ? state.bar : 0, state.spec.mutes || {});
   if (view === 'library') library.render();
   if (view === 'save') library.renderSave();
   if (view === 'now') renderNow();
@@ -837,7 +939,9 @@ function onStep(step) {
   const bar = Math.floor(step / spb);
   if (bar !== state.bar) {
     state.bar = bar;
-    ui.renderGrids(cells, state.engine.live, bar, state.spec.mutes);
+    // The layers' grid only while it is on screen; it catches up when
+    // Layers is opened (setView).
+    if (state.view === 'layers') ui.renderGrids(cells, state.engine.live, bar, state.spec.mutes);
   }
   ui.moveCursor(lights, cells, step % spb);
 }
@@ -964,6 +1068,9 @@ function toggleMute(layer) {
   }
   state.spec.mutes[layer] = !state.spec.mutes[layer];
   state.synth.setMute(layer, state.spec.mutes[layer]);
+  // The channel goes quiet at once either way; back on, its notes are
+  // decided again from now, not after what the core holds (queue item 40).
+  state.engine.redecide();
   ui.renderGrids(cells, state.engine.live || state.pattern, Math.max(0, state.bar), state.spec.mutes);
 }
 
@@ -1171,6 +1278,9 @@ function wire() {
       state.engine.driftOn = on;
       if (on) state.engine.driftAmount = v;
       else if (state.engine.base) state.engine.live = state.engine.base;
+      // Off, the loop as composed from now; on, the next pass in the queue
+      // wanders as far as asked.
+      state.engine.redecide(on ? null : state.engine.base);
     }
     ui.el('wanderRow').classList.toggle('off', !on);
     store.setPrefs(on ? { drift: true, driftAmount: v } : { drift: false });
@@ -1194,6 +1304,7 @@ function wire() {
     // The same number of passes takes a different time at a new tempo.
     ui.el('lenVal').textContent = describeLength(state.spec.playFor || 0, state.spec);
     if (state.synth) state.synth.setEchoTime((60 / state.spec.bpm) * 0.75);
+    if (state.engine) state.engine.redecide();
   });
 
   for (const k of ['warmth', 'space', 'wobble']) {
@@ -1257,6 +1368,7 @@ function wire() {
     if (state.engine && state.engine.spec) push(state.engine.report());
     else lines.push('scheduler: not built yet (press Play)');
     lines.push(...awayReport());
+    lines.push(...viewsReport());
     ui.el('diagOut').textContent = lines.join('\n');
   };
 
@@ -1271,6 +1383,8 @@ function wire() {
     renderDiag();
     try {
       await navigator.clipboard.writeText(ui.el('diagOut').textContent);
+      // The views' report starts again from here.
+      viewsReset();
       ui.toast('Diagnostics copied');
     } catch {
       ui.toast('Select the text above and copy it manually');
@@ -1353,6 +1467,7 @@ function wire() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) awayBegin();
     else awayEnd();
+    viewFlush(document.hidden);
     if (state.synth && state.ctx.state === 'suspended') state.ctx.resume();
     if (state.engine) state.engine.retune();
     if (document.visibilityState === 'visible' && state.media && state.engine
@@ -1361,6 +1476,7 @@ function wire() {
     }
   });
 
+  watchLongTasks();
   const cores = navigator.hardwareConcurrency || 4;
   const prefs = store.getPrefs();
   state.vibes = vibeSelection(prefs.vibes);

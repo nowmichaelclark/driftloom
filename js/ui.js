@@ -359,13 +359,23 @@ export function moveCursor(lights, cells, index) {
   if (index === lastCursor) return;
   if (lastCursor >= 0) {
     if (lights[lastCursor]) lights[lastCursor].classList.remove('on');
-    if (columns[lastCursor]) for (const d of columns[lastCursor]) d.classList.remove('at');
+    if (columnsLive && columns[lastCursor]) for (const d of columns[lastCursor]) d.classList.remove('at');
   }
   if (index >= 0) {
     if (lights[index]) lights[index].classList.add('on');
-    if (columns[index]) for (const d of columns[index]) d.classList.add('at');
+    if (columnsLive && columns[index]) for (const d of columns[index]) d.classList.add('at');
   }
   lastCursor = index;
+}
+
+// The layers' column follows the music only while Layers is on screen
+// (queue item 40: nothing animates in a view that is hidden). Shown
+// again, it is put where the cursor is.
+let columnsLive = true;
+export function setColumnsLive(on) {
+  if (on === columnsLive) return;
+  columnsLive = on;
+  if (lastCursor >= 0 && columns[lastCursor]) for (const d of columns[lastCursor]) d.classList.toggle('at', on);
 }
 
 // --------------------------------------------------------------- misc
