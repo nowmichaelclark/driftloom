@@ -348,6 +348,13 @@ Stated decisions, not inferences. Dated where the date matters.
   of Time port or RollerCoaster Tycoon), one traditional, easy to mod.
   Possibly one early, to test as we go. Brain's picks in `docs/CORE.md`
   (promise 10): Luanti (first, phase 4), OpenRCT2, Stardew Valley.
+- **Requests (Mikey, 2026-10-13):** in the app, listeners choose more
+  for the next loop -- bars, tempo, rhythm, scale, etc. -- alongside the
+  vibes; developers ask the same way ("a peaceful, zany loop at 77 bpm,
+  16 bars, when the sun rises"). Charter promise 11: one request, each
+  choice pinned, ranged or left to chance; the generator port (phase 2)
+  is built around it. Picks like the vibes, not settings (brain's
+  reading; the settings rule stands).
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 

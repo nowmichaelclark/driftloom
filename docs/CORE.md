@@ -237,6 +237,38 @@ a modest laptop and running on several kinds of device:
   goes back into the core and the guide, so the next developer never
   meets it.
 
+### 11. Ask for the music you want
+
+Mikey, 2026-10-13: listeners choose more than vibes for the next loop --
+how many bars, the tempo, the rhythm (meter and feel), the scale, and so
+on -- alongside the vibes; and developers ask the same way: "a peaceful,
+zany loop at 77 bpm, 16 bars, when the sun rises."
+
+- **One request, for everyone.** The generator takes a request: each
+  musical choice (bars, tempo, meter, rhythm feel, scale and key,
+  profile, instruments, layers, vibes...) is either **pinned** to a
+  value, given a **range**, or **left to chance**. The app's pickers, a
+  developer's code and a game's events all build the same request; what
+  is left to chance is drawn from the seed as today.
+- **Requests bend the music, never break it.** A pin that pulls against
+  a profile's character finds its in-between (as vibes do: "no pair is
+  forbidden"), and a request that truly can't be met says so in plain
+  words instead of playing something else.
+- **Events:** a host can attach a request to a moment ("when the sun
+  rises", "entering the cave", "turn 12"), and the core changes over at
+  the next musical boundary rather than mid-phrase.
+- **Codes carry only what was pinned** beside the seed, so a pinned
+  loop's code stays short (promise 8).
+- **The balance lock** keeps guarding what plays when nothing is pinned;
+  what plays when the listener pins is theirs.
+- In the app these are **picks for the next loop, like the vibes**, not
+  settings: the rule that theme and "lighter on processor" are the only
+  settings stands. How the pickers look is a Painter session's job.
+- *Measure:* every musical choice the generator makes can be pinned or
+  ranged through the request (a test walks the list); a pinned value is
+  honored in the render (measured: tempo, bar count, meter, scale); and
+  the same request and seed give the same loop on every target.
+
 ## The phases
 
 One phase at a time, each with a fresh hands session or several, each
@@ -255,7 +287,9 @@ one before it.
    choice (one channel today), and today's blocks move behind the shared
    block interface (promise 5), so phase 5 starts from a clean place.
 2. **The generator in Rust.** `generator.js`, vibes, moods and characters
-   ported, with profiles and vibes as data. *Done when:* the balance lock
+   ported, with profiles and vibes as data, built around the request
+   (promise 11) from the start. *Done when:* every choice can be pinned
+   (promise 11's measure), and the balance lock
    and `stats.mjs` corpus numbers match the JavaScript generator's within
    stated tolerances, and a blind album (old vs new generator) passes his
    ears.
@@ -270,7 +304,8 @@ one before it.
 4. **The first game: Luanti.** Pulled forward so a real game tests the
    host API while it is still cheap to change: the minimal C header, a
    native audio output, and steering (the game tells the core where,
-   when and what weather; the core leans its vibes). Earlier, from phase
+   when and what weather; the core leans its vibes), with requests on
+   events (promise 11). Earlier, from phase
    1 on, the native command-line renderer and a tiny test host stand in
    for a game in CI. *Done when:* Luanti plays Driftloom following
    biome, time and weather on a laptop and an Android phone, with promise
@@ -316,3 +351,5 @@ measurement that says so.
 - **Stereo possible, mono the default** (promise 9).
 - **Three games prove the core** (promise 10); the first pulled forward
   as phase 4. The picks are the brain's; Mikey may swap any.
+- **Requests: listeners and developers ask for bars, tempo, rhythm,
+  scale and more, alongside vibes** (promise 11; added after approval).
