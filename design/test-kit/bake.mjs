@@ -1,5 +1,6 @@
 // Bakes the design spec from the app itself (Painter session 5, v18;
-// v19 adds the next picks, Painter session 6).
+// v19 adds the next picks, Painter session 6; v20 the vibe key and the
+// Length picker's ∞ and any keys).
 //
 // The spec used to be drawn by hand and then ported into the app. Since
 // v18 it goes the other way: this script runs the real app in headless
@@ -9,7 +10,7 @@
 // and a change to the app's look shows up here by baking again.
 //
 //   cd design/test-kit && npm install
-//   node bake.mjs                      # writes ../driftloom_v19.html
+//   node bake.mjs                      # writes ../driftloom_v20.html
 //   node bake.mjs --out ../x.html      # somewhere else
 //
 // What it takes from the repo: index.html and js/ (run as they are),
@@ -35,7 +36,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const args = process.argv.slice(2);
 const opt = (name, dflt) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : dflt; };
-const OUT = path.resolve(opt('--out', path.join(ROOT, 'design/driftloom_v19.html')));
+const OUT = path.resolve(opt('--out', path.join(ROOT, 'design/driftloom_v20.html')));
 const SIZES = (process.env.SIZES || "100,130,150,200").split(",").map(Number);
 const W = 340, H = 780;
 
@@ -165,7 +166,7 @@ async function goto(page, state) {
   if ((await shown(page)) !== 'now') await press(page, '#nowBtn');
   // Now Playing outside an album, and the next picks it opens: leave the
   // album first (these are visited after every place that shows it).
-  if ((view === 'now' && sub === 'free') || view === 'picks' || view === 'length') {
+  if ((view === 'now' && sub === 'free') || view === 'vibe' || view === 'length') {
     if (await page.locator('#nowNext:not([hidden])').count()) {
       await press(page, '#nowAction');
       await page.waitForTimeout(2400); // the "left the album" note fades
@@ -176,7 +177,11 @@ async function goto(page, state) {
     return;
   }
   if (view === 'now') return;
-  if (view === 'vibes') return press(page, '#vibesBtn');
+  // The vibe words open from the Vibe panel's mood line (v20).
+  if (view === 'vibes') {
+    await press(page, '#vibesBtn');
+    return press(page, '#picksList .pk-line-mood button.pk-val');
+  }
   if (view === 'layers' || view === 'sounds') {
     await press(page, '#viewBtn');
     if ((await shown(page)) !== view) await press(page, '#viewBtn');
@@ -276,8 +281,9 @@ const STATES = ['now', 'vibes', 'layers', 'sounds',
   'library:albums', 'library:loops', 'library:more', 'library:advanced',
   ...Array.from({ length: albumCount }, (_, i) => `library:album:${i}`),
   'save:albums', 'save:share',
-  // Last, since they leave the album: the next picks (v19).
-  'now:free', 'picks', 'length'];
+  // Last, since they leave the album: the next picks (v19; the panel is
+  // "vibe" since v20).
+  'now:free', 'vibe', 'length'];
 
 // The app's whole screen once (every view is in it, most hidden), then
 // each place's own view and card at every text size.

@@ -1,5 +1,5 @@
 // Screenshots of the next picks in the app (Painter session 6): Now Playing
-// outside an album, the New loops panel and the Length picker, in any
+// outside an album, the Vibe panel (the brief's "New loops") and the Length picker, in any
 // theme and text size, with any picks. Also measures what the brief asks
 // for: targets, nothing scrolling, the panel fitting its zone.
 //
@@ -71,11 +71,12 @@ const MEASURE = `(() => {
     if (r.bottom > zone.bottom + 0.5 || r.top < zone.top - 0.5 || r.left < zone.left - 0.5 || r.right > zone.right + 0.5) out.outside.push(n.id || n.textContent.trim());
   }
   for (const n of [v, ...v.querySelectorAll('*')]) {
+    if (n.classList.contains('vh')) continue; // screen-reader-only text
     const cs = getComputedStyle(n);
     if (n.scrollHeight > n.clientHeight + 1 && /auto|scroll/.test(cs.overflowY)) out.scrolls.push(n.className || n.id);
     if (n.scrollWidth > n.clientWidth + 1 && n.clientWidth && !/visible/.test(cs.overflowX) && n.tagName !== 'INPUT') out.overflow.push(n.className || n.id);
   }
-  for (const n of v.querySelectorAll('.pk-pill, .pk-any, .ln-time, .ln-ticks span, .page-title, .ln-end-name')) {
+  for (const n of v.querySelectorAll('.pk-pill, .pk-any, .ln-time, .ln-ticks span, .ln-inf, .pk-anykey')) {
     const r = n.getBoundingClientRect();
     if (r.width && (r.right > zone.right + 0.5 || r.left < zone.left - 0.5 || r.bottom > zone.bottom + 0.5)) out.outside.push(n.textContent.trim());
   }
@@ -150,7 +151,8 @@ for (const size of SIZES) {
       shots.push(await page.locator('#app').screenshot());
       m.picks = await page.evaluate(MEASURE);
       await page.locator('#picksList .pk-line-pace button.pk-val').last().click(); await settle(page);
-      if (set === 'nothing') { await page.click('#lenEndless'); await settle(page); }
+      // nothing: the picker opens with any lit; worst: the ∞ key pressed.
+      if (set === 'worst') { await page.click('#lenEndless'); await settle(page); }
       shots.push(await page.locator('#app').screenshot());
       m.length = await page.evaluate(MEASURE);
       await page.click('#lenCancel'); await settle(page);

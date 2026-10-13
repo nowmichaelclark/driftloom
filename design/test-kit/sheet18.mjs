@@ -1,8 +1,8 @@
-// Contact sheets of the v18 / v19 spec: chosen places x themes x text sizes,
+// Contact sheets of the v18 to v20 spec: chosen places x themes x text sizes,
 // one picture. Uses the page's own window.spec, so it shows exactly what
 // the review controls would.
 //
-//   node sheet18.mjs ../driftloom_v19.html out/sheet.png \
+//   node sheet18.mjs ../driftloom_v20.html out/sheet.png \
 //     --places now,layers,library:more --themes all --sizes 100 [--paused] [--insets android]
 //
 // --themes all | t-dawn,t-nocturne,…   --places all | now,vibes,…

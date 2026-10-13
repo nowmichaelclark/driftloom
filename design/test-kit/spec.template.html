@@ -3,11 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Driftloom spec v19</title>
+<title>Driftloom spec v20</title>
 <!--
   ================================================================
-  DRIFTLOOM · DESIGN SPEC · v19 (Painter session 6, 2026-10-13)
+  DRIFTLOOM · DESIGN SPEC · v20 (Painter session 6, 2026-10-14)
   ================================================================
+
+  v20 · THE VIBE KEY, ANY AND ∞ (Mikey's answers, 2026-10-14)
+
+    - The top-left key reads "vibe" (no count) and opens the panel,
+      in an album too. The pills on Now Playing show outside an album
+      only, as in v19: to see them, leave the album.
+    - The panel ("New loops" in the brief) is called Vibe. It has no
+      title on screen, only close (screen readers still hear "Vibe").
+      The place is "vibe" (it was "picks").
+    - The vibe words open from the panel's mood line; their close goes
+      back to the panel.
+    - Length: the Endless label and switch become one ∞ key, lit while
+      endless is on, with an any key beside it. Any lit: the number
+      reads "any"; -1, +1, the slider or typing pick a number. Tempo
+      gets its own any key when its picker is built.
+    - Line two's any key in the panel still clears tempo and length.
+  In the app: build v99.
+
+  v19 (below) is kept as it was written; where it says "picks", "New
+  loops" or "Endless switch", read v20 above.
 
   v19 · NEXT PICKS (Painter session 6)
 
@@ -95,10 +115,10 @@
 
   The v17 scripts in test-kit/ measure the v17 file and need its nine
   phones; run them against design/archive/driftloom_v17_library.html.
-  For v18 and v19 the page offers window.spec (see the script at the end):
+  For v18 to v20 the page offers window.spec (see the script at the end):
   show(place), setTheme(cls), setSize(pct), setPlaying(bool), audit().
   The address bar takes the same, e.g.
-    driftloom_v19.html#view=library:loops&theme=t-dawn&size=150
+    driftloom_v20.html#view=library:loops&theme=t-dawn&size=150
   test-kit/sheet18.mjs makes contact sheets from it.
 -->
 <style>
@@ -326,6 +346,16 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
       <p class="pg-audit" id="audit" role="status" aria-live="polite"></p>
     </section>
 
+    <section class="pg-panel pg-notes" aria-labelledby="v20-h">
+      <h2 id="v20-h">New in v20: the vibe key, any and ∞</h2>
+      <p>Mikey's answers to the brief's two open questions (2026-10-14), in the app as build v99.</p>
+      <ul>
+        <li><span class="pg-tag new">new</span><b>The vibe key.</b> The top-left key on Now Playing reads "vibe" and opens the panel, in an album too. The pills under the clock still show only outside an album: to see them, leave the album.</li>
+        <li><span class="pg-tag gone">changed</span><b>The panel is called Vibe</b> (the brief's "New loops"). No title on screen, only close; screen readers still hear "Vibe". Its mood line opens the vibe words, whose close comes back to the panel.</li>
+        <li><span class="pg-tag gone">changed</span><b>Length: ∞ and any.</b> The Endless label and switch are now one ∞ key, lit while endless is on, with an any key beside it. With any lit, the number reads "any"; −1, +1, the slider or typing pick a number. Tempo gets its own any key when its picker is built.</li>
+      </ul>
+    </section>
+
     <section class="pg-panel pg-notes" aria-labelledby="v19-h">
       <h2 id="v19-h">New in v19: next picks</h2>
       <p>The chosen design (<span class="pg-mono">design/next-picks.md</span>), built into the app (build v97). Pick <b>Now Playing, no album</b>, <b>New loops</b> or <b>Length</b> above, or press <b>leave album</b> on Now Playing.</p>
@@ -376,8 +406,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
     <section class="pg-panel pg-notes" aria-labelledby="open-h">
       <h2 id="open-h">Open items</h2>
       <ul>
-        <li><span class="pg-tag open">decide</span><b>Next picks: the way in during an album.</b> The pills are hidden in an album, so they can't open New loops there. Suggestion from the brief: keep the top-left key, renamed "new loops", in an album only. Until then the Vibes key stays as it was.</li>
-        <li><span class="pg-tag open">decide</span><b>Next picks: setting only tempo or only length back to "any".</b> Line two's any key clears both.</li>
+        <li><span class="pg-tag open">later</span><b>Tempo picker</b> (with its own any key), and the key, style and voices pickers: not designed yet.</li>
         <li><span class="pg-tag open">next</span><b>Measure the app against the standard.</b> Port the v17 test kit to this file (one phone, a theme at a time). It is the same as measuring the app, since this file is the app's own drawing.</li>
         <li><span class="pg-tag open">decide</span><b>The Info card drops lines when it is full.</b> v17's rule was that nothing in it is ever dropped; lines took turns instead (the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away. Keep the app's way, or bring the turns back?</li>
         <li><span class="pg-tag open">found</span><b>The Info card can cut off its last lines.</b> Its text column is as tall as the art (118px). With the sample loop the readout fits at 100%, but from 130% the meter line and the album line are hidden, even after folding as far as it goes (one style and one feeling leave nothing to fold; the album and meter lines never fold). The audit line says so when it happens. It is the app's own behavior, not a baking artifact.</li>
@@ -419,7 +448,7 @@ const D = /*BAKE:DATA*/null;
     mutes: {}, vibes: (D.vibes || []).slice(), saved: null, lite: null,
     // v19: whether an album is playing (the bake plays one), and where
     // the Vibes list goes back to.
-    inAlbum: true, vibesFrom: 'now',
+    inAlbum: true,
   };
   var BASE = ['now', 'sounds', 'layers'];
   var viewOf = function (state) { return state.split(':')[0]; };
@@ -553,14 +582,15 @@ const D = /*BAKE:DATA*/null;
       var c = current();
       go(c === 'sounds' ? 'layers' : c === 'layers' ? 'sounds' : S.lastEdit);
     },
-    vibesBtn: function () { S.vibesFrom = 'now'; go('vibes'); },
-    vibesClose: function () { go(S.vibesFrom === 'picks' ? 'picks' : 'now'); },
+    // v20: the vibe key opens the Vibe panel; the vibe words close to it.
+    vibesBtn: function () { go('vibe'); },
+    vibesClose: function () { go('vibe'); },
     // v19: leaving the album and going back to it; the next picks.
     nowAction: function () { S.inAlbum = !S.inAlbum; go('now'); },
-    nowPicks: function () { go('picks'); },
+    nowPicks: function () { go('vibe'); },
     picksClose: function () { go('now'); },
-    lenCancel: function () { go('picks'); },
-    lenDone: function () { go('picks'); },
+    lenCancel: function () { go('vibe'); },
+    lenDone: function () { go('vibe'); },
     vibesClear: function () { S.vibes = []; restore(); },
     playBtn: function () { setPlaying(!S.playing); },
     // As library.js does: focus goes to the page's title, and back.
@@ -602,7 +632,7 @@ const D = /*BAKE:DATA*/null;
     if (t.classList.contains('back') && t.closest('#libPane')) { S.lib.album = null; go('library'); return; }
 
     // The next picks: the mood line opens Vibes, the length line Length.
-    if (t.classList.contains('pk-val') && t.closest('.pk-line-mood')) { S.vibesFrom = 'picks'; go('vibes'); return; }
+    if (t.classList.contains('pk-val') && t.closest('.pk-line-mood')) { go('vibes'); return; }
     if (t.classList.contains('pk-val') && t.closest('.pk-line-pace')) { go('length'); return; }
 
     // Themes.
@@ -692,7 +722,7 @@ const D = /*BAKE:DATA*/null;
   function vibesWords() {
     var n = S.vibes.length;
     var b = $('vibesBtn');
-    if (b) { b.textContent = n ? 'vibes\u00a0·\u00a0' + n : 'vibes'; b.setAttribute('aria-label', n ? 'Vibes, ' + n + ' picked' : 'Vibes'); }
+    if (b) { b.textContent = 'vibe'; b.setAttribute('aria-label', 'Vibe'); }
     var c = $('vibesCount');
     if (c) c.textContent = n ? n + ' for new loops' : 'none: new loops as usual';
     var x = $('vibesClear');
@@ -844,7 +874,7 @@ const D = /*BAKE:DATA*/null;
 
   // ---------- review controls ----------
   var PLACES = [
-    ['now', 'Now Playing'], ['now:free', 'Now Playing, no album'], ['picks', 'New loops'], ['length', 'Length'], ['vibes', 'Vibes'], ['layers', 'Layers'], ['sounds', 'Sound'],
+    ['now', 'Now Playing'], ['now:free', 'Now Playing, no album'], ['vibe', 'Vibe'], ['length', 'Length'], ['vibes', 'Vibe words'], ['layers', 'Layers'], ['sounds', 'Sound'],
     ['library:albums', 'Albums'], ['library:album:2', 'An album'], ['library:loops', 'Loops'],
     ['library:more', 'More'], ['library:advanced', 'Advanced'], ['save:albums', 'Save'], ['save:share', 'Share'],
   ];
@@ -868,7 +898,7 @@ const D = /*BAKE:DATA*/null;
     if (BASE.indexOf(p[0]) >= 0) S.lastView = p[0];
     if (p[0] === 'sounds' || p[0] === 'layers') S.lastEdit = p[0];
     if (p[0] === 'now') S.inAlbum = p[1] !== 'free';
-    if (p[0] === 'picks' || p[0] === 'length') S.inAlbum = false;
+    if (p[0] === 'vibe' || p[0] === 'length') S.inAlbum = false;
     return show(state);
   }
   function syncChips() {
@@ -903,7 +933,7 @@ const D = /*BAKE:DATA*/null;
 
   function caption() {
     var names = { now: 'Now Playing', vibes: 'Vibes', layers: 'Layers', sounds: 'Sound', library: 'Library', save: 'Save',
-      picks: 'New loops', length: 'New loops › Length' };
+      vibe: 'Vibe', length: 'Vibe › Length' };
     var bits = S.state.split(':');
     var where = names[bits[0]] + (bits[1] ? ' › ' + ({ albums: 'Albums', loops: 'Loops', more: 'More', advanced: 'More › Advanced', album: 'an album', share: 'Share', free: 'outside an album' })[bits[1]] : '');
     if (bits[0] === 'save' && bits[1] === 'albums') where = 'Save';
