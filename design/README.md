@@ -57,6 +57,10 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - **When proposing the next session, give four things:** new or continuing session, which model, what effort, and the session label (e.g. "Painter 6 · Measure the app").
 - **Mikey judges the design by eye.** Show changes as screenshots or contact sheets, and measure every compliance claim.
 - **Use an independent reviewer.** An agent that hasn't seen the work catches over-claims.
+- **Don't theme the design on the name.** The app may not stay "Driftloom", so no loom, thread or weaving motifs in the UI (2026-10-13).
+- **No decorative art on Now Playing.** The cover lives on the Info card; Now Playing stays text and controls.
+- **Favor plain over metaphor.** Of 20 Next-picks directions (café menu, dice, radio, magnets…), Mikey chose the quietest: one small line on Now Playing that opens a plain list. Themed metaphors read as gimmicks.
+- **Exact values, not just presets.** People want to pick exactly how many bars, not choose from five sizes; presets can sit beside an exact control.
 
 ## Open items
 
