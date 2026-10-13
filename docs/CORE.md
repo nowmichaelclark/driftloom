@@ -266,8 +266,8 @@ zany loop at 77 bpm, 16 bars, when the sun rises."
   before. The length in a code is a variable-width number, not a byte,
   so it costs only what it uses: up to 32 bars, one character; up to
   1,024, two; up to 32,768, three; and only when the length was pinned.
-  **No cap in the core.** Brain's proposal for the app's picker (Mikey,
-  2026-10-13, asked where to stop; 3,072 came from Beethoven's Ninth):
+  **No cap in the core.** The app's picker (decided, Mikey, 2026-10-13;
+  3,072 came from Beethoven's Ninth):
   up to 32,768 bars (three characters, about 27 hours at 80 bpm), plus
   **Endless**; nothing longer would differ from Endless for a listener.
   Both journeys are wanted: an arc like a symphony's, and long, slow
@@ -351,8 +351,8 @@ one before it.
    to the background. **Lossless** (FLAC, about half a WAV's size) is the
    safe format the core writes itself; a **small** format (Opus or AAC,
    about 70 MB for 2.5 hours mono) uses the encoder the phone or browser
-   already has, where it has one. Brain's proposal, to keep the settings
-   rule: the format is chosen in the export sheet each time, and the
+   already has, where it has one. Decided (Mikey, 2026-10-13), keeping
+   the settings rule: the format is chosen in the export sheet each time, and the
    existing "lighter on processor" setting decides the speed (on: gentle
    and cool; off: as fast as the device safely allows).
 8. **Better than Chromium.** The sound improvements, one item each, blind
