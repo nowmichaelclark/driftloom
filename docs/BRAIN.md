@@ -46,6 +46,33 @@ Mikey's point, and the reason for step 4: the one thing nobody in this loop
 can do except him is hear it. Numbers check the ear; they do not replace
 it.
 
+**Two tracks while the core is built (Mikey, 2026-10-13: yes, the app
+keeps changing alongside the phases).** The **core track** is the
+charter's phases (`docs/CORE.md`), queue items 42 on. The **app track**
+is everything else: bug fixes, Painter redesigns, vibe tuning, new
+buttons and menus. Both merge to `main`; the rules that keep them from
+colliding:
+- Each change is its own PR from the latest `main`; the second to merge
+  takes the next `BUILD` / `CACHE` number. Core-track and app-track
+  sessions don't share a branch.
+- **Free any time:** the look (`css/`, `design/`, icons, themes),
+  menus and views that don't touch playback, Library, covers, text.
+- **Vibe tuning** (`js/vibes.js`): free until phase 2 starts; during
+  phase 2's port it pauses, then continues in the new data format.
+- **Generator changes** (`js/generator.js`, profiles, moods): fine
+  until phase 2, then made in Rust only (otherwise made twice).
+- **Audio bugs:** in `core/`, they go through the brain into the core
+  track's queue (the hands there own those files); in the JavaScript
+  synth, only if testers actually hear the fallback.
+- **New controls for core features** (request pickers, export, stereo):
+  a Painter session can design them now; they are wired up once the
+  core feature exists (requests after phase 2, export in phase 7).
+  Wiring the bars and tempo pickers to today's generator first is fine
+  if cheap; phase 3 replaces the plumbing anyway.
+- **Around phase 3** (the page stops scheduling notes and only sends
+  commands), changes to playback controls wait for it, or go through
+  the brain.
+
 Only one brain chat edits these files at a time. Long chats get slow and
 lose detail; start a fresh brain chat per phase (the words, the Rust port)
 and a fresh hands chat per phase too, since the queue file carries
