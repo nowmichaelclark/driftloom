@@ -12,6 +12,14 @@
 //! cargo run --release --example dlrender -- --flush LIST...  with the
 //!                                           processor flushing subnormal
 //!                                           numbers (must hash the same)
+//! cargo run --release --example dlrender -- --rate 96000 LIST...  at another
+//!                                           sample rate (the name says which)
+//! cargo run --release --example dlrender -- --blocks 1,441,random LIST...
+//!                                           also render each through
+//!                                           `Core::render`, that many frames
+//!                                           a call, failing if the speaker
+//!                                           output differs from the plain
+//!                                           render's
 //! cargo run --release --example dlrender -- --wav OUT.wav [--signal NAME] LIST
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! ```
@@ -22,9 +30,9 @@ mod notelist;
 
 use std::process::ExitCode;
 
-use notelist::{SIGNALS, line, parse, read_wav, render, render_flushing, wav};
+use notelist::{Blocks, SIGNALS, line, parse, read_wav, render, render_blocks, render_flushing, wav};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -39,6 +47,7 @@ fn main() -> ExitCode {
 fn run(args: Vec<String>) -> Result<(), String> {
     let (mut twice, mut flush, mut wav_to, mut signal) = (false, false, None, "out".to_string());
     let (mut compare, mut lists) = (false, Vec::new());
+    let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -47,6 +56,12 @@ fn run(args: Vec<String>) -> Result<(), String> {
             "--compare" => compare = true,
             "--wav" => wav_to = Some(args.next().ok_or(USAGE)?),
             "--signal" => signal = args.next().ok_or(USAGE)?,
+            "--rate" => rate = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
+            "--blocks" => {
+                for word in args.next().ok_or(USAGE)?.split(',') {
+                    blocks.push(Blocks::parse(word)?);
+                }
+            }
             "--help" | "-h" => {
                 println!("{USAGE}");
                 return Ok(());
@@ -73,7 +88,10 @@ fn run(args: Vec<String>) -> Result<(), String> {
     };
     for path in &lists {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-        let list = parse(&text).map_err(|e| format!("{path}: {e}"))?;
+        let mut list = parse(&text).map_err(|e| format!("{path}: {e}"))?;
+        if let Some(rate) = rate {
+            list = list.at_rate(rate);
+        }
         let first = if flush { render_flushing(&list, keep) } else { render(&list, keep) }.map_err(|e| format!("{path}: {e}"))?;
         if twice {
             let again = render(&list, None).map_err(|e| format!("{path}: {e}"))?;
@@ -82,6 +100,12 @@ fn run(args: Vec<String>) -> Result<(), String> {
             }
         }
         println!("{}", line(&list, &first.hashes));
+        for &how in &blocks {
+            let out = render_blocks(&list, how).map_err(|e| format!("{path}: {e}"))?;
+            if out != first.hashes[0] {
+                return Err(format!("{path}: rendered {how:?} frames a call, the speaker output is {out}, not {}", first.hashes[0]));
+            }
+        }
         if let Some(out) = &wav_to {
             std::fs::write(out, wav(&first.kept, list.rate)).map_err(|e| format!("{out}: {e}"))?;
         }

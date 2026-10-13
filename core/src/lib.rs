@@ -64,10 +64,22 @@ use texture::Texture;
 use voice::{Fiddle, Fm, FmOptions, Kalimba, PadNote, SineNote, Tubular, Vibrato, midi_to_freq};
 use wave::{Fft, Waves};
 
-/// Web Audio's render quantum. The core renders in blocks of this many
-/// frames, on frame numbers that are multiples of it, as an AudioWorklet
-/// is called; a host with another block size buffers.
+/// The core's internal block, Web Audio's render quantum. The core works in
+/// blocks of this many frames, on frame numbers that are multiples of it,
+/// as an AudioWorklet is called. A host with another block size does not
+/// notice: `Core::render` takes any number of frames a call and buffers.
 pub const QUANTUM: usize = 128;
+
+/// The highest sample rate this build holds its delay lines and its noise
+/// for, in Hz: 192,000 with the `wide` feature (the default), 96,000
+/// without (the web build). Above it `Core::start` refuses the rate, and a
+/// core started anyway has no mix (`Core::mixing`).
+pub const MAX_RATE: f64 = if cfg!(feature = "wide") { 192_000.0 } else { 96_000.0 };
+const MAX_FRAMES_A_SECOND: usize = if cfg!(feature = "wide") { 192_000 } else { 96_000 };
+
+/// The lowest sample rate `Core::start` accepts, in Hz. The charter's range
+/// is 22,050 to 192,000 Hz (`docs/CORE.md`, promise 4).
+pub const MIN_RATE: f64 = 22_050.0;
 
 /// The channels the core plays into. Each is one of the synth's per-layer
 /// channels: all five of them (queue item 27). Since queue item 29 the core
@@ -126,6 +138,34 @@ pub const VOLUME: u32 = TONE_FREQ + 5;
 pub const KILL: u32 = TONE_FREQ + 6;
 pub const BYPASS: u32 = TONE_FREQ + 7;
 pub const COLD: u32 = TONE_FREQ + 8;
+
+/// Why `Core::start` or `Core::render` would not.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Error {
+    /// The sample rate is outside `MIN_RATE` to `MAX_RATE`.
+    Rate,
+    /// The output layout is not one the core renders yet. Mono, one
+    /// channel, is the only one; the number is how many channels were asked
+    /// for.
+    Layout(u32),
+}
+
+impl Error {
+    /// What went wrong, in plain ASCII: a host shows it to a person.
+    #[must_use]
+    pub const fn message(self) -> &'static str {
+        match self {
+            Error::Rate => "sample rate outside what this core runs at (22050 to 192000 Hz, or 96000 in the web build)",
+            Error::Layout(_) => "output layout not supported yet: the core renders mono (1 channel)",
+        }
+    }
+}
+
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.message())
+    }
+}
 
 /// What the core says to a note.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -394,6 +434,10 @@ pub struct Core {
     /// What the host plays into each channel itself, for this block: notes
     /// it could not hand over (`inputs`).
     inputs: [[f32; QUANTUM]; CHANNELS],
+    /// How many frames of the last block `render` rendered the host has yet
+    /// to be given. Counted down, not up, so a new core is all zeros and the
+    /// static one costs nothing in the `.wasm`.
+    unserved: usize,
     mix: Mix,
     master: Master,
     /// Whether the master chain fits at this rate.
@@ -424,6 +468,7 @@ impl Core {
             sung: [const { Sung::new() }; sung::POOL],
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
             inputs: [[0.0; QUANTUM]; CHANNELS],
+            unserved: 0,
             mix: Mix::new(),
             master: Master::new(),
             master_ready: false,
@@ -452,7 +497,82 @@ impl Core {
         }
         self.strums = [0; CHANNELS];
         self.inputs = [[0.0; QUANTUM]; CHANNELS];
+        self.unserved = 0;
         self.quality(true);
+    }
+
+    /// Start the core for a host: at `rate` Hz, rendering `channels`
+    /// channels, with the full mix. The first call a native or game host
+    /// makes; the web host's worklet calls `init` and `quality` itself.
+    ///
+    /// Mono (1 channel) is the only layout there is. Asking for another
+    /// returns `Error::Layout` and leaves the core as it was, so stereo
+    /// can arrive later as a render of its own (`docs/CORE.md`, promise 9)
+    /// without anything a host already does changing.
+    ///
+    /// # Errors
+    ///
+    /// `Error::Layout` for any layout but mono, `Error::Rate` for a rate
+    /// outside `MIN_RATE` to `MAX_RATE`.
+    pub fn start(&mut self, rate: f64, channels: u32) -> Result<(), Error> {
+        if channels != 1 {
+            return Err(Error::Layout(channels));
+        }
+        if !(MIN_RATE..=MAX_RATE).contains(&rate) {
+            return Err(Error::Rate);
+        }
+        self.init(rate);
+        Ok(())
+    }
+
+    /// Render the next `out[0].len()` frames, any number, into the host's
+    /// buffer: one slice a channel of the layout chosen at `start`, so one,
+    /// all the same length. The call after this one carries on where this
+    /// one stopped, whatever the block sizes.
+    ///
+    /// The core renders internally in blocks of `QUANTUM` frames on frame
+    /// numbers that are multiples of it, so its samples do not depend on the
+    /// host's block size: asking for 1, 441 or 1,024 frames at a time gives
+    /// the same bits. What a host needs to know is when a note must be
+    /// handed over: before the block holding its start frame is rendered,
+    /// which is `next_frame` rounded up to a block. A note handed over after
+    /// that is late (`Core::late`) and starts at the next block; one handed
+    /// over before it starts on its exact sample.
+    ///
+    /// Do not mix this with `process`, which a host that owns its own block
+    /// clock (the web worklet) calls instead.
+    ///
+    /// # Errors
+    ///
+    /// `Error::Layout` if `out` does not hold exactly one channel; nothing
+    /// is rendered.
+    pub fn render(&mut self, out: &mut [&mut [f32]]) -> Result<(), Error> {
+        let [out] = out else {
+            return Err(Error::Layout(u32::try_from(out.len()).unwrap_or(u32::MAX)));
+        };
+        let mut done = 0;
+        while done < out.len() {
+            if self.unserved == 0 {
+                let block = self.next;
+                self.process(block);
+                self.unserved = QUANTUM;
+            }
+            let ready = self.master.output()[0].get(QUANTUM - self.unserved..).unwrap_or(&[]);
+            let take = ready.len().min(out.len() - done);
+            if let (Some(to), Some(from)) = (out.get_mut(done..done + take), ready.get(..take)) {
+                to.copy_from_slice(from);
+            }
+            self.unserved -= take;
+            done += take;
+        }
+        Ok(())
+    }
+
+    /// The first frame of the next block to render: every frame before it
+    /// has been rendered, and a note starting before it is late.
+    #[must_use]
+    pub fn next_frame(&self) -> u64 {
+        self.next
     }
 
     /// The mix as the synth builds it on lite quality (three combs, not
@@ -756,7 +876,7 @@ impl Core {
     }
 
     // A waiting note's start has come: give it a voice.
-    fn start(&mut self, w: Waiting) {
+    fn begin_note(&mut self, w: Waiting) {
         if self.slots.iter().all(|s| s.busy) {
             self.drop_for(VOICES_BUSY);
             return;
@@ -1040,7 +1160,7 @@ impl Core {
             {
                 *gap = last;
             }
-            self.start(w);
+            self.begin_note(w);
         }
         for bus in self.buses.iter_mut().flatten() {
             bus.fill(0.0);
@@ -1586,6 +1706,102 @@ mod tests {
         assert!(peak > 0.01 && peak < 0.5, "peak {peak}");
         assert_eq!(core.busy(), 0);
         assert!(core.sung.iter().all(|v| !v.busy));
+    }
+
+    #[test]
+    fn a_host_starts_the_core_at_a_rate_and_a_layout_or_is_told_plainly_why_not() {
+        let mut core = boxed();
+        assert_eq!(core.start(48_000.0, 1), Ok(()));
+        for (rate, channels, want) in [
+            (48_000.0, 2, Error::Layout(2)),
+            (48_000.0, 0, Error::Layout(0)),
+            (48_000.0, 6, Error::Layout(6)),
+            (8_000.0, 1, Error::Rate),
+            (22_049.0, 1, Error::Rate),
+            (MAX_RATE + 1.0, 1, Error::Rate),
+            (f64::NAN, 1, Error::Rate),
+        ] {
+            assert_eq!(core.start(rate, channels), Err(want), "{rate} Hz, {channels} channels");
+            assert!(want.message().is_ascii());
+        }
+        // The edges of the range are in it.
+        assert_eq!(core.start(22_050.0, 1), Ok(()));
+        assert_eq!(core.start(MAX_RATE, 1), Ok(()));
+        // A refused start leaves the core as it was.
+        assert_eq!(core.start(48_000.0, 2), Err(Error::Layout(2)));
+        assert!(core.mixing());
+    }
+
+    #[test]
+    fn render_refuses_a_layout_it_does_not_have_and_renders_nothing() {
+        let mut core = boxed();
+        let (mut a, mut b) = ([1.0f32; 64], [1.0f32; 64]);
+        assert_eq!(core.render(&mut [&mut a, &mut b]), Err(Error::Layout(2)));
+        assert_eq!(core.render(&mut []), Err(Error::Layout(0)));
+        assert!(a.iter().all(|x| x.to_bits() == 1.0f32.to_bits()));
+        assert_eq!(core.next_frame(), 0);
+    }
+
+    /// The same notes, taken a call at a time of any size, are the same
+    /// samples bit for bit: the core renders on its own blocks and the
+    /// host's size is no business of the sound's.
+    #[test]
+    fn the_host_may_ask_for_any_number_of_frames_a_call() {
+        let render_in = |sizes: &[usize]| -> Vec<u32> {
+            let mut core = boxed();
+            core.key(key(3, 0, 0, 0));
+            core.note(KALIMBA, MELODY, 0.0123, 72.0, 0.3, 0.6, STRIKE | BODY, NO);
+            core.note(KALIMBA, MELODY, 0.2001, 64.0, 1.5, 0.5, STRIKE, NO);
+            core.note(HAT, DRUMS_CHANNEL, 0.3, 0.0, 0.1, 0.7, 0, NO);
+            let mut all = Vec::new();
+            let mut at = 0;
+            let total = 40_000;
+            while all.len() < total {
+                let want = sizes[at % sizes.len()].min(total - all.len());
+                at += 1;
+                let mut buffer = vec![0.0f32; want];
+                core.render(&mut [&mut buffer]).expect("mono");
+                all.extend(buffer.iter().map(|x| x.to_bits()));
+            }
+            assert_eq!((core.late(), core.missed(), core.dropped()), (0, 0, 0));
+            all
+        };
+        let whole = render_in(&[40_000]);
+        assert!(whole.iter().any(|&b| f32::from_bits(b) != 0.0), "the notes sound");
+        for sizes in [&[1][..], &[64], &[127], &[128], &[129], &[441], &[1024], &[1, 2, 3, 500, 1], &[3000]] {
+            assert!(render_in(sizes) == whole, "calls of {sizes:?} frames");
+        }
+    }
+
+    #[test]
+    fn a_note_handed_over_ahead_starts_on_its_exact_sample_whatever_the_calls() {
+        // First sounding frame of a hat at 0.0123 s, calls of 1 and 777.
+        let first = |size: usize| -> usize {
+            let mut core = boxed();
+            core.note(KALIMBA, MELODY, 0.0123, 72.0, 0.3, 0.6, STRIKE | BODY, NO);
+            let mut seen = 0;
+            loop {
+                let mut buffer = vec![0.0f32; size];
+                core.render(&mut [&mut buffer]).expect("mono");
+                if let Some(i) = buffer.iter().position(|&x| x != 0.0) {
+                    return seen + i;
+                }
+                seen += size;
+            }
+        };
+        assert_eq!(first(1), first(777));
+        // And the sample is the one the time falls on, or just after (the
+        // first sample of a sine is zero): the melody before the master
+        // chain, which delays what it carries.
+        let mut core = boxed();
+        core.note(KALIMBA, MELODY, 0.0123, 72.0, 0.3, 0.6, STRIKE | BODY, NO);
+        let at = usize::try_from(osc::frame_at(0.0123, RATE)).expect("a small frame");
+        let mut start = None;
+        for b in 0..8 {
+            let melody = core.process((b * QUANTUM) as u64)[0];
+            start = start.or(melody.iter().position(|&x| x != 0.0).map(|i| b * QUANTUM + i));
+        }
+        assert!((at..=at + 2).contains(&start.expect("it sounds")), "{start:?} against {at}");
     }
 
     fn key(seed: u32, pass: u32, step: u32, ord: u32) -> Key {

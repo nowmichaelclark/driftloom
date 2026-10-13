@@ -60,6 +60,10 @@ jobs:
         run: node test/draw.test.mjs
       - name: Next picks tests
         run: node test/picks.test.mjs
+      # Level, tone and what folds back at 22,050 to 192,000 Hz against 48 kHz
+      # (queue item 45); makes the 192 kHz build of the core for itself.
+      - name: The core at other sample rates
+        run: node tools/rates.mjs
       # Playwright pinned to the version whose Chromium the baseline was
       # rendered with; the tool is a dependency of the tools, not the app.
       - name: Chromium, for the baseline
@@ -109,3 +113,14 @@ jobs:
       - name: The same, flushing subnormal numbers
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: tools/golden.sh --strict --flush ${{ matrix.target }}
+      # The speaker output must not depend on how many frames a host asks
+      # for a call (queue item 45): every list on x86-64 and wasm32, three
+      # short ones under QEMU on aarch64 and armv7. The PowerPC job (the
+      # slowest by far) renders the plain goldens only (Mikey, 2026-10-14).
+      - name: The same at every block size
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --blocks ${{ (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown') && 'all' || '' }} ${{ matrix.target }}
+      # And at other sample rates, one hash file for every target.
+      - name: The same at 22,050 to 192,000 Hz
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --rates ${{ matrix.target }}

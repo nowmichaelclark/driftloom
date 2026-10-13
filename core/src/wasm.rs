@@ -37,6 +37,15 @@ fn core() -> &'static mut Core {
     unsafe { &mut *CORE.0.get() }
 }
 
+/// Where `dl_render` puts the frames it renders.
+const RENDER_MAX: usize = 4096;
+struct Scratch(UnsafeCell<[f32; RENDER_MAX]>);
+
+// Single-threaded, as above.
+unsafe impl Sync for Scratch {}
+
+static SCRATCH: Scratch = Scratch(UnsafeCell::new([0.0; RENDER_MAX]));
+
 /// Set the sample rate and clear everything.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_init(rate: f64) {
@@ -105,6 +114,25 @@ pub extern "C" fn dl_quality(full: u32) -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_param(id: u32, op: u32, value: f64, time: f64, tau: f64) -> u32 {
     core().param(id, op, value, time, tau) as u32
+}
+
+/// Render `frames` (at most 4,096) the way a host with its own block size
+/// does, `Core::render`, and return where they are: a run of that many
+/// floats. The worklet never calls this (it owns the block clock and calls
+/// `dl_process`); the tools that check the sound does not depend on the
+/// host's block size do. 0 if the core would not render.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_render(frames: u32) -> *const f32 {
+    // SAFETY: single-threaded (above), and nothing else holds the scratch.
+    let scratch = unsafe { &mut *SCRATCH.0.get() };
+    let frames = (frames as usize).min(RENDER_MAX);
+    let Some(out) = scratch.get_mut(..frames) else {
+        return core::ptr::null();
+    };
+    match core().render(&mut [out]) {
+        Ok(()) => scratch.as_ptr(),
+        Err(_) => core::ptr::null(),
+    }
 }
 
 /// Where the host writes its own notes for the next block.

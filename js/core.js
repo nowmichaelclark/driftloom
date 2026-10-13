@@ -32,6 +32,31 @@ export function coreUnsupported() {
   return null;
 }
 
+// The highest sample rate the web core holds its delay lines and noise for
+// (core/src/lib.rs, MAX_RATE without the `wide` feature), and the rate asked
+// for instead when a context comes up faster (queue item 45): 48 kHz, which
+// the browser resamples to the device. Without it a device whose default is
+// 192 kHz would play everything in JavaScript.
+export const CORE_MAX_RATE = 96000;
+export const CORE_FALLBACK_RATE = 48000;
+
+// A new audio context from `Ctx` with `options`, on a rate the core can
+// run at: if the browser's default is above CORE_MAX_RATE, a context at
+// CORE_FALLBACK_RATE instead, and the fast one closed. If the browser will
+// not make that one, the first stands and the synth falls back to
+// JavaScript, as it always has for a core that will not run.
+export function newContext(Ctx, options = {}) {
+  const ctx = new Ctx(options);
+  if (ENGINE !== 'rust' || !(ctx.sampleRate > CORE_MAX_RATE)) return ctx;
+  try {
+    const slower = new Ctx({ ...options, sampleRate: CORE_FALLBACK_RATE });
+    try { ctx.close(); } catch { /* already gone */ }
+    return slower;
+  } catch {
+    return ctx;
+  }
+}
+
 // The voices the core plays, by the number it knows them by
 // (core/src/lib.rs), and the parts of a kalimba note (core/src/voice.rs).
 export const CORE_VOICES = {

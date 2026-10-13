@@ -1,6 +1,6 @@
 import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, loadCore, fetchCore, coreUnsupported, DROP_CAUSES, coreLog } from './core.js';
+import { ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import { Engine } from './engine.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v97';
+const BUILD = 'v98';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -120,7 +120,7 @@ let cells = null;
 function prepareAudio() {
   if (state.ctx) return;
   const Ctx = window.AudioContext || window.webkitAudioContext;
-  state.ctx = new Ctx({ latencyHint: 'playback' });
+  state.ctx = newContext(Ctx, { latencyHint: 'playback' });
   state.ctx.addEventListener('statechange', () => awayEvent(`audio ${state.ctx.state}`));
   if (ENGINE !== 'rust') return;
   const ctx = state.ctx;

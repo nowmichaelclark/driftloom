@@ -79,7 +79,7 @@ console.log('\nThe committed goldens');
     }
   }
   check('each reads, writes back the same and is plain ASCII', all);
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes'))) {
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && f !== 'rates.hashes')) {
     const rows = fs.readFileSync(path.join(dir, file), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
     const ok = rows.length === lists.length && rows.every((r) => {
       const [name, frames, ...hashes] = r.split(' ');
@@ -89,6 +89,20 @@ console.log('\nThe committed goldens');
     check(`${file} has a well-formed line for every list`, ok);
   }
 }
+
+{
+  // The lists at other sample rates (queue item 45): one line for each list
+  // and rate rates.txt names, in the golden hashes' form, NAME@RATE.
+  const rates = fs.readFileSync(path.join(dir0(), 'rates.txt'), 'utf8').split('\n');
+  const names = rates.find((l) => l.startsWith('lists ')).slice(6).trim().split(/\s+/);
+  const hz = rates.find((l) => l.startsWith('rates ')).slice(6).trim().split(/\s+/);
+  const rows = fs.readFileSync(path.join(dir0(), 'rates.hashes'), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
+  const want = hz.flatMap((r) => names.map((n) => `${n}@${r}`));
+  const ok = JSON.stringify(rows.map((r) => r.split(' ')[0])) === JSON.stringify(want)
+    && rows.every((r) => { const [, frames, ...hashes] = r.split(' '); return /^frames=\d+$/.test(frames) && hashes.length === SIGNALS.length && hashes.every((h, i) => new RegExp(`^${SIGNALS[i]}=[0-9a-f]{16}$`).test(h)); });
+  check('rates.hashes has a well-formed line for every list at every rate rates.txt names', ok);
+}
+function dir0() { return path.join(ROOT, 'core', 'golden'); }
 
 console.log(failures ? `\n${failures} failed\n` : '\nall passed\n');
 process.exit(failures ? 1 : 0);

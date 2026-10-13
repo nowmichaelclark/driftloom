@@ -19,6 +19,16 @@ license-file = "../LICENSE"
 crate-type = ["rlib"]
 
 [features]
+# Room for sample rates up to 192 kHz: the mix's delay lines, the master's
+# wobble and the noise are fixed arrays sized for the highest rate a build
+# supports (nothing allocates after start), and 192 kHz takes twice the
+# memory of 96 kHz (about 3 MB more). On by default for hosts that want the
+# charter's whole range (22,050 to 192,000 Hz); the web build leaves it off
+# (tools/build-core.sh): a browser's context runs at 96 kHz at most, and the
+# app keeps the memory it has.
+default = ["wide"]
+wide = []
+
 # The WebAssembly exports `js/worklet.js` calls (`src/wasm.rs`) and the
 # module's panic handler. Only tools/build-core.sh turns it on.
 web = []

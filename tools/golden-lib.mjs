@@ -125,11 +125,14 @@ export const SIGNALS = ['out', 'melody', 'chords', 'bass', 'texture', 'drums', '
 const QUANTUM = 128;
 const CHANNELS = 5;
 
-// Render a note list through the .wasm, the way the worklet drives it: the
-// exports, one block at a time. `keep` is the name of a signal whose
-// samples to return as well.
-export function renderWasm(bytes, list, keep = null) {
-  const { exports: x } = new WebAssembly.Instance(new WebAssembly.Module(bytes), {});
+// The same list at another sample rate, as the native host's `at_rate`: a
+// list is in seconds and Hz, so only the length in frames changes.
+export function atRate(list, rate) {
+  return { ...list, name: `${list.name}@${rate}`, rate, frames: Math.round(list.frames * rate / list.rate) };
+}
+
+// Hand a list's calls to a fresh core, as the worklet's host does.
+function load(x, list) {
   x.dl_init(list.rate);
   if (!x.dl_quality(list.quality === 'lite' ? 0 : 1)) throw new Error(`the core does not mix at ${list.rate} Hz`);
   list.events.forEach((e, n) => {
@@ -145,6 +148,39 @@ export function renderWasm(bytes, list, keep = null) {
       if (taken !== 0) throw new Error(`event ${n + 1}: the core took the note as ${taken}, not on time`);
     }
   });
+}
+
+// The speaker output of a list rendered a host's way: `size` frames a call
+// (a number, or 'random' for a different number each call, from 1 to 2000, in
+// a fixed order), through `dl_render`. Returns the samples' hash, which must
+// be the `out` hash of any other way of rendering the same list.
+export function renderWasmBlocks(bytes, list, size) {
+  const { exports: x } = new WebAssembly.Instance(new WebAssembly.Module(bytes), {});
+  load(x, list);
+  const hash = new Fnv();
+  let state = 0x2545f491;
+  for (let done = 0; done < list.frames;) {
+    let want = size;
+    if (size === 'random') {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      want = 1 + ((state >>> 8) % 2000);
+    }
+    const take = Math.min(want, 2000, list.frames - done);
+    const at = x.dl_render(take);
+    if (!at) throw new Error('the core would not render');
+    hash.samples(new Float32Array(x.memory.buffer, at, take));
+    done += take;
+  }
+  if (x.dl_dropped() || x.dl_late() || x.dl_missed()) throw new Error('the core dropped or missed notes');
+  return hash.hex();
+}
+
+// Render a note list through the .wasm, the way the worklet drives it: the
+// exports, one block at a time. `keep` is the name of a signal whose
+// samples to return as well.
+export function renderWasm(bytes, list, keep = null) {
+  const { exports: x } = new WebAssembly.Instance(new WebAssembly.Module(bytes), {});
+  load(x, list);
   const hashes = SIGNALS.map(() => new Fnv());
   const index = keep == null ? -1 : SIGNALS.indexOf(keep);
   const kept = index >= 0 ? new Float32Array(list.frames) : null;

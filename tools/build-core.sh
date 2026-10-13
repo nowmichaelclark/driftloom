@@ -4,6 +4,10 @@
 #   tools/build-core.sh          build, and replace js/dlcore.wasm
 #   tools/build-core.sh --check  build, and fail if js/dlcore.wasm differs
 #                                from the build by a single byte
+#   tools/build-core.sh --wide   build the 192 kHz variant, to
+#                                core/target/dlcore-wide.wasm (not committed:
+#                                the tools that render goldens above 96 kHz
+#                                in Node read it)
 #
 # The built file is committed (roadmap 16): the site stays plain files with
 # no build step, and the bytes that were checked are the bytes that ship.
@@ -20,10 +24,12 @@ set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 check=no
+wide=no
 case "${1:-}" in
   --check) check=yes ;;
+  --wide) wide=yes ;;
   '') ;;
-  *) echo "usage: tools/build-core.sh [--check]" >&2; exit 2 ;;
+  *) echo "usage: tools/build-core.sh [--check | --wide]" >&2; exit 2 ;;
 esac
 
 cd "$root/core"
@@ -38,7 +44,16 @@ export RUSTFLAGS
 # function (and Cargo leaves out LTO, which it does for a crate that is an
 # rlib too). Built as a cdylib alone, the same source renders about 15%
 # slower in V8 (measured by instruction count on the golden renders).
-cargo rustc --release --locked --target wasm32-unknown-unknown --features web --crate-type cdylib,rlib
+#
+# The web build leaves the `wide` feature off: a browser's context runs at 96
+# kHz at most, and the app keeps the memory it has (core/Cargo.toml).
+if [ "$wide" = yes ]; then
+  cargo rustc --release --locked --target wasm32-unknown-unknown --features web --crate-type cdylib,rlib
+  cp "$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm" "$root/core/target/dlcore-wide.wasm"
+  echo "build-core: wrote core/target/dlcore-wide.wasm ($(wc -c < "$root/core/target/dlcore-wide.wasm" | tr -d ' ') bytes)"
+  exit 0
+fi
+cargo rustc --release --locked --target wasm32-unknown-unknown --no-default-features --features web --crate-type cdylib,rlib
 
 built="$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm"
 committed="$root/js/dlcore.wasm"

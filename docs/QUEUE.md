@@ -2638,6 +2638,24 @@ Mikey decides this line:
      `installing`. It now follows the worker and lists each step with
      its time.
 
+- **Item 45, stopped at its tone yardstick, then finished on Mikey's
+  decisions (Session 21, hands, Sonnet 5.5, 2026-10-13/14, #213).** The
+  first pass stopped with three open decisions (the 2-5 kHz tone share of
+  analogpad, softpad and stab at 44.1 and 22.05 kHz; the noise's colour
+  being per-sample; 192 kHz memory) and Mikey answered them (see item 45).
+  What the numbers were, for the record. **Block independence:** all 21
+  goldens in calls of 1, 64, 128, 441, 1,024 frames and of random sizes hash
+  to the plain render's speaker output (x86-64 and wasm32). **Level** within
+  0.10 dB of 48 kHz at every rate. **What folds back** under -67 dB at every
+  rate, never more than 1.4 dB worse than 48 kHz's. **Tone**, voice by voice:
+  within 0.5 points at 96 and 192 kHz for all 19 voices; at 44.1 and 22.05
+  kHz analogpad -1.06 and -1.28 (of 16.79%), softpad -0.38 and -0.65 (of
+  4.66%), stab +0.64 and +0.97 (of 33.58%), which Mikey accepted up to 1.5
+  points. Whole lists: 18-shatter at 22.05 kHz is 1.13 points under its 48
+  kHz share, reported not held. I grepped for hidden rate constants: none in
+  the code except the tests' `44100` and the noise's poles. Memory: the web
+  build 14,745,600 bytes; the `wide` build 17,563,648 (2.8 MB more).
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -3113,3 +3131,23 @@ Mikey decides this line:
   Previous, Pause and Play from the lock screen straight away: each lands
   about two seconds later, with no skip or hole; on screen, a mute or re-roll
   still lands at once. Nothing in the sound itself changed.
+- #211, the randomness moves into the core (core phase 1, item 44, v95),
+  https://5f3b317d-driftloom.nowmichaelclark.workers.dev: a draw is a pure
+  function of the loop's seed, the pass, the note's place in its layer and the
+  kind of draw, so the same code plays the same audio every time (the baseline
+  renders its 40 loops again with another `Math.random` and all 40 are
+  bit-identical); the core makes its own noise; "Let the loop wander" is drawn
+  from the loop's seed and the pass. Different draws from the same
+  distributions: 37 of 40 loops changed in detail (at most 0.16 LU louder or
+  quieter). Listen for: nothing; a control album should sound the same as
+  before.
+- #213, any sample rate, any block size, any channel layout (core phase 1,
+  item 45, v98), https://b663e0c6-driftloom.nowmichaelclark.workers.dev: the
+  core takes 22,050 Hz up to its build's highest rate (192 kHz native, 96 kHz
+  in the web build) and renders any number of frames a call with the same
+  bits; mono is the only layout and anything else is refused in plain words;
+  the noise's colour is the same at every rate (exactly as before at 48 kHz);
+  a browser context faster than 96 kHz is asked to run at 48 kHz instead. At
+  44.1 kHz 36 of 40 baseline loops change in detail, by at most 0.03 LU.
+  Listen for: nothing; the control album should sound the same, a 44.1 kHz
+  phone's hats, breaths and textures a hair different at most.

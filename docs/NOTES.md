@@ -912,6 +912,45 @@ any pass can be reached without playing the ones before it.
 `tools/baseline.mjs` renders its loops a second time with another
 `Math.random` and fails if a single bit moves.
 
+### Any rate, any block, any layout
+
+Queue item 45 (charter promise 4). A host that is not the web worklet starts
+the core with `Core::start(rate, channels)` and takes its samples with
+`Core::render`, any number of frames a call:
+
+- **Block size.** The core still renders in blocks of 128 frames on frame
+  numbers that are multiples of 128 (`QUANTUM`; every envelope, filter and
+  parameter was proven on that grid), and `render` buffers between its own
+  blocks and the host's. So the host's block size cannot change a sample:
+  `tools/golden.sh --blocks` renders the goldens in calls of 1, 64, 128,
+  441 and 1,024 frames, and of a different size each call, on every target
+  (natively and, through `dl_render`, in Node) and the speaker output is the
+  plain render's to the bit. What a host needs to know is when a note must
+  be handed over: before the block holding its start frame is rendered
+  (`Core::next_frame`). Earlier, it starts on its exact sample; later, it is
+  late and starts at the next block, as in the browser.
+- **Rate.** 22,050 to 192,000 Hz (`MIN_RATE`, `MAX_RATE`); `start` refuses
+  anything else in plain ASCII. The mix's delay lines, the master's wobble
+  and the noise are fixed arrays, so the highest rate is chosen when the
+  core is built: the `wide` feature (on by default) holds 192 kHz, about 3
+  MB more than the web build's 96 kHz, which leaves it off
+  (`tools/build-core.sh`; `--wide` makes the big one for the tools). Nothing
+  in the core knows 44.1 or 48 kHz as a number except the tests and the noise:
+  its colour was written as per-sample filter poles, so it is carried to
+  other rates (`rng::noise_buffer`: poles to the power 48000/rate, gains and
+  level to match; every factor is exactly 1 at 48 kHz) and sounds the same
+  band for band at all of them. A browser context faster than the web build
+  holds (96 kHz) is asked to come up at 48 kHz instead (`newContext` in
+  `js/core.js`). `tools/golden.sh --rates` pins three lists at 22,050,
+  44,100, 96,000 and 192,000 Hz to hashes that every target must make, and
+  `tools/rates.mjs` measures level, tone and what folds back against the 48
+  kHz render.
+- **Layout.** Mono is the only layout. `start` with any other count of
+  channels, or `render` with other than one slice, returns
+  `Error::Layout` ("not supported yet") and renders nothing; the master chain
+  already runs per lane (`master::OUT`), so stereo can come as a render of its
+  own (charter promise 9).
+
 ### The first note
 
 The core is loaded as the page loads, not on the first tap: `js/main.js`
