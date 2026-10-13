@@ -4,7 +4,7 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 
 ## What this is
 
-- **Current file:** `driftloom_v18.html`. One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
+- **Current file:** `driftloom_v19.html` (v19, Painter session 6: the next picks). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
 - **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec stays in step with the app as long as it is baked again after every change to the look.
 - **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) are kept unchanged in `archive/driftloom_v17_library.html`.
 
@@ -19,8 +19,9 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 ```
 cd design/test-kit
 npm install            # Playwright; if the sandbox already has a Chromium, pin playwright to its version
-node bake.mjs          # writes ../driftloom_v18.html
-node sheet18.mjs ../driftloom_v18.html out/sheet.png --places layers --themes all
+node bake.mjs          # writes ../driftloom_v19.html
+node sheet18.mjs ../driftloom_v19.html out/sheet.png --places layers --themes all
+node picks_shots.mjs out/picks --themes all --sizes 100,200   # the next picks in the app, measured
 ```
 
 The bake prints the sample loop, the zone heights it measured and a check that the Layers notes it read from the generator match what the app drew. A design idea can still be tried by hand in a copy of the baked file; once it is agreed, it goes into the app and the spec is baked again.
@@ -32,9 +33,25 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - **Baked:** every view's markup and card at each text size. The app fits the Info card in script, so each text size is its own capture; the rest follows the stylesheet live.
 - **What the bake changes in the app's markup:** each canvas becomes a picture of what it drew, inputs keep their values as attributes, the moving marks (lit cell, halo column, clock) are cleared for the page's script to put back, and scripts are left out.
 - **Three changes the bake makes to the stylesheet** (noted at the top of the file): fonts inlined; the short-screen rule (`max-height: 700px`) switched off, since the spec phone is never that short; the reduced-motion rules copied under `html.sim-reduced-motion` for the review switch.
-- **For scripts:** `window.spec` has `show(place)`, `setTheme(cls)`, `setSize(pct)`, `setPlaying(bool)`, `audit()` and the lists of places, themes and sizes. The address bar takes the same: `driftloom_v18.html#view=library:loops&theme=t-dawn&size=150&paused&insets=android`.
+- **For scripts:** `window.spec` has `show(place)`, `setTheme(cls)`, `setSize(pct)`, `setPlaying(bool)`, `audit()` and the lists of places, themes and sizes. The address bar takes the same: `driftloom_v19.html#view=library:loops&theme=t-dawn&size=150&paused&insets=android`.
 
-## What changed since v17
+## What changed in v19 (Painter session 6, build v97)
+
+The chosen next-picks design (`next-picks.md`) is in the app and baked as three new places: **now:free** (Now Playing outside an album), **picks** (New loops) and **length** (the Length picker).
+
+- **Now Playing outside an album:** no "Next: …" line. The picked values sit under the clock as outline pills (moods on row one, tempo and length on row two, more than three moods end in "…"), only picked values, a dashed "anything" when nothing is picked. The pills are one button that opens New loops. **In an album, Now Playing is unchanged.**
+- **New loops:** five lines, a close key, an any key per line (lit while the line is left to chance; an unlit one clears the line, line two both tempo and length). Moods open today's Vibes list (whose close then comes back to the panel); length opens the Length picker. Tempo, key, style and voices have no picker yet, so they can't be tapped.
+- **Length:** cancel / Length / done; −1, the number (tap to type), +1; the doubling slider (16 stops, 1 to 32,768; a number between stops sits between them; arrows step a stop); an Endless switch; the body centered; no explainer text. Cancel restores the earlier length, "any" included.
+- **Colors** as the brief: theme tokens `--pk-mood`, `--pk-tempo`, `--pk-length`, `--pk-key`, `--pk-style`, `--pk-voices`, with the darker set in Dawn, Ember, Tidal and Olive. They only outline pills and color the slider and switch. One addition: in the four light themes the slider thumb and the lit switch get a 1px edge in the text color, because the length color is under 3:1 on the Ember (2.45) and Tidal (2.89) panels; with the edge it is 4.1:1 or more.
+- **Wiring (`js/picks.js`):** moods are today's vibes. Length and tempo bend new loops in today's generator, clamped to what it plays (`docs/BRAIN.md`, "Two tracks"): 1–32 bars become the loop's own length, played once, then the next new loop; longer lengths keep the loop as drawn and play it in whole passes, the nearest to that length (so roughly: 40 bars of a 16-bar loop play 48); Endless and "any" loop until skipped, as before. A tempo pick clamps the loop's bpm into its range (within 32–190). There is no tempo picker yet, so tempo can only come from the prefs (the bake seeds 70–85 bpm). Key, style and voices read "any". The Vibes key is left as it was (open question 1 in the brief).
+- **Fit:** nothing new scrolls. The panel's text follows the size setting up to 1.5× (like the Info meta); when long picks would not fit, the fit guard steps that cap down toward 1× (never below the 100% size), then takes the lines' padding away. Where the brief's layout can't hold, it reflows rather than overflow: a pill too wide for its row wraps between words (the widest moods, such as "adventurous, enthusiastic, experimental…", wrap even at 100%, though the brief says pills never wrap), and tempo and length stack on line two when they don't fit side by side (at 200% with everyday picks, and at 100% only for the widest pair, such as "100–120 bpm" with "32,768 bars"). The Length number is capped at 64px (1.33×) so five digits fit between −1 and +1.
+- **Rings:** the picked pill's 1.25px ring is an inset shadow, so it is drawn at 1.25px; the dashed pill's 1.5px dashed border is drawn at 1px by Chromium (a dashed line can't be a shadow).
+- **The play-time line** ("bars · ≈ 35–40 s") uses the playing loop's metre and the picked tempo range (or the playing loop's tempo); the brief's 45–55 s is for 4/4.
+- **Measured** (`test-kit/picks_shots.mjs`, all nine themes at 100, 130, 150 and 200%, four sets of picks: everyday, long, nothing, and the widest there are): every target in the three views is 44px or more, nothing scrolls, nothing spills past the view or the panel, no page errors. The spec's audit line finds nothing new (only open item 3 and the track name's height, as before).
+- **v18 file** moved to `archive/driftloom_v18.html`, beside v17.
+- **Also fixed:** the Vibes key's count now stays with its word ("vibes · 2" broke after the dot at 200%).
+
+## What changed from v17 to v18
 
 - One phone instead of nine; the theme is picked inside it.
 - Bottom keys: no LEDs or latched look; Row 3 is two keys (Now Playing, and the Sound / Layers switch).
@@ -45,6 +62,8 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 
 ## Reference images (`reference/`)
 
+- `v19_next_picks_nine_themes_100.png`, `v19_next_picks_nine_themes_200.png`: the three next-picks places (Now Playing outside an album, New loops, Length) in all nine themes, at 100% and 200% text, baked from the app.
+- `next_picks_1_everyday_nocturne.png`, `next_picks_2_long_ellipsis_dawn.png`, `next_picks_3_nothing_endless_dark.png`: the brief's three renders of the chosen next picks (the brief's text wins where they differ).
 - `v18_nine_themes_layers.png`: Layers in all nine themes.
 - `v18_every_view_nocturne.png`: every place in Nocturne.
 - `v18_text_sizes_now.png`: Now Playing in Dawn at 100, 130, 150 and 200%.
@@ -66,6 +85,8 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - **Round four (2026-10-13):** Now Playing shows the new-loop picks only outside an album. While an album plays, the album is what comes next, so the picks stay hidden. More than three moods end in an ellipsis ("merry, tender, dreamy…"). The length picker sits centered rather than top-heavy and has no explainer text ("tap the number to type", "plays until you skip").
 
 ## Open items
+
+0. **Next picks, open questions (from the brief):** the way into New loops during an album (today's Vibes key, renamed "new loops", only in an album?), and how to set only tempo or only length back to "any". Pickers for tempo, key, style and voices are not designed yet.
 
 1. **Measure the app against the standard.** Port the v17 test kit (`test-kit/`) to the v18 file: one phone, a theme at a time, through `window.spec`. Since the file is the app's own drawing, that measures the app. Until then the v17 numbers describe the v17 drawings, not the app.
 2. **Decide: the Info card drops lines when it is full.** v17's rule was that nothing in it is ever dropped (lines took turns, the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away.

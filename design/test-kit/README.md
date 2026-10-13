@@ -2,17 +2,19 @@
 
 Playwright scripts for the design spec.
 
-## v18: baking the spec, and contact sheets
+## v18 and v19: baking the spec, and contact sheets
 
     npm install
-    node bake.mjs                                   # writes ../driftloom_v18.html from the app
-    node sheet18.mjs ../driftloom_v18.html out/s.png --places all --themes t-dawn --sizes 100
+    node bake.mjs                                   # writes ../driftloom_v19.html from the app
+    node sheet18.mjs ../driftloom_v19.html out/s.png --places all --themes t-dawn --sizes 100
+    node picks_shots.mjs out/picks --themes all --sizes 100,200 --set everyday,long,nothing,worst
 
 | Script | What it does |
 |---|---|
 | bake.mjs | Runs the app (repo root) in headless Chromium at 340 × 780, seeds 30 loops and five albums, plays an album, visits every view at 100 / 130 / 150 / 200% and writes the spec from `spec.template.html` |
 | spec.template.html | The page around the phone: review controls, notes, the script that makes the keys work |
-| sheet18.mjs | Contact sheets of the v18 file through its `window.spec` (`--places`, `--themes`, `--sizes`, `--paused`, `--insets android`) |
+| picks_shots.mjs | The next picks in the app itself (Now Playing outside an album, New loops, Length): one PNG per view, theme, size and set of picks, and a JSON line per shot measuring targets under 44px, scrollers, overflow and anything outside the panel |
+| sheet18.mjs | Contact sheets of the v18 / v19 file through its `window.spec` (`--places`, `--themes`, `--sizes`, `--paused`, `--insets android`) |
 
 ## v17: the compliance measurements
 
