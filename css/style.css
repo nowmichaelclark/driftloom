@@ -2,7 +2,10 @@
    brought into the app in Painter session 4.
 
    The look, the nine themes and every measured number come from
-   design/driftloom_v17_library.html. The middle of this file is that
+   design/archive/driftloom_v17_library.html. Since v18 (Painter session
+   5) the spec is baked from this app instead: design/driftloom_v18.html
+   is this stylesheet and the app's own markup, so bake it again
+   (design/test-kit/bake.mjs) after changing the look. The middle of this file is that
    spec's stylesheet, lifted section by section (zones, shared controls,
    the nine theme blocks, the v17 views, the theme swatches) so the two
    can be diffed. This first part fits the mockup's fixed 340 x 780 phone
@@ -62,7 +65,7 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 }
 
 /* ============================================================
-   FROM THE SPEC: design/driftloom_v17_library.html
+   FROM THE SPEC: design/archive/driftloom_v17_library.html
    ============================================================ */
 
 /* Zone 1 — Info */

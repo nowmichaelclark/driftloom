@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Driftloom spec v18</title>
+<!--
+  ================================================================
+  DRIFTLOOM · DESIGN SPEC · v18 (Painter session 5, 2026-10-13)
+  ================================================================
+
+  START HERE
+
+  This file is BAKED. It is not edited by hand: design/test-kit/bake.mjs
+  runs the real app (index.html, js/, css/style.css) in headless
+  Chromium on a 340 x 780 screen, visits every view, and copies what the
+  app drew into this one file. The page around the phone comes from
+  design/test-kit/spec.template.html.
+
+    - To change how the phone looks: change the app (css/style.css,
+      index.html, js/ui.js, js/library.js), then bake again.
+    - To change this page (review controls, notes, tables): change
+      spec.template.html, then bake again.
+    - To bake:  cd design/test-kit && npm install && node bake.mjs
+
+  Until v17 it went the other way: the spec was drawn by hand, nine
+  phones side by side, and the app followed it (Painter session 4 ported
+  v17 in). Once the app had moved on (the Vibes key and view, Sound,
+  Save and Share, the real cover art, the readout fitter), Mikey asked
+  for the spec to show the app as it is, as one phone whose theme is
+  picked inside it (Library > More), the way the app does it.
+
+  v17 and its full handover (sessions 1 to 12, v13 to v17) are kept,
+  unchanged, in design/archive/driftloom_v17_library.html.
+
+  WHAT IS LIVE AND WHAT IS BAKED
+
+  Live, worked by this page's script: the keys move between views by
+  the app's own rules (main.js setView), Library tabs and albums, More
+  and Advanced, Save and Share; the theme swatches; Play / Pause; the
+  playhead and the halo column, at the loop's tempo; the layer rows bar
+  by bar (the notes come from the app's generator); layer on/off;
+  picking vibes; ticking albums in Save; the sliders; the Now Playing
+  clock. Everything that would make music, change data or open the
+  keyboard shows a short note on the phone instead.
+
+  Baked: every view's markup, every card, at 100 / 130 / 150 / 200%
+  text. The app fits its Info card in script (ui.js fitName and the
+  readout levels), so each text size is a separate capture; the rest of
+  the layout follows the stylesheet's container queries live.
+
+  The stylesheet is css/style.css, inlined whole, with three changes
+  made by the bake: fonts inlined, the short-screen rule
+  (@media max-height: 700px) switched off because the spec phone is never
+  that short, and the reduced-motion rules copied under
+  html.sim-reduced-motion so the review switch can show them. Then a
+  small block of page rules (below, "SPEC PAGE") puts the app's
+  full-screen phone into a 340 x 780 frame with simulated insets and a
+  status bar.
+
+  THE TEST KIT
+
+  The v17 scripts in test-kit/ measure the v17 file and need its nine
+  phones; run them against design/archive/driftloom_v17_library.html.
+  For v18 the page offers window.spec (see the script at the end):
+  show(place), setTheme(cls), setSize(pct), setPlaying(bool), audit().
+  The address bar takes the same, e.g.
+    driftloom_v18.html#view=library:loops&theme=t-dawn&size=150
+  test-kit/sheet18.mjs makes contact sheets from it.
+-->
+<style>
+/*BAKE:CSS*/
+</style>
+<style>
+/* ================================================================
+   SPEC PAGE
+   Everything below is the page around the phone, plus the frame
+   that turns the app's full-screen phone into a 340 x 780 one. Page
+   classes start with pg- so they never meet the app's own.
+   ================================================================ */
+
+html, body {
+  height: auto; min-height: 100%;
+  overflow: visible;
+  overscroll-behavior: auto;
+  background: #0a0a0c;
+}
+body.pg {
+  color: #c8c8ce;
+  background: radial-gradient(1200px 600px at 50% -200px, #1e1e22 0%, transparent 70%), #0a0a0c;
+  padding: 48px 24px 96px;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px; line-height: 1.6;
+}
+/* Page chrome stays in px, so only the phone grows with Text size. */
+.pg-mono { font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace; }
+.pg-serif { font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; }
+
+.pg-head { max-width: 1120px; margin: 0 auto 36px; }
+.pg-eyebrow { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #8a8a92; margin-bottom: 14px; }
+.pg-head h1 {
+  font-weight: 400; font-size: clamp(30px, 4.4vw, 44px); line-height: 1.1; letter-spacing: -0.015em;
+  color: #f2f2f4; margin-bottom: 12px;
+}
+.pg-head h1 span { color: #8e8e98; }
+.pg-head p { font-size: 15px; max-width: 680px; color: #a0a0a8; }
+.pg-head p b { color: #e6e6ea; font-weight: 600; }
+
+.pg-grid {
+  max-width: 1120px; margin: 0 auto;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 48px; align-items: start;
+}
+.pg-stage { position: sticky; top: 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.pg-cap { font-size: 11px; letter-spacing: 0.06em; color: #8a8a92; text-align: center; max-width: 340px; }
+.pg-cap b { color: #d6d6dc; font-weight: 500; }
+@media (max-width: 900px) {
+  .pg-grid { grid-template-columns: minmax(0, 1fr); }
+  .pg-stage { position: static; }
+}
+
+/* ---------- review controls ---------- */
+.pg-panel {
+  background: #131316; border: 1px solid #26262c; border-radius: 14px;
+  padding: 20px 22px; margin-bottom: 20px;
+}
+.pg-panel h2 {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 500;
+  color: #9a9aa2; margin-bottom: 12px;
+}
+.pg-ctl { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px 14px; align-items: start; }
+.pg-ctl > .pg-k {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a92; padding-top: 8px;
+}
+.pg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pg-chip { position: relative; display: inline-flex; }
+.pg-chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pg-chip span {
+  display: inline-block; padding: 6px 11px; border-radius: 8px;
+  background: #1a1a1e; border: 1px solid #2a2a31; color: #b8b8be;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: 0.02em;
+  cursor: pointer; user-select: none;
+}
+.pg-chip input:checked + span { background: #2a2140; border-color: #8a6fe0; color: #f0ecfa; }
+.pg-chip input:focus-visible + span { outline: 2px solid #b9a6f5; outline-offset: 2px; }
+.pg-chip span:hover { border-color: #3d3d47; color: #e6e6ea; }
+.pg-audit {
+  margin-top: 14px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11.5px; line-height: 1.7; color: #b8f4c0;
+}
+.pg-audit.bad { color: #f0b478; }
+.pg-audit .dim { color: #8a8a92; }
+
+/* ---------- notes and tables ---------- */
+.pg-notes h2 { margin-top: 4px; }
+.pg-notes p, .pg-notes li { color: #b4b4bc; font-size: 13.5px; }
+.pg-notes p + p { margin-top: 8px; }
+.pg-notes ul { margin: 6px 0 0 18px; padding: 0; }
+.pg-notes li { margin: 4px 0; }
+.pg-notes b { color: #ececf0; font-weight: 600; }
+.pg-notes code, .pg-notes kbd {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px;
+  background: #1c1c21; color: #dcdce2; padding: 1px 5px; border-radius: 4px;
+}
+.pg-notes a { color: #b9a6f5; }
+.pg-tag {
+  display: inline-block; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 4px; margin-right: 4px; vertical-align: 1px;
+}
+.pg-tag.new { color: #b8f4c0; background: rgba(143,224,149,0.12); border: 1px solid rgba(143,224,149,0.3); }
+.pg-tag.gone { color: #f0b478; background: rgba(224,149,74,0.12); border: 1px solid rgba(224,149,74,0.32); }
+.pg-tag.open { color: #a8c8f8; background: rgba(120,160,240,0.12); border: 1px solid rgba(120,160,240,0.32); }
+.pg-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
+.pg-table th, .pg-table td { text-align: left; padding: 6px 8px; border-top: 1px solid #222228; vertical-align: top; }
+.pg-table th { color: #8a8a92; font-weight: 500; width: 40%; }
+.pg-table td { color: #dcdce2; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; }
+.pg-table caption { caption-side: bottom; text-align: left; color: #7a7a84; font-size: 11.5px; padding-top: 8px; }
+
+/* ================================================================
+   THE FRAME: the app's phone at 340 x 780 plus insets
+   ================================================================ */
+/* Simulated safe-area insets. Desktop has no notch, so env() is 0 and
+   the insets would be invisible; these reproduce the iPhone 15 Pro. */
+body.pg { --safe-top: 59px; --safe-bottom: 34px; }
+body.pg.sim-android { --safe-top: 24px; --safe-bottom: 48px; }
+body.pg.use-real-insets {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-max-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+.pg-stage .phone {
+  width: 340px;
+  height: calc(780px + var(--safe-top) + var(--safe-bottom));
+  padding: var(--safe-top) 0 var(--safe-bottom);
+  border-radius: 44px;
+  flex: 0 0 auto;
+  box-shadow:
+    0 50px 90px -30px rgba(0,0,0,0.85),
+    0 0 0 1px rgba(255,255,255,0.055),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+/* The app's Buttons zone is min(240px, 34dvh): a third of a short
+   screen at most. On this phone (873px with iPhone insets) that is
+   always 240px; written out so a short browser window does not shrink
+   it. The toast sits just above it, as in the app. */
+.pg-stage .phone > .zone-buttons { flex-basis: 240px; }
+.pg-stage .phone .toast { bottom: calc(240px + 12px + var(--safe-bottom)); }
+
+/* OS chrome: the status bar in the top inset, and the home indicator
+   or the three-button bar in the bottom one. The OS draws these, so
+   they stay in px. Each theme colours .status in the app's sheet. */
+.pg-stage .phone .status {
+  position: absolute; top: 18px; left: 0; right: 0; z-index: 30;
+  display: flex; justify-content: space-between; padding: 0 30px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; pointer-events: none;
+}
+body.pg.sim-android .phone .status { top: 5px; padding: 0 18px; }
+body.pg.use-real-insets .phone .status { display: none; }
+.pg-stage .phone .status .bat {
+  display: inline-block; width: 20px; height: 10px; vertical-align: -1px; margin-right: 4px;
+  border: 1.4px solid currentColor; border-radius: 2.5px; position: relative;
+}
+.pg-stage .phone .status .bat::after { content: ''; position: absolute; inset: 1.5px; width: 55%; background: currentColor; border-radius: 1px; }
+.pg-stage .phone .os-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; height: var(--safe-bottom);
+  display: flex; align-items: center; justify-content: center; gap: 64px; pointer-events: none; z-index: 30;
+}
+.pg-stage .phone .os-bottom i {
+  display: block; width: 128px; height: 5px; border-radius: 3px; background: currentColor; opacity: 0.55;
+}
+.pg-stage .phone .os-bottom b { display: none; width: 14px; height: 14px; border: 1.6px solid currentColor; opacity: 0.6; }
+body.pg.sim-android .phone .os-bottom i { display: none; }
+body.pg.sim-android .phone .os-bottom b { display: block; }
+body.pg.sim-android .phone .os-bottom b:nth-of-type(1) { border-radius: 2px; }
+body.pg.sim-android .phone .os-bottom b:nth-of-type(2) { border-radius: 50%; }
+body.pg.sim-android .phone .os-bottom b:nth-of-type(3) {
+  width: 0; height: 0; border: 0; opacity: 0.6;
+  border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 12px solid currentColor;
+}
+body.pg.use-real-insets .phone .os-bottom { display: none; }
+.pg-stage .phone .os-bottom { color: var(--text-secondary, #888); }
+
+/* Review aid: trace the drawn edge of every tap target. */
+body.pg.show-targets .phone button,
+body.pg.show-targets .phone [role="button"],
+body.pg.show-targets .phone input[type="range"] { outline: 1px dashed #ff4fa3; outline-offset: 0; }
+body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; }
+</style>
+</head>
+<body class="pg">
+
+<header class="pg-head">
+  <div class="pg-eyebrow pg-mono">Driftloom · design spec · v18 · baked from the app <!--BAKE:DATE--></div>
+  <h1 class="pg-serif">One phone, as the app draws it.<br><span>Pick its theme inside it.</span></h1>
+  <p>This is the app's own screen, copied from the app itself, on a 340 × 780 phone. Use it like the app: the keys at the bottom move between views, <b>Library › More</b> picks the theme, Play starts the playhead. The controls on the right are review tools that the app does not have.</p>
+</header>
+
+<div class="pg-grid">
+
+  <div class="pg-stage" id="stage">
+    <!--BAKE:PHONE-->
+    <p class="pg-cap pg-mono" id="caption"></p>
+  </div>
+
+  <div>
+    <section class="pg-panel" aria-labelledby="rev-h">
+      <h2 id="rev-h">Review</h2>
+      <div class="pg-ctl">
+        <span class="pg-k" id="k-view">View</span>
+        <div class="pg-chips" role="radiogroup" aria-labelledby="k-view" id="viewChips"></div>
+
+        <span class="pg-k" id="k-size">Text size</span>
+        <div class="pg-chips" role="radiogroup" aria-labelledby="k-size" id="sizeChips"></div>
+
+        <span class="pg-k" id="k-ins">Insets</span>
+        <div class="pg-chips" role="radiogroup" aria-labelledby="k-ins">
+          <label class="pg-chip"><input type="radio" name="insets" value="ios" checked><span>iPhone 15 Pro</span></label>
+          <label class="pg-chip"><input type="radio" name="insets" value="android"><span>Android</span></label>
+          <label class="pg-chip"><input type="radio" name="insets" value="real"><span>This device</span></label>
+        </div>
+
+        <span class="pg-k" id="k-aid">Aids</span>
+        <div class="pg-chips" role="group" aria-labelledby="k-aid">
+          <label class="pg-chip"><input type="checkbox" id="aidTargets"><span>Touch targets</span></label>
+          <label class="pg-chip"><input type="checkbox" id="aidMotion"><span>Reduced motion</span></label>
+        </div>
+      </div>
+      <p class="pg-audit" id="audit" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="pg-panel pg-notes" aria-labelledby="new-h">
+      <h2 id="new-h">What changed since v17</h2>
+      <p>v17 was drawn by hand and then brought into the app. The app has moved on since, and v18 shows it as it is now. Against v17:</p>
+      <ul>
+        <li><span class="pg-tag gone">changed</span><b>One phone instead of nine.</b> The theme is picked inside it, in Library › More, as in the app.</li>
+        <li><span class="pg-tag gone">changed</span><b>Bottom keys.</b> No LEDs and no latched look; only Play and the Sound / Layers switch change their icons. Row 3 is two keys: Now Playing, and the switch (Mikey's choice when the design came into the app).</li>
+        <li><span class="pg-tag gone">changed</span><b>No drawn status-bar gap.</b> The Info zone's 40px top padding made room for a drawn status bar; in the app the inset does that, so the card sits 10px below it. The Info zone is shorter and the Dynamic zone taller (see the table).</li>
+        <li><span class="pg-tag gone">changed</span><b>The Info card.</b> Real cover art. Its lines are the app's readout: up to three styles and feelings, key, tempo, meter and bars, a form word (airy, drifting) and the album that is playing. When they do not fit, the lesser feelings and styles fold away (ui.js), where v17's lines took turns.</li>
+        <li><span class="pg-tag new">new</span><b>Now Playing</b> has the Vibes key at its top left; <b>Vibes</b> is a view of its own.</li>
+        <li><span class="pg-tag new">new</span><b>Sound</b> (seven sliders), <b>Save</b> (tick the albums this loop is in) and <b>Share</b> are drawn, where v17 left them unbuilt.</li>
+        <li><span class="pg-tag new">new</span><b>The Layers rows</b> follow the playhead bar by bar, as in the app.</li>
+      </ul>
+    </section>
+
+    <section class="pg-panel pg-notes" aria-labelledby="num-h">
+      <h2 id="num-h">Measured from the app</h2>
+      <table class="pg-table" id="numbers"></table>
+    </section>
+
+    <section class="pg-panel pg-notes" aria-labelledby="rule-h">
+      <h2 id="rule-h">Rules that carry over from v17</h2>
+      <p>These held for the v17 drawings and the app was built to them. They have not been re-measured on the app yet (the v17 test kit measures the v17 file); that is the next step.</p>
+      <ul>
+        <li><b>Three zones,</b> fixed heights; nothing pops up. Only lists scroll: the Library's lists, Advanced, the Vibes list and Save's albums.</li>
+        <li><b>Two settings:</b> Theme and Lighter on processor. One behavior for everybody.</li>
+        <li><b>Text</b> is 11px or larger and in rem (the status bar excepted). Numbers stay with their words (no-break spaces).</li>
+        <li><b>Every control is a native button</b> with a name. On/off is a switch; Play swaps its name between Play and Pause.</li>
+        <li><b>Contrast</b> is measured from pixels: text 4.5:1; notes, beat cells, the lit cell and focus rings 3:1. Off-beat cells and empty-slot dots are decorative.</li>
+        <li><b>Light-theme notes</b> keep their chroma; Olive keeps to warm hues.</li>
+        <li><b>Reduced motion</b> means nothing moves. Every mark drawn as a background color has a forced-colors rule.</li>
+        <li><b>Touch targets:</b> roll and on/off are drawn at 48 × 48, with no invisible hit pads.</li>
+      </ul>
+    </section>
+
+    <section class="pg-panel pg-notes" aria-labelledby="open-h">
+      <h2 id="open-h">Open items</h2>
+      <ul>
+        <li><span class="pg-tag open">next</span><b>Measure the app against the standard.</b> Port the v17 test kit to this file (one phone, a theme at a time). It is the same as measuring the app, since this file is the app's own drawing.</li>
+        <li><span class="pg-tag open">decide</span><b>The Info card drops lines when it is full.</b> v17's rule was that nothing in it is ever dropped; lines took turns instead (the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away. Keep the app's way, or bring the turns back?</li>
+        <li><span class="pg-tag open">found</span><b>At big text sizes the Info card cuts off its last line.</b> At 200% the readout is taller than its column (as tall as the art) even after folding as far as it goes, so the last line is clipped; the audit line above says so when it happens. It is the app's own behavior, not a baking artifact.</li>
+        <li><span class="pg-tag open">open</span><b>The Play / Pause glyph is under 3:1</b> in Dawn, Tidal, Olive and Night Light (found in v17, not yet fixed).</li>
+        <li><span class="pg-tag open">later</span>Safari, Firefox, VoiceOver and TalkBack, once the design is locked.</li>
+      </ul>
+    </section>
+
+    <section class="pg-panel pg-notes" aria-labelledby="how-h">
+      <h2 id="how-h">How this file is made</h2>
+      <p>It is <b>baked</b>: <code>design/test-kit/bake.mjs</code> runs the real app in headless Chromium at 340 × 780, seeds a library (30 loops, five albums, from fixed seeds), plays one of the albums, visits every view at each text size, and copies what the app drew. The phone's stylesheet is <code>css/style.css</code> itself. So to change the look, change the app and bake again; to change this page, edit <code>design/test-kit/spec.template.html</code>.</p>
+      <p>Baked <!--BAKE:DATE--> from <code id="bakedFrom"></code>. v17 and its handover (sessions 1–12) are in <code>design/archive/</code>.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const D = /*BAKE:DATA*/null;
+</script>
+<script>
+/* ================================================================
+   The spec's script. The phone's markup and the app's stylesheet do
+   the drawing; this swaps in each view's baked markup and keeps the
+   few things that move moving. Navigation follows js/main.js
+   (setView, the key handlers) and js/library.js (setTab, openAlbum).
+   ================================================================ */
+(function () {
+  'use strict';
+  var app = document.getElementById('app');
+  var $ = function (id) { return document.getElementById(id); };
+  var THEMES = [];
+
+  // ---------- where we are (main.js and library.js keep the same) ----------
+  var S = {
+    state: 'now', size: 100, playing: true, theme: 't-nocturne',
+    lastView: 'now', lastEdit: 'layers',
+    lib: { tab: 'albums', album: null, advanced: false },
+    saveTab: 'albums',
+    mutes: {}, vibes: [], saved: null, lite: null,
+  };
+  var BASE = ['now', 'sounds', 'layers'];
+  var viewOf = function (state) { return state.split(':')[0]; };
+
+  // ---------- pictures: kept once, pointed at by data-art ----------
+  function paintArt(root) {
+    var imgs = (root || app).querySelectorAll('img[data-art]');
+    for (var i = 0; i < imgs.length; i++) {
+      var k = imgs[i].getAttribute('data-art');
+      if (k !== '' && D.art[k] && imgs[i].getAttribute('src') !== D.art[k]) imgs[i].src = D.art[k];
+    }
+  }
+
+  // ---------- one baked place ----------
+  function variant(state) {
+    var s = D.states[state], base = s.sizes[100], v = s.sizes[S.size] || {};
+    return {
+      view: s.view,
+      html: v.html != null ? v.html : base.html,
+      card: v.card != null ? v.card : base.card,
+      keys: v.keys != null ? v.keys : base.keys,
+      playheadHidden: v.playheadHidden != null ? v.playheadHidden : base.playheadHidden,
+    };
+  }
+
+  function show(state) {
+    if (!D.states[state]) return false;
+    var v = variant(state);
+    S.state = state;
+    var views = app.querySelectorAll('.view');
+    for (var i = 0; i < views.length; i++) views[i].hidden = views[i].id !== v.view;
+    $(v.view).innerHTML = v.html;
+    $('card').innerHTML = v.card;
+    app.querySelector('.zone-buttons').innerHTML = v.keys;
+    $('playhead').style.visibility = v.playheadHidden ? 'hidden' : '';
+    paintArt();
+    restore();
+    cursor.place();
+    edgesAll();
+    syncChips();
+    caption();
+    return true;
+  }
+
+  // What the page changed since the bake, put back on fresh markup.
+  function restore() {
+    setPlayKey();
+    // Layers: mutes, and the bar the music is on.
+    var rows = app.querySelectorAll('.layer');
+    for (var i = 0; i < rows.length; i++) {
+      var layer = rows[i].getAttribute('data-layer');
+      if (S.mutes[layer] != null) setMute(rows[i], S.mutes[layer]);
+    }
+    paintBar();
+    // Themes.
+    var sws = app.querySelectorAll('#themes .sw');
+    for (var j = 0; j < sws.length; j++) {
+      var on = sws[j].getAttribute('data-theme') === S.theme;
+      sws[j].setAttribute('aria-checked', String(on));
+      sws[j].tabIndex = on ? 0 : -1;
+    }
+    var tn = $('themeName');
+    if (tn) tn.textContent = themeLabel(S.theme);
+    // Vibes.
+    var vk = app.querySelectorAll('.vb-key');
+    for (var k = 0; k < vk.length; k++) vk[k].setAttribute('aria-pressed', String(S.vibes.indexOf(vk[k].getAttribute('data-vibe')) >= 0));
+    vibesWords();
+    // Save ticks.
+    if (S.saved) {
+      var ticks = app.querySelectorAll('#savePane .lrow-main[role="checkbox"]');
+      for (var t = 0; t < ticks.length; t++) {
+        var title = rowTitle(ticks[t]);
+        if (S.saved[title] != null) setTick(ticks[t], S.saved[title]);
+      }
+    }
+    if (S.lite != null && $('liteMode')) setSwitch($('liteMode'), S.lite);
+    clock.paint();
+  }
+
+  // ---------- the rules for the keys (main.js setView and friends) ----------
+  function libraryState() {
+    var l = S.lib;
+    if (l.tab === 'loops') return 'library:loops';
+    if (l.tab === 'more') return l.advanced ? 'library:advanced' : 'library:more';
+    return l.album != null ? 'library:album:' + l.album : 'library:albums';
+  }
+  function go(view) {
+    var state = view === 'library' ? libraryState() : view === 'save' ? 'save:' + S.saveTab : view;
+    if (BASE.indexOf(view) >= 0) S.lastView = view;
+    if (view === 'sounds' || view === 'layers') S.lastEdit = view;
+    show(state);
+  }
+  function current() { return viewOf(S.state); }
+
+  var KEYS = {
+    libraryBtn: function () { go(current() === 'library' ? S.lastView : 'library'); },
+    saveBtn: function () { go(current() === 'save' ? S.lastView : 'save'); },
+    nowBtn: function () { go(current() === 'now' ? S.lastEdit : 'now'); },
+    viewBtn: function () {
+      var c = current();
+      go(c === 'sounds' ? 'layers' : c === 'layers' ? 'sounds' : S.lastEdit);
+    },
+    vibesBtn: function () { go('vibes'); },
+    vibesClose: function () { go('now'); },
+    vibesClear: function () { S.vibes = []; restore(); },
+    playBtn: function () { setPlaying(!S.playing); },
+    goAdvanced: function () { S.lib.advanced = true; go('library'); },
+    advBack: function () { S.lib.advanced = false; go('library'); },
+    liteMode: function (b) { S.lite = b.getAttribute('aria-checked') !== 'true'; setSwitch(b, S.lite); },
+  };
+
+  // Everything that would make sound, change data, or open a keyboard.
+  var NOTES = { prevBtn: 1, nextBtn: 1, loopName: 1 };
+  var ELSEWHERE = 'Not in the spec: try it in the app';
+
+  app.addEventListener('click', function (e) {
+    var t = e.target.closest('button, [role="button"]');
+    if (!t || !app.contains(t)) return;
+    var id = t.id;
+    if (KEYS[id]) { KEYS[id](t); audit(); return; }
+    if (NOTES[id]) { toast(ELSEWHERE); return; }
+
+    // Library tabs (library.js setTab): the tab you are on goes up a level.
+    var tab = t.getAttribute('data-tab');
+    if (tab) {
+      if (tab === 'albums' && S.lib.tab === 'albums') S.lib.album = null;
+      if (tab === 'more' && S.lib.tab === 'more') S.lib.advanced = false;
+      S.lib.tab = tab;
+      go('library');
+      return;
+    }
+    var stab = t.getAttribute('data-stab');
+    if (stab) { S.saveTab = stab; go('save'); return; }
+
+    // An album in the list opens it; the back key closes it.
+    if (t.classList.contains('lrow-main') && t.closest('#libPane') && t.closest('.lrow.album')) {
+      var rows = [].slice.call(app.querySelectorAll('#libPane .lrow.album'));
+      S.lib.album = rows.indexOf(t.closest('.lrow.album'));
+      go('library');
+      return;
+    }
+    if (t.classList.contains('back') && t.closest('#libPane')) { S.lib.album = null; go('library'); return; }
+
+    // Themes.
+    if (t.classList.contains('sw')) { setTheme(t.getAttribute('data-theme')); return; }
+
+    // Layers.
+    if (t.classList.contains('btn-on')) {
+      var row = t.closest('.layer');
+      var off = t.getAttribute('aria-checked') === 'true';
+      S.mutes[row.getAttribute('data-layer')] = off;
+      setMute(row, off);
+      return;
+    }
+    if (t.classList.contains('btn-roll')) { toast(ELSEWHERE); return; }
+
+    // Vibes.
+    if (t.classList.contains('vb-key')) {
+      var vb = t.getAttribute('data-vibe');
+      var at = S.vibes.indexOf(vb);
+      if (at >= 0) S.vibes.splice(at, 1); else S.vibes.push(vb);
+      restore();
+      return;
+    }
+
+    // Save: tick an album.
+    if (t.getAttribute('role') === 'checkbox' && t.closest('#savePane')) {
+      S.saved = S.saved || {};
+      var on = t.getAttribute('aria-checked') !== 'true';
+      S.saved[rowTitle(t)] = on;
+      setTick(t, on);
+      return;
+    }
+    toast(ELSEWHERE);
+  });
+
+  // Arrow keys move between theme swatches, as in the app.
+  app.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (!t.classList || !t.classList.contains('sw')) return;
+    var dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    var i = THEMES.findIndex(function (x) { return x[0] === S.theme; });
+    var next = THEMES[(i + dir + THEMES.length) % THEMES.length][0];
+    setTheme(next);
+    var n = app.querySelector('#themes [data-theme="' + next + '"]');
+    if (n) n.focus();
+  });
+
+  app.addEventListener('input', function (e) {
+    if (e.target.id === 'bpm' && $('bpmVal')) $('bpmVal').textContent = e.target.value;
+  });
+
+  // ---------- small pieces ----------
+  function setSwitch(b, on) {
+    b.setAttribute('aria-checked', String(on));
+    var w = b.querySelector('span') || b;
+    w.textContent = on ? 'on' : 'off';
+  }
+  function setMute(row, off) {
+    row.classList.toggle('dim', off);
+    setSwitch(row.querySelector('.btn-on'), !off);
+  }
+  function rowTitle(main) {
+    var t = main.querySelector('.lrow-title');
+    return t ? t.textContent.replace(', now playing', '').trim() : '';
+  }
+  function setTick(main, on) {
+    main.setAttribute('aria-checked', String(on));
+    var row = main.closest('.lrow');
+    if (row) row.classList.toggle('in', on);
+    var mark = main.querySelector('.pick');
+    if (mark) mark.innerHTML = on ? D.icons.check : '';
+  }
+  function vibesWords() {
+    var n = S.vibes.length;
+    var b = $('vibesBtn');
+    if (b) { b.textContent = n ? 'vibes · ' + n : 'vibes'; b.setAttribute('aria-label', n ? 'Vibes, ' + n + ' picked' : 'Vibes'); }
+    var c = $('vibesCount');
+    if (c) c.textContent = n ? n + ' for new loops' : 'none: new loops as usual';
+    var x = $('vibesClear');
+    if (x) x.disabled = !n;
+  }
+  function themeLabel(cls) {
+    for (var i = 0; i < THEMES.length; i++) if (THEMES[i][0] === cls) return THEMES[i][1];
+    return '';
+  }
+  function setTheme(cls) {
+    if (!themeLabel(cls)) return;
+    for (var i = 0; i < THEMES.length; i++) app.classList.remove(THEMES[i][0]);
+    app.classList.add(cls);
+    S.theme = cls;
+    restore();
+    caption();
+    audit();
+  }
+  function setPlayKey() {
+    var b = $('playBtn');
+    if (!b) return;
+    b.innerHTML = S.playing ? D.icons.pause : D.icons.play;
+    b.setAttribute('aria-label', S.playing ? 'Pause' : 'Play');
+    b.title = S.playing ? 'Pause' : 'Play';
+  }
+  function setPlaying(on) {
+    S.playing = !!on;
+    app.classList.toggle('playing', S.playing);
+    setPlayKey();
+    clock.mark();
+  }
+  var toastTimer = null;
+  function toast(text) {
+    var t = $('toast');
+    if (!t) return;
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  // Scrollers show a hairline at an edge while there is more past it
+  // (library.js edges).
+  function edges(sc) {
+    sc.classList.toggle('more-up', sc.scrollTop > 1);
+    sc.classList.toggle('more-down', sc.scrollTop + sc.clientHeight < sc.scrollHeight - 1);
+  }
+  function edgesAll() {
+    var scs = app.querySelectorAll('.scroll');
+    for (var i = 0; i < scs.length; i++) {
+      edges(scs[i]);
+      // The playing row in view, the first time, as the app does it.
+      var cur = scs[i].querySelector('.lrow.current');
+      if (cur && !scs[i].dataset.placed) { scs[i].scrollTop = Math.max(0, cur.offsetTop - scs[i].clientHeight / 3); edges(scs[i]); }
+      scs[i].dataset.placed = '1';
+    }
+  }
+  app.addEventListener('scroll', function (e) {
+    if (e.target.classList && e.target.classList.contains('scroll')) edges(e.target);
+  }, true);
+
+  // ---------- the music's clock: playhead, halo column, bars ----------
+  var L = D.loop;
+  var stepMs = 60000 / L.bpm / 4;
+  var cursor = {
+    step: 0, bar: 0, acc: 0,
+    place: function () {
+      var lights = app.querySelectorAll('#playhead i');
+      for (var i = 0; i < lights.length; i++) lights[i].classList.toggle('on', i === this.step);
+      var live = current() === 'layers';
+      var pats = app.querySelectorAll('.layer .pattern');
+      for (var p = 0; p < pats.length; p++) {
+        var dots = pats[p].children;
+        for (var d = 0; d < dots.length; d++) dots[d].classList.toggle('at', live && d === this.step);
+      }
+    },
+  };
+  function paintBar() {
+    var rows = app.querySelectorAll('.layer');
+    for (var i = 0; i < rows.length; i++) {
+      var bars = L.layers[rows[i].getAttribute('data-layer')];
+      if (!bars) continue;
+      var cells = bars[cursor.bar % bars.length];
+      var dots = rows[i].querySelectorAll('.pattern span');
+      for (var d = 0; d < dots.length; d++) {
+        var c = cells.charAt(d);
+        dots[d].classList.toggle('on', c === '1' || c === '2');
+        dots[d].classList.toggle('big', c === '2');
+      }
+    }
+  }
+
+  // Now Playing's clock (main.js updateNowClock): counting down to the
+  // end of a set length, or up, with the bar showing the pass.
+  var clock = {
+    t: 0, last: null,
+    total: L.bars * L.spb * stepMs / 1000,
+    init: function () {
+      var n = D.now || {};
+      this.down = n.sign < 0;
+      this.end = this.down ? n.t0 / Math.max(0.0001, 1 - (n.frac0 || 0)) : 0;
+      this.t = this.down ? this.end - n.t0 : (n.t0 || 0);
+    },
+    mark: function () { this.last = null; },
+    fmt: function (secs) {
+      var s = Math.max(0, Math.round(secs)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+      var p2 = function (x) { return (x < 10 ? '0' : '') + x; };
+      return h ? h + ':' + p2(m) + ':' + p2(r) : m + ':' + p2(r);
+    },
+    paint: function () {
+      var big = $('nowBig'), fill = $('nowFill');
+      if (!big) return;
+      var text, frac;
+      if (this.down) {
+        if (this.t >= this.end) this.t = 0;
+        text = '−' + this.fmt(this.end - this.t);
+        frac = Math.min(1, this.t / this.end);
+      } else {
+        text = this.fmt(this.t);
+        frac = (this.t % this.total) / this.total;
+      }
+      if (big.textContent !== text) big.textContent = text;
+      if (fill) fill.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+    },
+  };
+
+  var reduced = function () {
+    return document.documentElement.classList.contains('sim-reduced-motion')
+      || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  };
+  var prev = null;
+  function frame(now) {
+    if (prev == null) prev = now;
+    var dt = Math.min(250, now - prev);
+    prev = now;
+    if (S.playing) {
+      clock.t += dt / 1000;
+      cursor.acc += dt;
+      var moved = false;
+      while (cursor.acc >= stepMs) {
+        cursor.acc -= stepMs;
+        cursor.step = (cursor.step + 1) % L.spb;
+        if (cursor.step === 0) { cursor.bar = (cursor.bar + 1) % L.bars; paintBar(); }
+        moved = true;
+      }
+      // Reduced motion: the music keeps time, the screen keeps still
+      // apart from the clock's numbers.
+      if (moved && !reduced()) cursor.place();
+      clock.paint();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- review controls ----------
+  var PLACES = [
+    ['now', 'Now Playing'], ['vibes', 'Vibes'], ['layers', 'Layers'], ['sounds', 'Sound'],
+    ['library:albums', 'Albums'], ['library:album:2', 'An album'], ['library:loops', 'Loops'],
+    ['library:more', 'More'], ['library:advanced', 'Advanced'], ['save:albums', 'Save'], ['save:share', 'Share'],
+  ];
+  function chip(name, value, label, checked) {
+    return '<label class="pg-chip"><input type="radio" name="' + name + '" value="' + value + '"' + (checked ? ' checked' : '') + '><span>' + label + '</span></label>';
+  }
+  $('viewChips').innerHTML = PLACES.filter(function (p) { return D.states[p[0]]; })
+    .map(function (p) { return chip('place', p[0], p[1], p[0] === S.state); }).join('');
+  $('sizeChips').innerHTML = D.sizes.map(function (s) { return chip('size', s, s + '%', s === 100); }).join('');
+
+  // A place picked from the chips sets the app's memory the way the keys
+  // would have, so the keys go on from there.
+  function place(state) {
+    var p = state.split(':');
+    if (p[0] === 'library') {
+      S.lib.tab = p[1] === 'album' ? 'albums' : p[1] === 'advanced' ? 'more' : p[1];
+      S.lib.album = p[1] === 'album' ? Number(p[2]) : p[1] === 'albums' ? null : S.lib.album;
+      S.lib.advanced = p[1] === 'advanced';
+    }
+    if (p[0] === 'save') S.saveTab = p[1];
+    if (BASE.indexOf(p[0]) >= 0) S.lastView = p[0];
+    if (p[0] === 'sounds' || p[0] === 'layers') S.lastEdit = p[0];
+    return show(state);
+  }
+  function syncChips() {
+    var want = S.state.indexOf('library:album:') === 0 ? 'library:album:2' : S.state;
+    var r = document.querySelectorAll('input[name="place"]');
+    for (var i = 0; i < r.length; i++) r[i].checked = r[i].value === want;
+  }
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.name === 'place') { place(t.value); audit(); }
+    if (t.name === 'size') setSize(Number(t.value));
+    if (t.name === 'insets') {
+      document.body.classList.toggle('sim-android', t.value === 'android');
+      document.body.classList.toggle('use-real-insets', t.value === 'real');
+      audit();
+    }
+    if (t.id === 'aidTargets') document.body.classList.toggle('show-targets', t.checked);
+    if (t.id === 'aidMotion') { document.documentElement.classList.toggle('sim-reduced-motion', t.checked); audit(); }
+  });
+
+  // The text-size setting, as a phone applies it: the root font size.
+  function setSize(pct) {
+    if (D.sizes.indexOf(pct) < 0) return false;
+    S.size = pct;
+    document.documentElement.style.fontSize = pct === 100 ? '' : pct + '%';
+    var r = document.querySelectorAll('input[name="size"]');
+    for (var i = 0; i < r.length; i++) r[i].checked = Number(r[i].value) === pct;
+    show(S.state);
+    audit();
+    return true;
+  }
+
+  function caption() {
+    var names = { now: 'Now Playing', vibes: 'Vibes', layers: 'Layers', sounds: 'Sound', library: 'Library', save: 'Save' };
+    var bits = S.state.split(':');
+    var where = names[bits[0]] + (bits[1] ? ' › ' + ({ albums: 'Albums', loops: 'Loops', more: 'More', advanced: 'More › Advanced', album: 'an album', share: 'Share' })[bits[1]] : '');
+    if (bits[0] === 'save' && bits[1] === 'albums') where = 'Save';
+    if (bits[0] === 'save' && bits[1] === 'share') where = 'Save › Share';
+    $('caption').innerHTML = '<b>' + themeLabel(S.theme) + '</b> · ' + where + ' · ' + S.size + '% text';
+  }
+
+  // ---------- audit: re-measures the phone after every change ----------
+  function audit() {
+    var out = $('audit');
+    var zones = ['.zone-info', '.zone-dynamic', '.zone-buttons'].map(function (s) { return app.querySelector(s); });
+    var h = zones.map(function (z) { return Math.round(z.getBoundingClientRect().height); });
+    var want = [D.measured.zones.info, D.measured.zones.dynamic, D.measured.zones.buttons].map(Math.round);
+    var problems = [];
+    if (h.join() !== want.join()) problems.push('zones ' + h.join(' / ') + ' (baked ' + want.join(' / ') + ')');
+    // Overflow: a zone wider or taller than itself, or text cut at a
+    // panel's edge. Scrollers are allowed to be taller than they show.
+    zones.forEach(function (z, i) {
+      if (z.scrollWidth > z.clientWidth + 1) problems.push(['info', 'dynamic', 'buttons'][i] + ' zone overflows sideways');
+    });
+    var small = Infinity, smallWhat = '';
+    var walker = document.createTreeWalker(app, NodeFilter.SHOW_TEXT);
+    var n;
+    while ((n = walker.nextNode())) {
+      if (!n.nodeValue.trim()) continue;
+      var el = n.parentElement;
+      if (!el || el.closest('.status, [hidden], .vh, .toast')) continue;
+      if (!el.getClientRects().length) continue;
+      var fs = parseFloat(getComputedStyle(el).fontSize);
+      if (fs < small) { small = fs; smallWhat = n.nodeValue.trim().slice(0, 18); }
+    }
+    if (small < 11) problems.push('text at ' + small + 'px ("' + smallWhat + '")');
+    // The Info card's text column is as tall as the art; lines past it
+    // are cut off (ui.js folds lines to avoid that, down to a floor).
+    var col = $('loopDetail') && $('loopDetail').parentElement;
+    if (col && col.getClientRects().length && col.scrollHeight > col.clientHeight + 1) {
+      problems.push('Info card lines cut off (' + col.scrollHeight + 'px of text in ' + col.clientHeight + 'px)');
+    }
+    var tiny = [];
+    var btns = app.querySelectorAll('button, [role="button"]');
+    for (var b = 0; b < btns.length; b++) {
+      var r = btns[b].getBoundingClientRect();
+      if (!r.width || btns[b].closest('[hidden]')) continue;
+      if (r.width < 44 || r.height < 44) tiny.push(Math.round(r.width) + '×' + Math.round(r.height));
+      if (r.width < 24 || r.height < 24) problems.push('a target under 24px (WCAG 2.5.8): ' + Math.round(r.width) + '×' + Math.round(r.height));
+    }
+    var line = 'Audit · ' + themeLabel(S.theme) + ' · ' + S.state + ' @ ' + S.size + '% · zones ' + h.join(' / ')
+      + ' · smallest text ' + (isFinite(small) ? Math.round(small * 10) / 10 + 'px' : 'n/a')
+      + ' · ' + (tiny.length ? tiny.length + (tiny.length === 1 ? ' target' : ' targets') + ' under 44px <span class="dim">(' + tiny.slice(0, 4).join(', ') + (tiny.length > 4 ? '…' : '') + '; the name, which renames)</span>' : 'every target ≥ 44px');
+    if (problems.length) line += ' · <b>' + problems.join(' · ') + '</b>';
+    out.innerHTML = line;
+    out.classList.toggle('bad', problems.length > 0);
+    return { theme: S.theme, state: S.state, size: S.size, zones: h, smallest: small, under44: tiny, problems: problems };
+  }
+
+  // ---------- numbers ----------
+  function numbers() {
+    var m = D.measured;
+    var rows = [
+      ['Phone · content', '340 × 780 (+ insets)'],
+      ['Zones (info / dynamic / buttons)', m.zones.info + ' / ' + m.zones.dynamic + ' / ' + m.zones.buttons + ' px · gap ' + m.gap],
+      ['Info card radius', m.panel],
+      ['Cover', m.cover + ' px'],
+      ['Name', m.name],
+      ['Readout lines', m.meta],
+      ['Bottom keys', m.keys.join(' · ') + ' · radius ' + m.radius],
+      ['Themes', THEMES.map(function (t) { return t[1]; }).join(', ')],
+      ['The sample loop', D.loop.name + ' · ' + D.loop.bpm + ' bpm · ' + D.loop.bars + ' bars of ' + D.loop.spb + ' steps'],
+    ];
+    $('numbers').innerHTML = rows.map(function (r) { return '<tr><th scope="row">' + r[0] + '</th><td>' + r[1] + '</td></tr>'; }).join('')
+      + '<caption>At 100% text with no insets, measured in the app while baking. The Dynamic zone takes what is left.</caption>';
+    if ($('bakedFrom')) $('bakedFrom').textContent = D.commit || 'the working tree';
+  }
+
+  // ---------- start ----------
+  // The swatches carry the theme list (class and name), as the app built them.
+  var sw = (function () {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = D.states['library:more'].sizes[100].html;
+    return [].slice.call(tmp.querySelectorAll('#themes .sw'));
+  })();
+  THEMES = sw.map(function (b) { return [b.getAttribute('data-theme'), b.getAttribute('aria-label')]; });
+
+  // OS chrome in the insets.
+  var status = document.createElement('div');
+  status.className = 'status';
+  status.setAttribute('aria-hidden', 'true');
+  status.innerHTML = '<span>6:04</span><span class="right"><span class="bat"></span>34%</span>';
+  app.insertBefore(status, app.firstChild);
+  var bottom = document.createElement('div');
+  bottom.className = 'os-bottom';
+  bottom.setAttribute('aria-hidden', 'true');
+  bottom.innerHTML = '<i></i><b></b><b></b><b></b>';
+  app.appendChild(bottom);
+  app.setAttribute('aria-label', 'Driftloom, the app as baked');
+
+  clock.init();
+  numbers();
+
+  // The address bar: #view=…&theme=…&size=…&paused&insets=android&targets&motion
+  var q = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
+    if (!kv) return;
+    var i = kv.indexOf('=');
+    q[decodeURIComponent(i < 0 ? kv : kv.slice(0, i))] = i < 0 ? true : decodeURIComponent(kv.slice(i + 1));
+  });
+  if (q.theme) setTheme(q.theme);
+  if ('paused' in q) setPlaying(false);
+  if (q.insets) {
+    var ins = document.querySelector('input[name="insets"][value="' + q.insets + '"]');
+    if (ins) { ins.checked = true; ins.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+  if ('targets' in q) { $('aidTargets').checked = true; document.body.classList.add('show-targets'); }
+  if ('motion' in q) { $('aidMotion').checked = true; document.documentElement.classList.add('sim-reduced-motion'); }
+  if (q.size) {
+    S.size = Number(q.size);
+    document.documentElement.style.fontSize = S.size === 100 ? '' : S.size + '%';
+    var rs = document.querySelectorAll('input[name="size"]');
+    for (var i = 0; i < rs.length; i++) rs[i].checked = Number(rs[i].value) === S.size;
+  }
+  place(q.view && D.states[q.view] ? q.view : 'now');
+  if (q.theme) setTheme(q.theme);
+  audit();
+  requestAnimationFrame(frame);
+
+  // For scripts (the test kit): every place, and ways to get there.
+  window.spec = {
+    places: Object.keys(D.states), themes: THEMES.map(function (t) { return t[0]; }), sizes: D.sizes.slice(),
+    show: place, setTheme: function (c) { setTheme(c); return S.theme === c; }, setSize: setSize,
+    setPlaying: setPlaying, audit: audit, state: function () { return JSON.parse(JSON.stringify(S)); },
+  };
+})();
+</script>
+</body>
+</html>

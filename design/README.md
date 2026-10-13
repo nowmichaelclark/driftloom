@@ -1,85 +1,65 @@
-# Driftloom UI mockups: start here
+# Driftloom design spec: start here
 
-This folder is the **UI mockup / design spec** for the one-screen phone app. It is not part of the app: `.assetsignore` keeps it off the live site. The detailed record of every decision lives inside the HTML file; this note tells you where to find it.
+This folder is the **design spec** for the one-screen phone app. It is not part of the app: `.assetsignore` keeps it off the live site.
 
 ## What this is
 
-One self-contained HTML file showing the same phone screen in nine color themes, plus a spec sheet and handover notes. Since v17 each phone also has the Library and Now Playing views (open them with the phone's own keys, or the gallery's View control). Open it in any browser; no build step.
+- **Current file:** `driftloom_v18.html`. One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
+- **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec can't drift from the app: bake again after any change to the look.
+- **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) are kept unchanged in `archive/driftloom_v17_library.html`.
 
-- **Current file:** `driftloom_v17_library.html`.
-- **State:** the 12-session platform-compliance roadmap is complete (WCAG 2.2 AA, iOS HIG, Material 3). v15 was a design pass from Mikey; v16 (Painter session 2) reworked the light themes; v17 (Painter session 3) added the Library and Now Playing views, Olive's wine-and-rust notes and a glint on the light-theme playhead. The design is **not locked yet**; Mikey reviews each version by eye.
-- **In the app (Painter session 4, 2026-10-11):** v17 is ported into `index.html`, `css/style.css` (the spec's stylesheet lifted section by section), `js/ui.js` and `js/library.js`, on top of PR #153's logic. Deliberate departures: no LEDs or latched look on the bottom keys (they only change icons: Play, and the Sound / Layers switch), and Row 3 is two keys as in #153. Not yet re-measured with the test kit.
-- **Relation to PR #153:** #153 (the first one-screen UI, Painter session 1) stays open on purpose until this new UI is finished and brought into the app.
+## How to change it
 
-## Where things are in the HTML
-
-1. **The HTML comment at the very top** is the main handover. Read it in this order:
-   - the **v17 · LIBRARY + NOW PLAYING** block (newest work, including the independent review);
-   - the **v16 · LIGHT THEMES** block;
-   - the **v15 · DESIGN PASS** block;
-   - **WHAT SESSIONS 6–12 CHANGED**, including the Session 12 independent review;
-   - the v13 / Session 5 block (text sizing);
-   - earlier sessions;
-   - **WHAT NOT TO DO** (hard rules) and **EDITING NOTES** (where each CSS and script block lives).
-2. **Visible "handover" sections** on the page: one per session, in plain English, plus the roadmap.
-3. **Spec tables:** every measurement a theme must honor.
-4. **Gallery controls** above the phones: which view every phone shows (Layers, Albums, an album, Loops, More, Advanced, Now Playing), text size 100–200%, insets (iPhone, Android, or this device), touch-target outlines, simulate reduced motion, and a live audit line that re-measures all nine phones.
-
-## Rules that must not break (short list; the full list is in the file)
-
-- **Locked skeleton.** Zones are Info 205px, Dynamic ~319px and Buttons 240px, in a 780px content area. Nothing pops up. The zones never change height with text size.
-- **Scrolling in exactly two places (v17).** Both inside the Dynamic zone: the Library's lists (Albums, an album, Loops) and the Advanced page. Nothing else scrolls; More and Now Playing fit at every text size.
-- **Two settings, no more (v17).** Theme and Lighter on processor. Everything else is one behavior for everybody. The gallery's review controls are not part of the app.
-- **Numbers stay with their words.** Use U+00A0 no-break spaces ("47%&nbsp;Glade").
-- **Nothing in the Info card is ever dropped.** Lines that don't fit take turns in shared slots, with no animation, and the turning holds still while paused, hovered, focused, and for the rest of a loop once the user turns it by hand (the WCAG 2.2.2 mechanism).
-- **Text sizes.** All text is 11px or larger and uses rem (the status bar excepted). The track name never goes below 28px except as a last resort, and is never cut.
-- **Every control is a native `<button>`** with a name. On/off is a `role="switch"`. Play swaps its name between Play and Pause and has no `aria-pressed`.
-- **Contrast is measured from pixels.** Text 4.5:1. Notes, beat cells, the lit playhead cell and focus rings 3:1. Off-beat playhead cells and empty-slot dots are deliberately quiet and treated as decorative.
-- **Light-theme notes (v16):** keep their chroma; never darken them toward brown or gray to pass. Alternate light rows (~3.6:1) with deep rows (~5–6:1) and re-run the color-blind check after any change. Olive keeps to warm hues (since v17 its swatch's warm neighbors, wine and rust, are in); no cool hue.
-- **Views (v17):** names are capitalized, actions are lowercase words on keys; "where you are" is a key held down with its LED lit; destructive keys ask twice by re-wording themselves (and their accessible name), never with a popup; no word is broken mid-word.
-- **Reduced motion means nothing moves.** Every mark drawn as a background color needs a forced-colors rule.
-- **Touch targets.** roll and on/off are drawn at 48×48. No invisible hit pads.
-
-## How to verify (the test kit)
-
-`test-kit/` holds the Playwright scripts behind every number in the handover.
+| To change | Edit | Then |
+|---|---|---|
+| How the phone looks | the app: `css/style.css`, `index.html`, `js/ui.js`, `js/library.js` | bake |
+| The page around the phone (review controls, notes, tables) | `test-kit/spec.template.html` | bake |
+| What the bake visits or seeds | `test-kit/bake.mjs` | bake |
 
 ```
 cd design/test-kit
-npm install
-npx playwright install chromium
-./run_all.sh ../driftloom_v17_library.html
-python3 cvd_check.py ../driftloom_v17_library.html out/nontext_allon.json
+npm install            # Playwright; if the sandbox already has a Chromium, pin playwright to its version
+node bake.mjs          # writes ../driftloom_v18.html
+node sheet18.mjs ../driftloom_v18.html out/sheet.png --places layers --themes all
 ```
 
-Compare with `expected_output_v17.txt`. `sheet.mjs` makes contact sheets of any view, theme and size. Gotchas:
+The bake prints the sample loop, the zone heights it measured and a check that the Layers notes it read from the generator match what the app drew. A design idea can still be tried by hand in a copy of the baked file; once it is agreed, it goes into the app and the spec is baked again.
 
-- **Screenshots far down the page come back wrong** at deviceScaleFactor 2 (more than ~8000 CSS px down). The scripts hide the handover and spec sections first (`SHALLOW=1`); for Nocturne, Abyss and Olive the lit-cell numbers are only valid from the `HIDEFIRST=1` run.
-- **Load real fonts.** The scripts swap in local Inter and Space Grotesk via @fontsource and block every other network request.
-- **Pre-installed Chromium:** if the sandbox already has a Chromium build, pin `playwright` to the matching version rather than downloading browsers.
-- **Only Chromium has been tested.** Safari, Firefox and a real screen reader wait until the design is locked.
+## What is live in the file and what is baked
+
+- **Live** (the page's script, following `js/main.js` and `js/library.js`): moving between views, Library tabs and albums, More and Advanced, Save and Share, the theme swatches, Play / Pause, the playhead and halo column at the loop's tempo, the Layers rows bar by bar, layer on/off, picking vibes, ticking albums, the sliders, the Now Playing clock.
+- **Not live:** anything that makes music or changes data (Previous, Next, roll, new album, rename, export…). Those show "Not in the spec: try it in the app".
+- **Baked:** every view's markup and card at each text size. The app fits the Info card in script, so each text size is its own capture; the rest follows the stylesheet live.
+- **Three changes the bake makes to the stylesheet** (noted at the top of the file): fonts inlined; the short-screen rule (`max-height: 700px`) switched off, since the spec phone is never that short; the reduced-motion rules copied under `html.sim-reduced-motion` for the review switch.
+- **For scripts:** `window.spec` has `show(place)`, `setTheme(cls)`, `setSize(pct)`, `setPlaying(bool)`, `audit()` and the lists of places, themes and sizes. The address bar takes the same: `driftloom_v18.html#view=library:loops&theme=t-dawn&size=150&paused&insets=android`.
+
+## What changed since v17
+
+- One phone instead of nine; the theme is picked inside it.
+- Bottom keys: no LEDs or latched look; Row 3 is two keys (Now Playing, and the Sound / Layers switch).
+- No drawn status-bar gap: the Info zone is 174px and the Dynamic zone 350px (v17: 205 / 319); Buttons stay 240px.
+- The Info card has real cover art and the app's readout, which folds lesser lines away when full (v17's lines took turns instead).
+- New: the Vibes key and view, Sound, Save and Share.
 
 ## Reference images (`reference/`)
 
-- `v17_library_nine_themes.png`: the Library's Albums tab in all nine themes.
-- `v17_views_light.png`, `v17_views_dark.png`: every new view state (Albums, an album, Loops, More, Advanced, Now Playing) in a light and a dark theme.
-- `v17_text_200.png`: the new views at 200% text, plain and with the WCAG text-spacing override.
-- `v17_glint_and_olive.png`: the light-theme glint up close, and Olive's notes before and after.
-- `v17_forced_colours.png`: the new views in Windows dark and light contrast themes.
-- `v16_all_nine_themes_100pct.png`, `v16_colorblind_check.png`, `v16_forced_colours_light.png`: the Layers view references from v16 (still accurate for Layers apart from Olive's notes and the new LEDs on the bottom keys).
+- `v18_nine_themes_layers.png`: Layers in all nine themes.
+- `v18_every_view_nocturne.png`: every place in Nocturne.
+- `v18_text_sizes_now.png`: Now Playing in Dawn at 100, 130, 150 and 200%.
+- The `v16_*` and `v17_*` images belong to the archived v17 file.
 
 ## How Mikey likes to work
 
 - **American English** in chat, docs and code comments.
-- **One focused step per session.** Verify it against the standard, update the handover in the HTML, and bump the version (v16 → v17 …).
-- **When proposing the next session, give four things:** new or continuing session, which model, what effort, and the session label (e.g. "Painter 3 · Now Playing view").
+- **One focused step per session.** Verify it, update the handover, and bump the version.
+- **When proposing the next session, give four things:** new or continuing session, which model, what effort, and the session label (e.g. "Painter 6 · Measure the app").
 - **Mikey judges the design by eye.** Show changes as screenshots or contact sheets, and measure every compliance claim.
 - **Use an independent reviewer.** An agent that hasn't seen the work catches over-claims.
 
 ## Open items
 
-1. **Mikey reviews v17 by eye**, including one decision: should the Layers key show all the time (latched on Layers) so Row 3 never shifts under the thumb?
-2. **The Play / Pause glyph is under 3:1 in four themes** (Dawn 2.05, Tidal 2.71, Olive 2.78, Night Light 2.88). Found in v17; it predates v16.
-3. **Still unbuilt:** the Sound and Save views, the "add loops" and "move" pickers, naming a new album in place, the Info card showing the open album.
-4. **Inert keys:** Previous, Next, Save/Share, Sound, and every key in the views that would change data.
-5. **After the design is locked:** test Safari, Firefox, VoiceOver and TalkBack, then bring the UI into the app (superseding PR #153).
+1. **Measure the app against the standard.** Port the v17 test kit (`test-kit/`) to the v18 file: one phone, a theme at a time, through `window.spec`. Since the file is the app's own drawing, that measures the app. Until then the v17 numbers describe the v17 drawings, not the app.
+2. **Decide: the Info card drops lines when it is full.** v17's rule was that nothing in it is ever dropped (lines took turns, the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away.
+3. **At 200% text the Info card clips its last line**, even after folding as far as it goes. Seen in the app itself; the spec's audit line flags it.
+4. **The Play / Pause glyph is under 3:1** in Dawn, Tidal, Olive and Night Light (found in v17).
+5. **After the design is locked:** Safari, Firefox, VoiceOver and TalkBack.
