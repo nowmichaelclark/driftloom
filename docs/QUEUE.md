@@ -19,6 +19,11 @@ report calls for a fix, it comes first. 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
+**Two tracks (2026-10-13):** app work (fixes, redesigns, vibe tuning,
+new controls) goes on alongside the core phases, as separate PRs; see
+`docs/BRAIN.md`, "Two tracks". Core-track items here don't wait for it,
+and app-track sessions stay out of `core/`.
+
 **Mono by default, stereo possible later (Mikey, 2026-10-13; replaces
 "mono only" of 2026-10-11):** the app stays one channel. The core gets a
 seam for other channel layouts (item 45) and nothing more toward stereo
