@@ -263,7 +263,15 @@ zany loop at 77 bpm, 16 bars, when the sun rises."
   piece up front: memory and cost are the same for 4 bars or for
   endless, and any point of a long piece can be reached straight from
   the seed and the section number, without generating what comes
-  before. The length in a code is a variable-width number, not a byte.
+  before. The length in a code is a variable-width number, not a byte,
+  so it costs only what it uses: up to 32 bars, one character; up to
+  1,024, two; up to 32,768, three; and only when the length was pinned.
+  **No cap in the core.** Brain's proposal for the app's picker (Mikey,
+  2026-10-13, asked where to stop; 3,072 came from Beethoven's Ninth):
+  up to 32,768 bars (three characters, about 27 hours at 80 bpm), plus
+  **Endless**; nothing longer would differ from Endless for a listener.
+  Both journeys are wanted: an arc like a symphony's, and long, slow
+  wandering.
   Making a very long piece *musically* good (sections, returns, an arc
   over an hour, not one idea repeated or aimless wandering) is new
   composing work, a later item of its own with Mikey's ears; the core
@@ -330,10 +338,23 @@ one before it.
 6. **Codes, version 2.** Short codes, album seeds, recipe packs by hash,
    plain links. Old codes stop working; that's fine.
 7. **The host kit and the other two games.** The finished C header, the
-   WAV export in the app (roadmap 17), the guide, then OpenRCT2 and
+   audio export in the app (roadmap 17; below), the guide, then OpenRCT2 and
    Stardew Valley, each done by Mikey with Claude's help and each lesson
    fed back. *Done when:* promise 4's C program, promise 6's
    fresh-session test and promise 10's three games pass.
+   **Exports, safe first** (Mikey, 2026-10-13): an export must never
+   crash or break anything on the listener's device, old Android phones
+   and weak chips included; speed is welcome only where it is safe. So
+   the export renders in small chunks straight to the file (memory the
+   same for one minute or three hours), checks free space before it
+   starts, shows progress, can be cancelled, and survives the app going
+   to the background. **Lossless** (FLAC, about half a WAV's size) is the
+   safe format the core writes itself; a **small** format (Opus or AAC,
+   about 70 MB for 2.5 hours mono) uses the encoder the phone or browser
+   already has, where it has one. Brain's proposal, to keep the settings
+   rule: the format is chosen in the export sheet each time, and the
+   existing "lighter on processor" setting decides the speed (on: gentle
+   and cool; off: as fast as the device safely allows).
 8. **Better than Chromium.** The sound improvements, one item each, blind
    A/Bs where they touch what he likes.
 9. **Stereo, experimental** (much later; promise 9). Space recipes, the

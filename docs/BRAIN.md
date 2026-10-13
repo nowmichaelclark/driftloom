@@ -359,6 +359,15 @@ Stated decisions, not inferences. Dated where the date matters.
   far more bars than today's 32, e.g. 3,072. Charter promise 11: any
   length up to endless; the generator works section by section, so
   length costs nothing; long-form composition is later work by ear.
+  Both kinds wanted: a symphony-like journey (3,072 came from
+  Beethoven's Ninth) and long slow wandering. Proposed: no cap in the
+  core; the app's picker to 32,768 bars plus Endless.
+- **Exports, safe first (Mikey, 2026-10-13):** never crash or break
+  anything on the user's end, whatever the hardware, old Android and
+  weak chips included; fast only where safe. He suggested "fast" or
+  "lossless" as a toggle in settings; brain's proposal (charter phase 7):
+  format chosen per export, speed from the existing "lighter on
+  processor" setting, so no new setting.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
