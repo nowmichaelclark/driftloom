@@ -523,6 +523,12 @@ Stated decisions, not inferences. Dated where the date matters.
   reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
   late and dropped by cause) will say whether anything is left. If it
   calls for a fix, that comes before the core work.
+- **Emergency (2026-10-13): queue item 47**, glitches when minimized
+  or locked (Pixel 9, GrapheneOS, v92). All 10 late notes "inside the
+  buffer", none from stalls; render-ahead usually ~20 ms but 1.4 s at
+  worst. Brain's lead: Android deepens the output buffer in the
+  background and the planner only adapts after measuring. App track,
+  runs alongside the core track (outside `core/`). Hands: Opus 5.5, high.
 - **The core charter is approved (Session 18, 2026-10-13):
   `docs/CORE.md`.** Phase 1 is queued: items 42-46 in `docs/QUEUE.md`.
   Hands, by item: 42 Sonnet (Session 19), 43 Opus (20), 44-45 Sonnet

@@ -1293,6 +1293,78 @@ A small item: data in `rank.html`, no generator or synth change.
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
 
+## 47. Urgent: glitches when minimized or locked (Pixel 9, GrapheneOS, v92)
+
+**App track, emergency** (Mikey, 2026-10-13). Hands: **Opus 5.5, high**.
+Stay out of `core/` (the core track's item 43 is in progress there): the
+fix belongs in the page's scheduling (`js/engine.js`, `js/synth.js`,
+`js/core.js`, `js/worklet.js`). If it truly needs a core change, stop
+and leave a note.
+
+The first tester's phone (Pixel 9, GrapheneOS, installed app, Chrome
+155) still glitches when the app is minimized and when the screen is
+locked. His Diagnostics on v92, 3.9 minutes, the figures that matter:
+
+- `engine: rust late: 10 (stall 0, inside the buffer 10; left out 10)`
+- `renderAheadMs: 21 (measured 6)`, but `worstRenderAheadMs: 1413` and
+  `leastSpareMs: -1333`
+- `outputLatency: 0.272`, `measuredLatencyMs: 600`, `baseLatency: 0.0213`
+- `lookahead: 2`, `redecides: 0`, `lateTicks: 0`, `recentStallMs: 51`
+- While hidden (the last time only): 15.5 s, worst tick gap 252 ms,
+  **0 late notes**, audio and media running throughout.
+- Every view on screen: 0 late notes, 0 dropped.
+
+**What the brain reads in it (unproven; check each before relying on
+it):**
+1. **No stall, all ten late notes "inside the buffer".** The page was on
+   time; the core had already rendered past the notes' start times. The
+   render-ahead is usually 6-21 ms on this phone but reached **1.4 s** at
+   least once. The likely moment: Android moves a backgrounded or
+   screen-off app's audio to a deep, power-saving output buffer, so the
+   worklet suddenly renders over a second ahead in bursts.
+2. **The planner adapts only after it measures.** `engine.ahead` is the
+   latest measured render-ahead, not the worst seen, so right after the
+   jump, notes are still planned with tens of milliseconds to spare, land
+   inside the new buffer and are left out (item 41's rule): missing notes,
+   which is the glitch. Notes decided close to now are the ones at risk:
+   look at what decides notes near the clock (a new loop or pass starting,
+   "Let the loop wander", Next/Previous, media keys) rather than the
+   steady lookahead.
+3. **The hidden report can't see it.** It keeps only the last hidden
+   spell, and the late notes were not in it; they may fall at the moment
+   of hiding or showing, which neither section covers.
+
+**What:**
+- **Find the moment first, by evidence.** Add to Diagnostics a short log
+  of the render-ahead's jumps and of each late note: when (time since the
+  page began), whether hidden, visible or within a second of a change,
+  and what decided it (lookahead tick, new loop/pass, user action). If
+  the harness can model a deep buffer that appears on hide (as
+  `tools/views.mjs --buffer` models a fixed one), reproduce it there.
+- **Plan for the deep buffer before it bites:** what the evidence calls
+  for, likely both of these:
+  - remember the **worst** render-ahead seen this session (and per
+    device across sessions, in storage), and plan every note, including
+    the ones decided near the clock, at least that far ahead plus the
+    margin;
+  - when the page is hidden (and on `pagehide` / `freeze`), assume a deep
+    buffer at once rather than waiting to measure it.
+  The cost is a little latency on a mute, re-roll or tempo change while
+  hidden, which nobody can see; keep visible responsiveness as item 41
+  left it.
+- Keep item 41's rule (a note more than 30 ms late is left out, not
+  bunched).
+
+**Yardsticks:**
+- In the harness, with a deep buffer that appears on hide and leaves on
+  show: zero late notes across hide, lock-like freeze, show, new loops,
+  passes and Next/Previous while hidden.
+- Visible behavior unchanged on an ordinary phone: the latency of a mute
+  or re-roll as item 41 measured it.
+- Steps for the tester in the PR (what to do, what to copy), so his next
+  Diagnostics answer whether anything is left.
+- Bump `BUILD` and `CACHE`; the usual tests and checks.
+
 ## The core, phase 1: foundations (items 42-46)
 
 **Read `docs/CORE.md` first** (the charter, approved by Mikey on
