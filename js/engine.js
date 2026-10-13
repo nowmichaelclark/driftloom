@@ -49,6 +49,22 @@ const AHEAD_SHARE = 0.25;
 // is remembered and forgotten at this many seconds a second.
 const STALL_MARGIN = 0.5;
 const STALL_EASE = 0.02;
+// Hidden, on the core, a deep output buffer is assumed at once (queue item
+// 47). A tester's Pixel 9 rendered 6-21 ms past the clock on screen and
+// 1.4 s past it at least once with the app minimized or the screen locked:
+// Android moves a backgrounded app's audio to a deep, power-saving buffer,
+// and the core renders over a second ahead in bursts. The render-ahead is
+// only measured once notes have landed in it, so the notes decided near the
+// clock just after the jump (Next or Previous from the lock screen, Play,
+// catching up after a freeze) were planned with tens of ms to spare, landed
+// inside it and were left out: the glitch. So, hidden (or frozen), the
+// scheduler plans as if the render-ahead were at least this, or the worst
+// this session or this device has seen (`deviceAhead`, kept in storage),
+// whichever is more; never more than DEEP_MOST, so the hidden queue still
+// has seconds to spare. Shown again, it plans from the measurement, as
+// item 41 left it.
+const DEEP_AHEAD = 1.5;
+const DEEP_MOST = 4;
 const TICK_VISIBLE = 50;
 const TICK_HIDDEN = 250;
 
@@ -153,6 +169,11 @@ export class Engine {
     // counted only while the page is shown: hidden has its own queue.
     this.recentStall = 0;
     this.shownAt = 0;
+    // Queue item 47: the page frozen (or being put away) while hidden, and
+    // the worst render-ahead this device has seen before (seconds, from
+    // storage). Both only plan the hidden notes; see DEEP_AHEAD.
+    this.frozen = false;
+    this.deviceAhead = 0;
     this.visualQueue = [];
     this.visualOffset = 0;   // optional manual trim, normally zero
     this.latency = null;     // measured, smoothed, seconds
@@ -245,20 +266,48 @@ export class Engine {
     return typeof document !== 'undefined' && document.hidden;
   }
 
+  // Hidden, or frozen: where a deep output buffer is assumed (queue item 47).
+  get away() {
+    return this.frozen || this.hidden;
+  }
+
+  // The page is being frozen or put away (`freeze`, `pagehide`), or is back
+  // (`resume`, `pageshow`).
+  setFrozen(on) {
+    this.frozen = !!on;
+  }
+
   get lookahead() {
     if (!this.synth.queuesAhead) return this.hidden ? LOOKAHEAD_HIDDEN : LOOKAHEAD_VISIBLE;
-    if (this.hidden) return LOOKAHEAD_HIDDEN_CORE;
-    const deep = this.recentStall + this.ahead + STALL_MARGIN;
+    if (this.away) return LOOKAHEAD_HIDDEN_CORE;
+    // Deep enough, too, that the step after the queue's end is not already
+    // inside the deep buffer assumed the moment the page is hidden.
+    const deep = Math.max(this.recentStall + this.ahead, this.deepAhead) + STALL_MARGIN;
     return Math.min(LOOKAHEAD_HIDDEN_CORE, Math.max(LOOKAHEAD_VISIBLE_CORE, deep));
   }
 
   // How far past the audio clock the core has already rendered by the time
   // a note handed over now reaches it (queue item 41); 0 on the JavaScript
-  // synth, whose nodes start on the clock itself.
+  // synth, whose nodes start on the clock itself. Hidden or frozen, never
+  // less than the deep buffer assumed (queue item 47).
   get ahead() {
     if (!this.synth.queuesAhead) return 0;
-    const a = this.synth.renderAhead;
-    return typeof a === 'number' && Number.isFinite(a) ? a : 0;
+    const measured = finite(this.synth.renderAhead);
+    return this.away ? Math.max(measured, this.deepAhead) : measured;
+  }
+
+  // The render-ahead assumed while hidden: DEEP_AHEAD, or the worst this
+  // session (`worstAhead`) or this device has seen, up to DEEP_MOST.
+  get deepAhead() {
+    if (!this.synth.queuesAhead) return 0;
+    const worst = Math.max(DEEP_AHEAD, finite(this.synth.worstAhead), finite(this.deviceAhead));
+    return Math.min(DEEP_MOST, worst);
+  }
+
+  // What decided the notes handed over next, for Diagnostics' log of late
+  // notes (queue item 47): the synth passes it to the core with each note.
+  _why(cause) {
+    if (this.synth.queuesAhead) this.synth.why = cause;
   }
 
   // The soonest a note decided now may start: `least` ahead of the clock,
@@ -300,17 +349,30 @@ export class Engine {
   // have been but have not started. The next step is decided from now, as
   // on Play. The JavaScript synth, visible, has nothing that far ahead, so
   // nothing changes there.
+  //
+  // Hidden on the core, the new loop starts past the deep buffer assumed
+  // (queue item 47), about two seconds on, and the old one plays on until
+  // then rather than leaving that silent: only what it holds from there on
+  // is dropped. A phone with a deep buffer has rendered most of that
+  // already anyway.
   _cut() {
     const now = this.ctx.currentTime;
     if (!this.spec || this.nextStepTime <= now + LOOKAHEAD_VISIBLE + this.stepDur) return;
     this.pending = [];
     this.decided = [];
     this.floor = -Infinity;
-    this.synth.cancelAhead(now);
-    this.synth.restoreTails(now);
+    const start = this._soonest(0.08);
+    if (this.synth.queuesAhead && this.away) {
+      this.synth.cancelFrom(start);
+      this.synth.restoreTails(start);
+      this.visualQueue = this.visualQueue.filter((v) => v.time < start);
+    } else {
+      this.synth.cancelAhead(now);
+      this.synth.restoreTails(now);
+      this.visualQueue = [];
+    }
     this.tailsDucked = false;
-    this.visualQueue = [];
-    this.nextStepTime = this._soonest(0.08);
+    this.nextStepTime = start;
     // The new loop starts from when the page has finished loading it, not
     // from now: drawing and rendering it takes a slow phone a good part of
     // a second, and its first notes would be late. And it is decided then,
@@ -319,8 +381,8 @@ export class Engine {
     // position after loading it.)
     Promise.resolve().then(() => {
       if (!this.playing) return;
-      this.nextStepTime = this._soonest(0.08);
-      this._tick();
+      this.nextStepTime = Math.max(start, this._soonest(0.08));
+      this._tick('jump');
     });
   }
 
@@ -371,7 +433,7 @@ export class Engine {
     this.decided.length = back.index;
     this.visualQueue = this.visualQueue.filter((v) => v.time < back.time);
     this.redecides++;
-    this._decide();
+    this._decide('change');
   }
 
   start() {
@@ -382,7 +444,7 @@ export class Engine {
     this.synth.unsilence();
     this.nextStepTime = this._soonest(0.08);
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
-    this._tick();
+    this._tick('play');
   }
 
   stop() {
@@ -435,6 +497,9 @@ export class Engine {
       // Planned from (at least a render callback), and as measured.
       renderAheadMs: `${ms(this.ahead)} (measured ${c.ahead == null ? '- no notes yet' : ms(c.ahead)})`,
       worstRenderAheadMs: ms(c.worstAhead),
+      // Queue item 47: what is planned from while hidden, and this device's
+      // worst before this session.
+      hiddenRenderAheadMs: `${ms(this.deepAhead)} (assumed ${ms(DEEP_AHEAD)}, this device before ${ms(finite(this.deviceAhead))})`,
       leastSpareMs: ms(c.earliest),
       coreClockLeadMs: ms(c.clockLead),
       recentStallMs: ms(this.recentStall),
@@ -497,7 +562,9 @@ export class Engine {
     for (const { build } of this.pending.splice(0, i)) build();
   }
 
-  _tick() {
+  // `cause`: what asked for the notes decided now (Play, a jump), else the
+  // steady lookahead.
+  _tick(cause = 'lookahead') {
     if (!this.playing) return;
     this.totalTicks++;
     const now = performance.now();
@@ -538,13 +605,16 @@ export class Engine {
       // that turns a gap into a burst. Skip to now and carry on. On the
       // core every one of them would be late (or left out), so it always
       // skips, to the soonest a note can still be on time.
-      if (ahead > 0 || behind > 0.25) this.nextStepTime = this._soonest(0.02);
+      if (ahead > 0 || behind > 0.25) {
+        this.nextStepTime = this._soonest(0.02);
+        if (cause === 'lookahead') cause = 'catch-up';
+      }
     }
-    this._decide();
+    this._decide(cause);
   }
 
   // Every step up to the lookahead, and on the core where each began.
-  _decide() {
+  _decide(cause = 'lookahead') {
     const now = this.ctx.currentTime;
     const horizon = now + this.lookahead;
     const keep = this.synth.queuesAhead;
@@ -560,10 +630,14 @@ export class Engine {
           time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount,
           live: this.live, tailsDucked: this.tailsDucked,
         });
+        // A loop's first step, or a pass's, says so in the log.
+        const top = this.absStep === 0 ? 'new loop' : this.step === 0 ? 'new pass' : null;
+        this._why(top ? `${cause}, ${top}` : cause);
       }
       this._scheduleStep(this.step, this.nextStepTime);
       this._advance();
     }
+    if (keep) this._why('lookahead');
     this._flush();
   }
 
@@ -737,4 +811,8 @@ export class Engine {
     this.visualQueue.push({ step, time });
     if (this.visualQueue.length > 512) this.visualQueue.shift();
   }
+}
+
+function finite(x) {
+  return typeof x === 'number' && Number.isFinite(x) ? x : 0;
 }

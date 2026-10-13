@@ -511,6 +511,7 @@ node tools/perf.mjs --parts path            # walk the app, reading the output a
 node tools/stalls.mjs                        # hidden, the clock held back on purpose (queue item 39)
 node tools/views.mjs --changes               # visible, every view in turn, and how soon a change is heard (queue item 40)
 node tools/views.mjs --buffer 0.37 --graphics software,gpu   # a phone's large, bursty audio output; its graphics (queue item 41)
+node tools/deep.mjs                          # a deep output buffer that appears on hide: Next, Previous, Play and freezes just after (queue item 47)
 ```
 
 `measure.mjs` renders offline, faster than real time; this plays the real
@@ -742,6 +743,26 @@ longest recent stall, which the visible queue is sized to cover). `gpu`
 is the renderer WebGL names and whether it is a real GPU; `sw` lists each
 step the service worker took, with when. The views' report carries the
 same splits per view.
+
+Since queue item 47 the page plans for a deep output buffer the moment it
+is hidden (or frozen): Android may move a backgrounded app's audio to a
+deep, power-saving buffer, and a note decided near the clock just after
+(Next, Previous or Play from the lock screen, the catch-up after a freeze)
+landed inside it before it had been measured. `hiddenRenderAheadMs` is the
+render-ahead planned from while hidden: at least 1.5 s, or the worst seen
+this session or on this device before (kept in the page's preferences), up
+to 4 s. Next or Previous while hidden therefore starts the new loop about
+two seconds on, the old one playing until then. `while hidden (every
+time)` totals every hidden spell, not only the last; and `late notes and
+render-ahead jumps` logs each late note (how far late, how far ahead it was
+posted, whether left out, and what decided it: the steady `lookahead`, a
+`jump` (Next, Previous, a loop picked), `play`, a `change` (mute, re-roll,
+tempo, wander), a `catch-up` after the clock fell behind, marked `new loop`
+or `new pass` on a loop's or a pass's first step) and each time the
+render-ahead was measured more than 100 ms past what the page was planning
+from, with when (seconds since the page began), hidden or visible, and how
+near a change (hiding, showing, freezing). `page events` lists the last
+of those changes.
 
 ## The Rust core
 

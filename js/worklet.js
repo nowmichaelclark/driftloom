@@ -106,11 +106,18 @@ class DriftloomCore extends AudioWorkletProcessor {
           x[8] ?? NaN, x[9] ?? NaN, x[10] ?? NaN, x[11] ?? NaN,
         );
         if (taken === LATE || taken === MISSED) {
-          if (m.sent != null && m.sent < m.time) this.lateBuffer++;
+          const inside = m.sent != null && m.sent < m.time;
+          if (inside) this.lateBuffer++;
           else this.lateStall++;
+          // Rare, so worth a message each: Diagnostics counts them, and logs
+          // each late one with what decided it (queue item 47).
+          this.port.postMessage({
+            ...this.counts(),
+            note: { time: m.time, sent: m.sent, rendered, why: m.why, missed: taken === MISSED, inside },
+          });
+          return;
         }
-        // Rare, so worth a message each: Diagnostics counts them.
-        if (taken === LATE || taken === FULL || taken === MISSED) this.port.postMessage(this.counts());
+        if (taken === FULL) this.port.postMessage(this.counts());
         return;
       }
       case 'damp':
