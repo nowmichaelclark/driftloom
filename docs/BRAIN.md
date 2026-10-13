@@ -476,8 +476,12 @@ Stated decisions, not inferences. Dated where the date matters.
   reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
   late and dropped by cause) will say whether anything is left. If it
   calls for a fix, that comes before the core work.
-- **Charter drafted (Session 18): `docs/CORE.md`** (PR #196), every
-  question answered; waiting on Mikey's OK (and his view of the games).
+- **The core charter is approved (Session 18, 2026-10-13):
+  `docs/CORE.md`.** Phase 1 is queued: items 42-46 in `docs/QUEUE.md`.
+  Hands: **Session 19, Opus 5.5, high**. The brain verifies each PR
+  against its yardsticks (goldens on all targets, baseline, costs) and
+  builds the control album from 43 and 44. Before phase 5: the block
+  catalogue for Mikey (charter, promise 5).
 - **Next: the core** -- a new brain chat. Read **"The core"** under "What
   Mikey has decided" first: the number one priority, shoot for the moon,
   embeddable anywhere (game engines, mods, any OS or device, iOS and
@@ -502,8 +506,11 @@ Stated decisions, not inferences. Dated where the date matters.
 core charter, `docs/CORE.md` (PR #196, draft): promises each with a
 measure, phases, questions for Mikey. His answers (2026-10-13) added
 promise 9 (stereo possible, mono default) and open building blocks;
-then bit-identical everywhere (yes) and three games (promise 10). All
-answered; waiting on his OK, then merge and phase 1 into the queue.
+then bit-identical everywhere (yes) and three games (promise 10).
+**Approved by Mikey (2026-10-13).** Phase 1 queued as items 42-46
+(golden renders on five targets; the core's own math and `no_std`;
+randomness into the core; any rate, block size and channel layout; the
+building-block interface). Hands: Session 19, Opus 5.5, high.
 
 **Session 16 (brain, 2026-10-11 to 10-12), the words, then the glitches.**
 Its State bullets, newest first, kept here as written:

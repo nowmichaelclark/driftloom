@@ -13,16 +13,16 @@ on v91) are merged, each waiting on a tester's report (Diagnostics'
 "while hidden" and "views" sections; on v92 also `gpu`, the render-ahead
 and the late and dropped splits). 41's 1.3-1.8 s stalls were not
 reproduced here (Notes from Claude Code, below). 38, 34, 35 and 36 are
-done. **Next: nothing queued for the hands.** A
-new brain chat writes the core charter (`docs/BRAIN.md`, "The core");
-the tester's v92 report may add one fix first. 37 stays on hold. A new
+done. **Next: the core, phase 1 (items 42-46)**, from the charter
+`docs/CORE.md` (approved by Mikey, 2026-10-13); if the tester's v92
+report calls for a fix, it comes first. 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
-**Mono only (Mikey, 2026-10-11):** the output stays one channel. Nothing
-is built toward stereo (no panning, width or ping-pong echoes).
-A new Claude Code session starts here: read the standing rules and the
-merge policy, then take the next item.
+**Mono by default, stereo possible later (Mikey, 2026-10-13; replaces
+"mono only" of 2026-10-11):** the app stays one channel. The core gets a
+seam for other channel layouts (item 45) and nothing more toward stereo
+until the charter's phase 9 (`docs/CORE.md`, promise 9).
 
 **The engine, from here (Mikey, 2026-10-10):** the Rust core is
 Driftloom's own engine, not a copy of Chromium. Matching Chromium was
@@ -1287,6 +1287,237 @@ A small item: data in `rank.html`, no generator or synth change.
   Export writes the new words and the pool, the tests pass. Bump BUILD
   and CACHE. Add the new words to `docs/MOODS.md` under "Ranking
   results" as pool 3.
+
+## The core, phase 1: foundations (items 42-46)
+
+**Read `docs/CORE.md` first** (the charter, approved by Mikey on
+2026-10-13). It is the reason for every item below: ten promises, each
+with a measure. Phase 1 lays the ground the rest stands on: the same code
+makes **the same samples, bit for bit, on every device**; the core runs
+without the standard library; it takes any sample rate and block size;
+and its building blocks sit behind one small interface anyone can extend.
+
+Nothing in phase 1 is meant to change how Driftloom sounds to a
+listener. Items 43 and 44 change samples (by rounding, and by moving the
+random draws), so they update the core baseline and say what moved; the
+brain builds a control album from them for Mikey's ears ("does it still
+sound the same?"). The other items must leave `tools/baseline.mjs`
+passing unchanged.
+
+**Standing rules for core items** (in addition to the rules above; from
+the charter's promises 2 and 6, held on every PR from here on):
+
+- Nothing allocates, locks or frees after `Core::new`; nothing reachable
+  from rendering can panic. Say how you checked.
+- Every public item the PR touches is documented, with the reason, not
+  only the what. `cargo clippy -- -W clippy::pedantic` is clean in the
+  files the PR touches (allow a lint locally, with a one-line reason,
+  only where following it would make the code worse).
+- No dependencies in `core/` (dev-only tools in CI are fine).
+- Everything the core emits (names, errors, logs) is plain ASCII.
+- Costs: the core baseline's render costs may not rise by more than 5%
+  on any loop without a note saying why it is worth it.
+- The JavaScript synth is the fallback until the end of phase 3: leave it
+  working, untouched unless an item says otherwise.
+- The core is no longer a copy of Chromium. Where a doc comment says a
+  block "follows Chromium to the sample", leave it if still true, but
+  new work is judged by the charter's measures, not by nulling.
+
+Hands: **Opus 5.5, high**, for the whole phase (first of a phase,
+judgment-heavy: numeric code, cross-compiling, an interface design).
+Items in order; each a PR (a/b splits welcome).
+
+## 42. Golden renders on every target
+
+**Why:** promise 3 says the same code makes the same samples on every
+device. Before making that true, measure it: a set of renders whose
+hashes CI checks on several kinds of machine.
+
+**What:**
+- **A note-list file** (plain text or a small documented binary; your
+  call, say why): everything the core needs to render a loop with no
+  JavaScript (the notes with their draws, the parameters, the sample
+  rate, the length). A tool exports note lists from a fixed set of codes
+  through today's generator and host: about 12 loops covering every
+  voice, every channel and the master chain, plus one long busy loop.
+  Commit them under `core/golden/`.
+- **A native test host:** a small Rust program in `core/` (an example or
+  a binary target, no dependencies) that reads a note list, renders it
+  through `Core` and writes a WAV and a hash (a simple documented hash of
+  the raw samples; no crates). This is also the seed of the WAV export
+  (roadmap 17) and of every later native host.
+- **Golden hashes** in `core/golden/`, one per note list, and a check
+  (`cargo test` or a script) that renders them all and compares.
+- **CI on several targets**, each rendering the goldens and comparing:
+  `wasm32-unknown-unknown` (run in Node, through the same exports the
+  worklet uses), `x86_64-unknown-linux-gnu`, and under QEMU user mode
+  `aarch64-unknown-linux-gnu`, `armv7-unknown-linux-gnueabihf` and a
+  32-bit big-endian target (`powerpc-unknown-linux-gnu`, standing in for
+  a GameCube-style port). Keep the job's wall time sensible; say what it
+  costs.
+
+**Yardsticks:**
+- On each target, rendering twice gives the same hash.
+- **Report, don't fix yet:** which targets match the wasm hashes and
+  which don't, and for the ones that don't, the largest sample
+  difference and where it comes from (expected: the platforms' own
+  `sin`, `exp`, `powf`... item 43 removes them). Make cross-target
+  equality a CI failure only from item 43 on; until then CI checks each
+  target against its own golden.
+- The app is untouched; `tools/baseline.mjs` passes unchanged.
+
+## 43. The core's own math, and no standard library
+
+**Why:** platforms compute `sin`, `exp`, `powf`, `tanh`, `log10`... each
+their own way, so the same code can't make the same samples everywhere.
+The charter's answer (Mikey: yes, bit-identical everywhere): the core
+carries its own math. The same change lets the core build with
+`#![no_std]`, which is what lets it run on a console, an old handheld or
+a microcontroller.
+
+**What:**
+- A `math` module: every transcendental the core uses (today: `sin`,
+  `cos`, `exp`, `exp2`, `powf`, `log10`, `log2`, `tanh`; check with a
+  grep, there may be more) implemented in plain Rust from `+ - * /`,
+  comparisons and bit manipulation only, so IEEE rounding makes them
+  identical on every target. `sqrt` is exact in IEEE and may stay as the
+  hardware op if it stays identical in the goldens.
+  - Accuracy: say what each function achieves (max error in ulps over
+    its range, measured against a high-precision reference in a test),
+    and where audio allows a cheaper version, say so and why. The aim is
+    not "as fast as possible" or "as exact as possible" but well
+    reasoned: exact where errors accumulate (phase, frequency), cheap
+    where nobody can hear it.
+  - No fused multiply-add anywhere (Rust doesn't fuse unless asked;
+    keep it that way and write it down).
+- **Denormals**, handled explicitly: decide how the core keeps
+  recursive filters, envelopes and reverbs out of subnormal numbers
+  (some ARM and old hardware flush them to zero, others are very slow on
+  them), so results and costs match everywhere. Say what you chose.
+- `#![no_std]` for the library, with `alloc` only if `Core::new` still
+  needs it (allocation at construction only; document it). The wasm
+  build and the native test host keep working. Note in the PR what a
+  host on a machine with no allocator would need (for later; don't
+  build it).
+- From this item on, **cross-target equality is a CI failure**: every
+  target's hashes equal the wasm hashes.
+
+**Yardsticks:**
+- All goldens identical on all five targets.
+- The sound barely moves: report each golden's largest difference and
+  its residual against the old render (expected far below hearing, on
+  the order of -100 dB or lower; if any is not, stop and leave a note).
+  Update the core baseline in the same PR and say what moved.
+- Costs within the 5% rule; the `.wasm` size reported (159 KB before).
+
+## 44. The randomness moves into the core
+
+**Why:** promise 3. Today dozens of small articulation draws (strum
+spread, timing jitter, slides, the ensemble spread, the noise buffer,
+bell detunes, reed delays, source rates and offsets) come from
+`Math.random` in `js/synth.js` and `js/engine.js` and travel with each
+note. So the same code never makes the same audio twice, and a native
+or game host would have to invent them.
+
+**What:**
+- One small seeded generator in the core (documented, deterministic,
+  cheap; no crates). Each draw comes from the loop's seed, the note's
+  identity (where it sits in the loop and which pass of the loop it is,
+  so "Let the loop wander" still varies pass to pass, reproducibly) and
+  a fixed salt per kind of draw, so adding a new kind of draw later
+  never shifts the others.
+- The noise buffer: generated in the core from a fixed seed, not
+  handed over from JavaScript.
+- The host hands the core the seeds; the notes stop carrying draws.
+  Update the note-list format and the goldens.
+- The JavaScript synth keeps its own `Math.random` draws (it is the
+  fallback and retires at the end of phase 3); don't spend work on it.
+- List every draw you moved in the PR, with where it came from and its
+  range, so the brain can check none was missed or changed in range.
+
+**Yardsticks:**
+- Playing the same code twice in the app (core path) gives identical
+  audio: add this to `tools/baseline.mjs` (render twice, compare).
+- Each moved draw keeps its range and distribution: a test draws many
+  and compares mean, spread and range against the old formula.
+- Goldens identical across all targets.
+- Update the core baseline; the brain builds the control album from the
+  PR's list.
+
+## 45. Any sample rate, any block size, any channel layout
+
+**Why:** promise 4. A game or an operating system asks for its own rate
+(22,050 to 192,000 Hz) and its own block size (an audio callback may ask
+for 441 or 1,024 frames, or a different number every time). Today the
+core runs on Web Audio's 128-frame quantum. And promise 9: the core
+should render to whatever channel layout the host asks for, so stereo
+can come later without rebuilding it.
+
+**What:**
+- The host asks for any number of frames per call; the core may still
+  work internally in fixed blocks (128 is fine) and buffer between them.
+  Note start times stay sample-accurate whatever the host's block size.
+- Every rate-dependent piece (filter coefficients, delay lengths,
+  envelopes, the reverb, LFOs, oversampling) derives from the rate given
+  at `Core::new`; no hidden 44.1 or 48 kHz constants. Grep and say what
+  you found.
+- **Output layout** chosen by the host at `Core::new`: mono is the only
+  layout implemented; asking for another returns a clear "not supported
+  yet" (plain ASCII), not a panic. Shape the internals so a stereo
+  layout can be added later as a new render, not as a mono mix spread
+  across two channels (promise 9: the mono render pays nothing for
+  stereo existing). Build nothing toward stereo beyond that seam.
+- The web host is unchanged in behavior.
+
+**Yardsticks:**
+- **Block-size independence:** each golden rendered with host blocks of
+  1, 64, 128, 441, 1024 frames, and a random size every call, gives
+  identical hashes.
+- **Rate:** goldens at 48 kHz unchanged; new goldens at 22,050, 44,100,
+  96,000 and 192,000 Hz, each checked for level (within 0.2 dB of 48
+  kHz), tone (the 2-5 kHz share within the tone probe's tolerance) and
+  no aliasing worse than at 48 kHz. Say how you measured.
+- `tools/baseline.mjs` passes unchanged.
+
+## 46. The building-block interface
+
+**Why:** promise 5. Mikey (2026-10-13): developers, AI agents and he
+himself should be able to add building blocks, or make fundamental
+changes to one, easily, without understanding the whole core. This is
+also the ground phase 5 (instruments as recipes) builds on.
+
+**What:**
+- Read the core and propose the interface first, in the PR body before
+  the code: what a block is (an oscillator, a filter, an envelope, the
+  noise, the formants, the reed, the bell body, the compressor...), what
+  it takes in, puts out and is set by, how its state is held, how the
+  core finds it (one registry list). Fast: no dynamic dispatch on the
+  per-sample path unless measured to cost nothing; no allocation. Keep
+  it small; two or three concepts, not ten.
+- Move today's blocks behind it. Voices become compositions of blocks
+  where that is natural; where a voice's insides don't split cleanly,
+  say so rather than force it (phase 5 decides the recipe format).
+- **A test kit every block gets for free:** level, cost, tone (the 2-5
+  kHz share), determinism (twice, same hash) and a null test against a
+  stored render of the block's previous version, so a change is either
+  proven identical or reported as a sound change for an A/B.
+- **Prove "one file plus one line":** add a trivial demonstration block
+  in the tests (not in the app) that needs exactly one new file and one
+  line in the registry, and gets the kit's tests automatically.
+- `core/README.md`, first version: what the core is, the host calls,
+  how to add a building block (the walk-through the demonstration block
+  proves). Short; for developers and AI agents.
+- Update the header of `lib.rs`: the core is Driftloom's own engine;
+  the JavaScript synth is a fallback, no longer the reference.
+
+**Yardsticks:**
+- Goldens and `tools/baseline.mjs` unchanged, byte for byte: this is a
+  refactor.
+- Costs within the 5% rule (dispatch must not cost).
+- The demonstration block: one file, one line, the kit runs on it.
+- Leave a note for the brain: which of today's blocks felt awkward
+  behind the interface, and what a block catalogue (charter, promise 5)
+  should consider.
 
 ## 41. Urgent: the Pixel 10a still glitches on v91 -- what the field report shows
 

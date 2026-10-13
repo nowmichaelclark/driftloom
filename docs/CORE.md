@@ -1,9 +1,8 @@
 # The core: charter
 
-**Status: draft for Mikey's approval** (brain, Session 18, 2026-10-13).
-Every question is answered (2026-10-13). Waiting on his OK for the whole,
-including the three games (promise 10); then it merges and the brain
-writes the first phase into `docs/QUEUE.md`.
+**Status: approved by Mikey, 2026-10-13** (drafted by the brain,
+Session 18). Phase 1 is in `docs/QUEUE.md` as items 42-46. Changes to the
+charter are his to make; the brain proposes them, with the reason.
 
 The core is Driftloom's engine: the part users never see but developers
 do. It decides the notes and makes the sound, and it is the same code in
