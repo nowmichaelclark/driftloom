@@ -62,7 +62,7 @@ impl Noise {
         }
         self.len = len;
         if let Some(space) = self.samples.get_mut(..len) {
-            rng::noise_buffer(space);
+            rng::noise_buffer(space, rate);
         }
     }
 

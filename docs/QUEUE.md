@@ -2399,83 +2399,23 @@ Mikey decides this line:
      `installing`. It now follows the worker and lists each step with
      its time.
 
-- **Item 45, stopped at its tone yardstick; three decisions for the brain
-  (Session 21, hands, Sonnet 5.5, 2026-10-13).** Everything else in the item
-  is built and passing; the work is on branch `ccr-b0e3f851-fupv4w` as a
-  draft PR, **not merged**, as the brief says to stop rather than push on.
-  - **What is done and measured.** `Core::start(rate, channels)` (rate 22,050
-    to `MAX_RATE`; any layout but mono returns `Error::Layout`, "not
-    supported yet", ASCII, nothing rendered), `Core::render(&mut [&mut
-    [f32]])` (any number of frames a call, buffered over the core's own
-    128-frame blocks; `Core::next_frame` says when a note is late), the wasm
-    export `dl_render`, and in the native host `dlrender --rate HZ` and
-    `--blocks 1,441,random`. **Block independence:** all 21 goldens, in
-    calls of 1, 64, 128, 441 and 1,024 frames and of random sizes, hash to
-    the plain render's speaker output, on x86-64 natively and on wasm32 in
-    Node (`tools/golden.sh --blocks all`). **Rates:** 13-dust, 16-grove and
-    18-shatter at 22,050, 44,100, 96,000 and 192,000 Hz hash the same on
-    x86-64 and wasm32 (`tools/golden.sh --rates`, `core/golden/rates.hashes`;
-    aarch64, armv7 and PowerPC are left to CI). **The 48 kHz goldens and
-    `tools/baseline.mjs` are unchanged.** `tools/rates.mjs` measures the rest:
-    **level** within 0.10 dB of 48 kHz at every rate (yardstick 0.2); **what
-    folds back** (a loud sine through the whole chain, and sawtooth voices,
-    five pitches C5 to C8, 6-10.5 kHz, not the tone's harmonics) is under
-    -67 dB at every rate, and never worse than 48 kHz's by more than 1.4 dB
-    (the yardstick's 1 dB applies above -60 dB, where it could be heard). I grepped for hidden rate
-    constants: none in the code except the tests' `44100`; the two rate
-    rules in the core are Chromium's (wavetables halve below 24 kHz) and the
-    biquad and interpolation maths themselves.
-  - **Decision 1, the tone yardstick.** The 2-5 kHz share of a dry 0.4 s note
-    (the coffee-shop probe, three pitches, every melody voice) is within the
-    0.5 point tolerance at 96,000 and 192,000 Hz for all 19 voices, at
-    44,100 Hz for 17 of them and at 22,050 Hz for 16. Three saw-based voices are outside:
-    analogpad 16.79% at 48 kHz, -1.06 at 44.1 kHz and -1.28 at 22.05;
-    softpad 4.66%, -0.38 and -0.65; stab 33.58%, +0.64 and +0.97. They are
-    small spectral tilts, not a bug I can find: a band-by-band comparison of
-    analogpad at 44.1 against 48 kHz differs by under 0.5 dB up to 5 kHz and
-    by 0.3-0.9 dB above 6 kHz (the wavetable's linear interpolation, the
-    bilinear filters and the wobble's interpolating delay all lose a little
-    more near Nyquist at a lower rate); the share moves because it is a
-    small fraction of the total. In dB, the share changes by 0.1 to 0.7 dB.
-    The whole lists' shares are within 0.4 points except 18-shatter at
-    22.05 kHz, -1.33 (a bright list, 4.74% at 48 kHz). **Options:** (a)
-    accept a tolerance of 1.5 points (or 0.75 dB of the share) at 44.1 and
-    22.05 kHz and keep 0.5 at 96 kHz and above; (b) hold 0.5 everywhere and
-    treat the three voices as needing their own per-rate trims (I advise
-    against it: the app plays 44.1 kHz phones now, nobody has heard the
-    difference, and a trim would move the baseline); (c) judge 44.1 kHz by ear
-    in a control album (analogpad, stab, softpad at 44.1 against 48).
-  - **Decision 2, the noise's colour is in samples.** `_makeNoise` pinks the
-    noise with three one-pole sections whose poles are per-sample numbers
-    (0.99765, 0.963, 0.57), so the noise's colour moves with the rate: at 22.05
-    kHz its sections' corner frequencies are 0.46 of what they are at 48 kHz,
-    at 192 kHz four times. That is the one hidden rate constant the grep found
-    (a recipe tuned at 48 kHz). I wrote the fix (poles to the power
-    `48000/rate`, input gains scaled to keep the low-frequency gain, white
-    scaled by the square root of the rate ratio; exactly 1 at 48 kHz, so the
-    goldens did not move) and a test that the noise's density per Hz agrees
-    within 2 dB at 22.05, 44.1, 96 and 192 kHz. But **it moves the sound at 44.1
-    kHz** (the baseline's rate, and many phones'), so with "`tools/baseline.mjs`
-    passes unchanged" in the item I took it out again and left the finding.
-    Putting it back is one function (`rng::noise_buffer`) and a baseline update;
-    it improves 18-shatter at 22.05 kHz from -1.33 to -1.13 points and little
-    else. Your call: keep the noise as the synth always made it (44.1 and 48
-    kHz differ slightly) or make it rate-true and update the baseline.
-  - **Decision 3, memory for 192 kHz.** The mix's delay lines, the master's
-    wobble and the noise are fixed arrays sized for the highest rate. At 192
-    kHz the core's memory is 17.56 MB (16.75 MiB), 2.8 MB more than the web
-    build's 14.75 MB, which is over the 16 MB line items 23-28 set for phones. I
-    made the capacity a cargo feature: `wide` (192 kHz) is on by default for
-    hosts, and `tools/build-core.sh` builds the web `.wasm` without it, so the
-    app's `js/dlcore.wasm` keeps its 96 kHz limit and its memory (14,745,600
-    bytes, 146 KB file, as before); `--wide` makes the big build in
-    `core/target/` for the tools. If you would rather the web build hold 192
-    kHz too, or the other way round, it is the feature's default in
-    `core/Cargo.toml`.
-  - **Not done because of the stop:** `tools/rates.mjs` is not in CI (it
-    fails on the three voices above); `golden.sh --blocks` and `--rates` are
-    in `core.yml`, and the PowerPC job gets about 15 minutes longer under QEMU
-    (still inside its 60-minute limit). No version bump, no Done line.
+- **Item 45, stopped at its tone yardstick, then finished on Mikey's
+  decisions (Session 21, hands, Sonnet 5.5, 2026-10-13/14, #213).** The
+  first pass stopped with three open decisions (the 2-5 kHz tone share of
+  analogpad, softpad and stab at 44.1 and 22.05 kHz; the noise's colour
+  being per-sample; 192 kHz memory) and Mikey answered them (see item 45).
+  What the numbers were, for the record. **Block independence:** all 21
+  goldens in calls of 1, 64, 128, 441, 1,024 frames and of random sizes hash
+  to the plain render's speaker output (x86-64 and wasm32). **Level** within
+  0.10 dB of 48 kHz at every rate. **What folds back** under -67 dB at every
+  rate, never more than 1.4 dB worse than 48 kHz's. **Tone**, voice by voice:
+  within 0.5 points at 96 and 192 kHz for all 19 voices; at 44.1 and 22.05
+  kHz analogpad -1.06 and -1.28 (of 16.79%), softpad -0.38 and -0.65 (of
+  4.66%), stab +0.64 and +0.97 (of 33.58%), which Mikey accepted up to 1.5
+  points. Whole lists: 18-shatter at 22.05 kHz is 1.13 points under its 48
+  kHz share, reported not held. I grepped for hidden rate constants: none in
+  the code except the tests' `44100` and the noise's poles. Memory: the web
+  build 14,745,600 bytes; the `wide` build 17,563,648 (2.8 MB more).
 
 ## Done
 

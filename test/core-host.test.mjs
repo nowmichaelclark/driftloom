@@ -25,7 +25,7 @@ class FakeNode {
 }
 globalThis.AudioWorkletNode = FakeNode;
 
-const { CoreHost, coreUnsupported } = await import('../js/core.js');
+const { CoreHost, coreUnsupported, newContext, CORE_MAX_RATE, CORE_FALLBACK_RATE } = await import('../js/core.js');
 
 console.log('\nThe engine a URL asks for');
 for (const [search, want] of [['', 'rust'], ['?engine=rust', 'rust'], ['?engine=js', 'js'], ['?engine=nonsense', 'rust'], ['?x=1&engine=js', 'js']]) {
@@ -67,6 +67,36 @@ console.log('\nA disposed host');
   // The error that was already queued arrives anyway, by whatever path.
   next._fail('late');
   check('a failure after dispose reaches nobody', late === 0);
+}
+
+console.log('\nA context faster than the core holds (queue item 45)');
+{
+  // A browser whose default rate is `rate`; `refuse` makes it turn down an explicit rate.
+  const made = [];
+  const browser = (rate, refuse = false) => class {
+    constructor(options = {}) {
+      if (options.sampleRate && refuse) throw new Error('rate not supported');
+      this.sampleRate = options.sampleRate ?? rate;
+      this.options = options;
+      this.closed = false;
+      made.push(this);
+    }
+    close() { this.closed = true; }
+  };
+  for (const rate of [44100, 48000, 96000]) {
+    made.length = 0;
+    const ctx = newContext(browser(rate), { latencyHint: 'playback' });
+    check(`${rate} Hz is left as it is`, ctx.sampleRate === rate && made.length === 1);
+  }
+  made.length = 0;
+  const ctx = newContext(browser(192000), { latencyHint: 'playback' });
+  check(`192 kHz is asked to come up at ${CORE_FALLBACK_RATE} Hz instead, with the other options`,
+    ctx.sampleRate === CORE_FALLBACK_RATE && ctx.options.latencyHint === 'playback' && made.length === 2);
+  check('and the fast one is closed', made[0].closed && !made[1].closed);
+  made.length = 0;
+  const stuck = newContext(browser(192000, true));
+  check('a browser that will not do that keeps the first (the synth falls back to JavaScript)', stuck.sampleRate === 192000 && !stuck.closed);
+  check(`the limit is the web build's, ${CORE_MAX_RATE} Hz`, CORE_MAX_RATE === 96000);
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

@@ -20,6 +20,8 @@
 //! see the list in `salt`). `test/draw-vectors.txt` holds values both must
 //! make, and both sides' tests check them.
 
+use crate::math;
+
 /// Where a note sits in its loop: the loop's seed, which pass of the loop
 /// it is (the pass count rises each time the loop comes round), the step
 /// within the pass, and the note's place among the notes its layer plays at
@@ -151,24 +153,36 @@ const NOISE_KEY: Key = Key {
     ord: 0,
 };
 
-/// Fill `out` with the noise every breath, strike and drum plays: white
-/// noise lightly pinked, so it sounds like air and not a hiss. The recipe is
-/// the JavaScript synth's `_makeNoise`, number for number, with the white
-/// drawn from the core's own generator instead of the platform's.
-///
-/// The three one-pole sections' poles are per-sample numbers, so the noise's
-/// colour is in samples, not Hz: at 22,050 Hz it sits lower than at 48,000,
-/// at 192,000 higher. That is how the synth has always made it (a context at
-/// 44,100 Hz has a slightly different colour from one at 48,000), and moving
-/// it would move the sound at the rates the app runs at; see the note on
-/// queue item 45.
-pub fn noise_buffer(out: &mut [f32]) {
+/// The rate the noise's colour was tuned at, in Hz: at this rate the noise
+/// is exactly what the synth's `_makeNoise` made.
+const NOISE_TUNED_AT: f64 = 48_000.0;
+
+/// Fill `out` with the noise every breath, strike and drum plays at `rate`
+/// Hz: white noise lightly pinked, so it sounds like air and not a hiss.
+/// The recipe is the JavaScript synth's `_makeNoise`, with the white drawn
+/// from the core's own generator, carried to any rate: it was written as
+/// three one-pole filters whose poles are per-sample numbers, which at
+/// another rate would put the noise's colour somewhere else in Hz. Each
+/// pole is moved to keep its time constant (`p ^ (48000 / rate)`), its
+/// input gain to keep its gain at low frequencies, and the white's level to
+/// keep its density per Hz, so the noise sounds the same, band for band
+/// below 20 kHz, at every rate. At 48,000 Hz every factor is exactly 1, so
+/// the noise is what it was there.
+pub fn noise_buffer(out: &mut [f32], rate: f64) {
+    let ratio = NOISE_TUNED_AT / rate;
+    // (pole, input gain) of the three one-pole sections, moved to `rate`.
+    let section = |pole: f64, gain: f64| {
+        let moved = math::pow(pole, ratio);
+        (moved, gain * (1.0 - moved) / (1.0 - pole))
+    };
+    let ((p0, g0), (p1, g1), (p2, g2)) = (section(0.99765, 0.099), section(0.963, 0.293), section(0.57, 1.0526));
+    let white_level = math::sqrt(1.0 / ratio);
     let (mut b0, mut b1, mut b2) = (0.0_f64, 0.0_f64, 0.0_f64);
     for (i, sample) in (0_u32..).zip(out.iter_mut()) {
-        let white = unit(NOISE_KEY, 0, salt::NOISE, i) * 2.0 - 1.0;
-        b0 = 0.99765 * b0 + white * 0.099;
-        b1 = 0.963 * b1 + white * 0.293;
-        b2 = 0.57 * b2 + white * 1.0526;
+        let white = (unit(NOISE_KEY, 0, salt::NOISE, i) * 2.0 - 1.0) * white_level;
+        b0 = p0 * b0 + white * g0;
+        b1 = p1 * b1 + white * g1;
+        b2 = p2 * b2 + white * g2;
         // Stored as the JavaScript buffer stores it: a 32-bit float.
         #[allow(clippy::cast_possible_truncation)]
         let value = ((b0 + b1 + b2 + white * 0.1848) * 0.22) as f32;
@@ -319,8 +333,8 @@ mod tests {
     fn the_noise_is_pinked_white() {
         let mut a = vec![0.0_f32; 96_000];
         let mut b = vec![0.0_f32; 96_000];
-        noise_buffer(&mut a);
-        noise_buffer(&mut b);
+        noise_buffer(&mut a, 48_000.0);
+        noise_buffer(&mut b, 48_000.0);
         assert_eq!(a, b);
         let mean = a.iter().map(|x| f64::from(*x)).sum::<f64>() / a.len() as f64;
         let rms = (a.iter().map(|x| f64::from(*x * *x)).sum::<f64>() / a.len() as f64).sqrt();
@@ -328,5 +342,46 @@ mod tests {
         assert!(mean.abs() < 0.08, "mean {mean}");
         assert!((0.33..0.43).contains(&rms), "rms {rms}");
         assert!(peak > 1.2 && peak < 1.9, "peak {peak}");
+    }
+
+    /// The noise has the same density per Hz at every rate, in the bands
+    /// that all of them hold: its colour is in Hz, not in samples. Welch's
+    /// estimate at six frequencies, in dB under the one at 1 kHz, within 2 dB
+    /// of the 48 kHz noise's (the estimates themselves scatter by about 1 dB;
+    /// left in samples, the colour is several dB out at 22 and 192 kHz).
+    #[test]
+    fn the_noise_sounds_the_same_at_any_rate() {
+        let density = |rate: f64, hz: f64| -> f64 {
+            let mut noise = vec![0.0_f32; (rate * 8.0) as usize];
+            noise_buffer(&mut noise, rate);
+            // Goertzel over 0.1 s windows, averaged.
+            let n = (rate / 10.0) as usize;
+            let k = (hz * n as f64 / rate).round();
+            let w = 2.0 * std::f64::consts::PI * k / n as f64;
+            let c = 2.0 * w.cos();
+            let (mut sum, mut count) = (0.0, 0);
+            for chunk in noise.chunks_exact(n) {
+                let (mut s1, mut s2) = (0.0_f64, 0.0_f64);
+                for (i, x) in chunk.iter().enumerate() {
+                    // A Hann window.
+                    let hann = 0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / n as f64).cos();
+                    let s0 = f64::from(*x) * hann + c * s1 - s2;
+                    s2 = s1;
+                    s1 = s0;
+                }
+                sum += s1 * s1 + s2 * s2 - c * s1 * s2;
+                count += 1;
+            }
+            // Per Hz: the rate sets the scale (a density is per second).
+            10.0 * (sum / f64::from(count) / rate).log10()
+        };
+        let bands = [100.0, 300.0, 1000.0, 3000.0, 6000.0, 9000.0];
+        let at = |rate: f64| bands.map(|hz| density(rate, hz) - density(rate, 1000.0));
+        let reference = at(48_000.0);
+        for rate in [22_050.0, 44_100.0, 96_000.0, 192_000.0] {
+            for ((got, want), hz) in at(rate).iter().zip(reference).zip(bands) {
+                assert!((got - want).abs() < 2.0, "{rate} Hz at {hz} Hz: {got:.1} dB against {want:.1}");
+            }
+        }
     }
 }

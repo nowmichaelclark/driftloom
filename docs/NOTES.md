@@ -935,9 +935,13 @@ the core with `Core::start(rate, channels)` and takes its samples with
   core is built: the `wide` feature (on by default) holds 192 kHz, about 3
   MB more than the web build's 96 kHz, which leaves it off
   (`tools/build-core.sh`; `--wide` makes the big one for the tools). Nothing
-  in the core knows 44.1 or 48 kHz as a number except the tests; the one
-  recipe that carries a rate in disguise is the noise's colour (see the note
-  on queue item 45). `tools/golden.sh --rates` pins three lists at 22,050,
+  in the core knows 44.1 or 48 kHz as a number except the tests and the noise:
+  its colour was written as per-sample filter poles, so it is carried to
+  other rates (`rng::noise_buffer`: poles to the power 48000/rate, gains and
+  level to match; every factor is exactly 1 at 48 kHz) and sounds the same
+  band for band at all of them. A browser context faster than the web build
+  holds (96 kHz) is asked to come up at 48 kHz instead (`newContext` in
+  `js/core.js`). `tools/golden.sh --rates` pins three lists at 22,050,
   44,100, 96,000 and 192,000 Hz to hashes that every target must make, and
   `tools/rates.mjs` measures level, tone and what folds back against the 48
   kHz render.

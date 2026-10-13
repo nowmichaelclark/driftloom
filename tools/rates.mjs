@@ -14,9 +14,12 @@
 //             of the 48 kHz render's
 //   tone      the coffee-shop test of tools/measure.mjs, voice by voice: the
 //             share of a dry note's A-weighted energy in 2-5 kHz, for every
-//             melody voice at three pitches, within 0.5 points of 48 kHz's.
-//             (The whole lists' shares are printed too, for the record, and
-//             not held to it: see the note on 22,050 Hz in the PR.)
+//             melody voice at three pitches, within 0.5 points of 48 kHz's at
+//             96,000 and 192,000 Hz and within 1.5 points at 44,100 and
+//             22,050 Hz (Mikey, 2026-10-14: a lower rate's filters and
+//             interpolation lose a little more near Nyquist, and no voice is
+//             trimmed for it). The whole lists' shares are printed too, for
+//             the record, and not held to it.
 //   aliasing  a loud pure tone through the whole chain, at five pitches from
 //             C5 to C8 (the saturator and its oversampling are the likeliest
 //             place to fold) and sawtooth voices at the same pitches (their
@@ -43,7 +46,7 @@ const json = jsonAt >= 0 ? argv[jsonAt + 1] : null;
 const RATES = [22050, 44100, 96000, 192000];
 const REFERENCE = 48000;
 const LEVEL_TOLERANCE = 0.2;
-const TONE_TOLERANCE = 0.5;
+const TONE_TOLERANCE = (rate) => (rate <= 44100 ? 1.5 : 0.5);
 const ALIAS_TOLERANCE = 1;
 const ALIAS_AUDIBLE = -60;
 
@@ -262,7 +265,7 @@ for (const [name, [voice, parts, extra]] of Object.entries(VOICES)) {
     const share = probe(rate, voice, parts, extra);
     const d = share - at48;
     rows.push({ voice: name, rate, share, at48 });
-    const ok = Math.abs(d) <= TONE_TOLERANCE;
+    const ok = Math.abs(d) <= TONE_TOLERANCE(rate);
     cells.push(`${rate}: ${d >= 0 ? '+' : ''}${d.toFixed(2)}${ok ? '' : ' <--'}`);
     if (!ok) fail(`${name} at ${rate} Hz: tone share ${share.toFixed(2)} % against ${at48.toFixed(2)} % at ${REFERENCE} Hz`);
   }
