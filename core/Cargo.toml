@@ -10,9 +10,18 @@ license-file = "../LICENSE"
 [dependencies]
 
 [lib]
-# cdylib: the WebAssembly module the worklet loads. rlib: native tests,
-# and any later native host.
-crate-type = ["cdylib", "rlib"]
+# A plain Rust library: native tests, the test host and any later host
+# link it. The WebAssembly module the worklet loads is the same library
+# built as a cdylib with the `web` feature (tools/build-core.sh). A `no_std`
+# library cannot be a cdylib on its own: the final module needs a panic
+# handler, and only the web host's build should bring one, or any program
+# that links the library alongside `std` would have two.
+crate-type = ["rlib"]
+
+[features]
+# The WebAssembly exports `js/worklet.js` calls (`src/wasm.rs`) and the
+# module's panic handler. Only tools/build-core.sh turns it on.
+web = []
 
 [profile.release]
 opt-level = 3

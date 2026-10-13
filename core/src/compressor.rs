@@ -39,6 +39,7 @@
 //! so they are plain numbers here (`set`); Chromium reads each one's value
 //! once a block, as this does.
 
+use crate::math;
 use crate::QUANTUM;
 
 type Block = [f32; QUANTUM];
@@ -102,20 +103,20 @@ pub struct Settings {
 
 // `audio_utilities::DecibelsToLinear` and `LinearToDecibels`.
 fn to_linear(db: f32) -> f32 {
-    10.0f32.powf(0.05 * db)
+    math::powf(10.0, 0.05 * db)
 }
 
 fn to_db(linear: f32) -> f32 {
-    20.0 * linear.log10()
+    20.0 * math::log10f(linear)
 }
 
 // `fdlibm::powf` and `fdlibm::asinf`: the 64-bit function, rounded.
 fn pow64(x: f32, y: f32) -> f32 {
-    (x as f64).powf(y as f64) as f32
+    math::pow(x as f64, y as f64) as f32
 }
 
 fn asin64(x: f32) -> f32 {
-    (x as f64).asin() as f32
+    math::asin(x as f64) as f32
 }
 
 fn finite_or(x: f32, default: f32) -> f32 {
@@ -235,7 +236,7 @@ impl<const C: usize> Compressor<C> {
         }
         self.warp_for = f32::NAN;
         // `DiscreteTimeConstantForSampleRate`, in 64 bits.
-        self.metering_release_k = (1.0 - (-1.0 / (rate * METERING_RELEASE)).exp()) as f32;
+        self.metering_release_k = (1.0 - math::exp(-1.0 / (rate * METERING_RELEASE))) as f32;
     }
 
     /// Start warm: as if the node had just been listening to silence, at
@@ -396,7 +397,7 @@ impl<const C: usize> Compressor<C> {
                 // Warped, to smooth the exponential's corners.
                 if compressor_gain.to_bits() != self.warp_for.to_bits() {
                     self.warp_for = compressor_gain;
-                    self.warped = ((PI_OVER_TWO * compressor_gain) as f64).sin() as f32;
+                    self.warped = math::sin((PI_OVER_TWO * compressor_gain) as f64) as f32;
                     self.warped_db = to_db(self.warped);
                 }
                 let total_gain = post_gain * self.warped;
@@ -443,7 +444,7 @@ impl<const C: usize> Compressor<C> {
             return x;
         }
         let lt = self.linear_threshold;
-        lt + (1.0 - ((-k * (x - lt)) as f64).exp() as f32) / k
+        lt + (1.0 - math::exp((-k * (x - lt)) as f64) as f32) / k
     }
 
     // `Saturate`: the whole curve, a constant ratio past the knee.
@@ -480,7 +481,7 @@ impl<const C: usize> Compressor<C> {
             } else {
                 min_k = k;
             }
-            k = (min_k * max_k).sqrt();
+            k = math::sqrtf(min_k * max_k);
         }
         k
     }

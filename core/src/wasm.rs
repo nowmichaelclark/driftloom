@@ -12,7 +12,16 @@
 
 use core::cell::UnsafeCell;
 
-use crate::{Core, Taken};
+use crate::{Core, Key, Taken};
+
+/// What the module does if the core panics: nothing reachable from the
+/// exports can (`lib.rs`), but a `no_std` module must say. It traps, which
+/// the worklet reports as a processor error and the page answers by
+/// falling back to the JavaScript synth (queue item 31b).
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 
 struct Global(UnsafeCell<Core>);
 
@@ -71,35 +80,16 @@ pub extern "C" fn dl_note(
     ) as u32
 }
 
-/// Room for the draws of the sung note that comes next; see
-/// `Core::sung_draws`. Returns where to write them, or 0 if a note cannot
-/// have that many.
+/// Where the notes sent next sit in their loop; see `Core::key`.
 #[unsafe(no_mangle)]
-pub extern "C" fn dl_sung_draws(len: u32) -> *mut f64 {
-    let space = core().sung_draws(len as usize);
-    if space.is_empty() {
-        core::ptr::null_mut()
-    } else {
-        space.as_mut_ptr()
-    }
+pub extern "C" fn dl_key(seed: u32, pass: u32, step: u32, ord: u32) {
+    core().key(Key { seed, pass, step, ord });
 }
 
 /// A new strum into `channel` at `time`; see `Core::damp`.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_damp(channel: u32, time: f64) {
     core().damp(channel, time);
-}
-
-/// Room for `len` samples of the host's noise; see `Core::noise`. Returns
-/// where to write them, or 0 if the core cannot hold that many.
-#[unsafe(no_mangle)]
-pub extern "C" fn dl_noise(len: u32) -> *mut f32 {
-    let space = core().noise(len as usize);
-    if space.is_empty() {
-        core::ptr::null_mut()
-    } else {
-        space.as_mut_ptr()
-    }
 }
 
 /// The mix as the synth builds it on full quality (1) or lite (0); see

@@ -22,6 +22,7 @@
 //! each (the node's reported latency); Web Audio does not compensate for
 //! it, and neither does this.
 
+use crate::math;
 use crate::QUANTUM;
 
 /// Taps of the upsampler's kernel, and of the downsampler's before it is
@@ -36,7 +37,7 @@ const ALPHA: f64 = 0.16;
 fn blackman(x: f64) -> f64 {
     let (a0, a1, a2) = (0.5 * (1.0 - ALPHA), 0.5, 0.5 * ALPHA);
     let two_pi = 2.0 * core::f64::consts::PI;
-    a0 - a1 * (two_pi * x).cos() + a2 * (two_pi * 2.0 * x).cos()
+    a0 - a1 * math::cos(two_pi * x) + a2 * math::cos(two_pi * 2.0 * x)
 }
 
 pub struct Up {
@@ -61,7 +62,7 @@ impl Up {
         for (i, k) in self.kernel.iter_mut().enumerate() {
             let i = i as f64;
             let s = core::f64::consts::PI * (i - half as f64 - offset);
-            let sinc = if s == 0.0 { 1.0 } else { s.sin() / s };
+            let sinc = if s == 0.0 { 1.0 } else { math::sin(s) / s };
             let x = (i - offset) / n as f64;
             *k = (sinc * blackman(x)) as f32;
         }
@@ -121,8 +122,8 @@ impl Fft {
     fn init(&mut self) {
         for (k, (c, s)) in self.cos.iter_mut().zip(self.sin.iter_mut()).enumerate() {
             let a = -2.0 * core::f64::consts::PI * k as f64 / FFT as f64;
-            *c = a.cos() as f32;
-            *s = a.sin() as f32;
+            *c = math::cos(a) as f32;
+            *s = math::sin(a) as f32;
         }
     }
 
@@ -201,7 +202,7 @@ impl Down {
         let mut kernel = [0.0f32; DOWN_ODD];
         for i in (1..n).step_by(2) {
             let s = scale * core::f64::consts::PI * (i - half) as f64;
-            let mut sinc = if s == 0.0 { 1.0 } else { s.sin() / s };
+            let mut sinc = if s == 0.0 { 1.0 } else { math::sin(s) / s };
             sinc *= scale;
             let x = i as f64 / n as f64;
             if let Some(k) = kernel.get_mut(((i - 1) / 2) as usize) {

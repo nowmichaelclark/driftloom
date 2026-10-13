@@ -22,6 +22,7 @@
 //! The tables are built once, when the core starts, in a fixed array: no
 //! allocation.
 
+use crate::math;
 use core::f64::consts::PI;
 
 /// The longest table this core builds.
@@ -80,7 +81,7 @@ impl Wave {
         let size = if rate <= 24000.0 { SIZE / 2 } else { SIZE };
         self.size = size;
         // Chromium's own float arithmetic, step for step.
-        self.ranges = (0.5 + 3.0 * (size as f32).log2()) as usize;
+        self.ranges = (0.5 + 3.0 * math::log2f(size as f32)) as usize;
         self.ranges = self.ranges.min(RANGES);
         let half = size / 2;
         self.lowest = (0.5 * rate) / half as f32;
@@ -96,7 +97,7 @@ impl Wave {
                 // The first range that differs from range 0. A pitch picks
                 // ranges up to 2 above 1 + 3 log2(f / lowest); keep half a
                 // range clear of the edge.
-                self.same_below = self.lowest * 2f32.powf((r as f32 - 2.5) / 3.0);
+                self.same_below = self.lowest * math::powf(2.0, (r as f32 - 2.5) / 3.0);
             }
             // The same partials as the range before: the same table. A wave
             // with few partials has many of these (the fiddle's first 16).
@@ -146,7 +147,7 @@ impl Wave {
             };
         }
         let ratio = if f > 0.0 { f / self.lowest } else { 0.5 };
-        let cents = ratio.log2() * 1200.0;
+        let cents = math::log2f(ratio) * 1200.0;
         let top = self.ranges.saturating_sub(1);
         let range = (1.0 + cents / (1200.0 / 3.0)).max(0.0).min(top as f32);
         let higher = range as usize;
@@ -315,7 +316,7 @@ impl Waves {
         imag[1] = 1.0;
         self.sine.build(rate, &real[..2], &imag[..2], fft);
         for (n, im) in imag.iter_mut().enumerate().take(BOWED_PARTIALS + 1).skip(1) {
-            *im = (1.0 / (n as f64).powf(BOWED_SLOPE)) as f32;
+            *im = (1.0 / math::pow(n as f64, BOWED_SLOPE)) as f32;
         }
         self.bowed.build(
             rate,
@@ -346,20 +347,20 @@ impl Waves {
         ] {
             imag.fill(0.0);
             for (n, im) in imag.iter_mut().enumerate().take(LEAD_PARTIALS + 1).skip(1) {
-                *im = (1.0 / (n as f64).powf(slope)) as f32;
+                *im = (1.0 / math::pow(n as f64, slope)) as f32;
             }
             wave.build(rate, &real[..=LEAD_PARTIALS], &imag[..=LEAD_PARTIALS], fft);
         }
         imag.fill(0.0);
         for (n, im) in imag.iter_mut().enumerate().take(FOLK_PARTIALS + 1).skip(1) {
             let even = if n.is_multiple_of(2) { REED_EVEN } else { 1.0 };
-            *im = (even / (n as f64).powf(REED_SLOPE)) as f32;
+            *im = (even / math::pow(n as f64, REED_SLOPE)) as f32;
         }
         self.reed
             .build(rate, &real[..=FOLK_PARTIALS], &imag[..=FOLK_PARTIALS], fft);
         for (n, im) in imag.iter_mut().enumerate().take(FOLK_PARTIALS + 1).skip(1) {
             let odd = if n.is_multiple_of(2) { 0.0 } else { 1.0 };
-            *im = (odd / (n as f64).powf(PIPE_SLOPE)) as f32;
+            *im = (odd / math::pow(n as f64, PIPE_SLOPE)) as f32;
         }
         self.pipe
             .build(rate, &real[..=FOLK_PARTIALS], &imag[..=FOLK_PARTIALS], fft);
@@ -370,12 +371,12 @@ impl Waves {
         ] {
             for (n, im) in imag.iter_mut().enumerate().take(FOLK_PARTIALS + 1).skip(1) {
                 let k = n as f64;
-                *im = ((k * PI * NYLON_PLUCK_AT).sin() / k.powf(slope)) as f32;
+                *im = (math::sin(k * PI * NYLON_PLUCK_AT) / math::pow(k, slope)) as f32;
             }
             wave.build(rate, &real[..=FOLK_PARTIALS], &imag[..=FOLK_PARTIALS], fft);
         }
         for (n, im) in imag.iter_mut().enumerate().take(GLOTTAL_PARTIALS + 1).skip(1) {
-            *im = (1.0 / (n as f64).powf(GLOTTAL_SLOPE)) as f32;
+            *im = (1.0 / math::pow(n as f64, GLOTTAL_SLOPE)) as f32;
         }
         self.glottal.build(
             rate,
@@ -395,7 +396,7 @@ impl Default for Waves {
 /// The partials range `r` keeps, out of `half`.
 fn partials_for_range(r: usize, half: usize) -> usize {
     let cents = r as f32 * (1200.0 / 3.0);
-    let keep = 2f64.powf(-(cents as f64) / 1200.0) as f32;
+    let keep = math::pow(2.0, -(cents as f64) / 1200.0) as f32;
     (keep * half as f32) as usize
 }
 
@@ -473,7 +474,7 @@ impl Fft {
         if !self.ready {
             for (k, w) in self.twiddle.iter_mut().enumerate() {
                 let a = 2.0 * PI * k as f64 / SIZE as f64;
-                *w = (a.cos(), a.sin());
+                *w = (math::cos(a), math::sin(a));
             }
             self.ready = true;
         }

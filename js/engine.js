@@ -6,8 +6,13 @@
 // sample-accurate. Standard two-clock pattern.
 
 import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf } from './generator.js';
-import { Rng, randomSeed } from './rng.js';
+import { Rng } from './rng.js';
 import { Clock } from './clock.js';
+import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM } from './draw.js';
+
+// Which stream of a loop's seed is its wander (what ears albums have always
+// used for it).
+const DRIFT_SALT = 0x5eed1e55;
 
 // While you are looking at it, a short lookahead keeps mutes and re-rolls
 // feeling immediate. Once the page is hidden the timer may be throttled to
@@ -49,6 +54,22 @@ const AHEAD_SHARE = 0.25;
 // is remembered and forgotten at this many seconds a second.
 const STALL_MARGIN = 0.5;
 const STALL_EASE = 0.02;
+// Hidden, on the core, a deep output buffer is assumed at once (queue item
+// 47). A tester's Pixel 9 rendered 6-21 ms past the clock on screen and
+// 1.4 s past it at least once with the app minimized or the screen locked:
+// Android moves a backgrounded app's audio to a deep, power-saving buffer,
+// and the core renders over a second ahead in bursts. The render-ahead is
+// only measured once notes have landed in it, so the notes decided near the
+// clock just after the jump (Next or Previous from the lock screen, Play,
+// catching up after a freeze) were planned with tens of ms to spare, landed
+// inside it and were left out: the glitch. So, hidden (or frozen), the
+// scheduler plans as if the render-ahead were at least this, or the worst
+// this session or this device has seen (`deviceAhead`, kept in storage),
+// whichever is more; never more than DEEP_MOST, so the hidden queue still
+// has seconds to spare. Shown again, it plans from the measurement, as
+// item 41 left it.
+const DEEP_AHEAD = 1.5;
+const DEEP_MOST = 4;
 const TICK_VISIBLE = 50;
 const TICK_HIDDEN = 250;
 
@@ -117,7 +138,6 @@ export class Engine {
     this.driftOn = false;
     this.driftAmount = 1.0;
     this.loopCount = 0;
-    this.driftRng = new Rng(randomSeed());
     this.onStep = null;
     this.onLoop = null;
     this.onTrackEnd = null;
@@ -153,6 +173,11 @@ export class Engine {
     // counted only while the page is shown: hidden has its own queue.
     this.recentStall = 0;
     this.shownAt = 0;
+    // Queue item 47: the page frozen (or being put away) while hidden, and
+    // the worst render-ahead this device has seen before (seconds, from
+    // storage). Both only plan the hidden notes; see DEEP_AHEAD.
+    this.frozen = false;
+    this.deviceAhead = 0;
     this.visualQueue = [];
     this.visualOffset = 0;   // optional manual trim, normally zero
     this.latency = null;     // measured, smoothed, seconds
@@ -216,7 +241,7 @@ export class Engine {
     this.handover = false;
     this.spec = spec;
     this.base = render(spec);
-    this.live = this.driftOn ? drift(this.base, this.driftRng, this.driftAmount) : this.base;
+    this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
     this.synth.setCharacterLevel(character.level ?? 1);
@@ -245,20 +270,48 @@ export class Engine {
     return typeof document !== 'undefined' && document.hidden;
   }
 
+  // Hidden, or frozen: where a deep output buffer is assumed (queue item 47).
+  get away() {
+    return this.frozen || this.hidden;
+  }
+
+  // The page is being frozen or put away (`freeze`, `pagehide`), or is back
+  // (`resume`, `pageshow`).
+  setFrozen(on) {
+    this.frozen = !!on;
+  }
+
   get lookahead() {
     if (!this.synth.queuesAhead) return this.hidden ? LOOKAHEAD_HIDDEN : LOOKAHEAD_VISIBLE;
-    if (this.hidden) return LOOKAHEAD_HIDDEN_CORE;
-    const deep = this.recentStall + this.ahead + STALL_MARGIN;
+    if (this.away) return LOOKAHEAD_HIDDEN_CORE;
+    // Deep enough, too, that the step after the queue's end is not already
+    // inside the deep buffer assumed the moment the page is hidden.
+    const deep = Math.max(this.recentStall + this.ahead, this.deepAhead) + STALL_MARGIN;
     return Math.min(LOOKAHEAD_HIDDEN_CORE, Math.max(LOOKAHEAD_VISIBLE_CORE, deep));
   }
 
   // How far past the audio clock the core has already rendered by the time
   // a note handed over now reaches it (queue item 41); 0 on the JavaScript
-  // synth, whose nodes start on the clock itself.
+  // synth, whose nodes start on the clock itself. Hidden or frozen, never
+  // less than the deep buffer assumed (queue item 47).
   get ahead() {
     if (!this.synth.queuesAhead) return 0;
-    const a = this.synth.renderAhead;
-    return typeof a === 'number' && Number.isFinite(a) ? a : 0;
+    const measured = finite(this.synth.renderAhead);
+    return this.away ? Math.max(measured, this.deepAhead) : measured;
+  }
+
+  // The render-ahead assumed while hidden: DEEP_AHEAD, or the worst this
+  // session (`worstAhead`) or this device has seen, up to DEEP_MOST.
+  get deepAhead() {
+    if (!this.synth.queuesAhead) return 0;
+    const worst = Math.max(DEEP_AHEAD, finite(this.synth.worstAhead), finite(this.deviceAhead));
+    return Math.min(DEEP_MOST, worst);
+  }
+
+  // What decided the notes handed over next, for Diagnostics' log of late
+  // notes (queue item 47): the synth passes it to the core with each note.
+  _why(cause) {
+    if (this.synth.queuesAhead) this.synth.why = cause;
   }
 
   // The soonest a note decided now may start: `least` ahead of the clock,
@@ -300,17 +353,30 @@ export class Engine {
   // have been but have not started. The next step is decided from now, as
   // on Play. The JavaScript synth, visible, has nothing that far ahead, so
   // nothing changes there.
+  //
+  // Hidden on the core, the new loop starts past the deep buffer assumed
+  // (queue item 47), about two seconds on, and the old one plays on until
+  // then rather than leaving that silent: only what it holds from there on
+  // is dropped. A phone with a deep buffer has rendered most of that
+  // already anyway.
   _cut() {
     const now = this.ctx.currentTime;
     if (!this.spec || this.nextStepTime <= now + LOOKAHEAD_VISIBLE + this.stepDur) return;
     this.pending = [];
     this.decided = [];
     this.floor = -Infinity;
-    this.synth.cancelAhead(now);
-    this.synth.restoreTails(now);
+    const start = this._soonest(0.08);
+    if (this.synth.queuesAhead && this.away) {
+      this.synth.cancelFrom(start);
+      this.synth.restoreTails(start);
+      this.visualQueue = this.visualQueue.filter((v) => v.time < start);
+    } else {
+      this.synth.cancelAhead(now);
+      this.synth.restoreTails(now);
+      this.visualQueue = [];
+    }
     this.tailsDucked = false;
-    this.visualQueue = [];
-    this.nextStepTime = this._soonest(0.08);
+    this.nextStepTime = start;
     // The new loop starts from when the page has finished loading it, not
     // from now: drawing and rendering it takes a slow phone a good part of
     // a second, and its first notes would be late. And it is decided then,
@@ -319,8 +385,8 @@ export class Engine {
     // position after loading it.)
     Promise.resolve().then(() => {
       if (!this.playing) return;
-      this.nextStepTime = this._soonest(0.08);
-      this._tick();
+      this.nextStepTime = Math.max(start, this._soonest(0.08));
+      this._tick('jump');
     });
   }
 
@@ -371,7 +437,7 @@ export class Engine {
     this.decided.length = back.index;
     this.visualQueue = this.visualQueue.filter((v) => v.time < back.time);
     this.redecides++;
-    this._decide();
+    this._decide('change');
   }
 
   start() {
@@ -382,7 +448,7 @@ export class Engine {
     this.synth.unsilence();
     this.nextStepTime = this._soonest(0.08);
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
-    this._tick();
+    this._tick('play');
   }
 
   stop() {
@@ -435,6 +501,9 @@ export class Engine {
       // Planned from (at least a render callback), and as measured.
       renderAheadMs: `${ms(this.ahead)} (measured ${c.ahead == null ? '- no notes yet' : ms(c.ahead)})`,
       worstRenderAheadMs: ms(c.worstAhead),
+      // Queue item 47: what is planned from while hidden, and this device's
+      // worst before this session.
+      hiddenRenderAheadMs: `${ms(this.deepAhead)} (assumed ${ms(DEEP_AHEAD)}, this device before ${ms(finite(this.deviceAhead))})`,
       leastSpareMs: ms(c.earliest),
       coreClockLeadMs: ms(c.clockLead),
       recentStallMs: ms(this.recentStall),
@@ -473,10 +542,24 @@ export class Engine {
   // Build a voice now if its note is close enough, otherwise queue it.
   // Visible, or on the core, every voice is built at once; whatever a
   // hidden spell left queued goes first, so the order holds.
-  _play(time, build) {
+  _play(time, build, key = null) {
     // Deciding again after a change: what is asked for before the change is
     // heard was handed over already and plays as it was.
     if (time < this.floor) return;
+    // The note's place in its loop goes to the synth as it is built, and
+    // only then (queue item 44): the core draws everything the note leaves
+    // to chance from it.
+    if (key) {
+      const play = build;
+      build = () => {
+        this.synth.key = key;
+        try {
+          play();
+        } finally {
+          this.synth.key = null;
+        }
+      };
+    }
     if (!this.hidden || !this.pending || this.synth.queuesAhead) {
       if (this.pending && this.pending.length) for (const p of this.pending.splice(0)) p.build();
       build();
@@ -497,7 +580,9 @@ export class Engine {
     for (const { build } of this.pending.splice(0, i)) build();
   }
 
-  _tick() {
+  // `cause`: what asked for the notes decided now (Play, a jump), else the
+  // steady lookahead.
+  _tick(cause = 'lookahead') {
     if (!this.playing) return;
     this.totalTicks++;
     const now = performance.now();
@@ -538,13 +623,16 @@ export class Engine {
       // that turns a gap into a burst. Skip to now and carry on. On the
       // core every one of them would be late (or left out), so it always
       // skips, to the soonest a note can still be on time.
-      if (ahead > 0 || behind > 0.25) this.nextStepTime = this._soonest(0.02);
+      if (ahead > 0 || behind > 0.25) {
+        this.nextStepTime = this._soonest(0.02);
+        if (cause === 'lookahead') cause = 'catch-up';
+      }
     }
-    this._decide();
+    this._decide(cause);
   }
 
   // Every step up to the lookahead, and on the core where each began.
-  _decide() {
+  _decide(cause = 'lookahead') {
     const now = this.ctx.currentTime;
     const horizon = now + this.lookahead;
     const keep = this.synth.queuesAhead;
@@ -560,11 +648,24 @@ export class Engine {
           time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount,
           live: this.live, tailsDucked: this.tailsDucked,
         });
+        // A loop's first step, or a pass's, says so in the log.
+        const top = this.absStep === 0 ? 'new loop' : this.step === 0 ? 'new pass' : null;
+        this._why(top ? `${cause}, ${top}` : cause);
       }
       this._scheduleStep(this.step, this.nextStepTime);
       this._advance();
     }
+    if (keep) this._why('lookahead');
     this._flush();
+  }
+
+  // How the loop wanders on pass `pass` ("Let the loop wander"): a variation
+  // of the stored pattern drawn from the loop's seed and the pass number, so
+  // the same code wanders the same way every time it is played (queue item
+  // 44), and any pass can be reached without playing the ones before it.
+  _wander(pass) {
+    const seed = (((this.spec.seed ^ DRIFT_SALT) >>> 0) + Math.imul(pass, 0x9e3779b1)) >>> 0;
+    return drift(this.base, new Rng(seed || 1), this.driftAmount);
   }
 
   _advance() {
@@ -576,7 +677,7 @@ export class Engine {
       this.loopCount++;
       // Fresh variation at the top of each pass. The base pattern is never
       // touched, so the piece always returns to the version you saved.
-      this.live = this.driftOn ? drift(this.base, this.driftRng, this.driftAmount) : this.base;
+      this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
       if (this.onLoop) this.onLoop(this.loopCount);
       // A track with a set length hands over once it has run its passes.
       const limit = this.spec && this.spec.playFor;
@@ -637,6 +738,15 @@ export class Engine {
     const t = time + swing;
     const sd = this.stepDur;
     const mutes = this.spec.mutes || {};
+    // Where each note sits in its loop (core/src/rng.rs): the loop's seed,
+    // the pass, the step, and the note's place among its layer's notes at
+    // this step. Counted here, as the notes are decided, so it does not
+    // depend on what the voice budget turns away, on a layer being muted,
+    // or on when the voice is built.
+    const seed = this.spec.seed >>> 0;
+    const pass = this.loopCount;
+    const placed = { drums: 0, bass: 0, chords: 0, melody: 0, texture: 0 };
+    const keyOf = (layer) => ({ seed, pass, step, ord: placed[layer]++ });
 
     if (!mutes.drums) {
       const s = at('drums');
@@ -646,9 +756,10 @@ export class Engine {
         // Rolls sit between the steps, so they carry a fractional offset and
         // skip the humanising jitter that would smear them.
         const micro = e.micro ? e.micro * sd : 0;
-        const jitter = e.roll ? 0 : (Math.random() - 0.5) * 0.008;
+        const key = keyOf('drums');
+        const jitter = e.roll ? 0 : (draw(key, 'drums', HOST_JITTER) - 0.5) * 0.008;
         const at = t + micro + jitter;
-        this._play(at, () => this.synth.drum(e.inst, at, e.vel));
+        this._play(at, () => this.synth.drum(e.inst, at, e.vel), key);
         if (pump && (e.inst === 'kick' || e.inst === 'softkick')) this._play(at, () => this.synth.duck(t + micro, pump * e.vel));
       }
     }
@@ -656,7 +767,7 @@ export class Engine {
       const s = at('bass');
       for (const e of p.tracks.bass) {
         if (e.step !== s || !e.vel) continue;
-        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug));
+        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug), keyOf('bass'));
       }
     }
     // An ensemble does not attack together. The composer's detune keeps
@@ -666,19 +777,19 @@ export class Engine {
     // been delayed. Drawn once per layer per step so the two scatter
     // against each other as well as against the grid, and symmetric like
     // the drum jitter above so the music does not walk late.
-    const ensemble = () => (p.meta && p.meta.choir ? (Math.random() - 0.5) * 0.016 : 0);
+    const ensemble = (layer) => (p.meta && p.meta.choir ? (draw({ seed, pass, step, ord: 0 }, layer, HOST_ENSEMBLE) - 0.5) * 0.016 : 0);
 
     if (!mutes.chords) {
       const s = at('chords');
-      const slip = ensemble();
+      const slip = ensemble('chords');
       for (const e of p.tracks.chords) {
         if (e.step !== s || !e.vel) continue;
         if (e.voice === 'pad') {
-          this._play(t, () => this.synth.pad(e.notes, t, e.dur * sd, e.vel * CHORD_SPREAD));
+          this._play(t, () => this.synth.pad(e.notes, t, e.dur * sd, e.vel * CHORD_SPREAD), keyOf('chords'));
         } else {
           const spread = CHORD_SPREAD / Math.sqrt(e.notes.length);
           if (e.strum) {
-            const span = STRUM.min + Math.random() * (STRUM.max - STRUM.min);
+            const span = STRUM.min + draw(keyOf('chords'), 'chords', HOST_STRUM) * (STRUM.max - STRUM.min);
             const strings = e.strum === 'down' ? e.notes : e.notes.slice().reverse();
             const weight = e.strum === 'down' ? 1 : STRUM.up;
             // The hand that strikes the chord stops the last one's strings.
@@ -686,7 +797,7 @@ export class Engine {
             strings.forEach((n, i) => {
               const at = strings.length > 1 ? span * i / (strings.length - 1) : 0;
               this._play(t + slip + at, () => this.synth.voice(e.voice, n, t + slip + at, e.dur * sd, e.vel * spread * weight,
-                this.synth.channels.chords.gain, { vowel: e.vowel, detune: e.detune, strum: true }));
+                this.synth.channels.chords.gain, { vowel: e.vowel, detune: e.detune, strum: true }), keyOf('chords'));
             });
             continue;
           }
@@ -694,31 +805,31 @@ export class Engine {
             // Spread the notes of a chord by a few milliseconds so it
             // sounds like fingers rather than a switch closing.
             this._play(t + slip + i * 0.011, () => this.synth.voice(e.voice, n, t + slip + i * 0.011, e.dur * sd, e.vel * spread,
-              this.synth.channels.chords.gain, { vowel: e.vowel, detune: e.detune }));
+              this.synth.channels.chords.gain, { vowel: e.vowel, detune: e.detune }), keyOf('chords'));
           });
         }
       }
     }
     if (!mutes.melody) {
       const s = at('melody');
-      const slip = ensemble();
+      const slip = ensemble('melody');
       for (const e of p.tracks.melody) {
         if (e.step !== s || !e.vel) continue;
         const out = this.synth.channels.melody.gain;
         this._play(t + slip, () => this.synth.voice(e.voice, e.midi, t + slip, e.dur * sd, e.vel, out,
-          { glide: e.glide, vowel: e.vowel, detune: e.detune, prev: e.prev }));
+          { glide: e.glide, vowel: e.vowel, detune: e.detune, prev: e.prev }), keyOf('melody'));
         // Asked for after the note, so where the budget is short it is the
         // decoration that yields, never the tune.
         const under = harmonyOf(e, p.spec);
         if (under != null) {
           this._play(t + slip, () => this.synth.voice(e.voice, under, t + slip, e.dur * sd, e.vel * HARMONY_VEL, out,
-            { vowel: e.vowel, detune: e.detune }));
+            { vowel: e.vowel, detune: e.detune }), keyOf('melody'));
         }
         const graces = gracesOf(e, p.spec);
         graces.forEach((g, i) => {
           const at = t + slip - GRACE * (graces.length - i);
           this._play(at, () => this.synth.voice(e.voice, g, Math.max(this.ctx.currentTime, at), GRACE, e.vel * GRACE_VEL, out,
-            { vowel: e.vowel, detune: e.detune }));
+            { vowel: e.vowel, detune: e.detune }), keyOf('melody'));
         });
       }
     }
@@ -726,7 +837,7 @@ export class Engine {
       const s = at('texture');
       for (const e of p.tracks.texture) {
         if (e.step !== s || !e.vel) continue;
-        this._play(t, () => this.synth.texture(e.kind, e.notes, t, e.dur * sd, e.vel, { band: e.band }));
+        this._play(t, () => this.synth.texture(e.kind, e.notes, t, e.dur * sd, e.vel, { band: e.band }), keyOf('texture'));
       }
     }
 
@@ -737,4 +848,8 @@ export class Engine {
     this.visualQueue.push({ step, time });
     if (this.visualQueue.length > 512) this.visualQueue.shift();
   }
+}
+
+function finite(x) {
+  return typeof x === 'number' && Number.isFinite(x) ? x : 0;
 }

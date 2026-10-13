@@ -9,6 +9,8 @@
 //! every sample; `set` caches the last ones, so a filter whose parameters
 //! hold still costs a comparison a sample.
 
+use crate::math;
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum Kind {
     Lowpass,
@@ -32,6 +34,35 @@ pub struct Biquad {
     /// there are any (`set` has been called).
     last: (f32, f32, f32),
     ready: bool,
+    /// 10^(q/20) and 10^(gain/40), kept for the q and gain they were worked
+    /// out for: a cutoff that moves on every frame works the coefficients
+    /// out on every frame, and the power is the slow part of that.
+    resonance: Decibels,
+    amplitude: Decibels,
+}
+
+/// `10^(x / per)`, kept for the last `x`. All zeros until used, like the
+/// filter.
+#[derive(Clone, Copy)]
+struct Decibels {
+    ready: bool,
+    of: f32,
+    value: f64,
+}
+
+impl Decibels {
+    const fn new() -> Self {
+        Decibels { ready: false, of: 0.0, value: 0.0 }
+    }
+
+    fn get(&mut self, x: f32, per: f64) -> f64 {
+        if !self.ready || self.of.to_bits() != x.to_bits() {
+            self.value = math::pow(10.0, x as f64 / per);
+            self.of = x;
+            self.ready = true;
+        }
+        self.value
+    }
 }
 
 impl Biquad {
@@ -48,6 +79,8 @@ impl Biquad {
             y2: 0.0,
             last: (0.0, 0.0, 0.0),
             ready: false,
+            resonance: Decibels::new(),
+            amplitude: Decibels::new(),
         }
     }
 
@@ -72,10 +105,10 @@ impl Biquad {
                 if w >= 1.0 {
                     (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
                 } else if w > 0.0 {
-                    let resonance = 10f64.powf(q as f64 / 20.0);
+                    let resonance = self.resonance.get(q, 20.0);
                     let theta = core::f64::consts::PI * w;
-                    let alpha = theta.sin() / (2.0 * resonance);
-                    let cosw = theta.cos();
+                    let alpha = math::sin(theta) / (2.0 * resonance);
+                    let cosw = math::cos(theta);
                     let beta = (1.0 - cosw) / 2.0;
                     (
                         beta,
@@ -94,10 +127,10 @@ impl Biquad {
                     // The z-transform is 0.
                     (0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
                 } else if w > 0.0 {
-                    let resonance = 10f64.powf(q as f64 / 20.0);
+                    let resonance = self.resonance.get(q, 20.0);
                     let theta = core::f64::consts::PI * w;
-                    let alpha = theta.sin() / (2.0 * resonance);
-                    let cosw = theta.cos();
+                    let alpha = math::sin(theta) / (2.0 * resonance);
+                    let cosw = math::cos(theta);
                     let beta = (1.0 + cosw) / 2.0;
                     (
                         beta,
@@ -117,8 +150,8 @@ impl Biquad {
                 if w > 0.0 && w < 1.0 {
                     if q > 0.0 {
                         let w0 = core::f64::consts::PI * w;
-                        let alpha = w0.sin() / (2.0 * q);
-                        let k = w0.cos();
+                        let alpha = math::sin(w0) / (2.0 * q);
+                        let k = math::cos(w0);
                         (alpha, 0.0, -alpha, 1.0 + alpha, -2.0 * k, 1.0 - alpha)
                     } else {
                         // The limit as Q goes to 0 is 1.
@@ -131,12 +164,12 @@ impl Biquad {
             }
             Kind::Peaking => {
                 let q = (q as f64).max(0.0);
-                let a = 10f64.powf(gain as f64 / 40.0);
+                let a = self.amplitude.get(gain, 40.0);
                 if w > 0.0 && w < 1.0 {
                     if q > 0.0 {
                         let w0 = core::f64::consts::PI * w;
-                        let alpha = w0.sin() / (2.0 * q);
-                        let k = w0.cos();
+                        let alpha = math::sin(w0) / (2.0 * q);
+                        let k = math::cos(w0);
                         (
                             1.0 + alpha * a,
                             -2.0 * k,
@@ -175,9 +208,13 @@ impl Biquad {
 
     pub fn step(&mut self, x: f32) -> f32 {
         let x = x as f64;
-        let y = (self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2
+        let wide = self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2
             - self.a1 * self.y1
-            - self.a2 * self.y2) as f32;
+            - self.a2 * self.y2;
+        // A ringing tail decays toward the subnormal numbers; it stops at
+        // the silence floor instead, before it is rounded to 32 bits, so
+        // that no subnormal is ever made (`math`, "Subnormal numbers").
+        let y = if wide.abs() < f64::from(math::SILENCE) { 0.0 } else { wide as f32 };
         self.x2 = self.x1;
         self.x1 = x;
         self.y2 = self.y1;

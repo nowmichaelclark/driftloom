@@ -6,6 +6,7 @@
 //! body's bus; the body runs on the sum. The fiddle (`voice.rs`) plays
 //! through one too.
 
+use crate::math;
 use crate::QUANTUM;
 use crate::filter::{Biquad, Kind};
 use crate::osc::{Pitch, TableOsc};
@@ -252,7 +253,7 @@ impl Nylon {
         let f = midi_to_freq(midi);
         self.pitch = f as f32;
         let level = vel * NYLON_LEVEL;
-        let ring = NYLON_MELLOW_TAU * (261.6 / f).powf(0.35);
+        let ring = NYLON_MELLOW_TAU * math::pow(261.6 / f, 0.35);
         let stop = time + dur + 0.4;
         for ((osc, g), (peak, tau)) in self.oscs.iter_mut().zip(self.gains.iter_mut()).zip([
             (level, ring),

@@ -8,6 +8,7 @@
 //! `.wasm` (a static that is all zeros is not written into the file);
 //! `play` sets every value a note reads.
 
+use crate::math;
 use crate::QUANTUM;
 use crate::filter::{Biquad, Kind};
 use crate::osc::{Part, Pitch, TableOsc};
@@ -16,7 +17,7 @@ use crate::wave::Waves;
 
 /// `midiToFreq` in `js/theory.js`.
 pub fn midi_to_freq(midi: f64) -> f64 {
-    440.0 * 2f64.powf((midi - 69.0) / 12.0)
+    440.0 * math::pow(2.0, (midi - 69.0) / 12.0)
 }
 
 /// A GainNode's gain, before anything is scheduled on it.
@@ -561,7 +562,7 @@ impl PadNote {
         g.reset(UNITY);
         g.set_value_at_time(0.0001, time);
         g.linear_ramp_to_value_at_time(
-            ((vel * 0.22) / count.sqrt()) as f32,
+            ((vel * 0.22) / math::sqrt(count)) as f32,
             time + (dur * 0.4).min(0.9),
             time,
         );

@@ -511,6 +511,7 @@ node tools/perf.mjs --parts path            # walk the app, reading the output a
 node tools/stalls.mjs                        # hidden, the clock held back on purpose (queue item 39)
 node tools/views.mjs --changes               # visible, every view in turn, and how soon a change is heard (queue item 40)
 node tools/views.mjs --buffer 0.37 --graphics software,gpu   # a phone's large, bursty audio output; its graphics (queue item 41)
+node tools/deep.mjs                          # a deep output buffer that appears on hide: Next, Previous, Play and freezes just after (queue item 47)
 ```
 
 `measure.mjs` renders offline, faster than real time; this plays the real
@@ -743,6 +744,26 @@ is the renderer WebGL names and whether it is a real GPU; `sw` lists each
 step the service worker took, with when. The views' report carries the
 same splits per view.
 
+Since queue item 47 the page plans for a deep output buffer the moment it
+is hidden (or frozen): Android may move a backgrounded app's audio to a
+deep, power-saving buffer, and a note decided near the clock just after
+(Next, Previous or Play from the lock screen, the catch-up after a freeze)
+landed inside it before it had been measured. `hiddenRenderAheadMs` is the
+render-ahead planned from while hidden: at least 1.5 s, or the worst seen
+this session or on this device before (kept in the page's preferences), up
+to 4 s. Next or Previous while hidden therefore starts the new loop about
+two seconds on, the old one playing until then. `while hidden (every
+time)` totals every hidden spell, not only the last; and `late notes and
+render-ahead jumps` logs each late note (how far late, how far ahead it was
+posted, whether left out, and what decided it: the steady `lookahead`, a
+`jump` (Next, Previous, a loop picked), `play`, a `change` (mute, re-roll,
+tempo, wander), a `catch-up` after the clock fell behind, marked `new loop`
+or `new pass` on a loop's or a pass's first step) and each time the
+render-ahead was measured more than 100 ms past what the page was planning
+from, with when (seconds since the page began), hidden or visible, and how
+near a change (hiding, showing, freezing). `page events` lists the last
+of those changes.
+
 ## The Rust core
 
 The synth is in Rust (roadmap 16), for portability rather than speed: the
@@ -779,10 +800,10 @@ when a trap in it makes the worklet's `process` throw -- the JavaScript mix
 and chain take everything back and the notes play in Web Audio; a core that
 arrives mid-play is handed the mix's state (the tone, the echo, the mutes)
 as plain sets, so its values start where the JavaScript ones were asked to
-be and only later changes glide. JavaScript keeps everything else: scheduling, the voice
-budget (asked exactly as the JavaScript voice asks it) and every
-`Math.random` draw. A note travels to the worklet
-with its absolute start time and starts on its exact sample.
+be and only later changes glide. JavaScript keeps everything else: scheduling and the voice
+budget (asked exactly as the JavaScript voice asks it). The core makes
+every draw itself (queue item 44; see "Draws" below). A note travels to the worklet
+with its absolute start time and its place in its loop, and starts on its exact sample.
 
 The core (`core/`) is a Rust library with no dependencies and nothing
 browser in it: a queue of waiting notes, a fixed pool of voices, and
@@ -799,9 +820,9 @@ as `_body()` builds them in JavaScript; a body with nothing in it and
 nothing ringing is skipped. A new strum damps the last strum's nylon
 strings in the core as `damp()` does in JavaScript, whether they are
 already sounding or still waiting to start. The noise every breath and
-strike plays is the synth's own -- drawn from `Math.random` as it is built
--- so JavaScript hands its samples to the core once per synth (`noise.rs`,
-up to two seconds at 96 kHz; a faster context keeps its noise voices in
+strike plays is the core's own: two seconds of white noise, lightly pinked,
+made once as it starts from its seeded generator (`noise.rs`, `rng.rs`; up to
+two seconds at 96 kHz, and a faster context keeps its noise voices in
 JavaScript), and a source plays it the way Chromium plays an
 `AudioBufferSourceNode`. The mix (`mix.rs`) is `_build()` node for node,
 with Chromium's delay line (`delay.rs`: a buffer a block longer than the
@@ -853,6 +874,43 @@ parameter, the harness's) so it still proves the port.
 `cargo test` in `core/` runs its own tests, `node test/worklet.test.mjs` the
 worklet's, and `node tools/core-paths.mjs` plays the real app in headless
 Chromium with the core made to fail every way it can.
+
+### Draws
+
+Until queue item 44 the page drew every small piece of chance in a note with
+`Math.random` -- where in the noise a strike starts, a bell's detunes, how
+late the second reed comes in, a sung note's jitter -- and sent the numbers
+with the note, so the same code never made the same audio twice. Now a draw
+is a pure function (`core/src/rng.rs`, repeated in `js/draw.js`) of:
+
+- the **key** of the note: the loop's seed, the pass of the loop (it rises
+  each time the loop comes round, so "Let the loop wander" varies from pass
+  to pass, and reproducibly), the step within the pass, and the note's place
+  (`ord`) among the notes its layer plays at that step -- counted by the
+  engine as it decides them, so it does not depend on what the voice budget
+  turns away, on a layer being muted, or on when a voice is built;
+- the channel the note plays in;
+- the **kind** of draw (`rng::salt`: a number fixed for good, one for each
+  thing a voice leaves to chance), and which of that kind it is.
+
+Draws are looked up by name, never taken in turn from a stream, so a note
+that takes more of one kind (a long sung note takes more steps of jitter)
+changes nothing after it, and a new kind of draw cannot shift an old one.
+The hash is plain 32-bit integer arithmetic, so it is exact on every target;
+a draw is its top 24 bits over 2^24. `articulate::settle` fills a voice's
+draws in as the note arrives; the voices themselves are as they were.
+
+Four things the page still decides from the same generator (`js/draw.js`),
+because it must know the answer first: a drum's timing jitter, a layer's
+ensemble slip and a chord's strum span (the scheduler places notes, until
+phase 3 moves it), and whether a held sung vowel drifts and to where (the
+budget charges for it and the note's formant trim depends on it). The test
+vectors in `test/draw-vectors.txt` are checked on both sides. The wander
+itself ("Let the loop wander") is drawn from the loop's seed and the pass, so
+any pass can be reached without playing the ones before it.
+
+`tools/baseline.mjs` renders its loops a second time with another
+`Math.random` and fails if a single bit moves.
 
 ### The first note
 

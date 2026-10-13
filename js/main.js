@@ -1,6 +1,6 @@
 import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, loadCore, fetchCore, coreUnsupported, DROP_CAUSES } from './core.js';
+import { ENGINE, loadCore, fetchCore, coreUnsupported, DROP_CAUSES, coreLog } from './core.js';
 import { Engine } from './engine.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v93';
+const BUILD = 'v96';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -174,6 +174,10 @@ function buildAudio() {
   state.engine.onStep = onStep;
   state.engine.onLoop = onLoop;
   state.engine.onTrackEnd = onTrackEnd;
+  // The worst render-ahead this device has seen (queue item 47), planned
+  // from while hidden.
+  state.engine.deviceAhead = Number(store.getPrefs().renderAheadWorst) || 0;
+  state.engine.setFrozen(pageFrozen);
   state.engine.visualOffset = (parseInt(ui.el('playheadSync').value, 10) || 0) / 1000;
   const wander = parseFloat(ui.el('driftAmount').value);
   state.engine.driftOn = wander > 0;
@@ -329,7 +333,13 @@ function awayEnd() {
   a.to = performance.now();
   a.lateTo = coreLate();
   a.fillsTo = fillIns();
+  // Every hidden spell, not only the last (queue item 47).
+  awayAll.spells++;
+  awayAll.ms += a.to - a.from;
+  if (a.late != null && a.lateTo != null) awayAll.late += Math.max(0, a.lateTo - a.late);
 }
+
+const awayAll = { spells: 0, ms: 0, late: 0 };
 
 function awayEvent(what) {
   const a = state.away;
@@ -347,6 +357,7 @@ function awayReport() {
   const events = a.events.filter((e) => /^audio /.test(e));
   const media = a.events.filter((e) => !/^audio /.test(e));
   return [
+    `while hidden (every time): ${awayAll.spells} times, ${(awayAll.ms / 1000).toFixed(1)} s, late notes ${awayAll.late}`,
     'while hidden (the last time):',
     `hiddenFor: ${((to - a.from) / 1000).toFixed(1)} s`,
     `hiddenWorstGapMs: ${s ? s.worstGapMs : '-'}`,
@@ -357,6 +368,64 @@ function awayReport() {
     `hiddenAudio: ${a.audio}${events.length ? `; ${events.join('; ')}` : ' throughout'}`,
     `hiddenMedia: ${a.session}${media.length ? `; ${media.join('; ')}` : ' throughout'}`,
   ];
+}
+
+// ------------------------------------------------- jumps and late notes
+
+// When the page was hidden, shown, frozen and put away (queue item 47), on
+// its own clock, so the log of the render-ahead's jumps and late notes can
+// say where each fell: hidden or visible, and whether within a second of a
+// change. The tester's late notes fell in neither the views' report nor the
+// last hidden spell's.
+const pageEvents = [[0, 'opened']];
+let pageFrozen = false;
+
+function pageEvent(what) {
+  pageEvents.push([performance.now(), what]);
+  if (pageEvents.length > 400) pageEvents.splice(1, 1);
+}
+
+// The worst render-ahead seen, kept for this device: the next session
+// plans for it from the moment the page is hidden.
+function rememberAhead(reach = 0) {
+  const worst = Math.max(reach, state.synth ? state.synth.worstAhead || 0 : 0);
+  const kept = Number(store.getPrefs().renderAheadWorst) || 0;
+  if (worst > kept + 0.01) store.setPrefs({ renderAheadWorst: Math.round(worst * 1000) / 1000 });
+}
+coreLog.onjump = rememberAhead;
+
+const HIDE_WORDS = { hidden: 'hiding', shown: 'showing', frozen: 'freezing', resumed: 'resuming', pagehide: 'pagehide', pageshow: 'pageshow' };
+
+function whereAt(t) {
+  let hidden = false;
+  let near = null;
+  for (const [at, what] of pageEvents) {
+    if (what === 'opened') continue;
+    // Frozen or put away is hidden too; resumed, it is as it was.
+    if (at <= t && what === 'shown') hidden = false;
+    else if (at <= t && (what === 'hidden' || what === 'frozen' || what === 'pagehide')) hidden = true;
+    if (Math.abs(at - t) <= 1000 && (!near || Math.abs(at - t) < Math.abs(near[0] - t))) near = [at, what];
+  }
+  const by = near ? `, ${(Math.abs(t - near[0]) / 1000).toFixed(1)} s ${t >= near[0] ? 'after' : 'before'} ${HIDE_WORDS[near[1]]}` : '';
+  return `${hidden ? 'hidden' : 'visible'}${by}`;
+}
+
+function aheadLog() {
+  const list = coreLog.entries;
+  const lines = [`late notes and render-ahead jumps (since the page began; ${coreLog.total}${coreLog.total > list.length ? `, the last ${list.length}` : ''}):`];
+  if (!list.length) lines.push('  none');
+  for (const e of list) {
+    const when = `${(e.at / 1000).toFixed(1)} s, ${whereAt(e.at)}`;
+    if (e.kind === 'jump') lines.push(`  ${when}: render-ahead ${e.reachMs} ms (was ${e.wasMs})`);
+    else {
+      lines.push(`  ${when}: late note, ${e.lateMs} ms behind the core, posted ${e.spareMs} ms ahead`
+        + `${e.inside ? ' (inside the buffer)' : ' (stall)'}${e.missed ? ', left out' : ''}; decided by ${e.why || '-'}`);
+    }
+  }
+  const visits = pageEvents.filter(([, w]) => w !== 'opened').slice(-12)
+    .map(([at, w]) => `${w} ${(at / 1000).toFixed(1)}`);
+  lines.push(`page events (s): ${visits.length ? visits.join(', ') : 'none'}`);
+  return lines;
 }
 
 // ------------------------------------------------------- per view
@@ -1420,6 +1489,7 @@ function wire() {
     if (state.engine && state.engine.spec) push(state.engine.report());
     else lines.push('scheduler: not built yet (press Play)');
     lines.push(...awayReport());
+    lines.push(...aheadLog());
     lines.push(...viewsReport());
     ui.el('diagOut').textContent = lines.join('\n');
   };
@@ -1517,6 +1587,8 @@ function wire() {
   // The scheduler queues further ahead while hidden, so it has to be told
   // when that changes. Resume anything the system paused on the way out.
   document.addEventListener('visibilitychange', () => {
+    pageEvent(document.hidden ? 'hidden' : 'shown');
+    rememberAhead();
     if (document.hidden) awayBegin();
     else awayEnd();
     viewFlush(document.hidden);
@@ -1527,6 +1599,19 @@ function wire() {
       state.media.resume();
     }
   });
+
+  // A page about to be frozen or put away plans for a deep buffer at once,
+  // as hidden does (queue item 47): it may wake to one.
+  const frozen = (on, what) => () => {
+    pageEvent(what);
+    pageFrozen = on;
+    if (on) rememberAhead();
+    if (state.engine) state.engine.setFrozen(on);
+  };
+  document.addEventListener('freeze', frozen(true, 'frozen'));
+  document.addEventListener('resume', frozen(false, 'resumed'));
+  window.addEventListener('pagehide', frozen(true, 'pagehide'));
+  window.addEventListener('pageshow', (e) => { if (e.persisted) frozen(false, 'pageshow')(); });
 
   watchLongTasks();
   const cores = navigator.hardwareConcurrency || 4;

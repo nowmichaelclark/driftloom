@@ -1,0 +1,84 @@
+dlnotes 2
+# 04-vapor: 2 bars at 60 bpm, seed 828129958, 9 s of it, full quality.
+# Exported by tools/golden-export.mjs from the code in codes.txt; do not edit by hand.
+name 04-vapor
+rate 48000
+quality full
+frames 432000
+param 16 0 0 0 0
+param 17 0 0.85 0 0
+param 12 2 9094.117647058823 0 0.2
+param 15 0 0.8980392156862745 0 0
+param 11 2 0.9964705882352941 0 0.2
+param 8 2 0.74 0 0.2
+param 9 2 3123.1372549019607 0 0.2
+param 10 2 0.043333333333333335 0 0.2
+param 13 2 0.0005490196078431372 0 0.2
+param 14 2 0.000059607843137254906 0 0.2
+param 17 2 0.5435078976862291 0 0.08
+param 7 2 0.75 0 0.05
+param 4 2 0.82 0 0.03
+param 2 2 0.62 0 0.03
+param 1 2 0.44 0 0.03
+param 0 2 0.58 0 0.03
+param 3 2 0.5 0 0.03
+key 828129958 0 0 0
+note 22 2 0.05 29 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 0 1
+note 22 2 0.05 39 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 0 0
+note 14 0 0.05 63 1 0.680357039927899 0 65 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 0 0
+note 23 3 0.05 67 8 0.18581048265565187 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 0 0
+note 23 3 0.05 72 8 0.18581048265565187 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 4 0
+note 14 0 1.05 65 1 0.47817763841295974 0 63 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 0
+note 22 2 2.05 31 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 1
+note 22 2 2.05 34 3.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 2
+note 22 2 2.05 31 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 0
+note 6 1 2.05 55 2 0.20490889157183315 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 1
+note 6 1 2.061 60 2 0.20490889157183315 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 2
+note 6 1 2.0719999999999996 65 2 0.20490889157183315 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 0
+note 14 0 2.05 67 1 0.6895520888931296 0 65 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 12 0
+note 14 0 3.05 65 1 0.5441402296170978 0 67 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 16 0
+note 22 2 4.05 36 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 16 1
+note 22 2 4.05 39 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 16 2
+note 22 2 4.05 29 3.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 16 0
+note 14 0 4.05 63 1 0.5500269133322616 0 65 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 20 0
+note 6 1 5.05 58 1 0.22679437478388603 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 20 0
+note 14 0 5.05 65 1 0.43580393763685576 0 63 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 24 0
+note 22 2 6.05 31 3.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 24 1
+note 22 2 6.05 31 3.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 24 2
+note 22 2 6.05 34 1.75 0.55 1 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 24 0
+note 6 1 6.05 55 2 0.202296945329673 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 24 1
+note 6 1 6.061 58 2 0.202296945329673 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 24 0
+note 14 0 6.05 67 1 0.7565980041795634 0 65 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 28 0
+note 14 0 7.05 65 1 0.6730754931338039 0 67 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 1 0 0
+note 14 0 8.05 67 1 0.639535617532225 0 65 nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 1 0 0
+note 23 3 8.05 67 8 0.19249486091081053 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 1 0 0
+note 23 3 8.05 72 8 0.19249486091081053 0 nan nan nan nan nan nan nan nan nan nan nan nan

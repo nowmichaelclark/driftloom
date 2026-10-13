@@ -16,6 +16,14 @@
 //! Web Audio -- and, where Chromium's rendering differs from a plain
 //! reading of the spec, Chromium -- to the sample.
 
+// No standard library (queue item 43): the core needs no allocator, no
+// threads and no platform math, so it builds for a console or a
+// microcontroller as it does for the browser. Its own unit tests use `std`
+// (threads with room for a whole core on their stack, `Vec`); every real
+// build, the test host and the integration tests included, links it without.
+#![cfg_attr(not(test), no_std)]
+
+pub mod articulate;
 pub mod bass;
 pub mod breath;
 pub mod compressor;
@@ -25,18 +33,20 @@ pub mod filter;
 pub mod folk;
 pub mod lead;
 pub mod master;
+pub mod math;
 pub mod mix;
 pub mod noise;
 pub mod osc;
 pub mod param;
 pub mod resample;
+pub mod rng;
 pub mod sung;
 pub mod texture;
 pub mod timeline;
 pub mod voice;
 pub mod wave;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 
 use bass::Bass;
@@ -47,6 +57,8 @@ use lead::{Lead, LeadKind, Tone};
 use master::{Master, OUT};
 use mix::Mix;
 use noise::Noise;
+pub use rng::Key;
+use rng::Draws;
 use sung::{Kind3, Sung};
 use texture::Texture;
 use voice::{Fiddle, Fm, FmOptions, Kalimba, PadNote, SineNote, Tubular, Vibrato, midi_to_freq};
@@ -141,68 +153,75 @@ pub enum Taken {
 pub const MISS: f64 = 0.03;
 
 /// Why a note was dropped (`Core::dropped_by`): the queue of waiting notes
-/// was full when it arrived; a sung note found no room for its draws; every
-/// voice was busy when it started; every sung voice was.
+/// was full when it arrived; every voice was busy when it started; every
+/// sung voice was.
 pub const QUEUE_FULL: usize = 0;
-pub const NO_ROOM: usize = 1;
-pub const VOICES_BUSY: usize = 2;
-pub const SUNG_BUSY: usize = 3;
-const CAUSES: usize = 4;
+pub const VOICES_BUSY: usize = 1;
+pub const SUNG_BUSY: usize = 2;
+const CAUSES: usize = 3;
 
 /// How many extra values a note carries. Fixed, so a note is a plain value
-/// and nothing allocates: the widest voice, the temple bell, sends ten
-/// draws.
+/// and nothing allocates: the widest voice, the temple bell, settles ten
+/// draws into them.
 pub const EXTRA: usize = 12;
 
 /// The voices the core can play, by number. What each reads from a note's
-/// extra values (`Core::note`); values a voice does not name are unused:
+/// extra values (`Core::note`); values a voice does not name are unused.
+///
+/// A note's extra values are what the host decides: the note a voice is
+/// joined to, an `fm()` option, a vowel. What a voice leaves to chance is
+/// not the host's to send (queue item 44): `articulate::settle` fills those
+/// places from the seeded generator (`rng`) as the note arrives, and the
+/// list below names them as *draws*, in [0, 1) unless it says otherwise.
 ///
 /// - KALIMBA: `parts`, the strike and the body the budget let through.
-/// - FIDDLE: the note it is joined to (NaN if none), then its vibrato's
-///   rate, rate at the end and depth (NaN if the note has none).
+/// - FIDDLE: the note it is joined to (NaN if none). Its vibrato's rate,
+///   rate at the end and depth are drawn (none for a note under half a
+///   second).
 /// - PAD: how many notes the chord has.
 /// - FM: `fm()`'s options, resolved, in this order: ratio, index, attack,
 ///   decay, detune (cents). Every voice that is an `fm()` call -- keys,
 ///   bell, celeste, musicbox, rhodes, marimba, harp, piano -- is this.
 /// - SINE: none.
-/// - TUBULAR: the five `Math.random` draws for its partials' detunes, each
-///   in [0, 1), in partial order.
+/// - TUBULAR: five draws, for its partials' detunes, in partial order.
 /// - SOFTPAD, ANALOGPAD, ANALOGLEAD, SAWPLUCK, BEEP, MOOG: none.
-/// - WHISTLE: where its slide comes from in Hz (NaN if it does not slide),
-///   then how long the slide takes to arrive, in seconds.
+/// - WHISTLE: the note it is joined to (NaN if none). Whether it slides
+///   into its pitch, from where and how long it takes, is drawn.
 /// - NYLON: whether it is a string of a strum (1) or not (0 or NaN): the
 ///   next strum into its channel damps it (`Core::damp`).
-/// - ACCORDION: the note it is joined to (NaN if none), then the
-///   `Math.random` draw that sets how late its second reed comes in.
+/// - ACCORDION: the note it is joined to (NaN if none). How late its
+///   second reed comes in is drawn.
 /// - STAB: none.
-/// - OCARINA, FLUTE: where the slide comes from in Hz and how long it
-///   takes (NaN if it does not slide), then the breath's rate draw.
-/// - PANFLUTE: the vibrato's rate draw (NaN for a note too short for one),
-///   then the breath's rate draw.
-/// - KNOCK: the prepared piano's knock: its noise's rate and offset draws,
-///   then its bandpass's frequency draw.
-/// - TEMPLEBELL: the eight detune draws, partial by partial, then the
-///   strike's rate and offset draws.
-/// - HAT: `parts` is which (`breath::HAT`, `OPEN_HAT`, `SHAKER`); its
-///   noise's rate and offset draws.
+/// - OCARINA, FLUTE: the note it is joined to (NaN if none). Whether it
+///   slides, from where and how long it takes, and the breath's rate, are
+///   drawn.
+/// - PANFLUTE: the vibrato's rate (none for a note under half a second)
+///   and the breath's rate are drawn.
+/// - KNOCK: the prepared piano's knock: its noise's rate and offset, and its
+///   bandpass's frequency, are drawn.
+/// - TEMPLEBELL: the eight partials' detunes, in partial order, and the
+///   strike's rate and offset, are drawn.
+/// - HAT: `parts` is which (`breath::HAT`, `OPEN_HAT`, `SHAKER`). Its
+///   noise's rate and offset are drawn.
 /// - BASS: `parts` is the voice (`bass::SUB` and the rest) with the flags
-///   `bass::GLIDE` and `CHUG`; the pluck's click's rate and offset draws.
-///   Every bass voice but `rhodesbass`, which is an FM note.
+///   `bass::GLIDE` and `CHUG`. The pluck's click's rate and offset are
+///   drawn. Every bass voice but `rhodesbass`, which is an FM note.
 /// - TEXTURE: `parts` is which (`texture::SWELL` and the rest). The drop's
-///   rate, offset and band draws; the wind's slow sine's rate draw, then
-///   its band in Hz (NaN for the usual one); the waves' rate and offset
-///   draws. `bell` and `chime` are FM notes.
+///   rate, offset and band are drawn; the wind's slow sine's rate is, and
+///   its band in Hz is the host's (NaN for the usual one); the waves' rate
+///   and offset are drawn. `bell` and `chime` are FM notes.
 /// - DRUM: `parts` is which (`drums::KICK` and the rest; the hats are HAT).
-///   The noise's rate and offset draws, for every drum but the soft kick
-///   and the rim; the jingle's five zils' draws come first, then those.
+///   The noise's rate and offset are drawn, for every drum but the soft
+///   kick and the rim, and a jingle's five zils' detunes.
 /// - VOWEL, HUM, CHOIR: the vowel (0-3: a, e, o, u), where it drifts to
 ///   (the same, 4 for an opening hum, NaN for nowhere), the note's formant
-///   trim, and the composer's standing detune in cents; and every other
-///   draw, staged just before the note (`Core::sung_draws`).
+///   trim, and the composer's standing detune in cents. The scoop into the
+///   note, the jitter, the vibrato and the breath are drawn, in the voice
+///   (`sung`), from the note's key.
 ///
 /// The noise voices -- those from the ocarina on, the pluck, the drop, the
-/// wind, the waves and the drums but two -- need the noise (`Core::noise`); a
-/// core without it
+/// wind, the waves and the drums but two -- play the noise the core makes as
+/// it starts (`noise`); at a rate too high to hold it the core has none,
 /// drops them, and the host plays them in JavaScript.
 pub const KALIMBA: u32 = 0;
 pub const FIDDLE: u32 = 1;
@@ -234,12 +253,6 @@ pub const HUM: u32 = 26;
 pub const CHOIR: u32 = 27;
 /// The last voice there is.
 const LAST: u32 = CHOIR;
-
-/// The sung voices' draws, held from their note's arrival to its start:
-/// room for 64K, about four times the most a thirty-second render of the
-/// busiest sung loop in 30,000 hands over at once. A note that finds no
-/// room is dropped, and counted.
-pub const ARENA: usize = 1 << 16;
 
 fn sung_kind(voice: u32) -> Option<Kind3> {
     match voice {
@@ -335,9 +348,8 @@ struct Waiting {
     strum: u32,
     damped: bool,
     damp: f64,
-    /// A sung note's draws, in `Core::arena`: where, and how many.
-    draws: usize,
-    draw_count: usize,
+    /// Where the note sits in its loop, for the draws it makes.
+    draws: Draws,
 }
 
 const NOTHING: Waiting = Waiting {
@@ -355,8 +367,7 @@ const NOTHING: Waiting = Waiting {
     strum: 0,
     damped: false,
     damp: 0.0,
-    draws: 0,
-    draw_count: 0,
+    draws: Draws::new(Key { seed: 0, pass: 0, step: 0, ord: 0 }, 0),
 };
 
 pub struct Core {
@@ -378,13 +389,8 @@ pub struct Core {
     noise: Noise,
     /// The sung voices, which are too big for a slot (`sung`).
     sung: [Sung; sung::POOL],
-    /// A sung note's draws, written by the host just before the note
-    /// (`sung_draws`), and how many.
-    staging: [f64; sung::MAX_DRAWS],
-    staged: usize,
-    /// The waiting sung notes' draws, and where the next goes.
-    arena: [f64; ARENA],
-    arena_at: usize,
+    /// Where the notes the host sends next sit in their loop (`key`).
+    key: Key,
     /// What the host plays into each channel itself, for this block: notes
     /// it could not hand over (`inputs`).
     inputs: [[f32; QUANTUM]; CHANNELS],
@@ -416,10 +422,7 @@ impl Core {
             strums: [0; CHANNELS],
             noise: Noise::new(),
             sung: [const { Sung::new() }; sung::POOL],
-            staging: [0.0; sung::MAX_DRAWS],
-            staged: 0,
-            arena: [0.0; ARENA],
-            arena_at: 0,
+            key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
             inputs: [[0.0; QUANTUM]; CHANNELS],
             mix: Mix::new(),
             master: Master::new(),
@@ -439,6 +442,7 @@ impl Core {
         self.missed = 0;
         self.dropped = [0; CAUSES];
         self.clear();
+        self.noise.make(rate);
         let r = rate as f32;
         self.waves.build(r, &mut self.fft);
         for channel in self.bodies.iter_mut() {
@@ -554,17 +558,14 @@ impl Core {
         for v in self.sung.iter_mut() {
             v.busy = false;
         }
-        self.staged = 0;
-        self.arena_at = 0;
     }
 
     /// Drop every note still waiting for its start time, and leave the ones
     /// sounding as they are: the host handed notes over ahead of their time
     /// and the music has jumped since (Pause, Next or Previous, queue item
-    /// 39). The draws they kept in the arena go with them.
+    /// 39).
     pub fn cancel(&mut self) {
         self.waiting = 0;
-        self.staged = 0;
     }
 
     /// Drop the notes still waiting whose time is `time` (seconds) or later,
@@ -587,51 +588,17 @@ impl Core {
                 *gap = last;
             }
         }
-        self.staged = 0;
     }
 
-    /// Room for the draws of the sung note the host sends next, `len` of
-    /// them, in the order the JavaScript voice draws them: for each singer
-    /// the choir's spread (a choir only), the scoop's start and end, how
-    /// many steps of jitter, two draws a step, then the vibrato's rate,
-    /// depth and arrival; last the breath's rate. Empty if it is more than
-    /// a note can have.
-    pub fn sung_draws(&mut self, len: usize) -> &mut [f64] {
-        self.staged = if len <= sung::MAX_DRAWS { len } else { 0 };
-        self.staging.get_mut(..self.staged).unwrap_or(&mut [])
-    }
-
-    // Keep the staged draws for a sung note in the arena; where they are,
-    // or None if there is no room.
-    fn keep_draws(&mut self, len: usize) -> Option<usize> {
-        if len == 0 || len > ARENA {
-            return None;
-        }
-        let at = if self.arena_at + len > ARENA {
-            0
-        } else {
-            self.arena_at
-        };
-        // Not over any waiting note's.
-        let clash = self.queue.iter().take(self.waiting).any(|w| {
-            sung_kind(w.voice).is_some() && w.draws < at + len && at < w.draws + w.draw_count
-        });
-        if clash {
-            return None;
-        }
-        let from = self.staging.get(..len)?;
-        self.arena.get_mut(at..at + len)?.copy_from_slice(from);
-        self.arena_at = at + len;
-        Some(at)
-    }
-
-    /// Room for the host's noise, `len` samples at the core's rate, to be
-    /// written into what this returns (`_makeNoise`: two seconds, drawn
-    /// from `Math.random` as the synth is built). Empty, and no noise, if it
-    /// is longer than `noise::NOISE_MAX`.
-    pub fn noise(&mut self, len: usize) -> &mut [f32] {
-        self.noise.resize(len);
-        self.noise.space()
+    /// Where the notes the host sends next sit in their loop: the loop's
+    /// seed, the pass, the step and the note's place among its layer's
+    /// notes at that step (`rng::Key`). Every draw a note makes -- how
+    /// long its second reed waits, where in the noise a strike starts, a
+    /// sung note's jitter -- comes from this and nothing else, so the same
+    /// loop makes the same sound everywhere. It holds until the host sets
+    /// another.
+    pub fn key(&mut self, key: Key) {
+        self.key = key;
     }
 
     /// Notes that arrived after their start time had been rendered, the
@@ -645,16 +612,15 @@ impl Core {
         self.missed
     }
 
-    /// Notes dropped: the queue was full when they arrived, a sung note's
-    /// draws found no room, or every voice was busy when they started.
-    /// Missed notes are not among them.
+    /// Notes dropped: the queue was full when they arrived, or every voice
+    /// was busy when they started. Missed notes are not among them.
     pub fn dropped(&self) -> u32 {
         self.dropped
             .iter()
             .fold(0u32, |sum, n| sum.saturating_add(*n))
     }
 
-    /// Notes dropped for one cause (`QUEUE_FULL`, `NO_ROOM`, `VOICES_BUSY`,
+    /// Notes dropped for one cause (`QUEUE_FULL`, `VOICES_BUSY`,
     /// `SUNG_BUSY`).
     pub fn dropped_by(&self, cause: usize) -> u32 {
         self.dropped.get(cause).copied().unwrap_or(0)
@@ -689,7 +655,6 @@ impl Core {
         parts: u32,
         extra: [f64; EXTRA],
     ) -> Taken {
-        let staged = core::mem::take(&mut self.staged);
         if voice > LAST
             || (plays_noise(voice, parts) && !self.noise.ready())
             || channel as usize >= CHANNELS
@@ -713,15 +678,6 @@ impl Core {
             time = now;
             taken = Taken::Late;
         }
-        let (draws, draw_count) = if sung_kind(voice).is_some() {
-            let Some(at) = self.keep_draws(staged) else {
-                self.drop_for(NO_ROOM);
-                return Taken::Full;
-            };
-            (at, staged)
-        } else {
-            (0, 0)
-        };
         if self.waiting >= QUEUE {
             self.drop_for(QUEUE_FULL);
             return Taken::Full;
@@ -729,6 +685,11 @@ impl Core {
         let Some(gap) = self.queue.get_mut(self.waiting) else {
             return Taken::Full;
         };
+        // What the note leaves to chance is settled now, from where it sits
+        // in its loop, and not by the host.
+        let draws = Draws::new(self.key, channel);
+        let mut extra = extra;
+        articulate::settle(voice, parts, midi, dur, &draws, &mut extra);
         *gap = Waiting {
             voice,
             channel,
@@ -745,7 +706,6 @@ impl Core {
             damped: false,
             damp: 0.0,
             draws,
-            draw_count,
         };
         self.waiting += 1;
         taken
@@ -1018,12 +978,8 @@ impl Core {
                     }
                     return;
                 };
-                let draws = self
-                    .arena
-                    .get(w.draws..w.draws + w.draw_count)
-                    .unwrap_or(&[]);
                 v.play(
-                    kind, w.midi, w.time, w.dur, w.vel, a, b, c, d, draws, noise, rate,
+                    kind, w.midi, w.time, w.dur, w.vel, a, b, c, d, &w.draws, noise, rate,
                 );
                 v.busy = true;
                 let span = (v.start_frame(), v.end_frame());
@@ -1149,10 +1105,11 @@ impl Core {
                 body.run(bus, out);
             }
         }
-        // The host's own notes, then the mix.
+        // The host's own notes, then the mix. A channel's tail stops at the
+        // silence floor on its way in (`math`, "Subnormal numbers").
         for (out, input) in self.out.iter_mut().zip(self.inputs.iter_mut()) {
             for (y, x) in out.iter_mut().zip(input.iter()) {
-                *y += *x;
+                *y = math::silence(*y + *x);
             }
             input.fill(0.0);
         }
@@ -1498,9 +1455,7 @@ mod tests {
     #[test]
     fn a_tubular_note_rings_for_at_least_five_seconds() {
         let mut core = boxed();
-        let mut draws = [f64::NAN; EXTRA];
-        draws[..5].copy_from_slice(&[0.5, 0.0, 1.0, 0.25, 0.75]);
-        core.note(TUBULAR, CHORDS, 0.1, 60.0, 0.4, 0.8, 0, draws);
+        core.note(TUBULAR, CHORDS, 0.1, 60.0, 0.4, 0.8, 0, NO);
         let (peak, _) = energy(&mut core, 1, 4.0);
         assert!(peak > 0.05 && peak < 0.4, "peak {peak}");
         assert_eq!(core.busy(), 1, "gone before five seconds");
@@ -1536,16 +1491,26 @@ mod tests {
         }
     }
 
+    // The first note, from the key's ord up, that the chance sends sliding
+    // (a draw under 0.22) and the first it does not.
+    fn ords_that_slide_and_do_not() -> (u32, u32) {
+        let slides = |ord: u32| rng::unit(key(3, 0, 0, ord), MELODY, rng::salt::SLIDE, 0) < 0.22;
+        let slid = (0..1000).find(|&o| slides(o)).expect("some ord slides");
+        let plain = (0..1000).find(|&o| !slides(o)).expect("some ord does not");
+        (slid, plain)
+    }
+
     #[test]
-    fn a_whistle_slides_only_when_it_is_told_to() {
-        let mut plain = boxed();
-        let mut slid = boxed();
-        let mut none = [f64::NAN; EXTRA];
-        plain.note(WHISTLE, MELODY, 0.05, 72.0, 0.4, 0.7, 0, none);
-        none[0] = 440.0;
-        none[1] = 0.06;
-        slid.note(WHISTLE, MELODY, 0.05, 72.0, 0.4, 0.7, 0, none);
-        assert_ne!(render(&mut plain, 100), render(&mut slid, 100));
+    fn a_whistle_slides_when_its_draw_says_so() {
+        let (slid, plain) = ords_that_slide_and_do_not();
+        let (mut a, mut b, mut c) = (boxed(), boxed(), boxed());
+        for (core, ord) in [(&mut a, plain), (&mut b, slid), (&mut c, slid)] {
+            core.key(key(3, 0, 0, ord));
+            core.note(WHISTLE, MELODY, 0.05, 72.0, 0.4, 0.7, 0, NO);
+        }
+        let (a, b, c) = (render(&mut a, 100), render(&mut b, 100), render(&mut c, 100));
+        assert_ne!(a, b);
+        assert_eq!(b, c);
     }
 
     #[test]
@@ -1610,29 +1575,9 @@ mod tests {
         );
     }
 
-    // A choir note's draws, each singer's: the spread, the scoop's two,
-    // two steps of jitter, the vibrato's three; then the breath's.
-    fn choir_draws() -> Vec<f64> {
-        let mut d = Vec::new();
-        for _ in 0..3 {
-            d.extend_from_slice(&[0.5, 0.3, 0.6, 2.0, 0.4, 0.2, 0.7, 0.9, 0.1, 0.5, 0.5]);
-        }
-        d.push(0.25);
-        d
-    }
-
-    fn with_noise(core: &mut Core) {
-        for (i, x) in core.noise(2 * RATE as usize).iter_mut().enumerate() {
-            *x = ((i * 7919 % 2003) as f32 / 1001.5) - 1.0;
-        }
-    }
-
     #[test]
-    fn a_sung_note_takes_its_draws_and_lets_its_voice_go() {
+    fn a_sung_note_sings_then_lets_its_voice_go() {
         let mut core = boxed();
-        with_noise(&mut core);
-        let draws = choir_draws();
-        core.sung_draws(draws.len()).copy_from_slice(&draws);
         let mut extra = NO;
         extra[..4].copy_from_slice(&[0.0, f64::NAN, 1.0, 0.0]);
         assert_eq!(core.note(CHOIR, MELODY, 0.1, 60.0, 0.4, 0.8, 0, extra), Taken::OnTime);
@@ -1643,30 +1588,96 @@ mod tests {
         assert!(core.sung.iter().all(|v| !v.busy));
     }
 
-    #[test]
-    fn a_sung_note_without_its_draws_is_dropped() {
-        let mut core = boxed();
-        with_noise(&mut core);
-        assert_eq!(core.note(VOWEL, MELODY, 0.1, 60.0, 0.4, 0.8, 0, NO), Taken::Full);
-        assert!(core.sung_draws(sung::MAX_DRAWS + 1).is_empty());
-        assert_eq!(core.note(HUM, MELODY, 0.1, 60.0, 0.4, 0.8, 0, NO), Taken::Full);
-        assert_eq!(core.dropped(), 2);
-        assert_eq!(core.dropped_by(NO_ROOM), 2);
+    fn key(seed: u32, pass: u32, step: u32, ord: u32) -> Key {
+        Key { seed, pass, step, ord }
+    }
+
+    /// Every voice that draws, rendered for a key: the notes it makes are a
+    /// function of that key and nothing else.
+    fn drawing_voices(core: &mut Core) {
+        let t = 0.05;
+        let mut x = NO;
+        for (voice, channel, parts, dur) in [
+            (FIDDLE, MELODY, 0, 1.0),
+            (OCARINA, MELODY, 0, 1.0),
+            (FLUTE, MELODY, 0, 1.0),
+            (WHISTLE, MELODY, 0, 1.0),
+            (PANFLUTE, MELODY, 0, 1.0),
+            (ACCORDION, MELODY, 0, 1.0),
+            (TUBULAR, CHORDS, 0, 1.0),
+            (TEMPLEBELL, CHORDS, 0, 1.0),
+            (KNOCK, MELODY, 0, 0.5),
+            (HAT, DRUMS_CHANNEL, 0, 0.1),
+            (BASS, BASS_CHANNEL, bass::PLUCKBASS, 0.5),
+            (TEXTURE, TEXTURE_CHANNEL, texture::DROP, 0.5),
+            (TEXTURE, TEXTURE_CHANNEL, texture::WIND, 2.0),
+            (TEXTURE, TEXTURE_CHANNEL, texture::WAVES, 2.0),
+            (DRUM, DRUMS_CHANNEL, drums::JINGLE, 0.1),
+            (DRUM, DRUMS_CHANNEL, drums::SNARE, 0.1),
+            (VOWEL, MELODY, 0, 3.0),
+            (HUM, MELODY, 0, 3.0),
+            (CHOIR, MELODY, 0, 3.0),
+        ] {
+            x[0] = if voice == VOWEL || voice == HUM || voice == CHOIR { 0.0 } else { 62.0 };
+            if matches!(voice, VOWEL | HUM | CHOIR) {
+                x[1] = 1.0;
+                x[2] = 1.0;
+                x[3] = 0.0;
+            }
+            core.note(voice, channel, t, 64.0, dur, 0.8, parts, x);
+        }
     }
 
     #[test]
-    fn the_arena_keeps_a_waiting_notes_draws() {
-        let mut core = boxed();
-        with_noise(&mut core);
-        let draws = choir_draws();
-        // Enough notes to go round the arena: the ones still waiting keep
-        // their draws, so once it is full the next is dropped.
-        let fits = ARENA / draws.len();
-        for i in 0..=fits {
-            core.sung_draws(draws.len()).copy_from_slice(&draws);
-            let taken = core.note(CHOIR, MELODY, 1.0 + i as f64 * 0.001, 60.0, 0.4, 0.8, 0, NO);
-            let want = if i < fits { Taken::OnTime } else { Taken::Full };
-            assert_eq!(taken, want, "note {i}");
+    fn the_same_key_makes_the_same_draws_and_another_makes_others() {
+        let mut a = boxed();
+        let mut b = boxed();
+        let mut c = boxed();
+        let mut d = boxed();
+        for (core, k) in [(&mut a, key(9, 0, 4, 2)), (&mut b, key(9, 0, 4, 2)), (&mut c, key(9, 1, 4, 2)), (&mut d, key(10, 0, 4, 2))] {
+            core.key(k);
+            drawing_voices(core);
         }
+        let all = |core: &mut Core| -> Vec<u32> {
+            let mut bits = Vec::new();
+            for blk in 0..(5.0 * RATE) as usize / QUANTUM {
+                bits.extend(core.process((blk * QUANTUM) as u64).iter().flatten().map(|v| v.to_bits()));
+            }
+            bits
+        };
+        let (a, b, c, d) = (all(&mut a), all(&mut b), all(&mut c), all(&mut d));
+        assert_eq!(a, b, "the same key");
+        assert_ne!(a, c, "another pass");
+        assert_ne!(a, d, "another seed");
+    }
+
+    #[test]
+    fn the_core_makes_its_own_noise() {
+        let core = boxed();
+        assert_eq!(core.noise.samples().len(), 2 * RATE as usize);
+        assert!(core.noise.ready());
+        // Not silence, not clipping.
+        let peak = core.noise.samples().iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(peak > 0.3 && peak < 2.0, "peak {peak}");
+    }
+
+    #[test]
+    fn a_slide_comes_from_the_note_before_or_from_just_under() {
+        use articulate::slide_of;
+        // Never for a short note, and never when the draw is past the chance.
+        assert_eq!(slide_of(69.0, 0.1, f64::NAN, 0.0), None);
+        assert_eq!(slide_of(69.0, 1.0, f64::NAN, 0.5), None);
+        // Joined by a step within a fourth: from the note before.
+        let (from, reach) = slide_of(69.0, 1.0, 67.0, 0.1).expect("slides");
+        assert!((from - midi_to_freq(67.0)).abs() < 1e-9);
+        assert!((reach - 0.09).abs() < 1e-12);
+        // A repeat, a leap or no note before: from just under.
+        for prev in [69.0, 60.0, f64::NAN] {
+            let (from, _) = slide_of(69.0, 0.4, prev, 0.1).expect("slides");
+            assert!(from < 440.0 && from > 400.0, "{from}");
+        }
+        // The slide's reach follows the note, between 30 and 90 ms.
+        assert!((slide_of(69.0, 0.2, 67.0, 0.1).expect("slides").1 - 0.044).abs() < 1e-12);
+        assert!((slide_of(69.0, 0.18, 67.0, 0.1).expect("slides").1 - 0.0396).abs() < 1e-12);
     }
 }
