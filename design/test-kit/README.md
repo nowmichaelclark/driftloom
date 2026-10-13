@@ -1,16 +1,31 @@
 # Driftloom test kit
 
-Playwright measurements behind every number in the mockup's handover.
+Playwright scripts for the design spec.
+
+## v18: baking the spec, and contact sheets
 
     npm install
+    node bake.mjs                                   # writes ../driftloom_v18.html from the app
+    node sheet18.mjs ../driftloom_v18.html out/s.png --places all --themes t-dawn --sizes 100
+
+| Script | What it does |
+|---|---|
+| bake.mjs | Runs the app (repo root) in headless Chromium at 340 × 780, seeds 30 loops and five albums, plays an album, visits every view at 100 / 130 / 150 / 200% and writes the spec from `spec.template.html` |
+| spec.template.html | The page around the phone: review controls, notes, the script that makes the keys work |
+| sheet18.mjs | Contact sheets of the v18 file through its `window.spec` (`--places`, `--themes`, `--sizes`, `--paused`, `--insets android`) |
+
+## v17: the compliance measurements
+
+The scripts below measure the **v17** file, which has nine phones; they do not run on v18 yet (porting them is the next open item). Run them against the archived file:
+
     npx playwright install chromium
-    ./run_all.sh path/to/driftloom_vNN.html     # writes images to out/
+    ./run_all.sh ../archive/driftloom_v17_library.html     # writes images to out/
 
 Compare the output with `expected_output_v17.txt` (v16: `expected_output_v16.txt`, v15: `expected_output_v15.txt`).
 
 Color-blind check for the light themes' notes (after run_all.sh has written out/nontext_allon.json):
 
-    python3 cvd_check.py path/to/driftloom_vNN.html out/nontext_allon.json
+    python3 cvd_check.py ../archive/driftloom_v17_library.html out/nontext_allon.json
 
 | Script | What it checks |
 |---|---|
