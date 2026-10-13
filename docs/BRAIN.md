@@ -523,6 +523,11 @@ Stated decisions, not inferences. Dated where the date matters.
   reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
   late and dropped by cause) will say whether anything is left. If it
   calls for a fix, that comes before the core work.
+- **Item 45 stopped for decisions (#213, draft); decided by Mikey
+  2026-10-14** (written under item 45 in the queue): tone tolerance 1.5
+  points at 44.1/22.05 kHz; the noise made rate-true (baseline update);
+  192 kHz native-only; PowerPC CI runs plain goldens only. Items 42-44
+  merged (44 is #211).
 - **Emergency (2026-10-13): queue item 47**, glitches when minimized
   or locked (Pixel 9, GrapheneOS, v92). All 10 late notes "inside the
   buffer", none from stalls; render-ahead usually ~20 ms but 1.4 s at
