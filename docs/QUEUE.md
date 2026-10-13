@@ -2902,3 +2902,13 @@ Mikey decides this line:
   distributions: 37 of 40 loops changed in detail (at most 0.16 LU louder or
   quieter). Listen for: nothing; a control album should sound the same as
   before.
+- #213, any sample rate, any block size, any channel layout (core phase 1,
+  item 45, v96), https://b663e0c6-driftloom.nowmichaelclark.workers.dev: the
+  core takes 22,050 Hz up to its build's highest rate (192 kHz native, 96 kHz
+  in the web build) and renders any number of frames a call with the same
+  bits; mono is the only layout and anything else is refused in plain words;
+  the noise's colour is the same at every rate (exactly as before at 48 kHz);
+  a browser context faster than 96 kHz is asked to run at 48 kHz instead. At
+  44.1 kHz 36 of 40 baseline loops change in detail, by at most 0.03 LU.
+  Listen for: nothing; the control album should sound the same, a 44.1 kHz
+  phone's hats, breaths and textures a hair different at most.
