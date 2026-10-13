@@ -1333,7 +1333,9 @@ Hands, one fresh Claude Code session per model (Mikey's tokens):
 **43 Opus 5.5, high** (Session 20: numeric code, accuracy, denormals);
 **44 and 45 Sonnet 5.5, high** (Session 21: clear specs with strict
 yardsticks; if a yardstick won't pass, stop and leave a note rather than
-push on); **46 Opus 5.5, high** (Session 22: an interface design).
+push on); then a brain check (Session 22); **46 Opus 5.5, high**
+(Session 23: an interface design); then the brain's phase review
+(Session 24).
 Items in order; each a PR (a/b splits welcome).
 
 ## 42. Golden renders on every target
