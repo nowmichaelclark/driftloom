@@ -246,7 +246,14 @@ Stated decisions, not inferences. Dated where the date matters.
   17) from the same core; a documented host API for native and game
   hosts (`no_std`-friendly, sample-rate independent, deterministic);
   the generator in Rust when the words settle.
-- **Mono only, for now (Mikey, 2026-10-11).** The ears put stereo first;
+- **Stereo possible, mono the default (Mikey, 2026-10-13)** -- replaces
+  the line below. The app stays mono for now; stereo comes much later,
+  experimental first, and the core must make it implementable without a
+  rebuild. Stereo's variables (width, per-instrument pan that changes
+  track to track, how much and how fast things move, and more) must be
+  easy for developers and users to tweak. Carefully: "stereo holds its
+  own set of infinite possibilities". `docs/CORE.md`, promise 9.
+- *(Superseded 2026-10-13.)* **Mono only, for now (Mikey, 2026-10-11).** The ears put stereo first;
   Mikey decided against it: mono gives a controlled soundscape that
   sounds the same from system to system, where stereo can sound wildly
   different. The output stays one channel. The core's per-channel
@@ -322,6 +329,25 @@ Stated decisions, not inferences. Dated where the date matters.
   save only about 8% and carry characters that break links and Discord's
   formatting. The same rule for everything the core emits (names, codes,
   errors).
+- **The building blocks are open to change too** (Mikey, 2026-10-13):
+  developers, AI agents and Mikey can add blocks or make fundamental
+  changes to them easily. He doesn't know yet which blocks could be
+  added or are worth changing: the brain drafts a catalogue of ideas for
+  him before phase 4.
+- **The JavaScript synth retires at the end of phase 3** (Mikey,
+  2026-10-13); earlier only on its own branch, merged when the
+  replacement is ready. **The charter's targets stand**, to be revisited:
+  the brain proposes changes, or higher aims, as measurements come in.
+- **Bit-identical everywhere** (Mikey, 2026-10-13): the same code makes
+  exactly the same samples on every device; the core carries its own
+  math.
+- **Three existing games prove the core** (Mikey, 2026-10-13): if he, a
+  solo dev, can put it into three games seamlessly with Claude's help,
+  it's a breeze for others. Light enough for his modest laptop, running
+  on various devices: one open source, one source port (like an Ocarina
+  of Time port or RollerCoaster Tycoon), one traditional, easy to mod.
+  Possibly one early, to test as we go. Brain's picks in `docs/CORE.md`
+  (promise 10): Luanti (first, phase 4), OpenRCT2, Stardew Valley.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 
@@ -450,6 +476,12 @@ Stated decisions, not inferences. Dated where the date matters.
   reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
   late and dropped by cause) will say whether anything is left. If it
   calls for a fix, that comes before the core work.
+- **The core charter is approved (Session 18, 2026-10-13):
+  `docs/CORE.md`.** Phase 1 is queued: items 42-46 in `docs/QUEUE.md`.
+  Hands: **Session 19, Opus 5.5, high**. The brain verifies each PR
+  against its yardsticks (goldens on all targets, baseline, costs) and
+  builds the control album from 43 and 44. Before phase 5: the block
+  catalogue for Mikey (charter, promise 5).
 - **Next: the core** -- a new brain chat. Read **"The core"** under "What
   Mikey has decided" first: the number one priority, shoot for the moon,
   embeddable anywhere (game engines, mods, any OS or device, iOS and
@@ -469,6 +501,16 @@ Stated decisions, not inferences. Dated where the date matters.
   loops Mikey sends (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Session 18 (brain, Opus 5.5, 2026-10-13), the core.** Drafted the
+core charter, `docs/CORE.md` (PR #196, draft): promises each with a
+measure, phases, questions for Mikey. His answers (2026-10-13) added
+promise 9 (stereo possible, mono default) and open building blocks;
+then bit-identical everywhere (yes) and three games (promise 10).
+**Approved by Mikey (2026-10-13).** Phase 1 queued as items 42-46
+(golden renders on five targets; the core's own math and `no_std`;
+randomness into the core; any rate, block size and channel layout; the
+building-block interface). Hands: Session 19, Opus 5.5, high.
 
 **Session 16 (brain, 2026-10-11 to 10-12), the words, then the glitches.**
 Its State bullets, newest first, kept here as written:
