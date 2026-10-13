@@ -62,6 +62,7 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - **Favor plain over metaphor.** Of 20 Next-picks directions (café menu, dice, radio, magnets…), Mikey chose the quietest: one small line on Now Playing that opens a plain list. Themed metaphors read as gimmicks.
 - **Exact values, not just presets.** People want to pick exactly how many bars, not choose from five sizes; presets can sit beside an exact control.
 - **Next picks, settled so far (round three, 2026-10-13):** the New loops panel has five lines, like Layers, with Tempo and Length sharing one line. Labels are optional where the value says what it is ("16 bars", "70–85 bpm", "any key"). The panel's key reads "close", not "‹ Now". Loop length runs from 1 to 32,768 bars, or endless, and gets its own picker view. Colored backdrops behind values are liked; colored dots, "+3 any" and pencil marks are not needed.
+- **Next picks are chosen (2026-10-13):** see `next-picks.md` for the brief, and `reference/next_picks_*.png`.
 - **Round four (2026-10-13):** Now Playing shows the new-loop picks only outside an album. While an album plays, the album is what comes next, so the picks stay hidden. More than three moods end in an ellipsis ("merry, tender, dreamy…"). The length picker sits centered rather than top-heavy and has no explainer text ("tap the number to type", "plays until you skip").
 
 ## Open items
