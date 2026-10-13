@@ -1328,8 +1328,12 @@ the charter's promises 2 and 6, held on every PR from here on):
   block "follows Chromium to the sample", leave it if still true, but
   new work is judged by the charter's measures, not by nulling.
 
-Hands: **Opus 5.5, high**, for the whole phase (first of a phase,
-judgment-heavy: numeric code, cross-compiling, an interface design).
+Hands, one fresh Claude Code session per model (Mikey's tokens):
+**42 Sonnet 5.5, high** (Session 19: a clear spec, tooling and CI);
+**43 Opus 5.5, high** (Session 20: numeric code, accuracy, denormals);
+**44 and 45 Sonnet 5.5, high** (Session 21: clear specs with strict
+yardsticks; if a yardstick won't pass, stop and leave a note rather than
+push on); **46 Opus 5.5, high** (Session 22: an interface design).
 Items in order; each a PR (a/b splits welcome).
 
 ## 42. Golden renders on every target
