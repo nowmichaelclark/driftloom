@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v96';
+const BUILD = 'v98';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -57,6 +57,7 @@ import * as store from './storage.js';
 import * as ui from './ui.js';
 import * as library from './library.js';
 import { VIBE_IDS } from './vibes.js';
+import * as picks from './picks.js';
 
 const state = {
   ctx: null,
@@ -77,6 +78,11 @@ const state = {
   // The listener's vibes (queue item 38b), in VIBE_IDS order. Every new
   // loop leans toward them; saved in the prefs.
   vibes: [],
+  // The other next picks (design/next-picks.md): a tempo range and a
+  // length in bars (or 'endless'); null is "any". Saved in the prefs.
+  picks: { tempo: null, length: null },
+  // Where the Vibes list goes back to: Now Playing or the New loops panel.
+  vibesFrom: 'now',
   // The album most recently left, so Now Playing can offer the way back.
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
@@ -732,6 +738,8 @@ function setView(view) {
   if (view === 'save') library.renderSave();
   if (view === 'now') renderNow();
   if (view === 'vibes') renderVibes();
+  if (view === 'picks') picks.renderPanel();
+  if (view === 'length') picks.renderLength();
   refreshCard();
   store.setPrefs({ view: state.lastView, edit: state.lastEdit });
 }
@@ -773,8 +781,31 @@ function setVibes(list) {
   store.setPrefs({ vibes: state.vibes });
   if (state.view === 'vibes') renderVibes();
   else updateVibesKey();
-  // Next's name may be "something new" either way; nothing else changes
-  // until the next new loop.
+  // The picks on Now Playing and the panel show the moods; nothing else
+  // changes until the next new loop.
+  if (state.view === 'now') renderNow();
+  if (state.view === 'picks') picks.renderPanel();
+}
+
+// ----------------------------------------------------------- next picks
+
+function setPicks(next) {
+  state.picks = picks.cleanPicks({ ...state.picks, ...next });
+  store.setPrefs({ picks: state.picks });
+  if (state.view === 'now') renderNow();
+  if (state.view === 'picks') picks.renderPanel();
+}
+
+// An unlit any key puts its line back to chance. Line two holds tempo and
+// length, so it clears both.
+function clearPickLine(line) {
+  if (line === 'mood') setVibes([]);
+  else if (line === 'pace') setPicks({ tempo: null, length: null });
+}
+
+function openVibesFrom(from) {
+  state.vibesFrom = from;
+  setView('vibes');
 }
 
 function toggleVibe(id) {
@@ -786,7 +817,8 @@ function toggleVibe(id) {
 function updateVibesKey() {
   const n = state.vibes.length;
   const b = ui.el('vibesBtn');
-  b.textContent = n ? `vibes \u00b7 ${n}` : 'vibes';
+  // No-break spaces: the count stays with its word ("vibes · 2").
+  b.textContent = n ? `vibes\u00a0\u00b7\u00a0${n}` : 'vibes';
   b.setAttribute('aria-label', n ? `Vibes, ${n} picked` : 'Vibes');
 }
 
@@ -813,11 +845,20 @@ function renderNow() {
     ui.el('nowOf').textContent = `${pl.index + 1}\u00a0of\u00a0${n}`;
   }
 
+  // In an album the album is what comes next, so Now Playing says which
+  // track; outside one it shows what new loops lean toward instead.
+  const inAlbum = !!(pl && pl.ids.length);
   const next = ui.el('nowNext');
-  next.textContent = 'Next: ';
-  const b = document.createElement('b');
-  b.textContent = nextName();
-  next.appendChild(b);
+  next.hidden = !inAlbum;
+  ui.el('nowPicks').hidden = inAlbum;
+  if (inAlbum) {
+    next.textContent = 'Next: ';
+    const b = document.createElement('b');
+    b.textContent = nextName();
+    next.appendChild(b);
+  } else {
+    picks.renderNowPicks();
+  }
 
   const action = ui.el('nowAction');
   if (pl && pl.ids.length) {
@@ -1105,7 +1146,7 @@ function advancePlaylist(step) {
 // before any loop exists, and the first loop when the app opens. Not the
 // loop playing, an album's tracks, a saved loop, history or a re-roll.
 function newSpec() {
-  return drawSpec(undefined, state.vibes);
+  return picks.applyPicks(drawSpec(undefined, state.vibes), state.picks);
 }
 
 function togglePlay() {
@@ -1356,8 +1397,16 @@ function wire() {
     exportMidi: (spec) => exportMidi(cloneSpec(spec)),
   });
 
-  ui.el('vibesBtn').addEventListener('click', () => setView('vibes'));
-  ui.el('vibesClose').addEventListener('click', () => setView('now'));
+  ui.el('vibesBtn').addEventListener('click', () => openVibesFrom('now'));
+  ui.el('vibesClose').addEventListener('click', () => setView(state.vibesFrom === 'picks' ? 'picks' : 'now'));
+  picks.wirePicks({
+    state,
+    setView,
+    openVibes: () => openVibesFrom('picks'),
+    openLength: () => { picks.openLength(); setView('length'); },
+    setLength: (length) => setPicks({ length }),
+    clearLine: clearPickLine,
+  });
   ui.el('vibesClear').addEventListener('click', () => setVibes([]));
 
   ui.el('libraryBtn').addEventListener('click', () => {
@@ -1617,6 +1666,7 @@ function wire() {
   const cores = navigator.hardwareConcurrency || 4;
   const prefs = store.getPrefs();
   state.vibes = vibeSelection(prefs.vibes);
+  state.picks = picks.cleanPicks(prefs.picks);
   updateVibesKey();
   state.lite = prefs.lite ?? cores <= 4;
   setLiteSwitch(state.lite);

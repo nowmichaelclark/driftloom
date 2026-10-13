@@ -2,7 +2,10 @@
    brought into the app in Painter session 4.
 
    The look, the nine themes and every measured number come from
-   design/driftloom_v17_library.html. The middle of this file is that
+   design/archive/driftloom_v17_library.html. Since v18 (Painter session
+   5) the spec is baked from this app instead: design/driftloom_v18.html
+   is this stylesheet and the app's own markup, so bake it again
+   (design/test-kit/bake.mjs) after changing the look. The middle of this file is that
    spec's stylesheet, lifted section by section (zones, shared controls,
    the nine theme blocks, the v17 views, the theme swatches) so the two
    can be diffed. This first part fits the mockup's fixed 340 x 780 phone
@@ -62,7 +65,7 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 }
 
 /* ============================================================
-   FROM THE SPEC: design/driftloom_v17_library.html
+   FROM THE SPEC: design/archive/driftloom_v17_library.html
    ============================================================ */
 
 /* Zone 1 — Info */
@@ -478,6 +481,15 @@ h1, h2, h3, h4, h5, p { margin: 0; }
    Under prefers-reduced-motion: reduce nothing in the phone
    moves or fades. The Play press keeps its non-motion feedback
    (6% darker, inset shadow) and drops only the 2px drop.
+   (Painter session 5: this comment had lost its end and the
+   @media line when the spec was lifted in, so the rule below
+   applied to everyone and the press never moved. Put back from
+   the v17 spec.)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .phone *, .phone *::before, .phone *::after {
+    transition: none !important; animation: none !important;
+  }
   /* !important: the press rules above are more specific. */
   .phone .btn-play:active,
   .phone .btn:active,
@@ -1956,7 +1968,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
    fill and inward shadow stay. */
 @media (prefers-reduced-motion: reduce) {
   .phone .vkey:active, .phone .lrow-main:active, .phone .sw:active,
-  .phone .vkey[role="switch"][aria-checked="false"],
+  .phone .vkey[role="switch"][aria-checked="false"] { transform: none !important; }
 }
 
 /* ---------- Forced colours (Session 10 rules, new marks) -------
@@ -2223,6 +2235,275 @@ canvas.art { image-rendering: auto; }
 .np-bar i { width: 100%; transform-origin: left center; transform: scaleX(0); will-change: transform; }
 .np-bar i::after { display: none; }
 .np-dots i.on { width: 8px; height: 8px; }
+
+/* ============================================================
+   PAINTER 6 · NEXT PICKS  (design/next-picks.md)
+   What new loops lean toward, in three places: Now Playing shows
+   the picked values as outline pills (outside an album only), the
+   New loops panel lists five lines, and the Length picker sets
+   bars. Each line has its own colour; colours only outline pills
+   and colour the length slider and switch, text stays in the
+   theme's text colours. Nothing here scrolls.
+   ============================================================ */
+.t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
+  --pk-mood: #ffb347; --pk-tempo: #6fd6c8; --pk-length: #b8a2f2;
+  --pk-key: #f39ac0; --pk-style: #9fd38a; --pk-voices: #8fc3f0;
+  --pk-knob: #ffffff;
+}
+/* The light themes take the darker set. */
+.t-dawn, .t-ember, .t-tidal, .t-olive {
+  --pk-mood: #c77a12; --pk-tempo: #1f8f84; --pk-length: #7c5cd6;
+  --pk-key: #c94c86; --pk-style: #4f9a3a; --pk-voices: #3a7fc4;
+  --pk-knob: #ffffff;
+}
+
+/* ---------- the pill ------------------------------------------- */
+/* A picked value: a 1.25px inset ring in its line's colour at 80%
+   (a shadow, since a border that thin is drawn at 1px). A value left
+   to chance beside a picked one (line two) is dashed at 60%, in the
+   secondary text colour; a dashed line has to be a border, which
+   Chromium draws at 1px. Forced colours get a real border instead
+   (see the forced-colors block). */
+.pk-pill {
+  --pk: var(--text-secondary);
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 30px; padding: 3px 12px; border-radius: 15px;
+  border: 0; box-shadow: inset 0 0 0 1.25px color-mix(in srgb, var(--pk) 80%, transparent);
+  font-family: 'Inter', sans-serif; font-size: min(0.8125rem, calc(13px * var(--pk-cap, 1.5))); font-weight: 600;
+  line-height: 1.2; color: var(--text-primary); font-variant-numeric: tabular-nums;
+  white-space: nowrap; max-width: 100%; min-width: 0;
+}
+.pk-pill.dashed {
+  border: 1.5px dashed color-mix(in srgb, var(--pk) 60%, transparent); box-shadow: none;
+  padding: 2px 11px; font-weight: 500; color: var(--text-secondary);
+}
+/* Only very long moods at large text: wrap between words rather
+   than run out of the panel (set by script after layout). */
+.pk-pill.wrap { white-space: normal; text-align: center; border-radius: 14px; }
+.pk-mood { --pk: var(--pk-mood); }
+.pk-tempo { --pk: var(--pk-tempo); }
+.pk-length { --pk: var(--pk-length); }
+.pk-key { --pk: var(--pk-key); }
+.pk-style { --pk: var(--pk-style); }
+.pk-voices { --pk: var(--pk-voices); }
+
+/* ---------- Now Playing: the picks under the clock ------------- */
+/* One button, centred, at least 44px tall, drawing nothing of its
+   own: the pills are the key. It recesses when pressed, like every
+   key. Moods on the first row, tempo and length on the second. */
+.np-picks {
+  flex: 0 0 auto; align-self: center; max-width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; min-width: 44px; padding: 4px 6px; margin-top: 2px;
+  border: 0; border-radius: 14px; background: transparent; color: inherit;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), filter 90ms ease;
+}
+.np-picks:active { transform: translateY(1px); filter: brightness(0.94); }
+@media (hover: hover) { .np-picks:hover { background: var(--press-tint); } }
+.pk-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
+.np-picks .pk-pill {
+  min-height: 26px; padding: 2px 10px; border-radius: 13px;
+  font-size: min(0.75rem, 18px);
+}
+.np-picks .pk-pill.dashed { padding: 1px 9px; }
+.np-picks .pk-pill.wrap { border-radius: 13px; }
+/* Nothing picked: one quiet dashed "anything", so there is still
+   something to tap. */
+.np-picks .pk-none { border-color: var(--rule); }
+/* The fit guard's last step, after the text is back to 1x: the
+   lines lose their padding. */
+.v-picks.pk-tight .pk-line { padding: 0; }
+.v-picks.pk-tight .pk-vals { row-gap: 2px; }
+
+/* ---------- the New loops panel ---------------------------------- */
+/* Like the Info meta, the panel's text follows the size setting up to
+   1.5x (--pk-cap); when the picks are long enough not to fit, the
+   fit guard (picks.js) steps the cap down toward 1x, never below
+   the 100% size. */
+.v-picks { padding: 4px 0 0; }
+.pk-head { flex-wrap: nowrap; margin-bottom: 4px; }
+.pk-head .page-title { font-size: min(0.8125rem, 19.5px); }
+.pk-head .vkey { flex: 0 0 auto; font-size: min(0.75rem, 18px); }
+.pk-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pk-line {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 2px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.pk-vals {
+  flex: 1; min-width: 0; align-self: stretch;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
+}
+/* A value that opens a picker is a button that fills its share of
+   the line, left aligned. */
+.pk-val {
+  display: flex; align-items: center; justify-content: flex-start; min-width: 0; max-width: 100%;
+  min-height: 44px; padding: 0 2px; margin: 0;
+  border: 0; border-radius: 10px; background: transparent; color: inherit; text-align: left;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), filter 90ms ease;
+}
+.pk-val.fill { flex: 1; }
+.pk-val.static { min-height: 0; }
+button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
+@media (hover: hover) { button.pk-val:hover { background: var(--press-tint); } }
+.pk-any {
+  font-family: 'Inter', sans-serif; font-size: min(0.8125rem, calc(13px * var(--pk-cap, 1.5))); font-weight: 500;
+  line-height: 1.25; color: var(--text-secondary); overflow-wrap: break-word;
+}
+.pk-vals > .pk-any { padding-left: 2px; }
+.pk-sep { padding: 0 2px; }
+/* The any key: lit (.armed: a ring in the primary text colour, the
+   app's latched word key) while the whole line is left to chance. */
+.vkey.word.pk-anykey {
+  flex: 0 0 auto; align-self: center; min-width: 52px; min-height: 44px;
+  font-size: min(0.6875rem, calc(11px * var(--pk-cap, 1.5)));
+}
+
+/* ---------- the Length picker ------------------------------------ */
+.v-length { padding: 4px 0 0; }
+.ln-head {
+  flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+}
+.ln-head .vkey { font-size: min(0.75rem, 18px); }
+.ln-head #lenCancel { justify-self: start; }
+.ln-head .ln-done { justify-self: end; font-weight: 700; }
+.ln-title { flex: none; text-align: center; font-size: min(0.8125rem, 19.5px); }
+/* The body sits in the middle of the space under the head. */
+.ln-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: safe center;
+  gap: 22px; padding: 4px 4px 6px;
+}
+.ln-count { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.ln-step { font-variant-numeric: tabular-nums; font-size: min(0.8125rem, 19.5px); }
+.ln-num { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ln-input {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0; margin: 0;
+  border: 0; background: transparent; color: var(--text-primary); text-align: center;
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+  font-size: min(3rem, 64px); line-height: 1.05; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  /* The 2px underline in the length colour sits under the digits, as
+     wide as they are. */
+  text-decoration: underline 2px var(--pk-length); text-underline-offset: 0.16em;
+  text-decoration-skip-ink: none;
+  border-radius: 8px; caret-color: var(--pk-length);
+}
+.ln-input:disabled { opacity: 1; color: var(--text-primary); -webkit-text-fill-color: var(--text-primary); text-decoration: none; }
+.ln-time {
+  font-family: 'Inter', sans-serif; font-size: min(0.6875rem, 16.5px); font-weight: 500;
+  line-height: 1.3; color: var(--text-secondary); text-align: center; font-variant-numeric: tabular-nums;
+}
+/* The play time stays in one piece; the line breaks only after "·". */
+.ln-time .nw { white-space: nowrap; }
+/* The doubling slider: sixteen stops, a 4px track filled in the
+   length colour up to a 24px white thumb with a 3px ring. The input
+   itself is 44px tall, so the whole strip is the target. */
+.ln-slide { position: relative; padding: 0 2px; }
+.ln-slide input[type="range"] {
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 100%; height: 44px; margin: 0; background: transparent; cursor: pointer;
+}
+.ln-slide input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  /* A quiet dot at each stop, the fill, then the rail. The stop
+     spacing and the fill's width come from script, in px. */
+  background:
+    radial-gradient(circle, var(--guide-dot) 1.5px, transparent 2px) calc(12px - var(--tile, 18px) / 2) 50% / var(--tile, 18px) 4px repeat-x,
+    linear-gradient(var(--pk-length), var(--pk-length)) 0 0 / var(--fill, 0px) 100% no-repeat,
+    color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+.ln-slide input[type="range"]::-moz-range-track {
+  height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+.ln-slide input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--pk-length); }
+.ln-slide input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; margin-top: -10px; border-radius: 50%;
+  background: var(--pk-knob); box-shadow: 0 0 0 3px var(--pk-length), 0 1px 4px rgba(0,0,0,0.35);
+  border: 0;
+}
+.ln-slide input[type="range"]::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%; border: 0;
+  background: var(--pk-knob); box-shadow: 0 0 0 3px var(--pk-length), 0 1px 4px rgba(0,0,0,0.35);
+}
+.ln-slide input[type="range"]:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; border-radius: 8px; }
+.ln-ticks { position: relative; height: 1.3em; margin: -6px 2px 0; font-size: min(0.6875rem, 16.5px); }
+.ln-ticks span {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font-family: 'Inter', sans-serif; font-weight: 600; line-height: 1.3;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Each label sits under its stop: the thumb's centre runs from 12px
+   to 12px short of the end. The ends keep inside the panel. */
+.ln-ticks span[data-stop="0"] { left: 12px; }
+.ln-ticks span[data-stop="4"] { left: calc(12px + (100% - 24px) * 4 / 15); }
+.ln-ticks span[data-stop="8"] { left: calc(12px + (100% - 24px) * 8 / 15); }
+.ln-ticks span[data-stop="12"] { left: calc(12px + (100% - 24px) * 12 / 15); }
+.ln-ticks span[data-stop="15"] { left: calc(100% - 12px); }
+.ln-ticks span.on { color: var(--text-primary); font-weight: 700; }
+/* Endless: a label and a switch; on, it fills in the length colour. */
+.ln-endless { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ln-end-name {
+  font-family: 'Inter', sans-serif; font-size: min(0.8125rem, 19.5px); font-weight: 600;
+  color: var(--text-primary);
+}
+.ln-end-name > span { font-weight: 700; margin-right: 4px; }
+.tgl {
+  flex: 0 0 auto; position: relative; width: 56px; min-height: 44px; padding: 0; margin: 0;
+  border: 0; border-radius: 16px; background: transparent;
+}
+.tgl i {
+  position: absolute; left: 6px; right: 6px; top: 50%; height: 26px; margin-top: -13px;
+  border-radius: 13px; display: block;
+  background: color-mix(in srgb, var(--text-primary) 14%, transparent);
+  /* The off track's edge is 3:1 or more on every panel (65%). */
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text-primary) 65%, transparent);
+  transition: background-color 120ms ease;
+}
+.tgl i::after {
+  content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--text-secondary); box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 120ms ease;
+}
+.tgl[aria-checked="true"] i { background: var(--pk-length); box-shadow: none; }
+.tgl[aria-checked="true"] i::after { transform: translateX(18px); background: var(--pk-knob); }
+/* On the mid-tone light panels the length colour is under 3:1 against
+   the panel (Ember 2.45, Tidal 2.89, measured), so in the light themes
+   the thumb and the lit switch also get a 1px edge in the text colour,
+   which is (WCAG 1.4.11). The colour itself stays as the brief has it. */
+.t-dawn, .t-ember, .t-tidal, .t-olive { --pk-edge: color-mix(in srgb, var(--text-primary) 70%, transparent); }
+.t-dawn .ln-slide input[type="range"]::-webkit-slider-thumb,
+.t-ember .ln-slide input[type="range"]::-webkit-slider-thumb,
+.t-tidal .ln-slide input[type="range"]::-webkit-slider-thumb,
+.t-olive .ln-slide input[type="range"]::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--pk-length), 0 0 0 4px var(--pk-edge), 0 1px 4px rgba(0,0,0,0.3);
+}
+.t-dawn .tgl[aria-checked="true"] i, .t-ember .tgl[aria-checked="true"] i,
+.t-tidal .tgl[aria-checked="true"] i, .t-olive .tgl[aria-checked="true"] i {
+  box-shadow: 0 0 0 1px var(--pk-edge);
+}
+/* Endless on: the number reads ∞ and the bar controls dim and rest. */
+.v-length.endless :is(.ln-step, .ln-slide) { opacity: 0.4; }
+.v-length.endless .ln-slide input { cursor: default; }
+.v-length.endless .ln-time { font-weight: 600; }
+.ln-step:disabled { opacity: 0.4; }
+
+@media (prefers-reduced-motion: reduce) {
+  .phone .np-picks:active, .phone button.pk-val:active { transform: none !important; }
+}
+@media (forced-colors: active) {
+  .pk-pill { border: 1px solid CanvasText; }
+  .pk-pill.dashed { border-color: GrayText; }
+  .tgl i, .ln-slide input[type="range"] { forced-color-adjust: none; }
+  .tgl i { background: Canvas; box-shadow: inset 0 0 0 1.5px CanvasText; }
+  .tgl i::after { background: CanvasText; box-shadow: none; }
+  .tgl[aria-checked="true"] i { background: Highlight; }
+  .tgl[aria-checked="true"] i::after { background: HighlightText; }
+  .ln-slide input[type="range"]::-webkit-slider-runnable-track { background: GrayText; }
+  .ln-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; box-shadow: 0 0 0 3px Highlight; }
+  .ln-input { text-decoration-color: CanvasText; }
+  .vkey.word.pk-anykey.armed { outline: 2px solid Highlight; }
+}
 
 /* ---------- the toast -------------------------------------------- */
 .toast {

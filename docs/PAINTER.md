@@ -26,6 +26,11 @@ used soon. The rest waits for its phase of the core work.
 
 ## 1. Next-loop picks (soonest: can be designed now)
 
+**Designed (Mikey chose it, 2026-10-13):** `design/next-picks.md`, from
+Painter 5 -- the New loops panel, the picks on Now Playing and the
+Length picker. Still to design: the tempo, key and scale, style and
+voices pickers (with the range control), and the "can't do that" line.
+
 Today a listener can pick **vibes** (mood words such as merry, tender or
 floating) that each new loop leans toward. Soon they can also pin down
 the music itself. Developers and games will ask for the same things in

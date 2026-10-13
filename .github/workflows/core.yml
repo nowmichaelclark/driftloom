@@ -58,6 +58,8 @@ jobs:
         run: node test/golden.test.mjs
       - name: Draw tests (the page's copy of the core's generator)
         run: node test/draw.test.mjs
+      - name: Next picks tests
+        run: node test/picks.test.mjs
       # Level, tone and what folds back at 22,050 to 192,000 Hz against 48 kHz
       # (queue item 45); makes the 192 kHz build of the core for itself.
       - name: The core at other sample rates

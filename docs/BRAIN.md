@@ -389,6 +389,25 @@ Stated decisions, not inferences. Dated where the date matters.
   Both kinds wanted: a symphony-like journey (3,072 came from
   Beethoven's Ninth) and long slow wandering. Decided: no cap in the
   core; the app's picker to 32,768 bars plus Endless.
+- **Next picks, the design (Mikey, 2026-10-13):** chosen after four
+  rounds and 70 options (Painter session 5); the brief is
+  `design/next-picks.md` (it wins over the renders). In short: a **New
+  loops** panel of five lines -- moods (the vibes), tempo and length,
+  key and scale, style, voices -- each value an outline pill in its
+  line's color, with an **any** key per line; **Now Playing** outside an
+  album shows the picked values as pills (one button into the panel)
+  and drops "Next: something new"; in an album the picks are hidden and
+  Now Playing stays as today; a **Length** picker with cancel / done,
+  -1 / +1, a typed number, a doubling slider 1 to 32,768, and Endless.
+  Moods past three end in "...". Tempo, key, style and voices pickers
+  are not designed yet. **Painter 6** (app track) builds the screens:
+  moods wired to vibes; length and tempo to today's generator only if
+  cheap, clamped. The real wiring is queue items 48-53 (phases 2 and 3).
+  **Open, for Mikey:** (1) the way into New loops during an album
+  (Painter suggests today's top-left Vibes key renamed "new loops", in
+  albums only; until he decides, the Vibes key stays); (2) how to set
+  only length, or only tempo, back to "any" (line two's any key clears
+  both; until he decides, the line-level key alone is built).
 - **Exports, safe first (Mikey, 2026-10-13):** never crash or break
   anything on the user's end, whatever the hardware, old Android and
   weak chips included; fast only where safe. He suggested "fast" or
@@ -507,10 +526,20 @@ Stated decisions, not inferences. Dated where the date matters.
   Baseline in `docs/perf-baseline.md`.
 - `tools/listen.mjs` -- one-command albums; still not built (roadmap 20).
 
-## State -- 2026-10-11
+## State -- 2026-10-13
 
 ### Start here (for the next brain)
 
+- **Next picks (2026-10-13):** Mikey chose the design
+  (`design/next-picks.md`, from Painter 5, PR #205); see "Next picks,
+  the design" under "The core". Painter 6 (app track) is building the
+  screens now. Real wiring queued as items 48-52 (phase 2) and 53
+  (phase 3), for the phase review (Session 24) to order among phase 2's
+  own items. **Waiting on Mikey:** the two open questions (the way in
+  during an album; setting only length or only tempo to "any"). **Next
+  Painter work:** the tempo, key and scale, style and voices pickers,
+  and the "can't do that" line; long-piece display (`docs/PAINTER.md`,
+  section 2) before item 53.
 - **Where it is:** `main` at v92. The Rust core plays by default (the
   JavaScript synth is the fallback, `?engine=js`); Vibes are in the app
   (items 38a-b, v86-87; recipes in `js/vibes.js`, tuned once, v91); the
@@ -563,6 +592,13 @@ Stated decisions, not inferences. Dated where the date matters.
   loops Mikey sends (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Brain, 2026-10-13 evening (Opus 5.5), next picks.** Recorded Mikey's
+choice of the next-picks design (Painter 5) under "The core"; queued
+the real wiring as items 48-53 inside phases 2 and 3 (request and
+tempo; length to 32,768 and Endless, section by section; key and
+scale; style; voices and layers; the picks as core commands). Carried
+the brief's two open questions to Mikey. Docs only.
 
 **Session 18 (brain, Opus 5.5, 2026-10-13), the core.** Drafted the
 core charter, `docs/CORE.md` (PR #196, draft): promises each with a

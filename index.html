@@ -64,6 +64,9 @@
           <div id="nowBig" class="np-time">0:00</div>
           <div class="np-bar" aria-hidden="true"><i id="nowFill"></i></div>
           <div id="nowNext" class="np-next"></div>
+          <!-- Outside an album, what new loops lean toward, as pills: one
+               button that opens New loops (design/next-picks.md). -->
+          <button id="nowPicks" type="button" class="np-picks" hidden></button>
         </div>
         <button id="nowAction" type="button" class="vkey np-action" hidden></button>
       </div>
@@ -78,6 +81,45 @@
           <button id="vibesClear" type="button" class="vkey">clear all</button>
         </div>
         <div id="vibesList" class="vb-list" role="group" aria-label="Vibes for new loops"></div>
+      </div>
+
+      <!-- New loops: five lines of picks, each with an any key. Moods open
+           the Vibes list; length opens the Length picker. -->
+      <div id="viewPicks" class="view v-picks" data-view="picks" role="region" aria-label="New loops" hidden>
+        <div class="page-head pk-head">
+          <h2 class="page-title" tabindex="-1">New loops</h2>
+          <button id="picksClose" type="button" class="vkey">close</button>
+        </div>
+        <div id="picksList" class="pk-list"></div>
+      </div>
+
+      <!-- Length: bars for new loops, 1 to 32,768, or endless. Cancel
+           keeps the length it had before; done keeps what is shown. -->
+      <div id="viewLength" class="view v-length" data-view="length" role="region" aria-label="Length" hidden>
+        <div class="ln-head">
+          <button id="lenCancel" type="button" class="vkey">cancel</button>
+          <h2 class="page-title ln-title" tabindex="-1">Length</h2>
+          <button id="lenDone" type="button" class="vkey ln-done">done</button>
+        </div>
+        <div class="ln-body">
+          <div class="ln-count">
+            <button id="lenDown" type="button" class="vkey ln-step" aria-label="One bar fewer">−1</button>
+            <div class="ln-num">
+              <input id="lenNum" class="ln-input" type="text" inputmode="numeric" autocomplete="off"
+                     spellcheck="false" aria-label="Bars" aria-describedby="lenTime">
+              <span id="lenTime" class="ln-time"></span>
+            </div>
+            <button id="lenUp" type="button" class="vkey ln-step" aria-label="One bar more">+1</button>
+          </div>
+          <div class="ln-slide">
+            <input id="lenSlide" type="range" min="0" max="15" step="any" value="4" aria-label="Length">
+            <div id="lenTicks" class="ln-ticks" aria-hidden="true"><span data-stop="0">1</span><span data-stop="4">16</span><span data-stop="8">256</span><span data-stop="12">4k</span><span data-stop="15">32k</span></div>
+          </div>
+          <div class="ln-endless">
+            <span class="ln-end-name"><span aria-hidden="true">∞</span> Endless</span>
+            <button id="lenEndless" type="button" class="tgl" role="switch" aria-checked="false" aria-label="Endless"><i aria-hidden="true"></i></button>
+          </div>
+        </div>
       </div>
 
       <div id="viewSounds" class="view v-sounds" data-view="sounds" role="region" aria-label="Sound" hidden>
