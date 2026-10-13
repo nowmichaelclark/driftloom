@@ -41,7 +41,7 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - No drawn status-bar gap: the Info zone is 174px and the Dynamic zone 350px (v17: 205 / 319); Buttons stay 240px.
 - The Info card has real cover art and the app's readout, which folds lesser lines away when full (v17's lines took turns instead).
 - New: the Vibes key and view, Sound, Save and Share.
-- Fixed in the app (build v93): two reduced-motion blocks in `css/style.css` damaged when v17 was brought in. Because of them no key sank when pressed (for everybody), and under reduced motion the glint, transitions and panel-key drops kept going.
+- Fixed in the app (build v96): two reduced-motion blocks in `css/style.css` damaged when v17 was brought in. Because of them no key sank when pressed (for everybody), and under reduced motion the glint, transitions and panel-key drops kept going.
 
 ## Reference images (`reference/`)
 
