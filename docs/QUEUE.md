@@ -19,6 +19,11 @@ report calls for a fix, it comes first. 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
+**Next picks (2026-10-13):** Mikey chose the design
+(`design/next-picks.md`); Painter 6 builds the screens on the app track.
+Wiring each pick for real is items 48-53, inside phases 2 and 3; see
+"Next picks, wired for real" below.
+
 **Two tracks (2026-10-13):** app work (fixes, redesigns, vibe tuning,
 new controls) goes on alongside the core phases, as separate PRs; see
 `docs/BRAIN.md`, "Two tracks". Core-track items here don't wait for it,
@@ -1601,6 +1606,240 @@ also the ground phase 5 (instruments as recipes) builds on.
 - Leave a note for the brain: which of today's blocks felt awkward
   behind the interface, and what a block catalogue (charter, promise 5)
   should consider.
+
+## Next picks, wired for real (items 48-53)
+
+**Read first:** `design/next-picks.md` (the design Mikey chose on
+2026-10-13, Painter session 5) and `docs/CORE.md`, promise 11 (the
+request). The design shows five lines of picks for new loops: moods
+(today's vibes), tempo and length, key and scale, style (profile) and
+voices. Each is **pinned**, **ranged** or left to **any** (chance).
+
+**What already exists (app track, Painter 6):** the screens, with
+moods wired to vibes, and length and tempo wired to today's JavaScript
+generator only where cheap, clamped to what it can play (bars from the
+profile tables, 2 to 32; tempo 32 to 190 bpm). Tempo, key, style and
+voices can't be tapped until their pickers are designed. These items
+replace that plumbing with the real thing, in the core.
+
+**Where they sit in the phases.** They are not a phase of their own:
+items 48-52 belong to **phase 2** (the generator in Rust, built around
+the request) and item 53 to **phase 3** (off the page). The brain's
+phase review (Session 24) orders them among phase 2's own items; 48
+goes first, since the others stand on it. Don't start them before phase
+2 starts: the generator they change is the Rust one.
+
+**Rules for these items** (on top of the standing rules and the core
+rules above):
+- **When nothing is picked, nothing changes.** Every loop with all five
+  lines on "any" renders exactly as it did before the item (goldens,
+  `tools/baseline.mjs`, the balance lock). A pick may only change loops
+  that asked for it. Leaving a choice to chance draws from the seed as
+  today, with no extra draws that shift the rest.
+- **Requests bend the music, never break it** (promise 11). A pin that
+  pulls against a profile's character finds its in-between, as vibes do.
+  Only a request that truly can't be met says so, in a short plain line
+  (the "can't do that" message; its look is a Painter question, until
+  then plain text in the panel).
+- **Picks shape loops still to come, never the one playing**, and they
+  hold through re-rolls and "Let the loop wander": every new loop and
+  every wandered pass honors them. In an album, the album decides and
+  the picks wait (the design hides them there).
+- **Measure that a pick is honored in the render**, not only in the
+  spec: tempo from the note onsets, bar count from the cycle, scale and
+  key from the pitch classes, voices and layers from what sounds. A test
+  walks every pickable choice (promise 11's measure).
+- **A picker the design doesn't have yet** (tempo, key and scale, style,
+  voices, as of 2026-10-13): build the request side and its tests; the
+  app's line stays untappable until a Painter session designs the
+  picker. Don't invent the UI.
+- **Taste:** where an item leaves a musical choice open, take the
+  conservative one and mark it "for Mikey's ears", as always.
+
+Hands: chosen at the phase review. The brain's suggestion: 48 and 49
+Opus 5.5, high (the request's shape; sectioned generation); 50-52
+Sonnet 5.5, high (clear specs on 48's pattern); 53 Opus 5.5, high
+(playback, phase 3).
+
+## 48. The request, end to end, with tempo (phase 2)
+
+**Why:** promise 11. One request for everyone: the app's panel, a
+developer's code and a game's events build the same thing. Tempo is
+the simplest pick to prove it with.
+
+**What:**
+- The Rust generator takes a **request**: for each choice, pinned,
+  ranged or chance. Start with vibes (as today's selection) and tempo;
+  leave room for the rest without building them (48's design is what
+  49-52 follow, so keep it small and documented).
+- **Tempo:** pinned ("77 bpm") or a range ("70-85 bpm", the design's
+  example). A range draws from the seed inside it. Profiles with gaits
+  draw tempo and meter together today: a pinned or ranged tempo picks
+  the gait that fits and bends the tempo inside it. When style is left
+  to chance, prefer profiles whose band holds the tempo; when style is
+  pinned too and its band doesn't, play the profile at the asked tempo
+  (conservative: honor the pin; "for Mikey's ears"). The core's limit
+  is the core's to set; the app's picker range is the Painter's.
+- The app builds the request from the panel and sends it with each new
+  loop; today's vibes selection becomes part of it. Remove Painter 6's
+  clamped tempo plumbing.
+- Share codes: a loop made from a request reproduces from its code.
+  (Short codes that carry only the pins are phase 6.)
+- The "can't do that" line, for whatever request truly can't be met.
+
+**Yardsticks:**
+- Nothing picked: goldens, baseline and balance lock unchanged.
+- Pinned tempo: measured bpm within 0.5 of the pin on every target,
+  across 200 seeds and every profile.
+- Ranged tempo: every loop inside the range; over 500 seeds, the draws
+  cover the range (no clumping at one end; report the spread).
+- Same request and seed, same samples on every target.
+- A test that walks the request's choices (it grows with 49-52).
+
+## 49. Length, up to 32,768 bars and Endless (phase 2)
+
+**Why:** Mikey, 2026-10-13: far longer loops than today's 32 bars, the
+app's picker to 32,768 bars plus Endless; no cap in the core (charter,
+promise 11). The design's Length picker already exists (Painter 6).
+
+**What:**
+- **Pinned length**, any whole number from 1 bar up, and **Endless**.
+  The generator works a **section at a time**: memory and cost are the
+  same for 4 bars, 32,768 or Endless, and any section is reachable
+  straight from the seed and its number, without generating what comes
+  before (so a long piece can later be jumped into).
+- **What fills a long piece, until long-form composing exists:**
+  sections drawn the way "Let the loop wander" draws its next pass,
+  holding the request's other picks (key, tempo, style, voices, vibes).
+  Writing a piece with an arc (themes that return, a symphony's
+  journey, or long slow wandering) is later composing work by ear, its
+  own item; this item only makes sure it needs no rework. Conservative,
+  "for Mikey's ears".
+- A short pinned length (1, 2, 3 bars) plays as a loop of that length,
+  honored even where today's profile tables never draw it.
+- Length left to chance: today's draws, unchanged.
+- The Length picker's play time ("bars · ≈ 45-55 s", "≈ 3-4 hours")
+  comes from the request's tempo range, from one function the app and
+  the core share, so the two never disagree.
+- Remove Painter 6's clamped length plumbing (bars beyond today's
+  tables now come from the core).
+
+**Yardsticks:**
+- Nothing picked: unchanged, as above.
+- Pinned length: the rendered cycle is exactly that many bars (1, 2, 3,
+  7, 24, 32, 1,024 and 32,768, every profile).
+- Section *n* rendered straight from the seed equals section *n* reached
+  by rendering through, sample for sample (hash), for *n* up to 1,000
+  and for the last section of a 32,768-bar piece.
+- Memory after `Core::new` and cost per section flat from 4 bars to
+  Endless (the core rules: no allocation after `Core::new`).
+- Endless plays for a 24-hour render without drift or growth (in CI,
+  the command-line renderer at speed).
+
+## 50. Key and scale (phase 2)
+
+**Why:** line three of the design: "any key", or a pinned home note and
+scale (major, minor, dorian, pentatonic and the rest).
+
+**What:**
+- Key (home note) and scale, each pinned, ranged (a set: "D or G";
+  "any minor-ish mode") or chance. Follow 48's request pattern.
+- **Vibes and scale:** today's vibes pull the mode (and cinder and
+  shatter borrow bright modes when glad). A pinned scale wins; the vibes
+  then lean everything else. A pinned scale against a profile's
+  character finds its in-between ("no pair is forbidden").
+- Profiles with fixed modes (wayfare's minor v, cinder's added F over
+  E: Mikey's decisions stand) keep those features where the pinned
+  scale allows them; say per profile what a pin changes.
+- The app's line: values shown ("D dorian"); untappable until the
+  picker is designed.
+
+**Yardsticks:**
+- Nothing picked: unchanged.
+- Pinned key and scale: the loop's pitch classes stay in the scale
+  (borrowed chords the profile is known for excepted, listed) and its
+  tonic is the pinned key, measured from the render across 200 seeds
+  and every profile.
+- Refusals on full and lite for pinned scales no worse than the
+  catalog.
+
+## 51. Style (profile) (phase 2)
+
+**Why:** line four: "any style", or one or several of Driftloom's
+profiles (cinder, tide, wayfare, shrine and the rest).
+
+**What:**
+- Style pinned to one profile, or a set ("tide or shrine"); chance as
+  today. Each profile keeps its own character, instruments and drums;
+  vibes bend it within that character, as today.
+- A pinned style with other pins that pull against it (tempo outside
+  its band, a scale it doesn't use) follows 48 and 50: honor the pins,
+  find the in-between, "can't do that" only if truly impossible.
+- The app's line: the profile names; untappable until the picker is
+  designed.
+
+**Yardsticks:**
+- Nothing picked: unchanged (the balance lock guards what plays on
+  chance).
+- Pinned style: every loop is that profile; a set draws only from the
+  set, each member reached across 500 seeds.
+- Per profile, `stats.mjs` figures for pinned-style loops match the
+  same profile's loops drawn on chance, within stated tolerances (a
+  pin picks a profile; it doesn't change it).
+
+## 52. Voices, and which layers play (phase 2)
+
+**Why:** line five: "any voices", or chosen instruments per layer
+(melody, chords, bass, texture, drums), and layers left out (fewer
+layers is welcome variety).
+
+**What:**
+- Per layer: a voice pinned or a set, or chance; and the layer on, off
+  or chance. Follow 48's pattern.
+- **The rarities stay rare:** the choir (about 1 loop in 30) is not
+  forced by picking melody and chords voices; it can be asked for only
+  if the voice list offers it by name. Conservative: not offered until
+  Mikey says so.
+- A voice pinned onto a profile that never uses it plays at its
+  measured level (each voice already sits at its layer's median) and
+  passes the refusals; say which combinations needed care.
+- All layers off is the one obvious "can't do that".
+- The app's line: values shown ("kalimba, marimba"); untappable until
+  the picker is designed.
+
+**Yardsticks:**
+- Nothing picked: unchanged.
+- Pinned voices and layers: what sounds is what was asked, per layer,
+  measured from the render across 200 seeds and every profile.
+- Levels: pinned-voice loops land on the catalog's level spread
+  (`measure.mjs --profile`), no layer louder than its median allows.
+- Refusals on full and lite no worse than the catalog.
+
+## 53. The picks through the core's commands (phase 3)
+
+**Why:** phase 3 moves the whole core off the page; the page only sends
+commands and draws events. The picks become a command like the rest,
+and long pieces and Endless play from the core alone.
+
+**What:**
+- The panel's request is sent as a command; the core holds it and
+  applies it to every new loop, re-roll and wandered pass. No pick
+  logic left on the page.
+- Long pieces and Endless play with the page asleep, hidden or busy
+  (promise 1's stall test), with no lookahead on the page.
+- Now Playing's pills, the panel and the Length picker's play time read
+  from the core's events, so what they show is what the core will play.
+- Long-piece display on Now Playing (where you are, time left, Endless
+  with no "time left": `docs/PAINTER.md`, section 2) only once a Painter
+  session has designed it; until then, today's clock.
+
+**Yardsticks:**
+- Promise 1's stall test clean with a 32,768-bar piece and with
+  Endless.
+- A pick made while a loop plays changes the next loop, never the
+  current one.
+- Picks survive the page being hidden and shown again, and a reload
+  (stored as the vibes are today).
 
 ## 41. Urgent: the Pixel 10a still glitches on v91 -- what the field report shows
 
