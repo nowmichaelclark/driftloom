@@ -2845,3 +2845,14 @@ Mikey decides this line:
   `--strict`, and with flush-to-zero on x86-64). The app's sound moved only in
   tails under -225 dB; the core baseline was updated. Listen for: nothing; a
   control album should sound the same as before.
+- #210, glitches when minimized or locked (item 47, v94), no preview URL was
+  posted on the PR (the live site after the merge): hidden or frozen, the
+  page plans for a deep output buffer at once (1.5 s, or the worst this
+  session or this device has seen, up to 4 s), so Next, Previous and Play
+  from the lock screen and the catch-up after a freeze no longer land inside
+  it and get left out; hidden, Next keeps the old loop playing until the new
+  one starts. Diagnostics logs each late note with what decided it, and each
+  jump in the render-ahead. Listen for: lock the phone and press Next,
+  Previous, Pause and Play from the lock screen straight away: each lands
+  about two seconds later, with no skip or hole; on screen, a mute or re-roll
+  still lands at once. Nothing in the sound itself changed.
