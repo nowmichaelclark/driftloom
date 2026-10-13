@@ -2836,3 +2836,12 @@ Mikey decides this line:
   transcendental; the output differs by -84 to -145 dB). Chromium also
   flushes subnormals in the worklet, which Node does not (for item 43).
   Nothing to listen for.
+- #208, the core's own math, no standard library, no subnormals (core phase
+  1, item 43, v93), https://62b75066-driftloom.nowmichaelclark.workers.dev:
+  the core carries its own `sin`, `exp`, `pow` and the rest (fdlibm, the code
+  the wasm build already ran), builds with `no_std`, and stops filter and
+  channel tails at a -301 dB floor so no subnormal is ever made. All 21
+  goldens now hash the same on wasm32, x86-64, aarch64, armv7 and PowerPC (CI
+  `--strict`, and with flush-to-zero on x86-64). The app's sound moved only in
+  tails under -225 dB; the core baseline was updated. Listen for: nothing; a
+  control album should sound the same as before.
