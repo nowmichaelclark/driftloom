@@ -1562,6 +1562,24 @@ can come later without rebuilding it.
   no aliasing worse than at 48 kHz. Say how you measured.
 - `tools/baseline.mjs` passes unchanged.
 
+**Decisions on #213's stop (Mikey, 2026-10-14):**
+1. **Tone tolerance:** at 44,100 and 22,050 Hz the 2-5 kHz share may
+   differ from 48 kHz by up to **1.5 points** (0.5 stays at 96 and 192
+   kHz). No per-rate trims. Put `tools/rates.mjs` in CI with that
+   tolerance. Mikey's ears decide in the control album if anything is
+   heard.
+2. **The noise's color: make it rate-true** (the version written for
+   #213, exactly 1 at 48 kHz so the goldens don't move). Run
+   `node tools/baseline.mjs --update` in the same PR and say in the body
+   what moved at 44.1 kHz and by how much.
+3. **192 kHz stays a feature (`wide`):** on for native builds, off for
+   the web build (which keeps its 96 kHz limit and 14.75 MB). If a
+   browser's context runs above 96 kHz, the web host asks for a 48 kHz
+   context instead (or falls back as today); say which in the PR.
+4. **CI cost:** the PowerPC job renders the plain goldens only; block
+   sizes and rates run on x86-64, wasm32, aarch64 and armv7.
+Then finish item 45 and merge when CI is green.
+
 ## 46. The building-block interface
 
 **Why:** promise 5. Mikey (2026-10-13): developers, AI agents and he
