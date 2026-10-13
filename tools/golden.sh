@@ -62,6 +62,8 @@ while [ $# -gt 0 ]; do
 done
 
 wasm=wasm32-unknown-unknown
+tmp=$(mktemp)
+trap 'rm -f "$tmp" "$tmp".*' EXIT
 
 # The signals' names in the hash lines, for saying which differ.
 differing() {
@@ -82,14 +84,16 @@ differing() {
 if [ "$report" = yes ]; then
   base="$golden/$wasm.hashes"
   [ -f "$base" ] || { echo "golden: $base is missing; run tools/golden.sh --update $wasm" >&2; exit 1; }
-  total=$(wc -l < "$base" | tr -d ' ')
+  grep -v '^#' "$base" > "$tmp.base"
+  total=$(wc -l < "$tmp.base" | tr -d ' ')
   for file in "$golden"/*.hashes; do
     name=$(basename "$file" .hashes)
     [ "$name" = "$wasm" ] && continue
-    bad=$(differing "$base" "$file")
+    grep -v '^#' "$file" > "$tmp.other"
+    bad=$(differing "$tmp.base" "$tmp.other")
     count=$(printf '%s' "$bad" | grep -c . || true)
     echo "$name: $((total - count)) of $total lists match $wasm"
-    [ -n "$bad" ] && printf '%s\n' "$bad" | sed 's/^/    /'
+    if [ -n "$bad" ]; then printf '%s\n' "$bad" | sed 's/^/    /'; fi
   done
   exit 0
 fi
@@ -97,9 +101,6 @@ fi
 if [ -z "$target" ]; then
   target=$(rustc -vV | sed -n 's/^host: //p')
 fi
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
-
 echo "golden: rendering on $target" >&2
 if [ "$target" = "$wasm" ]; then
   if [ -n "$wav" ]; then node "$root/tools/golden-wasm.mjs" --twice --wav "$wav" > "$tmp"; else node "$root/tools/golden-wasm.mjs" --twice > "$tmp"; fi
@@ -131,7 +132,6 @@ fi
 
 [ -f "$file" ] || { echo "golden: core/golden/$target.hashes does not exist; run tools/golden.sh --update $target" >&2; exit 1; }
 grep -v '^#' "$file" > "$tmp.kept"
-trap 'rm -f "$tmp" "$tmp.kept"' EXIT
 status=0
 if cmp -s "$tmp" "$tmp.kept"; then
   echo "golden: $target: all $(wc -l < "$tmp" | tr -d ' ') lists match their hashes"
@@ -146,7 +146,6 @@ fi
 # a failure).
 if [ "$target" != "$wasm" ] && [ -f "$golden/$wasm.hashes" ]; then
   grep -v '^#' "$golden/$wasm.hashes" > "$tmp.wasm"
-  trap 'rm -f "$tmp" "$tmp.kept" "$tmp.wasm"' EXIT
   bad=$(differing "$tmp.wasm" "$tmp")
   count=$(printf '%s' "$bad" | grep -c . || true)
   total=$(wc -l < "$tmp" | tr -d ' ')
