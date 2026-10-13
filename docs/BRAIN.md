@@ -525,9 +525,13 @@ Stated decisions, not inferences. Dated where the date matters.
   calls for a fix, that comes before the core work.
 - **The core charter is approved (Session 18, 2026-10-13):
   `docs/CORE.md`.** Phase 1 is queued: items 42-46 in `docs/QUEUE.md`.
-  Hands: **Session 19, Opus 5.5, high**. The brain verifies each PR
-  against its yardsticks (goldens on all targets, baseline, costs) and
-  builds the control album from 43 and 44. Before phase 5: the block
+  Hands, by item: 42 Sonnet (Session 19), 43 Opus (20), 44-45 Sonnet
+  (21), 46 Opus (22), all high. **Brain checks, to save tokens, at
+  two points rather than every PR:** after 44 (goldens equal on all five
+  targets, the moved draws' list and ranges, the baseline; then the
+  control album for Mikey) and after 46 (phase review, then phase 2's
+  items). Both in a **new brain chat** (Session 23 or whichever label
+  is next), Opus 5.5. Session 18 closed after this. Before phase 5: the block
   catalogue for Mikey (charter, promise 5).
 - **Next: the core** -- a new brain chat. Read **"The core"** under "What
   Mikey has decided" first: the number one priority, shoot for the moon,
