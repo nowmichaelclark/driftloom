@@ -2845,8 +2845,8 @@ Mikey decides this line:
   `--strict`, and with flush-to-zero on x86-64). The app's sound moved only in
   tails under -225 dB; the core baseline was updated. Listen for: nothing; a
   control album should sound the same as before.
-- #210, glitches when minimized or locked (item 47, v94), no preview URL was
-  posted on the PR (the live site after the merge): hidden or frozen, the
+- #210, glitches when minimized or locked (item 47, v94),
+  https://410d5478-driftloom.nowmichaelclark.workers.dev: hidden or frozen, the
   page plans for a deep output buffer at once (1.5 s, or the worst this
   session or this device has seen, up to 4 s), so Next, Previous and Play
   from the lock screen and the catch-up after a freeze no longer land inside
