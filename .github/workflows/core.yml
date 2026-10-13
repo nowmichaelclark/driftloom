@@ -107,3 +107,11 @@ jobs:
       - name: The same, flushing subnormal numbers
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: tools/golden.sh --strict --flush ${{ matrix.target }}
+      # The speaker output must not depend on how many frames a host asks
+      # for a call (queue item 45): every list on the machines that are
+      # quick, three short ones under QEMU.
+      - name: The same at every block size
+        run: tools/golden.sh --blocks ${{ (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown') && 'all' || '' }} ${{ matrix.target }}
+      # And at other sample rates, one hash file for every target.
+      - name: The same at 22,050 to 192,000 Hz
+        run: tools/golden.sh --rates ${{ matrix.target }}

@@ -1,0 +1,14 @@
+# The golden lists named in rates.txt at the sample rates it names (tools/golden.sh --rates --update).
+# One line a list and rate, in the golden hashes' form. The same on every target.
+13-dust@22050 frames=154350 out=75ebb3511f2aac1f melody=a7c437ce706c7d0c chords=ee2992fd352219ba bass=c02da09fb4f1a18c texture=77d7581fa0bfa9ef drums=655fa7bb5bd55c4a bus=056b20a4c70ca8d0
+16-grove@22050 frames=110250 out=7626b57a348617d1 melody=aa558927f7fe367a chords=712a344fd33a4f86 bass=93c152fd7636fd46 texture=ff8b2eea48e67eb5 drums=2e3f3a9e947665ac bus=0c21849aa45b870e
+18-shatter@22050 frames=176400 out=7634e7e54d1e9041 melody=0bd1c87679ce06f9 chords=0ae22966f73b55a9 bass=2b755ff034d42f0d texture=02f4caa5a8ee17a6 drums=e637e46e97e56aa4 bus=e2e8c2b2afc8cc6f
+13-dust@44100 frames=308700 out=4fbbf3a6a9776180 melody=55edb43d8c99ddf0 chords=f789f9d2532fab77 bass=eff3dffb675d2f43 texture=7bb9c8fe46e51140 drums=e2f628da4aa57d4e bus=77fbcabdc0b3f03d
+16-grove@44100 frames=220500 out=9e74da5c128a2c33 melody=edc87f676e50f76d chords=cdd72f5d50b75213 bass=f19c283bd483bfd3 texture=5d7455c93a5526f6 drums=b66a9602c7cf1fc2 bus=168024e2eab16d22
+18-shatter@44100 frames=352800 out=0d085bfe40916ad7 melody=3fa2ac41a6165986 chords=c68eda8bc0118a8e bass=76f2405cb46ff5ea texture=86758ee0cd702f86 drums=bda1d929fd7f867d bus=508db9849b4819d6
+13-dust@96000 frames=672000 out=f457a3911b528a4e melody=d941361e20c13be9 chords=8cb7e2e1892f71db bass=f42b365f63c6215c texture=31a8d198e4847f9f drums=5a6618fe2cda0b54 bus=c55cd3a4f49bf2ac
+16-grove@96000 frames=480000 out=c58216c5b6e51b0c melody=d5e9db6e6630610b chords=5b6be7c9e521a292 bass=d83079bea87eb13d texture=dfd05de4911db395 drums=c9e99b5bce655d58 bus=707f04943371b4f7
+18-shatter@96000 frames=768000 out=ecb3e4a01fda308a melody=0f26ea1b871aa492 chords=8381585b5c1755c7 bass=15c17470d4e28582 texture=e48333e68bb8edf2 drums=408fe06b45833e58 bus=a1b5dfc4c8a76caf
+13-dust@192000 frames=1344000 out=370632faab76f032 melody=a9f2f6fb19be3a74 chords=4c0eb56829f4c8cb bass=a8354736abd33fa3 texture=ca60efdd83e7d09d drums=bdfadd16f1cc4c35 bus=90f889045dcb645c
+16-grove@192000 frames=960000 out=3be026c5cf14e38c melody=2b463d13b8b21c89 chords=dc44cc6b74f94aac bass=529b7585a8c642cd texture=530f33074e22a18c drums=f71ba4faad95f810 bus=0352854122d9b0c1
+18-shatter@192000 frames=1536000 out=19b7571522031b14 melody=553636543331ffe4 chords=9fa8cb3c690159ee bass=bf6b326317f0a32d texture=7011513e608ad877 drums=795d5ad09902b557 bus=69bb58d2ca6f689a

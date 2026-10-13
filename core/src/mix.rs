@@ -42,9 +42,9 @@ use crate::{BASS_CHANNEL, CHANNELS, CHORDS, DRUMS_CHANNEL, MELODY, QUANTUM, TEXT
 
 type Block = [f32; QUANTUM];
 
-/// The highest sample rate the mix holds its delays for. A host at a
-/// higher rate gets no mix (`Mix::ready`).
-pub const MAX_RATE: f64 = 96000.0;
+/// The highest sample rate the mix holds its delays for (`crate::MAX_RATE`).
+/// A host at a higher rate gets no mix (`Mix::ready`).
+pub const MAX_RATE: f64 = crate::MAX_RATE;
 
 // The longest delay each line is made for, in seconds (`createDelay`).
 const COMB_MAX: f64 = 0.5;
@@ -54,7 +54,13 @@ const ECHO_MAX: f64 = 2.0;
 /// The delay lines' memory: six combs, the pre-delay and the echo, at
 /// `MAX_RATE`, a block longer each (`delay::buffer_len`). All zeros, so it
 /// costs nothing in the `.wasm`.
-pub const MEMORY: usize = 6 * (QUANTUM + 48000) + (QUANTUM + 19200) + (QUANTUM + 192000);
+pub const MEMORY: usize = 6 * (QUANTUM + COMB_FRAMES) + (QUANTUM + PRE_DELAY_FRAMES) + (QUANTUM + ECHO_FRAMES);
+
+// Each line's longest delay in frames at `MAX_RATE`: half a second, a fifth
+// of one, and two (`COMB_MAX`, `PRE_DELAY_MAX`, `ECHO_MAX`).
+const COMB_FRAMES: usize = crate::MAX_FRAMES_A_SECOND / 2;
+const PRE_DELAY_FRAMES: usize = crate::MAX_FRAMES_A_SECOND / 5;
+const ECHO_FRAMES: usize = crate::MAX_FRAMES_A_SECOND * 2;
 
 /// The channels' gains, sends and order, in the core's channel numbers
 /// (`MELODY` and the rest), as `_build()` sets them.
@@ -485,7 +491,7 @@ mod tests {
     #[test]
     fn too_high_a_rate_has_no_mix() {
         let mut m = boxed(true);
-        m.init(192000.0, true);
+        m.init(2.0 * MAX_RATE, true);
         assert!(!m.ready());
         let ch = [[1.0f32; QUANTUM]; CHANNELS];
         assert!(m.process(0, &ch).iter().all(|&x| x == 0.0));

@@ -39,6 +39,7 @@ use std::fmt::Write as _;
 use dlcore::{CHANNELS, Core, EXTRA, Key, QUANTUM, Taken};
 
 /// One call the host made to the core.
+#[derive(Clone)]
 pub enum Event {
     /// `Core::param(id, op, value, time, tau)`.
     Param { id: u32, op: u32, value: f64, time: f64, tau: f64 },
@@ -305,8 +306,10 @@ fn flush_subnormals() -> Result<(), String> {
     Err("--flush is for x86-64 and aarch64".to_string())
 }
 
-fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, String> {
-    core.init(list.rate);
+/// Start a core for a list and hand it every call, before the first block:
+/// the host's side of a render, whichever way the samples are then taken.
+fn load(core: &mut Core, list: &List) -> Result<(), String> {
+    core.start(list.rate, 1).map_err(|e| e.message().to_string())?;
     core.quality(list.full);
     if !core.mixing() {
         return Err(format!("the core does not mix at {} Hz", list.rate));
@@ -328,6 +331,11 @@ fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, S
             }
         }
     }
+    Ok(())
+}
+
+fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, String> {
+    load(core, list)?;
     let mut hashes: Vec<Fnv> = SIGNALS.iter().map(|_| Fnv::new()).collect();
     let mut kept = Vec::new();
     let mut frame = 0u64;
@@ -361,6 +369,86 @@ fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, S
         ));
     }
     Ok(Rendered { hashes: hashes.iter().map(Fnv::hex).collect(), kept })
+}
+
+impl List {
+    /// The same list at another sample rate. A list is in seconds and Hz, so
+    /// nothing in it changes but how many frames the same time is.
+    #[must_use]
+    // A list is minutes of frames at most, far under what a double holds.
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn at_rate(&self, rate: f64) -> List {
+        List {
+            name: format!("{}@{}", self.name, rate as u64),
+            rate,
+            full: self.full,
+            frames: (self.frames as f64 * rate / self.rate).round() as u64,
+            events: self.events.clone(),
+        }
+    }
+}
+
+/// How a host asks for its frames, in `render_blocks`.
+#[derive(Clone, Copy, Debug)]
+pub enum Blocks {
+    /// The same number of frames every call (the last call is what is left).
+    Fixed(usize),
+    /// A different number every call, from 1 to 2,000, in a fixed order.
+    Random,
+}
+
+impl Blocks {
+    /// `1`, `441`, ... or `random`.
+    pub fn parse(word: &str) -> Result<Blocks, String> {
+        if word == "random" {
+            return Ok(Blocks::Random);
+        }
+        match word.parse::<usize>() {
+            Ok(n) if n > 0 => Ok(Blocks::Fixed(n)),
+            _ => Err(format!("a block size is a whole number of frames or random, not {word}")),
+        }
+    }
+}
+
+/// Render a list's speaker output the way a game's audio callback asks for
+/// it: through `Core::render`, `blocks` frames a call. Returns the hash of
+/// the samples, which must be the `out` hash of the same list rendered any
+/// other way.
+pub fn render_blocks(list: &List, blocks: Blocks) -> Result<String, String> {
+    let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
+    std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .stack_size(stack)
+            .spawn_scoped(scope, || {
+                let mut core = Box::new(Core::new());
+                load(&mut core, list)?;
+                let mut hash = Fnv::new();
+                let mut buffer = vec![0.0f32; 2000];
+                let mut state = 0x2545_f491_u32;
+                let mut done = 0u64;
+                while done < list.frames {
+                    let want = match blocks {
+                        Blocks::Fixed(n) => n,
+                        Blocks::Random => {
+                            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                            1 + (state >> 8) as usize % 2000
+                        }
+                    };
+                    let take = want.min(buffer.len()).min((list.frames - done) as usize);
+                    let out = &mut buffer[..take];
+                    core.render(&mut [out]).map_err(|e| e.message().to_string())?;
+                    hash.samples(&buffer[..take]);
+                    done += take as u64;
+                }
+                if core.dropped() > 0 || core.late() > 0 || core.missed() > 0 {
+                    return Err("the core dropped or missed notes".to_string());
+                }
+                Ok(hash.hex())
+            })
+            .map_err(|e| format!("could not start the render thread: {e}"))?
+            .join()
+            .map_err(|_| "the render thread panicked".to_string())?
+    })
 }
 
 /// The hash line for a render: the list's name, its length and each

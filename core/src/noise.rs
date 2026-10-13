@@ -28,12 +28,12 @@ use crate::QUANTUM;
 use crate::osc::{frame_at, frames};
 use crate::rng;
 
-/// The longest noise the core holds: two seconds at 96 kHz. A context
-/// faster than that keeps its noise voices in JavaScript.
-pub const NOISE_MAX: usize = 192_000;
-
 /// How long the noise is, in seconds.
 pub const SECONDS: f64 = 2.0;
+
+/// The longest noise the core holds: two seconds at `MAX_RATE`. A context
+/// faster than that keeps its noise voices in JavaScript.
+pub const NOISE_MAX: usize = crate::MAX_FRAMES_A_SECOND * 2;
 
 pub struct Noise {
     samples: [f32; NOISE_MAX],

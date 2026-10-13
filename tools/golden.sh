@@ -10,6 +10,18 @@
 #                                       numbers to zero (x86-64 and aarch64): the
 #                                       core never makes one, so nothing may change
 #   tools/golden.sh --report            compare every kept target with wasm32's
+#   tools/golden.sh --blocks [all] [TARGET]
+#                                       also render the lists the way a host with its own
+#                                       block size does (1, 64, 128, 441 and 1,024 frames a
+#                                       call, and a different number every call): the
+#                                       speaker output must be the plain render's, to the
+#                                       bit. Three short lists, or all of them (queue item 45)
+#   tools/golden.sh --rates [--update] [TARGET]
+#                                       render the lists in core/golden/rates.txt at the
+#                                       sample rates it names and compare with
+#                                       core/golden/rates.hashes, one file for every target:
+#                                       the same code makes the same samples at any rate,
+#                                       everywhere (queue item 45)
 #   tools/golden.sh --diff DIR_A DIR_B  how the WAVs written by two --wav runs differ,
 #                                       list by list: how many samples, where the first
 #                                       and the largest difference are, and how far
@@ -52,12 +64,16 @@ flush=''
 report=no
 wav=''
 target=''
+blocks=''
+rates=no
 while [ $# -gt 0 ]; do
   case "$1" in
     --update) update=yes ;;
     --strict) strict=yes ;;
     --flush) flush=--flush ;;
     --report) report=yes ;;
+    --blocks) blocks=short; [ "${2:-}" != all ] || { blocks=all; shift; } ;;
+    --rates) rates=yes ;;
     --wav) shift; wav=${1:?--wav needs a directory} ;;
     -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "golden: no such option: $1" >&2; exit 2 ;;
@@ -105,6 +121,76 @@ fi
 
 if [ -z "$target" ]; then
   target=$(rustc -vV | sed -n 's/^host: //p')
+fi
+
+# The sizes a host's audio callback might ask for: one frame, a power of two
+# below the core's own block, the core's block, a size that is nobody's
+# multiple, a big one, and a different one every call.
+sizes=1,64,128,441,1024,random
+
+if [ "$rates" = yes ]; then
+  # Which lists, at which rates (core/golden/rates.txt); one hash file for
+  # every target, since they must all make the same samples.
+  list_names=$(sed -n 's/^lists //p' "$golden/rates.txt")
+  rate_list=$(sed -n 's/^rates //p' "$golden/rates.txt")
+  echo "golden: rendering at $rate_list Hz on $target" >&2
+  : > "$tmp"
+  for rate in $rate_list; do
+    files=''
+    if [ "$target" = "$wasm" ]; then prefix="$golden"; else prefix=golden; fi
+    for name in $list_names; do files="$files $prefix/$name.dlnotes"; done
+    if [ "$target" = "$wasm" ]; then
+      # Above 96 kHz the committed .wasm (the web build) has no room: the
+      # wide build, made for this, renders it.
+      if [ "$rate" -gt 96000 ]; then
+        [ -f "$root/core/target/dlcore-wide.wasm" ] || "$root/tools/build-core.sh" --wide >&2
+        module="$root/core/target/dlcore-wide.wasm"
+      else
+        module="$root/js/dlcore.wasm"
+      fi
+      (cd "$root" && node tools/golden-wasm.mjs --twice --wasm "$module" --rate "$rate" $files) >> "$tmp"
+    else
+      (cd "$root/core" && cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush --rate "$rate" $files) >> "$tmp"
+    fi
+  done
+  file="$golden/rates.hashes"
+  if [ "$update" = yes ]; then
+    {
+      echo "# The golden lists named in rates.txt at the sample rates it names (tools/golden.sh --rates --update)."
+      echo "# One line a list and rate, in the golden hashes' form. The same on every target."
+      cat "$tmp"
+    } > "$file"
+    echo "golden: wrote core/golden/rates.hashes ($(wc -l < "$tmp" | tr -d ' ') renders)" >&2
+    exit 0
+  fi
+  grep -v '^#' "$file" > "$tmp.kept"
+  if cmp -s "$tmp" "$tmp.kept"; then
+    echo "golden: $target: all $(wc -l < "$tmp" | tr -d ' ') renders at other rates match their hashes"
+    exit 0
+  fi
+  echo "golden: $target: the renders at other rates moved"
+  differing "$tmp.kept" "$tmp" | sed 's/^/  /'
+  echo "  If the sound moved on purpose, run  tools/golden.sh --rates --update  and say so in the PR." >&2
+  exit 1
+fi
+
+if [ -n "$blocks" ]; then
+  if [ "$blocks" = all ]; then
+    names=$(cd "$golden" && ls *.dlnotes | sed 's/\.dlnotes$//')
+  else
+    names="14-bloom 16-grove 19-glade"
+  fi
+  files=''
+  if [ "$target" = "$wasm" ]; then prefix="$golden"; else prefix=golden; fi
+  for name in $names; do files="$files $prefix/$name.dlnotes"; done
+  echo "golden: $target: rendering $(echo $names | wc -w | tr -d ' ') lists in calls of $sizes frames" >&2
+  if [ "$target" = "$wasm" ]; then
+    (cd "$root" && node tools/golden-wasm.mjs --blocks "$sizes" $files) > /dev/null
+  else
+    (cd "$root/core" && cargo run -q --release --locked --example dlrender --target "$target" -- --blocks "$sizes" $files) > /dev/null
+  fi
+  echo "golden: $target: the speaker output is the same at every block size"
+  exit 0
 fi
 echo "golden: rendering on $target" >&2
 if [ "$target" = "$wasm" ]; then

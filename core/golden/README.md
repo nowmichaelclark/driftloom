@@ -27,6 +27,23 @@ subnormal number. `--flush` renders with the processor flushing subnormals to
 zero, as Chromium's audio threads do; it must change nothing, and CI checks it
 on x86-64.
 
+## Block sizes and rates (queue item 45)
+
+```sh
+tools/golden.sh --blocks [all] [TARGET]   # the lists, a host's way: any frames a call
+tools/golden.sh --rates [TARGET]          # three lists at 22,050 to 192,000 Hz
+tools/golden.sh --rates --update          # rewrite rates.hashes
+node tools/rates.mjs                      # level, tone and aliasing against 48 kHz
+```
+
+`--blocks` renders each list through `Core::render` in calls of 1, 64, 128,
+441 and 1,024 frames and of a different size every call, and fails unless
+the speaker output is the plain render's, to the bit. `--rates` renders the
+lists `rates.txt` names at the rates it names and compares with
+`rates.hashes`, one file for every target (they must all make the same
+samples); the 192 kHz renders in Node use the wide build
+(`tools/build-core.sh --wide`), since the web build holds 96 kHz.
+
 ## Rendering by hand
 
 ```sh
@@ -34,6 +51,8 @@ cd core
 cargo run --release --example dlrender -- golden/03-tide.dlnotes
 cargo run --release --example dlrender -- --wav /tmp/tide.wav golden/03-tide.dlnotes
 cargo run --release --example dlrender -- --compare a.wav b.wav
+cargo run --release --example dlrender -- --rate 96000 golden/03-tide.dlnotes   # NAME@96000
+cargo run --release --example dlrender -- --blocks 441,random golden/03-tide.dlnotes
 ```
 
 `--wav` writes a mono 32-bit float WAV (`--signal melody` and so on for a

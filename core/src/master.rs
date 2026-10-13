@@ -62,8 +62,8 @@ pub const CURVE: usize = 2048;
 /// The curve the synth starts with: `tanhCurve(1.0)`.
 const DRIVE: f64 = 1.0;
 
-/// The wobble's delay line at `mix::MAX_RATE`.
-pub const MEMORY: usize = QUANTUM + 19200;
+/// The wobble's delay line at `mix::MAX_RATE`: a fifth of a second.
+pub const MEMORY: usize = QUANTUM + crate::MAX_FRAMES_A_SECOND / 5;
 
 const EVENTS: usize = 64;
 // A volume slider moved by hand asks for a glide on every step it passes.

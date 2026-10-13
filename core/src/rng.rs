@@ -152,9 +152,16 @@ const NOISE_KEY: Key = Key {
 };
 
 /// Fill `out` with the noise every breath, strike and drum plays: white
-/// noise lightly pinked, so it sounds like air and not a hiss. The same
-/// recipe, number for number, as the JavaScript synth's `_makeNoise`, with
-/// the white drawn from the core's own generator instead of the platform's.
+/// noise lightly pinked, so it sounds like air and not a hiss. The recipe is
+/// the JavaScript synth's `_makeNoise`, number for number, with the white
+/// drawn from the core's own generator instead of the platform's.
+///
+/// The three one-pole sections' poles are per-sample numbers, so the noise's
+/// colour is in samples, not Hz: at 22,050 Hz it sits lower than at 48,000,
+/// at 192,000 higher. That is how the synth has always made it (a context at
+/// 44,100 Hz has a slightly different colour from one at 48,000), and moving
+/// it would move the sound at the rates the app runs at; see the note on
+/// queue item 45.
 pub fn noise_buffer(out: &mut [f32]) {
     let (mut b0, mut b1, mut b2) = (0.0_f64, 0.0_f64, 0.0_f64);
     for (i, sample) in (0_u32..).zip(out.iter_mut()) {

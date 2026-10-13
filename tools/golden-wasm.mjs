@@ -6,6 +6,13 @@
 //   node tools/golden-wasm.mjs --twice          render each twice, fail if they differ
 //   node tools/golden-wasm.mjs --wav DIR        also write each list's output to DIR/NAME.wav
 //   node tools/golden-wasm.mjs LIST.dlnotes...  only these lists
+//   node tools/golden-wasm.mjs --rate HZ        every list at another sample rate (NAME@HZ)
+//   node tools/golden-wasm.mjs --blocks 1,441,random
+//                                               also render each list that many frames a
+//                                               call (dl_render), failing if the speaker
+//                                               output is not the plain render's
+//   node tools/golden-wasm.mjs --wasm FILE      render through another build (the 192 kHz
+//                                               one, tools/build-core.sh --wide)
 //
 // tools/golden.sh compares the lines with core/golden/wasm32-unknown-unknown.hashes.
 // No browser: Node runs WebAssembly itself.
@@ -13,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readList, renderWasm, hashLine, wavBytes } from './golden-lib.mjs';
+import { atRate, readList, renderWasm, renderWasmBlocks, hashLine, wavBytes } from './golden-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GOLDEN = path.join(ROOT, 'core', 'golden');
@@ -24,23 +31,34 @@ if (argv.includes('--help') || argv.includes('-h')) {
 }
 let twice = false;
 let wavDir = null;
+let rate = null;
+let blocks = [];
+let wasm = path.join(ROOT, 'js', 'dlcore.wasm');
 const lists = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--twice') twice = true;
   else if (argv[i] === '--wav') wavDir = argv[++i];
+  else if (argv[i] === '--rate') rate = Number(argv[++i]);
+  else if (argv[i] === '--blocks') blocks = argv[++i].split(',').map((w) => (w === 'random' ? w : Number(w)));
+  else if (argv[i] === '--wasm') wasm = path.resolve(argv[++i]);
   else if (argv[i].startsWith('--')) { console.error(`golden-wasm: no such option: ${argv[i]}`); process.exit(2); }
   else lists.push(argv[i]);
 }
 const files = lists.length ? lists : fs.readdirSync(GOLDEN).filter((f) => f.endsWith('.dlnotes')).sort().map((f) => path.join(GOLDEN, f));
 if (wavDir) fs.mkdirSync(wavDir, { recursive: true });
 
-const bytes = fs.readFileSync(path.join(ROOT, 'js', 'dlcore.wasm'));
+const bytes = fs.readFileSync(wasm);
 for (const file of files) {
   try {
-    const list = readList(fs.readFileSync(file, 'utf8'));
+    let list = readList(fs.readFileSync(file, 'utf8'));
+    if (rate) list = atRate(list, rate);
     const first = renderWasm(bytes, list, wavDir ? 'out' : null);
     if (twice && renderWasm(bytes, list).hashes.join() !== first.hashes.join()) throw new Error('rendering twice gave different hashes');
     console.log(hashLine(list, first.hashes));
+    for (const size of blocks) {
+      const out = renderWasmBlocks(bytes, list, size);
+      if (out !== first.hashes[0]) throw new Error(`${size} frames a call: the speaker output is ${out}, not ${first.hashes[0]}`);
+    }
     if (wavDir) fs.writeFileSync(path.join(wavDir, `${list.name}.wav`), wavBytes(first.kept, list.rate));
   } catch (err) {
     console.error(`golden-wasm: ${path.relative(ROOT, file)}: ${err.message}`);

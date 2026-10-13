@@ -1,0 +1,4 @@
+# The lists tools/golden.sh --rates renders at other sample rates, and the rates.
+# Short, and between them every kind of sound: the sung and noise voices, a busy kit, the pads.
+rates 22050 44100 96000 192000
+lists 13-dust 16-grove 18-shatter
