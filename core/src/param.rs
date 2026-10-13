@@ -48,6 +48,7 @@
 //! returns false. Every voice knows how many it schedules, so this is a
 //! guard and not a policy.
 
+use crate::math;
 use crate::QUANTUM;
 
 /// The most events one parameter holds, unless it says otherwise. A
@@ -261,7 +262,7 @@ impl<const N: usize> Param<N> {
             };
             let step = match curve {
                 Curve::Exponential(e) => exponential_step(e, rate),
-                Curve::Target(e) if e.tau > 0.0 => (-1.0 / (e.tau * rate)).exp(),
+                Curve::Target(e) if e.tau > 0.0 => math::exp(-1.0 / (e.tau * rate)),
                 _ => 1.0,
             };
             while i < QUANTUM {
@@ -394,7 +395,7 @@ fn exponential_step(e: &Event, rate: f64) -> f64 {
     if v0 == 0.0 || v0 * v1 <= 0.0 || span <= 0.0 {
         return 1.0;
     }
-    (v1 / v0).powf(1.0 / (span * rate))
+    math::pow(v1 / v0, 1.0 / (span * rate))
 }
 
 fn is_ramp(e: &Event) -> bool {
@@ -413,7 +414,7 @@ fn ramp_at(e: &Event, t: f64) -> f64 {
             if v0 == 0.0 || v0 * v1 <= 0.0 {
                 v0
             } else {
-                v0 * (v1 / v0).powf(x)
+                v0 * math::pow(v1 / v0, x)
             }
         }
     }
@@ -423,7 +424,7 @@ fn ramp_at(e: &Event, t: f64) -> f64 {
 // value at the frame before the curve's first (see the module notes).
 fn chromium_start(p: &Event, time: f64, rate: f64) -> f64 {
     let at = time * rate;
-    let first = at.ceil();
+    let first = math::ceil(at);
     let before = (first - 1.0) / rate;
     let block = first > 0.0 && (first as u64).is_multiple_of(QUANTUM as u64);
     // A target exactly on a frame finds the event before it still current
@@ -450,7 +451,7 @@ fn target_at(e: &Event, t: f64) -> f64 {
     if e.tau <= 0.0 {
         return v1;
     }
-    v1 + (e.v0 - v1) * (-(t - e.time) / e.tau).exp()
+    v1 + (e.v0 - v1) * math::exp(-(t - e.time) / e.tau)
 }
 
 #[cfg(test)]

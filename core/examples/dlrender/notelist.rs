@@ -278,6 +278,19 @@ pub struct Rendered {
 /// Render a list through a fresh core and hash every signal. `keep` is the
 /// index in `SIGNALS` of one signal whose samples to return as well.
 pub fn render(list: &List, keep: Option<usize>) -> Result<Rendered, String> {
+    render_on(list, keep, false)
+}
+
+/// `render`, with the processor set to flush subnormal numbers to zero
+/// (inputs and results), as Chromium sets its audio threads. The core never
+/// makes a subnormal number (`dlcore::math`, "Subnormal numbers"), so this
+/// must hash the same as `render`; it is how that is checked. x86-64 and
+/// aarch64 only.
+pub fn render_flushing(list: &List, keep: Option<usize>) -> Result<Rendered, String> {
+    render_on(list, keep, true)
+}
+
+fn render_on(list: &List, keep: Option<usize>, flushing: bool) -> Result<Rendered, String> {
     // The core is megabytes of zeros: it is built on a thread whose stack
     // can hold it (a debug build copies it a few times on the way), and
     // lives on the heap.
@@ -286,6 +299,9 @@ pub fn render(list: &List, keep: Option<usize>) -> Result<Rendered, String> {
         std::thread::Builder::new()
             .stack_size(stack)
             .spawn_scoped(scope, || {
+                if flushing {
+                    flush_subnormals()?;
+                }
                 let mut core = Box::new(Core::new());
                 play(&mut core, list, keep)
             })
@@ -293,6 +309,43 @@ pub fn render(list: &List, keep: Option<usize>) -> Result<Rendered, String> {
             .join()
             .map_err(|_| "the render thread panicked".to_string())?
     })
+}
+
+/// Turn on flush-to-zero and denormals-are-zero for this thread: MXCSR's
+/// FTZ and DAZ bits on x86-64, FPCR's FZ bit on aarch64 (which flushes
+/// both). Threads start with them off.
+#[cfg(target_arch = "x86_64")]
+// The same signature as on the targets where it fails.
+#[allow(clippy::unnecessary_wraps)]
+fn flush_subnormals() -> Result<(), String> {
+    let mut csr: u32 = 0;
+    // SAFETY: reads and writes this thread's SSE control register, nothing
+    // else; the bits set change only how subnormal numbers round.
+    unsafe {
+        std::arch::asm!("stmxcsr [{}]", in(reg) &raw mut csr, options(nostack));
+        csr |= (1 << 15) | (1 << 6);
+        std::arch::asm!("ldmxcsr [{}]", in(reg) &raw const csr, options(nostack));
+    }
+    Ok(())
+}
+
+#[cfg(target_arch = "aarch64")]
+// The same signature as on the targets where it fails.
+#[allow(clippy::unnecessary_wraps)]
+fn flush_subnormals() -> Result<(), String> {
+    // SAFETY: as above, for this thread's floating-point control register.
+    unsafe {
+        let mut fpcr: u64;
+        std::arch::asm!("mrs {}, fpcr", out(reg) fpcr, options(nomem, nostack));
+        fpcr |= 1 << 24;
+        std::arch::asm!("msr fpcr, {}", in(reg) fpcr, options(nomem, nostack));
+    }
+    Ok(())
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+fn flush_subnormals() -> Result<(), String> {
+    Err("--flush is for x86-64 and aarch64".to_string())
 }
 
 fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, String> {

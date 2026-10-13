@@ -38,12 +38,13 @@
 //! numbers that are multiples of it: the host hands every block to the
 //! core in order, and these rules are counted from frame 0.
 
+use crate::math;
 use crate::QUANTUM;
 use crate::wave::Wave;
 
 /// `TimeToSampleFrame`'s first step: the time in frames, to 1/1024 of one.
 pub fn frames(time: f64, rate: f64) -> f64 {
-    (time * rate * 1024.0).round() / 1024.0
+    math::round(time * rate * 1024.0) / 1024.0
 }
 
 /// The first frame at or after `time` seconds, as Chromium schedules every
@@ -52,7 +53,7 @@ pub fn frames(time: f64, rate: f64) -> f64 {
 /// rounded to 1/1024 of a frame first, so a time a hair past a frame is
 /// that frame.
 pub fn frame_at(time: f64, rate: f64) -> u64 {
-    let f = frames(time, rate).ceil();
+    let f = math::ceil(frames(time, rate));
     if f > 0.0 { f as u64 } else { 0 }
 }
 
@@ -147,7 +148,7 @@ impl TableOsc {
                 && lo == end
                 && let Pitch::Steady { freq, detune } = pitch
             {
-                self.lead(within(freq * (detune / 1200.0).exp2(), nyquist), rate_scale);
+                self.lead(within(freq * math::exp2f(detune / 1200.0), nyquist), rate_scale);
             }
             return (0, 0);
         }
@@ -155,7 +156,7 @@ impl TableOsc {
         let n = hi - lo;
         match pitch {
             Pitch::Steady { freq, detune } => {
-                let f = within(freq * (detune / 1200.0).exp2(), nyquist);
+                let f = within(freq * math::exp2f(detune / 1200.0), nyquist);
                 let incr = f * rate_scale;
                 if first {
                     self.lead(f, rate_scale);
@@ -184,11 +185,11 @@ impl TableOsc {
                         let k = (1.0f64 / 1200.0) as f32;
                         let moving = matches!(freq, Part::Moving(_));
                         for (i, c) in incr.iter_mut().zip(d.iter()) {
-                            let m = (c * k).exp2();
+                            let m = math::exp2f(c * k);
                             *i = if moving { m * *i } else { m };
                         }
                     }
-                    Part::Steady(c) => scale *= (c / 1200.0).exp2(),
+                    Part::Steady(c) => scale *= math::exp2f(c / 1200.0),
                 }
                 for i in incr.iter_mut() {
                     *i = within(*i, nyquist) * scale;
@@ -269,8 +270,15 @@ fn within(f: f32, limit: f32) -> f32 {
     f.max(-limit).min(limit)
 }
 
+/// `index` wrapped into the table, `index - floor(index / size) * size`.
+/// Most frames it is already there, and then that is `index` to the bit
+/// (the floor is +0); the division, the slow part, is only done when not.
 fn wrap_to(index: f64, size: f64) -> f64 {
-    index - (index / size).floor() * size
+    if index.is_sign_positive() && index < size {
+        index
+    } else {
+        index - math::floor(index / size) * size
+    }
 }
 
 #[cfg(test)]

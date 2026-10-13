@@ -33,6 +33,7 @@
 //! Chromium runs its compressors' mono input as two identical channels,
 //! which is the same thing.
 
+use crate::math;
 use crate::compressor::{Compressor, Settings};
 use crate::delay::{Delay, buffer_len};
 use crate::filter::{Biquad, Kind};
@@ -232,7 +233,7 @@ impl Master {
         let n = CURVE as f64;
         for (i, y) in self.curve.iter_mut().enumerate() {
             let x = (i as f64 / (n - 1.0)) * 2.0 - 1.0;
-            *y = ((x * drive).tanh() / drive) as f32;
+            *y = (math::tanh(x * drive) / drive) as f32;
         }
     }
 
@@ -437,7 +438,7 @@ impl Master {
             let incr = f64::from(freq * wave.rate_scale());
             let size = wave.size() as f64;
             let moved = self.wow_index + (whole * QUANTUM as u64) as f64 * incr;
-            self.wow_index = moved - (moved / size).floor() * size;
+            self.wow_index = moved - math::floor(moved / size) * size;
             self.flutter.skip_whole(whole, wave, flutter_hz, rate);
         }
         self.lfo_block = block;
@@ -460,7 +461,7 @@ impl Master {
                 *y = wave.read_slow(self.wow_index, incr, pick);
             }
             self.wow_index += incr as f64;
-            self.wow_index -= (self.wow_index * inverse).floor() * size;
+            self.wow_index -= math::floor(self.wow_index * inverse) * size;
         }
     }
 }

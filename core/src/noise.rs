@@ -23,6 +23,7 @@
 //!   the offset plus the duration in buffer frames, rounded to the nearest;
 //!   a loop wraps around the whole buffer, keeping the fraction.
 
+use crate::math;
 use crate::QUANTUM;
 use crate::osc::{frame_at, frames};
 
@@ -122,8 +123,8 @@ impl NoiseSource {
     ) {
         let buffer = len as f64 / rate;
         let offset = offset.max(0.0).min(buffer);
-        let end = frames(offset + duration.max(0.0), rate).round();
-        self.begin(when, frames(offset, rate).round(), playback, rate);
+        let end = math::round(frames(offset + duration.max(0.0), rate));
+        self.begin(when, math::round(frames(offset, rate)), playback, rate);
         self.end = end.min(len as f64);
         self.looped = false;
         self.stop = u64::MAX;
@@ -148,7 +149,7 @@ impl NoiseSource {
     ) {
         let buffer = len as f64 / rate;
         let offset = offset.max(0.0).min(buffer);
-        self.begin(when, frames(offset, rate).round(), playback, rate);
+        self.begin(when, math::round(frames(offset, rate)), playback, rate);
         self.end = len as f64;
         self.looped = true;
         self.stop = frame_at(stop, rate);
@@ -189,7 +190,7 @@ impl NoiseSource {
         }
         let left = (self.end - self.index).max(0.0);
         let frames = if self.step > 0.0 {
-            (left / self.step).ceil() as u64
+            math::ceil(left / self.step) as u64
         } else {
             0
         };
@@ -225,13 +226,13 @@ impl NoiseSource {
                 self.done = true;
                 break;
             }
-            let at = self.index.floor();
+            let at = math::floor(self.index);
             let fraction = self.index - at;
             let i = (at as usize).min(len - 1);
             let mut j = i + 1;
             if j >= len {
                 j = if self.looped {
-                    ((self.index + 1.0 - size).floor().max(0.0) as usize).min(len - 1)
+                    (math::floor(self.index + 1.0 - size).max(0.0) as usize).min(len - 1)
                 } else {
                     i
                 };

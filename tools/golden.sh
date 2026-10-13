@@ -6,6 +6,9 @@
 #   tools/golden.sh --update [TARGET]   render, and rewrite that file
 #   tools/golden.sh --wav DIR [TARGET]  also write each list's output to DIR/NAME.wav
 #   tools/golden.sh --strict [TARGET]   also fail if the hashes differ from wasm32's
+#   tools/golden.sh --flush [TARGET]    render with the processor flushing subnormal
+#                                       numbers to zero (x86-64 and aarch64): the
+#                                       core never makes one, so nothing may change
 #   tools/golden.sh --report            compare every kept target with wasm32's
 #   tools/golden.sh --diff DIR_A DIR_B  how the WAVs written by two --wav runs differ,
 #                                       list by list: how many samples, where the first
@@ -16,9 +19,9 @@
 # engine, rendered in Node through the same exports the worklet calls); it
 # defaults to this machine's. The others are built with the pinned
 # toolchain and run directly (x86_64) or under QEMU's user mode, as
-# core/.cargo/config.toml says. Each target is held to its own file: the
-# hashes of one target may differ from another's until the core carries its
-# own math (queue item 43), from which --strict is what CI runs. Rendering
+# core/.cargo/config.toml says. Each target is held to its own file, and
+# since the core carries its own math (queue item 43) every file must equal
+# wasm32's: --strict, which CI runs, fails on any difference. Rendering
 # twice in one process must give the same hashes on every target; that is
 # checked on every run.
 #
@@ -45,6 +48,7 @@ fi
 
 update=no
 strict=no
+flush=''
 report=no
 wav=''
 target=''
@@ -52,6 +56,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --update) update=yes ;;
     --strict) strict=yes ;;
+    --flush) flush=--flush ;;
     --report) report=yes ;;
     --wav) shift; wav=${1:?--wav needs a directory} ;;
     -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -103,6 +108,7 @@ if [ -z "$target" ]; then
 fi
 echo "golden: rendering on $target" >&2
 if [ "$target" = "$wasm" ]; then
+  [ -z "$flush" ] || { echo "golden: --flush is for native targets" >&2; exit 2; }
   if [ -n "$wav" ]; then node "$root/tools/golden-wasm.mjs" --twice --wav "$wav" > "$tmp"; else node "$root/tools/golden-wasm.mjs" --twice > "$tmp"; fi
 else
   cd "$root/core"
@@ -111,15 +117,16 @@ else
     mkdir -p "$wav"
     for list in golden/*.dlnotes; do
       name=$(basename "$list" .dlnotes)
-      cargo run -q --release --locked --example dlrender --target "$target" -- --twice --wav "$wav/$name.wav" "$list" >> "$tmp"
+      cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush --wav "$wav/$name.wav" "$list" >> "$tmp"
     done
   else
-    cargo run -q --release --locked --example dlrender --target "$target" -- --twice golden/*.dlnotes > "$tmp"
+    cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush golden/*.dlnotes > "$tmp"
   fi
 fi
 
 file="$golden/$target.hashes"
 if [ "$update" = yes ]; then
+  [ -z "$flush" ] || { echo "golden: --update keeps plain renders; drop --flush" >&2; exit 2; }
   {
     echo "# The golden hashes on $target (tools/golden.sh --update $target)."
     echo "# One line a note list: its frames, then FNV-1a 64 of the output, of each channel"

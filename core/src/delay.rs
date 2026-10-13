@@ -22,12 +22,13 @@
 //! The samples live in a buffer the caller owns (`mix::Mix`), so a delay is
 //! a few numbers and the memory is all in one place.
 
+use crate::math;
 use crate::QUANTUM;
 
 /// `TimeToSampleFrame(time, rate, kRoundUp)`: the time in frames, to
 /// 1/1024 of one, then up to a whole frame.
 pub fn frames_up(time: f64, rate: f64) -> usize {
-    let f = ((time * rate * 1024.0).round() / 1024.0).ceil();
+    let f = math::ceil(math::round(time * rate * 1024.0) / 1024.0);
     if f > 0.0 { f as usize } else { 0 }
 }
 

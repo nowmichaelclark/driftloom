@@ -16,6 +16,13 @@
 //! Web Audio -- and, where Chromium's rendering differs from a plain
 //! reading of the spec, Chromium -- to the sample.
 
+// No standard library (queue item 43): the core needs no allocator, no
+// threads and no platform math, so it builds for a console or a
+// microcontroller as it does for the browser. Its own unit tests use `std`
+// (threads with room for a whole core on their stack, `Vec`); every real
+// build, the test host and the integration tests included, links it without.
+#![cfg_attr(not(test), no_std)]
+
 pub mod bass;
 pub mod breath;
 pub mod compressor;
@@ -25,6 +32,7 @@ pub mod filter;
 pub mod folk;
 pub mod lead;
 pub mod master;
+pub mod math;
 pub mod mix;
 pub mod noise;
 pub mod osc;
@@ -36,7 +44,7 @@ pub mod timeline;
 pub mod voice;
 pub mod wave;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 
 use bass::Bass;
@@ -1149,10 +1157,11 @@ impl Core {
                 body.run(bus, out);
             }
         }
-        // The host's own notes, then the mix.
+        // The host's own notes, then the mix. A channel's tail stops at the
+        // silence floor on its way in (`math`, "Subnormal numbers").
         for (out, input) in self.out.iter_mut().zip(self.inputs.iter_mut()) {
             for (y, x) in out.iter_mut().zip(input.iter()) {
-                *y += *x;
+                *y = math::silence(*y + *x);
             }
             input.fill(0.0);
         }
