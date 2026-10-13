@@ -1,0 +1,24 @@
+# The golden hashes on x86_64-unknown-linux-gnu (tools/golden.sh --update x86_64-unknown-linux-gnu).
+# One line a note list: its frames, then FNV-1a 64 of the output, of each channel
+# as it went into the mix, and of the signal at the bus compressor.
+01-glade frames=480000 out=90e8580c7f6d2321 melody=898bced47bd2540c chords=ec92c2fd7c11f707 bass=19446b1cda79e602 texture=57525bd6cb3c109b drums=a10d48e9e482e1d3 bus=a70602aced1e0465
+02-wayfare frames=768000 out=0a545a7a14b0e857 melody=5c60ab5cc0ce6aa6 chords=8fb52016f482d271 bass=3c270979a31a7f72 texture=644913c7acd78e2c drums=a6ac3cae53484fa5 bus=f0d8364ec10576e3
+03-tide frames=768000 out=da2adcb5d539bb74 melody=53dc39a4db8a8537 chords=fe1f2f34eff59a2f bass=cd8b54c1f0c8d49c texture=3a1c2bbfef09713d drums=41033af3b7e630af bus=474cfeb766a1153c
+04-vapor frames=432000 out=3cfe5bd07861de78 melody=c8fe5d0e23a89284 chords=31b6fbbf494b9bd9 bass=bef3b0fb7913584d texture=22f8f0d387777f03 drums=097113bcce1e7b25 bus=aa98b22d20dca423
+05-clockwork frames=528000 out=8cf2e02523f48bf6 melody=33027be13394ab1c chords=05a9febaff778322 bass=f6038abe80c904bd texture=496c9d95d3ddab25 drums=496c9d95d3ddab25 bus=4a856a26eb6f8d85
+06-undertow frames=768000 out=7e98f482e3dc1aa8 melody=bae9a8b8b4341b26 chords=a6e0dc54e1f8b4d3 bass=3f00c5039f372848 texture=1f5a81aad6d15c7b drums=992ffdab06e73a8a bus=2b23a2e348b9b4b5
+07-dust frames=816000 out=af7659a5279ca34b melody=050fec999794972c chords=30251ad32b278835 bass=c85f694b8e1b13c1 texture=4c85447ce0335c3f drums=ad9d0d8a3a3057fe bus=cd337ab04acd106f
+08-bloom frames=384000 out=9eeab807ecc262bd melody=8535b7b9d61ab42c chords=d8cfb47e77c07cfc bass=7626fbcf6f2202da texture=661f63ffc8122781 drums=e85a7d63d133a37f bus=ca1165d1a5ba4a80
+09-shrine frames=1200000 out=82ac9bd143e464ab melody=2be70b4b7c81dd1e chords=f8c5adc6834585ee bass=3204ea0f56c86b44 texture=220acbc2c817fb25 drums=220acbc2c817fb25 bus=40d5f03dd8ed6eff
+10-shrine frames=768000 out=ac87f42625174b04 melody=fa9fbb23e3acd46d chords=315857890d9cf08a bass=f34bcf2d4b9e0a0a texture=fccd8b86ce577466 drums=dff2e40b0a1ba325 bus=1313495cdf0c84f0
+11-haven frames=1200000 out=9ea2972e477d440f melody=37f21035b2359e6a chords=7ff6dda03280b132 bass=138b33341e0bfb7d texture=c476ac12f0df0d26 drums=220acbc2c817fb25 bus=9eaf9fe4b254596a
+12-vapor frames=1200000 out=d1e78fca040aded8 melody=09ad23ef56d0d12f chords=ac29cce1b8d830dc bass=8d49004491655e91 texture=ea7358a3ed8d85a5 drums=220acbc2c817fb25 bus=4c0ecc0c3afa5d99
+13-dust frames=336000 out=f078a501655232a5 melody=9689b03df616dd2a chords=39505d381c959d41 bass=b211f986805d7fc8 texture=1922d9393223e649 drums=daf087128e9ab81e bus=ec707ef252e71ed1
+14-bloom frames=336000 out=3c17fbe107b51180 melody=da21215ffe6f6d3f chords=92c70a537b8ff945 bass=57d34e57a6ffa988 texture=2373bb15fd5f4b25 drums=2373bb15fd5f4b25 bus=1de0ae5b921ac3ee
+15-wayfare frames=384000 out=e79b91470ac40576 melody=4704a18079c4fe83 chords=cec36bc7bb664ece bass=6b6eb8932e3787d4 texture=0f9813a298689622 drums=7dec467d40ca7e23 bus=1260f061e60219c5
+16-grove frames=240000 out=1226effcd3fbc5d7 melody=3a1d7ed292319796 chords=cbf337741c3818de bass=345e95ed42dc8c8a texture=850d39efb46487a6 drums=b95d20486fca139c bus=cb21f5f081215707
+17-bloom frames=432000 out=1921a464a59921a7 melody=defa5b9946827162 chords=810f84538c537a27 bass=868d3f9a4d8d1e76 texture=097113bcce1e7b25 drums=7618320706051a68 bus=b7a1b6ecab9e3759
+18-shatter frames=384000 out=d89c2237ded4e508 melody=e24f5c706407af10 chords=9ddd90ad15a75ff2 bass=e9cc57cf31d2fa13 texture=cf2662e8ac65cc6f drums=521066f2a17dfd69 bus=193f0e0c9bd55c41
+19-glade frames=240000 out=db425cafd39d3df2 melody=f27eba83be13702d chords=31e50ac59c701c8f bass=1804fbe59a7740a6 texture=a3f8ec44f62533ca drums=a01dc7e6da43fea0 bus=ae8622270999d9fd
+20-tide frames=432000 out=94cf0631fe95f750 melody=e5083d44cdff28bf chords=58b95445f63b9c3c bass=496aa30a42c5c3b2 texture=16473c4f3ee2aaa1 drums=ff73c5682dd9be02 bus=a9342c1d1fa11998
+busy-cinder frames=2880000 out=42de8beaf18dcc7b melody=5a9158c2d5921575 chords=757a10fb8f9a8baa bass=88065e170875eaff texture=3c8d75bd4c89c325 drums=890effa6f0aa1a55 bus=58ae9866c63ac70c

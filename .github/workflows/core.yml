@@ -5,6 +5,16 @@
 # baseline (tools/baseline.mjs, queue item 32): any change to what the core
 # plays fails here until a PR updates test/core-baseline.json on purpose.
 #
+# The second job, `golden`, renders the golden note lists (core/golden/,
+# queue item 42) on every target the core is meant to run on and compares
+# the hashes with the ones kept for that target: wasm32 in Node, x86-64
+# natively, and aarch64, 32-bit ARM and big-endian 32-bit PowerPC under
+# QEMU's user mode. The targets run side by side, and the slowest (QEMU
+# renders about 20 times slower than the machine) sets the wall time. Until
+# the core carries its own math (item 43) each target is held to its own
+# hashes and only reports how it compares with wasm32's; from item 43 on the
+# job runs tools/golden.sh with --strict.
+#
 # The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
 # the runner, installs that exact version and its wasm32 target on first
 # use, so nothing here names a version.
@@ -43,6 +53,8 @@ jobs:
         run: node test/dials.test.mjs
       - name: Word fit and word album tests
         run: node test/fit.test.mjs
+      - name: Golden-render tests
+        run: node test/golden.test.mjs
       # Playwright pinned to the version whose Chromium the baseline was
       # rendered with; the tool is a dependency of the tools, not the app.
       - name: Chromium, for the baseline
@@ -51,3 +63,41 @@ jobs:
           npx playwright install --with-deps chromium
       - name: The core against its baseline
         run: node tools/baseline.mjs
+
+  golden:
+    name: golden renders (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: wasm32-unknown-unknown
+          - target: x86_64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-gnu
+            packages: qemu-user gcc-aarch64-linux-gnu
+          - target: armv7-unknown-linux-gnueabihf
+            packages: qemu-user gcc-arm-linux-gnueabihf
+          - target: powerpc-unknown-linux-gnu
+            packages: qemu-user gcc-powerpc-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: QEMU and the cross linker
+        if: matrix.packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.packages }}
+      # The first cargo call installs the pinned toolchain; then its
+      # standard library for the target (the wasm32 job needs no Rust: it
+      # renders the committed js/dlcore.wasm in Node).
+      - name: The target's standard library
+        if: matrix.target != 'wasm32-unknown-unknown'
+        working-directory: core
+        run: |
+          cargo --version
+          rustup target add ${{ matrix.target }}
+      - name: Render the golden note lists
+        run: tools/golden.sh ${{ matrix.target }}

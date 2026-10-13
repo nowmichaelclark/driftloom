@@ -2755,3 +2755,12 @@ Mikey decides this line:
   mute, re-roll or tempo change lands about half a second after the key
   and nothing skips or bunches; on an ordinary one, as before. Nothing in
   the sound itself changed.
+- #204, golden renders on every target (core phase 1, item 42), no version
+  (the app is untouched): 21 note lists in `core/golden/`, a native test host
+  (`cargo run --release --example dlrender`), and `tools/golden.sh`, run by a
+  `golden` CI job on wasm32, x86-64, aarch64, armv7 and big-endian PowerPC.
+  Each target renders the same twice; the four glibc targets agree on all 21
+  lists, and wasm32 matches them on 5 (its `libm` differs by 1-3 ulp in every
+  transcendental; the output differs by -84 to -145 dB). Chromium also
+  flushes subnormals in the worklet, which Node does not (for item 43).
+  Nothing to listen for.
