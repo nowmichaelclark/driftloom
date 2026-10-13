@@ -636,6 +636,19 @@ export class Synth {
     return Math.max(core.ahead != null ? core.ahead : 0, callback) || null;
   }
 
+  // The worst render-ahead the core has measured this session, seconds
+  // (queue item 47); 0 without the core.
+  get worstAhead() {
+    const core = this._coreMix();
+    return core ? core.worstAhead : 0;
+  }
+
+  // What decided the notes handed over next (queue item 47): the core is
+  // told with each, so Diagnostics can say what decided a late one.
+  set why(cause) {
+    if (this.core) this.core.why = cause;
+  }
+
   // The music jumped (Pause, Next, Previous): the notes handed to the core
   // that have not started yet are dropped, and the ducks their kicks asked
   // for let go. What is sounding carries on, or fades with the kill gain.

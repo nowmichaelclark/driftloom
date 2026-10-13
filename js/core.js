@@ -102,6 +102,27 @@ export const DROP_CAUSES = ['queue full', 'no room for a sung note', 'voices bus
 // buffer.
 const AHEAD_EASE = 0.02;
 
+// A log of the render-ahead's jumps and of each late note (queue item 47),
+// for Diagnostics: kept for the page, across every core it builds, the last
+// LOG_MOST of them. Each entry has `at`, when it happened on the page's
+// clock (performance.now(), ms since the page began), and its `kind`:
+// 'jump', the render-ahead measured past what was planned from by more than
+// JUMP (`reachMs`, `wasMs`); or 'late', a note that reached the core after
+// its time (`lateMs` behind what the core had rendered, `spareMs` ahead of
+// the page's clock as it was posted, `why` it was decided, whether it was
+// `missed`: left out, and whether it came `inside` the buffer rather than
+// after a stall). `onjump(reach)` is called with each jump, so the page can
+// keep the worst for this device.
+export const coreLog = { entries: [], total: 0, onjump: null };
+const LOG_MOST = 40;
+const JUMP = 0.1;
+
+function logEntry(entry) {
+  coreLog.total++;
+  coreLog.entries.push(entry);
+  if (coreLog.entries.length > LOG_MOST) coreLog.entries.shift();
+}
+
 const WASM_URL = new URL('./dlcore.wasm', import.meta.url);
 const WORKLET_URL = new URL('./worklet.js', import.meta.url);
 
@@ -180,6 +201,9 @@ export class CoreHost {
     this.earliest = Infinity;
     this.clockLead = 0;
     this._aheadAt = 0;
+    // What decided the notes posted next (queue item 47): the engine says,
+    // through the synth, and each note carries it.
+    this.why = null;
     // Called with each report of how notes arrive (`arrivals`).
     this.onarrivals = null;
     // The compressors' gain reduction in dB, as of the last flush(); and
@@ -238,7 +262,7 @@ export class CoreHost {
   note(voice, channel, time, midi, dur, vel, parts, extra = NO_EXTRA, draws = null) {
     // `sent`: the page's clock as it posts, so the worklet can say how far
     // past it the core had already rendered when the note arrived.
-    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, draws, sent: this.ctx.currentTime });
+    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, draws, sent: this.ctx.currentTime, why: this.why });
   }
 
   // A new strum into `channel` at `time`: the last strum's nylon strings
@@ -283,6 +307,7 @@ export class CoreHost {
       if (m.lateBuffer != null) this.lateBuffer = m.lateBuffer;
       if (m.droppedBy) this.droppedBy = m.droppedBy;
     }
+    if (m.note) this._late(m.note);
     if (m.type === 'arrivals') this._arrivals(m);
     if (m.type === 'pong') {
       if (m.reduction) this.reduction = m.reduction;
@@ -300,6 +325,11 @@ export class CoreHost {
     const now = this.ctx.currentTime;
     if (m.reach != null && Number.isFinite(m.reach)) {
       const eased = this.ahead == null ? 0 : Math.max(0, this.ahead - AHEAD_EASE * Math.max(0, now - this._aheadAt));
+      // Past what the page was planning from: a jump, for the log.
+      if (m.reach > eased + JUMP) {
+        logEntry({ kind: 'jump', at: this._pageTime(m.rendered), reachMs: Math.round(m.reach * 1000), wasMs: Math.round(eased * 1000) });
+        if (coreLog.onjump) coreLog.onjump(m.reach);
+      }
       this.ahead = Math.max(eased, m.reach);
       this._aheadAt = now;
       this.worstAhead = Math.max(this.worstAhead, m.reach);
@@ -307,6 +337,24 @@ export class CoreHost {
     if (Number.isFinite(m.early)) this.earliest = Math.min(this.earliest, m.early);
     if (Number.isFinite(m.lead)) this.clockLead = Math.max(this.clockLead, m.lead);
     if (this.onarrivals) this.onarrivals(m);
+  }
+
+  // A note that reached the core after its time (queue item 47), for the
+  // log: how far behind what the core had rendered, how far ahead of the
+  // page's clock it was posted, and why it was decided.
+  _late(n) {
+    const ms = (x) => (Number.isFinite(x) ? Math.round(x * 1000) : null);
+    logEntry({
+      kind: 'late', at: this._pageTime(n.rendered), lateMs: ms(n.rendered - n.time), spareMs: ms(n.time - n.sent),
+      why: n.why || null, missed: !!n.missed, inside: !!n.inside,
+    });
+  }
+
+  // When the core was at `rendered` (its own count, seconds), on the page's
+  // clock: as long before now as the context's clock is past it.
+  _pageTime(rendered) {
+    const behind = Number.isFinite(rendered) ? Math.max(0, this.ctx.currentTime - rendered) : 0;
+    return Math.round(performance.now() - behind * 1000);
   }
 
   // The core does not run, at load or while playing. Once: the synth hears
