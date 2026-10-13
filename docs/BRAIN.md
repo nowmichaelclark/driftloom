@@ -355,6 +355,10 @@ Stated decisions, not inferences. Dated where the date matters.
   choice pinned, ranged or left to chance; the generator port (phase 2)
   is built around it. Picks like the vibes, not settings (brain's
   reading; the settings rule stands).
+- **Longer loops (Mikey, 2026-10-13):** listeners and developers can pick
+  far more bars than today's 32, e.g. 3,072. Charter promise 11: any
+  length up to endless; the generator works section by section, so
+  length costs nothing; long-form composition is later work by ear.
 - **A new brain chat for the core.** Before it: one more bug fix if the
   Pixel 10a tester's report on #187 calls for one.
 

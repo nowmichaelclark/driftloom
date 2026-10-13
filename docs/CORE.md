@@ -257,6 +257,17 @@ zany loop at 77 bpm, 16 bars, when the sun rises."
 - **Events:** a host can attach a request to a moment ("when the sun
   rises", "entering the cave", "turn 12"), and the core changes over at
   the next musical boundary rather than mid-phrase.
+- **Any length, up to endless** (Mikey, 2026-10-13: longer than today's
+  32 bars, even something like 3,072 -- about two and a half hours at
+  80 bpm). So the generator works a section at a time, never the whole
+  piece up front: memory and cost are the same for 4 bars or for
+  endless, and any point of a long piece can be reached straight from
+  the seed and the section number, without generating what comes
+  before. The length in a code is a variable-width number, not a byte.
+  Making a very long piece *musically* good (sections, returns, an arc
+  over an hour, not one idea repeated or aimless wandering) is new
+  composing work, a later item of its own with Mikey's ears; the core
+  is built so it needs no rework when it comes.
 - **Codes carry only what was pinned** beside the seed, so a pinned
   loop's code stays short (promise 8).
 - **The balance lock** keeps guarding what plays when nothing is pinned;
