@@ -1,9 +1,9 @@
 //! The noise every breath, strike and drum plays, and a source that plays
 //! it the way Chromium plays an `AudioBufferSourceNode`.
 //!
-//! The noise is not the core's to make: synth.js fills a two-second buffer
-//! from `Math.random` as each Synth is built (`_makeNoise`), so JavaScript
-//! hands its samples over once (`Core::noise`), and every note reads them.
+//! The core makes the noise itself, once, as it starts: two seconds of
+//! white noise lightly pinked, from its own seeded generator (`rng`), so
+//! every host and every run plays the same noise. Every note reads it.
 //!
 //! The source is Chromium's (`audio_buffer_source_handler.cc`, version 141,
 //! the one the measure harness runs), checked against it sample for sample
@@ -26,10 +26,14 @@
 use crate::math;
 use crate::QUANTUM;
 use crate::osc::{frame_at, frames};
+use crate::rng;
 
 /// The longest noise the core holds: two seconds at 96 kHz. A context
 /// faster than that keeps its noise voices in JavaScript.
 pub const NOISE_MAX: usize = 192_000;
+
+/// How long the noise is, in seconds.
+pub const SECONDS: f64 = 2.0;
 
 pub struct Noise {
     samples: [f32; NOISE_MAX],
@@ -44,20 +48,22 @@ impl Noise {
         }
     }
 
-    /// Room for `len` samples, to be written through `space`. False, and
-    /// no noise, when it is longer than the core holds.
-    pub fn resize(&mut self, len: usize) -> bool {
+    /// Make the noise for a context running at `rate` Hz: two seconds
+    /// (`SECONDS`), the same length the JavaScript synth's buffer is. None,
+    /// and no noise, when that is longer than the core holds.
+    pub fn make(&mut self, rate: f64) {
+        // A rate is a positive whole number of Hz well under what a usize
+        // holds, so the cast loses nothing a sample count needs.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let len = (rate * SECONDS) as usize;
         if len > NOISE_MAX {
             self.len = 0;
-            return false;
+            return;
         }
         self.len = len;
-        true
-    }
-
-    pub fn space(&mut self) -> &mut [f32] {
-        let len = self.len;
-        self.samples.get_mut(..len).unwrap_or(&mut [])
+        if let Some(space) = self.samples.get_mut(..len) {
+            rng::noise_buffer(space);
+        }
     }
 
     pub fn samples(&self) -> &[f32] {

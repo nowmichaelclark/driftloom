@@ -36,7 +36,7 @@ const LATE = 1;
 const FULL = 2;
 const MISSED = 4;
 // The causes Core::dropped_by counts, in its order.
-const CAUSES = 4;
+const CAUSES = 3;
 // How often the worklet says how early its notes arrive (queue item 41), in
 // seconds of audio.
 const REPORT_EVERY = 0.25;
@@ -67,13 +67,6 @@ class DriftloomCore extends AudioWorkletProcessor {
       if (!this.core.dl_quality(options.processorOptions.quality === 'lite' ? 0 : 1)) {
         throw new Error(`no mix at ${sampleRate} Hz`);
       }
-      // The synth's noise, once (core/src/noise.rs). Too long for the core
-      // and it keeps none: the synth plays its noise voices in JS.
-      const noise = options.processorOptions.noise;
-      if (noise) {
-        const at = this.core.dl_noise(noise.length);
-        if (at) new Float32Array(this.core.memory.buffer, at, noise.length).set(noise);
-      }
     } catch (err) {
       // Too old a browser for the module, most likely (it needs Safari 15
       // or later). The synth hears this and plays everything in JS.
@@ -88,12 +81,10 @@ class DriftloomCore extends AudioWorkletProcessor {
     switch (m.type) {
       case 'note': {
         if (!core) return;
-        // A sung note's draws go first, into the room the core keeps for
-        // the next note's (core/src/lib.rs, Core::sung_draws).
-        if (m.draws) {
-          const at = core.dl_sung_draws(m.draws.length);
-          if (at) new Float64Array(core.memory.buffer, at, m.draws.length).set(m.draws);
-        }
+        // Where the note sits in its loop goes first: the core draws
+        // everything the note leaves to chance from it (core/src/rng.rs).
+        const k = m.key;
+        if (k) core.dl_key(k.seed >>> 0, k.pass >>> 0, k.step >>> 0, k.ord >>> 0);
         const rendered = (this.next !== undefined ? this.next : currentFrame) / sampleRate;
         const a = this.arrivals;
         a.n++;

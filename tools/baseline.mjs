@@ -30,6 +30,11 @@
 //             full and lite
 //   costs     VOICE_COST as synth.js states it (the figures themselves came
 //             from render timing, which no baseline can keep)
+//   repeat    the same 40 loops (full quality) rendered a second time with the
+//             platform's Math.random seeded differently: every fingerprint
+//             must be the same (queue item 44: the core's render is a
+//             function of the code alone). This fails on its own, whatever
+//             the stored baseline says.
 //
 // The fingerprints are exact. The figures beside them are rounded
 // (loudness and level to 0.01 dB, the tone share to 0.1 point) so a diff is
@@ -55,7 +60,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
 }
 const update = argv.includes('--update');
 const onlyAt = argv.indexOf('--only');
-const PARTS = ['loops', 'voices', 'refusals', 'costs'];
+const PARTS = ['loops', 'voices', 'refusals', 'costs', 'repeat'];
 const only = onlyAt >= 0 ? argv[onlyAt + 1].split(',') : PARTS;
 for (const part of only) if (!PARTS.includes(part)) { console.error(`baseline: no part called '${part}'`); process.exit(2); }
 const passThrough = [];
@@ -94,8 +99,9 @@ function fnv(text) {
 
 // ----------------------------------------------------------------- loops
 
-function loopsFor(quality) {
-  const data = measure(['--n', String(LOOPS), '--seed', String(SEED), '--quality', quality, '--passes', '1', '--no-chain'], `loops-${quality}`);
+function loopsFor(quality, salt = null) {
+  const data = measure(['--n', String(LOOPS), '--seed', String(SEED), '--quality', quality, '--passes', '1', '--no-chain',
+    ...(salt == null ? [] : ['--random-salt', String(salt)])], `loops-${quality}${salt == null ? '' : '-salted'}`);
   // By name, so a diff says which loop moved (the seed breaks a tie).
   const out = {};
   for (const r of data.rows) {
@@ -184,6 +190,24 @@ function costs() {
   return { budgets, voices: table };
 }
 
+// ---------------------------------------------------------------- repeat
+
+// The loops rendered again with another Math.random: the same bits, or a draw
+// is still being taken from the platform.
+function repeat(first) {
+  const second = loopsFor('full', 48611);
+  const moved = Object.keys(first).filter((name) => {
+    const a = first[name];
+    const b = second[name];
+    return !b || a.out !== b.out || JSON.stringify(a.layers) !== JSON.stringify(b.layers);
+  });
+  if (moved.length) {
+    console.error(`baseline: ${moved.length} of ${Object.keys(first).length} loops rendered differently the second time (another Math.random):\n  ${moved.join(', ')}`);
+    process.exit(1);
+  }
+  return { loops: Object.keys(first).length, identical: Object.keys(first).length };
+}
+
 // ------------------------------------------------------------------ run
 
 const now = {};
@@ -198,6 +222,10 @@ if (only.includes('loops')) {
 if (only.includes('voices')) { log('every voice'); now.voices = voices(); }
 if (only.includes('refusals')) { log(`refusals over ${REFUSAL_LOOPS} loops, full and lite`); now.refusals = refusals(); }
 if (only.includes('costs')) now.costs = costs();
+if (only.includes('repeat')) {
+  log(`${LOOPS} loops again, with another Math.random`);
+  now.repeat = repeat(now.loops?.full ?? loopsFor('full'));
+}
 fs.rmSync(tmp, { recursive: true, force: true });
 
 // ------------------------------------------------------------ comparing

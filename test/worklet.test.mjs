@@ -38,7 +38,7 @@ function check(label, condition, detail = '') {
 function make() {
   const processor = new DriftloomCore({
     numberOfOutputs: 1,
-    processorOptions: { bytes: wasm, noise: null, quality: 'full' },
+    processorOptions: { bytes: wasm, quality: 'full' },
   });
   const blocks = [];
   const real = processor.core;
@@ -121,7 +121,7 @@ console.log('\nNotes handed over ahead (queue item 39)');
 // 40).
 function loudest(cancel, from, to) {
   const { processor } = make();
-  processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [], draws: null });
+  processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [] });
   if (cancel === true) processor.receive({ type: 'cancel' });
   else if (cancel !== false) processor.receive({ type: 'cancel', from: cancel });
   let peak = 0;
@@ -156,7 +156,7 @@ console.log('\nHow notes arrive (queue item 41)');
   // The core has rendered 40 blocks (116 ms). A note the page posted at 50
   // ms for 300 ms: on time, and the core was 66 ms past the page's clock.
   const note = (time, sent) => processor.receive({
-    type: 'note', voice: 0, channel: 0, time, midi: 69, dur: 0.2, vel: 0.5, parts: 1, extra: [], draws: null, sent,
+    type: 'note', voice: 0, channel: 0, time, midi: 69, dur: 0.2, vel: 0.5, parts: 1, extra: [], sent,
   });
   note(0.3, 0.05);
   // Handed over ahead of its time (sent at 50 ms for 100 ms), but behind
@@ -174,6 +174,50 @@ console.log('\nHow notes arrive (queue item 41)');
   check('the worklet reports how far past the page\'s clock it had rendered', report && Math.abs(report.reach - (40 * QUANTUM / RATE - 0.05)) < 1e-9,
     JSON.stringify(report));
   check('and the least time a note had to spare (negative: late)', report && report.early < -0.09 && report.n === 3);
+}
+
+console.log('\nWhere a note sits in its loop (queue item 44)');
+
+// The speaker output of notes posted with `keys`, one a hat (it plays the
+// noise, and draws where in it to start and how fast) at 0.05 s, for 0.4 s.
+function hats(...keys) {
+  const { processor } = make();
+  keys.forEach((key, i) => processor.receive({
+    type: 'note', voice: 21, channel: 4, time: 0.05 + i * 0.1, midi: 0, dur: 0, vel: 0.8, parts: 0, extra: [], key,
+  }));
+  const out = [];
+  for (let b = 0; b * QUANTUM < 0.4 * RATE; b++) {
+    globalThis.currentFrame = b * QUANTUM;
+    const outputs = [[new Float32Array(QUANTUM)]];
+    processor.process(Array.from({ length: 5 }, () => []), outputs);
+    out.push(...outputs[0][0]);
+  }
+  return out;
+}
+const same = (a, b) => a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
+
+{
+  const key = { seed: 7, pass: 1, step: 4, ord: 2 };
+  const a = hats(key);
+  check('a noise voice sounds with no noise handed over: the core makes its own', a.some((x) => Math.abs(x) > 1e-4));
+  check('the same key, the same samples', same(a, hats({ ...key })));
+  check('another pass of the loop, other draws', !same(a, hats({ ...key, pass: 2 })));
+  check('another seed, other draws', !same(a, hats({ ...key, seed: 8 })));
+  check('another place at the step, other draws', !same(a, hats({ ...key, ord: 3 })));
+}
+
+{
+  // The key reaches the core before the note it belongs to.
+  const { processor } = make();
+  const calls = [];
+  const real = processor.core;
+  processor.core = {
+    ...real,
+    dl_key: (...a) => { calls.push(['key', ...a]); return real.dl_key(...a); },
+    dl_note: (...a) => { calls.push(['note']); return real.dl_note(...a); },
+  };
+  processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [], key: { seed: 5, pass: 6, step: 7, ord: 8 } });
+  check('the key goes to the core first, as whole numbers', JSON.stringify(calls[0]) === '["key",5,6,7,8]' && calls[1][0] === 'note', JSON.stringify(calls));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

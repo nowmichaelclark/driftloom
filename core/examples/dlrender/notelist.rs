@@ -4,24 +4,22 @@
 //! A note list is plain ASCII text, one fact per line, because it is
 //! committed beside the hashes it produces and a diff of it should be
 //! readable. The page's host (`js/core.js`) makes the same few calls to the
-//! core whatever it plays -- `param`, `damp`, `note`, and the sung notes'
-//! draws before a note -- so a note list is those calls, in the order the
-//! synth made them, and nothing else. `tools/golden-export.mjs` writes
+//! core whatever it plays -- `param`, `damp`, `key` and `note` -- so a note
+//! list is those calls, in the order the synth made them, and nothing else. `tools/golden-export.mjs` writes
 //! them; this file reads them. Every number is written the way JavaScript
 //! prints a double (the shortest text that reads back exactly) and read
 //! back exactly, so a list is bit for bit what the host sent.
 //!
 //! ```text
-//! dlnotes 1                    the format and its version, first line
+//! dlnotes 2                    the format and its version, first line
 //! # ...                        a comment; so are blank lines
 //! name tide-1                  what the list is called
 //! rate 48000                   the sample rate, Hz
 //! quality full                 the mix: full (six combs) or lite (three)
-//! noise-seed 12345             the noise the voices play (see `noise`)
 //! frames 1536000               how many frames to render and hash
 //! param ID OP VALUE TIME TAU   Core::param
 //! damp CHANNEL TIME            Core::damp
-//! draws N D0 D1 ...            the next note's staged draws (Core::sung_draws)
+//! key SEED PASS STEP ORD       Core::key: where the notes that follow sit
 //! note VOICE CHANNEL TIME MIDI DUR VEL PARTS X0 ... X11
 //!                              Core::note; "nan" for a value left out
 //! ```
@@ -38,7 +36,7 @@
 
 use std::fmt::Write as _;
 
-use dlcore::{CHANNELS, Core, EXTRA, QUANTUM, Taken};
+use dlcore::{CHANNELS, Core, EXTRA, Key, QUANTUM, Taken};
 
 /// One call the host made to the core.
 pub enum Event {
@@ -46,7 +44,9 @@ pub enum Event {
     Param { id: u32, op: u32, value: f64, time: f64, tau: f64 },
     /// `Core::damp(channel, time)`.
     Damp { channel: u32, time: f64 },
-    /// `Core::note(...)`, with the draws staged for it, if it is a sung note.
+    /// `Core::key(key)`: where the notes after it sit in their loop.
+    Key(Key),
+    /// `Core::note(...)`.
     Note {
         voice: u32,
         channel: u32,
@@ -56,7 +56,6 @@ pub enum Event {
         vel: f64,
         parts: u32,
         extra: [f64; EXTRA],
-        draws: Vec<f64>,
     },
 }
 
@@ -65,7 +64,6 @@ pub struct List {
     pub name: String,
     pub rate: f64,
     pub full: bool,
-    pub noise_seed: u32,
     pub frames: u64,
     pub events: Vec<Event>,
 }
@@ -94,12 +92,10 @@ pub fn parse(text: &str) -> Result<List, String> {
         name: String::new(),
         rate: 0.0,
         full: true,
-        noise_seed: 0,
         frames: 0,
         events: Vec::new(),
     };
     let mut seen_header = false;
-    let mut draws: Vec<f64> = Vec::new();
     for (n, raw) in text.lines().enumerate() {
         let line = n + 1;
         let raw = raw.trim();
@@ -109,8 +105,8 @@ pub fn parse(text: &str) -> Result<List, String> {
         let words: Vec<&str> = raw.split_whitespace().collect();
         let (kind, args) = (words[0], &words[1..]);
         if !seen_header {
-            if kind != "dlnotes" || args != ["1"] {
-                return Err(format!("line {line}: a note list starts with: dlnotes 1"));
+            if kind != "dlnotes" || args != ["2"] {
+                return Err(format!("line {line}: a note list starts with: dlnotes 2"));
             }
             seen_header = true;
             continue;
@@ -139,10 +135,6 @@ pub fn parse(text: &str) -> Result<List, String> {
                     other => return Err(format!("line {line}: quality is full or lite, not {other}")),
                 };
             }
-            "noise-seed" => {
-                want(1)?;
-                list.noise_seed = whole(args[0], "the noise seed", line)?;
-            }
             "frames" => {
                 want(1)?;
                 list.frames = u64::from(whole(args[0], "the frame count", line)?);
@@ -164,18 +156,14 @@ pub fn parse(text: &str) -> Result<List, String> {
                     time: number(args[1], "the time", line)?,
                 });
             }
-            "draws" => {
-                let count = args
-                    .first()
-                    .ok_or_else(|| format!("line {line}: draws takes a count and the draws"))
-                    .and_then(|w| whole(w, "the count", line))? as usize;
-                if args.len() != count + 1 {
-                    return Err(format!("line {line}: draws says {count} and gives {}", args.len() - 1));
-                }
-                draws = args[1..]
-                    .iter()
-                    .map(|w| number(w, "a draw", line))
-                    .collect::<Result<_, _>>()?;
+            "key" => {
+                want(4)?;
+                list.events.push(Event::Key(Key {
+                    seed: whole(args[0], "the seed", line)?,
+                    pass: whole(args[1], "the pass", line)?,
+                    step: whole(args[2], "the step", line)?,
+                    ord: whole(args[3], "the note's place", line)?,
+                }));
             }
             "note" => {
                 want(7 + EXTRA)?;
@@ -192,14 +180,13 @@ pub fn parse(text: &str) -> Result<List, String> {
                     vel: number(args[5], "the velocity", line)?,
                     parts: whole(args[6], "the parts", line)?,
                     extra,
-                    draws: std::mem::take(&mut draws),
                 });
             }
             other => return Err(format!("line {line}: no such line: {other}")),
         }
     }
     if !seen_header {
-        return Err("empty: a note list starts with: dlnotes 1".to_string());
+        return Err("empty: a note list starts with: dlnotes 2".to_string());
     }
     if !(list.rate >= 8000.0 && list.rate <= 384_000.0) {
         return Err("the rate is missing or not between 8000 and 384000 Hz".to_string());
@@ -207,37 +194,7 @@ pub fn parse(text: &str) -> Result<List, String> {
     if list.frames == 0 {
         return Err("the frame count is missing".to_string());
     }
-    if !draws.is_empty() {
-        return Err("draws at the end of the list belong to no note".to_string());
-    }
     Ok(list)
-}
-
-/// The synth's noise (`Synth._makeNoise`), made from a seed: two seconds of
-/// white noise from `mulberry32` (`js/rng.js`), lightly pinked. The synth
-/// draws it from `Math.random`, so the page cannot hand it over twice the
-/// same; the exporter seeds `Math.random` with `mulberry32(noise-seed)`
-/// before the synth is built, so its noise is exactly this (and checks it).
-/// Item 44 moves the noise into the core, and this goes.
-pub fn noise(seed: u32, rate: f64) -> Vec<f32> {
-    let mut state = seed;
-    let mut next = move || {
-        state = state.wrapping_add(0x6d2b_79f5);
-        let mut t = (state ^ (state >> 15)).wrapping_mul(1 | state);
-        t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(0x3d | t)) ^ t;
-        f64::from(t ^ (t >> 14)) / 4_294_967_296.0
-    };
-    let len = (rate * 2.0).floor() as usize;
-    let (mut b0, mut b1, mut b2) = (0.0f64, 0.0f64, 0.0f64);
-    (0..len)
-        .map(|_| {
-            let white = next() * 2.0 - 1.0;
-            b0 = 0.99765 * b0 + white * 0.099;
-            b1 = 0.963 * b1 + white * 0.293;
-            b2 = 0.57 * b2 + white * 1.0526;
-            ((b0 + b1 + b2 + white * 0.1848) * 0.22) as f32
-        })
-        .collect()
 }
 
 /// FNV-1a, 64 bits, over bytes: the hash a render is kept by. It is not a
@@ -354,12 +311,6 @@ fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, S
     if !core.mixing() {
         return Err(format!("the core does not mix at {} Hz", list.rate));
     }
-    let noise = noise(list.noise_seed, list.rate);
-    let space = core.noise(noise.len());
-    if space.len() != noise.len() {
-        return Err(format!("the core cannot hold {} samples of noise", noise.len()));
-    }
-    space.copy_from_slice(&noise);
     for (n, event) in list.events.iter().enumerate() {
         match event {
             Event::Param { id, op, value, time, tau } => {
@@ -368,14 +319,8 @@ fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, S
                 }
             }
             Event::Damp { channel, time } => core.damp(*channel, *time),
-            Event::Note { voice, channel, time, midi, dur, vel, parts, extra, draws } => {
-                if !draws.is_empty() {
-                    let room = core.sung_draws(draws.len());
-                    if room.len() != draws.len() {
-                        return Err(format!("event {}: no room for {} draws", n + 1, draws.len()));
-                    }
-                    room.copy_from_slice(draws);
-                }
+            Event::Key(key) => core.key(*key),
+            Event::Note { voice, channel, time, midi, dur, vel, parts, extra } => {
                 let taken = core.note(*voice, *channel, *time, *midi, *dur, *vel, *parts, *extra);
                 if taken != Taken::OnTime {
                     return Err(format!("event {}: the core took the note as {taken:?}, not on time", n + 1));
