@@ -76,6 +76,8 @@ driftloom offline audio measurement
   --chrome <path>   an explicit Chromium executable
   --jobs <count>    renders in flight at once             (default 4)
   --no-chain        skip the second, chain-bypassed render of each loop
+  --random-salt <n> seed the platform's Math.random differently (the core's
+                    render must not change: queue item 44)
   --json <file>     also write every figure, per loop or per note, as JSON
   --voice <names>   per-voice probe instead of the corpus report; 'all'
                     probes every voice characters.js draws, by layer
@@ -246,6 +248,7 @@ function parseArgs(argv) {
       case '--chrome': opts.chrome = value(); break;
       case '--jobs': opts.jobs = Math.max(1, Math.round(number())); break;
       case '--no-chain': opts.chain = false; break;
+      case '--random-salt': opts.salt = number() >>> 0; break;
       case '--json': opts.json = value(); break;
       case '--selftest': opts.selftest = true; break;
       case '--endings': opts.endings = true; break;
@@ -667,7 +670,9 @@ async function renderLoop(spec, seconds, opts, bypass) {
   const channels = bypass ? 1 : 2 + LAYERS.length;
   const ctx = new OfflineAudioContext(channels, Math.ceil(seconds * opts.rate), opts.rate);
   const core = await coreFor(ctx, opts.engine);
-  Math.random = mulberry32(spec.seed >>> 0 || 1);
+  // opts.salt (--random-salt) moves the platform's random numbers and
+  // nothing else: since queue item 44 the core's render must not change.
+  Math.random = mulberry32((spec.seed >>> 0 || 1) ^ (opts.salt >>> 0));
   const synth = synthFor(ctx, opts.quality, opts.engine, core);
   const engine = new Engine(ctx, synth);
   // The engine's clock is never started here, but it has already opened a
@@ -995,7 +1000,8 @@ async function renderNote(job, midi, vel, rep, o) {
   const at = o.at ?? 0.05;
   const ctx = new OfflineAudioContext(1, Math.ceil((at - 0.05 + o.dur + (o.tail ?? 2.2)) * o.rate), o.rate);
   const core = await coreFor(ctx, o.engine);
-  Math.random = mulberry32(seedFor([job.layer, job.voice, midi, vel.toFixed(2), rep].join('|')));
+  const noteSeed = seedFor([job.layer, job.voice, midi, vel.toFixed(2), rep].join('|'));
+  Math.random = mulberry32(noteSeed);
   const synth = synthFor(ctx, 'full', o.engine, core);
   // The budget is a runtime guard and would only refuse notes here.
   synth._budget = () => true;
@@ -1014,7 +1020,9 @@ async function renderNote(job, midi, vel, rep, o) {
   const engine = Object.create(Engine.prototype);
   Object.assign(engine, {
     ctx, synth,
-    spec: { bpm: 60 / STEP / 4, swing: 0, mutes: {} },
+    // The note's seed, so each rep of a note draws what it leaves to chance
+    // differently, as the seeded Math.random did before queue item 44.
+    spec: { bpm: 60 / STEP / 4, swing: 0, mutes: {}, seed: noteSeed },
     live: { tracks, totalSteps: 1, stepsPerBar: 16 },
     absStep: 0, pumpAmount: 0, tailsDucked: false, visualQueue: [],
   });
@@ -1037,7 +1045,8 @@ async function renderStrums(job, midi, vel, o) {
   const core = await coreFor(ctx, o.engine);
   // Its own stream, taken up again for the second strum: other renders
   // seed Math.random while this one is suspended.
-  const random = mulberry32(seedFor([job.layer, job.voice, midi, vel.toFixed(2), o.dur, o.strum].join('|')));
+  const strumSeed = seedFor([job.layer, job.voice, midi, vel.toFixed(2), o.dur, o.strum].join('|'));
+  const random = mulberry32(strumSeed);
   Math.random = random;
   const synth = synthFor(ctx, 'full', o.engine, core);
   synth._budget = () => true;
@@ -1054,7 +1063,7 @@ async function renderStrums(job, midi, vel, o) {
   const engine = Object.create(Engine.prototype);
   Object.assign(engine, {
     ctx, synth,
-    spec: { bpm: 60 / STEP / 4, swing: 0, mutes: {} },
+    spec: { bpm: 60 / STEP / 4, swing: 0, mutes: {}, seed: strumSeed },
     live: { tracks, totalSteps: again + 1, stepsPerBar: 16 },
     absStep: 0, pumpAmount: 0, tailsDucked: false, visualQueue: [],
   });
@@ -1256,12 +1265,13 @@ async function renderHat(kind, vel, at, o) {
   const dur = kind === 'ohat' ? 0.26 : kind === 'shaker' ? 0.07 : 0.045;
   const ctx = new OfflineAudioContext(1, Math.ceil((at + dur + 0.6) * o.rate), o.rate);
   const core = await coreFor(ctx, o.engine);
-  Math.random = mulberry32(seedFor(['hat', kind, vel.toFixed(2), at].join('|')));
+  const hatSeed = seedFor(['hat', kind, vel.toFixed(2), at].join('|'));
+  Math.random = mulberry32(hatSeed);
   const synth = synthFor(ctx, 'full', o.engine, core);
   const channel = dryOut(synth, 'melody', ctx.destination);
   if (synth.core) {
-    const draws = [Math.random(), Math.random()];
-    synth.core.note(CORE_VOICES.hat, synth.core.channelOf(channel), at, 0, dur, vel, HAT_KINDS.indexOf(kind), draws);
+    synth.key = { seed: hatSeed, pass: 0, step: 0, ord: 0 };
+    synth.core.note(CORE_VOICES.hat, synth.core.channelOf(channel), at, 0, dur, vel, HAT_KINDS.indexOf(kind));
   } else {
     const src = synth._noiseSource(at, dur);
     const hpf = ctx.createBiquadFilter();

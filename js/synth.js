@@ -8,6 +8,7 @@ import {
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
   MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES,
 } from './core.js';
+import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
 
 // The channels in the core's order (core/src/lib.rs): its inputs, its
 // taps and its channel gains are numbered so.
@@ -492,6 +493,13 @@ export class Synth {
     // What the mix was last asked for, to hand from one mix to the other:
     // and whether the output was last silenced (`silence`).
     this._asked = { tone: null, echo: null, mutes: {}, killed: false };
+    // Where the note being played sits in its loop (queue item 44): the
+    // engine sets `{ seed, pass, step, ord }` before each note it plays, and
+    // every draw the core makes for the note comes from it (core/src/rng.rs).
+    // A note played without one (a preview, the measure harness) is
+    // numbered by how many have been, so a run is still the same every time.
+    this.key = null;
+    this._unkeyed = 0;
     // The kicks' ducks handed to the core, the last second's (`cancelFrom`).
     this._ducks = [];
     // Notes for a core voice that played in JS instead: the core had not
@@ -506,7 +514,7 @@ export class Synth {
     try {
       this.core = new CoreHost(this._raw, core,
         CORE_CHANNELS.map((name) => this.channels[name].gain),
-        this.noise.getChannelData(0), { quality: this.quality, taps: this._taps });
+        { quality: this.quality, taps: this._taps, key: () => this._noteKey() });
     } catch (err) {
       // No worklet node here: everything stays in JS, counted as fallbacks.
       this.coreFailed(err);
@@ -863,8 +871,8 @@ export class Synth {
 
   // Whether a note slides, and if so from where and how fast: the draw
   // (once, and only for a note long enough) and everything `_slide` does
-  // with it short of touching a parameter. The Rust core's whistle takes
-  // its slide from here and runs it itself.
+  // with it short of touching a parameter. (The Rust core decides this
+  // itself, with the same rules: core/src/articulate.rs.)
   _slideOf(midi, dur, opts) {
     // Scaled to note length, so a staccato line stays clean. A quarter of
     // the corpus's wind notes are shorter than this and none of them slide.
@@ -1372,9 +1380,8 @@ export class Synth {
   // ------------------------------------------------------------- drums
 
   // A drum on the Rust core, once the budget has said yes. The draws each
-  // drum makes below go with the note, in the order it makes them: the
-  // noise's rate and offset, and for the jingle its five zils' first. The
-  // soft kick and the rim draw nothing. False when the core cannot take it
+  // drum makes below (the noise's rate and offset, and for the jingle its
+  // five zils') the core makes itself. False when the core cannot take it
   // (counted as a fallback) or the drum is not one it has; the channel is
   // asked first, so a drum the core cannot take draws only in the
   // JavaScript voice, not twice.
@@ -1386,11 +1393,8 @@ export class Synth {
     const noisy = inst !== 'softkick' && inst !== 'rim';
     const channel = noisy ? this._coreNoiseChannel(out) : this._coreChannel(out);
     if (channel < 0) return false;
-    const draws = [];
-    if (inst === 'jingle' || inst === 'ojingle') for (let i = 0; i < 5; i++) draws.push(Math.random());
-    if (noisy) draws.push(Math.random(), Math.random());
-    if (hat !== undefined) this.core.note(CORE_VOICES.hat, channel, time, 0, 0, v, hat, draws);
-    else this.core.note(CORE_VOICES.drum, channel, time, 0, 0, v, kind, draws);
+    if (hat !== undefined) this.core.note(CORE_VOICES.hat, channel, time, 0, 0, v, hat);
+    else this.core.note(CORE_VOICES.drum, channel, time, 0, 0, v, kind);
     this._release(time, DRUM_HOLD[inst], cost);
     return true;
   }
@@ -1614,14 +1618,13 @@ export class Synth {
 
     // On the Rust core: every voice but rhodesbass, which is an fm() call
     // below and goes there itself. The core has the trims. The pluck's
-    // click draws its noise's rate and offset, which go with the note.
+    // click's draws are the core's.
     if (this.engine === 'rust' && voice !== 'rhodesbass') {
       const pluck = voice === 'pluckbass';
       const channel = pluck ? this._coreNoiseChannel(out) : this._coreChannel(out);
       if (channel >= 0) {
         const parts = (BASS_KINDS[voice] ?? 0) | (glide ? BASS_GLIDE : 0) | (chug ? BASS_CHUG : 0);
-        this.core.note(CORE_VOICES.bass, channel, time, midi, dur, vel, parts,
-          pluck ? [Math.random(), Math.random()] : []);
+        this.core.note(CORE_VOICES.bass, channel, time, midi, dur, vel, parts);
         this._release(time, hold, cost);
         return;
       }
@@ -1997,6 +2000,23 @@ export class Synth {
     return true;
   }
 
+  // Where the note now being played sits in its loop, for the core.
+  _noteKey() {
+    if (this.key) return this.key;
+    this._unkeyed = (this._unkeyed + 1) >>> 0;
+    return { seed: 0, pass: 0, step: 0, ord: this._unkeyed };
+  }
+
+  // A draw the page needs the answer to before the core is asked (whether a
+  // held vowel drifts decides what the note costs and what its trim is):
+  // the core's own generator, from the note's place in its loop
+  // (js/draw.js), on the core; the platform's on the JavaScript engine, as
+  // that synth has always drawn.
+  _hostDraw(dest, salt) {
+    if (this.engine !== 'rust') return Math.random();
+    return draw(this._noteKey(), dest === this.channels.chords.gain ? 'chords' : 'melody', salt);
+  }
+
   // The core's channel for `dest`, or -1, counted as a fallback: the core
   // has not arrived, has failed, or does not serve that channel.
   _coreChannel(dest) {
@@ -2014,20 +2034,13 @@ export class Synth {
   }
 
   // The fiddle on the Rust core, once the budget has said yes (it asks once,
-  // as below). Its three Math.random draws -- the vibrato's rate, where the
-  // rate drifts to, and its depth -- are drawn here, in the same order and
-  // only for the same notes as the JavaScript voice draws them, and sent
-  // with the note. It never slides, so there is no SLIDE_CHANCE draw.
+  // as below). Its vibrato's three draws -- the rate, where the rate drifts
+  // to, and its depth -- are the core's. It never slides, so there is no
+  // SLIDE_CHANCE draw.
   _coreFiddle(midi, time, dur, vel, dest, opts) {
     const channel = this._coreChannel(dest);
     if (channel < 0) return false;
-    let rate = NaN, end = NaN, depth = NaN;
-    if (dur >= VIBRATO_MIN_DUR) {
-      rate = 4.8 + Math.random() * 1.3;
-      end = rate * (0.9 + Math.random() * 0.2);
-      depth = 10 + Math.random() * 10;
-    }
-    this.core.note(CORE_VOICES.fiddle, channel, time, midi, dur, vel, 0, [opts.prev ?? NaN, rate, end, depth]);
+    this.core.note(CORE_VOICES.fiddle, channel, time, midi, dur, vel, 0, [opts.prev ?? NaN]);
     this._release(time, dur + 0.4, VOICE_COST.fiddle);
     return true;
   }
@@ -2067,14 +2080,13 @@ export class Synth {
       case 'flute': {
         const breathy = name === 'flute';
         if (!this._budget(time, soft, VOICE_COST[name])) return;
-        // On the core: the slide's draw, then the breath's rate, as below.
+        // On the core: the slide and the breath's rate are the core's draws;
+        // it needs the note this one is joined to.
         if (this.engine === 'rust') {
           const channel = this._coreNoiseChannel(dest);
           if (channel >= 0) {
-            const slide = this._slideOf(midi, dur, opts);
-            const breath = Math.random();
             this.core.note(breathy ? CORE_VOICES.flute : CORE_VOICES.ocarina, channel, time, midi, dur, vel, 0,
-              [slide ? slide.from : NaN, slide ? slide.reach : NaN, breath]);
+              [opts.prev ?? NaN]);
             this._release(time, dur + 0.4, VOICE_COST[name]);
             return;
           }
@@ -2175,10 +2187,9 @@ export class Synth {
       // register stop, not more accordion.
       case 'accordion': {
         if (!this._budget(time, soft, VOICE_COST.accordion)) return;
-        // On the core, the second reed's one draw is made here, where the
-        // loop below makes it, and sent with the note.
+        // On the core, the second reed's one draw is the core's.
         if (this.engine === 'rust' && this.core && this.core.channelOf(dest) >= 0) {
-          this._coreNote(CORE_VOICES.accordion, dest, time, midi, dur, vel, [opts.prev ?? NaN, Math.random()]);
+          this._coreNote(CORE_VOICES.accordion, dest, time, midi, dur, vel, [opts.prev ?? NaN]);
           this._release(time, dur + 0.35, VOICE_COST.accordion);
           return;
         }
@@ -2246,14 +2257,12 @@ export class Synth {
       // Pan flute; see PANFLUTE_LEVEL.
       case 'panflute': {
         if (!this._budget(time, soft, VOICE_COST.panflute)) return;
-        // On the core: the vibrato's rate (long notes only), then the
-        // breath's, as below.
+        // On the core: the vibrato's rate (long notes only) and the
+        // breath's are the core's draws.
         if (this.engine === 'rust') {
           const channel = this._coreNoiseChannel(dest);
           if (channel >= 0) {
-            const vibrato = dur >= VIBRATO_MIN_DUR ? Math.random() : NaN;
-            const breath = Math.random();
-            this.core.note(CORE_VOICES.panflute, channel, time, midi, dur, vel, 0, [vibrato, breath]);
+            this.core.note(CORE_VOICES.panflute, channel, time, midi, dur, vel, 0);
             this._release(time, dur + 0.4, VOICE_COST.panflute);
             return;
           }
@@ -2411,12 +2420,11 @@ export class Synth {
           out: dest, ratio: 1, index: 200, decay: 0.1, attack: 0.002, cost: 15,
         });
         if (!this._budget(time, soft, 3)) return;
-        // The knock on the core: its noise's rate and offset, then the
-        // bandpass's frequency, as below.
+        // The knock on the core: its noise's rate and offset, and the
+        // bandpass's frequency, are the core's draws.
         const knockChannel = this.engine === 'rust' ? this._coreNoiseChannel(dest) : -1;
         if (knockChannel >= 0) {
-          const draws = [Math.random(), Math.random(), Math.random()];
-          this.core.note(CORE_VOICES.knock, knockChannel, time, midi, 0.05, vel, 0, draws);
+          this.core.note(CORE_VOICES.knock, knockChannel, time, midi, 0.05, vel, 0);
         } else {
           const knock = this._noiseSource(time, 0.05);
           const bp = ctx.createBiquadFilter();
@@ -2573,7 +2581,7 @@ export class Synth {
         // disagree: a note just over the floor seldom moves and barely moves
         // when it does, and one held two seconds always moves and travels
         // the whole way. A long note that kept still would be the odd one.
-        const drifts = held > 0 && Math.random() < held;
+        const drifts = held > 0 && this._hostDraw(dest, HOST_DRIFT) < held;
         const depth = 0.34 + held * 0.66;
         // Where a held vowel goes: one rung along the open/close axis,
         // never across it. F1 is the openness formant -- a 800, o 450,
@@ -2594,7 +2602,7 @@ export class Synth {
             target = OPEN_HUM;
             targetId = SUNG_OPEN_HUM;
           } else {
-            const key = to[Math.floor(Math.random() * to.length)];
+            const key = to[Math.floor(this._hostDraw(dest, HOST_DRIFT_TO) * to.length)];
             target = VOWELS[key];
             targetId = SUNG_VOWELS[key];
           }
@@ -2635,33 +2643,16 @@ export class Synth {
         }
 
         // On the Rust core: the vowel, where it drifts and the trim, as
-        // worked out above; then every draw the singers and the breath
-        // make below, in the same order, with how many steps of jitter
-        // each singer took (core/src/lib.rs, Core::sung_draws). A note
-        // longer than the core holds the jitter for plays here.
+        // worked out above; the singers' own draws (the scoop, the jitter,
+        // the vibrato, the breath) are the core's. A note longer than the
+        // core holds the jitter for plays here.
         if (this.engine === 'rust') {
           const channel = dur <= SUNG_LONGEST ? this._coreNoiseChannel(dest) : -1;
           if (dur > SUNG_LONGEST) this.fallbacks++;
           if (channel >= 0) {
-            const draws = [];
-            for (let i = 0; i < (choral ? 3 : 1); i++) {
-              if (choral) draws.push(Math.random());
-              draws.push(Math.random(), Math.random());
-              const steps = draws.push(0) - 1;
-              let t = time + 0.12;
-              while (t < time + dur) {
-                const value = Math.random();
-                const step = Math.random();
-                draws.push(value, step);
-                draws[steps]++;
-                t += 0.09 + step * 0.08;
-              }
-              draws.push(Math.random(), Math.random(), Math.random());
-            }
-            draws.push(Math.random());
             const vowel = humming ? 0 : (SUNG_VOWELS[vowelKey] ?? 0);
             this.core.note(CORE_VOICES[name], channel, time, midi, dur, vel, 0,
-              [vowel, targetId, trim, opts.detune || 0], draws);
+              [vowel, targetId, trim, opts.detune || 0]);
             this._release(time, dur + 0.9, cost);
             return;
           }
@@ -2831,13 +2822,12 @@ export class Synth {
       case 'templebell': {
         if (!this._budget(time, soft, VOICE_COST.templebell)) return;
         const hold = Math.max(dur, 6.5);
-        // On the core: the eight detunes, partial by partial, then the
-        // strike's rate and offset, as below.
+        // On the core: the eight detunes and the strike's rate and offset
+        // are the core's draws.
         if (this.engine === 'rust') {
           const channel = this._coreNoiseChannel(dest);
           if (channel >= 0) {
-            const draws = Array.from({ length: 10 }, () => Math.random());
-            this.core.note(CORE_VOICES.templebell, channel, time, midi, dur, vel, 0, draws);
+            this.core.note(CORE_VOICES.templebell, channel, time, midi, dur, vel, 0);
             this._release(time, hold + 1.4, VOICE_COST.templebell);
             return;
           }
@@ -2889,11 +2879,10 @@ export class Synth {
       case 'tubular': {
         if (!this._budget(time, soft, VOICE_COST.tubular)) return;
         const hold = Math.max(dur, 5);
-        // On the Rust core: the five detune draws, in partial order, as the
-        // loop below makes them (and nothing else draws), go with the note.
+        // On the Rust core: the five detune draws (and nothing else draws)
+        // are the core's.
         if (this.engine === 'rust' && this.core && this.core.channelOf(dest) >= 0) {
-          const draws = [Math.random(), Math.random(), Math.random(), Math.random(), Math.random()];
-          this._coreNote(CORE_VOICES.tubular, dest, time, midi, dur, vel, draws);
+          this._coreNote(CORE_VOICES.tubular, dest, time, midi, dur, vel, []);
           this._release(time, hold + 1.2, VOICE_COST.tubular);
           return;
         }
@@ -2940,16 +2929,13 @@ export class Synth {
         const whistle = name === 'whistle';
         if (!this._budget(time, soft, VOICE_COST[name])) return;
         // On the Rust core. The whistle's one draw (does it slide, and
-        // from where) is made here, at the same point and only for the same
-        // notes as `_slide` below makes it, and sent with the note. The
-        // channel is checked first: a note the core cannot take draws in
-        // the JavaScript voice instead, not twice.
+        // from where) is the core's; it needs the note this one is joined
+        // to.
         if (this.engine === 'rust' && !opts.glide) {
           const channel = this._coreChannel(dest);
           if (channel >= 0) {
-            const slide = whistle ? this._slideOf(midi, dur, opts) : null;
             this.core.note(whistle ? CORE_VOICES.whistle : CORE_VOICES.moog, channel, time, midi, dur, vel, 0,
-              slide ? [slide.from, slide.reach] : []);
+              whistle ? [opts.prev ?? NaN] : []);
             this._release(time, dur + 0.5, VOICE_COST[name]);
             return;
           }
@@ -3106,12 +3092,12 @@ export class Synth {
       this.fm(notes[0], time, dur, vel, { out, ratio: 2.76, index: 230, decay: 1.6, attack: 0.004, cost: VOICE_COST.chime });
     } else if (kind === 'drop') {
       if (!this._budget(time, soft)) return;
-      // On the core: the noise's rate and offset, then the band, as below.
+      // On the core: the noise's rate and offset and the band are the
+      // core's draws.
       if (this.engine === 'rust') {
         const channel = this._coreNoiseChannel(out);
         if (channel >= 0) {
-          const draws = [Math.random(), Math.random(), Math.random()];
-          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.drop, draws);
+          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.drop);
           this._release(time, 0.15);
           return;
         }
@@ -3129,13 +3115,13 @@ export class Synth {
       this._release(time, 0.15);
     } else if (kind === 'wind') {
       if (!this._budget(time, soft)) return;
-      // On the core: the slow sine's rate draw, and the loop's band if it
-      // names one (the core has the usual one).
+      // On the core: the slow sine's rate is the core's draw; the loop's
+      // band is the page's, if it names one (the core has the usual one).
       if (this.engine === 'rust') {
         const channel = this._coreNoiseChannel(out);
         if (channel >= 0) {
           this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.wind,
-            [Math.random(), opts.band || NaN]);
+            [NaN, opts.band || NaN]);
           this._release(time, dur + 1);
           return;
         }
@@ -3167,12 +3153,11 @@ export class Synth {
       this._release(time, dur + 1);
     } else if (kind === 'waves') {
       if (!this._budget(time, soft, VOICE_COST.waves)) return;
-      // On the core: the rate draw, then the offset's.
+      // On the core: the rate and offset draws are the core's.
       if (this.engine === 'rust') {
         const channel = this._coreNoiseChannel(out);
         if (channel >= 0) {
-          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.waves,
-            [Math.random(), Math.random()]);
+          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.waves);
           this._release(time, dur + 0.1, VOICE_COST.waves);
           return;
         }

@@ -26,24 +26,14 @@ fn the_hash_is_fnv_1a_64() {
 }
 
 #[test]
-fn the_noise_is_the_synths() {
-    // The first samples of the synth's noise for seed 1 at 48 kHz, as
-    // `Synth._makeNoise` makes them (tools/golden-export.mjs checks the
-    // whole buffer against the synth's own on every export).
-    let n = notelist::noise(1, 48_000.0);
-    assert_eq!(n.len(), 96_000);
-    assert_eq!(n[..4], [0.091_103_88, -0.301_661_58, -0.155_117_96, 0.231_918_57]);
-}
-
-#[test]
 fn a_list_reads_back_what_it_says() {
-    let text = "dlnotes 1\n# c\nname t\nrate 48000\nquality lite\nnoise-seed 7\nframes 256\n\
-                param 17 0 0.5 0 0\ndamp 1 0.25\ndraws 2 0.5 -0\n\
+    let text = "dlnotes 2\n# c\nname t\nrate 48000\nquality lite\nframes 256\n\
+                param 17 0 0.5 0 0\ndamp 1 0.25\nkey 7 1 2 3\n\
                 note 25 0 0.1 60 0.4 0.8 0 nan nan nan nan nan nan nan nan nan nan nan nan\n";
     let list = parse(text).expect("a valid list");
-    assert_eq!((list.name.as_str(), list.frames, list.full, list.noise_seed), ("t", 256, false, 7));
-    assert_eq!(list.events.len(), 3);
-    for bad in ["", "dlnotes 2\n", "dlnotes 1\nrate 48000\nframes 128\nbogus 1\n", "dlnotes 1\nrate 48000\n"] {
+    assert_eq!((list.name.as_str(), list.frames, list.full), ("t", 256, false));
+    assert_eq!(list.events.len(), 4);
+    for bad in ["", "dlnotes 1\n", "dlnotes 2\nrate 48000\nframes 128\nbogus 1\n", "dlnotes 2\nrate 48000\n"] {
         let err = parse(bad).err().expect("an invalid list");
         assert!(err.is_ascii(), "{err}");
     }
@@ -51,7 +41,7 @@ fn a_list_reads_back_what_it_says() {
 
 #[test]
 fn an_empty_list_renders_silence_the_same_twice() {
-    let list = parse("dlnotes 1\nname quiet\nrate 48000\nquality full\nnoise-seed 1\nframes 1024\n").expect("a valid list");
+    let list = parse("dlnotes 2\nname quiet\nrate 48000\nquality full\nframes 1024\n").expect("a valid list");
     let (a, b) = (render(&list, Some(0)).expect("renders"), render(&list, None).expect("renders"));
     assert_eq!(a.hashes, b.hashes);
     assert_eq!(a.kept.len(), 1024);

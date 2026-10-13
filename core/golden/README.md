@@ -6,7 +6,7 @@ on every device. This directory is how that is measured (queue item 42).
 | File | What it is |
 |---|---|
 | `codes.txt` | The fixed set of loops: 20 that between them play every voice on every channel, and one long busy one. One line each: name, seconds to render, quality, share code. |
-| `NAME.dlnotes` | A loop as the core hears it: every call the app's host makes to the core, in order, as plain text. Everything needed to render it with no JavaScript. The format is documented in `examples/dlrender/notelist.rs`. |
+| `NAME.dlnotes` | A loop as the core hears it: every call the app's host makes to the core, in order, as plain text. Everything needed to render it with no JavaScript, and nothing left to chance: each note is preceded by its `key` (the loop's seed, the pass, the step and its place among its layer's notes), and the core draws everything the note leaves to chance from that (queue item 44). The format is documented in `examples/dlrender/notelist.rs`. |
 | `TARGET.hashes` | What each list renders to on that target: one line a list, with the FNV-1a 64 hash of the speaker output, of each of the five channels as it enters the mix, and of the signal at the bus compressor. |
 
 ## Checking

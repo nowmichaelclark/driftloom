@@ -9,11 +9,13 @@
 //! bandpass joins the tract under one envelope.
 //!
 //! What JavaScript decides arrives with the note: the vowel, where it
-//! drifts to (both drawn before the voice budget is asked), the note's
-//! formant trim (`_formantTrim`, worked out in JavaScript from the vowel
-//! and the note and sent, since it draws nothing and the synth already
-//! caches it), the composer's standing detune, and every other draw, in
-//! the order the JavaScript voice makes them (`Core::sung_draws`).
+//! drifts to (both settled before the voice budget is asked, since the
+//! budget and the trim depend on them), the note's formant trim
+//! (`_formantTrim`, worked out in JavaScript from the vowel and the note
+//! and sent, since the synth already caches it) and the composer's standing
+//! detune. Every other choice, the scoop, the jitter, the vibrato and the
+//! breath, is a draw the core makes itself from where the note sits in its
+//! loop (`rng`).
 //!
 //! The jitter takes one detune event for every 0.09 to 0.17 s of the note,
 //! so a singer's detune holds `DETUNE_EVENTS`, sized from the longest sung
@@ -27,6 +29,7 @@ use crate::filter::{Biquad, Kind};
 use crate::noise::NoiseSource;
 use crate::osc::{Part, Pitch, TableOsc, frame_at};
 use crate::param::Param;
+use crate::rng::{Draws, salt};
 use crate::voice::{Block, UNITY, midi_to_freq, pitch_of, release, starts_in};
 use crate::wave::Waves;
 
@@ -51,11 +54,6 @@ const _: () = assert!(0.12 + MAX_STEPS as f64 * 0.09 > LONGEST);
 /// A singer's detune: the scoop's two events and the jitter's.
 const DETUNE_EVENTS: usize = MAX_STEPS + 2;
 const SINGERS: usize = 3;
-
-/// The most draws a note sends: per singer the choir's spread, the scoop's
-/// two, the jitter's count and two a step, the vibrato's three; then the
-/// breath's rate.
-pub const MAX_DRAWS: usize = SINGERS * (4 + 2 * MAX_STEPS + 3) + 1;
 
 /// [centre Hz, bandwidth Hz, boost dB] for each formant (`VOWELS`): a, e,
 /// o, u, as the note's vowel numbers them.
@@ -139,21 +137,6 @@ pub struct Sung {
     end: u64,
 }
 
-/// Reads a note's draws in order; NaN once they run out (a note sent short
-/// sings without what is missing rather than reading another's).
-struct Draws<'a> {
-    all: &'a [f64],
-    at: usize,
-}
-
-impl Draws<'_> {
-    fn next(&mut self) -> f64 {
-        let x = self.all.get(self.at).copied().unwrap_or(f64::NAN);
-        self.at += 1;
-        x
-    }
-}
-
 impl Sung {
     pub const fn new() -> Self {
         Sung {
@@ -177,7 +160,8 @@ impl Sung {
     /// `vowel` is 0-3 (a, e, o, u); `target`, where it drifts to (the same
     /// numbers, 4 for an opening hum, anything else for none); `trim`, the
     /// note's formant trim; `lean`, the composer's standing detune in cents
-    /// (`opts.detune`); `draws`, the rest (`Core::sung_draws`).
+    /// (`opts.detune`); `draws`, where the note sits in its loop, which
+    /// settles every other choice the singers make (see `rng::salt`).
     #[allow(clippy::too_many_arguments)]
     pub fn play(
         &mut self,
@@ -190,7 +174,7 @@ impl Sung {
         target: f64,
         trim: f64,
         lean: f64,
-        draws: &[f64],
+        draws: &Draws,
         noise: usize,
         rate: f64,
     ) {
@@ -198,7 +182,6 @@ impl Sung {
         let choral = kind == Kind3::Choir;
         self.humming = humming;
         let f = midi_to_freq(midi);
-        let mut d = Draws { all: draws, at: 0 };
 
         let formants = if humming {
             HUM
@@ -261,46 +244,52 @@ impl Sung {
         self.count = if choral { SINGERS } else { 1 };
         let stop = stop_at + 0.01;
         for (i, s) in self.singers.iter_mut().take(self.count).enumerate() {
+            // Each singer's draws are numbered from `base`, so a choir's
+            // three singers differ from one another.
+            let base = salt::SUNG_SINGER * i as u32;
+            let u = |kind: u32, n: u32| draws.unit(kind, base + n);
             s.pitch.reset(f as f32);
             let spread = lean
                 + if choral {
-                    (i as f64 - 1.0) * (7.0 + d.next() * 6.0)
+                    (i as f64 - 1.0) * (7.0 + u(salt::SUNG_SPREAD, 0) * 6.0)
                 } else {
                     0.0
                 };
             let det = &mut s.detune;
             det.reset_at(0.0, rate);
-            det.set_value_at_time((spread - 22.0 - d.next() * 14.0) as f32, time);
-            det.linear_ramp_to_value_at_time(spread as f32, time + 0.06 + d.next() * 0.05, time);
-            let steps = d.next();
-            let steps = if steps >= 0.0 { steps as usize } else { 0 };
+            det.set_value_at_time((spread - 22.0 - u(salt::SUNG_SCOOP, 0) * 14.0) as f32, time);
+            det.linear_ramp_to_value_at_time(
+                spread as f32,
+                time + 0.06 + u(salt::SUNG_SCOOP, 1) * 0.05,
+                time,
+            );
+            // The jitter: a new small detune every 0.09 to 0.17 s of the
+            // note. Each step's value and wait are draws of their own, so a
+            // note that takes more steps changes nothing after them.
             let mut t = time + 0.12;
-            for _ in 0..steps.min(MAX_STEPS) {
-                let v = d.next();
+            for step in 0..MAX_STEPS as u32 {
+                if t >= time + dur {
+                    break;
+                }
+                let v = u(salt::SUNG_JITTER, 2 * step);
                 det.linear_ramp_to_value_at_time((spread + (v - 0.5) * 11.0) as f32, t, time);
-                t += 0.09 + d.next() * 0.08;
+                t += 0.09 + u(salt::SUNG_JITTER, 2 * step + 1) * 0.08;
             }
-            // Past what the core holds: read on, so what follows is
-            // still the vibrato's.
-            for _ in MAX_STEPS..steps {
-                d.next();
-                d.next();
-            }
-            s.lfo_rate = (4.3 + d.next() * 1.8) as f32;
-            let peak = (if humming { 5.0 } else { 9.0 }) + d.next() * 4.0;
+            s.lfo_rate = (4.3 + u(salt::SUNG_VIBRATO, 0) * 1.8) as f32;
+            let peak = (if humming { 5.0 } else { 9.0 }) + u(salt::SUNG_VIBRATO, 1) * 4.0;
             let dp = &mut s.depth;
             dp.reset_at(UNITY, rate);
             dp.set_value_at_time(0.0, time);
             dp.linear_ramp_to_value_at_time(
                 peak as f32,
-                time + (dur * 0.55).min(0.9) + d.next() * 0.2,
+                time + (dur * 0.55).min(0.9) + u(salt::SUNG_VIBRATO, 2) * 0.2,
                 time,
             );
             s.osc.schedule(time, stop, rate);
             s.lfo.schedule(time, stop, rate);
         }
 
-        let breath_rate = 0.8 + d.next() * 0.4;
+        let breath_rate = 0.8 + draws.unit(salt::SUNG_BREATH, 0) * 0.4;
         self.breath.looped(time, stop_at, breath_rate, noise, rate);
         self.breath_hz = if humming { 900.0 } else { 2200.0 };
         self.breath_filter.reset();

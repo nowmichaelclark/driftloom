@@ -36,7 +36,6 @@ window.renderOne = async (spec, seconds, rate) => {
   if (engine.clock.worker) engine.clock.worker.terminate();
   engine.driftOn = true;
   engine.driftAmount = 1;
-  engine.driftRng = new Rng((spec.seed ^ 0x5eed1e55) >>> 0);
   engine.load(spec);
   engine.playing = true;
   engine.nextStepTime = 0.05;

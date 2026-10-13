@@ -1,5 +1,5 @@
 // Tests for the golden renders' JavaScript side (queue item 42): the note-list
-// text, the hash and the noise recipe, which the native host
+// text and the hash, which the native host
 // (core/examples/dlrender/notelist.rs) has its own copies of. Each is pinned
 // to the same answers there, so the two cannot drift apart. Needs no browser.
 // Run with:  node test/golden.test.mjs
@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Fnv, noiseFor, num, readList, writeList, SIGNALS } from '../tools/golden-lib.mjs';
+import { Fnv, num, readList, writeList, SIGNALS } from '../tools/golden-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
@@ -33,23 +33,16 @@ check('the empty string', new Fnv().hex() === 'cbf29ce484222325');
   check('a sample goes in as its four bytes, least significant first', a.hex() === b.hex());
 }
 
-console.log('\nThe noise recipe');
-{
-  const n = noiseFor(1, 48000);
-  check('two seconds of it', n.length === 96000);
-  check('its first samples are the native host\'s',
-    Array.from(n.slice(0, 4)).join() === [0.09110388159751892, -0.30166158080101013, -0.1551179587841034, 0.2319185733795166].join());
-}
-
 console.log('\nNumbers and lists');
 check('nan, negative zero and shortest text', num(NaN) === 'nan' && num(-0) === '-0' && num(0.1) === '0.1' && num(1e-7) === '1e-7');
 {
   const list = {
-    name: 't', rate: 48000, quality: 'lite', noiseSeed: 7, frames: 256, comment: ['x'],
+    name: 't', rate: 48000, quality: 'lite', frames: 256, comment: ['x'],
     events: [
       { type: 'param', id: 17, op: 0, value: 0.5, time: 0, tau: 0 },
       { type: 'damp', channel: 1, time: 0.25 },
-      { type: 'note', voice: 25, channel: 0, time: 0.1, midi: 60.5, dur: 0.4, vel: 0.8, parts: 3, extra: [1, NaN, -0, 1 / 3], draws: [0.5, 0.25] },
+      { type: 'key', seed: 4288468419, pass: 1, step: 2, ord: 3 },
+      { type: 'note', voice: 25, channel: 0, time: 0.1, midi: 60.5, dur: 0.4, vel: 0.8, parts: 3, extra: [1, NaN, -0, 1 / 3] },
     ],
   };
   const text = writeList(list);
@@ -58,12 +51,13 @@ check('nan, negative zero and shortest text', num(NaN) === 'nan' && num(-0) === 
     === JSON.stringify([
       { type: 'param', id: 17, op: 0, value: 0.5, time: 0, tau: 0 },
       { type: 'damp', channel: 1, time: 0.25 },
-      { type: 'note', voice: 25, channel: 0, time: 0.1, midi: 60.5, dur: 0.4, vel: 0.8, parts: 3, extra: [1, 'nan', '-0', 1 / 3, ...Array(8).fill('nan')], draws: [0.5, 0.25] },
+      { type: 'key', seed: 4288468419, pass: 1, step: 2, ord: 3 },
+      { type: 'note', voice: 25, channel: 0, time: 0.1, midi: 60.5, dur: 0.4, vel: 0.8, parts: 3, extra: [1, 'nan', '-0', 1 / 3, ...Array(8).fill('nan')] },
     ]));
-  check('and its header', back.name === 't' && back.rate === 48000 && back.quality === 'lite' && back.noiseSeed === 7 && back.frames === 256);
+  check('and its header', back.name === 't' && back.rate === 48000 && back.quality === 'lite' && back.frames === 256);
   check('it is plain ASCII', /^[\x20-\x7e\n]*$/.test(text));
 }
-check('a bad line is named', (() => { try { readList('dlnotes 1\nbogus 1\n'); return false; } catch (e) { return /line 2/.test(e.message); } })());
+check('a bad line is named', (() => { try { readList('dlnotes 2\nbogus 1\n'); return false; } catch (e) { return /line 2/.test(e.message); } })());
 
 console.log('\nThe committed goldens');
 {

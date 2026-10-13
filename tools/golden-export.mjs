@@ -14,12 +14,11 @@
 //
 // Two things make the lists reproducible and honest:
 //
-//   - Math.random is seeded before the synth is built, so the same codes
-//     export the same lists (the synth's articulation draws travel with
-//     each note; item 44 moves them into the core), and the synth's noise
-//     is the first thing it draws: the list carries only the seed, and the
-//     export checks the noise the synth made against the recipe the hosts
-//     use (golden-lib.mjs noiseFor).
+//   - Nothing in a list is left to chance (queue item 44): the core draws
+//     everything a note leaves to chance from the note's key (its loop's
+//     seed, the pass, the step and its place among its layer's notes), and
+//     the list carries the key before each note. Once the synth is built,
+//     Math.random throws, so a note that drew from it could not be exported.
 //   - Each loop is also rendered in the page, and the list is rendered again
 //     in Node through the same js/dlcore.wasm. The hashes must be equal: if
 //     they are, the list holds every call that mattered, and none of the
@@ -62,22 +61,24 @@ import { loadCore, CoreHost, CORE_VOICES } from '/js/core.js';
 import { decodeSong } from '/js/share.js';
 import { newSpec } from '/js/generator.js';
 import { Rng, mulberry32 } from '/js/rng.js';
-import { Fnv, noiseFor } from '/tools/golden-lib.mjs';
+import { Fnv } from '/tools/golden-lib.mjs';
 
 const QUANTUM = 128;
 const NAMES = Object.fromEntries(Object.entries(CORE_VOICES).map(([k, v]) => [v, k]));
 
 // Play a spec into a synth on the core, the way tools/measure.mjs does, and
 // record what the host sent. Returns what it needs to export or to pick.
-async function play(spec, seconds, quality, noiseSeed, { render }) {
+async function play(spec, seconds, quality, { render }) {
   const frames = Math.ceil((seconds * ${RATE}) / QUANTUM) * QUANTUM;
   const ctx = new OfflineAudioContext(render ? 7 : 1, frames, ${RATE});
   const core = await loadCore(ctx);
   const events = [];
   const was = {};
   for (const name of ['note', 'damp', 'param', 'cancel']) was[name] = CoreHost.prototype[name];
-  CoreHost.prototype.note = function (voice, channel, time, midi, dur, vel, parts, extra, draws) {
-    events.push({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra: extra ? Array.from(extra) : [], draws: draws ? Array.from(draws) : null });
+  CoreHost.prototype.note = function (voice, channel, time, midi, dur, vel, parts, extra) {
+    const { seed, pass, step, ord } = this.keyOf();
+    events.push({ type: 'key', seed, pass, step, ord });
+    events.push({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra: extra ? Array.from(extra) : [] });
     return was.note.apply(this, arguments);
   };
   CoreHost.prototype.damp = function (channel, time) {
@@ -91,14 +92,13 @@ async function play(spec, seconds, quality, noiseSeed, { render }) {
   CoreHost.prototype.cancel = function () {
     throw new Error('the synth cancelled notes in an offline render');
   };
+  const random = Math.random;
   try {
-    Math.random = mulberry32(noiseSeed);
+    // The synth builds its JavaScript noise as it starts, which the core's
+    // notes never play.
+    Math.random = mulberry32(1);
     const synth = new Synth(ctx, quality, { engine: 'rust', core, taps: true });
     if (!synth.core) throw new Error('the synth has no core: ' + synth.coreError);
-    const noise = new Fnv();
-    noise.samples(synth.noise.getChannelData(0));
-    const recipe = new Fnv();
-    recipe.samples(noiseFor(noiseSeed, ${RATE}));
     const engine = new Engine(ctx, synth);
     if (engine.clock.worker) engine.clock.worker.terminate();
     let hashes = null;
@@ -114,6 +114,7 @@ async function play(spec, seconds, quality, noiseSeed, { render }) {
     engine.load(spec);
     engine.playing = true;
     engine.nextStepTime = 0.05;
+    Math.random = () => { throw new Error('Math.random in the sound path'); };
     let guard = 0;
     while (engine.nextStepTime < seconds && guard++ < 200000) {
       engine._scheduleStep(engine.step, engine.nextStepTime);
@@ -130,15 +131,16 @@ async function play(spec, seconds, quality, noiseSeed, { render }) {
     }
     const fallbacks = synth.fallbacks;
     synth.core.dispose();
-    return { events, frames, hashes, fallbacks, noiseOk: noise.hex() === recipe.hex() };
+    return { events, frames, hashes, fallbacks };
   } finally {
+    Math.random = random;
     Object.assign(CoreHost.prototype, was);
   }
 }
 
-window.exportLoop = async ({ code, seconds, quality, noiseSeed }) => {
+window.exportLoop = async ({ code, seconds, quality }) => {
   const spec = decodeSong(code);
-  const r = await play(spec, seconds, quality, noiseSeed, { render: true });
+  const r = await play(spec, seconds, quality, { render: true });
   return { ...r, bars: spec.bars, bpm: spec.bpm, seed: spec.seed };
 };
 
@@ -158,7 +160,7 @@ window.scanCorpus = async ({ seed, from, to, seconds, quality }) => {
     if (i < from) continue;
     const loopDur = spec.bars * (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
     const window = Math.min(seconds, loopDur);
-    const r = await play(spec, window, quality, spec.seed >>> 0 || 1, { render: false });
+    const r = await play(spec, window, quality, { render: false });
     const keys = [...new Set(r.events.filter((e) => e.type === 'note').map(keyOf))];
     const notes = r.events.filter((e) => e.type === 'note').length;
     out.push({ i, seed: spec.seed, loopDur, window, keys, notes, fallbacks: r.fallbacks });
@@ -260,17 +262,11 @@ if (!loops.length) { console.error('golden-export: no loops'); await done(1); }
 const wasm = fs.readFileSync(path.join(ROOT, 'js', 'dlcore.wasm'));
 let failed = 0;
 for (const loop of loops) {
-  // The noise's seed is the loop's own, as measure.mjs seeds its renders.
-  const r = await page.evaluate((o) => window.exportLoop(o), { ...loop, noiseSeed: 0 });
-  const noiseSeed = r.seed >>> 0 || 1;
-  // Seeded now that the loop's seed is known: the first page played it with
-  // a placeholder, so play it again for the real export.
-  const real = await page.evaluate((o) => window.exportLoop(o), { ...loop, noiseSeed });
+  const real = await page.evaluate((o) => window.exportLoop(o), loop);
   const problems = [];
-  if (!real.noiseOk) problems.push('the synth\'s noise is not the recipe\'s');
   if (real.fallbacks) problems.push(`${real.fallbacks} note(s) played in JavaScript`);
   const list = {
-    name: loop.name, rate: RATE, quality: loop.quality, noiseSeed, frames: real.frames, events: real.events,
+    name: loop.name, rate: RATE, quality: loop.quality, frames: real.frames, events: real.events,
     comment: [`${loop.name}: ${real.bars} bars at ${real.bpm} bpm, seed ${real.seed}, ${loop.seconds} s of it, ${loop.quality} quality.`, 'Exported by tools/golden-export.mjs from the code in codes.txt; do not edit by hand.'],
   };
   const text = writeList(list);

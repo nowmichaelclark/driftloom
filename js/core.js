@@ -9,7 +9,8 @@
 // wobble, the saturator, the tone and the highpass; since item 31 the bus
 // compressor, the master and kill gains and the ceiling, so its output goes
 // straight to the speakers. It keeps everything else: scheduling, the voice
-// budget and every Math.random draw.
+// budget; and, since queue item 44, none of the chance in a note: where each
+// note sits in its loop goes with it (a key), and the core draws from that.
 // The JavaScript synth stays, as the fallback: a browser without
 // AudioWorklet or WebAssembly, a core that fails to load, a core that traps
 // while playing (Diagnostics says which, `js (fallback: ...)`), and what
@@ -62,8 +63,10 @@ export const DRUM_KINDS = {
 };
 export const HAT_KINDS = { hat: 0, ohat: 1, shaker: 2 };
 // The longest noise the core holds (NOISE_MAX, core/src/noise.rs): two
-// seconds at 96 kHz.
+// seconds at 96 kHz. It makes the noise itself, two seconds of it, as it
+// starts; a context faster than this keeps its noise voices in JavaScript.
 export const CORE_NOISE_MAX = 192000;
+export const CORE_NOISE_SECONDS = 2;
 export const KALIMBA_STRIKE = 1;
 export const KALIMBA_BODY = 2;
 
@@ -93,7 +96,7 @@ export const CANCEL = 3;
 export const HOLD = 4;
 
 // Why the core dropped a note, in Core::dropped_by's order.
-export const DROP_CAUSES = ['queue full', 'no room for a sung note', 'voices busy', 'sung voices busy'];
+export const DROP_CAUSES = ['queue full', 'voices busy', 'sung voices busy'];
 
 // The render-ahead (queue item 41): how far past the page's clock the core
 // has already rendered by the time a note posted now reaches it. Taken as
@@ -162,6 +165,9 @@ export async function loadCore(ctx) {
 // core/src/lib.rs); what it leaves out reaches the core as NaN.
 const NO_EXTRA = [];
 
+// Where a note sits when nothing says (core/src/rng.rs, Key).
+const NO_KEY = { seed: 0, pass: 0, step: 0, ord: 0 };
+
 // One core node for one synth. `dests` are the synth's five channels in
 // the core's order, each a voice's destination: what a voice the core
 // takes would have played into, and, for a note it cannot take, where the
@@ -170,18 +176,21 @@ const NO_EXTRA = [];
 // master chain, for the speakers; with `taps`, five more carry the channels
 // as they went into the mix, and one more the signal as it reached the bus
 // compressor.
-// `noise` is the synth's noise samples, handed to the core once.
 // `quality` is the synth's: the mix has six combs on 'full', three on
-// 'lite'.
+// 'lite'. `key` is a function giving where the note about to be sent sits
+// in its loop, `{ seed, pass, step, ord }` (core/src/rng.rs): the core
+// draws everything a note leaves to chance from it.
 export class CoreHost {
-  constructor(ctx, core, dests, noise = null, { quality = 'full', taps = false } = {}) {
+  constructor(ctx, core, dests, { quality = 'full', taps = false, key = null } = {}) {
     this.ctx = ctx;
     this.dests = dests;
     this.taps = taps;
+    this.keyOf = key || (() => NO_KEY);
     // Called once if the core turns out not to run (too old a browser).
     this.onfail = null;
-    // Whether the core has the noise its noise voices play.
-    this.noise = !!noise && noise.length <= CORE_NOISE_MAX;
+    // Whether the core has the noise its noise voices play: it makes two
+    // seconds of it as it starts, if it holds that many samples.
+    this.noise = Math.floor(ctx.sampleRate * CORE_NOISE_SECONDS) <= CORE_NOISE_MAX;
     this.late = 0;
     this.dropped = 0;
     // Queue item 41: the late notes left out (more than the core's MISS
@@ -223,7 +232,7 @@ export class CoreHost {
       channelCount: 1,
       channelCountMode: 'explicit',
       // Copied, not moved: the page keeps its copy for the next synth.
-      processorOptions: { bytes: core.bytes, noise: this.noise ? noise : null, quality },
+      processorOptions: { bytes: core.bytes, quality },
     });
     this.node.port.onmessage = (e) => this._receive(e.data);
     // The processor threw while playing (a trap in the core, say): the node
@@ -256,13 +265,12 @@ export class CoreHost {
 
   // `extra` is the voice's own numbers (core/src/lib.rs): for the fiddle,
   // the note it is joined to and its vibrato; for the pad, how many notes
-  // the chord has; for fm, its five options; for tubular, its five detune
-  // draws.
-  // `draws` is a sung note's draws, as many as it made (Core::sung_draws).
-  note(voice, channel, time, midi, dur, vel, parts, extra = NO_EXTRA, draws = null) {
+  // the chord has; for fm, its five options. What a voice leaves to chance
+  // is not here: the core draws it from the note's `key`.
+  note(voice, channel, time, midi, dur, vel, parts, extra = NO_EXTRA) {
     // `sent`: the page's clock as it posts, so the worklet can say how far
     // past it the core had already rendered when the note arrived.
-    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, draws, sent: this.ctx.currentTime, why: this.why });
+    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, key: this.keyOf(), sent: this.ctx.currentTime, why: this.why });
   }
 
   // A new strum into `channel` at `time`: the last strum's nylon strings

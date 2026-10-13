@@ -49,7 +49,7 @@ function stubSynth(queuesAhead, renderAhead = null, worstAhead = 0) {
         const at = TIME_AT[prop];
         // A voice's channel is its fifth argument (the melody's or the chords').
         const layer = prop === 'voice' ? args[5] : prop === 'drum' ? 'drums' : prop;
-        calls.push({ name: prop, time: at == null ? args[0] : args[at], layer, args, why: t.why });
+        calls.push({ name: prop, time: at == null ? args[0] : args[at], layer, args, why: t.why, key: t.key ? { ...t.key } : null });
       };
     },
   });
@@ -99,6 +99,42 @@ function change(r, now, act) {
   act();
   const cancel = r.calls.slice(before).find((c) => c.name === 'cancelFrom');
   return { cancel, from: cancel ? cancel.args[0] : null, after: r.calls.slice(before), kept: r.calls.slice(0, before) };
+}
+
+console.log('\nWhere each note sits in its loop (queue item 44)');
+{
+  const noise = Math.random;
+  const r = rig(true, 777);
+  r.run(0.5);
+  // The core is handed whole passes ahead; play past the end of the first.
+  while (r.engine.loopCount < 1) r.run(r.ctx.currentTime + 1);
+  r.run(r.ctx.currentTime + 1);
+  const made = notes(r.calls);
+  check('every note is stamped with where it sits', made.length > 30 && made.every((c) => c.key && c.key.seed === (r.spec.seed >>> 0)),
+    `${made.length} notes, ${made.filter((c) => !c.key).length} unstamped, seed ${made[0] && JSON.stringify(made[0].key)} against ${r.spec.seed}`);
+  const places = made.map((c) => `${c.layer}:${c.key.pass}:${c.key.step}:${c.key.ord}`);
+  check('and no two notes of a layer share a place', new Set(places).size === places.length);
+  check('the pass rises as the loop comes round', made.some((c) => c.key.pass === 0) && made.some((c) => c.key.pass === 1));
+  check('the synth is left with no key once a note is built', r.engine.synth.key == null);
+
+  // Another Math.random changes nothing: the engine draws from the notes' places.
+  const again = rig(true, 777);
+  Math.random = () => { throw new Error('Math.random in the scheduler'); };
+  again.run(r.ctx.currentTime);
+  Math.random = noise;
+  const key = (c) => `${c.name} ${c.layer} ${JSON.stringify(c.key)} ${c.time}`;
+  const a = notes(r.calls).filter((c) => c.time < 2.5).map(key);
+  const b = notes(again.calls).filter((c) => c.time < 2.5).map(key);
+  const firstDiff = a.findIndex((x, i) => x !== b[i]);
+  check('played again, the same notes at the same times (jitter, strum and ensemble included)', a.length > 10 && a.join('\n') === b.join('\n'),
+    `${a.length} against ${b.length}; first difference ${a[firstDiff]} | ${b[firstDiff]}`);
+
+  // A muted layer takes nothing from the others' places.
+  const muted = rig(true, 777);
+  muted.spec.mutes.melody = true;
+  muted.run(2.5);
+  const others = (calls) => notes(calls).filter((c) => c.layer !== 'melody' && c.time < 2.5).map(key);
+  check('muting the melody leaves every other layer\'s places as they were', others(muted.calls).join('\n') === others(r.calls).join('\n'));
 }
 
 console.log('\nMute and unmute');
