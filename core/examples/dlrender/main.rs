@@ -9,6 +9,9 @@
 //! cargo run --release --example dlrender -- LIST...          hash lines
 //! cargo run --release --example dlrender -- --twice LIST...  and render each
 //!                                           twice, failing if they differ
+//! cargo run --release --example dlrender -- --flush LIST...  with the
+//!                                           processor flushing subnormal
+//!                                           numbers (must hash the same)
 //! cargo run --release --example dlrender -- --wav OUT.wav [--signal NAME] LIST
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! ```
@@ -19,9 +22,9 @@ mod notelist;
 
 use std::process::ExitCode;
 
-use notelist::{SIGNALS, line, parse, read_wav, render, wav};
+use notelist::{SIGNALS, line, parse, read_wav, render, render_flushing, wav};
 
-const USAGE: &str = "usage: dlrender [--twice] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -34,12 +37,13 @@ fn main() -> ExitCode {
 }
 
 fn run(args: Vec<String>) -> Result<(), String> {
-    let (mut twice, mut wav_to, mut signal) = (false, None, "out".to_string());
+    let (mut twice, mut flush, mut wav_to, mut signal) = (false, false, None, "out".to_string());
     let (mut compare, mut lists) = (false, Vec::new());
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--twice" => twice = true,
+            "--flush" => flush = true,
             "--compare" => compare = true,
             "--wav" => wav_to = Some(args.next().ok_or(USAGE)?),
             "--signal" => signal = args.next().ok_or(USAGE)?,
@@ -70,7 +74,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
     for path in &lists {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
         let list = parse(&text).map_err(|e| format!("{path}: {e}"))?;
-        let first = render(&list, keep).map_err(|e| format!("{path}: {e}"))?;
+        let first = if flush { render_flushing(&list, keep) } else { render(&list, keep) }.map_err(|e| format!("{path}: {e}"))?;
         if twice {
             let again = render(&list, None).map_err(|e| format!("{path}: {e}"))?;
             if again.hashes != first.hashes {

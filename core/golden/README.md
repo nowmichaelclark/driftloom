@@ -16,13 +16,16 @@ tools/golden.sh                              # this machine
 tools/golden.sh aarch64-unknown-linux-gnu    # under QEMU (see core/.cargo/config.toml)
 tools/golden.sh wasm32-unknown-unknown       # the app's engine, in Node
 tools/golden.sh --report                     # every kept target against wasm32
+tools/golden.sh --strict --flush             # flushing subnormals (x86-64, aarch64)
 ```
 
-CI runs it for five targets (`.github/workflows/core.yml`, job `golden`).
-Each target is held to its own `TARGET.hashes`: until the core carries its own
-math (queue item 43) the platforms' `sin`, `exp` and `powf` differ in their
-last bits, so the targets do not agree with each other, and `--strict` (which
-fails on any disagreement with wasm32) is switched on in item 43.
+CI runs it for five targets (`.github/workflows/core.yml`, job `golden`),
+with `--strict`: every target must make exactly wasm32's hashes. Since queue
+item 43 they do, because the core carries its own math (`core/src/math`)
+instead of each platform's `sin`, `exp` and `powf`, and never makes a
+subnormal number. `--flush` renders with the processor flushing subnormals to
+zero, as Chromium's audio threads do; it must change nothing, and CI checks it
+on x86-64.
 
 ## Rendering by hand
 
@@ -53,5 +56,6 @@ headless Chromium, records the host's calls, and checks the list: rendered in
 Node through `js/dlcore.wasm`, its speaker output and its bus must hash to
 exactly what the page rendered. (The channel taps need not: Chromium turns on
 flush-to-zero on its audio threads, which the worklet's WebAssembly runs on,
-so a tail decaying through subnormal numbers is zero in the page and not
-elsewhere. Item 43 decides how the core treats them.)
+so a tail decaying through subnormal numbers was zero in the page and not
+elsewhere. Since item 43 the core never makes one, so they agree; the check
+still compares only the two signals it always did.)

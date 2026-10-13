@@ -14,6 +14,15 @@ use core::cell::UnsafeCell;
 
 use crate::{Core, Taken};
 
+/// What the module does if the core panics: nothing reachable from the
+/// exports can (`lib.rs`), but a `no_std` module must say. It traps, which
+/// the worklet reports as a processor error and the page answers by
+/// falling back to the JavaScript synth (queue item 31b).
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
+
 struct Global(UnsafeCell<Core>);
 
 // WebAssembly here runs on one thread: the audio thread that owns the

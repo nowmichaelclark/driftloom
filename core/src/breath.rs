@@ -8,6 +8,7 @@
 //! (`Param::reset_at`), and each keeps its voice a moment past its last
 //! stop, as the leads do, for its filter to ring out.
 
+use crate::math;
 use crate::QUANTUM;
 use crate::filter::{Biquad, Kind};
 use crate::noise::NoiseSource;
@@ -380,7 +381,7 @@ impl Panflute {
         let level = vel * PANFLUTE_LEVEL;
         let p = &mut self.pitch;
         p.reset_at(A440, rate);
-        p.set_value_at_time((f * 2f64.powf(-PANFLUTE_DIP / 1200.0)) as f32, time);
+        p.set_value_at_time((f * math::pow(2.0, -PANFLUTE_DIP / 1200.0)) as f32, time);
         p.exponential_ramp_to_value_at_time(f as f32, time + 0.05, time);
         let stop = time + dur + 0.4;
         self.vibrato = vibrato.is_some();
@@ -623,7 +624,7 @@ impl Default for Struck {
 /// `BELL_PARTIAL_VEL`, and the temple bell's lift as a chord voice.
 const BELL_PARTIAL_VEL: f64 = 0.8;
 fn chord_lift() -> f64 {
-    10f64.powf(1.9 / 20.0)
+    math::pow(10.0, 1.9 / 20.0)
 }
 /// A bowl's partials: ratio to the note and relative level. Each is a pair
 /// of sines 4 cents either side, which is what beats.

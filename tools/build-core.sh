@@ -31,7 +31,14 @@ cargo_home=${CARGO_HOME:-$HOME/.cargo}
 rustup_home=${RUSTUP_HOME:-$HOME/.rustup}
 RUSTFLAGS="--remap-path-prefix=$root/core=/dlcore --remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$rustup_home=/rustup"
 export RUSTFLAGS
-cargo build --release --locked --target wasm32-unknown-unknown
+# The library with its WebAssembly exports (the `web` feature), as a cdylib:
+# the crate itself is a plain no_std library (core/Cargo.toml says why). It
+# is built as an rlib in the same run, as it always was: that keeps its
+# functions public, so LLVM does not fold every stage into one giant
+# function (and Cargo leaves out LTO, which it does for a crate that is an
+# rlib too). Built as a cdylib alone, the same source renders about 15%
+# slower in V8 (measured by instruction count on the golden renders).
+cargo rustc --release --locked --target wasm32-unknown-unknown --features web --crate-type cdylib,rlib
 
 built="$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm"
 committed="$root/js/dlcore.wasm"

@@ -32,6 +32,7 @@
 //! A timeline holds a fixed number of events and never allocates; one
 //! added past that is dropped, and the call returns false.
 
+use crate::math;
 use crate::QUANTUM;
 
 /// `exp(-10)`: within this of its target, a target curve has arrived
@@ -271,7 +272,7 @@ impl Line<'_> {
         if let Some(first) = self.list().first()
             && first.time > start as f64 / rate
         {
-            let first_frame = (first.time * rate).ceil();
+            let first_frame = math::ceil(first.time * rate);
             let fill_end = if end as f64 > first_frame {
                 first_frame as u64
             } else {
@@ -308,7 +309,7 @@ impl Line<'_> {
                 if (2.0 * rate * e.time - 2.0 * current as f64 + 1.0).abs() <= 1.0 {
                     value = (e.value as f64
                         + (value - e.value) as f64
-                            * (-(current as f64 / rate - e.time) / e.tau).exp())
+                            * math::exp(-(current as f64 / rate - e.time) / e.tau))
                         as f32;
                 } else {
                     let c = discrete_time_constant(e.tau, control) as f32;
@@ -331,7 +332,7 @@ impl Line<'_> {
                 None => (value1, end as f64 / rate + 1.0, None),
             };
             let fill_end = if end as f64 > time2 * rate {
-                (time2 * rate).ceil() as u64
+                math::ceil(time2 * rate) as u64
             } else {
                 end
             };
@@ -462,7 +463,7 @@ fn within(v: f32, min: f32, max: f32) -> f32 {
 
 // `DiscreteTimeConstantForSampleRate`.
 fn discrete_time_constant(tau: f64, rate: f64) -> f64 {
-    1.0 - (-1.0 / (rate * tau)).exp()
+    1.0 - math::exp(-1.0 / (rate * tau))
 }
 
 // `HasSetTargetConverged`.
@@ -556,7 +557,7 @@ fn set_target(
     let c = current as f64;
     if start <= c && c < start + 1.0 {
         value = (target as f64
-            + (value - target) as f64 * (-(c / rate - time1) / tau32 as f64).exp())
+            + (value - target) as f64 * math::exp(-(c / rate - time1) / tau32 as f64))
             as f32;
     } else {
         value += (target - value) * c0;

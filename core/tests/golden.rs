@@ -71,3 +71,18 @@ fn the_shortest_golden_matches_its_kept_hashes() {
     let rendered = render(&list, None).expect("renders");
     assert_eq!(notelist::line(&list, &rendered.hashes), want);
 }
+
+/// A golden whose drums' tails once went subnormal (queue item 43): with the
+/// processor flushing subnormal numbers to zero, as Chromium's audio
+/// threads do, it must render to the same bits as without, because the core
+/// never makes one (`dlcore::math`, "Subnormal numbers"). `tools/golden.sh
+/// --flush` does every golden.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+#[test]
+fn flushing_subnormals_changes_nothing() {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/golden");
+    let list = parse(&std::fs::read_to_string(format!("{dir}/16-grove.dlnotes")).expect("the golden list")).expect("a valid list");
+    let plain = render(&list, None).expect("renders");
+    let flushing = notelist::render_flushing(&list, None).expect("renders");
+    assert_eq!(plain.hashes, flushing.hashes);
+}
