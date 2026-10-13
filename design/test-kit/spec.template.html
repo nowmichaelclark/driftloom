@@ -3,11 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Driftloom spec v18</title>
+<title>Driftloom spec v19</title>
 <!--
   ================================================================
-  DRIFTLOOM · DESIGN SPEC · v18 (Painter session 5, 2026-10-13)
+  DRIFTLOOM · DESIGN SPEC · v19 (Painter session 6, 2026-10-13)
   ================================================================
+
+  v19 · NEXT PICKS (Painter session 6)
+
+  The chosen next-picks design (design/next-picks.md) is in the app and
+  baked here, as three new places:
+    - now:free  Now Playing outside an album. No "Next: ..." line; the
+                picked values as outline pills under the clock (moods,
+                then tempo and length), one button that opens New loops.
+                In an album ("now") Now Playing is as it was.
+    - picks     New loops: five lines, a close key, an any key per line.
+    - length    The Length picker: cancel / Length / done, -1 number +1,
+                the doubling slider, Endless.
+  The bake seeds the brief's first render: merry, tender, 70-85 bpm, 16
+  bars. The app has no tempo picker yet; the tempo is a saved pick.
+  Live here: leave album / back to the album, the pills, close, the mood
+  line (opens Vibes, whose close comes back), the length line, cancel
+  and done. The any keys, -1, +1, the slider and Endless change picks,
+  so they show the "Not in the spec" note; try them in the app. The
+  pills are baked: vibes picked on this page do not change them.
+  In the app (build v97): js/picks.js; mood is today's vibes; length and
+  tempo bend new loops in today's generator, clamped to what it plays
+  (1-32 bars as the loop's own length, played once; longer lengths as
+  passes of the loop as drawn; tempo clamped into 32-190). Key, style
+  and voices read "any". The Vibes key stays (open question 1).
+
+  v18 (Painter session 5) follows.
 
   START HERE
 
@@ -69,10 +95,10 @@
 
   The v17 scripts in test-kit/ measure the v17 file and need its nine
   phones; run them against design/archive/driftloom_v17_library.html.
-  For v18 the page offers window.spec (see the script at the end):
+  For v18 and v19 the page offers window.spec (see the script at the end):
   show(place), setTheme(cls), setSize(pct), setPlaying(bool), audit().
   The address bar takes the same, e.g.
-    driftloom_v18.html#view=library:loops&theme=t-dawn&size=150
+    driftloom_v19.html#view=library:loops&theme=t-dawn&size=150
   test-kit/sheet18.mjs makes contact sheets from it.
 -->
 <style>
@@ -262,7 +288,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
 <body class="pg">
 
 <header class="pg-head">
-  <div class="pg-eyebrow pg-mono">Driftloom · design spec · v18 · baked from the app <!--BAKE:DATE--></div>
+  <div class="pg-eyebrow pg-mono">Driftloom · design spec · v19 · baked from the app <!--BAKE:DATE--></div>
   <h1 class="pg-serif">One phone, as the app draws it.<br><span>Pick its theme inside it.</span></h1>
   <p>This is the app's own screen, copied from the app itself, on a 340 × 780 phone. Use it like the app: the keys at the bottom move between views, <b>Library › More</b> picks the theme, Play starts the playhead. The controls on the right are review tools that the app does not have.</p>
 </header>
@@ -300,8 +326,20 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
       <p class="pg-audit" id="audit" role="status" aria-live="polite"></p>
     </section>
 
+    <section class="pg-panel pg-notes" aria-labelledby="v19-h">
+      <h2 id="v19-h">New in v19: next picks</h2>
+      <p>The chosen design (<span class="pg-mono">design/next-picks.md</span>), built into the app (build v97). Pick <b>Now Playing, no album</b>, <b>New loops</b> or <b>Length</b> above, or press <b>leave album</b> on Now Playing.</p>
+      <ul>
+        <li><span class="pg-tag new">new</span><b>Now Playing outside an album</b> drops the "Next: …" line and shows what new loops lean toward as outline pills: moods on the first row, tempo and length on the second. Only picked values show; with nothing picked, a dashed "anything". The pills are one button that opens New loops. In an album, Now Playing is as before.</li>
+        <li><span class="pg-tag new">new</span><b>New loops:</b> five lines (moods; tempo and length; key; style; voices), a close key, and an any key per line, lit while the whole line is left to chance. Moods open the Vibes list; length opens the Length picker. Tempo, key, style and voices have no picker yet.</li>
+        <li><span class="pg-tag new">new</span><b>Length:</b> cancel / Length / done; −1, the number (tap to type), +1; a doubling slider with sixteen stops from 1 to 32,768; an Endless switch. Cancel puts back the length from before, "any" included.</li>
+        <li><span class="pg-tag new">new</span><b>Each line has a colour</b> that outlines its pills (and colours the length slider and switch); the light themes take a darker set. Text stays in the theme's text colours.</li>
+        <li><span class="pg-tag gone">note</span><b>Baked picks:</b> merry, tender, 70–85 bpm, 16 bars, as in the brief. The any keys, −1, +1, the slider and Endless change picks, so here they show a note; try them in the app.</li>
+      </ul>
+    </section>
+
     <section class="pg-panel pg-notes" aria-labelledby="new-h">
-      <h2 id="new-h">What changed since v17</h2>
+      <h2 id="new-h">What changed from v17 to v18</h2>
       <p>v17 was drawn by hand and then brought into the app. The app has moved on since, and v18 shows it as it is now. Against v17:</p>
       <ul>
         <li><span class="pg-tag gone">changed</span><b>One phone instead of nine.</b> The theme is picked inside it, in Library › More, as in the app.</li>
@@ -338,6 +376,8 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
     <section class="pg-panel pg-notes" aria-labelledby="open-h">
       <h2 id="open-h">Open items</h2>
       <ul>
+        <li><span class="pg-tag open">decide</span><b>Next picks: the way in during an album.</b> The pills are hidden in an album, so they can't open New loops there. Suggestion from the brief: keep the top-left key, renamed "new loops", in an album only. Until then the Vibes key stays as it was.</li>
+        <li><span class="pg-tag open">decide</span><b>Next picks: setting only tempo or only length back to "any".</b> Line two's any key clears both.</li>
         <li><span class="pg-tag open">next</span><b>Measure the app against the standard.</b> Port the v17 test kit to this file (one phone, a theme at a time). It is the same as measuring the app, since this file is the app's own drawing.</li>
         <li><span class="pg-tag open">decide</span><b>The Info card drops lines when it is full.</b> v17's rule was that nothing in it is ever dropped; lines took turns instead (the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away. Keep the app's way, or bring the turns back?</li>
         <li><span class="pg-tag open">found</span><b>The Info card can cut off its last lines.</b> Its text column is as tall as the art (118px). With the sample loop the readout fits at 100%, but from 130% the meter line and the album line are hidden, even after folding as far as it goes (one style and one feeling leave nothing to fold; the album and meter lines never fold). The audit line says so when it happens. It is the app's own behavior, not a baking artifact.</li>
@@ -376,7 +416,10 @@ const D = /*BAKE:DATA*/null;
     lastView: 'now', lastEdit: 'layers',
     lib: { tab: 'albums', album: null, advanced: false },
     saveTab: 'albums',
-    mutes: {}, vibes: [], saved: null, lite: null,
+    mutes: {}, vibes: (D.vibes || []).slice(), saved: null, lite: null,
+    // v19: whether an album is playing (the bake plays one), and where
+    // the Vibes list goes back to.
+    inAlbum: true, vibesFrom: 'now',
   };
   var BASE = ['now', 'sounds', 'layers'];
   var viewOf = function (state) { return state.split(':')[0]; };
@@ -494,7 +537,8 @@ const D = /*BAKE:DATA*/null;
     return l.album != null ? 'library:album:' + l.album : 'library:albums';
   }
   function go(view) {
-    var state = view === 'library' ? libraryState() : view === 'save' ? 'save:' + S.saveTab : view;
+    var state = view === 'library' ? libraryState() : view === 'save' ? 'save:' + S.saveTab
+      : view === 'now' && !S.inAlbum ? 'now:free' : view;
     if (BASE.indexOf(view) >= 0) S.lastView = view;
     if (view === 'sounds' || view === 'layers') S.lastEdit = view;
     show(state);
@@ -509,8 +553,14 @@ const D = /*BAKE:DATA*/null;
       var c = current();
       go(c === 'sounds' ? 'layers' : c === 'layers' ? 'sounds' : S.lastEdit);
     },
-    vibesBtn: function () { go('vibes'); },
-    vibesClose: function () { go('now'); },
+    vibesBtn: function () { S.vibesFrom = 'now'; go('vibes'); },
+    vibesClose: function () { go(S.vibesFrom === 'picks' ? 'picks' : 'now'); },
+    // v19: leaving the album and going back to it; the next picks.
+    nowAction: function () { S.inAlbum = !S.inAlbum; go('now'); },
+    nowPicks: function () { go('picks'); },
+    picksClose: function () { go('now'); },
+    lenCancel: function () { go('picks'); },
+    lenDone: function () { go('picks'); },
     vibesClear: function () { S.vibes = []; restore(); },
     playBtn: function () { setPlaying(!S.playing); },
     // As library.js does: focus goes to the page's title, and back.
@@ -550,6 +600,10 @@ const D = /*BAKE:DATA*/null;
       return;
     }
     if (t.classList.contains('back') && t.closest('#libPane')) { S.lib.album = null; go('library'); return; }
+
+    // The next picks: the mood line opens Vibes, the length line Length.
+    if (t.classList.contains('pk-val') && t.closest('.pk-line-mood')) { S.vibesFrom = 'picks'; go('vibes'); return; }
+    if (t.classList.contains('pk-val') && t.closest('.pk-line-pace')) { go('length'); return; }
 
     // Themes.
     if (t.classList.contains('sw')) { setTheme(t.getAttribute('data-theme')); return; }
@@ -638,7 +692,7 @@ const D = /*BAKE:DATA*/null;
   function vibesWords() {
     var n = S.vibes.length;
     var b = $('vibesBtn');
-    if (b) { b.textContent = n ? 'vibes · ' + n : 'vibes'; b.setAttribute('aria-label', n ? 'Vibes, ' + n + ' picked' : 'Vibes'); }
+    if (b) { b.textContent = n ? 'vibes\u00a0·\u00a0' + n : 'vibes'; b.setAttribute('aria-label', n ? 'Vibes, ' + n + ' picked' : 'Vibes'); }
     var c = $('vibesCount');
     if (c) c.textContent = n ? n + ' for new loops' : 'none: new loops as usual';
     var x = $('vibesClear');
@@ -790,7 +844,7 @@ const D = /*BAKE:DATA*/null;
 
   // ---------- review controls ----------
   var PLACES = [
-    ['now', 'Now Playing'], ['vibes', 'Vibes'], ['layers', 'Layers'], ['sounds', 'Sound'],
+    ['now', 'Now Playing'], ['now:free', 'Now Playing, no album'], ['picks', 'New loops'], ['length', 'Length'], ['vibes', 'Vibes'], ['layers', 'Layers'], ['sounds', 'Sound'],
     ['library:albums', 'Albums'], ['library:album:2', 'An album'], ['library:loops', 'Loops'],
     ['library:more', 'More'], ['library:advanced', 'Advanced'], ['save:albums', 'Save'], ['save:share', 'Share'],
   ];
@@ -813,6 +867,8 @@ const D = /*BAKE:DATA*/null;
     if (p[0] === 'save') S.saveTab = p[1];
     if (BASE.indexOf(p[0]) >= 0) S.lastView = p[0];
     if (p[0] === 'sounds' || p[0] === 'layers') S.lastEdit = p[0];
+    if (p[0] === 'now') S.inAlbum = p[1] !== 'free';
+    if (p[0] === 'picks' || p[0] === 'length') S.inAlbum = false;
     return show(state);
   }
   function syncChips() {
@@ -846,9 +902,10 @@ const D = /*BAKE:DATA*/null;
   }
 
   function caption() {
-    var names = { now: 'Now Playing', vibes: 'Vibes', layers: 'Layers', sounds: 'Sound', library: 'Library', save: 'Save' };
+    var names = { now: 'Now Playing', vibes: 'Vibes', layers: 'Layers', sounds: 'Sound', library: 'Library', save: 'Save',
+      picks: 'New loops', length: 'New loops › Length' };
     var bits = S.state.split(':');
-    var where = names[bits[0]] + (bits[1] ? ' › ' + ({ albums: 'Albums', loops: 'Loops', more: 'More', advanced: 'More › Advanced', album: 'an album', share: 'Share' })[bits[1]] : '');
+    var where = names[bits[0]] + (bits[1] ? ' › ' + ({ albums: 'Albums', loops: 'Loops', more: 'More', advanced: 'More › Advanced', album: 'an album', share: 'Share', free: 'outside an album' })[bits[1]] : '');
     if (bits[0] === 'save' && bits[1] === 'albums') where = 'Save';
     if (bits[0] === 'save' && bits[1] === 'share') where = 'Save › Share';
     $('caption').innerHTML = '<b>' + themeLabel(S.theme) + '</b> · ' + where + ' · ' + S.size + '% text';

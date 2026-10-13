@@ -58,6 +58,8 @@ jobs:
         run: node test/golden.test.mjs
       - name: Draw tests (the page's copy of the core's generator)
         run: node test/draw.test.mjs
+      - name: Next picks tests
+        run: node test/picks.test.mjs
       # Playwright pinned to the version whose Chromium the baseline was
       # rendered with; the tool is a dependency of the tools, not the app.
       - name: Chromium, for the baseline

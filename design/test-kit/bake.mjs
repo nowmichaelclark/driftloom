@@ -1,4 +1,5 @@
-// Bakes the design spec from the app itself (Painter session 5, v18).
+// Bakes the design spec from the app itself (Painter session 5, v18;
+// v19 adds the next picks, Painter session 6).
 //
 // The spec used to be drawn by hand and then ported into the app. Since
 // v18 it goes the other way: this script runs the real app in headless
@@ -8,7 +9,7 @@
 // and a change to the app's look shows up here by baking again.
 //
 //   cd design/test-kit && npm install
-//   node bake.mjs                      # writes ../driftloom_v18.html
+//   node bake.mjs                      # writes ../driftloom_v19.html
 //   node bake.mjs --out ../x.html      # somewhere else
 //
 // What it takes from the repo: index.html and js/ (run as they are),
@@ -34,7 +35,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const args = process.argv.slice(2);
 const opt = (name, dflt) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : dflt; };
-const OUT = path.resolve(opt('--out', path.join(ROOT, 'design/driftloom_v18.html')));
+const OUT = path.resolve(opt('--out', path.join(ROOT, 'design/driftloom_v19.html')));
 const SIZES = (process.env.SIZES || "100,130,150,200").split(",").map(Number);
 const W = 340, H = 780;
 
@@ -60,6 +61,7 @@ const BASE = `http://127.0.0.1:${server.address().port}`;
 // generator from fixed seeds (tools/views.mjs does the same). Names come
 // from the generator, so they stay put from one bake to the next unless
 // the generator changes.
+const SEED_VIBES = ['merry', 'tender'];
 const SEED_LIBRARY = `(async () => {
   const g = await import('/js/generator.js');
   const store = await import('/js/storage.js');
@@ -73,7 +75,11 @@ const SEED_LIBRARY = `(async () => {
     store.setAlbumIds(album.id, ids.slice(a * 6, a * 6 + 6));
   }
   for (const id of ids.slice(0, 8)) store.addToAlbum(store.FAVORITES, id);
-  store.setPrefs({ theme: 't-nocturne', view: 'now', edit: 'layers' });
+  // The next picks of the brief's first render (design/next-picks.md):
+  // two moods, 70–85 bpm and 16 bars. The app has no tempo picker yet, so
+  // the tempo is seeded here, as a saved pick.
+  store.setPrefs({ theme: 't-nocturne', view: 'now', edit: 'layers',
+    vibes: ${JSON.stringify(SEED_VIBES)}, picks: { tempo: [70, 85], length: 16 } });
 })()`;
 
 // -------------------------------------------------- copying what is drawn
@@ -157,6 +163,18 @@ async function goto(page, state) {
   // Home first, so every visit starts from the same place.
   if ((await shown(page)) !== 'now') await press(page, '#nowBtn');
   if ((await shown(page)) !== 'now') await press(page, '#nowBtn');
+  // Now Playing outside an album, and the next picks it opens: leave the
+  // album first (these are visited after every place that shows it).
+  if ((view === 'now' && sub === 'free') || view === 'picks' || view === 'length') {
+    if (await page.locator('#nowNext:not([hidden])').count()) {
+      await press(page, '#nowAction');
+      await page.waitForTimeout(2400); // the "left the album" note fades
+    }
+    if (view === 'now') return;
+    await press(page, '#nowPicks');
+    if (view === 'length') await press(page, '#picksList .pk-line-pace button.pk-val');
+    return;
+  }
   if (view === 'now') return;
   if (view === 'vibes') return press(page, '#vibesBtn');
   if (view === 'layers' || view === 'sounds') {
@@ -257,7 +275,9 @@ await press(page, '#nowBtn');
 const STATES = ['now', 'vibes', 'layers', 'sounds',
   'library:albums', 'library:loops', 'library:more', 'library:advanced',
   ...Array.from({ length: albumCount }, (_, i) => `library:album:${i}`),
-  'save:albums', 'save:share'];
+  'save:albums', 'save:share',
+  // Last, since they leave the album: the next picks (v19).
+  'now:free', 'picks', 'length'];
 
 // The app's whole screen once (every view is in it, most hidden), then
 // each place's own view and card at every text size.
@@ -424,7 +444,7 @@ const commit = (() => {
 const DATA = {
   baked: new Date().toISOString().slice(0, 10),
   sizes: SIZES, states, art: allArt, loop: { name: loop.name, bpm: loop.bpm, spb: loop.spb, bars: loop.bars, layers: loop.layers },
-  icons: loop.icons, measured, now, commit,
+  icons: loop.icons, measured, now, commit, vibes: SEED_VIBES,
 };
 
 const template = fs.readFileSync(path.join(HERE, 'spec.template.html'), 'utf8');
