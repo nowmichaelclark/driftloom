@@ -5,7 +5,7 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 ## What this is
 
 - **Current file:** `driftloom_v18.html`. One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
-- **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec can't drift from the app: bake again after any change to the look.
+- **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec stays in step with the app as long as it is baked again after every change to the look.
 - **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) are kept unchanged in `archive/driftloom_v17_library.html`.
 
 ## How to change it
@@ -27,9 +27,10 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 
 ## What is live in the file and what is baked
 
-- **Live** (the page's script, following `js/main.js` and `js/library.js`): moving between views, Library tabs and albums, More and Advanced, Save and Share, the theme swatches, Play / Pause, the playhead and halo column at the loop's tempo, the Layers rows bar by bar, layer on/off, picking vibes, ticking albums, the sliders, the Now Playing clock.
+- **Live** (the page's script, following `js/main.js` and `js/library.js`): moving between views, Library tabs and albums, More and Advanced, Save and Share, the theme swatches, Play / Pause, the playhead and halo column at the loop's tempo, the Layers rows bar by bar (the loop's first pass; Wander's later changes are not shown), layer on/off, picking vibes, ticking albums, the sliders, the Now Playing clock.
 - **Not live:** anything that makes music or changes data (Previous, Next, roll, new album, rename, export…). Those show "Not in the spec: try it in the app".
 - **Baked:** every view's markup and card at each text size. The app fits the Info card in script, so each text size is its own capture; the rest follows the stylesheet live.
+- **What the bake changes in the app's markup:** each canvas becomes a picture of what it drew, inputs keep their values as attributes, the moving marks (lit cell, halo column, clock) are cleared for the page's script to put back, and scripts are left out.
 - **Three changes the bake makes to the stylesheet** (noted at the top of the file): fonts inlined; the short-screen rule (`max-height: 700px`) switched off, since the spec phone is never that short; the reduced-motion rules copied under `html.sim-reduced-motion` for the review switch.
 - **For scripts:** `window.spec` has `show(place)`, `setTheme(cls)`, `setSize(pct)`, `setPlaying(bool)`, `audit()` and the lists of places, themes and sizes. The address bar takes the same: `driftloom_v18.html#view=library:loops&theme=t-dawn&size=150&paused&insets=android`.
 
@@ -40,6 +41,7 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - No drawn status-bar gap: the Info zone is 174px and the Dynamic zone 350px (v17: 205 / 319); Buttons stay 240px.
 - The Info card has real cover art and the app's readout, which folds lesser lines away when full (v17's lines took turns instead).
 - New: the Vibes key and view, Sound, Save and Share.
+- Fixed in the app (build v93): two reduced-motion blocks in `css/style.css` damaged when v17 was brought in. Because of them no key sank when pressed (for everybody), and under reduced motion the glint, transitions and panel-key drops kept going.
 
 ## Reference images (`reference/`)
 
@@ -60,6 +62,6 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 
 1. **Measure the app against the standard.** Port the v17 test kit (`test-kit/`) to the v18 file: one phone, a theme at a time, through `window.spec`. Since the file is the app's own drawing, that measures the app. Until then the v17 numbers describe the v17 drawings, not the app.
 2. **Decide: the Info card drops lines when it is full.** v17's rule was that nothing in it is ever dropped (lines took turns, the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away.
-3. **At 200% text the Info card clips its last line**, even after folding as far as it goes. Seen in the app itself; the spec's audit line flags it.
+3. **The Info card can cut off its last lines.** Its text column is as tall as the art (118px). With the sample loop the readout fits at 100%, but from 130% the meter and album lines are hidden, even after folding as far as it goes. Seen in the app itself; the spec's audit line flags it.
 4. **The Play / Pause glyph is under 3:1** in Dawn, Tidal, Olive and Night Light (found in v17).
 5. **After the design is locked:** Safari, Firefox, VoiceOver and TalkBack.

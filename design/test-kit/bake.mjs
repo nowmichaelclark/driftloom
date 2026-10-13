@@ -211,6 +211,7 @@ let page = await ctx.newPage();
 await page.goto(`${BASE}/index.html`);
 await page.evaluate(SEED_LIBRARY);
 
+let firstPass = null;
 async function open(size) {
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(`${size}%: ${e.message} ${(e.stack || '').split('\n').slice(1, 3).join(' ')}`));
@@ -230,6 +231,15 @@ async function open(size) {
   await press(p, '[data-tab="albums"]');
   await p.locator('#libPane .lrow.album').nth(2).locator('button', { hasText: 'play' }).click();
   await settle(p, 1500);
+  // The Layers rows as the app draws them now, in the loop's first pass:
+  // with Wander on (the default) later passes drift away from it.
+  if (size === 100) firstPass = await p.evaluate(() => {
+    const drawn = {};
+    for (const row of document.querySelectorAll('.layer')) {
+      drawn[row.dataset.layer] = [...row.querySelectorAll('.pattern span')].map((d) => (d.classList.contains('big') ? 2 : d.classList.contains('on') ? 1 : 0)).join('');
+    }
+    return drawn;
+  });
   await press(p, '#nowBtn');
   return p;
 }
@@ -319,20 +329,14 @@ const loop = await page.evaluate(async () => {
       layers[layer].push(out.map((v) => (v > 0.55 ? 2 : v ? 1 : 0)).join(''));
     }
   }
-  // What the app draws for bar 0, to check the reading above against.
-  const drawn = {};
-  for (const row of document.querySelectorAll('.layer')) {
-    drawn[row.dataset.layer] = [...row.querySelectorAll('.pattern span')].map((d) => (d.classList.contains('big') ? 2 : d.classList.contains('on') ? 1 : 0)).join('');
-  }
-  return { name, bpm: spec.bpm, spb, bars, layers, drawn,
-    icons: { play: ui.icon('play'), pause: ui.icon('pause'), check: ui.icon('check') } };
+  return { name, bpm: spec.bpm, spb, bars, layers,
+    icons: { play: ui.icon('play'), pause: ui.icon('pause'), check: ui.icon('check'), sounds: ui.icon('sounds'), layers: ui.icon('layers') } };
 });
 
-// The skeleton shows Now Playing and Layers is rendered for bar 0 at the
-// moment of capture, which may be a later bar; the check is that bar 0 as
-// read matches some bar the app could have drawn.
-const drawnRow = Object.values(loop.drawn).join('|');
-const someBar = Array.from({ length: loop.bars }, (_, b) => Object.keys(loop.drawn).map((l) => loop.layers[l][b]).join('|'));
+// The first pass, as read from the generator, must hold the bar the app
+// was drawing during its first pass.
+const drawnRow = Object.values(firstPass).join('|');
+const someBar = Array.from({ length: loop.bars }, (_, b) => Object.keys(firstPass).map((l) => loop.layers[l][b]).join('|'));
 const patternOk = someBar.includes(drawnRow);
 
 // ------------------------------------------- Now Playing's clock
@@ -413,8 +417,8 @@ function inlineFonts(text) {
 const commit = (() => {
   try {
     const sha = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
-    const dirty = execSync('git status --porcelain -- index.html css js', { cwd: ROOT }).toString().trim();
-    return `commit ${sha}${dirty ? ' with uncommitted changes to the app' : ''}`;
+    const dirty = execSync('git status --porcelain -- index.html css js design/test-kit/bake.mjs design/test-kit/spec.template.html', { cwd: ROOT }).toString().trim();
+    return `commit ${sha}${dirty ? ' plus uncommitted changes' : ''}`;
   } catch { return ''; }
 })();
 const DATA = {

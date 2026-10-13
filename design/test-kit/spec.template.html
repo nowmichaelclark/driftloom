@@ -39,7 +39,8 @@
   the app's own rules (main.js setView), Library tabs and albums, More
   and Advanced, Save and Share; the theme swatches; Play / Pause; the
   playhead and the halo column, at the loop's tempo; the layer rows bar
-  by bar (the notes come from the app's generator); layer on/off;
+  by bar (the loop's first pass, from the app's generator; with Wander
+  on, the app varies later passes, which the spec does not); layer on/off;
   picking vibes; ticking albums in Save; the sliders; the Now Playing
   clock. Everything that would make music, change data or open the
   keyboard shows a short note on the phone instead.
@@ -48,6 +49,12 @@
   text. The app fits its Info card in script (ui.js fitName and the
   readout levels), so each text size is a separate capture; the rest of
   the layout follows the stylesheet's container queries live.
+
+  The markup is the app's, with these changes: each canvas becomes an
+  <img> of what it drew (kept once, pointed at by data-art); inputs
+  keep their values as attributes; the lit cell, the halo column and
+  the clock are cleared (the page's script puts them back); scripts
+  are left out.
 
   The stylesheet is css/style.css, inlined whole, with three changes
   made by the bake: fonts inlined, the short-screen rule
@@ -241,6 +248,10 @@ body.pg.sim-android .phone .os-bottom b:nth-of-type(3) {
 body.pg.use-real-insets .phone .os-bottom { display: none; }
 .pg-stage .phone .os-bottom { color: var(--text-secondary, #888); }
 
+/* The bake turns each canvas into a picture of it. The app sizes the
+   cover canvas to its box (.cover canvas); the picture needs the same. */
+.pg-stage .phone .cover > img { display: block; width: 100%; height: 100%; }
+
 /* Review aid: trace the drawn edge of every tap target. */
 body.pg.show-targets .phone button,
 body.pg.show-targets .phone [role="button"],
@@ -300,6 +311,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
         <li><span class="pg-tag new">new</span><b>Now Playing</b> has the Vibes key at its top left; <b>Vibes</b> is a view of its own.</li>
         <li><span class="pg-tag new">new</span><b>Sound</b> (seven sliders), <b>Save</b> (tick the albums this loop is in) and <b>Share</b> are drawn, where v17 left them unbuilt.</li>
         <li><span class="pg-tag new">new</span><b>The Layers rows</b> follow the playhead bar by bar, as in the app.</li>
+        <li><span class="pg-tag gone">fixed</span><b>In the app: the key press, and reduced motion.</b> Two reduced-motion blocks in the app's stylesheet had been damaged when v17 was brought in. The first had lost its opening line, so its "keys do not sink" rule applied to everybody (no key sank when pressed) while its "nothing animates" rule did nothing (the light themes' glint and every transition kept running under reduced motion). The second had lost its declarations, so the keys inside the panel still dropped under reduced motion. Both are put back as v17 had them (build v93).</li>
       </ul>
     </section>
 
@@ -310,7 +322,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
 
     <section class="pg-panel pg-notes" aria-labelledby="rule-h">
       <h2 id="rule-h">Rules that carry over from v17</h2>
-      <p>These held for the v17 drawings and the app was built to them. They have not been re-measured on the app yet (the v17 test kit measures the v17 file); that is the next step.</p>
+      <p>These held for the v17 drawings and the app was built to them. They have not been re-measured on the app yet (the v17 test kit measures the v17 file); that is the next step. One has already been found broken and fixed in this session: the reduced-motion rules (below).</p>
       <ul>
         <li><b>Three zones,</b> fixed heights; nothing pops up. Only lists scroll: the Library's lists, Advanced, the Vibes list and Save's albums.</li>
         <li><b>Two settings:</b> Theme and Lighter on processor. One behavior for everybody.</li>
@@ -318,7 +330,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
         <li><b>Every control is a native button</b> with a name. On/off is a switch; Play swaps its name between Play and Pause.</li>
         <li><b>Contrast</b> is measured from pixels: text 4.5:1; notes, beat cells, the lit cell and focus rings 3:1. Off-beat cells and empty-slot dots are decorative.</li>
         <li><b>Light-theme notes</b> keep their chroma; Olive keeps to warm hues.</li>
-        <li><b>Reduced motion</b> means nothing moves. Every mark drawn as a background color has a forced-colors rule.</li>
+        <li><b>Reduced motion:</b> nothing slides, fades or twinkles, and pressed keys keep their darker fill but do not drop. The playhead still steps with the music. Every mark drawn as a background color has a forced-colors rule.</li>
         <li><b>Touch targets:</b> roll and on/off are drawn at 48 × 48, with no invisible hit pads.</li>
       </ul>
     </section>
@@ -328,7 +340,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
       <ul>
         <li><span class="pg-tag open">next</span><b>Measure the app against the standard.</b> Port the v17 test kit to this file (one phone, a theme at a time). It is the same as measuring the app, since this file is the app's own drawing.</li>
         <li><span class="pg-tag open">decide</span><b>The Info card drops lines when it is full.</b> v17's rule was that nothing in it is ever dropped; lines took turns instead (the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away. Keep the app's way, or bring the turns back?</li>
-        <li><span class="pg-tag open">found</span><b>At big text sizes the Info card cuts off its last line.</b> At 200% the readout is taller than its column (as tall as the art) even after folding as far as it goes, so the last line is clipped; the audit line above says so when it happens. It is the app's own behavior, not a baking artifact.</li>
+        <li><span class="pg-tag open">found</span><b>The Info card can cut off its last lines.</b> Its text column is as tall as the art (118px). With the sample loop the readout fits at 100%, but from 130% the meter line and the album line are hidden, even after folding as far as it goes (one style and one feeling leave nothing to fold; the album and meter lines never fold). The audit line says so when it happens. It is the app's own behavior, not a baking artifact.</li>
         <li><span class="pg-tag open">open</span><b>The Play / Pause glyph is under 3:1</b> in Dawn, Tidal, Olive and Night Light (found in v17, not yet fixed).</li>
         <li><span class="pg-tag open">later</span>Safari, Firefox, VoiceOver and TalkBack, once the design is locked.</li>
       </ul>
@@ -390,8 +402,25 @@ const D = /*BAKE:DATA*/null;
     };
   }
 
+  // Which control has the keyboard, said so it can be found again in
+  // fresh markup: by id, or by the data- name a tab, swatch or vibe has.
+  function focusKey(el) {
+    if (!el || !app.contains(el) || el === app) return null;
+    if (el.id) return '#' + el.id;
+    var attrs = ['data-tab', 'data-stab', 'data-theme', 'data-vibe', 'data-layer'];
+    for (var i = 0; i < attrs.length; i++) {
+      var v = el.getAttribute(attrs[i]);
+      if (v != null) return '[' + attrs[i] + '="' + v + '"]';
+    }
+    var row = el.closest('.layer');
+    if (row) return '.layer[data-layer="' + row.getAttribute('data-layer') + '"] .' + el.className.split(' ')[0];
+    return null;
+  }
+  var focusNext = null;
   function show(state) {
     if (!D.states[state]) return false;
+    var had = focusNext || focusKey(document.activeElement);
+    focusNext = null;
     var v = variant(state);
     S.state = state;
     var views = app.querySelectorAll('.view');
@@ -406,12 +435,25 @@ const D = /*BAKE:DATA*/null;
     edgesAll();
     syncChips();
     caption();
+    if (had) {
+      var back = app.querySelector(had);
+      if (back && back.getClientRects().length) back.focus({ preventScroll: true });
+    }
     return true;
   }
 
   // What the page changed since the bake, put back on fresh markup.
   function restore() {
     setPlayKey();
+    // The switch shows where it goes, not where you are (main.js setView).
+    var vb = $('viewBtn');
+    if (vb) {
+      var c = current();
+      var target = c === 'sounds' ? 'layers' : c === 'layers' ? 'sounds' : S.lastEdit;
+      if (vb.getAttribute('data-icon') !== target) { vb.innerHTML = D.icons[target]; vb.setAttribute('data-icon', target); }
+      vb.setAttribute('aria-label', target === 'sounds' ? 'Show sound controls' : 'Show layers');
+      vb.title = target === 'sounds' ? 'Sound' : 'Layers';
+    }
     // Layers: mutes, and the bar the music is on.
     var rows = app.querySelectorAll('.layer');
     for (var i = 0; i < rows.length; i++) {
@@ -471,8 +513,9 @@ const D = /*BAKE:DATA*/null;
     vibesClose: function () { go('now'); },
     vibesClear: function () { S.vibes = []; restore(); },
     playBtn: function () { setPlaying(!S.playing); },
-    goAdvanced: function () { S.lib.advanced = true; go('library'); },
-    advBack: function () { S.lib.advanced = false; go('library'); },
+    // As library.js does: focus goes to the page's title, and back.
+    goAdvanced: function () { S.lib.advanced = true; focusNext = '#libAdvanced .page-title'; go('library'); },
+    advBack: function () { S.lib.advanced = false; focusNext = '#goAdvanced'; go('library'); },
     liteMode: function (b) { S.lite = b.getAttribute('aria-checked') !== 'true'; setSwitch(b, S.lite); },
   };
 
@@ -541,9 +584,21 @@ const D = /*BAKE:DATA*/null;
     toast(ELSEWHERE);
   });
 
-  // Arrow keys move between theme swatches, as in the app.
+  // Arrow keys move along a tab row (library.js tabKeys) and between
+  // theme swatches (main.js initThemes), as in the app.
   app.addEventListener('keydown', function (e) {
     var t = e.target;
+    var attr = t.hasAttribute && (t.hasAttribute('data-tab') ? 'data-tab' : t.hasAttribute('data-stab') ? 'data-stab' : null);
+    if (attr) {
+      var d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      var list = [].slice.call(app.querySelectorAll('[' + attr + ']'));
+      var n = list[(list.indexOf(t) + d + list.length) % list.length];
+      n.focus();
+      n.click();
+      return;
+    }
     if (!t.classList || !t.classList.contains('sw')) return;
     var dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
     if (!dir) return;
@@ -710,10 +765,6 @@ const D = /*BAKE:DATA*/null;
     },
   };
 
-  var reduced = function () {
-    return document.documentElement.classList.contains('sim-reduced-motion')
-      || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-  };
   var prev = null;
   function frame(now) {
     if (prev == null) prev = now;
@@ -729,9 +780,9 @@ const D = /*BAKE:DATA*/null;
         if (cursor.step === 0) { cursor.bar = (cursor.bar + 1) % L.bars; paintBar(); }
         moved = true;
       }
-      // Reduced motion: the music keeps time, the screen keeps still
-      // apart from the clock's numbers.
-      if (moved && !reduced()) cursor.place();
+      // Under reduced motion the app's playhead still steps with the
+      // music (nothing slides or fades; the cell just changes), so here too.
+      if (moved) cursor.place();
       clock.paint();
     }
     requestAnimationFrame(frame);
@@ -830,21 +881,37 @@ const D = /*BAKE:DATA*/null;
     if (small < 11) problems.push('text at ' + small + 'px ("' + smallWhat + '")');
     // The Info card's text column is as tall as the art; lines past it
     // are cut off (ui.js folds lines to avoid that, down to a floor).
+    // A line counts as cut when its baseline falls past the nearest box
+    // that clips it: then the letters themselves are lost. (A range's
+    // box also holds the space under the baseline, 0.242em in Inter, so
+    // that much is taken off; a clipped descender alone does not count.)
     var col = $('loopDetail') && $('loopDetail').parentElement;
-    if (col && col.getClientRects().length && col.scrollHeight > col.clientHeight + 1) {
-      problems.push('Info card lines cut off (' + col.scrollHeight + 'px of text in ' + col.clientHeight + 'px)');
+    if (col && col.getClientRects().length) {
+      var clip = $('loopDetail');
+      while (clip && clip !== app && getComputedStyle(clip).overflowY === 'visible') clip = clip.parentElement;
+      var edge = clip.getBoundingClientRect().bottom + 0.5, cut = [];
+      var lis = $('loopDetail').children;
+      for (var li = 0; li < lis.length; li++) {
+        var rg = document.createRange();
+        rg.selectNodeContents(lis[li]);
+        var rr = rg.getBoundingClientRect();
+        var base = rr.bottom - 0.242 * parseFloat(getComputedStyle(lis[li]).fontSize);
+        if (rr.height && base > edge) cut.push(lis[li].textContent.trim());
+      }
+      if (cut.length) problems.push('Info card cuts off ' + cut.length + (cut.length === 1 ? ' line' : ' lines') + ' (' + cut.join(', ') + ')');
     }
     var tiny = [];
-    var btns = app.querySelectorAll('button, [role="button"]');
+    var btns = app.querySelectorAll('button, [role="button"], input[type="range"]');
     for (var b = 0; b < btns.length; b++) {
       var r = btns[b].getBoundingClientRect();
       if (!r.width || btns[b].closest('[hidden]')) continue;
-      if (r.width < 44 || r.height < 44) tiny.push(Math.round(r.width) + '×' + Math.round(r.height));
+      var nm = btns[b].getAttribute('aria-label') || btns[b].id || btns[b].textContent.trim().slice(0, 14);
+      if (r.width < 44 || r.height < 44) tiny.push(nm + ' ' + Math.round(r.width) + '×' + Math.round(r.height));
       if (r.width < 24 || r.height < 24) problems.push('a target under 24px (WCAG 2.5.8): ' + Math.round(r.width) + '×' + Math.round(r.height));
     }
     var line = 'Audit · ' + themeLabel(S.theme) + ' · ' + S.state + ' @ ' + S.size + '% · zones ' + h.join(' / ')
       + ' · smallest text ' + (isFinite(small) ? Math.round(small * 10) / 10 + 'px' : 'n/a')
-      + ' · ' + (tiny.length ? tiny.length + (tiny.length === 1 ? ' target' : ' targets') + ' under 44px <span class="dim">(' + tiny.slice(0, 4).join(', ') + (tiny.length > 4 ? '…' : '') + '; the name, which renames)</span>' : 'every target ≥ 44px');
+      + ' · ' + (tiny.length ? tiny.length + (tiny.length === 1 ? ' target' : ' targets') + ' under 44px <span class="dim">(' + tiny.slice(0, 4).join(', ') + (tiny.length > 4 ? '…' : '') + ')</span>' : 'every target ≥ 44px');
     if (problems.length) line += ' · <b>' + problems.join(' · ') + '</b>';
     out.innerHTML = line;
     out.classList.toggle('bad', problems.length > 0);
@@ -910,7 +977,7 @@ const D = /*BAKE:DATA*/null;
   }
   if ('targets' in q) { $('aidTargets').checked = true; document.body.classList.add('show-targets'); }
   if ('motion' in q) { $('aidMotion').checked = true; document.documentElement.classList.add('sim-reduced-motion'); }
-  if (q.size) {
+  if (q.size && D.sizes.indexOf(Number(q.size)) >= 0) {
     S.size = Number(q.size);
     document.documentElement.style.fontSize = S.size === 100 ? '' : S.size + '%';
     var rs = document.querySelectorAll('input[name="size"]');
