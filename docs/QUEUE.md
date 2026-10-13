@@ -3142,7 +3142,7 @@ Mikey decides this line:
   quieter). Listen for: nothing; a control album should sound the same as
   before.
 - #213, any sample rate, any block size, any channel layout (core phase 1,
-  item 45, v96), https://b663e0c6-driftloom.nowmichaelclark.workers.dev: the
+  item 45, v98), https://b663e0c6-driftloom.nowmichaelclark.workers.dev: the
   core takes 22,050 Hz up to its build's highest rate (192 kHz native, 96 kHz
   in the web build) and renders any number of frames a call with the same
   bits; mono is the only layout and anything else is refused in plain words;
