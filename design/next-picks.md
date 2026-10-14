@@ -140,8 +140,9 @@ section wins.
   **any** key inside its own picker. In the Length picker the Endless
   label and switch are replaced by one **∞ key** that lights while
   endless is on, which leaves room for an any key beside it. With any
-  lit the number reads "any"; −1, +1, the slider or typing a number
-  pick one. Tempo's any key comes with the tempo picker. Line two's any
+  lit the number reads "any" (the slider's thumb hollow); −1, +1, the
+  slider or typing a number pick one. Turning ∞ off goes to a number of
+  bars, not back to any. Tempo's any key comes with the tempo picker. Line two's any
   key in the panel still clears both.
 
 ## Open questions (as they were asked, now answered above)

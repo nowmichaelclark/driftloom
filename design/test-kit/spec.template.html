@@ -308,7 +308,7 @@ body.pg.show-targets .phone button:focus-visible { outline: 2px solid var(--focu
 <body class="pg">
 
 <header class="pg-head">
-  <div class="pg-eyebrow pg-mono">Driftloom · design spec · v19 · baked from the app <!--BAKE:DATE--></div>
+  <div class="pg-eyebrow pg-mono">Driftloom · design spec · v20 · baked from the app <!--BAKE:DATE--></div>
   <h1 class="pg-serif">One phone, as the app draws it.<br><span>Pick its theme inside it.</span></h1>
   <p>This is the app's own screen, copied from the app itself, on a 340 × 780 phone. Use it like the app: the keys at the bottom move between views, <b>Library › More</b> picks the theme, Play starts the playhead. The controls on the right are review tools that the app does not have.</p>
 </header>
@@ -932,7 +932,7 @@ const D = /*BAKE:DATA*/null;
   }
 
   function caption() {
-    var names = { now: 'Now Playing', vibes: 'Vibes', layers: 'Layers', sounds: 'Sound', library: 'Library', save: 'Save',
+    var names = { now: 'Now Playing', vibes: 'Vibe words', layers: 'Layers', sounds: 'Sound', library: 'Library', save: 'Save',
       vibe: 'Vibe', length: 'Vibe › Length' };
     var bits = S.state.split(':');
     var where = names[bits[0]] + (bits[1] ? ' › ' + ({ albums: 'Albums', loops: 'Loops', more: 'More', advanced: 'More › Advanced', album: 'an album', share: 'Share', free: 'outside an album' })[bits[1]] : '');

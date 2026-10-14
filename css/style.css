@@ -2240,9 +2240,10 @@ canvas.art { image-rendering: auto; }
    PAINTER 6 · NEXT PICKS  (design/next-picks.md)
    What new loops lean toward, in three places: Now Playing shows
    the picked values as outline pills (outside an album only), the
-   New loops panel lists five lines, and the Length picker sets
-   bars. Each line has its own colour; colours only outline pills
-   and colour the length slider and switch, text stays in the
+   Vibe panel (the brief's "New loops") lists five lines, and the
+   Length picker sets bars. Each line has its own colour; colours
+   only outline pills and colour the length slider and the lit ∞,
+   text stays in the
    theme's text colours. Nothing here scrolls.
    ============================================================ */
 .t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
@@ -2315,7 +2316,7 @@ canvas.art { image-rendering: auto; }
 .v-picks.pk-tight .pk-line { padding: 0; }
 .v-picks.pk-tight .pk-vals { row-gap: 2px; }
 
-/* ---------- the New loops panel ---------------------------------- */
+/* ---------- the Vibe panel ---------------------------------------- */
 /* Like the Info meta, the panel's text follows the size setting up to
    1.5x (--pk-cap); when the picks are long enough not to fit, the
    fit guard (picks.js) steps the cap down toward 1x, never below
@@ -2479,6 +2480,14 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
    underline; the slider shows no fill. −1, +1, the slider and typing
    stay live: each picks a number of bars. */
 .v-length.any .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; }
+/* ...and the thumb is hollow, a quiet ring in the secondary text
+   colour, so it doesn't read as a number picked. */
+.v-length.any .ln-slide input[type="range"]::-webkit-slider-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
+.v-length.any .ln-slide input[type="range"]::-moz-range-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
 .ln-step:disabled { opacity: 0.4; }
 
 @media (prefers-reduced-motion: reduce) {

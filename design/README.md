@@ -41,7 +41,7 @@ Mikey's answers to the brief's open questions (2026-10-14; written up in `next-p
 
 - **The vibe key:** the top-left key on Now Playing reads "vibe" (no count) and opens the panel, in an album too. The pills under the clock still show only outside an album.
 - **The panel is called Vibe** (place `vibe`, view `#viewVibe`; it was "New loops" / `picks`). No title on screen, only close; screen readers still hear "Vibe". The pills' name reads "Vibe: merry, tender, …". Its mood line opens the vibe words, whose close now always comes back to the panel.
-- **Length picker:** the Endless label and switch are one ∞ key (lit: a ring in the text color, the ∞ glowing in the length color), with an any key beside it. With any lit the number reads "any" and the slider shows no fill; −1, +1, the slider or typing pick a number. Done keeps any; cancel still restores what was there before.
+- **Length picker:** the Endless label and switch are one ∞ key (lit: a ring in the text color, the ∞ glowing in the length color), with an any key beside it. With any lit the number reads "any", the slider shows no fill and its thumb is hollow; −1, +1, the slider or typing pick a number. Done keeps any; cancel still restores what was there before.
 - **Measured** (`test-kit/picks_shots.mjs`, now shooting the picker with any lit and with ∞ lit): every target 44px or more, nothing scrolls or spills, no page errors, in all nine themes at 100–200%.
 
 ## What changed in v19 (Painter session 6, build v97)

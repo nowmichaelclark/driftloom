@@ -13,7 +13,7 @@ Playwright scripts for the design spec.
 |---|---|
 | bake.mjs | Runs the app (repo root) in headless Chromium at 340 × 780, seeds 30 loops and five albums, plays an album, visits every view at 100 / 130 / 150 / 200% and writes the spec from `spec.template.html` |
 | spec.template.html | The page around the phone: review controls, notes, the script that makes the keys work |
-| picks_shots.mjs | The next picks in the app itself (Now Playing outside an album, New loops, Length): one PNG per view, theme, size and set of picks, and a JSON line per shot measuring targets under 44px, scrollers, overflow and anything outside the panel |
+| picks_shots.mjs | The next picks in the app itself (Now Playing outside an album, the Vibe panel, Length): one PNG per view, theme, size and set of picks, and a JSON line per shot measuring targets under 44px, scrollers, overflow and anything outside the panel |
 | sheet18.mjs | Contact sheets of the v18 to v20 files through its `window.spec` (`--places`, `--themes`, `--sizes`, `--paused`, `--insets android`) |
 
 ## v17: the compliance measurements
