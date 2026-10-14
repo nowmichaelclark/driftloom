@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v98';
+const BUILD = 'v99';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -81,8 +81,6 @@ const state = {
   // The other next picks (design/next-picks.md): a tempo range and a
   // length in bars (or 'endless'); null is "any". Saved in the prefs.
   picks: { tempo: null, length: null },
-  // Where the Vibes list goes back to: Now Playing or the New loops panel.
-  vibesFrom: 'now',
   // The album most recently left, so Now Playing can offer the way back.
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
@@ -738,7 +736,7 @@ function setView(view) {
   if (view === 'save') library.renderSave();
   if (view === 'now') renderNow();
   if (view === 'vibes') renderVibes();
-  if (view === 'picks') picks.renderPanel();
+  if (view === 'vibe') picks.renderPanel();
   if (view === 'length') picks.renderLength();
   refreshCard();
   store.setPrefs({ view: state.lastView, edit: state.lastEdit });
@@ -746,7 +744,7 @@ function setView(view) {
 
 // ----------------------------------------------------------------- vibes
 
-// Queue item 38b. The Vibes key on Now Playing opens this view in its
+// Queue item 38b. The Vibe panel's mood line opens this view in its
 // place; Close goes back. No limit on how many: past five, each new loop
 // picks five of them (generator.js, `newSpec`).
 function renderVibes() {
@@ -784,7 +782,7 @@ function setVibes(list) {
   // The picks on Now Playing and the panel show the moods; nothing else
   // changes until the next new loop.
   if (state.view === 'now') renderNow();
-  if (state.view === 'picks') picks.renderPanel();
+  if (state.view === 'vibe') picks.renderPanel();
 }
 
 // ----------------------------------------------------------- next picks
@@ -793,7 +791,7 @@ function setPicks(next) {
   state.picks = picks.cleanPicks({ ...state.picks, ...next });
   store.setPrefs({ picks: state.picks });
   if (state.view === 'now') renderNow();
-  if (state.view === 'picks') picks.renderPanel();
+  if (state.view === 'vibe') picks.renderPanel();
 }
 
 // An unlit any key puts its line back to chance. Line two holds tempo and
@@ -803,23 +801,16 @@ function clearPickLine(line) {
   else if (line === 'pace') setPicks({ tempo: null, length: null });
 }
 
-function openVibesFrom(from) {
-  state.vibesFrom = from;
-  setView('vibes');
-}
-
 function toggleVibe(id) {
   setVibes(state.vibes.includes(id) ? state.vibes.filter((v) => v !== id) : [...state.vibes, id]);
 }
 
-// The key says how many are picked, so Now Playing shows that new loops
-// are leaning without opening the view.
+// The vibe key (Mikey, 2026-10-14): one word, "vibe", that opens the Vibe
+// panel; the panel and the pills say what is picked.
 function updateVibesKey() {
-  const n = state.vibes.length;
   const b = ui.el('vibesBtn');
-  // No-break spaces: the count stays with its word ("vibes · 2").
-  b.textContent = n ? `vibes\u00a0\u00b7\u00a0${n}` : 'vibes';
-  b.setAttribute('aria-label', n ? `Vibes, ${n} picked` : 'Vibes');
+  b.textContent = 'vibe';
+  b.setAttribute('aria-label', 'Vibe');
 }
 
 // ----------------------------------------------------------- now playing
@@ -1397,12 +1388,14 @@ function wire() {
     exportMidi: (spec) => exportMidi(cloneSpec(spec)),
   });
 
-  ui.el('vibesBtn').addEventListener('click', () => openVibesFrom('now'));
-  ui.el('vibesClose').addEventListener('click', () => setView(state.vibesFrom === 'picks' ? 'picks' : 'now'));
+  // The vibe key opens the Vibe panel; the vibe words (from its mood line)
+  // close back to it.
+  ui.el('vibesBtn').addEventListener('click', () => setView('vibe'));
+  ui.el('vibesClose').addEventListener('click', () => setView('vibe'));
   picks.wirePicks({
     state,
     setView,
-    openVibes: () => openVibesFrom('picks'),
+    openVibes: () => setView('vibes'),
     openLength: () => { picks.openLength(); setView('length'); },
     setLength: (length) => setPicks({ length }),
     clearLine: clearPickLine,

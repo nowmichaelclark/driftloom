@@ -122,7 +122,30 @@ middle viewport.
 - Opened while length is "any": it starts at the playing loop's length;
   cancel returns to "any".
 
-## Open questions (for Mikey)
+## Decided (Mikey, 2026-10-14)
+
+Both open questions are answered, and the panel is renamed. Built in
+build v99, spec v20. Where this section and the text above differ, this
+section wins.
+
+- **The way in during an album:** the picks on Now Playing stay hidden
+  in an album; to see them, leave the album first. The top-left key now
+  reads **"vibe"** (no count) and opens the panel, in an album and out
+  of one.
+- **The panel is called Vibe** (it was "New loops"). No title on screen,
+  only the close key on the right ("cleaner this way"); screen readers
+  still hear "Vibe". Its mood line opens the vibe words, whose close
+  comes back to the panel.
+- **Only tempo, or only length, back to "any":** each gets its own
+  **any** key inside its own picker. In the Length picker the Endless
+  label and switch are replaced by one **∞ key** that lights while
+  endless is on, which leaves room for an any key beside it. With any
+  lit the number reads "any" (the slider's thumb hollow); −1, +1, the
+  slider or typing a number pick one. Turning ∞ off goes to a number of
+  bars, not back to any. Tempo's any key comes with the tempo picker. Line two's any
+  key in the panel still clears both.
+
+## Open questions (as they were asked, now answered above)
 
 1. **The way in during an album.** The pills are hidden in an album, so
    they can't open New loops there. Painter's suggestion: keep today's

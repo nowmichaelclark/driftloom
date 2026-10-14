@@ -1,7 +1,9 @@
 // Next picks (Painter session 6, design/next-picks.md): what new loops lean
 // toward. Three places: Now Playing shows the picked values as pills (only
-// outside an album; in an album the album is what comes next), the New
-// loops panel lists the five lines, and the Length picker sets bars.
+// outside an album; in an album the album is what comes next), the Vibe
+// panel lists the five lines (the vibe key and the pills open it; it was
+// "New loops" in the brief, renamed by Mikey 2026-10-14), and the Length
+// picker sets bars.
 //
 // The five lines are moods, tempo and length (sharing a line), key, style
 // and voices. Moods are today's vibes (state.vibes). Length and tempo are
@@ -32,7 +34,9 @@ const LINES = [
 
 let api = null;
 // The Length picker works on a draft: done keeps it, cancel drops it.
-let draft = null;   // { bars, endless }
+// mode is 'bars', 'endless' or 'any'; bars is the number shown when the
+// mode is 'bars', and where −1, +1 and the slider start from otherwise.
+let draft = null;   // { bars, mode }
 let before = null;  // what length was when the picker opened
 
 // ------------------------------------------------------------- words
@@ -119,7 +123,7 @@ function fitPills(host) {
 }
 
 // Now Playing, outside an album: the picked values on up to two rows, all
-// one button that opens New loops. Only picked values show; with nothing
+// one button that opens the Vibe panel. Only picked values show; with nothing
 // picked, one quiet dashed "anything".
 export function renderNowPicks() {
   const { state } = api;
@@ -149,11 +153,11 @@ export function renderNowPicks() {
     b.append(row);
     spokenParts.push('anything');
   }
-  b.setAttribute('aria-label', `New loops: ${spokenParts.join(', ')}`);
+  b.setAttribute('aria-label', `Vibe: ${spokenParts.join(', ')}`);
   fitPills(b);
 }
 
-// ------------------------------------------------------ New loops panel
+// ------------------------------------------------------------ Vibe panel
 
 function lineButton(cls, onClick) {
   const b = document.createElement('button');
@@ -247,7 +251,7 @@ export function renderPanel() {
 // padding away.
 const CAPS = [1.5, 1.3, 1.15, 1];
 function fitPanel() {
-  const view = el('viewPicks');
+  const view = el('viewVibe');
   const list = el('picksList');
   const fits = () => list.scrollHeight <= list.clientHeight + 0.5;
   view.classList.remove('pk-tight');
@@ -295,18 +299,22 @@ function roughly([a, b]) {
   return lo === hi ? `≈${NB}${lo}${NB}${unit}` : `≈${NB}${lo}–${hi}${NB}${unit}`;
 }
 
+// −1, +1, the slider and typing all pick a number of bars, whatever the
+// mode was.
 function setDraftBars(n) {
   draft.bars = clampBars(n);
+  draft.mode = 'bars';
   renderLength();
 }
 
 export function openLength() {
   const { state } = api;
   before = state.picks.length;
-  const start = typeof before === 'number' ? before
-    : before === 'endless' ? (state.spec ? state.spec.bars : 16)
-      : (state.spec ? state.spec.bars : 16);
-  draft = { bars: clampBars(start), endless: before === 'endless' };
+  // From endless or any, −1, +1 and the slider start at the playing
+  // loop's length.
+  const start = typeof before === 'number' ? before : (state.spec ? state.spec.bars : 16);
+  const mode = before === 'endless' ? 'endless' : before == null ? 'any' : 'bars';
+  draft = { bars: clampBars(start), mode };
   renderLength();
 }
 
@@ -314,14 +322,20 @@ export function renderLength() {
   if (!draft) return;
   const num = el('lenNum');
   const slide = el('lenSlide');
-  const { bars, endless } = draft;
-  el('viewLength').classList.toggle('endless', endless);
-  if (document.activeElement !== num || endless) num.value = endless ? '∞' : group(bars);
+  const { bars, mode } = draft;
+  const endless = mode === 'endless';
+  const any = mode === 'any';
+  const view = el('viewLength');
+  view.classList.toggle('endless', endless);
+  view.classList.toggle('any', any);
+  // Endless shows ∞ and "endless"; any shows "any" alone, and typing a
+  // number from there picks it.
+  if (document.activeElement !== num || endless) num.value = endless ? '∞' : any ? 'any' : group(bars);
   num.disabled = endless;
-  num.setAttribute('aria-label', endless ? 'Bars: endless' : 'Bars');
+  num.setAttribute('aria-label', endless ? 'Bars: endless' : any ? 'Bars: any' : 'Bars');
   const time = el('lenTime');
-  time.textContent = endless ? 'endless' : `${bars === 1 ? 'bar' : 'bars'} · `;
-  if (!endless) {
+  time.textContent = endless ? 'endless' : any ? '\u00a0' : `${bars === 1 ? 'bar' : 'bars'} · `;
+  if (mode === 'bars') {
     const nw = document.createElement('span');
     nw.className = 'nw';
     nw.textContent = roughly(playTime(bars));
@@ -334,13 +348,15 @@ export function renderLength() {
   slide.value = String(s);
   const w = slide.clientWidth || 280;
   slide.style.setProperty('--tile', `${((w - 24) / STOPS).toFixed(3)}px`);
-  slide.style.setProperty('--fill', `${(12 + (w - 24) * (s / STOPS)).toFixed(2)}px`);
-  slide.setAttribute('aria-valuetext', endless ? 'endless' : lengthText(bars).replace(/ /g, ' '));
+  slide.style.setProperty('--fill', any ? '0px' : `${(12 + (w - 24) * (s / STOPS)).toFixed(2)}px`);
+  slide.setAttribute('aria-valuetext', endless ? 'endless' : any ? 'any' : lengthText(bars).replace(/ /g, ' '));
   for (const tick of el('lenTicks').children) {
-    tick.classList.toggle('on', Math.abs(Number(tick.dataset.stop) - s) < 1e-9);
+    tick.classList.toggle('on', !any && Math.abs(Number(tick.dataset.stop) - s) < 1e-9);
   }
-  const sw = el('lenEndless');
-  sw.setAttribute('aria-checked', endless ? 'true' : 'false');
+  el('lenEndless').setAttribute('aria-pressed', endless ? 'true' : 'false');
+  const anyKey = el('lenAny');
+  anyKey.setAttribute('aria-pressed', any ? 'true' : 'false');
+  anyKey.classList.toggle('armed', any);
   fitNumber();
 }
 
@@ -358,35 +374,36 @@ function commitTyped() {
   if (!draft) return;
   const num = el('lenNum');
   const digits = num.value.replace(/[^0-9]/g, '');
-  if (digits) draft.bars = clampBars(digits);
+  if (digits) { draft.bars = clampBars(digits); draft.mode = 'bars'; }
   renderLength();
 }
 
 export function wirePicks(handlers) {
   api = handlers;
-  el('nowPicks').addEventListener('click', () => api.setView('picks'));
+  el('nowPicks').addEventListener('click', () => api.setView('vibe'));
   el('picksClose').addEventListener('click', () => api.setView('now'));
 
   el('lenCancel').addEventListener('click', () => {
     // Nothing was changed while the picker was open, so leaving it is
     // enough: the length is still what it was before, "any" included.
     draft = null;
-    api.setView('picks');
+    api.setView('vibe');
   });
   el('lenDone').addEventListener('click', () => {
     if (document.activeElement === el('lenNum')) commitTyped();
-    const value = draft.endless ? 'endless' : draft.bars;
+    const value = draft.mode === 'endless' ? 'endless' : draft.mode === 'any' ? null : draft.bars;
     draft = null;
     api.setLength(value);
-    api.setView('picks');
+    api.setView('vibe');
   });
   el('lenDown').addEventListener('click', () => setDraftBars(draft.bars - 1));
   el('lenUp').addEventListener('click', () => setDraftBars(draft.bars + 1));
 
   const num = el('lenNum');
   num.addEventListener('focus', () => {
-    if (draft.endless) return;
-    num.value = String(draft.bars);
+    if (draft.mode === 'endless') return;
+    // From any, the field starts empty (leaving it empty keeps any).
+    num.value = draft.mode === 'any' ? '' : String(draft.bars);
     num.select();
   });
   num.addEventListener('input', () => {
@@ -417,8 +434,16 @@ export function wirePicks(handlers) {
     setDraftBars(2 ** Math.max(0, Math.min(STOPS, next)));
   });
 
+  // The ∞ key lights while endless is on; pressed again, it goes back to
+  // a number of bars. The any key lights while length is left to chance;
+  // pressing it lit does nothing, like the panel's any keys.
   el('lenEndless').addEventListener('click', () => {
-    draft.endless = !draft.endless;
+    draft.mode = draft.mode === 'endless' ? 'bars' : 'endless';
+    renderLength();
+  });
+  el('lenAny').addEventListener('click', () => {
+    if (draft.mode === 'any') return;
+    draft.mode = 'any';
     renderLength();
   });
 }

@@ -4,7 +4,7 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 
 ## What this is
 
-- **Current file:** `driftloom_v19.html` (v19, Painter session 6: the next picks). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
+- **Current file:** `driftloom_v20.html` (v20, Painter session 6: the vibe key, and any and ∞ in the Length picker; v19 is in `archive/`). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
 - **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec stays in step with the app as long as it is baked again after every change to the look.
 - **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) are kept unchanged in `archive/driftloom_v17_library.html`.
 
@@ -19,8 +19,8 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 ```
 cd design/test-kit
 npm install            # Playwright; if the sandbox already has a Chromium, pin playwright to its version
-node bake.mjs          # writes ../driftloom_v19.html
-node sheet18.mjs ../driftloom_v19.html out/sheet.png --places layers --themes all
+node bake.mjs          # writes ../driftloom_v20.html
+node sheet18.mjs ../driftloom_v20.html out/sheet.png --places layers --themes all
 node picks_shots.mjs out/picks --themes all --sizes 100,200   # the next picks in the app, measured
 ```
 
@@ -33,7 +33,16 @@ The bake prints the sample loop, the zone heights it measured and a check that t
 - **Baked:** every view's markup and card at each text size. The app fits the Info card in script, so each text size is its own capture; the rest follows the stylesheet live.
 - **What the bake changes in the app's markup:** each canvas becomes a picture of what it drew, inputs keep their values as attributes, the moving marks (lit cell, halo column, clock) are cleared for the page's script to put back, and scripts are left out.
 - **Three changes the bake makes to the stylesheet** (noted at the top of the file): fonts inlined; the short-screen rule (`max-height: 700px`) switched off, since the spec phone is never that short; the reduced-motion rules copied under `html.sim-reduced-motion` for the review switch.
-- **For scripts:** `window.spec` has `show(place)`, `setTheme(cls)`, `setSize(pct)`, `setPlaying(bool)`, `audit()` and the lists of places, themes and sizes. The address bar takes the same: `driftloom_v19.html#view=library:loops&theme=t-dawn&size=150&paused&insets=android`.
+- **For scripts:** `window.spec` has `show(place)`, `setTheme(cls)`, `setSize(pct)`, `setPlaying(bool)`, `audit()` and the lists of places, themes and sizes. The address bar takes the same: `driftloom_v20.html#view=library:loops&theme=t-dawn&size=150&paused&insets=android`.
+
+## What changed in v20 (Painter session 6, build v99)
+
+Mikey's answers to the brief's open questions (2026-10-14; written up in `next-picks.md`, "Decided"):
+
+- **The vibe key:** the top-left key on Now Playing reads "vibe" (no count) and opens the panel, in an album too. The pills under the clock still show only outside an album.
+- **The panel is called Vibe** (place `vibe`, view `#viewVibe`; it was "New loops" / `picks`). No title on screen, only close; screen readers still hear "Vibe". The pills' name reads "Vibe: merry, tender, …". Its mood line opens the vibe words, whose close now always comes back to the panel.
+- **Length picker:** the Endless label and switch are one ∞ key (lit: a ring in the text color, the ∞ glowing in the length color), with an any key beside it. With any lit the number reads "any", the slider shows no fill and its thumb is hollow; −1, +1, the slider or typing pick a number. Done keeps any; cancel still restores what was there before.
+- **Measured** (`test-kit/picks_shots.mjs`, now shooting the picker with any lit and with ∞ lit): every target 44px or more, nothing scrolls or spills, no page errors, in all nine themes at 100–200%.
 
 ## What changed in v19 (Painter session 6, build v97)
 
@@ -62,6 +71,7 @@ The chosen next-picks design (`next-picks.md`) is in the app and baked as three 
 
 ## Reference images (`reference/`)
 
+- `v20_vibe_any_infinity_100.png`, `v20_vibe_any_infinity_200.png`: Now Playing outside an album, the Vibe panel, and the Length picker with any lit and with ∞ lit, in all nine themes, at 100% and 200% text (from the app, `test-kit/picks_shots.mjs`).
 - `v19_next_picks_nine_themes_100.png`, `v19_next_picks_nine_themes_200.png`: the three next-picks places (Now Playing outside an album, New loops, Length) in all nine themes, at 100% and 200% text, baked from the app.
 - `next_picks_1_everyday_nocturne.png`, `next_picks_2_long_ellipsis_dawn.png`, `next_picks_3_nothing_endless_dark.png`: the brief's three renders of the chosen next picks (the brief's text wins where they differ).
 - `v18_nine_themes_layers.png`: Layers in all nine themes.
@@ -86,7 +96,7 @@ The chosen next-picks design (`next-picks.md`) is in the app and baked as three 
 
 ## Open items
 
-0. **Next picks, open questions (from the brief):** the way into New loops during an album (today's Vibes key, renamed "new loops", only in an album?), and how to set only tempo or only length back to "any". Pickers for tempo, key, style and voices are not designed yet.
+0. **Next picks, still to design:** the tempo picker (with its own any key), and the key, style and voices pickers. (The brief's two open questions were answered in v20.)
 
 1. **Measure the app against the standard.** Port the v17 test kit (`test-kit/`) to the v18 file: one phone, a theme at a time, through `window.spec`. Since the file is the app's own drawing, that measures the app. Until then the v17 numbers describe the v17 drawings, not the app.
 2. **Decide: the Info card drops lines when it is full.** v17's rule was that nothing in it is ever dropped (lines took turns, the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away.

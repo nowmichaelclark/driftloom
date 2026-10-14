@@ -54,7 +54,7 @@
              item 38b); the album stays centred between the key and a
              spacer as wide as the key. -->
         <div class="np-head">
-          <button id="vibesBtn" type="button" class="vkey np-vibes">vibes</button>
+          <button id="vibesBtn" type="button" class="vkey np-vibes" aria-label="Vibe">vibe</button>
           <div id="nowAlbum" class="np-top" hidden>
             <div id="nowAlbumName" class="np-album"></div>
             <div class="np-pos"><span id="nowDots" class="np-dots" aria-hidden="true"></span><span id="nowOf" class="np-of"></span></div>
@@ -65,15 +65,16 @@
           <div class="np-bar" aria-hidden="true"><i id="nowFill"></i></div>
           <div id="nowNext" class="np-next"></div>
           <!-- Outside an album, what new loops lean toward, as pills: one
-               button that opens New loops (design/next-picks.md). -->
+               button that opens the Vibe panel (design/next-picks.md). -->
           <button id="nowPicks" type="button" class="np-picks" hidden></button>
         </div>
         <button id="nowAction" type="button" class="vkey np-action" hidden></button>
       </div>
 
-      <!-- Vibes: every vibe, two columns, tap to pick. The one view that
-           scrolls whole (there are many); its header row stays put, Close
-           where the Vibes key was. -->
+      <!-- The vibe words: every vibe, two columns, tap to pick. Opened from
+           the Vibe panel's mood line; close goes back to the panel. The one
+           view that scrolls whole (there are many); its header row stays
+           put. -->
       <div id="viewVibes" class="view v-vibes" data-view="vibes" role="region" aria-label="Vibes" hidden>
         <div class="vb-head">
           <button id="vibesClose" type="button" class="vkey np-vibes">close</button>
@@ -83,11 +84,14 @@
         <div id="vibesList" class="vb-list" role="group" aria-label="Vibes for new loops"></div>
       </div>
 
-      <!-- New loops: five lines of picks, each with an any key. Moods open
-           the Vibes list; length opens the Length picker. -->
-      <div id="viewPicks" class="view v-picks" data-view="picks" role="region" aria-label="New loops" hidden>
+      <!-- Vibe: what new loops lean toward, five lines of picks, each with
+           an any key. The vibe key and the pills on Now Playing open it.
+           Moods open the vibe words; length opens the Length picker. No
+           title on screen (Mikey, 2026-10-14: cleaner); screen readers get
+           one. -->
+      <div id="viewVibe" class="view v-picks" data-view="vibe" role="region" aria-label="Vibe" hidden>
         <div class="page-head pk-head">
-          <h2 class="page-title" tabindex="-1">New loops</h2>
+          <h2 class="page-title vh" tabindex="-1">Vibe</h2>
           <button id="picksClose" type="button" class="vkey">close</button>
         </div>
         <div id="picksList" class="pk-list"></div>
@@ -115,9 +119,11 @@
             <input id="lenSlide" type="range" min="0" max="15" step="any" value="4" aria-label="Length">
             <div id="lenTicks" class="ln-ticks" aria-hidden="true"><span data-stop="0">1</span><span data-stop="4">16</span><span data-stop="8">256</span><span data-stop="12">4k</span><span data-stop="15">32k</span></div>
           </div>
-          <div class="ln-endless">
-            <span class="ln-end-name"><span aria-hidden="true">∞</span> Endless</span>
-            <button id="lenEndless" type="button" class="tgl" role="switch" aria-checked="false" aria-label="Endless"><i aria-hidden="true"></i></button>
+          <!-- Endless is one key, the ∞, lit while on; any puts length back
+               to chance (Mikey, 2026-10-14). -->
+          <div class="ln-keys">
+            <button id="lenEndless" type="button" class="vkey ln-inf" aria-pressed="false" aria-label="Endless"><span aria-hidden="true">∞</span></button>
+            <button id="lenAny" type="button" class="vkey word pk-anykey" aria-pressed="false" aria-label="Any length">any</button>
           </div>
         </div>
       </div>
