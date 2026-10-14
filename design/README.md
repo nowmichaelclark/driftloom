@@ -71,6 +71,7 @@ The chosen next-picks design (`next-picks.md`) is in the app and baked as three 
 
 ## Reference images (`reference/`)
 
+- `v20_vibe_any_infinity_100.png`, `v20_vibe_any_infinity_200.png`: Now Playing outside an album, the Vibe panel, and the Length picker with any lit and with ∞ lit, in all nine themes, at 100% and 200% text (from the app, `test-kit/picks_shots.mjs`).
 - `v19_next_picks_nine_themes_100.png`, `v19_next_picks_nine_themes_200.png`: the three next-picks places (Now Playing outside an album, New loops, Length) in all nine themes, at 100% and 200% text, baked from the app.
 - `next_picks_1_everyday_nocturne.png`, `next_picks_2_long_ellipsis_dawn.png`, `next_picks_3_nothing_endless_dark.png`: the brief's three renders of the chosen next picks (the brief's text wins where they differ).
 - `v18_nine_themes_layers.png`: Layers in all nine themes.
