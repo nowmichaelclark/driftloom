@@ -12,6 +12,12 @@ For every loop rendered as 'mono' and as one or more space recipes:
   balance       L minus R level over the whole render, dB
   bal_p95       95th percentile of |L - R| level over 2 s windows, dB
   cost          render wall time against mono (a rough proxy)
+  bounce        how fast the image jumps: 90th percentile of the change in
+                L-R level from one 100 ms window to the next, above 200 Hz, dB
+                (round 1's ping-pong and per-hit placement read high here)
+  drift_bal     how far the image travels slowly: the 5th-95th percentile
+                range of L-R level over 4 s windows, dB
+  drift_width   the same for side/mid above 200 Hz over 4 s windows, dB
 """
 import json, os, sys
 import numpy as np
@@ -76,7 +82,23 @@ for pick, g in groups.items():
             a, b = np.sum(L[i:i + w2] ** 2), np.sum(R[i:i + w2] ** 2)
             if a > 1e-7 and b > 1e-7:
                 bals.append(abs(db(a, b)))
+        Lh, Rh = hp200(L), hp200(R)
+        def lvl(x, w):
+            k = int(w * RATE)
+            m = len(x) // k
+            return np.sum(x[: m * k].reshape(m, k) ** 2, axis=1)
+        l1, r1 = lvl(Lh, 0.1), lvl(Rh, 0.1)
+        ok1 = (l1 + r1) > np.median(l1 + r1) * 0.03
+        b1 = db(l1, r1)
+        jumps = np.abs(np.diff(b1))[(ok1[1:] & ok1[:-1])]
+        l4, r4 = lvl(Lh, 4.0), lvl(Rh, 4.0)
+        s4, m4 = lvl((Lh - Rh) / 2, 4.0), lvl((Lh + Rh) / 2, 4.0)
+        ok4 = (l4 + r4) > np.median(l4 + r4) * 0.03
+        b4, w4 = db(l4, r4)[ok4], db(s4, m4)[ok4]
         rows.append({
+            'bounce': round(float(np.percentile(jumps, 90)), 2) if len(jumps) else None,
+            'drift_bal': round(float(np.percentile(b4, 95) - np.percentile(b4, 5)), 2) if len(b4) > 2 else None,
+            'drift_width': round(float(np.percentile(w4, 95) - np.percentile(w4, 5)), 2) if len(w4) > 2 else None,
             'pick': pick, 'lead': r['lead'], 'recipe': tag, 'space': r['space'],
             'fold_dLU': round(meter.integrated_loudness(fold) - lm1, 2),
             'fold_resid': round(db(np.sum((fold - mm) ** 2), np.sum(mm ** 2)), 1),
@@ -94,14 +116,15 @@ for pick, g in groups.items():
         })
 
 json.dump(rows, open(sys.argv[3], 'w'), indent=1)
-hdr = f"{'loop':14} {'recipe':9} {'fold dLU':>8} {'resid':>6} {'worst oct':>9} {'st dLU':>7} {'S/M':>6} {'S/M>200':>7} {'lowS':>6} {'corr':>5} {'c05':>5} {'bal':>5} {'b95':>5} {'cost':>5}"
+hdr = f"{'loop':14} {'recipe':11} {'fold dLU':>8} {'resid':>6} {'worst oct':>9} {'st dLU':>7} {'S/M':>6} {'S/M>200':>7} {'lowS':>6} {'corr':>5} {'c05':>5} {'bal':>5} {'b95':>5} {'cost':>5} {'bnc':>5} {'dBal':>5} {'dW':>5}"
 print(hdr)
 for r in sorted(rows, key=lambda r: (r['pick'], r['recipe'])):
     worst = max(r['fold_bands'].values(), key=abs)
-    print(f"{str(r['pick'])+' '+r['lead']:14} {r['recipe']:9} {r['fold_dLU']:8.2f} {r['fold_resid']:6.1f} {worst:9.2f} {r['st_dLU']:7.2f} {r['side_mid']:6.1f} {r['side_mid_hi']:7.1f} {r['low_side']:6.1f} {r['corr_med']:5.2f} {r['corr_p05']:5.2f} {r['balance']:5.2f} {r['bal_p95']:5.1f} {r['cost']:5.2f}")
-for rec in ('room', 'placed', 'drifting', 'wide', 'widedrift', 'wideC', 'widedriftC'):
+    f = lambda v: f'{v:5.2f}' if v is not None else '    -'
+    print(f"{str(r['pick'])+' '+r['lead']:14} {r['recipe']:11} {r['fold_dLU']:8.2f} {r['fold_resid']:6.1f} {worst:9.2f} {r['st_dLU']:7.2f} {r['side_mid']:6.1f} {r['side_mid_hi']:7.1f} {r['low_side']:6.1f} {r['corr_med']:5.2f} {r['corr_p05']:5.2f} {r['balance']:5.2f} {r['bal_p95']:5.1f} {r['cost']:5.2f} {f(r['bounce'])} {f(r['drift_bal'])} {f(r['drift_width'])}")
+for rec in sorted({r['recipe'] for r in rows}):
     sel = [r for r in rows if r['recipe'] == rec]
     if not sel:
         continue
     med = lambda k: float(np.median([r[k] for r in sel if r[k] is not None]))
-    print(f"median {rec:9} fold dLU {med('fold_dLU'):.2f}  resid {med('fold_resid'):.1f}  S/M {med('side_mid'):.1f}  S/M>200 {med('side_mid_hi'):.1f}  lowS {med('low_side'):.1f}  corr {med('corr_med'):.2f}  c05 {med('corr_p05'):.2f}  cost {med('cost'):.2f}")
+    print(f"median {rec:11} fold dLU {med('fold_dLU'):.2f}  resid {med('fold_resid'):.1f}  S/M {med('side_mid'):.1f}  S/M>200 {med('side_mid_hi'):.1f}  lowS {med('low_side'):.1f}  corr {med('corr_med'):.2f}  c05 {med('corr_p05'):.2f}  cost {med('cost'):.2f}  bounce {med('bounce'):.2f}  dBal {med('drift_bal'):.2f}  dW {med('drift_width'):.2f}")

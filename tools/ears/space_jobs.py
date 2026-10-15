@@ -1,4 +1,15 @@
-"""Space recipes for the stereo sketch: per-loop draws from each recipe's ranges."""
+"""Space recipes for the stereo sketch: per-loop draws from each recipe's ranges.
+
+Round 1 (Ears 2): room, placed, drifting, wide, widedrift, from the seed.
+Round 2 (Ears 4): wide2 and drift2, from the seed and what the loop is
+(a scan.mjs row): heavy parts centered and widened symmetrically, only
+light parts placed and by less, no ping-pong to speak of, sparse and wet
+loops near mono, and drifting that is slow (a breath of 60-140 s, a light
+part crossing over 30-60 s).
+
+Usage: python3 space_jobs.py SEEDS.json OUT.json PICKS SECONDS [RECIPES] [nomono]
+SEEDS.json is {pick: seed} or a scan.mjs list (needed for round 2).
+"""
 import json, random, sys
 
 def draw(seed):
@@ -31,13 +42,57 @@ def draw(seed):
     widedrift = {**wide, 'move': wmove}
     return {'room': room, 'placed': placed, 'drifting': drifting, 'wide': wide, 'widedrift': widedrift}
 
+LIGHT_TEXTURE = {'chime', 'bells', 'drops'}
+
+
+def width_scale(info):
+    """How much width a loop takes: sparse loops little, wet sparse loops less."""
+    nps = sum(info['perSec'].values())
+    dens = min(1.0, max(0.0, (nps - 0.5) / 5))
+    w = 0.25 + 0.75 * dens
+    if info['space'] > 0.7:
+        w *= 0.75
+    return round(w, 2), dens
+
+
+def draw2(seed, info):
+    r = random.Random(seed ^ 0x5BAC2)
+    u = r.uniform
+    w, dens = width_scale(info)
+    light = info.get('texture') in LIGHT_TEXTURE
+    side = r.choice([-1, 1])
+    hat = round(side * w * u(0.08, 0.15), 2)
+    drum = {'hat': hat, 'ohat': hat, 'shaker': round(hat * 0.7, 2), 'jingle': round(hat * 0.7, 2), 'ojingle': round(hat * 0.7, 2)}
+    pan = {'chords': 0, 'melody': 0, 'texture': round(-side * w * u(0.1, 0.25), 2) if light else 0}
+    wide2 = {
+        'verbWidth': round(w * u(0.55, 0.8), 2), 'echoWidth': round(w * u(0.15, 0.3), 2),
+        'pan': pan, 'drumPan': drum,
+        'spread': {'chords': round(w * u(0.3, 0.5), 2), 'texture': round(w * u(0.35, 0.6), 2) if not light else round(w * u(0.15, 0.3), 2),
+                   'melody': round(w * u(0.0, 0.12), 2)},
+        'ceil': -7.0 if dens > 0.5 else (-9.0 if dens > 0.15 else -12.0),
+        'w': w,
+    }
+    drift2 = json.loads(json.dumps(wide2))
+    drift2['breath'] = {'period': round(u(60, 140), 1), 'depth': round(u(0.3, 0.45), 2)}
+    cross = round(u(60, 120), 1)  # a full sway: across in 30-60 s
+    if light:
+        drift2['move'] = {'texture': {'depth': round(min(w * u(0.2, 0.3), 0.45 - abs(pan['texture'])), 2), 'period': cross}}
+    if info.get('drums'):
+        drift2['drumMove'] = {'depth': round(min(w * u(0.1, 0.18), 0.3 - abs(hat)), 2), 'period': cross}
+    return {'wide2': wide2, 'drift2': drift2}
+
+
 if __name__ == '__main__':
-    seeds = json.load(open(sys.argv[1]))  # {pick: seed}
+    raw = json.load(open(sys.argv[1]))
+    info = {str(x['pick']): x for x in raw} if isinstance(raw, list) else None
+    seeds = {k: v['seed'] for k, v in info.items()} if info else raw  # {pick: seed}
     picks = [int(p) for p in sys.argv[3].split(',')]
     secs = float(sys.argv[4])
     jobs = []
     for p in picks:
         rec = draw(seeds[str(p)])
+        if info:
+            rec.update(draw2(seeds[str(p)], info[str(p)]))
         if len(sys.argv) <= 6 or sys.argv[6] != 'nomono':
             jobs.append({'pick': p, 'seconds': secs, 'tag': 'mono'})
         for name in (sys.argv[5].split(',') if len(sys.argv) > 5 else ('room', 'placed', 'drifting')):

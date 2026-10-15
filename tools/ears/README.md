@@ -18,12 +18,17 @@ audio.
 | `sections.py` | Floor drops (the low end out for 2 s or more while the rest plays) and full stops (the whole mix 30 dB down for 1 s or more) |
 | `summarize.py`, `summarize2.py` | Per-album medians; batch two's tables in batch one's definitions |
 | `spec.py` | A 60-second log-frequency spectrogram, for looking at by eye |
-| `render2.mjs` | `render.mjs` with a job list (`node render2.mjs REPO OUTDIR JOBS.json`): per job a corpus index, length, tag, `proto` (prototype switches) and `space` (a space recipe for a sketch synth); writes 32-bit float WAVs and records refused notes per voice, chord changes a minute and render time |
+| `render2.mjs` | `render.mjs` with a job list (`node render2.mjs REPO OUTDIR JOBS.json`): per job a corpus index, length, tag, `proto` (prototype switches) and `space` (a space recipe for a sketch synth); writes 32-bit float WAVs and records refused notes and asks per voice, chord changes a minute and render time. Ears 4 added `stems` (a second WAV with each layer and each sketch on its own channel), `then`/`thenAt` (load another loop partway through, as Next does), `reserve` (price every note as if N more units were spent), sketch yields (a sketch that asks for room and holds none is counted apart from refused notes) and `PLAYWRIGHT_ROOT` |
+| `scan.mjs` | The corpus without rendering: per loop its profile, tempo, length, notes a second per layer, drums or not, voices, reverb space and chord changes, for picking busy and sparse loops (`node scan.mjs REPO > scan.json`) |
+| `sketch_check.py` | What a sketch adds and takes, against the same loop without it: added level, its loudest and median 2 s window against the loop, bands, refused notes per voice (any voice that loses a note is listed), each layer's own level from the stems, cost |
+| `warmth.py` | How warm a stab is, the same way on a record and a sketch: centroid, 2–4 kHz and 1–2 kHz against 250 Hz–1 kHz, attack rise time |
+| `seq_clips.py` | Clips from a list of segments (any files, any start and length), each matched to -18 LUFS, with timestamps |
 | `clips.py` | Before/after clips from a `render2.mjs` index (tags `<sound>-before`, `<sound>-after`): loudness-matched MP3s and what moved (bands, added level, refused notes) |
-| `space_jobs.py` | Draws each loop's space recipe (room, placed, drifting, wide, widedrift) from its seed and writes `render2.mjs` jobs; needs a `{index: seed}` file from a scan render |
-| `stereo_guard.py` | The stereo guards against the mono render: fold loudness and tone, side/mid (whole, above 200 Hz, below 120 Hz), correlation, balance, cost |
-| `width_ceiling.py` | The width ceiling, offline: turns the side down where it rises above a target against the mid; the fold is unchanged |
-| `stereo_clips.py` | Mono, room, wide and wide + drifting of one loop in one loudness-matched clip |
+| `space_jobs.py` | Draws each loop's space recipe from its seed and writes `render2.mjs` jobs. Round 1: room, placed, drifting, wide, widedrift. Round 2 (Ears 4, needs a `scan.mjs` file instead of `{index: seed}`): wide2 and drift2, scaled by how busy and how wet the loop is |
+| `stereo_guard.py` | The stereo guards against the mono render: fold loudness and tone, side/mid (whole, above 200 Hz, below 120 Hz), correlation, balance, cost; Ears 4 added bounce (how fast the image jumps) and slow drift (how far balance and width travel over 4 s windows) |
+| `scale_side.py` | A recipe's width turned up or down offline: every stereo move in the sketch is linear in its width settings, so scaling a render's side by K is the same as scaling them all by K (run before the ceiling) |
+| `width_ceiling.py` | The width ceiling, offline: turns the side down where it rises above a target against the mid; the fold is unchanged. `auto` takes each recipe's own target |
+| `stereo_clips.py` | Mono, room, wide and wide + drifting of one loop in one loudness-matched clip (any order of tags with lengths, and a start offset) |
 
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median
@@ -42,4 +47,14 @@ from run to run at about -79 dB (the wobble's LFOs).
 `sketches/` holds offline sketches used only to render clips, as patches
 against `main` at the commit named inside. Apply one to a local copy, never
 to the app: `space-sketch.patch` (Ears 2) adds the stereo space recipes
-behind `globalThis.SPACE` (see `render2.mjs`).
+behind `globalThis.SPACE` (see `render2.mjs`). `ears4-sketch.patch`
+(Ears 4, against `a23153d`) holds everything Ears 4 rendered: the space
+sketch with round 2's breath and drifting light kit, and the tuned dub
+stab, organ, wash and long chords behind `globalThis.PROTO` (`dubStab`,
+`organ`, `wash`, `longChords`: `'on'` for the tuned sketch, `'r1'` for
+round 1's, or a kind to force one draw, such as `dubStab: 'busy'` or
+`longChords: 'whole'`).
+
+Render cost: two renders at once on a two-core workspace take about
+1–4 s per second of audio; the densest loops (cinder #16) about 4 s. Keep
+150 s renders to loops that need them.

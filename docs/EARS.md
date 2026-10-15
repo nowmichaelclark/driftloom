@@ -7,7 +7,9 @@ difference with a yardstick a hands session can test against. Mikey is
 still the one who decides whether anything sounds good.
 
 The full reports are in the Project knowledge: `claude/ears-batch-1.md`
-(20 albums), `claude/ears-batch-2.md` (12 more), `claude/ears-sessions.md`
+(20 albums), `claude/ears-batch-2.md` (12 more), `claude/ears-batch-3.md`
+and `claude/ears-batch-4.md` (the sketches and stereo, by round),
+`claude/ears-sessions.md`
 (how to run an ears session), `claude/ears-prototypes.md`, and the raw
 measurements in `claude/ears-data.csv`. The tools are in `tools/ears/`.
 
@@ -68,6 +70,26 @@ from the measurements: the wash's fixed level is inaudible under a beat
 (-28 dB at its peak), and the organ loses about half its chords to the
 voice budget in a dense loop. Verdicts: `claude/ears-batch-3.md`.
 
+### The tune round (Ears 4, 2026-10-15)
+
+Each of the four reworked from Mikey's notes (sketch:
+`tools/ears/sketches/ears4-sketch.patch`; report and verdicts:
+`claude/ears-batch-4.md`). Checked on nine loops at 60 s, four at 150 s
+and four that load a second loop partway through: **no sketch refused a
+note, its own or any other part's**, and every layer's own level was
+unchanged (per-layer stems, `sketch_check.py`).
+
+| Sketch | What changed | Measured |
+|---|---|---|
+| dubStab | How often drawn per loop (rare, sparse, some; busy only on busy loops), only over a groove; a triangle and soft saw through a closing lowpass, a slower attack, a darker echo; asks the budget for room and holds none | Centroid 320–338 Hz (round 1: 740–860; "Quadrant Dub I": 377); attack 13–18 ms (round 1: 1–3; the record: 12); adds -11 to -20 dB against the loop |
+| organ | One instrument per loop outside the voice budget: a registration from nine, a slow rotary-style chorus, a little drive, a swell, a key click in some loops; lets go in full stops | Zero refusals (round 1: 5–24 of its chords per loop, and other parts' notes); -12 to -20 dB against the loop |
+| wash | Its level follows the loop's own layers, aimed 9–13 dB under | Loudest 2 s window under a beat -8 dB (round 1: -22) |
+| longChords | An option: today's lengths 56%, twice 16%, 8 s 10%, 16 s 9%, the whole loop 9%; calm loops lean long, driving ones away | Median chord changes a minute 22.5 → 19.4 (round 1: 16.4); one-chord loops 11 → 31 of 400 |
+
+For the core, if approved: the organ is fixed overhead outside the voice
+budget (reserving room for it inside would refuse other notes: 4–40 more
+per loop); the stab is a budget probe that holds nothing.
+
 ## Stereo, measured (Ears 2, 2026-10-15)
 
 **The goal (Mikey, 2026-10-15):** stereo becomes the default once the
@@ -101,6 +123,30 @@ Whole-mix side/mid reads lower than records (-18 against -8/-9) because
 Driftloom's energy sits in the centered bass; above 200 Hz it matches.
 Recipes, clips and the sketch: `claude/ears-batch-3.md` and
 `claude/ears-space-sketch.md` in the Project.
+
+### Round 2 (Ears 4, 2026-10-15)
+
+From Mikey's round 1 notes (mono won every loop; bouncing and a heavy
+part leaning to one ear annoyed; sparse loops wanted no width; drifting
+could do more): the ping-pong narrowed to 0.15–0.3 and the light kit
+placed as one, by 0.08–0.15; chords, pads, melody and bass never placed,
+only widened symmetrically; every width scaled by how busy and how wet the
+loop is, with a tighter ceiling on sparse loops; and a slow breath on all
+the side sends (60–140 s) with light parts crossing over 30–60 s. Also
+rendered 1.8 times wider (exact: every move is linear in its width).
+Twelve loops, eight at 150 s (`stereo_guard.py`, which now also measures
+bounce and slow drift):
+
+| Measure (median) | Round 1 wide | Round 2 | Round 2 wider |
+|---|---|---|---|
+| Side/mid above 200 Hz | -10.1 dB | -19.3 dB | -14.3 dB |
+| Correlation, 5th percentile | 0.68 | 0.96 | 0.88 |
+| Bounce (image jump per 100 ms, 90th pct) | 4.0 dB | 1.8 dB | 2.8 dB |
+| Balance travel over 4 s windows | 3.1 dB | 0.6 dB | 1.0 dB |
+
+Every guard passes in both: fold within 0.10 LU and 0.33 dB per octave,
+side 23.7 dB or more under mid below 120 Hz, balance within 0.26 dB, the
+same refused notes as mono. Mikey's verdicts: `claude/ears-batch-4.md`.
 
 ## The album list (2026-10-15)
 
