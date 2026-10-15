@@ -29,6 +29,18 @@ audio.
 | `scale_side.py` | A recipe's width turned up or down offline: every stereo move in the sketch is linear in its width settings, so scaling a render's side by K is the same as scaling them all by K (run before the ceiling) |
 | `width_ceiling.py` | The width ceiling, offline: turns the side down where it rises above a target against the mid; the fold is unchanged. `auto` takes each recipe's own target |
 | `stereo_clips.py` | Mono, room, wide and wide + drifting of one loop in one loudness-matched clip (any order of tags with lengths, and a start offset) |
+| `album.py` | **Ears 3:** runs the album-card pipeline end to end (stages `pick,split,events,techniques,theory,space,card`), cached in `WORKDIR/<album>/`, and writes `card.md`: `python3 -I album.py ALBUM_DIR WORKDIR [--stages a,b] [--only TRACK] [--workers 2]`. Run it in the background (`nohup`) and poll; the split stage is the slow one |
+| `pick.py` | Track picking from `analyze.py`'s mix numbers: the most typical track plus the 3 least like the rest (every track for an EP of 6 or fewer) |
+| `split.py` | Demucs htdemucs on CPU into drums, bass, other, vocals (`split.json` records the mode and time); falls back to harmonic/percussive plus band splits, with no vocals, if Demucs is missing |
+| `events.py` | Note events per stem, grouped into instrument candidates: register, attack, decay, brightness, harmonicity, vibrato, detune, level against the mix, left-right position, timestamps of the clearest examples |
+| `techniques.py` | Sections, stem entries and exits, brightness sweeps, echo times, pumping locked to the kick, tape wobble and speed, stereo movement, floor drops (from stems) |
+| `theory.py` | Tempo and bar length, swing, cross-rhythm, key and mode, chords (changes, settled chords, on-beat share), bass behavior, top line, repetition and form |
+| `space.py` | Width, correlation, pan and mono loss by band and by stem, and width over time |
+| `card.py` | Drafts the album card (hook, sounds, techniques, theory, space, vibes, wholesome take, For later) from the JSON; judgment lines are marked **[JUDGMENT]** |
+| `cardlib.py`, `calsig.py` | Shared helpers; the test-signal makers |
+| `calibrate.py`, `cal_*.py` | Calibration: test signals with known answers through every card tool; `python3 -I calibrate.py [--out FILE]` (about 80 s). Rows with tolerance `"limit"` are reported, not graded |
+
+Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). One four-track album takes about 30 minutes of machine time on 2 CPU cores, mostly Demucs; see `docs/EARS.md`.
 
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median
@@ -38,7 +50,7 @@ in the Project as `claude/ears-data.csv`.
 A shell command stops after 10 minutes: run long render batches in the
 background (`nohup ... &`) and poll.
 
-Calibration and limits: the wobble measure read a 5-cent wow as 3.3 and a
+Calibration and limits (Ears 1): the wobble measure read a 5-cent wow as 3.3 and a
 12-cent wow as 8.0. The chord counter undercounts fast changes (it read
 Driftloom as 17 a minute against the generator's 29). Single-file tuning
 readings within about ±8 cents are noise. Renders of the same loop differ
