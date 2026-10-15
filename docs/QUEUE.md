@@ -1413,6 +1413,11 @@ yardsticks; if a yardstick won't pass, stop and leave a note rather than
 push on); then a brain check (Session 22); **46 Opus 5.5, high**
 (Session 23: an interface design); then the brain's phase review
 (Session 24).
+**Then, before phase 2 (Mikey, 2026-10-15):** an instrument batch
+written by Session 24 (new sounds from the ears, core-only, on item 46's
+interface), built by Session 25 (Opus 5.5, high), checked and heard in
+Session 26; phase 2 starts with Session 27. New profiles come after
+phase 2, as data. See `docs/BRAIN.md`, "The plan to phase 2".
 Items in order; each a PR (a/b splits welcome).
 
 ## 42. Golden renders on every target
