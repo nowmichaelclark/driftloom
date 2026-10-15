@@ -40,10 +40,10 @@ Driftloom measured at `3149af1` (JavaScript engine, 80 loops of 60 s and
 | **Tails** | -1.2 / -1.9 dB a second after a note | -4.5 to -8.8 | calm profiles toward 1–2 dB a second; dry stays possible (4 of 32 albums are) |
 | **Pauses** | full stops 0.03 / 0.06 a minute; in 43% of beat tracks with a steady low end the kick and bass drop out for ~3 s while the rest plays (0.42 a minute) | full stops 1.11 a minute (60 s loops); floor drops almost never | some full stops become floor drops, with the tails left ringing |
 
-**Stereo is out (Mikey, 2026-10-11): Driftloom stays mono, for now.**
-Mono gives a controlled soundscape that sounds the same on every system;
-stereo can sound wildly different from one to the next. Measure records'
-stereo if useful, but don't propose stereo items.
+**Stereo across the board, with a Mono switch (Mikey, 2026-10-15;
+replaces "mono only" of 2026-10-11).** `docs/CORE.md`, promise 9. Ears
+sessions propose stereo treatments as offline clips against today's mono
+first; see "Stereo, measured" below.
 
 A tuning difference was reported in batch one and corrected in batch
 two: only 8 of 32 albums are clearly off A440, so it's optional at most.
@@ -56,11 +56,53 @@ Heard as before/after clips on 2026-10-10; "all the new stuff is
 sounding really great". These are directions, not specs. Each needs
 building properly, one at a time, with nothing lost:
 
-stereo placement with a ping-pong echo (dropped 2026-10-11: mono only); a rounder bass with harmonics
+stereo placement with a ping-pong echo (dropped 2026-10-11, back 2026-10-15 as space recipes); a rounder bass with harmonics
 that reads on a phone; soft high bells from the chord's notes; floor
 drops instead of full stops; a slow filter arc; dub chord stabs thrown
 into the echo; a soft drawbar organ under held chords; a noise wash
 every ~20 s; chord lengths drawn per loop from a spread.
+
+Approved: roundBass, glass, floorDrop, arc. dubStab, organ, wash and
+longChords went to Mikey again on 2026-10-15 (Ears 2), with two flags
+from the measurements: the wash's fixed level is inaudible under a beat
+(-28 dB at its peak), and the organ loses about half its chords to the
+voice budget in a dense loop. Verdicts: `claude/ears-batch-3.md`.
+
+## Stereo, measured (Ears 2, 2026-10-15)
+
+Three space recipes (room; wide; wide + drifting), sketched on a local
+copy of the JavaScript synth so that (L + R) / 2 before the master chain
+is exactly the mono mix: placement only above 150 Hz, width from a side-
+only chorus above 200 Hz, the reverb and echo split into mid and side,
+and a width ceiling (side turned down above -7 dB against the mid).
+Twelve loops, 60 s, against their mono renders (`tools/ears/stereo_guard.py`):
+
+| Guard | Proposed limit | Wide, measured (worst of 12) |
+|---|---|---|
+| Fold to mono: loudness | within ±0.5 LU of the mono render | 0.18 LU |
+| Fold to mono: tone | every octave 63 Hz–8 kHz within ±1 dB | 0.5 dB |
+| Low end centered | side 20 dB or more under mid below 120 Hz | -20.7 dB or lower, except one loop with almost no low end (-19.8) |
+| Width | side/mid above 200 Hz -14 to -6 dB for most loops; ceiling -7 | -15.6 to -7.5 (median -10.1) |
+| Nothing essential on one side | correlation median 0.7+, 5th percentile 0.3+; balance within ±2 dB | 0.77, 0.45, -2.9 dB |
+| Cost | under 2× mono | 1.14× median (JavaScript render time; the core measures its own) |
+| Notes | refused notes same as mono | same in all 12 |
+
+Whole-mix side/mid reads lower than records (-18 against -8/-9) because
+Driftloom's energy sits in the centered bass; above 200 Hz it matches.
+Recipes, clips and the sketch: `claude/ears-batch-3.md` and
+`claude/ears-space-sketch.md` in the Project.
+
+## The album list (2026-10-15)
+
+Mikey's full list is 73 records, plus everything Aphex Twin released
+between *SAW 85-92* and *Drukqs*; he wants sounds, techniques and theory
+from every one, harsh records included (wholesome takes only), so that a
+listener sometimes hears "that album" in a loop. Rules for what comes
+out of it: never real words in voices; no quotes, public domain
+included; new sounds join existing vibes by weight, harsher ones sit
+behind particular vibes (rare elsewhere, never banned), and open vibes
+like "zany" take almost anything. The plan, the album card and the
+session split: `claude/ears-plan.md`.
 
 ## Reference tracks
 
