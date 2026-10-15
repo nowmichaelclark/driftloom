@@ -18,11 +18,20 @@ audio.
 | `sections.py` | Floor drops (the low end out for 2 s or more while the rest plays) and full stops (the whole mix 30 dB down for 1 s or more) |
 | `summarize.py`, `summarize2.py` | Per-album medians; batch two's tables in batch one's definitions |
 | `spec.py` | A 60-second log-frequency spectrogram, for looking at by eye |
+| `render2.mjs` | `render.mjs` with a job list (`node render2.mjs REPO OUTDIR JOBS.json`): per job a corpus index, length, tag, `proto` (prototype switches) and `space` (a space recipe for a sketch synth); writes 32-bit float WAVs and records refused notes per voice, chord changes a minute and render time |
+| `clips.py` | Before/after clips from a `render2.mjs` index (tags `<sound>-before`, `<sound>-after`): loudness-matched MP3s and what moved (bands, added level, refused notes) |
+| `space_jobs.py` | Draws each loop's space recipe (room, placed, drifting, wide, widedrift) from its seed and writes `render2.mjs` jobs; needs a `{index: seed}` file from a scan render |
+| `stereo_guard.py` | The stereo guards against the mono render: fold loudness and tone, side/mid (whole, above 200 Hz, below 120 Hz), correlation, balance, cost |
+| `width_ceiling.py` | The width ceiling, offline: turns the side down where it rises above a target against the mid; the fold is unchanged |
+| `stereo_clips.py` | Mono, room, wide and wide + drifting of one loop in one loudness-matched clip |
 
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median
 of drift60/drift10 per file. The measurements for batches one and two are
 in the Project as `claude/ears-data.csv`.
+
+A shell command stops after 10 minutes: run long render batches in the
+background (`nohup ... &`) and poll.
 
 Calibration and limits: the wobble measure read a 5-cent wow as 3.3 and a
 12-cent wow as 8.0. The chord counter undercounts fast changes (it read
