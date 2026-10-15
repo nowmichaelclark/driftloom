@@ -17,7 +17,8 @@ used soon. The rest waits for its phase of the core work.
   now only the bottom-right Sound / Layers switch does).
 - **Only two settings exist:** the theme and "lighter on processor".
   Everything new below is a pick, a sheet or a message, not a setting.
-- **The music is mono** for now; stereo comes much later.
+- **The music is stereo** (coming soon), with a **Mono** switch in the
+  settings for anyone who prefers it (Mikey, 2026-10-15).
 - **Calm and wholesome:** the music is cozy (a nice coffee shop, Animal
   Crossing, Ocarina of Time's whimsy); the look should feel the same.
 - **Plain characters only** in anything the app shows as a code or name
@@ -124,15 +125,15 @@ Instruments are becoming small recipes anyone can make, including mods.
 - **Modded or recipe instrument badge.** In Layers and Sounds, a quiet
   mark that an instrument is not one of Driftloom's own.
 
-## 6. Stereo (much later, experimental)
+## 6. Stereo (soon: stereo by default, with a mono switch)
 
-- **Mono or stereo indicator.** Which one is playing.
+- **The Mono switch.** A setting that makes all of Driftloom mono
+  (exactly today's sound), for people who prefer it or listen on one
+  speaker. Stereo is the default.
+- **Mono or stereo indicator,** if wanted: which one is playing.
 - **Space controls,** if they are ever shown to listeners: how wide the
   whole mix is, where each instrument sits left to right, and how it
   moves.
-- **Experimental marking.** A calm way to say a feature is still an
-  experiment.
-
 ## 7. The Advanced page
 
 - **Core version.** Which version of the engine is running (share codes

@@ -29,10 +29,11 @@ new controls) goes on alongside the core phases, as separate PRs; see
 `docs/BRAIN.md`, "Two tracks". Core-track items here don't wait for it,
 and app-track sessions stay out of `core/`.
 
-**Mono by default, stereo possible later (Mikey, 2026-10-13; replaces
-"mono only" of 2026-10-11):** the app stays one channel. The core gets a
-seam for other channel layouts (item 45) and nothing more toward stereo
-until the charter's phase 9 (`docs/CORE.md`, promise 9).
+**Stereo across the board, with a mono switch (Mikey, 2026-10-15;
+replaces the earlier mono lines):** stereo is coming, after the
+instrument batch and before phase 2, from items Session 24 writes
+(`docs/CORE.md`, promise 9). Until those items, build nothing toward
+stereo beyond item 45's channel-layout seam.
 
 **The engine, from here (Mikey, 2026-10-10):** the Rust core is
 Driftloom's own engine, not a copy of Chromium. Matching Chromium was
