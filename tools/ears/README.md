@@ -38,3 +38,8 @@ Calibration and limits: the wobble measure read a 5-cent wow as 3.3 and a
 Driftloom as 17 a minute against the generator's 29). Single-file tuning
 readings within about ±8 cents are noise. Renders of the same loop differ
 from run to run at about -79 dB (the wobble's LFOs).
+
+`sketches/` holds offline sketches used only to render clips, as patches
+against `main` at the commit named inside. Apply one to a local copy, never
+to the app: `space-sketch.patch` (Ears 2) adds the stereo space recipes
+behind `globalThis.SPACE` (see `render2.mjs`).
