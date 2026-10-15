@@ -70,6 +70,16 @@ voice budget in a dense loop. Verdicts: `claude/ears-batch-3.md`.
 
 ## Stereo, measured (Ears 2, 2026-10-15)
 
+**The goal (Mikey, 2026-10-15):** stereo becomes the default once the
+brain and hands build it, but only once it's tuned: it should sound
+better than mono about 95% of the time, and the default settings should
+always sound better. In round 1 (below) mono won on every loop, judged on
+Koss KPH30 wireless headphones (he can also check on earbuds), so stereo
+needs more rounds of clips and listening before any default is chosen.
+Mikey's notes and the next round's directions: `claude/ears-batch-3.md`.
+The sketch used for the clips: `tools/ears/sketches/space-sketch.patch`
+(a local, offline sketch of `js/synth.js`; never app code).
+
 Three space recipes (room; wide; wide + drifting), sketched on a local
 copy of the JavaScript synth so that (L + R) / 2 before the master chain
 is exactly the mono mix: placement only above 150 Hz, width from a side-
