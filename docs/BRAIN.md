@@ -530,6 +530,29 @@ Stated decisions, not inferences. Dated where the date matters.
 
 ### Start here (for the next brain)
 
+- **The plan to phase 2 (Mikey, 2026-10-15).** He wants more
+  instruments, profiles and vibes before the Luanti step, with ears
+  sessions to find them. Timed so nothing is built twice:
+  - **Now, alongside everything:** ears sessions (records he loves ->
+    candidate sounds as offline clips; his verdicts, including on
+    dubStab, organ, wash and longChords). Vibes may be added until phase
+    2 starts (data in `js/vibes.js`).
+  - **Session 22** (brain, Opus): check items 42-45; the control album.
+  - **Session 23** (hands, Opus, high): item 46, the building-block
+    interface.
+  - **Session 24** (brain, Opus): phase 1 review; write **the instrument
+    batch** (new queue items: the sounds Mikey approved, built in the
+    core on 46's interface, core-only, no JavaScript-synth versions: the
+    fallback substitutes an existing voice; generator pools updated, the
+    balance lock re-baselined on purpose; each sound measured for level,
+    cost and tone against its ears reference); and write phase 2's items
+    (ordering 48-53 among them).
+  - **Session 25** (hands, Opus, high): the instrument batch.
+  - **Session 26** (brain, Opus): check the batch; a labeled album
+    (keep / tune / drop); new vibes with Mikey, last before the port.
+  - **Session 27** (hands): the first item of phase 2.
+  - **New profiles wait until phase 2 lands**, then go in as data
+    (before phase 3 and Luanti). Phase order in the charter unchanged.
 - **Next picks (2026-10-13):** Mikey chose the design
   (`design/next-picks.md`, from Painter 5, PR #205); see "Next picks,
   the design" under "The core". Painter 6 (app track) is building the
