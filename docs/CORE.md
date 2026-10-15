@@ -146,8 +146,8 @@ Freedom from Chromium is freedom to be better, not different by
 accident.
 
 - The balance lock holds (`stats.mjs --check`, rebuilt for the Rust
-  generator); the refusal and level checks hold; the app plays mono
-  (promise 9).
+  generator); the refusal and level checks hold; the mono render keeps
+  the approved balance (promise 9).
 - Changes to sounds Mikey already likes go to **blind A/Bs**; new sounds
   to labeled albums. His ears are the acceptance test.
 - Improvements beyond Chromium (a warm reverb designed for this music,
@@ -172,37 +172,40 @@ accident.
 - Anything may break while in testing (2026-10-12): old codes are not
   protected.
 
-### 9. Stereo is possible; mono is the default
+### 9. Stereo across the board, with a mono switch
 
-Changed 2026-10-13 (Mikey; it replaces "mono only" of 2026-10-11). The
-app stays mono for now, and stereo comes much later. But the core is
-built so stereo can be added without rebuilding it, and with great care:
-stereo has endlessly many variables, and each should be easy for
-developers and users to tweak.
+Mikey, 2026-10-15 (replaces "stereo possible, mono the default" of
+2026-10-13 and "mono only" of 2026-10-11): **Driftloom is stereo**,
+everywhere, with an optional switch that makes everything mono for
+listeners and developers who prefer it. Stereo has endlessly many
+variables, and each should be easy for developers and users to tweak.
 
-- **The core renders to any channel layout** the host asks for: mono
-  today, stereo later (and more channels possible in principle). Mono is
-  not a stereo mix folded down; it is its own render, so the mono app
-  pays nothing for stereo existing.
+- **Two renders, both first-class.** The core renders stereo by default
+  and mono when asked. Mono is not a stereo mix folded down; it is its
+  own render, with the balance Mikey approved, so the mono switch gives
+  exactly today's sound. Both are deterministic and golden-tested.
 - **Space is data, like instruments.** Where a sound sits and how it
   moves is a "space recipe", separate from the instrument: width of the
   whole mix, per-instrument pan, whether a part moves this track and not
   the next, how far, how fast and in what shape it moves, stereo echoes
-  and reverb, and whatever else gets thought up. Recipes give ranges, the
-  seed picks within them per track, so the variation is part of the
-  music and the code reproduces it.
+  and reverb, and whatever else gets thought up. Recipes give ranges; the
+  core draws within them from the loop's seed (it has the seed since
+  item 44), so the variation is part of the music and the code
+  reproduces it.
 - **Every variable is a named setting** a developer or a user can turn,
-  layered: the core's defaults, a profile's or vibe's lean, the host's
-  (a game) and the listener's. Whether the app ever shows any of them is
-  Mikey's call later; today's app rule (theme and "lighter on processor"
-  the only settings) stands until he changes it.
-- **Guards:** a stereo render, folded to mono, must sound like the mono
-  render (measured: level and tone within stated limits), so stereo can
-  never hurt a phone speaker or a mono venue; and it must not double the
-  cost on a phone.
-- **Built in steps:** phase 1 makes the core channel-agnostic; much
-  later, an experimental stereo behind a flag (phase 9), never the app's
-  default until Mikey says so.
+  layered: the core's defaults, a profile's or vibe's lean, the request's
+  picks (promise 11), the host's (a game) and the listener's.
+- **In the app:** a **Mono** switch joins the settings (Mikey's
+  exception to "theme and lighter on processor are the only settings").
+  Whether finer space controls are ever shown is his call later.
+- **Guards:** the stereo render, folded to mono, must sound like the
+  mono render (measured: level and tone within stated limits), so
+  stereo never hurts a phone speaker, a Bluetooth speaker or a mono
+  venue; nothing essential lives on one side only; low notes (bass,
+  kick) stay centered; and stereo must not double the cost on a phone.
+- **Judged by ear first:** ears sessions propose stereo treatments as
+  offline clips (stereo against today's mono) before anything is built;
+  Mikey's verdicts decide which space recipes exist.
 
 ### 10. Three real games prove it
 
@@ -357,9 +360,16 @@ one before it.
    and cool; off: as fast as the device safely allows).
 8. **Better than Chromium.** The sound improvements, one item each, blind
    A/Bs where they touch what he likes.
-9. **Stereo, experimental** (much later; promise 9). Space recipes, the
-   layered settings, the mono-fold guard, behind a flag. The app stays
-   mono until Mikey decides otherwise.
+9. *(Stereo moved earlier, 2026-10-15: see "Stereo" below the phases.)*
+
+**Stereo (Mikey, 2026-10-15), in steps:** ears sessions propose stereo
+treatments as clips now; after the instrument batch (before phase 2),
+the core gets its stereo render, the mono switch and the first space
+recipes, drawn from the seed in the core (the mix, the echo and the
+reverb in stereo; per-channel and per-instrument pan and width); phase 2
+adds space to the request; space recipes keep growing like instruments.
+Blind A/B against the mono render for anything that changes sounds
+Mikey already likes.
 
 Then the platforms, each its own phase: Android on F-Droid (alpha/beta),
 itch.io desktop, later Google Play. iOS and macOS stay a recompile away.
@@ -380,7 +390,8 @@ measurement that says so.
   on its own branch, merged when the replacement is ready.
 - **The targets stand**, to be revisited (above).
 - **The building blocks are open to change** (promise 5).
-- **Stereo possible, mono the default** (promise 9).
+- **Stereo across the board, with a mono switch** (promise 9; changed
+  2026-10-15).
 - **Three games prove the core** (promise 10); the first pulled forward
   as phase 4. The picks are the brain's; Mikey may swap any.
 - **Requests: listeners and developers ask for bars, tempo, rhythm,

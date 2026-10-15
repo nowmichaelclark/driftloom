@@ -273,7 +273,14 @@ Stated decisions, not inferences. Dated where the date matters.
   17) from the same core; a documented host API for native and game
   hosts (`no_std`-friendly, sample-rate independent, deterministic);
   the generator in Rust when the words settle.
-- **Stereo possible, mono the default (Mikey, 2026-10-13)** -- replaces
+- **Stereo across the board, with a mono switch (Mikey, 2026-10-15)** --
+  replaces the two lines below. Stereo everywhere by default; an
+  optional switch makes everything mono for listeners and devs who like
+  that (a settings exception he chose). Ears sessions propose stereo
+  treatments as clips first; the core's stereo render, the mono switch
+  and the first space recipes come after the instrument batch, before
+  phase 2 (`docs/CORE.md`, promise 9).
+- *(Superseded 2026-10-15.)* **Stereo possible, mono the default (Mikey, 2026-10-13)** -- replaces
   the line below. The app stays mono for now; stereo comes much later,
   experimental first, and the core must make it implementable without a
   rebuild. Stereo's variables (width, per-instrument pan that changes
@@ -547,9 +554,13 @@ Stated decisions, not inferences. Dated where the date matters.
     balance lock re-baselined on purpose; each sound measured for level,
     cost and tone against its ears reference); and write phase 2's items
     (ordering 48-53 among them).
-  - **Session 25** (hands, Opus, high): the instrument batch.
-  - **Session 26** (brain, Opus): check the batch; a labeled album
-    (keep / tune / drop); new vibes with Mikey, last before the port.
+  - **Session 25** (hands, Opus, high): the instrument batch, then
+    **stereo in the core** (Session 24 writes those items too, from the
+    ears' stereo clips and Mikey's verdicts; split into 25b if usage
+    runs out).
+  - **Session 26** (brain, Opus): check the batch and stereo; a labeled
+    album (keep / tune / drop) and a stereo-vs-mono A/B; new vibes with
+    Mikey, last before the port.
   - **Session 27** (hands): the first item of phase 2.
   - **New profiles wait until phase 2 lands**, then go in as data
     (before phase 3 and Luanti). Phase order in the charter unchanged.
