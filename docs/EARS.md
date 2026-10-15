@@ -102,6 +102,55 @@ Driftloom's energy sits in the centered bass; above 200 Hz it matches.
 Recipes, clips and the sketch: `claude/ears-batch-3.md` and
 `claude/ears-space-sketch.md` in the Project.
 
+## Album-card tools (Ears 3, 2026-10-15)
+
+`tools/ears/album.py` turns one album into the plan's album card:
+it picks tracks, splits them into stems, and measures sounds, techniques,
+theory and space, then drafts the card with numbers and timestamps filled
+in. Judgment lines (hook, vibes, wholesome take, why a thing waits) are
+marked **[JUDGMENT]** for a person or a later session. Test cards for
+*Geogaddi* and *Galaxy Garden*: `claude/ears-cards-test.md`.
+
+Every measure was run on test signals with known answers
+(`python3 -I calibrate.py`, about 80 s): **163 of 163 graded checks within
+tolerance; 10 further rows show known limits** (reported, not graded).
+
+| Measure | Tested on | Worst graded error | Stops being reliable |
+|---|---|---|---|
+| Note groups (events) | strings, bells, ramps, vibrato, detune, pan, levels | f0 within 0.2 cents; attack within 4 ms (reads a little long); decay within 0.02 dB/s; vibrato within 0.8 cents and 0.04 Hz; detune within 0.4 cents; pan and level exact | groups are candidates, not instruments; attacks under ~5 ms read as about 9 ms |
+| Sections, stem entries | sections of 20 to 40 s and 10 to 14 s, chord-only changes with 4-s crossfades; stems gated in and out | all boundaries found, timing error 0 s; stem edges within 0.5 s | sections under ~10 s |
+| Sweeps, echo, pumping, wobble, pan | cutoff sweeps, echoes, ducked pads, wow, panned stems | sweep 4.3 oct read 4.2; echo times within 4 ms; 12-cent wobble read 13.7 and rate exact; pan range within 0.05 | pumping reads about 70% of the true depth (a floor); echo needs 6+ notes ringing alone for 1.5 s; sweeps under 0.7 octave not reported |
+| Floor drops (from stems) | gated kick and bass | edges exact (0 s) | drops under 2 s not counted; skipped where the low end is on under 75% of the time |
+| Tempo | 6 tempos, 72 to 160 BPM | within 0.04 BPM, within a factor of 2 on 6 of 6; the exact octave 4 of 6 | octave ambiguity (reported as half and double) |
+| Bar length, swing, cross-rhythm | accented bars, swung grooves, 4:3 and 3:2 | swing within 0.01 of the beat | bar length needs an accent; the score says when it is unclear |
+| Key and mode | 7 modes x 3 keys | mode 19 of 21 without bass, 20 of 21 with; tonic 20 of 21 and 21 of 21 | margin under 0.02 is a guess; pentatonic fits are flagged |
+| Chords | clean chord sequences, dry and with 1.5 s reverb | change count exact down to a chord every 0.5 s dry and every 1 s with reverb; labels 100% for triads, 88% sevenths and sus | faster than 0.5 s (0.35 s reads 127 for 170 a minute); chord names on dense or noisy music are a guess |
+| Bass behavior | pedal, ostinato, walking | 100% classified; pitch within 0.01 semitone | needs a bass stem with notes |
+| Top line | melody alone, over a pad 12 dB down, and at equal level | notes found with the right pitch 85% alone, 90% over a quiet pad; median interval exact; contour (arch, rising, falling) right | only when the line is clear of its accompaniment (pad at equal level: 31% found, step share 0.19 for 0.28) |
+| Form and repetition | repeated phrases | period found; bars counted exactly | the bar length must be within ~1% (5% off loses the lags) |
+| Space | independent, mono and half-correlated channels by band | width within 0.1 dB, mono loss 3.01 for 3 dB | a quiet band next to a much louder wide band leaks (-40 dB reads -1); `share_of_stem` says when to distrust |
+
+*Real music has no truth to check against.* For chord changes the card
+prints the share that land on a beat next to chance; for the rest, listen
+at the timestamps.
+
+**Against Ears 1:** Galaxy Garden floor drops agree in kind (Crystal
+Caverns is the drop track, two tracks too sparse), though the counts
+differ (2.74 against 4.87 a minute) because stems replace a 30 to 120 Hz
+band. Geogaddi's chord changes do not match: the new counter reads 16 to
+28 a minute (11 to 20 settled) against Ears 1's "about 10". It sees
+movement inside slow pads that the 2-second window skipped, and the
+on-beat shares support it on two of four tracks. Treat chord counts from
+Ears 1 as floors; do not mix the two without saying which.
+
+**Cost of one album** (2 CPU cores): picking 19 tracks about 3 minutes;
+Demucs about 1.0 to 1.3 times the audio length (4 tracks of ~4.5 minutes
+is ~20 minutes; it ran at 0.7 when other jobs shared the cores); the
+measuring stages about 2.5 minutes a track (events 45 s, theory 30 s,
+techniques 15 s, space 10 s on a 4-minute track). A four-track album is
+about 30 minutes of machine time, run in the background, polled with
+sleeps. Disk: about 1 GB for Demucs, ~160 MB of stems per track.
+
 ## The album list (2026-10-15)
 
 Mikey's full list is 73 records, plus everything Aphex Twin released
