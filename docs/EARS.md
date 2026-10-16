@@ -66,8 +66,10 @@ every ~20 s; chord lengths drawn per loop from a spread.
 
 Approved: roundBass, glass, floorDrop, arc; **dubStab and longChords
 (2026-10-16, as in Ears 4's round 4)**; **stereo's baseline** (round 4's
-blend of room and ensemble, steady). Still tuning: organ and wash (round
-5, `claude/ears-batch-4.md`). dubStab, organ, wash and
+blend of room and ensemble, steady); **wash** (2026-10-16, round 5).
+Still tuning: the organ (one organ in the end; round 6 offers four pipe
+variations: chapel, cathedral, distant cathedral, celeste, each moving at
+most once a bar with a dip at 800 Hz; `claude/ears-batch-4.md`). dubStab, organ, wash and
 longChords went to Mikey again on 2026-10-15 (Ears 2), with two flags
 from the measurements: the wash's fixed level is inaudible under a beat
 (-28 dB at its peak), and the organ loses about half its chords to the
