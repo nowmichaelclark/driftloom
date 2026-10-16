@@ -38,10 +38,11 @@ audio.
 | `theory.py` | Tempo and bar length, swing, cross-rhythm, key and mode, chords (changes, settled chords, on-beat share), bass behavior, top line, repetition and form |
 | `space.py` | Width, correlation, pan and mono loss by band and by stem, and width over time |
 | `card.py` | Drafts the album card (hook, sounds, techniques, theory, space, vibes, wholesome take, For later) from the JSON; judgment lines are marked **[JUDGMENT]** |
+| `check_stems.py` | **Ears 5:** spot checks on one track's stems before its card is written: each stem's share of the power (empty bass stem, no beat), band shares per stem, the strongest 20–200 Hz lines (subharmonic misreads), the drum-onset grid (tempo octave), and runs where the low end of all stems summed is 15 dB down (floor drops the stems-only count misses): `python3 -I check_stems.py WORKDIR/<album>/stems/<track> [--drop-db 15]` |
 | `cardlib.py`, `calsig.py` | Shared helpers; the test-signal makers |
 | `calibrate.py`, `cal_*.py` | Calibration: test signals with known answers through every card tool; `python3 -I calibrate.py [--out FILE]` (about 80 s). Rows with tolerance `"limit"` are reported, not graded |
 
-Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). One four-track album takes about 30 minutes of machine time on 2 CPU cores, mostly Demucs; see `docs/EARS.md`.
+Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). One album takes about 40 minutes of machine time on 2 CPU cores (28 to 43 over five albums), about 1.6 seconds per second of deep-pass audio plus 25 s per track in the album, mostly Demucs; see `docs/EARS.md`.
 
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median
