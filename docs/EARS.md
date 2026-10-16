@@ -245,13 +245,52 @@ movement inside slow pads that the 2-second window skipped, and the
 on-beat shares support it on two of four tracks. Treat chord counts from
 Ears 1 as floors; do not mix the two without saying which.
 
-**Cost of one album** (2 CPU cores): picking 19 tracks about 3 minutes;
-Demucs about 1.0 to 1.3 times the audio length (4 tracks of ~4.5 minutes
-is ~20 minutes; it ran at 0.7 when other jobs shared the cores); the
-measuring stages about 2.5 minutes a track (events 45 s, theory 30 s,
-techniques 15 s, space 10 s on a 4-minute track). A four-track album is
-about 30 minutes of machine time, run in the background, polled with
-sleeps. Disk: about 1 GB for Demucs, ~160 MB of stems per track.
+**Cost of one album** (2 CPU cores; five pile 1 albums, Ears 5): about 40
+minutes of machine time for 3 or 4 deep-pass tracks (28 to 43 minutes; 11,582 s
+over five albums), which is about **1.6 seconds per second of deep-pass
+audio plus 25 seconds per track in the album**. The parts: picking
+(mix-level numbers for every track) 22 to 26 s a track (an album of 27 tracks
+takes 11.6 minutes); Demucs 1.0 to 1.1 times the audio length (1.42 once,
+while other jobs shared the cores); the measuring stages about 3 minutes a
+track (134 to 226 s; across 19 runs events 6 to 184 s, theory 11 to 82 s,
+techniques 6 to 39 s, space 3 to 66 s) or 32 to 37 s per audio minute. A four-track album is
+run in the background and polled with sleeps (a shell command stops after
+10 minutes). Disk: about 1 GB for Demucs, ~160 MB of stems per track.
+
+**What the Ears 5 cards found beyond the table** (`tools/ears/check_stems.py`
+checks most of these before a card is written):
+
+- The separator moves the sub: on several tracks the whole low end is in the
+  drums stem (On's D-Scape, Classics' Phlange Phace) or the drums stem holds
+  the whole track (Quoth, 99.8%). A bass stem under about 2% of the power
+  makes bass behavior, bass pumping and bass wobble void, and floor drops
+  counted from drums and bass alone come out too small (Volume II track 15:
+  one drop of 2.8 s reported against 44 s found with the stems summed).
+- A track with empty drums and bass stems has no beat: its meter, swing and
+  chord-on-beat numbers mean nothing.
+- A note group whose register is a half or a third of the strongest spectral
+  line is a subharmonic misread (Volume II track 21: 37 Hz against a 111.7 Hz
+  line). Partials under about 60 Hz cannot be measured: ignore "bell-like"
+  labels there; pitch under 40 Hz is good to about a semitone.
+- A flat-topped gated note reads its flat-top length as "attack" (Quoth's
+  sub: 187 ms against a real rise of about 30 ms).
+- Tempo: the meter tool reports half-time (72 for a 144 BPM grid); the
+  picker's mix-level tempo can be off by a factor of 4/5 on broken-beat
+  tracks (112.3 for 139, 117.5 for 145). The drum-onset repeat and echo times
+  settle it (`check_stems.py`).
+- "Kick every x s" that does not fit the beat means the kick finder locked on
+  something else; do not trust the pumping depth tied to it.
+- A pan or stereo cycle of exactly 3 to 4 s shared by several parts looks like
+  the analysis window, not an auto-pan.
+- The vocals stem on an instrumental is the separator's guess at voice-like
+  sound; a listen decides whether any voice is in it.
+- The tuning reading (mix level) ran from -48 to +45 cents across the pile; a
+  half-semitone offset splits a note's weight over two neighboring pitch
+  classes, so key margins and chord names on those tracks are a guess. Check
+  it against a direct line (a kick's Hz) when the two disagree.
+- The vibes line's "energy above 2 kHz" can disagree with the direct spectrum
+  (Classics' Phlange Phace: 39% against 21%); use the picker's band shares or
+  the stem sum.
 
 ## The album list (2026-10-15)
 
