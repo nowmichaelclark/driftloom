@@ -1,14 +1,14 @@
 Ears 4 sketch (2026-10-15/16): a local, offline sketch for rendering clips; never app code.
 Against main at a23153d (js/ unchanged since). Includes the Ears 2 space sketch with round 2's breath and drifting
-light kit and round 3's allpass reverb side (verbSmooth), and dubStab, organ, wash and longChords behind globalThis.PROTO
-('on' is the latest round: dubStab and longChords round 4 and the wash round 5 (approved), the organ round 5;
-'r4', 'r3', 'r2' and 'r1' the earlier rounds where they differ; organFlavor 'tonewheel' or 'pipe' pins round 5's
-articulation; organVariant 'chapel', 'cathedral', 'distant' or 'celeste' is round 6, and 'mix' round 7, weighted
-by organMix, default { chapel: 0.55, pipe5: 0.25, distant: 0.1, celeste: 0.1 }).
+light kit and round 3's allpass reverb side (verbSmooth), and dubStab, organ, wash and longChords behind globalThis.PROTO.
+Approved (Mikey, 2026-10-16): dubStab: 'on' and longChords: 'on' (round 4), wash: 'on' (round 5), and the organ as
+organ: 'on', organVariant: 'chapelOrgan' (round 7's mix, weighted by organMix, default { chapel: 0.55, pipe5: 0.25,
+distant: 0.1, celeste: 0.1 }); the stereo baseline is the blend of round 3's room3 and ens3 (space_jobs.py,
+blend_side.py; ears-batch-4.md). 'r4', 'r3', 'r2' and 'r1' select earlier rounds where they differ.
 Apply to a local copy only: git apply tools/ears/sketches/ears4-sketch.patch
 
 diff --git a/js/engine.js b/js/engine.js
-index 450790b..c67bb7b 100644
+index 450790b..a14db41 100644
 --- a/js/engine.js
 +++ b/js/engine.js
 @@ -247,6 +247,7 @@ export class Engine {
@@ -19,7 +19,7 @@ index 450790b..c67bb7b 100644
      for (const [layer, muted] of Object.entries(spec.mutes || {})) {
        this.synth.setMute(layer, muted);
      }
-@@ -688,6 +689,271 @@ export class Engine {
+@@ -688,6 +689,272 @@ export class Engine {
      }
    }
  
@@ -132,7 +132,8 @@ index 450790b..c67bb7b 100644
 +          // Stops mix as pipe loudness (each drawbar's amplitude, weighted),
 +          // timings and sends as weighted means; round 5's pipe brings the
 +          // loop's own registration and tone, so loops still differ.
-+          if (P.organVariant === 'mix') {
++          // Approved as the chapel organ (Mikey, 2026-10-16): 'chapelOrgan'.
++          if (P.organVariant === 'mix' || P.organVariant === 'chapelOrgan') {
 +            const W = P.organMix || { chapel: 0.55, pipe5: 0.25, distant: 0.1, celeste: 0.1 };
 +            const pipe5 = { bars: E.organ.bars || REG.find((x) => x[0] === E.organ.reg)[1], speak: E.organ.speak, chiff: E.organ.chiff,
 +              verb: 0.35, dry: 1, release: 0.35, tone: E.organ.tone, celeste: E.organ.celeste,
@@ -291,7 +292,7 @@ index 450790b..c67bb7b 100644
    // True when every layer is scheduled out for the bar containing this step,
    // either by the loop's entry schedule or by a drift rest.
    _isSilentBar(absStep) {
-@@ -720,6 +986,12 @@ export class Engine {
+@@ -720,6 +987,12 @@ export class Engine {
        // Deciding again after a change, a bar line before it is heard was
        // handed over already, as it was.
        const kept = time < this.floor;
@@ -304,7 +305,7 @@ index 450790b..c67bb7b 100644
        if (quiet && !this.tailsDucked) {
          if (!kept) this.synth.fadeTails(time);
          this.tailsDucked = true;
-@@ -840,6 +1112,9 @@ export class Engine {
+@@ -840,6 +1113,9 @@ export class Engine {
          this._play(t, () => this.synth.texture(e.kind, e.notes, t, e.dur * sd, e.vel, { band: e.band }), keyOf('texture'));
        }
      }

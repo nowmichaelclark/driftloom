@@ -644,9 +644,13 @@ Stated decisions, not inferences. Dated where the date matters.
   **dubStab and longChords approved 2026-10-16** (as in Ears 4's round 4,
   `tools/ears/sketches/ears4-sketch.patch`), and **stereo's baseline
   approved** (the blend of room and ensemble, steady; moving stereo kept
-  for a later, experimental option); organ and wash still being tuned by
-  the ears -- under the charter they may become the first instruments
-  built as recipes; vibe tuning from the loops Mikey sends
+  for a later, experimental option); **the wash and the chapel organ
+  approved the same day** (Ears 4's rounds 5 and 7; every recipe, with
+  levels, costs and checks, in `claude/ears-batch-4.md`, the sketch in
+  `tools/ears/sketches/ears4-sketch.patch`; the organ belongs outside
+  the voice budget as fixed overhead, the stab is a budget probe that
+  holds nothing) -- under the charter they may become the first
+  instruments built as recipes; vibe tuning from the loops Mikey sends
   (`js/vibes.js`, the brain's to edit).
 
 ### The log

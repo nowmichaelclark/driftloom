@@ -68,7 +68,8 @@ chords behind `globalThis.PROTO` (`dubStab`, `organ`, `wash`,
 `longChords`: `'on'` for round 4, `'r3'`, `'r2'` or `'r1'` for the earlier rounds
 where they differ, or a kind to force one draw, such as `dubStab: 'busy'`
 or `longChords: 'whole'`; `organDrive`, `washRel`, `stabLevel` override
-one value).
+one value). The approved organ is `organVariant: 'chapelOrgan'`
+(round 7's mix; `organMix` reweights it).
 
 Render cost: two renders at once on a two-core workspace take about
 1–4 s per second of audio; the densest loops (cinder #16) about 4 s. Keep
