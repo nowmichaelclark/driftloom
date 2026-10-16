@@ -1,0 +1,1277 @@
+Ears 4 sketch (2026-10-15/16): a local, offline sketch for rendering clips; never app code.
+Against main at a23153d (js/ unchanged since). Includes the Ears 2 space sketch with round 2's breath and drifting
+light kit and round 3's allpass reverb side (verbSmooth), and dubStab, organ, wash and longChords behind globalThis.PROTO.
+Approved (Mikey, 2026-10-16): dubStab: 'on' and longChords: 'on' (round 4), wash: 'on' (round 5), and the organ as
+organ: 'on', organVariant: 'chapelOrgan' (round 7's mix, weighted by organMix, default { chapel: 0.55, pipe5: 0.25,
+distant: 0.1, celeste: 0.1 }); the stereo baseline is the blend of round 3's room3 and ens3 (space_jobs.py,
+blend_side.py; ears-batch-4.md). 'r4', 'r3', 'r2' and 'r1' select earlier rounds where they differ.
+Apply to a local copy only: git apply tools/ears/sketches/ears4-sketch.patch
+
+diff --git a/js/engine.js b/js/engine.js
+index 450790b..a14db41 100644
+--- a/js/engine.js
++++ b/js/engine.js
+@@ -247,6 +247,7 @@ export class Engine {
+     this.synth.setCharacterLevel(character.level ?? 1);
+     this.pumpAmount = character.pump ?? 0;
+     this.synth.setEchoTime((60 / spec.bpm) * 0.75);
++    if (globalThis.PROTO && Object.keys(globalThis.PROTO).length) this._earsLoad(spec);
+     for (const [layer, muted] of Object.entries(spec.mutes || {})) {
+       this.synth.setMute(layer, muted);
+     }
+@@ -688,6 +689,272 @@ export class Engine {
+     }
+   }
+ 
++  // ---------------------------------------------- ears sketches (Ears 4)
++  // Local and offline, never app code: the tune round's dub stab, organ and
++  // wash, switched on by globalThis.PROTO. Every draw is from a stream of
++  // its own (the loop's seed), so the loop itself is unchanged.
++  _earsLoad(spec) {
++    const P = globalThis.PROTO || {};
++    const base = this.base;
++    const sec = base.totalSteps * this.stepDur;
++    const n = LAYERS.reduce((a, l) => a + (base.tracks[l] || []).filter((e) => e.vel).length, 0);
++    const nps = n / sec;
++    const drums = (base.tracks.drums || []).some((e) => e.vel) && !(spec.mutes || {}).drums;
++    const E = this._ears = { P, nps, drums, busy: drums && nps >= 7 };
++    const t0 = this.ctx.currentTime + 0.05;
++    if (P.dubStab) {
++      E.stabRng = new Rng(((spec.seed ^ 0x57ab) >>> 0) || 1);
++      if (P.dubStab === 'r1') E.stab = 'r1';
++      else {
++        const r = new Rng(((spec.seed ^ 0x57ac) >>> 0) || 1);
++        // How often: sparse by default; busy only now and then, on a busy loop.
++        const kinds = [['rare', 34], ['sparse', 36], ['some', 20]];
++        if (E.busy) kinds.push(['busy', 14]);
++        let kind = typeof P.dubStab === 'string' && !['on', 'r2', 'r3'].includes(P.dubStab) ? P.dubStab : r.weighted(kinds);
++        // Round 3: only over a busy groove (the one place Mikey liked it);
++        // elsewhere, none. Same draws as round 2, so a busy loop keeps its kind.
++        if (P.dubStab !== 'r2' && !E.busy && !(typeof P.dubStab === 'string' && P.dubStab in { rare: 1, sparse: 1, some: 1, busy: 1 })) kind = 'none';
++        // Chances per bar: the offbeat after beat one, and after beat three.
++        const rates = { none: [0, 0], rare: [0.22, 0], sparse: [0.45, 0.05], some: [0.6, 0.2], busy: [0.65, 0.5] };
++        E.stab = {
++          kind, rates: rates[kind],
++          opts: { decay: r.range(0.18, 0.3), open: r.range(2400, 3400), saw: r.range(0.6, 0.9),
++            throw: r.range(0.45, 0.7), echoTone: r.range(1200, 1800),
++            // Round 3 (not 'r2'): softer and blooming, from the busy stab
++            // Mikey liked: a slower attack, a longer tail, two saws a few
++            // cents apart under the triangle, a darker and lighter echo
++            // throw, some reverb.
++            ...(P.dubStab === 'r2' ? {} : { attack: 0.022, decay: r.range(0.32, 0.45), detune: [6, -6], throw: r.range(0.3, 0.42),
++              echoTone: r.range(1000, 1300), verb: 0.25, open: r.range(2000, 2800) }),
++            // Round 4: the same sound, less of it: it dominated the loop. A
++            // shorter tail, less reverb, a little less low-mid body, 4 dB down.
++            ...(['r2', 'r3'].includes(P.dubStab) ? {} : { decay: r.range(0.24, 0.34), verb: 0.12, hp: 320 }),
++            // Down by up to 8 dB in a sparse loop, as the organ is.
++            level: (P.stabLevel ?? (['r2', 'r3'].includes(P.dubStab) ? 0.24 : 0.19)) * Math.min(1, Math.max(0.4, (nps + 1) / 5)) },
++        };
++      }
++    }
++    if (P.organ) {
++      if (P.organ === 'r1') E.organ = 'r1';
++      else {
++        const r = new Rng(((spec.seed ^ 0x0e9a) >>> 0) || 1);
++        // Drawbars, 16' 5 1/3' 8' 4' 2 2/3' 2' 1 3/5' 1 1/3' 1', 0-8.
++        const REG = [
++          ['flute', [0, 0, 8, 0, 0, 0, 0, 0, 0], 14], ['stopped', [8, 0, 8, 0, 0, 0, 0, 0, 0], 14],
++          ['mellow', [8, 3, 8, 0, 0, 0, 0, 0, 0], 14], ['choral', [6, 8, 8, 6, 0, 0, 0, 0, 0], 12],
++          ['full', [8, 8, 8, 0, 0, 0, 0, 0, 0], 12], ['hollow', [0, 0, 8, 0, 6, 0, 4, 0, 0], 9],
++          ['airy', [0, 0, 8, 4, 0, 0, 0, 0, 3], 9], ['round', [6, 0, 8, 5, 0, 3, 0, 0, 0], 10],
++          ['bright', [8, 6, 8, 6, 4, 4, 0, 0, 2], 6],
++        ];
++        const reg = REG[r.weighted(REG.map((x, i) => [i, x[2]]))];
++        E.organ = {
++          reg: reg[0], bars: reg[1], rate: r.range(0.55, 1.15), depth: r.range(0.6, 1), drive: P.organDrive ?? r.range(0.08, 0.5),
++          tone: r.range(2400, 4200), swell: r.chance(0.35) ? r.range(0.01, 0.06) : r.range(0.15, 0.6),
++          click: r.chance(0.45) ? r.range(0.04, 0.1) : 0,
++        };
++        if (P.organ !== 'r3') {
++          // Round 4: softer without losing presence. The same draws as round
++          // 3 (so the stream doesn't move), then: the soft registrations only
++          // (the loud ones fall back to their soft neighbor), no drive, a
++          // darker tone, a breathing swell on every chord, no pitch-bending
++          // chorus (a slow level shimmer instead), and some of it sent into
++          // the room, so it sits behind the loop instead of in front.
++          const SOFT = { choral: 'mellow', full: 'stopped', bright: 'round' };
++          const name = SOFT[E.organ.reg] || E.organ.reg;
++          const pick = REG.find((x) => x[0] === name);
++          Object.assign(E.organ, {
++            reg: name, bars: pick[1], drive: P.organDrive ?? 0, tone: 1400 + (E.organ.tone - 2400) * 0.6,
++            swell: 0.25 + E.organ.swell * 0.7, click: 0, chorus: 0, shimmer: 0.3 + E.organ.rate * 0.25, verb: 0.35,
++          });
++        }
++        if (!['r3', 'r4'].includes(P.organ)) {
++          // Round 5: articulation, drawn per loop (or pinned by organFlavor).
++          const r5 = new Rng(((spec.seed ^ 0x0e9b) >>> 0) || 1);
++          const flavor = P.organFlavor || (r5.chance(0.5) ? 'tonewheel' : 'pipe');
++          Object.assign(E.organ, {
++            flavor, perc: r5.chance(0.6) ? 2 : 3, percDecay: r5.range(0.08, 0.16),
++            speak: r5.range(0.06, 0.12), chiff: r5.range(0.8, 1.4), celeste: r5.range(3, 6),
++            swell: flavor === 'pipe' ? 0.1 : 0.01,
++          });
++          // Round 6: variations of the pipe organ, to pick one from. Every
++          // one holds through passing chords (hold), and dips the middle
++          // (carve: -5 dB around 800 Hz, where tunes live) so it stops
++          // burying the other parts.
++          //   chapel:    flutes 8' and 4', a soft chiff, a little room.
++          //   cathedral: a principal chorus 16' 8' 4' 2' with a mixture
++          //              (1 1/3' and 1'), slow speech, a big room: power.
++          //   distant:   the cathedral heard from the back of the nave:
++          //              mostly room, the direct sound 8 dB down.
++          //   celeste:   a string rank and a celeste a few cents sharp,
++          //              slow speech, no chiff: an organ that surrounds.
++          const V = {
++            chapel: { bars: [0, 0, 8, 6, 0, 0, 0, 0, 0], speak: 0.12, chiff: 0.6, verb: 0.45, release: 0.4, tone: 2400, celeste: 3, celesteLevel: 0.25 },
++            cathedral: { bars: [6, 0, 8, 6, 0, 5, 0, 3, 3], speak: 0.2, chiff: 0.7, verb: 0.8, release: 0.6, tone: 3800, celeste: 2, celesteLevel: 0.2, low: 50 },
++            distant: { bars: [6, 0, 8, 6, 0, 5, 0, 3, 3], speak: 0.25, chiff: 0, verb: 1.3, dry: 0.4, release: 0.8, tone: 3200, celeste: 2, celesteLevel: 0.2, low: 50 },
++            celeste: { bars: [0, 0, 8, 6, 4, 4, 3, 2, 2], speak: 0.3, chiff: 0, verb: 0.6, release: 0.8, tone: 2200, celeste: 7, celesteLevel: 0.9 },
++          };
++          // Round 7: a mix of the variations, by weight (Mikey's first:
++          // 55% chapel, 25% round 5's pipe, 10% distant, 10% celeste).
++          // Stops mix as pipe loudness (each drawbar's amplitude, weighted),
++          // timings and sends as weighted means; round 5's pipe brings the
++          // loop's own registration and tone, so loops still differ.
++          // Approved as the chapel organ (Mikey, 2026-10-16): 'chapelOrgan'.
++          if (P.organVariant === 'mix' || P.organVariant === 'chapelOrgan') {
++            const W = P.organMix || { chapel: 0.55, pipe5: 0.25, distant: 0.1, celeste: 0.1 };
++            const pipe5 = { bars: E.organ.bars || REG.find((x) => x[0] === E.organ.reg)[1], speak: E.organ.speak, chiff: E.organ.chiff,
++              verb: 0.35, dry: 1, release: 0.35, tone: E.organ.tone, celeste: E.organ.celeste,
++              celesteLevel: 0.45, low: 75, hold: 0, carve: 0, levelMul: 1 };
++            const src = { pipe5, ...Object.fromEntries(Object.entries(V).map(([k, v]) => [k, { dry: 1, low: 75, hold: 1, carve: -5,
++              levelMul: { chapel: 1.19, cathedral: 1.16, distant: 1.6, celeste: 0.9 }[k], ...v }])) };
++            const total = Object.values(W).reduce((a, b) => a + b, 0);
++            const mean = (key) => Object.entries(W).reduce((a, [k, w]) => a + w * (src[k][key] ?? 0), 0) / total;
++            const amp = (b) => (b ? Math.pow(10, (b - 8) * 3 / 20) : 0);
++            const bars = Array.from({ length: 9 }, (_, i) => {
++              const a = Object.entries(W).reduce((x, [k, w]) => x + w * amp(src[k].bars[i]), 0) / total;
++              return a > 0.01 ? 8 + 20 * Math.log10(a) / 3 : 0;
++            });
++            Object.assign(E.organ, {
++              flavor: 'pipe', reg: 'mix', bars, speak: mean('speak'), chiff: mean('chiff'), verb: mean('verb'), dry: mean('dry'),
++              release: mean('release'), tone: mean('tone'), celeste: mean('celeste'), celesteLevel: mean('celesteLevel'),
++              low: mean('low'), hold: mean('hold') >= 0.5, carve: mean('carve'), levelMul: mean('levelMul'), mix: W,
++            });
++          }
++          const vname = P.organVariant;
++          if (vname && V[vname]) {
++            Object.assign(E.organ, { flavor: 'pipe', reg: vname, hold: true, carve: -5, ...V[vname] });
++            // Matched by ear (K-weighted, three loops) to about 2 dB under
++            // round 5's pipe, which Mikey heard as burying the other parts.
++            E.organ.levelMul = { chapel: 1.19, cathedral: 1.16, distant: 1.6, celeste: 0.9 }[vname];
++          }
++        }
++        Object.assign(E.organ, {
++          // A held bed weighs more in a sparse loop: under about three notes
++          // a second it comes down, by up to 11 dB.
++          level: (P.organLevel ?? (P.organ === 'r3' ? 0.11 : 0.085)) * (E.organ.levelMul ?? 1) * Math.min(1, Math.max(0.28, (nps + 0.5) / 3.5)),
++        });
++        this.synth.organSetup(E.organ);
++      }
++      E.organKey = null;
++      E.organUntil = 0;
++    }
++    if (P.wash) {
++      if (P.wash === 'r1') this.synth.startWashR1(t0, 20);
++      else {
++        const r = new Rng(((spec.seed ^ 0x3a54) >>> 0) || 1);
++        // Round 3: 8 dB down from round 2, which took over the music.
++        // Round 4: softer (see the synth) and 8 dB further down by energy,
++        // which is about 5 dB by ear (the soft wash is darker).
++        const rel = P.washRel ?? (P.wash === 'r2' ? r.range(-13, -9) : P.wash === 'r3' ? r.range(-21, -17) : P.wash === 'r4' ? r.range(-29.5, -25.5) : r.range(-31, -27));
++        E.wash = { period: r.range(17, 26), rel };
++        // k turns the follower (the mix's average |x|) into the swell's
++        // peak gain; WASH_K is calibrated by render (docs in the sketch).
++        let color = null;
++        if (!['r2', 'r3', 'r4'].includes(P.wash)) {
++          // Round 5: colored by the loop's key: resonances on the root (or
++          // its fifth) in 600-1200 Hz and an octave and a fifth above.
++          const r5 = new Rng(((spec.seed ^ 0x3a55) >>> 0) || 1);
++          const pc = ((spec.root ?? 0) + (r5.chance(0.6) ? 0 : 7)) % 12;
++          let hz = 440 * Math.pow(2, (pc - 9) / 12);
++          while (hz < 600) hz *= 2;
++          while (hz > 1200) hz /= 2;
++          color = { peaks: [[hz, r5.range(4, 7)], [hz * 3, r5.range(2, 4)]], q: r5.range(3, 5) };
++          E.wash.color = { hz: Math.round(hz), pc };
++        }
++        this.synth.startWash(t0, { period: E.wash.period, k: (P.washK ?? 25) * Math.pow(10, rel / 20), soft: !['r2', 'r3'].includes(P.wash), color });
++      }
++    }
++  }
++
++  _earsStep(p, s, t, sd, abs, cyc, at, mutes) {
++    const E = this._ears;
++    const spb = p.stepsPerBar || 16;
++    const chords = p.tracks.chords;
++    const len = cyc.chords || p.totalSteps;
++    if (E.stab === 'r1') {
++      for (const e of chords) {
++        if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
++        const notes = e.notes.slice(0, 3).map((n) => { let m = n; while (m > 72) m -= 12; while (m < 57) m += 12; return m; });
++        for (const [off, chance] of [[2, 0.6], [10, 0.35]]) {
++          if (!E.stabRng.chance(chance)) continue;
++          const at = t + off * sd;
++          this._play(at, () => this.synth.dubStabR1(notes, at, 0.8));
++        }
++      }
++    } else if (E.stab) {
++      const half = Math.floor(spb / 2);
++      const pos = s % spb;
++      const which = pos === 2 ? 0 : pos === half + 2 ? 1 : -1;
++      // Not in a bar the loop leaves silent (a rest or a full stop): a stab
++      // alone in a hole is the loudest thing for seconds.
++      // And only over a groove: a bar where the drums or the bass play and
++      // the other layers have at least four notes between them. In a thin
++      // passage a stab and its echo are left ringing on their own.
++      const busyBar = () => {
++        let n = 0, floor = 0;
++        for (const l of ['drums', 'bass', 'melody', 'texture']) {
++          if (mutes[l]) continue;
++          const pos = at(l);
++          const from = pos - (pos % spb);
++          const k = p.tracks[l].filter((e) => e.vel && e.step >= from && e.step < from + spb).length;
++          n += k;
++          if ((l === 'drums' || l === 'bass') && k) floor++;
++        }
++        return floor > 0 && n >= 4;
++      };
++      if (which >= 0 && E.stab.rates[which] > 0 && !this._isSilentBar(abs) && busyBar()) {
++        // The chord sounding now: the last one struck, if it was struck
++        // within the last bar (the layer may be resting).
++        let cur = null;
++        for (const e of chords) if (e.vel && e.notes && e.notes.length && e.step <= s && (!cur || e.step >= cur.step)) cur = e;
++        if (cur && s - cur.step < spb && E.stabRng.chance(E.stab.rates[which])) {
++          const notes = cur.notes.slice(0, 3).map((n) => { let m = n; while (m > 72) m -= 12; while (m < 55) m += 12; return m; });
++          this._play(t, () => this.synth.dubStab(notes, t, 0.8, E.stab.opts));
++        }
++      }
++    }
++    if (E.organ) {
++      for (const e of chords) {
++        if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
++        const key = e.notes.join();
++        if (key === E.organKey && abs < E.organUntil) continue;
++        // Held until the next chord with other notes, or the loop's end; let
++        // go after a bar or so where the chords rest for more than two bars.
++        let next = len, nextAny = len;
++        for (const o of chords) {
++          if (o.step <= s || !o.vel || !o.notes || !o.notes.length) continue;
++          nextAny = Math.min(nextAny, o.step);
++          if (o.notes.join() !== key) next = Math.min(next, o.step);
++        }
++        // Round 6 (a variation with `hold`): fewer changes. The organ moves
++        // at most once a bar, and holds through a chord that keeps its
++        // lowest note and two of its notes (a passing chord), so it doesn't
++        // follow every busy change of the keys.
++        if (E.organ !== 'r1' && E.organ.hold && E.organHeld) {
++          const pcs = (ns) => ns.map((n) => ((n % 12) + 12) % 12);
++          const a = pcs(E.organHeld), b = pcs(e.notes);
++          const shared = b.filter((x) => a.includes(x)).length;
++          const sameLow = a[0] === b[0];
++          if (abs - (E.organLast ?? -1e9) < spb || (sameLow && shared >= 2)) continue;
++        }
++        E.organKey = key;
++        E.organUntil = abs + (next - s);
++        E.organHeld = e.notes.slice().sort((x, y) => x - y);
++        E.organLast = abs;
++        if (E.organ === 'r1') {
++          this._play(t, () => this.synth.organR1(e.notes, t, (next - s) * sd, 0.9));
++        } else {
++          this.synth.organChord(e.notes, t, 1);
++          const gap = nextAny - s;
++          if (gap > 2 * spb) {
++            const hold = Math.max(e.dur || 0, spb);
++            this.synth.organOff(t + hold * sd, 0.6);
++            E.organUntil = abs + hold;
++          }
++        }
++      }
++    }
++  }
++
+   // True when every layer is scheduled out for the bar containing this step,
+   // either by the loop's entry schedule or by a drift rest.
+   _isSilentBar(absStep) {
+@@ -720,6 +987,12 @@ export class Engine {
+       // Deciding again after a change, a bar line before it is heard was
+       // handed over already, as it was.
+       const kept = time < this.floor;
++      // Ears sketch: a full stop stays a full stop for the organ too.
++      if (quiet && this._ears && this._ears.organ && this._ears.organ !== 'r1' && !kept) {
++        this.synth.organOff(time);
++        this._ears.organKey = null;
++        this._ears.organHeld = null;
++      }
+       if (quiet && !this.tailsDucked) {
+         if (!kept) this.synth.fadeTails(time);
+         this.tailsDucked = true;
+@@ -840,6 +1113,9 @@ export class Engine {
+         this._play(t, () => this.synth.texture(e.kind, e.notes, t, e.dur * sd, e.vel, { band: e.band }), keyOf('texture'));
+       }
+     }
++    // Ears sketches ask after every layer of the step, so where the budget
++    // is short it is the sketch that yields.
++    if (this._ears && !mutes.chords) this._earsStep(p, at('chords'), t, sd, abs, cyc, at, mutes);
+ 
+     // The cursor used to get a setTimeout per step. Timer callbacks drift,
+     // arrive in bursts and are the first thing the main thread drops under
+diff --git a/js/generator.js b/js/generator.js
+index 9964fa7..b1b6a64 100644
+--- a/js/generator.js
++++ b/js/generator.js
+@@ -838,8 +838,47 @@ function genHarmony(spec, vary = null, besides = null) {
+   const events = [];
+   let prevVoicing = null;
+ 
++  // EARS SKETCH (Ears 4; local and offline, never app code): long chords
++  // as an option. Each loop draws how long its chords last, from a stream
++  // of its own so every draw below is unchanged. Today's lengths stay the
++  // most common; the long ones lean in for calm loops; and some loops hold
++  // one chord for the whole loop. PROTO.longChords 'r1' is round 1's spread.
++  let chordAt = (slot) => shape[slot % shape.length];
++  let chordTrim = 1;
++  const LC = (globalThis.PROTO || {}).longChords;
++  if (LC) {
++    const lr = new Rng(((spec.layerSeeds.chords ^ 0x10c4) >>> 0) || 1);
++    const slotSec = (spb * 60 / spec.bpm / 4) / chordsPerBar;
++    let kind;
++    if (LC === 'r1') {
++      kind = lr.weighted([['asIs', 35], ['double', 30], ['eight', 20], ['long', 15]]);
++    } else {
++      // Calm loops (a low energy feel, or calm vibes) lean long.
++      const calm = (spec.feel && spec.feel.energy < 0.35) || ['floating', 'meditative', 'hushed', 'misty', 'foggy', 'hypnotic', 'still']
++        .some((v) => spec.vibes && spec.vibes[v] > 0.25);
++      // ...and driving ones (a high energy feel) lean away: round 1's long
++      // chords worked in grove and not in wayfare.
++      const w = calm ? 1.8 : spec.feel && spec.feel.energy > 0.65 ? 0.5 : 1;
++      kind = typeof LC === 'string' && !['on', 'r2', 'r3'].includes(LC) ? LC : lr.weighted([['asIs', 56], ['double', 16], ['eight', 10 * w], ['long', 9 * w], ['whole', 9 * w]]);
++    }
++    const target = { asIs: slotSec, double: 2 * slotSec, eight: 8, long: 16, whole: Infinity }[kind];
++    let hold = kind === 'whole' ? slotCount : Math.max(1, Math.round(target / slotSec));
++    if (kind !== 'long' && kind !== 'whole') hold = Math.min(hold, Math.max(1, Math.floor(slotCount / 2)));
++    const turnaround = kind !== 'whole' && hold >= 2 && lr.chance(0.3);
++    const seq = [];
++    for (let k = 0; seq.length < slotCount; k++) {
++      const last = k % shape.length === shape.length - 1;
++      const len = turnaround && last ? Math.max(1, Math.floor(hold / 2)) : hold;
++      for (let j = 0; j < len && seq.length < slotCount; j++) seq.push(shape[k % shape.length]);
++    }
++    chordAt = (slot) => seq[slot];
++    globalThis.EARS_LONGCHORDS = kind; // read by the ears tools
++    // Round 3: a held chord rings on while the rest moves, so it reads
++    // louder than its level says: trimmed by up to about 2 dB the longer it holds.
++    if (LC !== 'r1' && LC !== 'r2') chordTrim = { asIs: 1, double: 0.92, eight: 0.86, long: 0.8, whole: 0.8 }[kind];
++  }
+   for (let s = 0; s < slotCount; s++) {
+-    const chord = shape[s % shape.length];
++    const chord = chordAt(s);
+     const degree = stepDegree(chord);
+     // A spelled chord is built, sevenths and ninths too, in its own scale.
+     const steps = typeof chord === 'number' ? scale : spelledSteps(scale, chord);
+@@ -946,6 +985,30 @@ function genHarmony(spec, vary = null, besides = null) {
+     }
+   }
+ 
++  if (chordTrim !== 1) for (const e of events) e.vel *= chordTrim;
++  // Round 4: a held pad is tied, not struck again over its own tail. The
++  // same chord repeated on a sustained voice overlapped its ringing copy,
++  // and the two beat against each other (the roughness Mikey heard: grove
++  // #47's chord layer doubled its 15-75 Hz flutter at 150-400 Hz).
++  if (LC && LC !== 'r1' && LC !== 'r2' && LC !== 'r3') {
++    const SUSTAINED = new Set(['pad', 'softpad', 'moogpad', 'analogpad', 'choir']);
++    const tied = [];
++    for (const e of events.slice().sort((a, b) => a.step - b.step)) {
++      const prev = tied[tied.length - 1];
++      // The next strike of the same chord, within a slot of the last one:
++      // its tail would still be ringing (a pad lets go over 1.6 s).
++      if (prev && SUSTAINED.has(e.voice) && prev.voice === e.voice && prev.notes.length > 1
++        && prev.notes.join() === e.notes.join() && e.step - prev.last <= slotLen) {
++        prev.dur = Math.max(prev.dur, e.step + e.dur - prev.step);
++        prev.last = e.step;
++        continue;
++      }
++      tied.push(Object.assign(e, { last: e.step }));
++    }
++    for (const e of tied) delete e.last;
++    events.length = 0;
++    events.push(...tied);
++  }
+   return { slots, events, shape, cycleSteps: spec.bars * spb };
+ }
+ 
+@@ -2561,6 +2624,40 @@ export function render(spec) {
+     separateRegisters(harmony, tracks, choir);
+   }
+ 
++  // EARS SKETCH (Ears 4, round 4): held chords stay in the octave today's
++  // chords take. separateRegisters moves the keys down an octave when their
++  // centre sits within five semitones of the tune's; holding chords nudges
++  // that centre just across the line in about one held loop in eight (grove
++  // #47: up an octave, into the range the ear is most sensitive to, the
++  // "too loud" held chords), so the octave is read from today's progression.
++  {
++    const LCx = (globalThis.PROTO || {}).longChords;
++    if (LCx && LCx !== 'r1' && LCx !== 'r2' && LCx !== 'r3' && !render._inner) {
++      const keep = globalThis.PROTO;
++      globalThis.PROTO = { ...keep, longChords: undefined };
++      render._inner = true;
++      let today;
++      try { today = render(spec); } finally { render._inner = false; globalThis.PROTO = keep; }
++      const centre = (list) => {
++        const ns = list.filter((e) => e.vel && e.notes && e.notes.length).flatMap((e) => e.notes);
++        return ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : null;
++      };
++      const a = centre(today.tracks.chords);
++      const b = centre(tracks.chords);
++      const sh = a != null && b != null ? Math.round((a - b) / 12) * 12 : 0;
++      if (sh) {
++        const moved = new Set();
++        for (const list of [harmony.events, tracks.chords]) {
++          for (const e of list) {
++            if (!e.notes || moved.has(e)) continue;
++            moved.add(e);
++            e.notes = e.notes.map((n) => n + sh);
++          }
++        }
++      }
++    }
++  }
++
+   // After the register work, so the pitch written down is the pitch played.
+   annotatePrev(tracks.melody, spec, (spec.cycles && spec.cycles.melody) || spec.bars * spb);
+ 
+diff --git a/js/synth.js b/js/synth.js
+index 5eebd88..4f3dfa0 100644
+--- a/js/synth.js
++++ b/js/synth.js
+@@ -994,6 +994,77 @@ export class Synth {
+     this.output = this.ceiling;
+     this.ceiling.connect(ctx.destination);
+ 
++    // EARS SKETCH (space recipes, 2026-10-15). Off unless a page sets
++    // globalThis.SPACE. Every stereo move below is mid/side or a linear
++    // balance (L = 1 + p, R = 1 - p), so (L + R) / 2 is exactly today's mono
++    // mix before the master chain.
++    const SP = globalThis.SPACE || null;
++    this.space = SP;
++    // Ears 4, round 2: one slow breath for the whole image. The reverb's,
++    // the echo's and the spread's side signals all ride it, between
++    // 1 - depth and 1, once every `period` seconds (60-140 s), so the room
++    // opens and closes slowly instead of anything bouncing.
++    let breath = null;
++    if (SP && SP.breath) {
++      const c = ctx.createConstantSource();
++      c.offset.value = 1 - SP.breath.depth / 2;
++      const o = ctx.createOscillator();
++      o.frequency.value = 1 / SP.breath.period;
++      const d = ctx.createGain();
++      d.gain.value = SP.breath.depth / 2;
++      breath = ctx.createGain();
++      c.connect(breath);
++      o.connect(d).connect(breath);
++      c.start(ctx.currentTime + 0.05);
++      o.start(ctx.currentTime + 0.05);
++      (this._spaceLfos ||= []).push(c, o);
++    }
++    const msPair = (src, dest, hpHz = 0, breathe = false) => {
++      // src (mono) -> dest as [+src, -src]: a pure side signal. hpHz keeps
++      // the side above a frequency, so the low end stays centered.
++      if (hpHz) {
++        const hp = ctx.createBiquadFilter();
++        hp.type = 'highpass';
++        hp.frequency.value = hpHz;
++        src.connect(hp);
++        src = hp;
++      }
++      if (breathe && breath) {
++        const b = ctx.createGain();
++        b.gain.value = 0;
++        breath.connect(b.gain);
++        src.connect(b);
++        src = b;
++      }
++      const m = ctx.createChannelMerger(2);
++      const flip = ctx.createGain();
++      flip.gain.value = -1;
++      src.connect(m, 0, 0);
++      src.connect(flip).connect(m, 0, 1);
++      m.connect(dest);
++    };
++    const balance = (src, p, move, dest) => {
++      // Placement above 150 Hz only, so low notes stay centered:
++      // L = src + p * HP(src), R = src - p * HP(src). The fold is src.
++      src.connect(dest);
++      const hp = ctx.createBiquadFilter();
++      hp.type = 'highpass';
++      hp.frequency.value = 150;
++      const a = ctx.createGain();
++      a.gain.value = p;
++      src.connect(hp).connect(a);
++      if (move && move.depth) {
++        const o = ctx.createOscillator();
++        o.frequency.value = 1 / move.period;
++        const d = ctx.createGain();
++        d.gain.value = move.depth;
++        o.connect(d).connect(a.gain);
++        o.start(ctx.currentTime + 0.05);
++        (this._spaceLfos ||= []).push(o);
++      }
++      msPair(a, dest);
++    };
++
+     // Reverb: parallel damped comb filters. Far cheaper than a convolver
+     // and it can be tuned live, which a fixed impulse response cannot.
+     this.reverbIn = ctx.createGain();
+@@ -1024,6 +1095,46 @@ export class Synth {
+     }
+     this.combSum.gain.value = 0.2 / this.combs.length;
+     this.combSum.connect(this.reverbOut);
++    if (SP && SP.verbSmooth) {
++      // Round 3: the room's side is the reverb itself through a chain of
++      // delay allpasses (5-23 ms), which leaves its tone alone and only
++      // scrambles its phase, so left and right come apart smoothly; even
++      // minus odd combs gave a side with the combs' own ringing in it.
++      // Still side only: the mid is today's reverb.
++      const vs = ctx.createGain();
++      vs.gain.value = SP.verbSmooth * 0.2 / this.combs.length;
++      this.verbSide = vs;
++      this.combs.forEach((c) => c.d.connect(vs));
++      let node = vs;
++      for (const [d, g] of [[0.0051, 0.6], [0.0117, 0.55], [0.0173, 0.5], [0.0229, 0.45]]) {
++        // w = x + g w(n - d); y = -g w + w(n - d)
++        const w = ctx.createGain();
++        const dl = ctx.createDelay(0.05);
++        dl.delayTime.value = d;
++        const fb = ctx.createGain();
++        fb.gain.value = g;
++        const ff = ctx.createGain();
++        ff.gain.value = -g;
++        const y = ctx.createGain();
++        node.connect(w);
++        w.connect(dl);
++        dl.connect(fb).connect(w);
++        w.connect(ff).connect(y);
++        dl.connect(y);
++        node = y;
++      }
++      msPair(node, this.reverbOut, 180, true);
++      SP.verbWidthScale = SP.verbSmooth;
++    } else if (SP && SP.verbWidth) {
++      // Side = even combs minus odd combs; the mid stays today's reverb.
++      this.verbSide = ctx.createGain();
++      this.verbSide.gain.value = SP.verbWidth * 0.2 / this.combs.length;
++      const odd = ctx.createGain();
++      odd.gain.value = -1;
++      this.combs.forEach((c, i) => c.d.connect(i % 2 ? odd : this.verbSide));
++      odd.connect(this.verbSide);
++      msPair(this.verbSide, this.reverbOut, 180, true);
++    }
+     // Both tails run through one gain so a scheduled rest can be made into
+     // real silence. Without this a four second hole is two seconds of hole
+     // and two seconds of reverb wash, which is not what silence sounds like.
+@@ -1047,9 +1158,35 @@ export class Synth {
+     this.echoIn = ctx.createGain();
+     this.echoIn.connect(this.echo);
+     this.echo.connect(this.echoTone);
+-    this.echoTone.connect(this.echoFb);
+-    this.echoFb.connect(this.echo);
+-    this.echoTone.connect(this.tails);
++    if (SP && SP.echoWidth) {
++      // Two delays in the loop: odd repeats come out of A, even out of B.
++      // Mid = A + B is today's echo; side = A - B makes it a ping-pong.
++      this.echoB = ctx.createDelay(2.0);
++      this.echoB.delayTime.value = 0.36;
++      const toneB = ctx.createBiquadFilter();
++      toneB.type = 'lowpass';
++      toneB.frequency.value = 2000;
++      const fbB = ctx.createGain();
++      fbB.gain.value = 0.34;
++      this.echoTone.connect(this.echoFb);
++      this.echoFb.connect(this.echoB);
++      this.echoB.connect(toneB);
++      toneB.connect(fbB);
++      fbB.connect(this.echo);
++      this.echoTone.connect(this.tails);
++      toneB.connect(this.tails);
++      const side = ctx.createGain();
++      side.gain.value = SP.echoWidth;
++      const negB = ctx.createGain();
++      negB.gain.value = -1;
++      this.echoTone.connect(side);
++      toneB.connect(negB).connect(side);
++      msPair(side, this.tails, 180, true);
++    } else {
++      this.echoTone.connect(this.echoFb);
++      this.echoFb.connect(this.echo);
++      this.echoTone.connect(this.tails);
++    }
+ 
+     // No continuous surface-noise layer: the musical voices and reverb
+     // provide the atmosphere without adding an audible hiss.
+@@ -1086,11 +1223,54 @@ export class Synth {
+       verb.gain.value = c.verb;
+       const echo = ctx.createGain();
+       echo.gain.value = c.echo;
+-      g.connect(name === 'drums' ? this.preBus : this.pumpBus);
++      const p = (SP && SP.pan && SP.pan[name]) || 0;
++      const mv = SP && SP.move && SP.move[name];
++      const dest = name === 'drums' ? this.preBus : this.pumpBus;
++      if ((p || mv) && name !== 'drums' && name !== 'bass') balance(g, p, mv, dest);
++      else g.connect(dest);
++      const sp = SP && SP.spread && SP.spread[name];
++      if (sp && name !== 'drums' && name !== 'bass') {
++        // Width without a pan: a slowly swaying 9-15 ms copy of the part,
++        // above 200 Hz only, added as side (+ left, - right). It cancels
++        // in the fold, so mono hears the part exactly as before.
++        const d = ctx.createDelay(0.05);
++        d.delayTime.value = 0.012;
++        const lfo = ctx.createOscillator();
++        lfo.frequency.value = 0.21 + 0.07 * Object.keys(cfg).indexOf(name);
++        const depth = ctx.createGain();
++        depth.gain.value = 0.003;
++        lfo.connect(depth).connect(d.delayTime);
++        lfo.start(ctx.currentTime + 0.05);
++        (this._spaceLfos ||= []).push(lfo);
++        const hp = ctx.createBiquadFilter();
++        hp.type = 'highpass';
++        hp.frequency.value = 200;
++        const a = ctx.createGain();
++        a.gain.value = sp;
++        g.connect(d).connect(hp).connect(a);
++        msPair(a, this.pumpBus, 0, true);
++      }
+       g.connect(verb).connect(this.reverbIn);
+       g.connect(echo).connect(this.echoIn);
+       this.channels[name] = { gain: g, verb, echo, base: c };
+     }
++    if (SP && SP.drumPan) {
++      // Small percussion placed per instrument; kick, snare and the rest
++      // stay in the middle. The drums' sends hear (L + R) / 2, the hit itself.
++      this.drumIns = {};
++      for (const [inst, p] of Object.entries(SP.drumPan)) {
++        const i = ctx.createGain();
++        // Round 2: the light kit can drift across, slowly, as one.
++        const mv = SP.drumMove && ['hat', 'ohat', 'shaker', 'jingle', 'ojingle'].includes(inst)
++          ? { ...SP.drumMove, depth: SP.drumMove.depth * (Math.abs(p) / (Math.abs(SP.drumPan.hat) || 1)) } : null;
++        balance(i, p, mv, this.channels.drums.gain);
++        this.drumIns[inst] = i;
++      }
++      for (const n of [this.channels.drums.verb, this.channels.drums.echo]) {
++        n.channelCount = 1;
++        n.channelCountMode = 'explicit';
++      }
++    }
+   }
+ 
+   setTone(tone) {
+@@ -1130,6 +1310,7 @@ export class Synth {
+       c.lp.frequency.setTargetAtTime(1400 + space * 2600, t, 0.2);
+     }
+     this.combSum.gain.setTargetAtTime((1 - fb) / this.combs.length, t, 0.2);
++    if (this.verbSide) this.verbSide.gain.setTargetAtTime((this.space.verbSmooth || this.space.verbWidth) * (1 - fb) / this.combs.length, t, 0.2);
+     this.wowDepth.gain.setTargetAtTime(0.0004 + wobble * 0.0038, t, 0.2);
+     this.flutterDepth.gain.setTargetAtTime(0.00004 + wobble * 0.0005, t, 0.2);
+   }
+@@ -1185,6 +1366,7 @@ export class Synth {
+       return;
+     }
+     this.echo.delayTime.setTargetAtTime(Math.min(1.9, seconds), this.ctx.currentTime, 0.05);
++    if (this.echoB) this.echoB.delayTime.setTargetAtTime(Math.min(1.9, seconds), this.ctx.currentTime, 0.05);
+   }
+ 
+   setMute(layer, muted, instant = false) {
+@@ -1323,7 +1505,7 @@ export class Synth {
+     }
+   }
+ 
+-  _budget(time = this.ctx.currentTime, soft = false, cost = DEFAULT_COST) {
++  _budget(time = this.ctx.currentTime, soft = false, cost = DEFAULT_COST, probe = false) {
+     while (this._releases.length && this._releases[0].at <= time) this._releases.shift();
+     const spent = this._releases.reduce((sum, r) => sum + r.cost, 0);
+     const ceiling = this.quality === 'lite' ? LITE_BUDGET : MAX_BUDGET;
+@@ -1338,7 +1520,12 @@ export class Synth {
+     // ceilings -- full is unchanged at 170, and lite gets 50.
+     const reserve = Math.min(LATE_LAYER_RESERVE, Math.round(ceiling * RESERVE_SHARE));
+     const cap = soft ? Math.max(40, ceiling - reserve) : ceiling;
+-    if (spent + cost > cap) return false;
++    if (spent + cost > cap) {
++      // Ears sketch: when the budget last turned a note away (a probe is
++      // not a note), so a sketch can stay out of the way of a busy passage.
++      if (!probe) this._lastRefusal = time;
++      return false;
++    }
+     return true;
+   }
+ 
+@@ -1403,7 +1590,7 @@ export class Synth {
+     const cost = VOICE_COST[inst] ?? 1.5;
+     if (!this._budget(time, false, cost)) return;
+     const ctx = this.ctx;
+-    const out = this.channels.drums.gain;
++    const out = (this.drumIns && this.drumIns[inst]) || this.channels.drums.gain;
+     const v = Math.max(0, Math.min(1, vel));
+     if (this.engine === 'rust' && this._coreDrum(inst, time, v, cost)) return;
+ 
+@@ -3061,6 +3248,562 @@ export class Synth {
+     }
+   }
+ 
++  // ---------------------------------------------- ears sketches (Ears 4)
++  // A local, offline sketch for the tune round; never app code. Nothing
++  // here runs unless the engine is asked by globalThis.PROTO. None of it
++  // touches Math.random, so every other draw in a render stays the same.
++
++  // A gain into a channel, kept apart so a render can tap the sketch as a
++  // stem of its own (render2.mjs, `stems`).
++  _sketchOut(name, channel) {
++    this._sketch ||= {};
++    if (!this._sketch[name]) {
++      const g = this.ctx.createGain();
++      g.connect(this.channels[channel].gain);
++      this._sketch[name] = { node: g, channel };
++    }
++    return this._sketch[name].node;
++  }
++
++  // Round 1's dub stab (Ears 1), kept for the before/after clips.
++  dubStabR1(notes, time, vel) {
++    if (!this._budget(time, true, 10)) return;
++    const ctx = this.ctx;
++    const bp = ctx.createBiquadFilter();
++    bp.type = 'bandpass';
++    bp.frequency.setValueAtTime(820, time);
++    bp.frequency.exponentialRampToValueAtTime(560, time + 0.16);
++    bp.Q.value = 1.8;
++    const g = ctx.createGain();
++    g.gain.setValueAtTime(0.0001, time);
++    g.gain.exponentialRampToValueAtTime(Math.max(0.001, vel * 0.9), time + 0.004);
++    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.2);
++    const throwGain = ctx.createGain();
++    throwGain.gain.value = 0.9;
++    for (const m of notes) {
++      const o = ctx.createOscillator();
++      o.type = 'sawtooth';
++      o.frequency.value = midiToFreq(m);
++      o.connect(bp);
++      o.start(time); o.stop(time + 0.25);
++    }
++    bp.connect(g);
++    g.connect(this._sketchOut('dubStab', 'chords'));
++    g.connect(throwGain).connect(this.echoIn);
++    this._release(time, 0.3, 10);
++  }
++
++  // The tuned dub stab: rounder and warmer. A triangle under a softened
++  // saw, a slower attack, a lowpass that closes as the stab dies (no narrow
++  // bandpass), the lows trimmed below 220 Hz so it sits over the bass, and
++  // a darker, lighter throw into the echo. Measured against Basic Channel's
++  // Quadrant Dub I (tools/ears/warmth.py): round 1 sat an octave brighter.
++  dubStab(notes, time, vel, o = {}) {
++    // It asks the budget but never holds any of it: it plays only where
++    // there is room to spare right now (its cost and a margin under the full
++    // ceiling), and then takes nothing, so it can't cost another part a
++    // note. Its own cost is small and brief, for the core to allow for as
++    // it does the organ's.
++    const cost = 8;
++    if (!this._budget(time, false, cost + (o.margin ?? 20), true)) return;
++    const ctx = this.ctx;
++    const atk = o.attack ?? 0.012;
++    const dec = o.decay ?? 0.24;
++    const det = o.detune ?? [3, -4];
++    const lp = ctx.createBiquadFilter();
++    lp.type = 'lowpass';
++    lp.Q.value = 0.8;
++    lp.frequency.setValueAtTime(o.open ?? 1500, time);
++    lp.frequency.exponentialRampToValueAtTime(o.close ?? 700, time + dec);
++    const hp = ctx.createBiquadFilter();
++    hp.type = 'highpass';
++    hp.frequency.value = o.hp ?? 220;
++    hp.Q.value = 0.6;
++    const g = ctx.createGain();
++    const peak = vel * (o.level ?? 0.5) / Math.sqrt(notes.length);
++    g.gain.setValueAtTime(0, time);
++    g.gain.linearRampToValueAtTime(peak, time + atk);
++    g.gain.setTargetAtTime(0, time + atk, dec / 3.5);
++    const end = time + atk + dec * 1.8;
++    for (const m of notes) {
++      const f = midiToFreq(m);
++      for (const [type, lvl, dt] of [['triangle', 1, det[0]], ['sawtooth', o.saw ?? 0.4, det[1]]]) {
++        const osc = ctx.createOscillator();
++        osc.type = type;
++        osc.frequency.value = f;
++        osc.detune.value = dt;
++        const og = ctx.createGain();
++        og.gain.value = lvl;
++        osc.connect(og).connect(lp);
++        osc.start(time); osc.stop(end);
++      }
++    }
++    lp.connect(hp).connect(g);
++    g.connect(this._sketchOut('dubStab', 'chords'));
++    const dark = ctx.createBiquadFilter();
++    dark.type = 'lowpass';
++    dark.frequency.value = o.echoTone ?? 1100;
++    const th = ctx.createGain();
++    th.gain.value = o.throw ?? 0.6;
++    g.connect(dark).connect(th).connect(this.echoIn);
++    if (o.verb) {
++      // Round 3: a little more room, so the stab blooms instead of knocking.
++      const v = ctx.createGain();
++      v.gain.value = o.verb;
++      g.connect(v).connect(this.reverbIn);
++    }
++  }
++
++  // Round 1's organ, kept for the before/after clips.
++  organR1(notes, time, dur, vel) {
++    if (!this._budget(time, true, 14)) return;
++    const ctx = this.ctx;
++    const g = ctx.createGain();
++    const peak = Math.max(0.001, vel * 0.035 / Math.sqrt(notes.length));
++    g.gain.setValueAtTime(0.0001, time);
++    g.gain.linearRampToValueAtTime(peak, time + 0.6);
++    g.gain.setValueAtTime(peak, time + Math.max(0.6, dur));
++    g.gain.linearRampToValueAtTime(0.0001, time + Math.max(0.6, dur) + 0.8);
++    const trem = ctx.createGain();
++    trem.gain.value = 1;
++    const lfo = ctx.createOscillator();
++    lfo.frequency.value = 5.4;
++    const depth = ctx.createGain();
++    depth.gain.value = 0.12;
++    lfo.connect(depth).connect(trem.gain);
++    const lp = ctx.createBiquadFilter();
++    lp.type = 'lowpass';
++    lp.frequency.value = 2400;
++    const end = time + Math.max(0.6, dur) + 0.9;
++    for (let m of notes) {
++      while (m > 67) m -= 12;
++      for (const [mult, lvl] of [[0.5, 0.7], [1, 1], [1.5, 0.45], [2, 0.3]]) {
++        const o = ctx.createOscillator();
++        o.type = 'sine';
++        o.frequency.value = midiToFreq(m) * mult;
++        const og = ctx.createGain();
++        og.gain.value = lvl;
++        o.connect(og).connect(lp);
++        o.start(time); o.stop(end);
++      }
++    }
++    lp.connect(trem).connect(g).connect(this._sketchOut('organ', 'chords'));
++    lfo.start(time); lfo.stop(end);
++    this._release(time, Math.max(0.6, dur) + 0.9, 14);
++  }
++
++  // The tuned organ: one instrument per loop, built at load and left
++  // running, the way tonewheels keep turning. Four voices, each one
++  // oscillator whose wave is the loop's registration (nine drawbars as
++  // harmonics over the 16'), retuned at each chord. Then a little drive,
++  // a tone filter, and a slow rotary-style chorus: a swaying delay mixed
++  // with the dry sound, a slower tremolo beside it. It never asks the voice
++  // budget, so it can't be refused and can't refuse anything; its cost is
++  // fixed and small (render2.mjs measures it), for the core to reserve.
++  organSetup(o) {
++    const ctx = this.ctx;
++    this.organStop(ctx.currentTime);
++    const H = [1, 3, 2, 4, 6, 8, 10, 12, 16]; // 16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'
++    const real = new Float32Array(17);
++    const imag = new Float32Array(17);
++    o.bars.forEach((b, i) => { if (b) imag[H[i]] += Math.pow(10, (b - 8) * 3 / 20); });
++    const wave = ctx.createPeriodicWave(real, imag);
++    const t0 = ctx.currentTime + 0.02;
++    const bus = ctx.createGain();
++    // Round 3: the drive with headroom. Round 2 fed the four voices' sum
++    // (up to about 2) straight into the shaper, whose input ends at 1, so
++    // every chord was clipped flat: the broken low notes Mikey heard. Now
++    // the sum comes in at most about 0.8, through a soft curve normalized
++    // to 1 at full scale, and gain is made up after it.
++    const k = 0.6 + 2.2 * o.drive;
++    const curve = new Float32Array(2048);
++    for (let i = 0; i < curve.length; i++) {
++      const x = (i / (curve.length - 1)) * 2 - 1;
++      curve[i] = Math.tanh(k * x) / Math.tanh(k);
++    }
++    const drive = ctx.createWaveShaper();
++    drive.curve = curve;
++    drive.oversample = '2x';
++    const pre = ctx.createGain();
++    pre.gain.value = 0.4;
++    const post = ctx.createGain();
++    post.gain.value = 1.5 * Math.tanh(k) / k;
++    const tone = ctx.createBiquadFilter();
++    tone.type = 'lowpass';
++    tone.frequency.value = o.tone;
++    tone.Q.value = 0.5;
++    // And a gentle highpass, so a 16' stop doesn't thicken the bass.
++    const low = ctx.createBiquadFilter();
++    low.type = 'highpass';
++    low.frequency.value = 75;
++    low.Q.value = 0.5;
++    if (o.low) low.frequency.value = o.low;
++    bus.connect(pre).connect(drive).connect(post).connect(low);
++    if (o.carve) {
++      // Round 6: a dip around 800 Hz, where the tunes live, so the organ
++      // surrounds them instead of covering them.
++      const cv = ctx.createBiquadFilter();
++      cv.type = 'peaking';
++      cv.frequency.value = 800;
++      cv.Q.value = 0.8;
++      cv.gain.value = o.carve;
++      low.connect(cv).connect(tone);
++    } else {
++      low.connect(tone);
++    }
++    // The rotary: the horn as a swaying delay, the drum as a slower tremolo.
++    const dry = ctx.createGain();
++    dry.gain.value = 0.62;
++    const wet = ctx.createGain();
++    wet.gain.value = 0.55;
++    const dl = ctx.createDelay(0.03);
++    dl.delayTime.value = 0.0045;
++    const horn = ctx.createOscillator();
++    horn.frequency.value = o.rate;
++    const hornDepth = ctx.createGain();
++    hornDepth.gain.value = o.depth * 0.0018;
++    horn.connect(hornDepth).connect(dl.delayTime);
++    const trem = ctx.createGain();
++    trem.gain.value = 1;
++    const drum = ctx.createOscillator();
++    drum.frequency.value = o.rate * 0.83;
++    const drumDepth = ctx.createGain();
++    drumDepth.gain.value = o.depth * 0.09;
++    drum.connect(drumDepth).connect(trem.gain);
++    if (o.chorus === 0) {
++      // Round 4: no pitch-bending chorus; the level shimmers slowly instead.
++      dry.gain.value = 1;
++      tone.connect(dry).connect(trem);
++      drum.frequency.value = o.shimmer;
++      drumDepth.gain.value = 0.12;
++    } else {
++      tone.connect(dry).connect(trem);
++      tone.connect(dl).connect(wet).connect(trem);
++    }
++    const level = ctx.createGain();
++    level.gain.value = o.level;
++    const direct = ctx.createGain();
++    direct.gain.value = o.dry ?? 1;
++    trem.connect(level).connect(direct).connect(this._sketchOut('organ', 'chords'));
++    if (o.verb) {
++      const v = ctx.createGain();
++      v.gain.value = o.verb;
++      level.connect(v).connect(this.reverbIn);
++    }
++    horn.start(t0); drum.start(t0);
++    const voices = [];
++    const extra = [];
++    for (let i = 0; i < 4; i++) {
++      const osc = ctx.createOscillator();
++      osc.setPeriodicWave(wave);
++      osc.frequency.value = 110;
++      const g = ctx.createGain();
++      g.gain.value = 0;
++      osc.connect(g).connect(bus);
++      osc.start(t0);
++      const v = { osc, g, midi: null };
++      if (o.flavor === 'pipe') {
++        // Round 5: a celeste rank, a second pipe a few cents sharp at half
++        // the level, so each note shimmers slowly the way a pipe organ's
++        // voix celeste does (a beat every second or two, not a wobble).
++        const c = ctx.createOscillator();
++        c.setPeriodicWave(wave);
++        c.frequency.value = 110;
++        c.detune.value = o.celeste ?? 4;
++        const cg = ctx.createGain();
++        cg.gain.value = o.celesteLevel ?? 0.45;
++        c.connect(cg).connect(g);
++        c.start(t0);
++        v.cel = c;
++        extra.push(c);
++      }
++      voices.push(v);
++    }
++    this._organ = { o, voices, srcs: [horn, drum, ...voices.map((v) => v.osc), ...extra], level, bus, on: false };
++  }
++
++  // Each chord: the voices dip for a few milliseconds, retune, and come
++  // back in over the loop's swell (instant to slow), with a soft key click
++  // in the loops that drew one.
++  organChord(notes, time, vel = 1) {
++    const org = this._organ;
++    if (!org) return;
++    const ms = [...new Set(notes.map((n) => { let m = n; while (m > 67) m -= 12; while (m < 48) m += 12; return m; }))]
++      .sort((a, b) => a - b).slice(0, 4);
++    const each = vel / Math.sqrt(Math.max(3, ms.length));
++    const swell = org.o.swell;
++    if (org.o.flavor) return this._organLegato(org, ms, each, time, vel);
++    org.voices.forEach((v, i) => {
++      const g = v.g.gain;
++      g.cancelScheduledValues(time - 0.02);
++      g.setTargetAtTime(0, time - 0.02, 0.004);
++      if (i < ms.length) {
++        v.osc.frequency.setValueAtTime(midiToFreq(ms[i]) / 2, time);
++        g.setTargetAtTime(each, time, Math.max(0.004, swell / 3));
++      }
++    });
++    if (org.o.click) {
++      const ctx = this.ctx;
++      const src = ctx.createBufferSource();
++      src.buffer = this.noise;
++      const bp = ctx.createBiquadFilter();
++      bp.type = 'bandpass';
++      bp.frequency.value = 2600;
++      bp.Q.value = 1.2;
++      const cg = ctx.createGain();
++      cg.gain.setValueAtTime(0, time);
++      cg.gain.linearRampToValueAtTime(org.o.click * vel, time + 0.0015);
++      cg.gain.setTargetAtTime(0, time + 0.0015, 0.004);
++      src.connect(bp).connect(cg).connect(org.bus);
++      src.start(time, (time * 7.31) % 1.5, 0.04);
++    }
++    org.on = true;
++  }
++
++  // Round 5: articulation, after real organs. A note both chords share
++  // keeps sounding through the change, untouched; only the notes that
++  // change are let go and spoken again, on voices freed by the old chord.
++  // 'tonewheel' (after a Hammond): notes speak at once and let go fast,
++  // and each newly spoken note gets a soft percussion, a 4' or 2 2/3'
++  // partial that rings for a moment and fades (the Hammond's percussion
++  // tab), so a chord change is heard as a touch rather than a swell.
++  // 'pipe' (after a church or chamber organ): notes speak in about 60-120
++  // ms with a soft chiff (a breath of filtered noise at the pipe's second
++  // harmonic, the sound of air finding the pipe), shimmer through the
++  // celeste rank, and let go over a third of a second.
++  _organLegato(org, ms, each, time, vel) {
++    const o = org.o;
++    const pipe = o.flavor === 'pipe';
++    const atk = pipe ? (o.speak ?? 0.09) : 0.006;
++    const rel = pipe ? (o.release ?? 0.35) : 0.12;
++    const keep = new Set();
++    const want = ms.slice();
++    // Voices already on a wanted note stay as they are.
++    for (const v of org.voices) {
++      const k = want.indexOf(v.midi);
++      if (v.midi != null && v.on && k >= 0) {
++        keep.add(v);
++        want.splice(k, 1);
++        v.g.gain.cancelScheduledValues(time);
++        v.g.gain.setTargetAtTime(each, time, 0.05);
++      }
++    }
++    const free = org.voices.filter((v) => !keep.has(v));
++    free.forEach((v, i) => {
++      const g = v.g.gain;
++      g.cancelScheduledValues(time);
++      if (i < want.length) {
++        const m = want[i];
++        const f = midiToFreq(m) / 2;
++        const was = v.on;
++        // A voice still sounding another note lets go first, quickly.
++        if (was) {
++          g.setTargetAtTime(0, time, 0.008);
++          v.osc.frequency.setValueAtTime(f, time + 0.03);
++          if (v.cel) v.cel.frequency.setValueAtTime(f, time + 0.03);
++          g.setTargetAtTime(each, time + 0.03, atk / 3);
++        } else {
++          v.osc.frequency.setValueAtTime(f, time);
++          if (v.cel) v.cel.frequency.setValueAtTime(f, time);
++          g.setTargetAtTime(each, time, atk / 3);
++        }
++        v.midi = m;
++        v.on = true;
++        this._organSpeak(org, m, time + (was ? 0.03 : 0), vel, each);
++      } else {
++        g.setTargetAtTime(0, time, rel / 3);
++        v.on = false;
++        v.midi = null;
++      }
++    });
++    org.on = true;
++  }
++
++  // The touch of a newly spoken note: percussion or chiff.
++  _organSpeak(org, m, time, vel, each) {
++    const ctx = this.ctx;
++    const o = org.o;
++    const f = midiToFreq(m);
++    const g = ctx.createGain();
++    if (o.flavor === 'pipe' && !o.chiff) return;
++    if (o.flavor === 'pipe') {
++      const src = ctx.createBufferSource();
++      src.buffer = this.noise;
++      const bp = ctx.createBiquadFilter();
++      bp.type = 'bandpass';
++      bp.frequency.value = Math.min(6000, f * 2);
++      bp.Q.value = 6;
++      g.gain.setValueAtTime(0, time);
++      g.gain.linearRampToValueAtTime(each * (o.chiff ?? 1.2), time + 0.012);
++      g.gain.setTargetAtTime(0, time + 0.012, 0.025);
++      src.connect(bp).connect(g).connect(org.bus);
++      src.start(time, (time * 3.17 + m * 0.013) % 1.5, 0.15);
++    } else {
++      const osc = ctx.createOscillator();
++      osc.frequency.value = f * (o.perc ?? 2);
++      g.gain.setValueAtTime(0, time);
++      g.gain.linearRampToValueAtTime(each * 0.5 * vel, time + 0.004);
++      g.gain.setTargetAtTime(0, time + 0.004, o.percDecay ?? 0.12);
++      osc.connect(g).connect(org.bus);
++      osc.start(time);
++      osc.stop(time + 1);
++    }
++  }
++
++  organOff(time, fall = 0.25) {
++    const org = this._organ;
++    if (!org || !org.on) return;
++    for (const v of org.voices) {
++      v.g.gain.cancelScheduledValues(time);
++      v.g.gain.setTargetAtTime(0, time, fall / 3);
++      v.on = false;
++      v.midi = null;
++    }
++    org.on = false;
++  }
++
++  organStop(time) {
++    const org = this._organ;
++    if (!org) return;
++    for (const v of org.voices) v.g.gain.setTargetAtTime(0, time, 0.05);
++    for (const s of org.srcs) { try { s.stop(time + 0.5); } catch { /* already stopped */ } }
++    this._organ = null;
++  }
++
++  // Round 1's wash: one fixed level. Kept for the before/after clips.
++  startWashR1(t0, period = 20, seconds = 3600) {
++    this._washBuild(t0, period, seconds, null);
++  }
++
++  // The tuned wash: the same swell, but its level follows the loop. A slow
++  // follower (the mix's average level over a few seconds, taken before the
++  // master chain) sets the gain, so the swells peak a drawn number of dB
++  // under whatever the loop is doing, and go quiet when the loop does.
++  startWash(t0, o) {
++    this._washBuild(t0, o.period, o.seconds ?? 3600, o);
++  }
++
++  _washBuild(t0, period, seconds, o) {
++    const ctx = this.ctx;
++    if (this._wash) {
++      const old = this._wash;
++      old.g.gain.cancelScheduledValues(0);
++      old.g.gain.setTargetAtTime(0.0001, t0, 0.3);
++      for (const src of old.srcs) { try { src.stop(t0 + 2); } catch { /* already stopped */ } }
++    }
++    const srcs = [];
++    const merge = ctx.createChannelMerger(2);
++    for (const [ch, offset] of [[0, 0], [1, 0.73]]) {
++      const src = ctx.createBufferSource();
++      src.buffer = this.noise;
++      src.loop = true;
++      src.connect(merge, 0, ch);
++      src.start(t0, offset);
++      src.stop(t0 + seconds);
++      srcs.push(src);
++    }
++    // Two noises, left and right, as in round 1 (the one part that was
++    // already wide in the mono renders; folded, it is the same swell 3 dB
++    // down, which the follower doesn't care about).
++    const fold = merge;
++    const soft = o && o.soft;
++    const color = o && o.color;
++    // Round 4 (soft): softer, like waves or wind. Two gentle lowpasses
++    // sweeping 350 Hz -> 1.3 kHz (round 1-3: a bandpass 500 Hz -> 2 kHz, the
++    // hiss Mikey heard as harsh), a slower rise and fall.
++    const bp = ctx.createBiquadFilter();
++    bp.type = soft || color ? 'lowpass' : 'bandpass';
++    bp.Q.value = soft || color ? 0.5 : 0.9;
++    const bp2 = ctx.createBiquadFilter();
++    bp2.type = 'lowpass';
++    bp2.Q.value = 0.5;
++    bp2.frequency.value = 20000;
++    const g = ctx.createGain();
++    const n = 256;
++    const level = new Float32Array(n);
++    const freq = new Float32Array(n);
++    const top = o ? 1 : 0.06;
++    for (let i = 0; i < n; i++) {
++      const ph = Math.pow(Math.sin(Math.PI * i / (n - 1)), soft || color ? 1.4 : 2);
++      level[i] = 0.0001 + top * ph;
++      freq[i] = color ? 450 * Math.pow(5.5, ph) : soft ? 350 * Math.pow(3.7, ph) : 500 * Math.pow(4, ph);
++    }
++    g.gain.value = 0.0001;
++    for (let t = t0 + period / 2; t < t0 + seconds - period; t += period) {
++      g.gain.setValueCurveAtTime(level, t, period * 0.8);
++      bp.frequency.setValueCurveAtTime(freq, t, period * 0.8);
++      if (soft || color) bp2.frequency.setValueCurveAtTime(freq, t, period * 0.8);
++    }
++    if (color) {
++      // Round 5: brighter (the sweep opens to about 2.5 kHz again, but
++      // through gentle lowpasses, not round 1's hissy band) and colored: a
++      // soft resonance tuned to a note of the loop's key, two of them an
++      // octave and a fifth apart, the way wind sings across a bottle.
++      const tint = ctx.createGain();
++      fold.connect(bp).connect(bp2).connect(tint);
++      let last = tint;
++      for (const [hz, gain] of color.peaks) {
++        const pk = ctx.createBiquadFilter();
++        pk.type = 'peaking';
++        pk.frequency.value = hz;
++        pk.Q.value = color.q;
++        pk.gain.value = gain;
++        last.connect(pk);
++        last = pk;
++      }
++      last.connect(g);
++    } else {
++      fold.connect(bp).connect(bp2).connect(g);
++    }
++    let tail = g;
++    if (o) {
++      // The follower: |x| of the loop's own parts (the five channels, dry;
++      // not the wash, or a sparse loop's wash would hold itself up),
++      // smoothed twice, 0.7 s each, so it follows a loop into a rest.
++      const sum = ctx.createGain();
++      for (const name of ['drums', 'bass', 'chords', 'melody', 'texture']) this.channels[name].gain.connect(sum);
++      const rect = ctx.createWaveShaper();
++      const c = new Float32Array(4097);
++      for (let i = 0; i < c.length; i++) c[i] = Math.abs(i / 2048 - 1);
++      rect.curve = c;
++      const a = Math.exp(-1 / (0.7 * ctx.sampleRate));
++      const s1 = ctx.createIIRFilter([1 - a], [1, -a]);
++      const s2 = ctx.createIIRFilter([1 - a], [1, -a]);
++      const k = ctx.createGain();
++      k.gain.value = o.k;
++      sum.connect(rect).connect(s1).connect(s2).connect(k);
++      const vca = ctx.createGain();
++      vca.gain.value = 0;
++      k.connect(vca.gain);
++      g.connect(vca);
++      tail = vca;
++    }
++    if (o) {
++      // A channel of its own, set like the texture's (level and sends), so
++      // the follower can listen to the texture without hearing the wash.
++      if (!this._washCh) {
++        const c = this.channels.texture.base;
++        const ch = ctx.createGain();
++        ch.gain.value = c.gain;
++        const verb = ctx.createGain();
++        verb.gain.value = c.verb;
++        const echo = ctx.createGain();
++        echo.gain.value = c.echo;
++        ch.connect(this.pumpBus);
++        ch.connect(verb).connect(this.reverbIn);
++        ch.connect(echo).connect(this.echoIn);
++        const g0 = ctx.createGain();
++        g0.connect(ch);
++        this._washCh = g0;
++        (this._sketch ||= {}).wash = { node: g0, channel: 'texture' };
++      }
++      tail.connect(this._washCh);
++    } else {
++      tail.connect(this._sketchOut('wash', 'texture'));
++    }
++    this._wash = { g, srcs };
++  }
++
+   // ------------------------------------------------------------ texture
+ 
+   texture(kind, notes, time, dur, vel, opts = {}) {

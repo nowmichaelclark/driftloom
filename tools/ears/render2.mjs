@@ -1,11 +1,22 @@
-// render.mjs, extended for this session: a job list instead of one setting,
-// prototypes (PROTO) and space recipes (SPACE) per job, refused-note
-// counts from the voice budget, chord changes a minute from the generator,
-// and the render's wall time (a rough cost proxy).
+// render.mjs, extended for the ears sessions: a job list instead of one
+// setting, prototypes (PROTO) and space recipes (SPACE) per job, refused-note
+// counts from the voice budget (and asked counts) per voice, chord changes a
+// minute from the generator, and the render's wall time (a rough cost proxy).
 //
 // Usage: node render2.mjs REPO OUTDIR JOBS.json
 // JOBS.json: { "seed": 20261009, "n": 80, "jobs": [ { "pick": 8, "seconds": 60,
 //   "tag": "mono", "proto": {...}, "space": {...} }, ... ] }
+// Per job, optionally (Ears 4):
+//   "stems": true      also write <name>-stems.wav: one mono channel per layer
+//                      (dry, after its channel gain) and per sketch, from the
+//                      same render; names in the index ("stemNames")
+//   "then": 12, "thenAt": 40   load another corpus loop partway through, as
+//                      Next or a reroll would (checks what a sketch leaves
+//                      behind across loads)
+//   "reserve": 14      every budget check as if 14 more units were spent (what
+//                      a fixed reservation for a sketch would cost the rest)
+// PLAYWRIGHT_ROOT points at a folder holding the playwright package when it
+// isn't in `npm root -g`.
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -43,15 +54,32 @@ function chordStats(spec) {
   const sec = (r.totalSteps || 0) * 60 / spec.bpm / 4;
   return { chordEvents: ev.length, changesPerMin: sec ? changes / sec * 60 : null, loopSec: sec };
 }
-window.renderOne = async (spec, seconds, rate, proto, space) => {
+const STEM_LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
+const STEM_SKETCHES = ['dubStab', 'organ', 'wash'];
+// Also tapped with stems: what reaches the master saturator (a WaveShaper,
+// which clamps its input at +-1), for checking whether the mix clips there.
+const STEM_TAPS = ['satIn'];
+window.renderOne = async (spec, seconds, rate, proto, space, opts = {}) => {
   globalThis.PROTO = proto || {};
   globalThis.SPACE = space || null;
-  const ctx = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
+  const nStems = opts.stems ? STEM_LAYERS.length + STEM_SKETCHES.length + STEM_TAPS.length : 0;
+  const ctx = new OfflineAudioContext(2 + nStems, Math.ceil(seconds * rate), rate);
   Math.random = mulberry32(spec.seed >>> 0 || 1);
   const synth = new Synth(ctx, 'full');
-  let asked = 0, refused = 0; const who = {};
+  let asked = 0, refused = 0; const who = {}, askedWho = {}, yields = {};
   const orig = synth._budget.bind(synth);
-  synth._budget = (t, s, c) => { asked++; const ok = orig(t, s, c); if (!ok) { refused++; const f = (new Error().stack.split('\\n')[2] || '').trim().split(' ')[1] || '?'; who[f] = (who[f] || 0) + 1; } return ok; };
+  const reserve = opts.reserve || 0;
+  synth._budget = (t, s, c, probe) => {
+    const f = (new Error().stack.split('\\n')[2] || '').trim().split(' ')[1] || '?';
+    const ok = orig(t, s, (c ?? 12) + reserve, probe);
+    // A probe (a sketch asking whether there is room, holding nothing) is
+    // not a note asked for; when the answer is no, the sketch yields.
+    if (probe) { if (!ok) yields[f] = (yields[f] || 0) + 1; return ok; }
+    asked++;
+    askedWho[f] = (askedWho[f] || 0) + 1;
+    if (!ok) { refused++; who[f] = (who[f] || 0) + 1; }
+    return ok;
+  };
   const engine = new Engine(ctx, synth);
   if (engine.clock.worker) engine.clock.worker.terminate();
   engine.driftOn = true;
@@ -60,25 +88,71 @@ window.renderOne = async (spec, seconds, rate, proto, space) => {
   engine.playing = true;
   engine.nextStepTime = 0.05;
   let guard = 0;
+  let then = opts.thenSpec ? opts.thenAt : Infinity;
   while (engine.nextStepTime < seconds && guard++ < 400000) {
+    if (engine.nextStepTime >= then) {
+      // As Next does, offline: the new loop from its first step, now.
+      then = Infinity;
+      const at = engine.nextStepTime;
+      engine.playing = false;
+      engine.load(opts.thenSpec);
+      engine.playing = true;
+      engine.nextStepTime = at;
+    }
     engine._scheduleStep(engine.step, engine.nextStepTime);
     engine._advance();
+  }
+  const stemNames = [];
+  if (nStems) {
+    // Every voice is scheduled by now, so every sketch node exists.
+    const merger = ctx.createChannelMerger(2 + nStems);
+    let k = 2;
+    const tap = (node, gain, name) => {
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      g.channelCount = 1;
+      g.channelCountMode = 'explicit';
+      node.connect(g).connect(merger, 0, k++);
+      stemNames.push(name);
+    };
+    for (const l of STEM_LAYERS) tap(synth.channels[l].gain, 1, l);
+    for (const n of STEM_SKETCHES) {
+      const sk = synth._sketch && synth._sketch[n];
+      if (sk) tap(sk.node, synth.channels[sk.channel].base.gain, n);
+      else { k++; stemNames.push(n + ' (none)'); }
+    }
+    if (synth.wobble) tap(synth.wobble, 1, 'satIn'); else { k++; stemNames.push('satIn (none)'); }
+    ctx.destination.channelInterpretation = 'discrete';
+    merger.connect(ctx.destination);
   }
   const t0 = performance.now();
   const buf = await ctx.startRendering();
   const ms = performance.now() - t0;
-  const L = buf.getChannelData(0), R = buf.getChannelData(1);
-  const f32 = new Float32Array(L.length * 2);
-  for (let i = 0; i < L.length; i++) { f32[2 * i] = L[i]; f32[2 * i + 1] = R[i]; }
-  let s = '';
-  const bytes = new Uint8Array(f32.buffer);
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  const inter = (chans) => {
+    const n = buf.length, c = chans.length;
+    const f32 = new Float32Array(n * c);
+    const d = chans.map((i) => buf.getChannelData(i));
+    for (let i = 0; i < n; i++) for (let j = 0; j < c; j++) f32[c * i + j] = d[j][i];
+    let s = '';
+    const bytes = new Uint8Array(f32.buffer);
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  const b64 = inter([0, 1]);
+  const stemsB64 = nStems ? inter(Array.from({ length: nStems }, (_, i) => 2 + i)) : null;
+  const E = engine._ears || null;
+  const sketch = E ? {
+    nps: +E.nps.toFixed(2), busy: E.busy,
+    stab: E.stab && (E.stab === 'r1' ? 'r1' : { kind: E.stab.kind, ...E.stab.opts }),
+    organ: E.organ && (E.organ === 'r1' ? 'r1' : { reg: E.organ.reg, rate: E.organ.rate, drive: E.organ.drive, tone: E.organ.tone, swell: E.organ.swell, click: E.organ.click }),
+    wash: E.wash || (proto && proto.wash === 'r1' ? 'r1' : null),
+  } : null;
   const cs = chordStats(spec);
   const r = render(spec);
   return {
-    b64: btoa(s), lead: leadOf(spec), seed: spec.seed, bpm: spec.bpm ?? null,
+    b64, stemsB64, stemNames, sketch, lead: leadOf(spec), seed: spec.seed, bpm: spec.bpm ?? null,
     meta: r.meta || {}, bars: r.totalSteps ? r.totalSteps / 16 : null,
-    asked, refused, who, ms, ...cs,
+    asked, refused, who, askedWho, yields, ms, ...cs,
   };
 };
 window.ready = true;
@@ -97,7 +171,7 @@ await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
 
 const require = createRequire(import.meta.url);
-const globalRoot = execSync('npm root -g').toString().trim();
+const globalRoot = process.env.PLAYWRIGHT_ROOT || execSync('npm root -g').toString().trim();
 const { chromium } = require(path.join(globalRoot, 'playwright'));
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const page = await browser.newPage();
@@ -110,20 +184,28 @@ const specs = await page.evaluate(([s, n]) => window.specsFor(s, n), [job.seed ?
 const index = [];
 for (const j of job.jobs) {
   const spec = specs[j.pick];
-  const r = await page.evaluate(([spec, sec, rate, proto, space]) => window.renderOne(spec, sec, rate, proto, space),
-    [spec, j.seconds ?? 60, RATE, j.proto || {}, j.space || null]);
-  const f32 = Buffer.from(r.b64, 'base64');
+  const opts = { stems: !!j.stems, reserve: j.reserve || 0, thenSpec: j.then != null ? specs[j.then] : null, thenAt: j.thenAt ?? 30 };
+  const r = await page.evaluate(([spec, sec, rate, proto, space, opts]) => window.renderOne(spec, sec, rate, proto, space, opts),
+    [spec, j.seconds ?? 60, RATE, j.proto || {}, j.space || null, opts]);
   // 32-bit float WAV, so nothing clips or rounds before measuring.
-  const header = Buffer.alloc(44);
-  header.write('RIFF', 0); header.writeUInt32LE(36 + f32.length, 4); header.write('WAVE', 8);
-  header.write('fmt ', 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(3, 20); header.writeUInt16LE(2, 22);
-  header.writeUInt32LE(RATE, 24); header.writeUInt32LE(RATE * 8, 28); header.writeUInt16LE(8, 32); header.writeUInt16LE(32, 34);
-  header.write('data', 36); header.writeUInt32LE(f32.length, 40);
+  const wav = (b64, ch) => {
+    const f32 = Buffer.from(b64, 'base64');
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0); header.writeUInt32LE(36 + f32.length, 4); header.write('WAVE', 8);
+    header.write('fmt ', 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(3, 20); header.writeUInt16LE(ch, 22);
+    header.writeUInt32LE(RATE, 24); header.writeUInt32LE(RATE * 4 * ch, 28); header.writeUInt16LE(4 * ch, 32); header.writeUInt16LE(32, 34);
+    header.write('data', 36); header.writeUInt32LE(f32.length, 40);
+    return Buffer.concat([header, f32]);
+  };
   const name = `${String(j.pick).padStart(3, '0')}-${r.lead}-${j.tag}.wav`;
-  fs.writeFileSync(path.join(OUT, name), Buffer.concat([header, f32]));
+  fs.writeFileSync(path.join(OUT, name), wav(r.b64, 2));
+  if (r.stemsB64) fs.writeFileSync(path.join(OUT, name.replace('.wav', '-stems.wav')), wav(r.stemsB64, r.stemNames.length));
   delete r.b64;
-  index.push({ file: name, pick: j.pick, tag: j.tag, proto: j.proto || {}, space: j.space || null, ...r });
-  console.log(name, `refused ${r.refused}/${r.asked} ${JSON.stringify(r.who)}`, `chords/min ${r.changesPerMin?.toFixed(1)}`, `${Math.round(r.ms)} ms`);
+  delete r.stemsB64;
+  index.push({ file: name, pick: j.pick, tag: j.tag, seconds: j.seconds ?? 60, proto: j.proto || {}, space: j.space || null, then: j.then ?? null, ...r });
+  // Written after every job, so a batch cut short keeps what it rendered.
+  fs.writeFileSync(path.join(OUT, `index-${path.basename(JOBS, '.json')}.json`), JSON.stringify(index, null, 1));
+  console.log(name, `refused ${r.refused}/${r.asked} ${JSON.stringify(r.who)}`, Object.keys(r.yields || {}).length ? `yields ${JSON.stringify(r.yields)}` : '', `chords/min ${r.changesPerMin?.toFixed(1)}`, `${Math.round(r.ms)} ms`);
 }
 fs.writeFileSync(path.join(OUT, `index-${path.basename(JOBS, '.json')}.json`), JSON.stringify(index, null, 1));
 await browser.close();

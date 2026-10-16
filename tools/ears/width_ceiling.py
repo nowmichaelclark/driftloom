@@ -4,6 +4,8 @@ over 2-second windows; the mid is untouched, so the fold to mono is exactly
 the input's. A core block could do the same, deterministically.
 
 Usage: python3 -I width_ceiling.py INDEX.json WAVDIR CEIL_DB TAG[,TAG...]
+CEIL_DB 'auto' takes each job's own target from its recipe (`space.ceil`,
+round 2: -7 for busy loops, -9 sparse, -12 very sparse), else -7.
 Writes <file>-C.wav next to each input and INDEX-ceiling.json.
 """
 import json, os, sys
@@ -12,7 +14,7 @@ import soundfile as sf
 from scipy.signal import butter, sosfilt, lfilter
 
 idx = json.load(open(sys.argv[1]))
-wavdir, ceil = sys.argv[2], float(sys.argv[3])
+wavdir, ceil_arg = sys.argv[2], sys.argv[3]
 tags = sys.argv[4].split(',')
 RATE = 44100
 HOP = 441  # 10 ms
@@ -27,6 +29,7 @@ out = []
 for r in idx:
     if r['tag'] not in tags:
         continue
+    ceil = float((r.get('space') or {}).get('ceil', -7)) if ceil_arg == 'auto' else float(ceil_arg)
     x, _ = sf.read(os.path.join(wavdir, r['file']), dtype='float64')
     L, R = x[:, 0], x[:, 1]
     M, S = (L + R) / 2, (L - R) / 2

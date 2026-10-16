@@ -314,7 +314,13 @@ one before it.
    (promise 11's measure), and the balance lock
    and `stats.mjs` corpus numbers match the JavaScript generator's within
    stated tolerances, and a blind album (old vs new generator) passes his
-   ears.
+   ears. **Ported with one known fix** (Ears 4, 2026-10-16): the chords'
+   octave is decided from the progression, not from the sounding events,
+   so a pin or any non-harmonic change can't flip it (today's
+   `separateRegisters` flipped it in 11 of 87 loops when only the chord
+   lengths changed); *measured* by a corpus check that varies one
+   non-harmonic choice per loop and finds no octave flips. Details in
+   `docs/BRAIN.md`, "Start here".
 3. **Off the page.** The whole core runs on the audio side; the page
    sends commands and draws events. The scheduler, the lookahead and the
    JavaScript synth and generator are retired at the end of this phase

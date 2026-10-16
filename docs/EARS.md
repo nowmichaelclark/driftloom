@@ -7,7 +7,9 @@ difference with a yardstick a hands session can test against. Mikey is
 still the one who decides whether anything sounds good.
 
 The full reports are in the Project knowledge: `claude/ears-batch-1.md`
-(20 albums), `claude/ears-batch-2.md` (12 more), `claude/ears-sessions.md`
+(20 albums), `claude/ears-batch-2.md` (12 more), `claude/ears-batch-3.md`
+and `claude/ears-batch-4.md` (the sketches and stereo, by round),
+`claude/ears-sessions.md`
 (how to run an ears session), `claude/ears-prototypes.md`, and the raw
 measurements in `claude/ears-data.csv`. The tools are in `tools/ears/`.
 
@@ -62,11 +64,72 @@ drops instead of full stops; a slow filter arc; dub chord stabs thrown
 into the echo; a soft drawbar organ under held chords; a noise wash
 every ~20 s; chord lengths drawn per loop from a spread.
 
-Approved: roundBass, glass, floorDrop, arc. dubStab, organ, wash and
+Approved: roundBass, glass, floorDrop, arc; **dubStab and longChords
+(2026-10-16, as in Ears 4's round 4)**; **stereo's baseline** (round 4's
+blend of room and ensemble, steady); **wash** (2026-10-16, round 5);
+**the chapel organ** (2026-10-16, round 7: one organ, mixed 55% chapel,
+25% round 5's pipe, 10% distant cathedral, 10% celeste; it holds through
+passing chords, moves at most once a bar, dips 800 Hz, and sits outside
+the voice budget). Every Ears 4 sketch is approved; the recipes are in
+`claude/ears-batch-4.md` and `tools/ears/sketches/ears4-sketch.patch`. dubStab, organ, wash and
 longChords went to Mikey again on 2026-10-15 (Ears 2), with two flags
 from the measurements: the wash's fixed level is inaudible under a beat
 (-28 dB at its peak), and the organ loses about half its chords to the
 voice budget in a dense loop. Verdicts: `claude/ears-batch-3.md`.
+
+### The tune round (Ears 4, 2026-10-15)
+
+Each of the four reworked from Mikey's notes (sketch:
+`tools/ears/sketches/ears4-sketch.patch`; report and verdicts:
+`claude/ears-batch-4.md`). Checked on nine loops at 60 s, four at 150 s
+and four that load a second loop partway through: **no sketch refused a
+note, its own or any other part's**, and every layer's own level was
+unchanged (per-layer stems, `sketch_check.py`).
+
+| Sketch | What changed | Measured |
+|---|---|---|
+| dubStab | How often drawn per loop (rare, sparse, some; busy only on busy loops), only over a groove; a triangle and soft saw through a closing lowpass, a slower attack, a darker echo; asks the budget for room and holds none | Centroid 320–338 Hz (round 1: 740–860; "Quadrant Dub I": 377); attack 13–18 ms (round 1: 1–3; the record: 12); adds -11 to -20 dB against the loop |
+| organ | One instrument per loop outside the voice budget: a registration from nine, a slow rotary-style chorus, a little drive, a swell, a key click in some loops; lets go in full stops | Zero refusals (round 1: 5–24 of its chords per loop, and other parts' notes); -12 to -20 dB against the loop |
+| wash | Its level follows the loop's own layers, aimed 9–13 dB under | Loudest 2 s window under a beat -8 dB (round 1: -22) |
+| longChords | An option: today's lengths 56%, twice 16%, 8 s 10%, 16 s 9%, the whole loop 9%; calm loops lean long, driving ones away | Median chord changes a minute 22.5 → 19.4 (round 1: 16.4); one-chord loops 11 → 31 of 400 |
+
+For the core, if approved: the organ is fixed overhead outside the voice
+budget (reserving room for it inside would refuse other notes: 4–40 more
+per loop); the stab is a budget probe that holds nothing.
+
+Mikey's verdicts on round 2 (2026-10-16): longChords' spread approved;
+the rest tune. Round 3, same session: the organ's "broken" low notes were
+clipping (four voices summed into a drive with no headroom; fixed, the
+distortion under the notes from -19 to -40 dB); the stab plays only on
+busy loops, softer and blooming; the wash 8 dB lower (round 1's level on a
+sparse loop, 5 dB above it under a beat); held chords trimmed by up to 2
+dB. Lesson for any sketch with a drive or shaper: a WaveShaper clamps its
+input at ±1, so check what reaches it.
+
+Round 3 verdicts: the stab much better but too full; the organ's and the
+wash's texture still wrong (the wash harsh, heavy, in front); held chords
+still rough or loud. Round 4: the held chords' roughness was **an octave
+jump**, not the master (nothing past 0.84 reaches its saturator):
+`separateRegisters` drops the keys an octave when their centre is within
+five semitones of the melody's, and holding chords moved that centre
+across the line in 11 of 87 held loops; held chords now take today's
+octave (0 move). The stab is about 5 LU quieter and shorter; the organ
+soft registrations only, no drive, darker, swelling, behind the loop; the
+wash a gentle lowpass (350 Hz → 1.3 kHz) instead of a bandpass hiss, about
+2 dB under round 1 on a sparse loop. A finding for the generator whatever
+the sketches' fate: any change that moves the chord centre can flip that
+octave decision, so it wants hysteresis or a decision from the
+progression rather than the events. Written into `docs/BRAIN.md` and
+the charter's phase 2 (`docs/CORE.md`) at Mikey's request.
+
+Round 4 verdicts: dubStab and longChords approved; the organ wants
+better articulation, the wash its brightness back and some color. Round
+5: the organ keeps a note two chords share sounding through the change
+and speaks only the notes that change, in two flavors after real organs
+(tonewheel: instant speech and a soft percussion partial; pipe: a slower
+speech with a chiff and a celeste rank); the wash opens to about 2.5 kHz
+again and takes two soft resonances tuned to the loop's key (centroid 0.9
+kHz; round 1 1.9, round 4 0.5).
 
 ## Stereo, measured (Ears 2, 2026-10-15)
 
@@ -101,6 +164,45 @@ Whole-mix side/mid reads lower than records (-18 against -8/-9) because
 Driftloom's energy sits in the centered bass; above 200 Hz it matches.
 Recipes, clips and the sketch: `claude/ears-batch-3.md` and
 `claude/ears-space-sketch.md` in the Project.
+
+### Round 2 (Ears 4, 2026-10-15)
+
+From Mikey's round 1 notes (mono won every loop; bouncing and a heavy
+part leaning to one ear annoyed; sparse loops wanted no width; drifting
+could do more): the ping-pong narrowed to 0.15–0.3 and the light kit
+placed as one, by 0.08–0.15; chords, pads, melody and bass never placed,
+only widened symmetrically; every width scaled by how busy and how wet the
+loop is, with a tighter ceiling on sparse loops; and a slow breath on all
+the side sends (60–140 s) with light parts crossing over 30–60 s. Also
+rendered 1.8 times wider (exact: every move is linear in its width).
+Twelve loops, eight at 150 s (`stereo_guard.py`, which now also measures
+bounce and slow drift):
+
+| Measure (median) | Round 1 wide | Round 2 | Round 2 wider |
+|---|---|---|---|
+| Side/mid above 200 Hz | -10.1 dB | -19.3 dB | -14.3 dB |
+| Correlation, 5th percentile | 0.68 | 0.96 | 0.88 |
+| Bounce (image jump per 100 ms, 90th pct) | 4.0 dB | 1.8 dB | 2.8 dB |
+| Balance travel over 4 s windows | 3.1 dB | 0.6 dB | 1.0 dB |
+
+Every guard passes in both: fold within 0.10 LU and 0.33 dB per octave,
+side 23.7 dB or more under mid below 120 Hz, balance within 0.26 dB, the
+same refused notes as mono. Mikey's verdicts: `claude/ears-batch-4.md`.
+
+Verdict (2026-10-16): round 2 about matches mono ("not better, not
+worse"; a much closer call than round 1); the long drifting version didn't
+work in practice. Round 3 holds the width at round 2's and moves where it
+lives: **steady** (round 2 held still), **room** (dry parts centered, a
+smoother allpass-decorrelated reverb side carrying all the width) and
+**ensemble** (chords and texture spread, no room width). All guards pass.
+
+Round 3 verdict: room and ensemble both liked, leaning to room. Round 4
+blends the two at the same width (room weighted 0.64, ensemble 0.5;
+`blend_side.py`): bounce 1.21 dB, between room (1.02) and ensemble (1.82),
+every guard passing. **Approved as the baseline (Mikey, 2026-10-16).**
+Stereo that moves (panning, drifting) is kept as a later option for
+users and developers, in a session of its own; the default stays
+steady.
 
 ## Album-card tools (Ears 3, 2026-10-15)
 
