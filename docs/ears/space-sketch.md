@@ -1,0 +1,202 @@
+# Ears 2 space sketch: the stereo recipes as code
+
+A local sketch of `js/synth.js` on `main` at 01bce2b, used only to render
+the stereo clips in `docs/ears/batch-3.md`. **Not app code and never
+pushed:** a reference for the hands when stereo is built in the core.
+Off unless a page sets `globalThis.SPACE` (render with
+`tools/ears/render2.mjs`, a `space` object per job; draws per loop in
+`space_jobs.py`). The width ceiling is applied afterwards by
+`width_ceiling.py`, not in this diff.
+
+```diff
+diff --git a/js/synth.js b/js/synth.js
+index 5eebd88..8d7f1bc 100644
+--- a/js/synth.js
++++ b/js/synth.js
+@@ -994,6 +994,51 @@ export class Synth {
+     this.output = this.ceiling;
+     this.ceiling.connect(ctx.destination);
+ 
++    // EARS SKETCH (space recipes, 2026-10-15). Off unless a page sets
++    // globalThis.SPACE. Every stereo move below is mid/side or a linear
++    // balance (L = 1 + p, R = 1 - p), so (L + R) / 2 is exactly today's mono
++    // mix before the master chain.
++    const SP = globalThis.SPACE || null;
++    this.space = SP;
++    const msPair = (src, dest, hpHz = 0) => {
++      // src (mono) -> dest as [+src, -src]: a pure side signal. hpHz keeps
++      // the side above a frequency, so the low end stays centered.
++      if (hpHz) {
++        const hp = ctx.createBiquadFilter();
++        hp.type = 'highpass';
++        hp.frequency.value = hpHz;
++        src.connect(hp);
++        src = hp;
++      }
++      const m = ctx.createChannelMerger(2);
++      const flip = ctx.createGain();
++      flip.gain.value = -1;
++      src.connect(m, 0, 0);
++      src.connect(flip).connect(m, 0, 1);
++      m.connect(dest);
++    };
++    const balance = (src, p, move, dest) => {
++      // Placement above 150 Hz only, so low notes stay centered:
++      // L = src + p * HP(src), R = src - p * HP(src). The fold is src.
++      src.connect(dest);
++      const hp = ctx.createBiquadFilter();
++      hp.type = 'highpass';
++      hp.frequency.value = 150;
++      const a = ctx.createGain();
++      a.gain.value = p;
++      src.connect(hp).connect(a);
++      if (move && move.depth) {
++        const o = ctx.createOscillator();
++        o.frequency.value = 1 / move.period;
++        const d = ctx.createGain();
++        d.gain.value = move.depth;
++        o.connect(d).connect(a.gain);
++        o.start(ctx.currentTime + 0.05);
++        (this._spaceLfos ||= []).push(o);
++      }
++      msPair(a, dest);
++    };
++
+     // Reverb: parallel damped comb filters. Far cheaper than a convolver
+     // and it can be tuned live, which a fixed impulse response cannot.
+     this.reverbIn = ctx.createGain();
+@@ -1024,6 +1069,16 @@ export class Synth {
+     }
+     this.combSum.gain.value = 0.2 / this.combs.length;
+     this.combSum.connect(this.reverbOut);
++    if (SP && SP.verbWidth) {
++      // Side = even combs minus odd combs; the mid stays today's reverb.
++      this.verbSide = ctx.createGain();
++      this.verbSide.gain.value = SP.verbWidth * 0.2 / this.combs.length;
++      const odd = ctx.createGain();
++      odd.gain.value = -1;
++      this.combs.forEach((c, i) => c.d.connect(i % 2 ? odd : this.verbSide));
++      odd.connect(this.verbSide);
++      msPair(this.verbSide, this.reverbOut, 180);
++    }
+     // Both tails run through one gain so a scheduled rest can be made into
+     // real silence. Without this a four second hole is two seconds of hole
+     // and two seconds of reverb wash, which is not what silence sounds like.
+@@ -1047,9 +1102,35 @@ export class Synth {
+     this.echoIn = ctx.createGain();
+     this.echoIn.connect(this.echo);
+     this.echo.connect(this.echoTone);
+-    this.echoTone.connect(this.echoFb);
+-    this.echoFb.connect(this.echo);
+-    this.echoTone.connect(this.tails);
++    if (SP && SP.echoWidth) {
++      // Two delays in the loop: odd repeats come out of A, even out of B.
++      // Mid = A + B is today's echo; side = A - B makes it a ping-pong.
++      this.echoB = ctx.createDelay(2.0);
++      this.echoB.delayTime.value = 0.36;
++      const toneB = ctx.createBiquadFilter();
++      toneB.type = 'lowpass';
++      toneB.frequency.value = 2000;
++      const fbB = ctx.createGain();
++      fbB.gain.value = 0.34;
++      this.echoTone.connect(this.echoFb);
++      this.echoFb.connect(this.echoB);
++      this.echoB.connect(toneB);
++      toneB.connect(fbB);
++      fbB.connect(this.echo);
++      this.echoTone.connect(this.tails);
++      toneB.connect(this.tails);
++      const side = ctx.createGain();
++      side.gain.value = SP.echoWidth;
++      const negB = ctx.createGain();
++      negB.gain.value = -1;
++      this.echoTone.connect(side);
++      toneB.connect(negB).connect(side);
++      msPair(side, this.tails, 180);
++    } else {
++      this.echoTone.connect(this.echoFb);
++      this.echoFb.connect(this.echo);
++      this.echoTone.connect(this.tails);
++    }
+ 
+     // No continuous surface-noise layer: the musical voices and reverb
+     // provide the atmosphere without adding an audible hiss.
+@@ -1086,11 +1167,51 @@ export class Synth {
+       verb.gain.value = c.verb;
+       const echo = ctx.createGain();
+       echo.gain.value = c.echo;
+-      g.connect(name === 'drums' ? this.preBus : this.pumpBus);
++      const p = (SP && SP.pan && SP.pan[name]) || 0;
++      const mv = SP && SP.move && SP.move[name];
++      const dest = name === 'drums' ? this.preBus : this.pumpBus;
++      if ((p || mv) && name !== 'drums' && name !== 'bass') balance(g, p, mv, dest);
++      else g.connect(dest);
++      const sp = SP && SP.spread && SP.spread[name];
++      if (sp && name !== 'drums' && name !== 'bass') {
++        // Width without a pan: a slowly swaying 9-15 ms copy of the part,
++        // above 200 Hz only, added as side (+ left, - right). It cancels
++        // in the fold, so mono hears the part exactly as before.
++        const d = ctx.createDelay(0.05);
++        d.delayTime.value = 0.012;
++        const lfo = ctx.createOscillator();
++        lfo.frequency.value = 0.21 + 0.07 * Object.keys(cfg).indexOf(name);
++        const depth = ctx.createGain();
++        depth.gain.value = 0.003;
++        lfo.connect(depth).connect(d.delayTime);
++        lfo.start(ctx.currentTime + 0.05);
++        (this._spaceLfos ||= []).push(lfo);
++        const hp = ctx.createBiquadFilter();
++        hp.type = 'highpass';
++        hp.frequency.value = 200;
++        const a = ctx.createGain();
++        a.gain.value = sp;
++        g.connect(d).connect(hp).connect(a);
++        msPair(a, this.pumpBus);
++      }
+       g.connect(verb).connect(this.reverbIn);
+       g.connect(echo).connect(this.echoIn);
+       this.channels[name] = { gain: g, verb, echo, base: c };
+     }
++    if (SP && SP.drumPan) {
++      // Small percussion placed per instrument; kick, snare and the rest
++      // stay in the middle. The drums' sends hear (L + R) / 2, the hit itself.
++      this.drumIns = {};
++      for (const [inst, p] of Object.entries(SP.drumPan)) {
++        const i = ctx.createGain();
++        balance(i, p, null, this.channels.drums.gain);
++        this.drumIns[inst] = i;
++      }
++      for (const n of [this.channels.drums.verb, this.channels.drums.echo]) {
++        n.channelCount = 1;
++        n.channelCountMode = 'explicit';
++      }
++    }
+   }
+ 
+   setTone(tone) {
+@@ -1130,6 +1251,7 @@ export class Synth {
+       c.lp.frequency.setTargetAtTime(1400 + space * 2600, t, 0.2);
+     }
+     this.combSum.gain.setTargetAtTime((1 - fb) / this.combs.length, t, 0.2);
++    if (this.verbSide) this.verbSide.gain.setTargetAtTime(this.space.verbWidth * (1 - fb) / this.combs.length, t, 0.2);
+     this.wowDepth.gain.setTargetAtTime(0.0004 + wobble * 0.0038, t, 0.2);
+     this.flutterDepth.gain.setTargetAtTime(0.00004 + wobble * 0.0005, t, 0.2);
+   }
+@@ -1185,6 +1307,7 @@ export class Synth {
+       return;
+     }
+     this.echo.delayTime.setTargetAtTime(Math.min(1.9, seconds), this.ctx.currentTime, 0.05);
++    if (this.echoB) this.echoB.delayTime.setTargetAtTime(Math.min(1.9, seconds), this.ctx.currentTime, 0.05);
+   }
+ 
+   setMute(layer, muted, instant = false) {
+@@ -1403,7 +1526,7 @@ export class Synth {
+     const cost = VOICE_COST[inst] ?? 1.5;
+     if (!this._budget(time, false, cost)) return;
+     const ctx = this.ctx;
+-    const out = this.channels.drums.gain;
++    const out = (this.drumIns && this.drumIns[inst]) || this.channels.drums.gain;
+     const v = Math.max(0, Math.min(1, vel));
+     if (this.engine === 'rust' && this._coreDrum(inst, time, v, cost)) return;
+ 
+```

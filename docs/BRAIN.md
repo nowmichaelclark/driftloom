@@ -18,8 +18,9 @@ Three roles.
   that changes how the app sounds. He relays between brain and hands.
 - **Ears** (since 2026-10-09) -- separate claude.ai chats that measure
   records Mikey loves against Driftloom renders and write findings with
-  yardsticks (`docs/EARS.md`, `tools/ears/`, and the `claude/ears-*`
-  docs in the Project; read `claude/ears-sessions.md` for their scope).
+  yardsticks (`docs/EARS.md`, `tools/ears/`, and the reports, plan and
+  album cards in `docs/ears/`; read `docs/ears/sessions.md` for their
+  scope and for the rule that their outputs live in the repo).
   They don't touch the queue or app code; the brain turns their findings
   into items.
 
@@ -637,7 +638,7 @@ Stated decisions, not inferences. Dated where the date matters.
   one non-harmonic choice per loop and counts octave flips (0 expected).
   Today's loops render as they always have (the flip needs a change to
   happen); the fix itself will move the octave in the few loops where the
-  two ways of deciding disagree, which the phase's blind album covers; the ears' sketch fix and numbers: `claude/ears-batch-4.md`,
+  two ways of deciding disagree, which the phase's blind album covers; the ears' sketch fix and numbers: `docs/ears/batch-4.md`,
   "Round 4", and `docs/EARS.md`. Written into the charter's phase 2.
 - **Waiting, not urgent:** item 37 (on hold; Vibes cover it); the
   ears-approved sounds -- roundBass, glass, floorDrop, arc (2026-10-10);
@@ -646,7 +647,7 @@ Stated decisions, not inferences. Dated where the date matters.
   approved** (the blend of room and ensemble, steady; moving stereo kept
   for a later, experimental option); **the wash and the chapel organ
   approved the same day** (Ears 4's rounds 5 and 7; every recipe, with
-  levels, costs and checks, in `claude/ears-batch-4.md`, the sketch in
+  levels, costs and checks, in `docs/ears/batch-4.md`, the sketch in
   `tools/ears/sketches/ears4-sketch.patch`; the organ belongs outside
   the voice budget as fixed overhead, the stab is a budget probe that
   holds nothing) -- under the charter they may become the first
@@ -1109,8 +1110,7 @@ Mikey's listening: making the core the default (the flag's last step),
 then the ears reports' sound items (stereo first), and the generator's
 port when the words settle.
 
-**Ears reports** (Project knowledge, `claude/ears-batch-1.md`,
-`-batch-2.md`, `ears-tools.md`): a parallel sounds-and-ideas brain chat
+**Ears reports** (`docs/ears/batch-1.md`, `batch-2.md`, `tools.md`): a parallel sounds-and-ideas brain chat
 measured 32 albums against Driftloom (stereo, too much 60-120 Hz and
 too little 1-5 kHz, chords changing too often, loops that circle,
 short tails, full stops where records drop the floor). Its candidate

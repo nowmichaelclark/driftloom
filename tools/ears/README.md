@@ -47,7 +47,7 @@ Card tools need `pip install --break-system-packages demucs scipy` too (Demucs i
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median
 of drift60/drift10 per file. The measurements for batches one and two are
-in the Project as `claude/ears-data.csv`.
+in the repo as `docs/ears/data.csv`.
 
 A shell command stops after 10 minutes: run long render batches in the
 background (`nohup ... &`) and poll.

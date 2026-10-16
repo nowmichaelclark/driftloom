@@ -6,18 +6,19 @@ measures both the same way, and reports where they differ, each
 difference with a yardstick a hands session can test against. Mikey is
 still the one who decides whether anything sounds good.
 
-The full reports are in the Project knowledge: `claude/ears-batch-1.md`
-(20 albums), `claude/ears-batch-2.md` (12 more), `claude/ears-batch-3.md`
-and `claude/ears-batch-4.md` (the sketches and stereo, by round),
-`claude/ears-sessions.md`
-(how to run an ears session), `claude/ears-prototypes.md`, and the raw
-measurements in `claude/ears-data.csv`. The tools are in `tools/ears/`.
+The full reports are in `docs/ears/` (index: `docs/ears/README.md`):
+`batch-1.md` (20 albums), `batch-2.md` (12 more), `batch-3.md` and
+`batch-4.md` (the sketches and stereo, by round), `sessions.md` (how to run
+an ears session, and the rule that ears outputs live in the repo),
+`plan.md`, `cards-pile-1.md` and `cards-test.md` (album cards),
+`prototypes.md`, and the raw measurements in `data.csv`. The tools are in
+`tools/ears/`.
 
 ## Who does what
 
 - **Ears:** measure records and renders, find gaps, pick reference tracks,
   render before/after clips, and check changes by measurement. Findings go
-  to the Project and here.
+  to `docs/ears/` and here, in a PR, the same session.
 - **Brain:** turns findings into queue items and sequences them.
 - **Hands:** build them, with the level, refusal and balance-lock checks.
 
@@ -71,17 +72,17 @@ blend of room and ensemble, steady); **wash** (2026-10-16, round 5);
 25% round 5's pipe, 10% distant cathedral, 10% celeste; it holds through
 passing chords, moves at most once a bar, dips 800 Hz, and sits outside
 the voice budget). Every Ears 4 sketch is approved; the recipes are in
-`claude/ears-batch-4.md` and `tools/ears/sketches/ears4-sketch.patch`. dubStab, organ, wash and
+`docs/ears/batch-4.md` and `tools/ears/sketches/ears4-sketch.patch`. dubStab, organ, wash and
 longChords went to Mikey again on 2026-10-15 (Ears 2), with two flags
 from the measurements: the wash's fixed level is inaudible under a beat
 (-28 dB at its peak), and the organ loses about half its chords to the
-voice budget in a dense loop. Verdicts: `claude/ears-batch-3.md`.
+voice budget in a dense loop. Verdicts: `docs/ears/batch-3.md`.
 
 ### The tune round (Ears 4, 2026-10-15)
 
 Each of the four reworked from Mikey's notes (sketch:
 `tools/ears/sketches/ears4-sketch.patch`; report and verdicts:
-`claude/ears-batch-4.md`). Checked on nine loops at 60 s, four at 150 s
+`docs/ears/batch-4.md`). Checked on nine loops at 60 s, four at 150 s
 and four that load a second loop partway through: **no sketch refused a
 note, its own or any other part's**, and every layer's own level was
 unchanged (per-layer stems, `sketch_check.py`).
@@ -139,7 +140,7 @@ better than mono about 95% of the time, and the default settings should
 always sound better. In round 1 (below) mono won on every loop, judged on
 Koss KPH30 wireless headphones (he can also check on earbuds), so stereo
 needs more rounds of clips and listening before any default is chosen.
-Mikey's notes and the next round's directions: `claude/ears-batch-3.md`.
+Mikey's notes and the next round's directions: `docs/ears/batch-3.md`.
 The sketch used for the clips: `tools/ears/sketches/space-sketch.patch`
 (a local, offline sketch of `js/synth.js`; never app code).
 
@@ -162,8 +163,8 @@ Twelve loops, 60 s, against their mono renders (`tools/ears/stereo_guard.py`):
 
 Whole-mix side/mid reads lower than records (-18 against -8/-9) because
 Driftloom's energy sits in the centered bass; above 200 Hz it matches.
-Recipes, clips and the sketch: `claude/ears-batch-3.md` and
-`claude/ears-space-sketch.md` in the Project.
+Recipes, clips and the sketch: `docs/ears/batch-3.md` and
+`docs/ears/space-sketch.md`.
 
 ### Round 2 (Ears 4, 2026-10-15)
 
@@ -187,7 +188,7 @@ bounce and slow drift):
 
 Every guard passes in both: fold within 0.10 LU and 0.33 dB per octave,
 side 23.7 dB or more under mid below 120 Hz, balance within 0.26 dB, the
-same refused notes as mono. Mikey's verdicts: `claude/ears-batch-4.md`.
+same refused notes as mono. Mikey's verdicts: `docs/ears/batch-4.md`.
 
 Verdict (2026-10-16): round 2 about matches mono ("not better, not
 worse"; a much closer call than round 1); the long drifting version didn't
@@ -211,7 +212,7 @@ it picks tracks, splits them into stems, and measures sounds, techniques,
 theory and space, then drafts the card with numbers and timestamps filled
 in. Judgment lines (hook, vibes, wholesome take, why a thing waits) are
 marked **[JUDGMENT]** for a person or a later session. Test cards for
-*Geogaddi* and *Galaxy Garden*: `claude/ears-cards-test.md`.
+*Geogaddi* and *Galaxy Garden*: `docs/ears/cards-test.md`; the pile 1 cards: `docs/ears/cards-pile-1.md`.
 
 Every measure was run on test signals with known answers
 (`python3 -I calibrate.py`, about 80 s): **163 of 163 graded checks within
@@ -302,7 +303,7 @@ out of it: never real words in voices; no quotes, public domain
 included; new sounds join existing vibes by weight, harsher ones sit
 behind particular vibes (rare elsewhere, never banned), and open vibes
 like "zany" take almost anything. The plan, the album card and the
-session split: `claude/ears-plan.md`.
+session split: `docs/ears/plan.md`.
 
 ## Reference tracks
 
