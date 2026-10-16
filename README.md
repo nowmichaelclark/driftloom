@@ -151,6 +151,9 @@ overall character when pools change.
 - `docs/ALBUMS.md` -- listening albums waiting for answers.
 - `docs/EARS.md` -- what the ears sessions measured on Mikey's albums
   against Driftloom, and what they're for; their tools are in `tools/ears/`.
+- `docs/ears/` -- everything the ears sessions write: reports, the plan,
+  album cards, raw data (index in `docs/ears/README.md`). Ears outputs live
+  in the repo, not only in the Project (Mikey, 2026-10-17).
 - `docs/perf-baseline.md` -- the live performance baseline and what came
   of it.
 - `core/` -- the Rust core's source; `js/dlcore.wasm` is built from it.

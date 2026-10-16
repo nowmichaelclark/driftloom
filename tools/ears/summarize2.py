@@ -3,7 +3,7 @@
 Usage: python3 -I summarize2.py
 Album table (medians per file; chords/min seconds-weighted), pooled figures
 for the six differences for batch 1, pile 2 and Driftloom, side by side.
-Definitions match ears-batch-1.md: drift = median of per-file drift60/drift10;
+Definitions match docs/ears/batch-1.md: drift = median of per-file drift60/drift10;
 "steady beat" = pulse >= 0.6; 1-5 kHz = b1000_2000 + b2000_5000.
 """
 import json, glob
