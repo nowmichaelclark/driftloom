@@ -1,7 +1,7 @@
 """Space recipes for the stereo sketch: per-loop draws from each recipe's ranges.
 
 Round 1 (Ears 2): room, placed, drifting, wide, widedrift, from the seed.
-Round 2 (Ears 4): wide2 and drift2, from the seed and what the loop is
+Round 2 (Ears 4): wide2 and drift2 (round 3: room3 and ens3), from the seed and what the loop is
 (a scan.mjs row): heavy parts centered and widened symmetrically, only
 light parts placed and by less, no ping-pong to speak of, sparse and wet
 loops near mono, and drifting that is slow (a breath of 60-140 s, a light
@@ -79,7 +79,15 @@ def draw2(seed, info):
         drift2['move'] = {'texture': {'depth': round(min(w * u(0.2, 0.3), 0.45 - abs(pan['texture'])), 2), 'period': cross}}
     if info.get('drums'):
         drift2['drumMove'] = {'depth': round(min(w * u(0.1, 0.18), 0.3 - abs(hat)), 2), 'period': cross}
-    return {'wide2': wide2, 'drift2': drift2}
+    # Round 3 (Ears 4): where the width lives, heard apart. Steady is round 2
+    # held still (wide2). Room: the dry parts all centered, width only in a
+    # smoother reverb side (allpass-decorrelated, `verbSmooth`), no echo
+    # width. Ensemble: no room width; chords and texture spread 1.6 times
+    # round 2's, the light kit placed as in round 2.
+    room3 = {'verbSmooth': round(w * u(0.7, 0.9), 2), 'ceil': wide2['ceil'], 'w': w}
+    ens3 = {'pan': pan, 'drumPan': drum, 'ceil': wide2['ceil'], 'w': w,
+            'spread': {k: round(min(0.8, v * 1.6), 2) for k, v in wide2['spread'].items()}}
+    return {'wide2': wide2, 'drift2': drift2, 'room3': room3, 'ens3': ens3}
 
 
 if __name__ == '__main__':

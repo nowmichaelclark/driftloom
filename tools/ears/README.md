@@ -61,11 +61,13 @@ against `main` at the commit named inside. Apply one to a local copy, never
 to the app: `space-sketch.patch` (Ears 2) adds the stereo space recipes
 behind `globalThis.SPACE` (see `render2.mjs`). `ears4-sketch.patch`
 (Ears 4, against `a23153d`) holds everything Ears 4 rendered: the space
-sketch with round 2's breath and drifting light kit, and the tuned dub
-stab, organ, wash and long chords behind `globalThis.PROTO` (`dubStab`,
-`organ`, `wash`, `longChords`: `'on'` for the tuned sketch, `'r1'` for
-round 1's, or a kind to force one draw, such as `dubStab: 'busy'` or
-`longChords: 'whole'`).
+sketch with round 2's breath and drifting light kit and round 3's
+allpass reverb side (`verbSmooth`), and the dub stab, organ, wash and long
+chords behind `globalThis.PROTO` (`dubStab`, `organ`, `wash`,
+`longChords`: `'on'` for round 3, `'r2'` or `'r1'` for the earlier rounds
+where they differ, or a kind to force one draw, such as `dubStab: 'busy'`
+or `longChords: 'whole'`; `organDrive`, `washRel`, `stabLevel` override
+one value).
 
 Render cost: two renders at once on a two-core workspace take about
 1–4 s per second of audio; the densest loops (cinder #16) about 4 s. Keep

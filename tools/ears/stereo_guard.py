@@ -68,6 +68,10 @@ for pick, g in groups.items():
         n = min(len(x), len(m))
         L, R = x[:n, 0], x[:n, 1]
         mm = m[:n]
+        # Loudness against the same stretch of the mono render (a shorter
+        # stereo render against a longer mono one read a false offset).
+        lm1 = meter.integrated_loudness(mm)
+        lm2 = meter.integrated_loudness(mono[:n])
         fold = (L + R) / 2
         mid, side = fold, (L - R) / 2
         w = int(0.4 * RATE)

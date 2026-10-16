@@ -90,6 +90,15 @@ For the core, if approved: the organ is fixed overhead outside the voice
 budget (reserving room for it inside would refuse other notes: 4–40 more
 per loop); the stab is a budget probe that holds nothing.
 
+Mikey's verdicts on round 2 (2026-10-16): longChords' spread approved;
+the rest tune. Round 3, same session: the organ's "broken" low notes were
+clipping (four voices summed into a drive with no headroom; fixed, the
+distortion under the notes from -19 to -40 dB); the stab plays only on
+busy loops, softer and blooming; the wash 8 dB lower (round 1's level on a
+sparse loop, 5 dB above it under a beat); held chords trimmed by up to 2
+dB. Lesson for any sketch with a drive or shaper: a WaveShaper clamps its
+input at ±1, so check what reaches it.
+
 ## Stereo, measured (Ears 2, 2026-10-15)
 
 **The goal (Mikey, 2026-10-15):** stereo becomes the default once the
@@ -147,6 +156,13 @@ bounce and slow drift):
 Every guard passes in both: fold within 0.10 LU and 0.33 dB per octave,
 side 23.7 dB or more under mid below 120 Hz, balance within 0.26 dB, the
 same refused notes as mono. Mikey's verdicts: `claude/ears-batch-4.md`.
+
+Verdict (2026-10-16): round 2 about matches mono ("not better, not
+worse"; a much closer call than round 1); the long drifting version didn't
+work in practice. Round 3 holds the width at round 2's and moves where it
+lives: **steady** (round 2 held still), **room** (dry parts centered, a
+smoother allpass-decorrelated reverb side carrying all the width) and
+**ensemble** (chords and texture spread, no room width). All guards pass.
 
 ## Album-card tools (Ears 3, 2026-10-15)
 
