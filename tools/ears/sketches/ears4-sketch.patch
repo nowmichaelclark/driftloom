@@ -1,11 +1,12 @@
 Ears 4 sketch (2026-10-15/16): a local, offline sketch for rendering clips; never app code.
 Against main at a23153d (js/ unchanged since). Includes the Ears 2 space sketch with round 2's breath and drifting
 light kit and round 3's allpass reverb side (verbSmooth), and dubStab, organ, wash and longChords behind globalThis.PROTO
-('on' is round 4; 'r3', 'r2' and 'r1' the earlier rounds where they differ).
+('on' is the latest round: dubStab and longChords round 4 (approved), organ and wash round 5; 'r4', 'r3', 'r2' and 'r1'
+the earlier rounds where they differ; organFlavor 'tonewheel' or 'pipe' pins the organ's articulation).
 Apply to a local copy only: git apply tools/ears/sketches/ears4-sketch.patch
 
 diff --git a/js/engine.js b/js/engine.js
-index 450790b..1cff03c 100644
+index 450790b..c58b15d 100644
 --- a/js/engine.js
 +++ b/js/engine.js
 @@ -247,6 +247,7 @@ export class Engine {
@@ -16,7 +17,7 @@ index 450790b..1cff03c 100644
      for (const [layer, muted] of Object.entries(spec.mutes || {})) {
        this.synth.setMute(layer, muted);
      }
-@@ -688,6 +689,187 @@ export class Engine {
+@@ -688,6 +689,209 @@ export class Engine {
      }
    }
  
@@ -98,6 +99,16 @@ index 450790b..1cff03c 100644
 +            swell: 0.25 + E.organ.swell * 0.7, click: 0, chorus: 0, shimmer: 0.3 + E.organ.rate * 0.25, verb: 0.35,
 +          });
 +        }
++        if (!['r3', 'r4'].includes(P.organ)) {
++          // Round 5: articulation, drawn per loop (or pinned by organFlavor).
++          const r5 = new Rng(((spec.seed ^ 0x0e9b) >>> 0) || 1);
++          const flavor = P.organFlavor || (r5.chance(0.5) ? 'tonewheel' : 'pipe');
++          Object.assign(E.organ, {
++            flavor, perc: r5.chance(0.6) ? 2 : 3, percDecay: r5.range(0.08, 0.16),
++            speak: r5.range(0.06, 0.12), chiff: r5.range(0.8, 1.4), celeste: r5.range(3, 6),
++            swell: flavor === 'pipe' ? 0.1 : 0.01,
++          });
++        }
 +        Object.assign(E.organ, {
 +          // A held bed weighs more in a sparse loop: under about three notes
 +          // a second it comes down, by up to 11 dB.
@@ -115,11 +126,23 @@ index 450790b..1cff03c 100644
 +        // Round 3: 8 dB down from round 2, which took over the music.
 +        // Round 4: softer (see the synth) and 8 dB further down by energy,
 +        // which is about 5 dB by ear (the soft wash is darker).
-+        const rel = P.washRel ?? (P.wash === 'r2' ? r.range(-13, -9) : P.wash === 'r3' ? r.range(-21, -17) : r.range(-29.5, -25.5));
++        const rel = P.washRel ?? (P.wash === 'r2' ? r.range(-13, -9) : P.wash === 'r3' ? r.range(-21, -17) : P.wash === 'r4' ? r.range(-29.5, -25.5) : r.range(-31, -27));
 +        E.wash = { period: r.range(17, 26), rel };
 +        // k turns the follower (the mix's average |x|) into the swell's
 +        // peak gain; WASH_K is calibrated by render (docs in the sketch).
-+        this.synth.startWash(t0, { period: E.wash.period, k: (P.washK ?? 25) * Math.pow(10, rel / 20), soft: !['r2', 'r3'].includes(P.wash) });
++        let color = null;
++        if (!['r2', 'r3', 'r4'].includes(P.wash)) {
++          // Round 5: colored by the loop's key: resonances on the root (or
++          // its fifth) in 600-1200 Hz and an octave and a fifth above.
++          const r5 = new Rng(((spec.seed ^ 0x3a55) >>> 0) || 1);
++          const pc = ((spec.root ?? 0) + (r5.chance(0.6) ? 0 : 7)) % 12;
++          let hz = 440 * Math.pow(2, (pc - 9) / 12);
++          while (hz < 600) hz *= 2;
++          while (hz > 1200) hz /= 2;
++          color = { peaks: [[hz, r5.range(4, 7)], [hz * 3, r5.range(2, 4)]], q: r5.range(3, 5) };
++          E.wash.color = { hz: Math.round(hz), pc };
++        }
++        this.synth.startWash(t0, { period: E.wash.period, k: (P.washK ?? 25) * Math.pow(10, rel / 20), soft: !['r2', 'r3'].includes(P.wash), color });
 +      }
 +    }
 +  }
@@ -204,7 +227,7 @@ index 450790b..1cff03c 100644
    // True when every layer is scheduled out for the bar containing this step,
    // either by the loop's entry schedule or by a drift rest.
    _isSilentBar(absStep) {
-@@ -720,6 +902,11 @@ export class Engine {
+@@ -720,6 +924,11 @@ export class Engine {
        // Deciding again after a change, a bar line before it is heard was
        // handed over already, as it was.
        const kept = time < this.floor;
@@ -216,7 +239,7 @@ index 450790b..1cff03c 100644
        if (quiet && !this.tailsDucked) {
          if (!kept) this.synth.fadeTails(time);
          this.tailsDucked = true;
-@@ -840,6 +1027,9 @@ export class Engine {
+@@ -840,6 +1049,9 @@ export class Engine {
          this._play(t, () => this.synth.texture(e.kind, e.notes, t, e.dur * sd, e.vel, { band: e.band }), keyOf('texture'));
        }
      }
@@ -352,7 +375,7 @@ index 9964fa7..b1b6a64 100644
    annotatePrev(tracks.melody, spec, (spec.cycles && spec.cycles.melody) || spec.bars * spb);
  
 diff --git a/js/synth.js b/js/synth.js
-index 5eebd88..a287948 100644
+index 5eebd88..7a0c9e0 100644
 --- a/js/synth.js
 +++ b/js/synth.js
 @@ -994,6 +994,77 @@ export class Synth {
@@ -623,7 +646,7 @@ index 5eebd88..a287948 100644
      const v = Math.max(0, Math.min(1, vel));
      if (this.engine === 'rust' && this._coreDrum(inst, time, v, cost)) return;
  
-@@ -3061,6 +3248,416 @@ export class Synth {
+@@ -3061,6 +3248,546 @@ export class Synth {
      }
    }
  
@@ -856,6 +879,7 @@ index 5eebd88..a287948 100644
 +    }
 +    horn.start(t0); drum.start(t0);
 +    const voices = [];
++    const extra = [];
 +    for (let i = 0; i < 4; i++) {
 +      const osc = ctx.createOscillator();
 +      osc.setPeriodicWave(wave);
@@ -864,9 +888,25 @@ index 5eebd88..a287948 100644
 +      g.gain.value = 0;
 +      osc.connect(g).connect(bus);
 +      osc.start(t0);
-+      voices.push({ osc, g });
++      const v = { osc, g, midi: null };
++      if (o.flavor === 'pipe') {
++        // Round 5: a celeste rank, a second pipe a few cents sharp at half
++        // the level, so each note shimmers slowly the way a pipe organ's
++        // voix celeste does (a beat every second or two, not a wobble).
++        const c = ctx.createOscillator();
++        c.setPeriodicWave(wave);
++        c.frequency.value = 110;
++        c.detune.value = o.celeste ?? 4;
++        const cg = ctx.createGain();
++        cg.gain.value = 0.45;
++        c.connect(cg).connect(g);
++        c.start(t0);
++        v.cel = c;
++        extra.push(c);
++      }
++      voices.push(v);
 +    }
-+    this._organ = { o, voices, srcs: [horn, drum, ...voices.map((v) => v.osc)], level, bus, on: false };
++    this._organ = { o, voices, srcs: [horn, drum, ...voices.map((v) => v.osc), ...extra], level, bus, on: false };
 +  }
 +
 +  // Each chord: the voices dip for a few milliseconds, retune, and come
@@ -879,6 +919,7 @@ index 5eebd88..a287948 100644
 +      .sort((a, b) => a - b).slice(0, 4);
 +    const each = vel / Math.sqrt(Math.max(3, ms.length));
 +    const swell = org.o.swell;
++    if (org.o.flavor) return this._organLegato(org, ms, each, time, vel);
 +    org.voices.forEach((v, i) => {
 +      const g = v.g.gain;
 +      g.cancelScheduledValues(time - 0.02);
@@ -906,12 +947,103 @@ index 5eebd88..a287948 100644
 +    org.on = true;
 +  }
 +
++  // Round 5: articulation, after real organs. A note both chords share
++  // keeps sounding through the change, untouched; only the notes that
++  // change are let go and spoken again, on voices freed by the old chord.
++  // 'tonewheel' (after a Hammond): notes speak at once and let go fast,
++  // and each newly spoken note gets a soft percussion, a 4' or 2 2/3'
++  // partial that rings for a moment and fades (the Hammond's percussion
++  // tab), so a chord change is heard as a touch rather than a swell.
++  // 'pipe' (after a church or chamber organ): notes speak in about 60-120
++  // ms with a soft chiff (a breath of filtered noise at the pipe's second
++  // harmonic, the sound of air finding the pipe), shimmer through the
++  // celeste rank, and let go over a third of a second.
++  _organLegato(org, ms, each, time, vel) {
++    const o = org.o;
++    const pipe = o.flavor === 'pipe';
++    const atk = pipe ? (o.speak ?? 0.09) : 0.006;
++    const rel = pipe ? 0.35 : 0.12;
++    const keep = new Set();
++    const want = ms.slice();
++    // Voices already on a wanted note stay as they are.
++    for (const v of org.voices) {
++      const k = want.indexOf(v.midi);
++      if (v.midi != null && v.on && k >= 0) {
++        keep.add(v);
++        want.splice(k, 1);
++        v.g.gain.cancelScheduledValues(time);
++        v.g.gain.setTargetAtTime(each, time, 0.05);
++      }
++    }
++    const free = org.voices.filter((v) => !keep.has(v));
++    free.forEach((v, i) => {
++      const g = v.g.gain;
++      g.cancelScheduledValues(time);
++      if (i < want.length) {
++        const m = want[i];
++        const f = midiToFreq(m) / 2;
++        const was = v.on;
++        // A voice still sounding another note lets go first, quickly.
++        if (was) {
++          g.setTargetAtTime(0, time, 0.008);
++          v.osc.frequency.setValueAtTime(f, time + 0.03);
++          if (v.cel) v.cel.frequency.setValueAtTime(f, time + 0.03);
++          g.setTargetAtTime(each, time + 0.03, atk / 3);
++        } else {
++          v.osc.frequency.setValueAtTime(f, time);
++          if (v.cel) v.cel.frequency.setValueAtTime(f, time);
++          g.setTargetAtTime(each, time, atk / 3);
++        }
++        v.midi = m;
++        v.on = true;
++        this._organSpeak(org, m, time + (was ? 0.03 : 0), vel, each);
++      } else {
++        g.setTargetAtTime(0, time, rel / 3);
++        v.on = false;
++        v.midi = null;
++      }
++    });
++    org.on = true;
++  }
++
++  // The touch of a newly spoken note: percussion or chiff.
++  _organSpeak(org, m, time, vel, each) {
++    const ctx = this.ctx;
++    const o = org.o;
++    const f = midiToFreq(m);
++    const g = ctx.createGain();
++    if (o.flavor === 'pipe') {
++      const src = ctx.createBufferSource();
++      src.buffer = this.noise;
++      const bp = ctx.createBiquadFilter();
++      bp.type = 'bandpass';
++      bp.frequency.value = Math.min(6000, f * 2);
++      bp.Q.value = 6;
++      g.gain.setValueAtTime(0, time);
++      g.gain.linearRampToValueAtTime(each * (o.chiff ?? 1.2), time + 0.012);
++      g.gain.setTargetAtTime(0, time + 0.012, 0.025);
++      src.connect(bp).connect(g).connect(org.bus);
++      src.start(time, (time * 3.17 + m * 0.013) % 1.5, 0.15);
++    } else {
++      const osc = ctx.createOscillator();
++      osc.frequency.value = f * (o.perc ?? 2);
++      g.gain.setValueAtTime(0, time);
++      g.gain.linearRampToValueAtTime(each * 0.5 * vel, time + 0.004);
++      g.gain.setTargetAtTime(0, time + 0.004, o.percDecay ?? 0.12);
++      osc.connect(g).connect(org.bus);
++      osc.start(time);
++      osc.stop(time + 1);
++    }
++  }
++
 +  organOff(time, fall = 0.25) {
 +    const org = this._organ;
 +    if (!org || !org.on) return;
 +    for (const v of org.voices) {
 +      v.g.gain.cancelScheduledValues(time);
 +      v.g.gain.setTargetAtTime(0, time, fall / 3);
++      v.on = false;
++      v.midi = null;
 +    }
 +    org.on = false;
 +  }
@@ -961,12 +1093,13 @@ index 5eebd88..a287948 100644
 +    // down, which the follower doesn't care about).
 +    const fold = merge;
 +    const soft = o && o.soft;
++    const color = o && o.color;
 +    // Round 4 (soft): softer, like waves or wind. Two gentle lowpasses
 +    // sweeping 350 Hz -> 1.3 kHz (round 1-3: a bandpass 500 Hz -> 2 kHz, the
 +    // hiss Mikey heard as harsh), a slower rise and fall.
 +    const bp = ctx.createBiquadFilter();
-+    bp.type = soft ? 'lowpass' : 'bandpass';
-+    bp.Q.value = soft ? 0.5 : 0.9;
++    bp.type = soft || color ? 'lowpass' : 'bandpass';
++    bp.Q.value = soft || color ? 0.5 : 0.9;
 +    const bp2 = ctx.createBiquadFilter();
 +    bp2.type = 'lowpass';
 +    bp2.Q.value = 0.5;
@@ -977,17 +1110,37 @@ index 5eebd88..a287948 100644
 +    const freq = new Float32Array(n);
 +    const top = o ? 1 : 0.06;
 +    for (let i = 0; i < n; i++) {
-+      const ph = Math.pow(Math.sin(Math.PI * i / (n - 1)), soft ? 1.4 : 2);
++      const ph = Math.pow(Math.sin(Math.PI * i / (n - 1)), soft || color ? 1.4 : 2);
 +      level[i] = 0.0001 + top * ph;
-+      freq[i] = soft ? 350 * Math.pow(3.7, ph) : 500 * Math.pow(4, ph);
++      freq[i] = color ? 450 * Math.pow(5.5, ph) : soft ? 350 * Math.pow(3.7, ph) : 500 * Math.pow(4, ph);
 +    }
 +    g.gain.value = 0.0001;
 +    for (let t = t0 + period / 2; t < t0 + seconds - period; t += period) {
 +      g.gain.setValueCurveAtTime(level, t, period * 0.8);
 +      bp.frequency.setValueCurveAtTime(freq, t, period * 0.8);
-+      if (soft) bp2.frequency.setValueCurveAtTime(freq, t, period * 0.8);
++      if (soft || color) bp2.frequency.setValueCurveAtTime(freq, t, period * 0.8);
 +    }
-+    fold.connect(bp).connect(bp2).connect(g);
++    if (color) {
++      // Round 5: brighter (the sweep opens to about 2.5 kHz again, but
++      // through gentle lowpasses, not round 1's hissy band) and colored: a
++      // soft resonance tuned to a note of the loop's key, two of them an
++      // octave and a fifth apart, the way wind sings across a bottle.
++      const tint = ctx.createGain();
++      fold.connect(bp).connect(bp2).connect(tint);
++      let last = tint;
++      for (const [hz, gain] of color.peaks) {
++        const pk = ctx.createBiquadFilter();
++        pk.type = 'peaking';
++        pk.frequency.value = hz;
++        pk.Q.value = color.q;
++        pk.gain.value = gain;
++        last.connect(pk);
++        last = pk;
++      }
++      last.connect(g);
++    } else {
++      fold.connect(bp).connect(bp2).connect(g);
++    }
 +    let tail = g;
 +    if (o) {
 +      // The follower: |x| of the loop's own parts (the five channels, dry;

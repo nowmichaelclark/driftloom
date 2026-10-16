@@ -619,11 +619,35 @@ Stated decisions, not inferences. Dated where the date matters.
   their own.
 - **Not brain-verified** (Mikey chose to save tokens): #164 and #166, and
   items 38-41's PRs (the hands' reports are in them).
+- **From the ears, for the generator port (Ears 4, 2026-10-16; Mikey
+  asked that the brain hear of it): the chords' octave can flip.**
+  `separateRegisters` (`js/generator.js`) moves the keys down an octave
+  when the mean pitch of the *sounding* chord notes is within five
+  semitones of the melody's mean. That mean depends on which chord
+  events survive the form, rests and gaps, so a change that doesn't
+  touch the harmony can still push it across the line: holding chords
+  longer (the ears' longChords sketch) flipped the octave in 11 of 87
+  held loops (200 scanned), and Mikey heard those loops' chords as too
+  loud and rough (grove #47's pads jumped from 104 Hz to 208 Hz at the
+  bottom). Pins and requests (promise 11: length, tempo, voices) are
+  exactly that kind of change. **Wanted in phase 2, not after it:**
+  decide the octave from the progression itself (its chords and voicing
+  before form, rests and gaps) rather than from the events, so pinning or
+  varying anything else never moves it; and a corpus check that varies
+  one non-harmonic choice per loop and counts octave flips (0 expected).
+  Today's loops render as they always have (the flip needs a change to
+  happen); the fix itself will move the octave in the few loops where the
+  two ways of deciding disagree, which the phase's blind album covers; the ears' sketch fix and numbers: `claude/ears-batch-4.md`,
+  "Round 4", and `docs/EARS.md`. Written into the charter's phase 2.
 - **Waiting, not urgent:** item 37 (on hold; Vibes cover it); the
-  ears-approved sounds (roundBass, glass, floorDrop, arc; dubStab, organ,
-  wash and longChords wait on his verdict) -- under the charter they may
-  become the first instruments built as recipes; vibe tuning from the
-  loops Mikey sends (`js/vibes.js`, the brain's to edit).
+  ears-approved sounds -- roundBass, glass, floorDrop, arc (2026-10-10);
+  **dubStab and longChords approved 2026-10-16** (as in Ears 4's round 4,
+  `tools/ears/sketches/ears4-sketch.patch`), and **stereo's baseline
+  approved** (the blend of room and ensemble, steady; moving stereo kept
+  for a later, experimental option); organ and wash still being tuned by
+  the ears -- under the charter they may become the first instruments
+  built as recipes; vibe tuning from the loops Mikey sends
+  (`js/vibes.js`, the brain's to edit).
 
 ### The log
 

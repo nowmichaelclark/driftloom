@@ -64,7 +64,10 @@ drops instead of full stops; a slow filter arc; dub chord stabs thrown
 into the echo; a soft drawbar organ under held chords; a noise wash
 every ~20 s; chord lengths drawn per loop from a spread.
 
-Approved: roundBass, glass, floorDrop, arc. dubStab, organ, wash and
+Approved: roundBass, glass, floorDrop, arc; **dubStab and longChords
+(2026-10-16, as in Ears 4's round 4)**; **stereo's baseline** (round 4's
+blend of room and ensemble, steady). Still tuning: organ and wash (round
+5, `claude/ears-batch-4.md`). dubStab, organ, wash and
 longChords went to Mikey again on 2026-10-15 (Ears 2), with two flags
 from the measurements: the wash's fixed level is inaudible under a beat
 (-28 dB at its peak), and the organ loses about half its chords to the
@@ -112,7 +115,17 @@ wash a gentle lowpass (350 Hz → 1.3 kHz) instead of a bandpass hiss, about
 2 dB under round 1 on a sparse loop. A finding for the generator whatever
 the sketches' fate: any change that moves the chord centre can flip that
 octave decision, so it wants hysteresis or a decision from the
-progression rather than the events.
+progression rather than the events. Written into `docs/BRAIN.md` and
+the charter's phase 2 (`docs/CORE.md`) at Mikey's request.
+
+Round 4 verdicts: dubStab and longChords approved; the organ wants
+better articulation, the wash its brightness back and some color. Round
+5: the organ keeps a note two chords share sounding through the change
+and speaks only the notes that change, in two flavors after real organs
+(tonewheel: instant speech and a soft percussion partial; pipe: a slower
+speech with a chiff and a celeste rank); the wash opens to about 2.5 kHz
+again and takes two soft resonances tuned to the loop's key (centroid 0.9
+kHz; round 1 1.9, round 4 0.5).
 
 ## Stereo, measured (Ears 2, 2026-10-15)
 
@@ -182,8 +195,9 @@ smoother allpass-decorrelated reverb side carrying all the width) and
 Round 3 verdict: room and ensemble both liked, leaning to room. Round 4
 blends the two at the same width (room weighted 0.64, ensemble 0.5;
 `blend_side.py`): bounce 1.21 dB, between room (1.02) and ensemble (1.82),
-every guard passing. Stereo that moves (panning, drifting) is kept for a
-session of its own, for loops and vibes that want it; the default stays
+every guard passing. **Approved as the baseline (Mikey, 2026-10-16).**
+Stereo that moves (panning, drifting) is kept as a later option for
+users and developers, in a session of its own; the default stays
 steady.
 
 ## Album-card tools (Ears 3, 2026-10-15)
