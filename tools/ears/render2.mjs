@@ -56,10 +56,13 @@ function chordStats(spec) {
 }
 const STEM_LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 const STEM_SKETCHES = ['dubStab', 'organ', 'wash'];
+// Also tapped with stems: what reaches the master saturator (a WaveShaper,
+// which clamps its input at +-1), for checking whether the mix clips there.
+const STEM_TAPS = ['satIn'];
 window.renderOne = async (spec, seconds, rate, proto, space, opts = {}) => {
   globalThis.PROTO = proto || {};
   globalThis.SPACE = space || null;
-  const nStems = opts.stems ? STEM_LAYERS.length + STEM_SKETCHES.length : 0;
+  const nStems = opts.stems ? STEM_LAYERS.length + STEM_SKETCHES.length + STEM_TAPS.length : 0;
   const ctx = new OfflineAudioContext(2 + nStems, Math.ceil(seconds * rate), rate);
   Math.random = mulberry32(spec.seed >>> 0 || 1);
   const synth = new Synth(ctx, 'full');
@@ -118,6 +121,7 @@ window.renderOne = async (spec, seconds, rate, proto, space, opts = {}) => {
       if (sk) tap(sk.node, synth.channels[sk.channel].base.gain, n);
       else { k++; stemNames.push(n + ' (none)'); }
     }
+    if (synth.wobble) tap(synth.wobble, 1, 'satIn'); else { k++; stemNames.push('satIn (none)'); }
     ctx.destination.channelInterpretation = 'discrete';
     merger.connect(ctx.destination);
   }

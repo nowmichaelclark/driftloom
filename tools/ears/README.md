@@ -27,6 +27,7 @@ audio.
 | `space_jobs.py` | Draws each loop's space recipe from its seed and writes `render2.mjs` jobs. Round 1: room, placed, drifting, wide, widedrift. Round 2 (Ears 4, needs a `scan.mjs` file instead of `{index: seed}`): wide2 and drift2, scaled by how busy and how wet the loop is |
 | `stereo_guard.py` | The stereo guards against the mono render: fold loudness and tone, side/mid (whole, above 200 Hz, below 120 Hz), correlation, balance, cost; Ears 4 added bounce (how fast the image jumps) and slow drift (how far balance and width travel over 4 s windows) |
 | `scale_side.py` | A recipe's width turned up or down offline: every stereo move in the sketch is linear in its width settings, so scaling a render's side by K is the same as scaling them all by K (run before the ceiling) |
+| `blend_side.py` | Two space recipes blended offline: one render's mid and a weighted sum of both renders' sides (exact, as every recipe keeps the mono mix as its mid) |
 | `width_ceiling.py` | The width ceiling, offline: turns the side down where it rises above a target against the mid; the fold is unchanged. `auto` takes each recipe's own target |
 | `stereo_clips.py` | Mono, room, wide and wide + drifting of one loop in one loudness-matched clip (any order of tags with lengths, and a start offset) |
 | `album.py` | **Ears 3:** runs the album-card pipeline end to end (stages `pick,split,events,techniques,theory,space,card`), cached in `WORKDIR/<album>/`, and writes `card.md`: `python3 -I album.py ALBUM_DIR WORKDIR [--stages a,b] [--only TRACK] [--workers 2]`. Run it in the background (`nohup`) and poll; the split stage is the slow one |
@@ -64,7 +65,7 @@ behind `globalThis.SPACE` (see `render2.mjs`). `ears4-sketch.patch`
 sketch with round 2's breath and drifting light kit and round 3's
 allpass reverb side (`verbSmooth`), and the dub stab, organ, wash and long
 chords behind `globalThis.PROTO` (`dubStab`, `organ`, `wash`,
-`longChords`: `'on'` for round 3, `'r2'` or `'r1'` for the earlier rounds
+`longChords`: `'on'` for round 4, `'r3'`, `'r2'` or `'r1'` for the earlier rounds
 where they differ, or a kind to force one draw, such as `dubStab: 'busy'`
 or `longChords: 'whole'`; `organDrive`, `washRel`, `stabLevel` override
 one value).

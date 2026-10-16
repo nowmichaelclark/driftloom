@@ -99,6 +99,21 @@ sparse loop, 5 dB above it under a beat); held chords trimmed by up to 2
 dB. Lesson for any sketch with a drive or shaper: a WaveShaper clamps its
 input at ±1, so check what reaches it.
 
+Round 3 verdicts: the stab much better but too full; the organ's and the
+wash's texture still wrong (the wash harsh, heavy, in front); held chords
+still rough or loud. Round 4: the held chords' roughness was **an octave
+jump**, not the master (nothing past 0.84 reaches its saturator):
+`separateRegisters` drops the keys an octave when their centre is within
+five semitones of the melody's, and holding chords moved that centre
+across the line in 11 of 87 held loops; held chords now take today's
+octave (0 move). The stab is about 5 LU quieter and shorter; the organ
+soft registrations only, no drive, darker, swelling, behind the loop; the
+wash a gentle lowpass (350 Hz → 1.3 kHz) instead of a bandpass hiss, about
+2 dB under round 1 on a sparse loop. A finding for the generator whatever
+the sketches' fate: any change that moves the chord centre can flip that
+octave decision, so it wants hysteresis or a decision from the
+progression rather than the events.
+
 ## Stereo, measured (Ears 2, 2026-10-15)
 
 **The goal (Mikey, 2026-10-15):** stereo becomes the default once the
@@ -163,6 +178,13 @@ work in practice. Round 3 holds the width at round 2's and moves where it
 lives: **steady** (round 2 held still), **room** (dry parts centered, a
 smoother allpass-decorrelated reverb side carrying all the width) and
 **ensemble** (chords and texture spread, no room width). All guards pass.
+
+Round 3 verdict: room and ensemble both liked, leaning to room. Round 4
+blends the two at the same width (room weighted 0.64, ensemble 0.5;
+`blend_side.py`): bounce 1.21 dB, between room (1.02) and ensemble (1.82),
+every guard passing. Stereo that moves (panning, drifting) is kept for a
+session of its own, for loops and vibes that want it; the default stays
+steady.
 
 ## Album-card tools (Ears 3, 2026-10-15)
 
