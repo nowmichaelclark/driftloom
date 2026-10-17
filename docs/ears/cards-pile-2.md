@@ -7,7 +7,7 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 | Album | Tracks (deep pass) | Machine time | Status |
 |---|---|---|---|
 | I Care Because You Do (1995) | 12 (4) | 4,352 s | done |
-| Ventolin (EP) | 14 (4) | | |
+| Ventolin (EP) | 14 (4) | 2,620 s | done |
 | Donkey Rhubarb (EP) | 5 | | |
 | Hangable Auto Bulb (AFX) | 10 | | |
 | GAK (AFX) | 9 | | |
@@ -138,5 +138,118 @@ Machine time: 4,352 s (72.5 min) for 23.6 minutes of deep-pass audio (1,417.5 s)
 - Key margins: Acrid 0.051, Next Heap With 0.042 (usable but its chord names disagree with it), Start 0.009 and Alberto 0.008 (guesses). Chord names on all four are guesses on dense music. Tuning readings run from -20 to +38 cents across the 12 mix-level rows.
 - Top lines: ranges of 12 to 23 semitones with 13 to 39% leaps; Start's phrases of 49 notes are a sign of bleed. None is trustworthy on tracks where the drums or pad are loud. Pitch under 60 Hz: partial-off labels are not measurable; kick pitches are good to about a semitone.
 - Separator and floor drops: the stems-only count undercounts (Acrid 2 against 5, Alberto 3 against 8), as the docs say.
+
+---
+
+## Aphex Twin, Ventolin (EP, 14 mixes)
+
+Ears 6, 2026-10-18, Sonnet 5.5. 14 mixes, all measured at mix level, 59 minutes. Deep pass on four, as the picker chose (this is an 11-or-more-track set, so one typical plus three unlike): the most typical, the crowsmengegus mix (5:53), and the three least like the rest, the praze-an-beeble mix (3:22), the asthma beats mix (1:40) and hilow (2:56). It is a bass record: in the two tracks where the bass stem is real it holds 44% (crowsmengegus) and 72% (hilow) of the power, with 94 to 98% of that under 120 Hz, and hilow has 88% of its energy under 120 Hz.
+
+Machine time: 2,620 s (43.7 min) of compute for 13.8 minutes of deep-pass audio (830.3 s): pick 255 s (14 tracks, 18 s a track), MDX-Net split 2,048 s (2.47 times the audio), measuring 317 s (0.38 times the audio). The plan's formula gives 1,678 s, so this is 1.56 times it, again all separator. Wall clock was 3,907 s: the workspace restarted at 04:51 and the second split was lost and redone (about 20 minutes), which is not counted above.
+
+**Shared tracks.** ICBYD's 05 Ventolin (Video Version) is 269.2 s and -8.7 LUFS; no mix on this EP is within 3 s of that length (the closest are salbutamol 346.6 s, -8.4 LUFS, and the Cylob mix 306.0 s). Salbutamol, wheeze and the short ventolin1 un e,ru,ec+2 (81.5 s) share its mix tempo of 143.6 BPM, and salbutamol is within 0.3 LU of its loudness, so the Video Version is probably an edit of the salbutamol mix; I did not listen to compare. None of the 14 matches a pile 1 Classics row. The Video Version therefore has no deep pass anywhere in the pile, and it stays a mix-level row on both cards.
+
+### The hook
+- A bass-led record: sine-like bass notes tuned to a line that moves (A#1, C2, D2, D#2, E2, F2 in hilow; A1 to D2 in crowsmengegus), kicks and ticks over them, near-mono mixes, and in two of the four tracks the low end leaves for a few seconds at a time in a regular pattern.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a rolling sine-wave bass at 86 or 136 BPM under dry ticks, with the sub dropping out for 3 to 4 s every few bars.
+
+### Sounds
+
+**S1. Sine-like bass notes that move over a fifth or so (hilow): bass-1, 176 notes, 49%; bass-2, 104 notes, 24%**
+- In synth terms: bass-1 sits at 83 Hz (66 to 88), attack 52 ms, falls 21 dB/s, brightness 83 Hz (the same as its register: no overtones to speak of), no change over the note, level -1.4 dB, centered (correlation 1.00). bass-2 is a longer boom at 58 Hz (54 to 59), attack 186 ms, falls 50 dB/s, brightness 69 Hz, level -1.5 dB. The bass stem holds 72% of the power, 98% under 120 Hz.
+- Hear it at: bass-1 0:20.4 (F2, 0.75 s, +22 dB alone), 1:05.2 (F2, 0.43 s, +22 dB alone), 1:16.0 (F2, 0.76 s, +21 dB alone); bass-2 0:15.6 (A1, 0.51 s, +23 dB alone), 0:18.4 (A#1, 0.47 s, +22 dB alone), 0:07.3 (A#1, 0.51 s, +19 dB alone).
+- Check: the bass stem's strongest lines are 58.2 Hz (A#1, 2 cents flat), 65.0 (C2), 73.5 (D2), 78.2 (D#2, 9 cents sharp), 82.7 (E2) and 87.6 (F2): six notes within an octave, all within 3 dB of each other, so the line walks. It is real, not a subharmonic misread (the stem is 72% of the power and the lines are ratios of the same scale, not 1:2).
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass or a plain sine sub, pitched to a walking line, with a short boom version at 58 Hz.
+
+**S2. Bass with a short fall, over a ducking kick (crowsmengegus): bass-1, 351 notes, 35%**
+- In synth terms: 66 Hz (55 to 74), attack 51 ms, falls 48 dB/s, brightness 77 Hz, level -2.7 dB, centered. The bass stem holds 44% of the track's power and 94% of it is under 120 Hz; the drums stem holds 24% and is 91% under 120 Hz.
+- Hear it at: 3:28.2 (C#2, 1.11 s, +10 dB alone), 4:30.9 (C#2, 1.94 s, +9 dB alone), 3:27.3 (D2, 0.85 s, +11 dB alone). Only +9 to +11 dB alone, so these are not clean.
+- Check: bass lines at 73.4 Hz (D2, exact), 61.7 (B1, exact), 65.5 (C2), 69.3 (C#2), 55.6 (A1, 19 cents sharp): the line moves among A, B, C, C#, D (1.03 notes a second, steps 37%, thirds 26%, fourths and fifths 22%).
+- Building blocks: **[JUDGMENT]** **Guess:** the same sub bass as S1 with a faster fall; "tuned bass line" and "tuned sub-kick" are already on the list.
+
+**S3. A mid tone the separator calls vocals, and wide ticks (praze-an-beeble): vocals-1, 233 notes, 30%; drums-1, 309 notes, 27%**
+- In synth terms: vocals-1 is a bell-like tone around 154 Hz (48 to 315), partials off whole multiples, attack 48 ms, falls 311 dB/s (a short pluck), brightness 666 Hz (267 to 1,384), level -0.0 dB, centered. The vocals stem holds 51% of the power: 61% of it in 120 to 500 Hz and 36% in 0.5 to 2 kHz. drums-1 is a high tick, fundamental 52 Hz (37 to 741: the group fuses a thump and ticks), attack 30 ms, falls 123 dB/s, brightness 2.8 kHz (1.2 to 3.9), level -0.9 dB, correlation 0.89, wide.
+- Hear it at: vocals-1 3:20.0 (G3, 0.32 s, +49 dB alone), 3:19.4 (G3, 0.45 s, +48 dB alone), 3:18.8 (F2, 0.96 s, +48 dB alone); drums-1 0:10.4 (G1, 0.26 s, +39 dB alone), 0:11.2 (A1, 0.16 s, +37 dB alone), 0:11.3 (A1, 0.22 s, +32 dB alone).
+- Check: the vocals stem on an instrumental is a guess; with half the power and a 120 Hz to 2 kHz tone it is the track's main pitched voice (a plucked or bell-like lead), put in the wrong stem, and I did not listen to decide whether it is voice-like. It never has words in it that I can tell. The examples at 3:18 to 3:20 are clean because the low end is out and nothing else plays.
+- Building blocks: **[JUDGMENT]** **Guess:** a short bell-like pluck at G3 (falls 300 dB/s) and a wide tick-and-thump layer; the pluck is close to the existing bell/pluck sounds.
+
+**S4. A mono tick kit and a bell pad (asthma beats): drums-1, 307 notes, 23%; other-1, 250 notes, 25%**
+- In synth terms: drums-1 is a bright tick, fundamental 57 Hz (36 to 1,212: fused), attack 12 ms, falls 212 dB/s, brightness 4.8 kHz (1.8 to 6.8), level -9.8 dB (-18.9 to -0.8), correlation 1.00. other-1 is a bell-like pad around B2 (123 Hz, 77 to 312), attack 125 ms, falls 13 dB/s, brightness 542 Hz, level -6.9 dB. The drums stem holds 70% of the power, 73% under 120 Hz, 5% above 5 kHz.
+- Hear it at: drums-1 0:29.5 (C#2, 0.21 s, +22 dB alone), 0:30.0 (E2, 0.15 s, +22 dB alone), 0:28.9 (A#1, 0.51 s, +18 dB alone); other-1 0:56.5 (A#2, 0.26 s, +11 dB alone), 1:13.6 (D3, 0.12 s, +12 dB alone), 0:55.1 (D#2, 0.48 s, +10 dB alone; not clean).
+- Check: the whole file is mono (every band correlation 1.00; width -33 to -27 dB), so this is a mono recording or fold. The bell pad's partials are 77 to 312 Hz, near the tool's lower limit, so the bell label is soft.
+- Building blocks: **[JUDGMENT]** **Guess:** bright mono ticks (closer to hats than to a kick) over a bell pad; a harsh-leaning sound at 4.8 kHz brightness, so it waits behind its vibes.
+
+### Techniques
+
+**T1. The low end leaves in short regular gaps (crowsmengegus and praze-an-beeble)**
+- crowsmengegus: sums of the stems under 120 Hz go 15 dB down for 3.0 to 4.5 s at 0:10.5, 0:15.5, 0:21.5 and 0:27.0 (5 to 6 s apart) and again at 1:13.5, 1:19.0, 1:24.5, 1:30.0 (3.0, 3.5, 2.5, 2.5 s, 5.5 s apart), with a 7.0 s one at 1:36.5; from 5:04.0 the low end is out for the last 48.5 s. The tool's floor-drop count (1.71 a minute, from the kick and bass stems only) lists most of them (0:21.8, 0:27.0, 1:13.5, 1:18.8, 1:24.5, 1:30.0, 4:44.5 for 2.5 s, 5:03.8 for 6.2 s). The low end is on 71% of the time, below the 75% line, because of the 8 s intro and the 48 s ending, so the count is a floor by the docs' rule; I trust the repeated 5.5 s pattern because the sums and the stems agree on it.
+- praze-an-beeble: the low end is on only 39% of the time (the bass stem is empty), so the tool skips the count. The sums show 2.5 to 3.0 s gaps about every 11 s from 0:03 to 2:06 (0:03, 0:14.5, 0:25.5, 0:36.5, then 0:59, 1:10, 1:21.5, 1:32.5, 1:43.5, 1:55, 2:06), then long gaps: 2:15 for 7.5 s, 2:23.5 for 25.5 s, 2:49.5 for 7.5 s, 2:59 for 10.5 s, 3:10 for 11.5 s.
+- **[JUDGMENT]** **Guess:** a 3 to 4 s floor drop every 5.5 s for four times in a row, in a block, then back; and a pulse with the low end off for 3 s every 11 s.
+
+**T2. Kick-locked ducking (crowsmengegus, hilow, asthma beats)**
+- Bass dips 3.8 dB at the kick in crowsmengegus (kick every 0.44 s), 3.4 dB in hilow (kick every 0.35 s, peak 0 ms after) and 4.2 dB in asthma beats (peak 150 ms after). The tool reads about 70% of the true depth, so the real dip is about 5 to 6 dB. praze-an-beeble's reading (other dips 6.7 dB, kick every 0.66 s) does not fit its 0.348 s beat, so I do not trust it; its bass stem is empty.
+- **[JUDGMENT]** **Guess:** a 5 to 6 dB duck on the bass at the kick, in loops at 86 BPM and above.
+
+**T3. A slow tuning wobble on the pad (hilow, crowsmengegus)**
+- hilow: the other stem wobbles 16 cents at 0.4 Hz (the tool read a 12-cent wow as 8.0 in calibration, so the real wobble is nearer 24 cents). crowsmengegus: other 8 cents at 1.0 Hz and bass 12 cents at 0.7 Hz; praze-an-beeble's bass 5 cents at 0.8 Hz is void (empty stem); asthma beats: none. Mix-level tuning: asthma beats +21, ventolin1 un e,ru,ec+2 -43 (81.5 s, not deep-passed), crowsmengegus -18, praze-an-beeble -19; the crowsmengegus bass lines come out at 0 to +19 cents, so its -18 is mix-level noise (pile 1 readings ran from -48 to +45).
+- **[JUDGMENT]** **Guess:** a 0.4 Hz pad wobble of 15 to 25 cents on some loops.
+
+**T4. Sections, and echoes I do not claim**
+- crowsmengegus has 14 section boundaries (a median of 20 s), with drums and vocals coming in at 0:07.5 and a big whole-mix brightness rise of 3.6 octaves over the first 11 s and a fall of 3.2 octaves at 1:37.5 to 1:43.5, when drums, bass and pad go out together (1:37.5 and 1:38.0) and come back at 1:42.5 to 1:43. asthma beats has a breakdown: the pad leaves at 0:27.5, the mix falls 4.2 octaves at 0:30 and comes back up 2.8 octaves from 0:35.5, and the pad returns at 0:46.
+- Echoes: asthma beats other 180 ms (+4.5 dB, 2 later repeats), which is a sixteenth note at 90.6 BPM (165 ms) but 9% off, so not claimed; the tool's drum echo at 664 ms (+21.4 dB) is the beat itself (the beat is 0.662 s) and is not an echo. None found elsewhere.
+- **[JUDGMENT]** **Guess:** a whole-mix brightness arc of about three octaves over 10 s at the start of a loop, and a 15 s breakdown where the pad leaves.
+
+### Theory
+
+**Th1. Tempos: 136, 172, 90.6 and 86, and a possible three against four (asthma beats)**
+- Beat grids from the drum stems: crowsmengegus 0.441 s (136 BPM; the tool says 68, half-time; the picker says 136.0), praze-an-beeble 0.348 s (172.4 BPM; tool 86, picker 172.3), asthma beats 0.662 s (90.6 BPM; tool 90, picker 89.1), hilow 0.697 s (86.1 BPM; tool 86, picker 86.1). Swing (off-beat at 0.75 of the beat) in asthma beats and hilow is a late hit rather than a swing, as in pile 1.
+- asthma beats also shows 0.499 s (strength 0.58) next to the 0.662 s beat, and both land together at 1.997 s (0.73): four ticks of 0.499 against three beats of 0.666 in 2 s, which would be a 4:3 cross-rhythm. The tool claims no cross-rhythm there, and I have not listened, so it is a lead for a listen, not a finding.
+- **[JUDGMENT]** **Guess:** a tempo draw of 86 to 90 or 136 to 172; the 4:3 pattern is worth Ears 8 hearing before it goes on the list.
+
+**Th2. Major sevenths again, and a walking bass (praze-an-beeble, asthma beats, hilow)**
+- praze-an-beeble: Emaj7 12%, C#maj7 7%, F#maj7 7%, F#sus2 6% of the time, 39 changes a minute (15 lasting 1.5 s or more), 56% of changes on a beat against 43% by chance, so the chord changes are beat-locked; but the pitch classes are flat (every one near 0.09; key margin 0.001), so there is no key to read, and the drums and the vocals-stem tone are what the pitch tool hears.
+- asthma beats: C#maj7 34%, F#min7 19%, G#maj7 9%, Dmaj7 6% (26 changes a minute, 14 lasting 1.5 s or more, 45% on a beat = chance); key margin 0.005, a guess. The same shape as Classics, a long major seventh with minor sevenths beside it.
+- hilow: F5 24%, D5 13%, G#5 12%, A# 12% (fifths, not full chords; 42 changes a minute, 15 settled, 33% on a beat against 43% by chance, so less beat-locked than chance); bass F 0.20, D 0.18, D# 0.16, A 0.14, repeats 45%, 1.43 notes a second; key F dorian, margin 0.017, a guess that fits an F pentatonic.
+- crowsmengegus: key C lydian, margin 0.011, a guess; chord names (A#7 22%, Csus2 21%) at 38 changes a minute but only 8 lasting 1.5 s or more, and the median chord is 0.9 s: far too fast for the bass line to be playing them, so the names are the pad's rapid movement or a mis-read.
+- **[JUDGMENT]** **Guess:** a bass line that walks six scale notes within an octave at 1 to 1.4 notes a second, over fifths or sevenths; major-seventh chords with a minor-seventh neighbor for the pad.
+
+### Space
+- Four spaces. crowsmengegus is near-mono with a wider pad: median -18 dB (-28 to -7), sub -22 (0.99), 120 to 500 Hz -9 (0.78), mids -14, 2 to 5 kHz -18; bass and drums -23 and -21, the other stem -9.
+- praze-an-beeble is the widest, with a wide sub: median -13 dB (-25 to -9), sub -6 dB (correlation 0.80), low-mids -15, mids -10, 2 to 5 kHz -11, air -12; the drums stem is wide (-8 dB, pan +0.35, widest in the sub at -6 dB, mono loss 0.6 dB) and the vocals-stem tone is narrow (-22 dB). Its drums pan range is 0.46 and the other stem's 0.27, so the image moves.
+- asthma beats is mono: width -29 dB median (-30 to -27) and correlation 1.00 in every band, drums -30, bass -39, other -33.
+- hilow is near-mono at the bottom and wider above it: median -11 dB (-14 to -7), sub -20 (0.98), low-mids -10, mids -11, 2 to 5 kHz -21, air -25; the other stem is -9 dB (mono loss 0.5 dB), bass -21, drums -18.
+- **[JUDGMENT]** **Guess:** three recipes: a mono file for the ticks (asthma beats); a mono-ish low end with a wider pad (crowsmengegus, hilow); and a wide moving drum image with a wide sub (praze-an-beeble), where the mono fold would cost 0.6 dB on the drums, so the wide sub is a small risk.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 and S2 sine-like walking bass: toward hypnotic, warm, cozy x2; away from bright, energetic x0.5.
+- S3 bell-like pluck over wide ticks: toward dreamy, strange x1.5.
+- S4 mono tick kit: toward strange, experimental x2; away from cozy, tender x0.3 (harsh-leaning at 4.8 kHz).
+- T1 regular floor-drop gaps: toward hypnotic, minimal x1.5.
+- T2 bass duck: toward bouncy x1.5.
+- Th1 4:3 cross-rhythm if confirmed: toward strange, hypnotic x2.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: praze-an-beeble has 10% of its energy above 2 kHz by the mix (16% by the stems sum; the two measures differ and I did not find out why), asthma beats 8% (6% by the stems), crowsmengegus 6%, hilow 1%. Not harsh. asthma beats' tick kit has a brightness of 4.8 kHz and a 5% share above 5 kHz in the drums stem, the one bright layer. No polarity flag; praze-an-beeble's sub is wide (-6 dB, correlation 0.80), but it holds only 12% of the track's energy.
+- **[JUDGMENT]** **Guess:** take the sine-like walking bass, the duck, the regular floor drops and the pad wobble; take the mono ticks only at a gentle level behind strange or experimental vibes; the wide sub of praze-an-beeble needs the stereo guard.
+
+### For later
+- praze-an-beeble, other-1 (353 notes): C3, mixed or noisy, falls 94 dB/s; hear 2:54.7, 0:30.7. **[JUDGMENT]** **Guess:** waits.
+- praze-an-beeble, drums-2 (191 notes): mid snap, falls 48 dB/s, leans right (+0.21); hear 0:06.3, 0:06.2. **[JUDGMENT]** **Guess:** waits, a right-hand snap.
+- asthma beats, bass-1 (332 notes): D1, partials off whole multiples (below 60 Hz this is not measurable), falls 34 dB/s; hear 0:38.7, 0:37.9. **[JUDGMENT]** **Guess:** waits, a very low bass; the bell label is the tool's limit.
+- asthma beats, drums-2 (88 notes): low thump, brightens; hear 1:27.5, 0:01.4. **[JUDGMENT]** **Guess:** waits.
+- hilow, drums-1 (250 notes): low thump, falls 164 dB/s, brightens; hear 0:32.4, 0:43.5. **[JUDGMENT]** **Guess:** waits, the kick under the bass.
+- crowsmengegus, drums-1 (267 notes): low thump, falls 230 dB/s, brightens; hear 4:07.5, 1:07.4. **[JUDGMENT]** **Guess:** waits.
+- crowsmengegus, vocals-1 and vocals-2 (164 and 167 notes): D#4 and C#6, bell-like; hear 5:44.8 and 5:21.4: the separator's guess on an instrumental, probably the pad's top. **[JUDGMENT]** **Guess:** waits; never as words.
+- Not given a deep pass (mix-level only): plain-an-gwarry mix (4:38, 161.5 BPM, sub 71%, width -32 dB near mono, 14.5 chord changes a minute); the coppice mix (4:36, 20.7 chord changes a minute, the most); deep gong mix (6:21, sub 80%, 92 BPM, 11 chord changes a minute); salbutamol mix (5:47, -8.4 LUFS, the loudest, 143.6 BPM, related to the Video Version); wheeze mix (7:14, 143.6 BPM, sub 65%, the longest); Cylob mix (5:06, 71.8 BPM, no chord changes at all); carharrack mix (2:54, 95.7 BPM); marazanvose mix (3:21, 112 BPM, sub 30%, the least bass); probus mix (4:16, 136 BPM, width -6 dB, the widest); ventolin1 un e,ru,ec+2 (1:21, tuning -43 cents, 0 chord changes). **[JUDGMENT]** **Guess:** the Cylob mix (a long track with no chord change) and the coppice mix (the fastest chord movement) are the two to hear if Ears 8 wants more.
+
+### Reliability notes for this card
+- Separator: MDX-Net, not Demucs (see the top of this file). The sub lives in the drums stem on crowsmengegus (91% under 120 Hz) and hilow (88%), asthma beats (73%).
+- Empty or odd stems: praze-an-beeble's bass stem holds 0.0% of the power, so its bass behavior (A 0.52, C 0.44; 0.10 notes a second), bass pump (2.4 dB) and bass wobble (5 cents) are void, and its vocals stem holds 51%, which is a pitched tone and not a voice (no words). hilow's vocals stem holds 0.0%. The vocals stems of crowsmengegus (8%) and asthma beats (1.4%) are hats and pad bleed.
+- Tempo: the tool's meter is half the drum grid on crowsmengegus (68 against 136) and praze-an-beeble (86 against 172); on asthma beats and hilow it agrees.
+- Key margins: crowsmengegus 0.011, praze-an-beeble 0.001, asthma beats 0.005, hilow 0.017: all guesses. Chord names on all four are guesses on dense music, and the chord changes of crowsmengegus (0.9 s median) are faster than the 0.5 s limit allows trusting.
+- Top lines: ranges of 10 to 24 semitones; asthma beats' phrase of 98 notes with arch 100% and praze-an-beeble's 40% leaps are a sign of bleed. Not trustworthy.
+- Floor drops: crowsmengegus is on 71% of the time and praze-an-beeble on 39% (the rule skips under 75%); I read the sums instead, which is why T1 gives times. Pitch under 60 Hz: partial-off labels are not measurable.
+- A workspace restart at 04:51 killed the run; the second split was redone from scratch and the first album's results were unaffected.
 
 ---
