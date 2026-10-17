@@ -8,7 +8,7 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 |---|---|---|---|
 | I Care Because You Do (1995) | 12 (4) | 4,352 s | done |
 | Ventolin (EP) | 14 (4) | 2,620 s | done |
-| Donkey Rhubarb (EP) | 5 | | |
+| Donkey Rhubarb (EP) | 5 (4) | 4,170 s | done |
 | Hangable Auto Bulb (AFX) | 10 | | |
 | GAK (AFX) | 9 | | |
 | Analogue Bubblebath 4 | 5 | | |
@@ -251,5 +251,111 @@ Machine time: 2,620 s (43.7 min) of compute for 13.8 minutes of deep-pass audio 
 - Top lines: ranges of 10 to 24 semitones; asthma beats' phrase of 98 notes with arch 100% and praze-an-beeble's 40% leaps are a sign of bleed. Not trustworthy.
 - Floor drops: crowsmengegus is on 71% of the time and praze-an-beeble on 39% (the rule skips under 75%); I read the sums instead, which is why T1 gives times. Pitch under 60 Hz: partial-off labels are not measurable.
 - A workspace restart at 04:51 killed the run; the second split was redone from scratch and the first album's results were unaffected.
+
+---
+
+## Aphex Twin, Donkey Rhubarb (EP, 5 tracks)
+
+Ears 6, 2026-10-18, Sonnet 5.5. 5 tracks, all measured at mix level; an EP of 6 or fewer, so the plan says every track gets the deep pass, but I gave four: 01 Donkey Rhubarb (6:08), 02 Vaz Deferenz (5:50), 03 Icct Hedral (Philip Glass Orchestration) (8:00) and 04 Pancake Lizard (4:31). Track 05 (Icct Hedral, Phillip Glass dry version plus bonus DAT glitches) is the same audio as 03 in the copy I have (see below), so it has no pass of its own. It is a record of four different things: two near-mono drum tracks that share one 1.718 s bar, a wide beatless orchestral-synth piece, and a bass-led groove in G mixolydian with big filter-like swings.
+
+Machine time: 4,170 s (69.5 min) for 24.5 minutes of deep-pass audio (1,469.5 s): pick 150 s (5 tracks, 30 s a track), MDX-Net split 3,415 s (2.32 times the audio), measuring 605 s (0.41 times the audio). The plan's formula gives 2,476 s, so this is 1.68 times it, all separator. (I killed the run 19 s into track 05.)
+
+**Shared tracks.** Tracks 03 and 05 decode to the identical audio in the files I have: part00 and part01 give the same MD5 for the decoded streams (c36959b1... and 001e6965...), and the picker rows are identical to every digit (480.0 s, -14.6 LUFS, same bands). In both cases the third piece (about 2 s) is missing from my copy: two 21 KB tail files came back inline from the Drive connector and were not saved. So 05's name promises a dry version and bonus DAT glitches that could only be in that missing tail (or the Drive file is a duplicate upload); **Mikey: it is worth checking in Drive whether the two files really differ.** I gave the audio one pass, under 03. ICBYD's 04 Icct Hedral (Edit) is 367.1 s and -10.6 LUFS against 03's 480 s and -14.6, wider than most (width -6.3 dB against -3.8), with 8.8 chord changes a minute against 25.4: not a twin, probably a shorter, louder edit of the same piece; both report a mix tempo of 143.6 BPM, which is the picker's, not a finding. I did not listen to compare. No other title repeats.
+
+### The hook
+- Mono drum tracks where the sub kick lands on G1/A1 and a pumping dip of 7 dB or more shows at the kick; a wide, beatless synth-orchestra piece with a bass that moves between F and F# (a phrygian flat second); a bass-led groove in G mixolydian with 3 to 4 octave brightness swings every 10 to 20 s.
+- **[JUDGMENT]** One line a listener would say. **Guess:** dry mono drums with a deep sub kick, then a wide string-like pad piece with a bass that leans on the flat second.
+
+### Sounds
+
+**S1. Two sub-kick layers on G1 (Donkey Rhubarb): drums-1, 217 notes, 28%; drums-2, 283 notes, 23%**
+- In synth terms: drums-1 is a thump at 50 Hz (44 to 51), attack 33 ms, falls 128 dB/s, brightness 111 Hz and rising 1.15 octaves over the note, level -0.7 dB, correlation 1.00. drums-2 sits at 53 Hz (45 to 61), attack 39 ms, falls 74 dB/s, brightness 199 Hz, level -0.4 dB. The drums stem holds 71% of the power and 83% of it is under 120 Hz; the bass stem holds 5%.
+- Hear it at: drums-1 2:26.3 (G1, 0.32 s, +25 dB alone), 5:30.6 (E2, 0.13 s, +24 dB alone), 3:14.2 (G1, 0.36 s, +19 dB alone); drums-2 5:07.1 (G1, 0.21 s, +29 dB alone), 5:33.2 (B1, 0.11 s, +29 dB alone), 5:07.1 (A#1, 0.13 s, +29 dB alone).
+- Check: pitch under 60 Hz is good to about a semitone, so G1 (49 Hz) is the kick's home with A#1 and B1 above it. The whole file is mono (correlation 1.00 in every band, width -29 dB) at +43 cents on the mix-level tuning reading, which is the pile 1 range (-48 to +45) and a quarter-tone-ish offset; the kick pitches (G1) are not tested against it.
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick again, as two layers: a short fast-falling one that brightens, and a longer plain one.
+
+**S2. A sub boom on A1 and F#1 (Vaz Deferenz): drums-1, 401 notes, 59%**
+- In synth terms: 55 Hz (46 to 60), attack 148 ms (slow, so a boom, not a click), falls 46 dB/s, brightness 92 Hz, level -0.4 dB, centered. The drums stem holds 80% of the power, 87% under 120 Hz; the bass stem holds 2% (void).
+- Hear it at: 5:22.2 (A1, 0.41 s, +19 dB alone), 5:19.6 (F#1, 0.41 s, +18 dB alone), 5:20.4 (A1, 0.43 s, +16 dB alone). All three are in the last 30 seconds, where the track thins out.
+- Building blocks: **[JUDGMENT]** **Guess:** a tuned boom with a slow attack on two notes a minor third apart.
+
+**S3. A wide, noisy mid pad over a walking bass, no drums (Icct Hedral, Philip Glass Orchestration): other-1, 388 notes, 46%; bass-1, 392 notes, 34%**
+- In synth terms: other-1 sits at 105 Hz (58 to 174), attack 127 ms, falls 21 dB/s, brightness 632 Hz, level -2.3 dB, left and right related only partly (correlation 0.41). The group is weak (silhouette 0.21): a blended texture of overlapping parts. bass-1 sits at 55 Hz (33 to 86), attack 54 ms, falls 27 dB/s, brightness 97 Hz, level -5.7 dB, correlation 0.86. The other stem holds 68% of the power, the bass 26%, the drums 1.3%.
+- Hear it at: other-1 0:12.3 (D3, 1.25 s, +46 dB alone), 7:35.2 (G2, 0.26 s, +47 dB alone), 7:47.2 (G#2, 0.19 s, +45 dB alone); bass-1 7:03.6 (F1, 0.43 s, +7 dB alone), 7:09.0 (F1, +8 dB alone), 7:09.1 (F1, 1.24 s, +5 dB alone). The pad examples are clean (nothing else plays at the start and end); the bass examples are not (+5 to +8 dB alone).
+- Check: the drums stem is near empty (1.3%), so the drum entries and exits the tool lists (44% of the time) are void. The vocals stem holds 5%, 89% of it in 0.5 to 2 kHz: a pitched mid part, not hats; it never has words that I can tell.
+- Building blocks: **[JUDGMENT]** **Guess:** a wide organ- or string-like pad with a partly unrelated left and right; the closest existing sounds are the pads, with the width (correlation 0.4) the new part.
+
+**S4. A bass that swells and a bell pad (Pancake Lizard): bass-1, 103 notes, 19%; other-1, 446 notes, 27%**
+- In synth terms: bass-1 sits at 49 Hz (44 to 62), attack 356 ms (153 to 760: a slow swell), falls 5 dB/s (a long sustain), brightness 108 Hz, leans left (-0.15; stem -0.13), correlation 0.99. other-1 is a bell-like voice at 86 Hz (38 to 218), attack 96 ms, falls 43 dB/s, brightness 484 Hz, level -7.0 dB, correlation 0.82; its group is weak (silhouette 0.15). The bass stem holds 54% of the power (82% under 120 Hz).
+- Hear it at: bass-1 1:11.7 (F1, 0.27 s, +24 dB alone), 1:11.6 (F1, 0.24 s, +24 dB alone), 1:16.9 (G1, 0.17 s, +18 dB alone); other-1 2:27.1 (C3, 0.24 s, +33 dB alone), 2:27.4 (C3, 0.57 s, +21 dB alone), 2:25.3 (C3, 0.54 s, +20 dB alone).
+- Building blocks: **[JUDGMENT]** **Guess:** a slow-swelling sine-like bass on F1 and G1, with a bell pad above it.
+
+### Techniques
+
+**T1. Deep kick ducking (Donkey Rhubarb)**
+- The other stem dips 7.3 dB at the kick (peak 180 ms after; kick every 0.43 s) and the bass stem 9.8 dB (peak 364 ms after). The tool reads about 70% of the true depth, so the real dip is 10 dB or more on the other stem; the bass stem is 4.6% of the power, so its 9.8 is the less certain number. Vaz Deferenz reads 3.2 dB (other) and 3.8 dB (bass; void, 2% stem), and Icct Hedral's 3.7 dB at a kick every 0.45 s is void (there are no drums). Pancake Lizard's other stem dips 3.0 dB at a kick every 0.45 s, which does not match its 0.511 s beat; unconfirmed.
+- **[JUDGMENT]** **Guess:** a deep kick duck of 10 dB or more on the pad, as the strongest end of the duck range (the ICBYD and Ventolin ones were 5 to 7 dB).
+
+**T2. Brightness swings of 3 to 4 octaves every 10 to 20 s while the bass plays on (Pancake Lizard, 0:08 to 1:17)**
+- The mix gets brighter 2.2 octaves at 0:08 to 0:15.5, darker 3.0 from 0:15.5 to 0:24.0, brighter 4.0 from 0:24.0 to 0:36.0, darker 3.1 from 0:36.0 to 0:41.0, brighter 2.7 at 0:50.0 to 0:57.5, darker 3.6 from 0:57.5 to 1:08.5, brighter 1.7 to 1:17.0 (37 more sweeps in `techniques.json`). The bass is on the whole time (it goes out at 1:38.0, comes back at 2:27.5) and the other stem plays 98% of the time, so these are not entries and exits: that makes it the best case so far for a real filter movement, though they are whole-mix numbers on a track whose bass holds 54% of the power.
+- Donkey Rhubarb has a break: the mix falls 3.1 octaves at 2:15.5 to 2:26.0 and the kick (S1) returns alone at 2:26.3; it falls 2.1 octaves at 2:52 and rises 2.3 from 2:59.5 to 3:11.0.
+- **[JUDGMENT]** **Guess:** a filter sweep of 3 to 4 octaves over 8 to 12 s, repeated, with a rising half then a falling half.
+
+**T3. A slow pan cycle and a tape-speed drift (Vaz Deferenz, Pancake Lizard)**
+- Vaz Deferenz: the other stem wobbles 15 cents at 2.4 Hz (the tool reads a 12-cent wow as 8.0, so the real wobble is nearer 22 cents) and its pan range is 0.38, cycling every 50 s. A 50 s cycle is not the tool's 3 to 4 s window artifact, so it is a slow pan. Pancake Lizard: the bass wobbles 11 cents at 1.2 Hz and its speed moves by up to 14 cents in 4 s; the other stem wobbles 6 cents at 6.5 Hz; the bass pan range is 0.46 and the other stem's 0.45 (both move). Icct Hedral: the bass wobbles 10 cents at 0.5 Hz. Donkey Rhubarb: nothing at 4 cents or more.
+- **[JUDGMENT]** **Guess:** a 50 s slow pan on a mid layer, and a few cents of drift on the bass that moves up to 14 cents in 4 s.
+
+**T4. Low-end entrances and gaps, and echoes I do not claim (Icct Hedral, Donkey Rhubarb, Vaz Deferenz)**
+- Icct Hedral has no low end at all for the first 41 s (the bass stem enters at 0:59.5); later gaps in the low end are 12 s at 1:44.5, 9.5 s at 2:27, 21.5 s at 3:42 and 10 s at 5:06. The low end is on only 59% of the time, so the tool skips the count (rule: under 75%). The last 34.5 s, from 7:25, is the end. Donkey Rhubarb and Vaz Deferenz have no floor drops (only intro and tail runs); Pancake Lizard has two 9 s ones, at 3:56.0 and 4:08.5, as the drums go out at 3:35.0 and the bass at 3:57 and 4:12.5 (the low end is on 74% of the time, just under the line, so the count is borderline).
+- The tool's drum echo at 434 ms (+9.8 dB) on Donkey Rhubarb is its kick spacing (0.43 s); Pancake Lizard's 514 ms other-stem echo (+3.1 dB) is its beat (0.511 s); neither is an echo. Vaz Deferenz's 444 ms other-stem echo (+8.9 dB, two repeats) is 3% over a quarter note at 139.7 BPM (429 ms); unconfirmed.
+- **[JUDGMENT]** **Guess:** a piece that holds the low end back for the first 40 s and brings the bass in under a pad; no echo claimed.
+
+### Theory
+
+**Th1. One 1.718 s bar felt at two speeds, and a 117 BPM groove**
+- Drum-stem onset repeats: Donkey Rhubarb 1.718 s (0.82) with a beat every 0.430 s (0.75): 139.7 BPM as a 4-beat bar (the tool's 140 agrees, the picker's 143.6 does not); swung 0.63 of the beat (triplet feel). Vaz Deferenz 0.859 s (0.77) and 1.718 s (0.75): the same bar, felt at 69.8 BPM (the tool says 70; the picker's 112.3 is wrong), with a long-short split (0.325 s plus 0.534 s) and swing 0.62. Pancake Lizard 2.055 s (0.65) and 0.511 s (0.58): 117 BPM, 4 beats a bar, straight eighths (the tool and picker agree). Icct Hedral has no beat (drums 1.3%), so its tool tempo (94) and picker tempo (143.6) are void.
+- **[JUDGMENT]** **Guess:** a bar of 1.7 s drawn at full or half time (140 or 70), and a straight 117.
+
+**Th2. A phrygian flat second in the bass; a mixolydian groove**
+- Icct Hedral: bass F# 0.29 and F 0.26 of its time (55% together), with A 0.18 and C 0.18; 0.83 notes a second; key F phrygian, margin 0.021 (usable). The bass sits on the root and the flat second a semitone above it, with the third and fifth (A and C) above: the phrygian flat-second sound over a major-looking triad, which clashes. 25 chord changes a minute, 19 lasting 1.5 s or more (a median of about 3 s); the repeat structure is a two-bar loop (3.2 s bars, lag 2 at 0.65). Chord names are a guess on a dense pad.
+- Pancake Lizard: pitch classes G 0.17, C 0.15, F 0.11, A 0.11, B 0.10, all in G mixolydian; key margin 0.049 (usable). The bass sits on G 0.38 of the time (F 0.19, C 0.16, B 0.16), with 24% fourths and fifths: a G pedal with the b7 (F) and the fourth (C). 23% of its bars near-duplicate an earlier bar, at 8 bars (0.50).
+- Donkey Rhubarb and Vaz Deferenz: key margins 0.008 and 0.001, guesses; Donkey Rhubarb's bass notes (G 0.30, G# 0.25, A# 0.25, A 0.12, 0.10 a second) are a semitone cluster from a 5% stem, so a guess; Vaz Deferenz's bass is void (2% stem). The top lines of both (47 and 48% leaps) are bleed from the drums.
+- **[JUDGMENT]** **Guess:** a bass that alternates root and flat second under a major triad (in a phrygian loop), and a mixolydian pedal on the fifth-below-the-tonic; pad changes about every 3 s.
+
+### Space
+- Four spaces. Donkey Rhubarb is a mono file: median width -29 dB (-32 to -26), correlation 1.00 in every band, every part under -27 dB. Vaz Deferenz is near-mono with a wider mid layer: median -17 dB (-18 to -14), sub -24, mids -13 (0.92); drums -23, the other stem -13 and leaning right (+0.18).
+- Icct Hedral is the widest of the album, and wide even in the sub: median -4 dB (-5 to -2), sub -7 (correlation 0.69), low-mids -4, mids -3 (0.36), highs -4; the other stem is -3 dB (mono loss 1.7 dB), the bass stem -9 dB (mono loss 0.5 dB), the vocals stem -3 dB and leaning right (+0.31, mono loss 1.8 dB).
+- Pancake Lizard is half-wide with a moving image: median -12 dB (-20 to -10), sub -17 (0.96), mids -12, highs -24; the bass stem leans left (pan -0.13) with a 0.46 range, the other stem -10 dB.
+- **[JUDGMENT]** **Guess:** a mono recipe for the drum tracks, a wide-in-every-band recipe with a wide sub for the orchestral piece (the mono fold costs 1.7 dB on the pad, so it needs the stereo guard), and a half-wide recipe with a drifting bass for the groove.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 and S2 sub kicks: toward booming, hypnotic, energetic x2; away from restful, tender x0.4.
+- S3 wide synth-orchestra pad: toward dreamy, stately, hazy x2; away from bouncy, cheeky x0.4.
+- S4 slow-swelling bass: toward hypnotic, warm x1.5.
+- T1 deep duck: toward bouncy, energetic x1.5.
+- T2 repeated big filter sweeps: toward hypnotic, dreamy x2; away from still x0.5.
+- Th2 phrygian flat-second bass: toward mysterious, strange x2.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: 11% (Donkey Rhubarb) and 12% (Vaz Deferenz) of the energy is above 2 kHz by the mix, the highest on the record, but the stems show it is the hats: the vocals stems are 83 to 84% above 5 kHz on both. Icct Hedral 4%, Pancake Lizard 5%. No polarity flag; Icct Hedral is wide but not out of phase (correlation 0.36 to 0.69). The weight flag: the drums stems of Donkey Rhubarb and Vaz Deferenz are 83% and 87% under 120 Hz.
+- **[JUDGMENT]** **Guess:** take the tuned sub kick (modest level), the deep duck (as a loop's top end), the repeated filter sweep, the root-and-flat-second bass and the wide pad; leave the hats on the drum tracks behind a gentle level.
+
+### For later
+- Donkey Rhubarb, other-1 (445 notes): F3, noisy, falls 31 dB/s; hear 3:32.8, 3:53.4. **[JUDGMENT]** **Guess:** waits.
+- Donkey Rhubarb, bass-1 (436 notes): G#1, falls 273 dB/s and brightens; hear 5:16.9, 5:20.3. **[JUDGMENT]** **Guess:** waits, a short bass pluck (below 60 Hz the bell label is the tool's limit).
+- Pancake Lizard, drums-1 (182 notes): low thump, falls 103 dB/s, brightens; hear 2:42.8, 1:41.5. **[JUDGMENT]** **Guess:** waits.
+- Pancake Lizard, bass-2 (36 notes): C2, slow swell, falls 8 dB/s; hear 0:54.6, 1:02.1. **[JUDGMENT]** **Guess:** waits.
+- Icct Hedral, other-2 (112 notes): C#4, bell-like; hear 0:23.9, 7:41.6; and vocals-1 (469 notes, D4, noisy; hear 6:58.2, 6:58.1): a pitched mid part in the vocals stem. **[JUDGMENT]** **Guess:** waits, a high bell over the pad.
+- Donkey Rhubarb vocals-1 and Vaz Deferenz vocals-1 (439 and 415 notes, B2 and C#3, falls 428 and 773 dB/s; hear 5:38.7, 5:13.0 and 5:44.0, 3:48.4): short ticks the separator put in the vocals stem. **[JUDGMENT]** **Guess:** waits; not voices.
+- Not given a deep pass: 05 Icct Hedral (dry version plus bonus DAT glitches), the same audio as 03 in my copy (see Shared tracks). **[JUDGMENT]** **Guess:** Mikey checks the Drive file; if it differs, a second pass on the part that differs is worth one more run.
+
+### Reliability notes for this card
+- Separator: MDX-Net, not Demucs (see the top of this file). The sub lives in the drums stem on Donkey Rhubarb (83% under 120 Hz) and Vaz Deferenz (87%); Pancake Lizard's drums stem is 32% under 120 Hz (mids), and its bass stem is real (54%).
+- Empty stems: Vaz Deferenz's bass stem holds 1.8%, so its bass behavior (G# 0.65, 0.04 notes a second), bass pump and bass lines are void. Icct Hedral's drums stem holds 1.3%, so its drum entries, pump numbers and drum-based tempo are void. Donkey Rhubarb's bass stem (4.6%) is thin: treat its bass notes as a guess. The vocals stems of Donkey Rhubarb, Vaz Deferenz and Pancake Lizard are hats (61 to 84% above 5 kHz); Icct Hedral's is a mid part (89% in 0.5 to 2 kHz). No words anywhere.
+- Tempo: the tool's meter agrees with the drum grid on Donkey Rhubarb, Vaz Deferenz and Pancake Lizard but bar length is unclear on the first two (scores 0.12 and 0.01); the picker's mix-level tempo is wrong on Vaz Deferenz (112.3 against 69.8).
+- Key margins: Donkey Rhubarb 0.008 and Vaz Deferenz 0.001 (guesses), Icct Hedral 0.021 and Pancake Lizard 0.049 (usable). Chord names are guesses on dense pads. Tuning readings run from -1 to +43 cents.
+- Floor drops: Icct Hedral (59% on) is skipped by the rule; Pancake Lizard (74%) is borderline. Pitch under 60 Hz: kick pitches are good to about a semitone, partial-off labels are not measurable.
+- Missing audio: the 2 s tails of 03 and 05 (and any DAT glitches in them) are not in this analysis.
 
 ---
