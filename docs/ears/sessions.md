@@ -24,6 +24,17 @@ in the Project (a doc, a number, a decision) moves it into the repo before
 it ends. Docs stay in `docs/ears/`, not the app, core or `design/` folders;
 ears sessions still never put code into the app or core.
 
+**Keep the raw measurements too (Mikey, 2026-10-18).** The cards keep only a
+summary; the per-track JSON (`pick.json`, `events.json`, `techniques.json`,
+`theory.json`, `space.json`, `stem_check.json`, `split.json`), `progress.log`
+and the unedited draft `card.md` are what a later synthesis can re-query. At
+the end of a session, tar.gz them (everything in the workdir except audio,
+stems and the `joined/` wavs, about 3.5 MB for six albums) into
+`docs/ears/raw/<pile-and-half>-raw.tar.gz` and add a line to
+`docs/ears/raw/README.md`, in the same PR as the cards. Stems and audio are
+never committed (about 1 GB an album; `split.py` rebuilds them). Pile 1's raw
+files were not kept (the workspace forgot them); Ears 6 onward are.
+
 **The card tools exist (Ears 3, 2026-10-15; PR #221).** `tools/ears/album.py`
 runs pick, split, events, techniques, theory, space and the card writer for
 one album and drafts the card, with **[JUDGMENT]** marking what a person or

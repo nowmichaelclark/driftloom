@@ -218,6 +218,11 @@ hours if the weights stay blocked. Run it as a chain script that resumes from
 the cache (the workspace restarted once and killed the processes; the disk
 survived).
 
+**Keep the raw files.** Every session that runs `album.py` ends by archiving
+its workdir's JSON, logs and draft cards into `docs/ears/raw/` (rule and recipe
+in `sessions.md`); the cards are a summary and the raw files are what later
+analysis uses.
+
 ## Piles and sessions
 
 Ears sessions are new chats in the Procedural Music App Project, labeled Ears 3, Ears 4, ...

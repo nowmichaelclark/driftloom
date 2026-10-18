@@ -20,6 +20,7 @@ hands are in `docs/EARS.md`.
 | `space-sketch.md` | The stereo recipes as a diff (Ears 2; a reference, never app code). |
 | `tools.md` | Ears 1's scripts as written then. The current versions are in `tools/ears/`. |
 | `uploads.md` | The records still to upload to Drive, by pile. |
+| `raw/` | The raw per-track JSON, logs and draft cards from each pile (tar.gz, no audio or stems); see its README. Kept from Ears 6 on. |
 | `data.csv` | Raw per-track measurements for batches one and two and 104 Driftloom loops. |
 
 New cards go in `cards-<pile>.md`, new batches in `batch-N.md`, in a PR from
