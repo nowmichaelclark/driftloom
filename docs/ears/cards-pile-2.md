@@ -1008,3 +1008,139 @@ Machine time: 1,022 s (17.0 min) for 15.6 minutes of deep-pass audio (933.8 s): 
 - Tempo: meter at two thirds of the grid on 06 and half of it on 13; the picker is off by 4/5 on 06 (112.3 for 139.5) and by two thirds on 13 (99.4 for 147.8). Use the grid.
 - Key margins: 06 0.013 and 12 0.011 (guesses), 04 0.024 and 13 0.024 (usable). Chord names on 06 and 13 are guesses on kick-led music (13's 9% on-beat share is far below chance). Tuning: 06 -21, 04 -11, 13 -22, 12 -18 cents at mix level; none checked against a direct line.
 - Pitch under 60 Hz (13's D1 sub, 37 Hz) is good to a semitone only; the "bell-like" labels there are not measurable. 04's pitch labels on the hat ticks are artefacts. The vibes line gives 44% above 2 kHz for 04 against the drums stem's 68% above 5 kHz: the two agree it is a bright track.
+
+---
+
+## Caustic Window, Compilation
+
+Ears 7, 2026-10-18, Sonnet 5.5. 13 tracks, all measured at mix level, 64.7 minutes. Deep pass on four, as the picker chose: the most typical, 01 Joyrex J4 (4:30), and the three least like the rest, 03 Cordialatron (4:44), 02 AFX 114 (1:21) and 09 Fantasia (6:03). Loudness -9.9, -12.7, -8.4 and -8.3 LUFS: the loudest record of the second half, five of the 13 tracks are above -9 LUFS. Stems from Demucs htdemucs. The mix-level tuning runs from -45 to +47 cents across the 13 tracks (Fantasia -45, Clayhill Dub -44, Humanoid Must Not Escape +47, We Are the Music Makers +45), which is a half-semitone offset: every key and chord name on this card is a guess where the offset is large.
+
+**What this card covers.** *Joyrex J9ii* (the folder holds Fantasia, Clayhill Dub, The Garden of Linmiri and We Are the Music Makers (Hardcore Mix)) is all on this record as tracks 09, 11, 12 and 13, so by Mikey's skip rule it has no card of its own. Lengths from the J9ii files (358.4, 203.2, 368.3 and 236.1 s) agree with these tracks (362.5, 204.9, 370.2 and 239.2 s) to within 1 to 4 s, with the J9ii figures a little short for every track, as expected for the same audio; I did not compare waveforms. J9i is not in the folder (Mikey: most of it is on this record). Fantasia got the deep pass here; the other three J9ii tracks are mix-level only (see For later).
+
+Machine time: 1,293 s (21.6 min) for 16.6 minutes of deep-pass audio (998.0 s): pick 112 s (13 tracks, 8.6 s a track), Demucs 718 s (161.7, 197.2, 56.4 and 303.0 s: 0.72 times the audio; Fantasia ran at 0.84, the others at 0.60 to 0.69, probably because I was reading files at the time), measuring 463 s (0.46 times). The formula (1.6 s per second of deep-pass audio plus 25 s a track in the album) gives 1,922 s; measured is 0.67 of it.
+
+**Shared tracks.** `twins.py` on this album's rows against the first half's rows and `data.csv` (Aphex): no probable twin (Caustic Window is not Aphex, so `--artist Aphex` was used on the earlier piles only; the 13 rows were also compared with Analogue Bubblebath 3, 4 and 5 and Bradley's Beat and Robot: none). The only repeat is the J9ii one above.
+
+### Stem check (read first)
+- 01 Joyrex J4: drums 81%, bass 15% (real; 81% of it under 120 Hz, strongest line 55.0 Hz), other 2.5% (top line, chords, other-stem pumping and echoes void or guesses), vocals 0.6%. Drum grid: beat 0.406 s = 147.8 BPM (4-beat bar 1.637 s = 146.6); the tool's 98 is two thirds of it (a triplet reading, matching the swing 0.67); the picker says 117.5.
+- 03 Cordialatron: drums 47%, bass 27% (99% of it under 120 Hz, strongest line 41.2 Hz = E1), other 25%, vocals 0.0%. Grid: beat 0.708 s = 84.7 BPM and a bar of 1.881 s = 127.6 BPM; the picker says 129.2, so the tempo is about 128 with a triplet pulse at 84.7 (2/3 of 127.6); the tool's 64 is half of 127.6.
+- 02 AFX 114: drums 72%, bass 0.4% (empty: bass notes, pumping, wobble void), other 28%, vocals 0.0%. The sub is in the other stem (49% of it under 120 Hz) and the drums stem (41%). The repeat of 1.614 s is a bar: 148.7 BPM as 4 beats (the card's draft says "37.2 BPM", which is the bar rate, not a beat); the tool's 74 is half of 148.7; the picker says 117.5.
+- 09 Fantasia: drums 74%, bass 1.9% (void), other 3.7% (top line, chords, other-stem numbers guesses), vocals 21%. Bar 1.567 s = 153.2 BPM as 4 beats (the draft's "38.3 BPM" is the bar rate); the tool's 102 is two thirds of 153.2, a triplet reading; the picker says 123. The vocals stem holds 21% of the power: a sustained lead the separator called voice-like (see S7); I did not listen to decide. No words are claimed.
+
+### The hook
+- A loud, hard, mono-sub record from the early 90s: a kick tuned to C2 and a filter-closing bass over a triplet shuffle at 147.8 BPM, a bare E1 drone sub that comes and goes in 3 to 8 s blocks, a nearly fully mono 6-minute track with a lead that sings alone over a 7 s break, and a fast 81 s piece of 600 ms boom kicks with the hats out of phase.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a mono, hard-limited 148 BPM shuffle where one sustained lead plays alone for a few seconds each time the floor drops out.
+
+### Sounds
+
+**S1. Long boom kick with a rising filter (AFX 114): drums-1, 105 notes, 48%**
+- In synth terms: 56 Hz (51 to 63), attack 100 ms (36 to 326), falls 39 dB/s, brightness 207 Hz rising 2.03 octaves over the note (0.28 to 3.71), harmonic share 0.20 (mostly noise), level -1.6 dB, correlation 0.67. About one kick every 0.81 s (74 BPM, the half-time of 148.7), each 0.35 to 0.62 s long.
+- Hear it at: 0:01.5 (A1, 0.35 s, +16 dB alone), 0:09.3 (G#1, 0.62 s, +14 dB alone), 0:23.8 (G#1, 0.60 s, +14 dB alone).
+- Check: the pitch is about 55 Hz (A1 55.0, G#1 51.9) with the track's tuning of +29 cents; a harmonic share of 0.20 and a correlation of 0.67 say it is a noisy, slightly wide kick, not a clean sine. The attack is not believable at this register (under 60 Hz).
+- Building blocks: **[JUDGMENT]** **Guess:** a tuned sub-kick with a 600 ms tail and a filter that opens 2 octaves during the note; closest to the tuned kick, longer.
+
+**S2. Tuned kick on C2 (Joyrex J4): drums-1, 394 notes, 41%**
+- In synth terms: 65 Hz (50 to 69), C2 (65.4 Hz), attack 38 ms, falls 24 dB/s, harmonic share 0.88, brightness 186 Hz, correlation 0.99, level -0.3 dB. A second group (drums-2, 106 notes, falls 215 dB/s) is the short click.
+- Hear it at: 3:44.3 (C2, 0.13 s, +43 dB alone), 1:08.8 (C2, 0.14 s, +42 dB alone), 1:10.2 (C2, 0.33 s, +41 dB alone).
+- Check: tuning +23 cents at mix level, so the kick is a hair sharp of C2. Clean examples (+41 to +43 dB alone) at 1:08.8 to 1:10.2, which sits just before the +3.1 octave rise at 1:10.5.
+- **[JUDGMENT]** **Guess:** the tuned sub-kick again, set to the key's root; the family of sounds from the first half.
+
+**S3. Filter-closing bass with a slow swell (Joyrex J4): bass-1, 187 notes, 20%**
+- In synth terms: 54 Hz (39 to 74), attack 295 ms (68 to 595, a slow swell), falls 13 dB/s, brightness 886 Hz at the start and darkening 0.81 octave over the note (2.79 octaves at the 10th percentile), harmonic share 0.29 (noisy partials, partials 104 cents off whole multiples), level -8.7 dB, correlation 0.96. The tool labels it bell-like; at 54 Hz the labels are not measurable. A second group (bass-2, 120 notes, around F2, falls 99 dB/s) is a short pluck.
+- Hear it at: 1:37.8 (B1, 0.38 s, +28 dB alone), 1:40.8 (G1, 0.52 s, +25 dB alone), 1:40.3 (F#1, 0.39 s, +25 dB alone). All sit in the drums-out gap at 1:38.5 to 1:41.5.
+- Check: the bass line is believable (the bass stem is 15%): D# 0.34, F 0.24, A 0.17, C 0.12, 0.50 notes a second; D# and A are a tritone apart.
+- **[JUDGMENT]** **Guess:** roundBass with a slow attack and a lowpass that closes about 0.8 octave over each note.
+
+**S4. A bare E1 drone sub that enters in short blocks (Cordialatron): bass-1, 62 notes, 14%**
+- In synth terms: 41 Hz (41 to 42), E1 (41.2 Hz), harmonic share 1.00 (a pure sine), attack 45 ms, falls 28 dB/s, vibrato 7 cents (0 to 18), brightness 118 Hz, level -2.2 dB, centered (correlation 1.00). The bass stem plays 26% of the time (in at 0:08.0, 0:41.5, 0:49.0, 1:00.0, 1:11.5; out at 0:14.0, 0:44.0, 0:55.5, 1:06.5, 1:21.5): blocks of 3 to 6 s.
+- Hear it at: 2:57.9 (E1, 0.11 s, +14 dB alone), 2:42.3 (E1, 0.82 s, +9 dB alone), 0:38.5 (E1, 0.86 s, +6 dB alone).
+- Check: pitch under 40 Hz is good to a semitone, but E1 is 41.2 Hz and the strongest line in the stem is 41.2 Hz exactly, so E is believable. The bass line is one note: E 0.98, repeats 89%, 0.19 notes a second.
+- **[JUDGMENT]** **Guess:** a sine sub drone on one note, dropped in for 3 to 6 s at a time; roundBass without its upper harmonics.
+
+**S5. A wide, noisy mid pad (Cordialatron): other-1, 500 notes, 38%**
+- In synth terms: 116 Hz (65 to 292), around A#2, brightness 595 Hz, harmonic share 0.70, attack 99 ms, falls 25 dB/s, level -3.3 dB, left-right correlation 0.45 (0.21 to 0.69). Weak (silhouette 0.15, one group): a blended texture, not one instrument. The other stem is 25% of the power (44% in 120 to 500 Hz, 53% in 0.5 to 2 kHz).
+- Hear it at: 0:21.7 (C3, 0.26 s, +56 dB alone), 0:24.4 (A#2, 0.29 s, +55 dB alone), 0:25.4 (C3, 0.23 s, +56 dB alone). All fall inside the first floor drop (0:15.0 to 0:30.0), so they are clean.
+- **[JUDGMENT]** **Guess:** a wide, noisy pad at A#2 to C3 with unrelated left and right; the width is the new part.
+
+**S6. A D#1 sub in the other stem (AFX 114): other-1, 345 notes, 22%**
+- In synth terms: 38 Hz (32 to 43), attack 55 ms, falls 85 dB/s, brightness 145 Hz, harmonic share 0.22, level -10.0 dB, correlation 0.99. Hear it at 0:49.6 (? label, 0.24 s, +9 dB alone), 1:10.3 (C1, +6 dB alone). A second group (other-2, 96 notes, around F1, falls 85 dB/s) is the same kind.
+- Check: partials under 60 Hz cannot be measured, pitch under 40 Hz is good to a semitone, and the +5 to +9 dB examples are not clean. Treat it as a sub rumble in the other stem, since the bass stem is empty.
+- **[JUDGMENT]** **Guess:** waits; part of the sub, not a separate instrument.
+
+**S7. A sustained lead in the vocals stem (Fantasia): vocals-1, 462 notes, 40%**
+- In synth terms: around G#2 by the median (102 Hz, 58 to 306), but the clean examples are D#4 and F4 (311 and 349 Hz); brightness 1,816 Hz (705 to 4,149), harmonic share 0.40, attack 129 ms (39 to 702), falls 30 dB/s, level -7.6 dB, correlation 1.00, vibrato up to 37 cents. The vocals stem is 21% of the power.
+- Hear it at: 2:27.1 (D#4, 1.4 s, +40 dB alone), 2:28.5 (F4, 0.41 s, +42 dB alone), 2:23.9 (D#4, 1.4 s, +37 dB alone). All fall in the 2:22.5 to 2:29.5 break, where the drums, bass and other stems all leave and only this stem plays.
+- Check: the examples show that a lead with held 1.4 s notes plays alone for 7 s; whether it is a voice or a synth lead I cannot tell without a listen, and Driftloom's rule is vowels, hums and choirs only. The 462 notes with a median at 102 Hz say the group also holds low bleed from the kick.
+- **[JUDGMENT]** **Guess:** a held mono lead that plays alone during a floor drop; needs a listen before anything about "voice".
+
+### Techniques
+
+**T1. Floor drops and breaks where one part plays alone (Cordialatron, Fantasia)**
+- Cordialatron (sums, under 120 Hz 15 dB down): 0:15.0 for 15.0 s, 1:30.0 for 8.0 s, **2:00.5 for 30.0 s**, 3:19.5 for 11.0 s, 4:15.5 for 8.0 s, 4:31.0 for 13.0 s (the tail, the track ends at 4:44). The stems-only count is 1.18 a minute (0:15.0 for 15.2 s, 1:30.2 for 7.8 s, 2:03.2 for 14.5 s, 2:23.0 for 7.8 s, 4:15.8 for 7.8 s); the low end is on only 57% of the track, so by rule the stems count is skipped and the sums are the figure. The drums stem leaves at 0:15.5, 1:31.5, 2:04.0, 2:24.5, 4:17.0 and returns at 0:29.5, 1:37.5, 2:15.0, 2:30.0, 4:23.0.
+- Fantasia: the stems count 2.03 a minute (0:24.5 for 7.8 s, 1:46.0 for 3.0 s, 1:54.0 for 4.5 s, 2:22.2 for 7.5 s, 3:14.0 for 3.0 s, 4:21.8 for 3.0 s, 4:30.5 for 3.8 s, 4:50.2 for 3.2 s); the sums find 16 runs (3.0 to 12.5 s) because the sub is in the drums stem too. The 2:22.2 break is the one where the lead plays alone (S7).
+- Joyrex J4 and AFX 114: no drops (sums: J4 only the first 2.5 s and the tail at 4:22.5 for 7.5 s; AFX 114 a 3.0 s tail).
+- **[JUDGMENT]** **Guess:** floor drops of 3 to 15 s, a few per loop, on the faster loops, with one 30 s break on a calm loop; a held lead left on during the break.
+
+**T2. Big pad filter sweeps (AFX 114) and a build (Joyrex J4)**
+- AFX 114's other stem rises 2.7 octaves (0:28.5 to 0:34.0), rises 2.9 (0:38.0 to 0:47.5) and falls 4.1 (0:47.5 to 0:56.0), rises 1.9 (0:56.5 to 1:01.5); the mix rises 3.6 octaves at 1:13.0 to 1:20.5. Joyrex J4: the mix falls 1.6 octaves at 1:02.5 to 1:10.5 and rises 3.1 at 1:10.5 to 1:16.5, then falls 1.4 at 1:41.5; Fantasia: -4.2 octaves at 0:17.0, +3.0 at 0:22.5, -3.1 at 1:02.5, +2.6 at 1:09.0 (68 more in techniques.json). Whole-mix swings on drum-led tracks are mostly hats and fills, but AFX 114's other-stem sweeps are real filter moves on a pad.
+- **[JUDGMENT]** **Guess:** a 4-octave pad lowpass sweep over 8 to 9 s, up then down, on the sub-heavy loops.
+
+**T3. A triplet drum echo of 234 ms (Cordialatron)**
+- Cordialatron's drums echo at 234 ms (+9.9 dB, 4 later repeats): 234 ms is a third of the 0.708 s beat (0.33), a triplet eighth, in line with the triplet pulse at 84.7 BPM. The tool needs six notes ringing alone for 1.5 s, which a drums stem rarely gives, so I treat the time as likely and the level as unconfirmed.
+- **[JUDGMENT]** **Guess:** a triplet-eighth echo on percussion at +6 to +10 dB, four repeats.
+
+**T4. Pumping figures that do not hold (all four)**
+- The tool reports ducking at the kick: J4 other 2.8 dB and bass 4.2 dB (kick every 0.41 s, fits the 0.406 s beat: believable but small); AFX 114 other 4.0 and bass 4.1 dB (kick every 0.31 s, does not fit a 0.81 s kick: do not trust; the bass stem is 0.4%); Cordialatron other 3.4 and bass 7.8 dB (kick every 0.64 s, does not fit the 0.708 s beat: do not trust); Fantasia other 3.4 and bass 5.7 dB (kick every 0.24 s, does not fit the 0.392 s beat: do not trust, and the bass stem is 1.9%).
+- **[JUDGMENT]** **Guess:** only J4's 3 to 4 dB duck is worth carrying.
+
+### Theory
+
+**Th1. Tempi and swing: 148 triplet shuffle, 128 with a triplet pulse, 149 and 153 slow-kick**
+- J4: 147.8 BPM, triplet shuffle (off-beat 0.67). Cordialatron: about 128 (127.6), off-beat 0.75, with a pulse at 84.7. AFX 114: 148.7 with a kick every other beat (74 BPM), off-beat 0.62 (triplet feel). Fantasia: 153.2, off-beat 0.67. Pulse strength: J4 0.87, Cordialatron 0.91, AFX 114 0.45 (weak: slow kick), Fantasia 0.48 (weak).
+- **[JUDGMENT]** **Guess:** a tempo draw of 128 to 153, triplet shuffle on the fast ones.
+
+**Th2. An E drone a semitone under an F minor harmony (Cordialatron)**
+- The bass stem is E for 98% of its time (41.2 Hz), 0.19 notes a second, 89% repeats; the key tool says F dorian, margin 0.031 (usable), pitch classes F 0.16, D# 0.12, G# 0.12, A# 0.11, C 0.11 (an F minor pentatonic with no D natural); chords Fmin7 22%, A#5 9%, A#7 8%, D#sus2 6%. So an E sits a semitone under F: against F minor that is a major-seventh below the root's octave, a very close, dissonant sub. Cordialatron's 46 chord changes a minute (12 lasting 1.5 s or more) have only 16% on a beat against 32% by chance: the chord tool is following the other stem's movement, not a chord rhythm; the picker counts 11.8 a minute. Tuning -15 cents, so a half-step clash is not an offset artefact.
+- **[JUDGMENT]** **Guess:** a drone a semitone below the tonic as a rare, "strange" colour; leave it out of calm vibes.
+
+**Th3. Diminished and lydian colours over a pedal (J4, AFX 114, Fantasia)**
+- J4: D# lydian, margin 0.015 (a guess); bass D# 0.34, F 0.24, A 0.17, C 0.12; chords Amaj7 21%, Adim 14%, F7 12%, Fmaj7 11% (28 changes a minute, 9 lasting 1.5 s or more, 50% on a beat against 49% by chance); picker 2.0 a minute. A is a tritone above the D# pedal, which is the lydian fourth. AFX 114: C# ionian, margin 0.002 (a coin toss); chords C#dim 71%, Fmaj7 8%, C#maj7 7%, 9 changes a minute; top line 3 semitones wide, 69% steps: a drone. Fantasia: G lydian, margin 0.031 (usable, but the mix reads -45 cents); chords Dmaj7 61%, Gmaj7 20% (8 changes a minute, median chord 4.0 s); bass void; top line 34 semitones wide (10th to 90th percentile) with 37% leaps and 16 notes a phrase, which looks like bleed across stems.
+- **[JUDGMENT]** **Guess:** a held major-seventh chord with its lydian IV on top (Dmaj7 to Gmaj7), a diminished triad drone, and a bass a tritone below its chord.
+
+**Th4. Form (J4)**
+- J4: bars of 1.2 s, repeats at 1 bar (0.74), 8 (0.48), 16 (0.28); 32% of bars near-duplicate an earlier one. Cordialatron: 2, 4, 8 bars (0.52, 0.47, 0.46); 18%. Fantasia 11%, AFX 114 0% (too short to say).
+- **[JUDGMENT]** **Guess:** 8- and 16-bar phrases for the shuffle loop.
+
+### Space
+- J4: near mono, median -13 dB (-16 to -8), sub -16, 120 to 500 -13, mids -11, presence -20 (0.98), air -11. Drums -20 dB, bass -15, other -7 (mono loss 0.8 dB, 3% of the power).
+- Cordialatron is **wide above a mono sub**: median -4 dB (-6 to -2), sub -27 (1.00), 120 to 500 -5 (0.54), mids -4 (0.46), presence -4 (0.42), air -2 (0.24). Bass -28 dB, drums -11 (widest in the air band, -2 dB), other -4 (mono loss 1.5 dB, 31% of the power).
+- AFX 114: **hats out of phase**: median -6 dB (-7 to -4), sub -24, 120 to 500 -22, mids -13, presence +1 dB (correlation -0.13), **air +8 dB (correlation -0.73)**. The drums stem is -6 dB wide, mono loss 0.9 dB, widest in the air band (+8 dB). 18% of the energy is above 2 kHz.
+- Fantasia is **fully mono**: median -29 dB (-30 to -27) in every band (correlation 1.00 from the sub to the air); drums -32 dB, vocals -30, other -28. 14% of the energy is above 2 kHz.
+- **[JUDGMENT]** **Guess:** a wide pad over a mono sub (Cordialatron), a dead-mono hard record (Fantasia), and no out-of-phase hats (AFX 114) without the mono-fold guard.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1, S2 booming kicks and S3, S4 closing bass and E drone: toward booming, hypnotic, energetic x2; away from restful, still x0.4.
+- S5 wide noisy pad: toward hazy, dreamy x1.5.
+- S7 lead alone over a break: toward mysterious, dreamy x1.5.
+- T1 floor drops and breaks: toward energetic, hypnotic x1.5.
+- T2 big pad sweeps: toward strange x1.5.
+- Th2 E under F minor: toward strange, mysterious x1.5; away from happy, peaceful, restful x0.2.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: AFX 114 has 18% of its energy above 2 kHz, Fantasia 14%, Cordialatron 8%, J4 5%. Polarity flag: AFX 114's hats (air correlation -0.73, +8 dB wide, mono loss 0.9 dB for the drums stem): do not copy as it is. A dissonance flag: Cordialatron's E drone under F minor. Weight: J4 and Fantasia have 72 to 86% of the drums stem under 120 Hz, and the record is loud (-8.3 to -9.9 LUFS for three of four), so any kick or sub needs the low-end level guard. Fantasia is fully mono, a plus for the mono switch.
+- **[JUDGMENT]** **Guess:** take the C2 tuned kick, the closing bass, the E sine drone in 3 to 6 s blocks (on the root, not a semitone below), the wide pad over a mono sub, the pad sweep, the 30 s break and the triplet echo; leave AFX 114's out-of-phase hats and the semitone clash for strange vibes only.
+
+### For later
+- J4, drums-2 (106 notes, low thump, falls 215 dB/s); hear 3:46.3, 1:11.6; bass-2 (120 notes, F2, falls 99 dB/s); hear 0:21.5, 0:19.8. **[JUDGMENT]** **Guess:** waits, the click and a pluck.
+- Cordialatron, drums-1 (139 notes) and drums-2 (72 notes), mid snaps that brighten, falls 92 and 95 dB/s; hear 0:56.0, 0:44.7 and 0:40.9, 0:33.4. **[JUDGMENT]** **Guess:** waits, the snare-like hit.
+- AFX 114, drums-2 (76 notes, snap, falls 83 dB/s); hear 1:18.0, 0:00.0; other-2 (96 notes, F1); hear 0:50.4, 0:49.8. **[JUDGMENT]** **Guess:** waits.
+- Fantasia, other-1 (345 notes, around C2, noisy, falls 36 dB/s; hear 1:56.8, 1:57.0) and drums-2 (112 notes, snap, slow swell; hear 2:55.2, 3:29.5). **[JUDGMENT]** **Guess:** waits.
+- Not given a deep pass (mix-level only): 04 Italic Eyeball (4:25.7, 143.6 BPM, sub 88%, width -18.7); 06 Astroblaster (5:29.2, 152 BPM, 0.4 chord changes a minute); 07 On the Romance Tip (5:06.1, 144 BPM, width -5.3 dB, the widest, tuning +35 cents, almost no pitch bends or wobble); 08 Joyrex J5 (6:54.8, -8.7 LUFS, 152 BPM, sub 83%); 10 Humanoid Must Not Escape (5:42.8, 144 BPM, sub 71%, tuning +47); 05 Pigeon Street (0:23.1, too short). The J9ii tracks: 11 Clayhill Dub (3:24.9, 161.5 BPM, sub 96% of the energy, centroid 63 Hz, width -28 dB, tuning -44: the most sub-only track of the half), 12 The Garden of Linmiri (6:10.2, 152 BPM, width -23 dB), 13 We Are the Music Makers (Hardcore Mix) (3:59.2, 107.7 BPM, width -30 dB, tuning +45). **[JUDGMENT]** **Guess:** On the Romance Tip (wide) and Clayhill Dub (sub-only) are the two worth a listen.
+
+### Reliability notes for this card
+- Separator: Demucs (0.72 times the audio). Bass stems: AFX 114 (0.4%) and Fantasia (1.9%) are empty, so their bass notes, pumping and wobble (Fantasia bass 11 cents at 3.3 Hz) are void; J4 and Cordialatron have real bass stems. AFX 114's and Fantasia's "bell-like" labels at 38 Hz and 100 Hz are not measurable.
+- Tempo: the draft card's beat figures of 37.2 BPM (AFX 114) and 38.3 BPM (Fantasia) are the bar rate: the bar of 1.614 s and 1.567 s as 4 beats is 148.7 and 153.2 BPM. The picker is 117.5 for J4 and AFX 114 and 123 for Fantasia (a factor of 4/5, and 4/5 again), as the docs warn for broken beats.
+- Key margins: J4 0.015, AFX 114 0.002 (guesses), Cordialatron 0.031 and Fantasia 0.031 (usable, but tuning -15 and -45 cents on the mix). Chord names are guesses on dense tracks, and Cordialatron's chord rhythm is not beat-locked (16% against 32%).
+- Pumping: three of four kick periods do not fit their beat: void. Fantasia's top line (34 semitones, 37% leaps) is bleed across stems, not a melody.
+- The 7 s break at 2:22.5 on Fantasia is clean; every "+40 dB alone" example on this card sits in such a break, so the levels read high against the full mix.
