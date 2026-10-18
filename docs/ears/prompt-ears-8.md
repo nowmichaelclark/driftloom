@@ -1,0 +1,21 @@
+# Prompt for Ears 8 (the first synthesis)
+
+Paste this as the first message of the Ears 8 session (Claude Code in the Driftloom folder, after `git checkout main && git pull`). Opus 5.5, high effort.
+
+```
+Ears 8 (Opus 5.5, high effort). You're the first synthesis session for Driftloom's ears work. Ears 5, 6 and 7 wrote album cards from 16 records (docs/ears/cards-pile-1.md and cards-pile-2.md). Your job is to turn them into a short, ranked batch of candidates for Mikey to judge by ear. You never build into the app or the core: sketches are offline (the way tools/ears/sketches/ears4-sketch.patch was), and Mikey decides what sounds good.
+
+Read first: docs/ears/sessions.md, docs/ears/plan.md, docs/EARS.md, docs/ears/batch-4.md (the format of a batch, how clips and verdicts were handled, and what is already approved: roundBass, glass, floorDrop, arc, dubStab, longChords, wash, the chapel organ, stereo's baseline), tools/ears/README.md, both card files in full, and docs/ears/raw/ (the raw JSON behind the cards, unpack to a scratch folder when a card's summary is not enough). Also skim docs/BRAIN.md and docs/CORE.md only to know what Driftloom already does, so you do not propose what exists. Standing rules: ears outputs live in the repo (docs/ears/, in a PR) and nowhere only in the Project; never real words in voices (vowels, hums, choirs only); no quotes at all; wholesome takes only, but harsh albums are fair game (take what is wholesome, leave the rest); ears sessions never put code into the app or core; Mikey decides what sounds good.
+
+What to do:
+1. Read every card's Guess lines and [JUDGMENT] lines and the Stem check and Reliability notes. Trust a number only where its card says the tool is reliable. Several cards flag guesses (empty bass stems, tempo octaves, key margins under 0.02, tuning, bell-like labels under 60 Hz); do not build a candidate on a flagged number without checking it yourself.
+2. Find what repeats across records: sounds that appear on several albums (the tuned sub-kick family, the sine sub bass and pedal notes, filter-closing bass, wide noisy pads over a mono sub, the sine walking bass), techniques (floor drops with a late bass return, ducking against the kick, 4-bar drop cycles, brightness arcs), and theory (loop lengths, 3:2 pulses, pedal-and-neighbor bass, lydian and phrygian pairs). Repetition across records is the strongest evidence; a single record is a lead.
+3. Choose at most 12 candidates, ranked: for each, a reference (album, track, timestamp), the measurement with its reliability, what it would add to Driftloom, a yardstick a hands session can test, the guards it needs (level, stereo fold, a low-end level guard for anything under 60 Hz), and the closest existing Driftloom block. Say which were dropped and why, in one line each.
+4. For the top candidates (about 6), write an offline sketch the way Ears 4 did, render clips with and without it from the real engine on today's main, loudness-matched (-18 LUFS as before), and run sketch_check.py and stereo_guard.py. Keep the sketch as a patch in tools/ears/sketches/, never in the app.
+5. Settle the [JUDGMENT] lines for the chosen candidates only: the vibe weights (x1.5 to x3 toward, x0.2 to x0.5 away, never 0), the wholesome flags, and the hook line for each album you drew from.
+6. Write docs/ears/batch-5.md in batch-4's format: a short list at the top with approved / tune / dropped left blank for Mikey's verdicts, then each candidate. Put the clips in ~/ears8/clips/ (file names with the candidate name and the with/without tag) and tell Mikey the folder; do not commit audio.
+
+At the end: update docs/ears/plan.md (mark Ears 8 done, name the next session per the table; pile 3 still needs its own session, so check how the labels shift), keep docs/EARS.md current, open the PR with gh api (GraphQL is not available) for Mikey to merge, and tell Mikey in plain words what the batch holds, in what order to listen, and the next session's label, model and effort.
+```
+
+Notes for Mikey: Ears 8 takes real engine renders, so it needs Node and the repo's own test tooling working on your computer (batch-4.md says how the earlier sketches were rendered). If a render step fails, Claude Code should say so rather than guess. Listen in the order the batch gives; verdicts go back into batch-5.md at the top.
