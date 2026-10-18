@@ -286,7 +286,12 @@ not this table. Opus 5.5, high: it changes drift's random stream, the
 budget and the low end, all judgment calls. One question for the brain:
 `docs/BRAIN.md`'s plan to phase 2 puts new sounds after item 46 and in the
 core only, while this logic sits in today's JavaScript generator; the brain
-should say where it lands before the session starts. dropSpotlight, widePad
+should say where it lands before the session starts. **Answered (brain,
+2026-10-18):** the choices go in today's JavaScript generator (allowed
+until phase 2, then ported); what they play goes in the core, after item
+46. It is the third group of the sound batch Session 24 writes (after the
+instruments and stereo), built in Session 25c; see `docs/BRAIN.md`, "The
+plan to phase 2". dropSpotlight, widePad
 and dottedPulse were not sketched and are still unreviewed; a later ears
 session sketches them.
 

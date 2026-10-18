@@ -548,20 +548,44 @@ Stated decisions, not inferences. Dated where the date matters.
   - **Session 22** (brain, Opus): check items 42-45; the control album.
   - **Session 23** (hands, Opus, high): item 46, the building-block
     interface.
-  - **Session 24** (brain, Opus): phase 1 review; write **the instrument
-    batch** (new queue items: the sounds Mikey approved, built in the
-    core on 46's interface, core-only, no JavaScript-synth versions: the
-    fallback substitutes an existing voice; generator pools updated, the
-    balance lock re-baselined on purpose; each sound measured for level,
-    cost and tone against its ears reference); and write phase 2's items
-    (ordering 48-53 among them).
-  - **Session 25** (hands, Opus, high): the instrument batch, then
-    **stereo in the core** (Session 24 writes those items too, from the
-    ears' stereo clips and Mikey's verdicts; split into 25b if usage
-    runs out).
-  - **Session 26** (brain, Opus): check the batch and stereo; a labeled
-    album (keep / tune / drop) and a stereo-vs-mono A/B; new vibes with
-    Mikey, last before the port.
+  - **Session 24** (brain, Opus): phase 1 review; then write **the
+    sound batch** into the queue, three groups, from `docs/ears/`
+    (batch-4 and batch-5 and Mikey's verdicts):
+    (a) **instruments**: dubStab, longChords, wash, the chapel organ,
+    roundBass, glass, floorDrop, arc; built in the core on 46's
+    interface, core-only (the JavaScript-synth fallback substitutes an
+    existing voice), each measured for level, cost and tone against its
+    ears reference;
+    (b) **stereo in the core**: the approved stereo baseline, the mono
+    switch, the first space recipes (charter promise 9);
+    (c) **the mixing logic** (Ears 8, batch 5): tunedKick, lateFloor,
+    floorDrop shapes, pedalBass, subDuck, padSweep, echoTime, under
+    Mikey's rules (today's behavior stays one option in every choice;
+    seeded per-loop choices; most loops get one or two changes; subDuck
+    only with a kick and a sub; stagger and stutter only with a bass
+    line; drop style may follow the bar length; a wandering loop may
+    swap the kick at section boundaries with a crossfade or a wait).
+    **Where it lands (brain, 2026-10-18, answering Ears 8's question):**
+    the choices go in today's JavaScript generator, which is allowed
+    until phase 2 starts and then ported with everything else (they
+    become part of what the port must match); what they play (the tuned
+    kick and boom, the bass-only duck, the chord-layer sweep, the echo
+    time as a parameter) goes in the core only, after item 46, so
+    nothing collides with 46. One builder session for both halves.
+    Then phase 2's items (ordering 48-53 among them). The balance lock
+    is re-baselined on purpose, once per group, and says what moved.
+  - **Session 25a / 25b / 25c** (hands, Opus 5.5, high): the three
+    groups in that order, one PR per item; a new session per group (or
+    when usage runs out), same brief.
+  - **Session 26** (brain, Opus): check all three groups; a labeled
+    album (keep / tune / drop) of the new sounds and mixing, and a blind
+    stereo-vs-mono A/B; new vibes with Mikey, last before the port.
+  - **Ears cadence (brain's advice, 2026-10-18):** after Ears 9, pause
+    new piles until the batch is built and heard in the app. The
+    approved backlog is large, and sketches can sound different in the
+    app than as clips (the first ears session's lesson); hearing it in
+    the app first makes later syntheses sharper and saves tokens. Mikey
+    decides.
   - **Session 27** (hands): the first item of phase 2.
   - **New profiles wait until phase 2 lands**, then go in as data
     (before phase 3 and Luanti). Phase order in the charter unchanged.
