@@ -478,6 +478,7 @@ Stated decisions, not inferences. Dated where the date matters.
 | Depth (blind, 8) | development heard at 24 and 32 bars; weak at 16 (second pass #108) |
 | Depth two (blind, 6 x 16 bars) | 4/4 developing "goes somewhere"; simple: 1 goes somewhere, 1 loops (and looping is welcome sometimes) |
 | Rust, all voices (10, core on, phone) | "it sounded great!" |
+| Phase 1 check (blind A/B, 9, v92 vs v99) | "everything sounds the same on both versions"; no difference he could hear |
 
 ## Methods that proved themselves
 
@@ -545,7 +546,11 @@ Stated decisions, not inferences. Dated where the date matters.
     candidate sounds as offline clips; his verdicts, including on
     dubStab, organ, wash and longChords). Vibes may be added until phase
     2 starts (data in `js/vibes.js`).
-  - **Session 22** (brain, Opus): check items 42-45; the control album.
+  - **Session 22** (brain, Opus, 2026-10-18): **done.** Items 42-45
+    verified, 47's PR read; the control album "Phase 1 check" heard by
+    Mikey the same day: no difference. See the log; one known issue for phase 2
+    (wander across the slider's upper range should not repeat; `docs/QUEUE.md`,
+    "Known issues").
   - **Session 23** (hands, Opus, high): item 46, the building-block
     interface.
   - **Session 24** (brain, Opus): phase 1 review; then write **the
@@ -600,7 +605,8 @@ Stated decisions, not inferences. Dated where the date matters.
   Painter work:** the tempo, key and scale, style and voices pickers,
   and the "can't do that" line; long-piece display (`docs/PAINTER.md`,
   section 2) before item 53.
-- **Where it is:** `main` at v92. The Rust core plays by default (the
+- **Where it is:** `main` at v99 (2026-10-18; phase 1's items 42-45 and
+  47 merged, Painter 6's next-picks screens). The Rust core plays by default (the
   JavaScript synth is the fallback, `?engine=js`); Vibes are in the app
   (items 38a-b, v86-87; recipes in `js/vibes.js`, tuned once, v91); the
   dials, the word fit and the word-album builder are tools (items 34-35);
@@ -680,6 +686,52 @@ Stated decisions, not inferences. Dated where the date matters.
   (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Session 22 (brain, Opus 5.5, 2026-10-18), phase 1 check.** Items
+42-45 (#204, #208, #211, #213) checked against their yardsticks; all
+pass. What the brain ran itself, not taken from the reports:
+- **Goldens:** native x86-64, `tools/golden.sh --strict`, `--strict
+  --flush`, `--rates`, `--blocks all`: 21 of 21 equal to wasm32's, the
+  same with flush-to-zero, the 12 renders at 22.05-192 kHz match, the
+  speaker output the same at every block size. The five targets' hash
+  files are line for line identical, and CI on main (run 39123172239)
+  is green on all five legs with `--strict`.
+- **The moved draws (#211):** every `Math.random` in `js/synth.js` and
+  `js/engine.js` before the PR accounted for (moved into the core, moved
+  to `js/draw.js`, or left in the JavaScript synth, which is the
+  fallback); each slot the core fills matches what the page sent before,
+  and the formulas and ranges match (the sung voices' too). Checked that
+  no two notes on a channel share a key where a draw is made (21
+  goldens: none; the only shared keys are swell textures, which draw
+  nothing), so a chord's notes don't move in lockstep.
+- **Costs, which #213 did not report:** instruction counts (native,
+  cachegrind) for busy-cinder, 09-shrine (choir) and 15-wayfare at items
+  43, 44 and 45: within +-0.25% step to step, except the choir 1.1%
+  cheaper at 44 (no arena). #208's three loops over 5% (+5.0 to +7.4%
+  in wasm instructions) were reported with the reason (the silence
+  floors, code layout); accepted.
+- Not rerun: `tools/baseline.mjs` (no Chromium in this container; CI
+  runs it and it is green on main).
+**Notes for later (Session 24):** existing files carry hundreds of
+pedantic clippy warnings (lib.rs 81, wave.rs 69, timeline.rs 68, #211),
+so the "clean in every file touched" rule can't be met; a cleanup item
+belongs before or with 46's refactor. 45's other rates were hashed on
+three goldens only (13-dust, 16-grove, 18-shatter), which is enough
+for now. **For Mikey, small:** since 44, "Let the loop wander" is
+drawn from the loop's code, so a saved loop wanders the same way every
+time it is played. **Mikey pushed back (2026-10-18):** at the top of the
+wander slider a loop should wander in an experimental, non-repeatable
+way; across the slider's whole upper range (his decision, the
+boundary tuned by ear as we go). Not a fix now; filed under "Known
+issues" in `docs/QUEUE.md`, for phase 2's generator port.
+**Session 22 closed** (2026-10-18), with #237 for Mikey to merge.
+**The control album, "Phase 1 check"** (`docs/ALBUMS.md`): blind A/B,
+v92 (PR #204's preview) against v99 (PR #236's, which is main), nine
+corpus loops covering every kind of moved draw, one pass each, and a
+null track that is bit-identical on both. **Heard the same evening:
+"everything sounds the same on both versions"** -- phase 1 changed
+nothing he can hear, as intended. Next: Session 23 (hands, Opus 5.5,
+high), item 46.
 
 **Brain, 2026-10-13 evening (Opus 5.5), next picks.** Recorded Mikey's
 choice of the next-picks design (Painter 5) under "The core"; queued

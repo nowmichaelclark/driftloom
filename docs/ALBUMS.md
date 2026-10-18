@@ -4,6 +4,38 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Phase 1 check" (2026-10-18, blind A/B, v92 against v99) -- heard 2026-10-18: "everything sounds the same on both versions"
+
+Core phase 1 (items 42-45) was meant to change nothing a listener hears:
+the core's own math (sound moved under -225 dB), the random draws moved
+into the core (different draws from the same ranges: a noise offset, a
+bell's detune, a singer's scoop), any rate and block size (nothing at 48
+kHz). Nine loops, one pass each (so "Let the loop wander" never comes
+in), chosen from the corpus to lean on every kind of draw that moved: 1
+pan flute over drums and wind; 2 whistle with the drop texture; 3 temple
+bells over an analog lead; 4 fiddle and accordion over the hand kit; 5
+hum and tubular bells; 6 soft pads; 7 ocarina and prepared piano over
+drums; 8 flute over drums; 9 choir with waves. About 3.5 minutes a link.
+
+Played on two commit previews, the same album pasted on each (each link
+keeps its own Library): **X** https://6e1cdb44-driftloom.nowmichaelclark.workers.dev
+and **Y** https://3769be13-driftloom.nowmichaelclark.workers.dev. One is
+v92 (before phase 1), the other v99 (today's main). Per track, one word:
+**same**, or **X** / **Y** for the one that sounds nicer, or
+**different** if they differ and neither is nicer; and any click or
+dropout. The screens differ a little between the links (Painter 6); best
+ignored. Diagnostics shows the build: look only after rating.
+
+Key, for the brain: X is v92 when the first hex digit of the SHA-256 of
+the album code below is even, v99 when odd. One track is a null, the
+same audio on both links to the bit (its seed is 12-vapor's in
+`core/golden/codes.txt`): an answer other than "same" there is the
+test-retest noise.
+
+```
+DLA1-0C6N0-T31ED-JJ0C9-0CDM6-ARVB0-04G0F-GA1C4-0R44E-ZVR3D-M7H5C-NTHKF-0VN8R-VMVF0-CKS8B-EZ50Z-39MR3-1NN00-XRE3R-109KR-262NN-9JCCP-5R000-00000-G0FG3-08410-4VXD6-0NKH2-DGXTX-EPGSF-5WA2E-4KWVN-0HPCZ-NHD10-D041B-9040G-E0442-M0G50-R1FKQ-YDN29-9EFG0-00000-0808R-51420-G1EZ3-7M79H-0GYAG-SZ401-15KAR-7J7R0-2X2D1-TYDXD-F2810-RF86R-80GDZ-WABZD-WX4K6-00000-00101-90A0G-82019-M64H5-1TTZS-33R0Y-BGZZV-9A7EJ-36TB1-5HCG2-0S8PG-41SG1-Z7G20-QZW3H-TGP30-7M000-00004-03010-31080-H2FQK-C5VDE-VZ47X-ERYTG-WKJPM-6B7KX-3KAQK-DK0M0-G0R19-M60P2-X70C1-0G0DC-015XK-0P1JJ-K1000-00000-200C0-420G3-01K72-B6KSY-A17NR-0401Q-JWMTR-VAR6Z-923Q1-T5TR2-3V082-TA0JT-0C1TW-1RZ00-SBAHB-V6KX0-W0000-40000-1G022-00V00-AG002-03110-40G40-3DNAG-T4NHG-BP9GY-R38E2-PPV0P-MCWSZ-1QJND-5TTNT-Y080P-M24N0-81K81-EBKEK-S0JC6-1M000-00004-0420R-32060-XBW85-NNDQN-H8YDT-6P18W-JB3QK-DD14Q-B73BQ-84Z2C-40G1W-471W0-G5S81-3B93K-KHE72-CR000-00008-0600G-820G8-TX12T-HTT3S-K1G6R-EWCK9-XGB84-EDH96-5Q261-A70G9-C1G1M-0F5C6-G80R6-QW026-1RXJ1-JCPWK-58G00-00000-5G38
+```
+
 ## "Heartwarming?" and "Joyful?" (2026-10-11, on v85 or later) -- the first word albums; heard 2026-10-11
 
 Mikey's idea for the words (`docs/MOODS.md`, "A better test: word

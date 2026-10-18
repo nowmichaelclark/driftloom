@@ -1421,6 +1421,13 @@ Session 26; phase 2 starts with Session 27. New profiles come after
 phase 2, as data. See `docs/BRAIN.md`, "The plan to phase 2".
 Items in order; each a PR (a/b splits welcome).
 
+**Brain check, Session 22 (2026-10-18): items 42-45 pass their
+yardsticks** (`docs/BRAIN.md`, the log); Mikey heard the control album:
+no difference. **Next: item 46.** For 46, one thing from the check: the files
+it moves carry old pedantic clippy warnings; clean the ones in code the
+refactor rewrites, and say how many are left in the PR, rather than
+leaving the standing rule unmet without a word.
+
 ## 42. Golden renders on every target
 
 **Why:** promise 3 says the same code makes the same samples on every
@@ -2429,6 +2436,22 @@ more nuance in them later. Not now. New instruments are welcome again
 sounds are queued after the core becomes the default, built in the core
 one at a time with the refusal and level checks (`docs/BRAIN.md`, State).
 Inspiration comes only from wholesome, comforting music.
+
+## Known issues
+
+- **"Let the loop wander" repeats itself since item 44** (Mikey,
+  2026-10-18). Since #211 each pass's wandering is drawn from the loop's
+  code and the pass number, so replaying a saved loop wanders exactly as
+  it did last time, at every slider setting. Mikey: the wander slider
+  (0 to 2.4) says how far a loop wanders, and **all the way to the right
+  it should feel experimental: not repeatable.** Not urgent. Brain's
+  sketch for when it is queued (the generator's port, phase 2, is the
+  natural place): the core's draws stay a pure function of what the host
+  sends (promise 3 holds); the host adds a per-play salt to the wander's
+  seed across the slider's whole upper range (**decided by Mikey,
+  2026-10-18**; where that range starts is to be tuned by ear as we
+  go), so the same code with the slider lower still wanders the same
+  way, and a share code or export says which it was.
 
 ## Merge policy
 
