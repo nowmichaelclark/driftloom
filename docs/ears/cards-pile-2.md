@@ -9,7 +9,7 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 | I Care Because You Do (1995) | 12 (4) | 4,352 s | done |
 | Ventolin (EP) | 14 (4) | 2,620 s | done |
 | Donkey Rhubarb (EP) | 5 (4) | 4,170 s | done |
-| Hangable Auto Bulb (AFX) | 10 | | |
+| Hangable Auto Bulb (AFX) | 10 (3) | 2,602 s | done |
 | GAK (AFX) | 9 | | |
 | Analogue Bubblebath 4 | 5 | | |
 
@@ -320,7 +320,7 @@ Machine time: 4,170 s (69.5 min) for 24.5 minutes of deep-pass audio (1,469.5 s)
 - Icct Hedral: bass F# 0.29 and F 0.26 of its time (55% together), with A 0.18 and C 0.18; 0.83 notes a second; key F phrygian, margin 0.021 (usable). The bass sits on the root and the flat second a semitone above it, with the third and fifth (A and C) above: the phrygian flat-second sound over a major-looking triad, which clashes. 25 chord changes a minute, 19 lasting 1.5 s or more (a median of about 3 s); the repeat structure is a two-bar loop (3.2 s bars, lag 2 at 0.65). Chord names are a guess on a dense pad.
 - Pancake Lizard: pitch classes G 0.17, C 0.15, F 0.11, A 0.11, B 0.10, all in G mixolydian; key margin 0.049 (usable). The bass sits on G 0.38 of the time (F 0.19, C 0.16, B 0.16), with 24% fourths and fifths: a G pedal with the b7 (F) and the fourth (C). 23% of its bars near-duplicate an earlier bar, at 8 bars (0.50).
 - Donkey Rhubarb and Vaz Deferenz: key margins 0.008 and 0.001, guesses; Donkey Rhubarb's bass notes (G 0.30, G# 0.25, A# 0.25, A 0.12, 0.10 a second) are a semitone cluster from a 5% stem, so a guess; Vaz Deferenz's bass is void (2% stem). The top lines of both (47 and 48% leaps) are bleed from the drums.
-- **[JUDGMENT]** **Guess:** a bass that alternates root and flat second under a major triad (in a phrygian loop), and a mixolydian pedal on the fifth-below-the-tonic; pad changes about every 3 s.
+- **[JUDGMENT]** **Guess:** a bass that alternates root and flat second under a major triad (in a phrygian loop), and a G pedal with the flat seventh and the fourth over it in a mixolydian set; pad changes about every 3 s.
 
 ### Space
 - Four spaces. Donkey Rhubarb is a mono file: median width -29 dB (-32 to -26), correlation 1.00 in every band, every part under -27 dB. Vaz Deferenz is near-mono with a wider mid layer: median -17 dB (-18 to -14), sub -24, mids -13 (0.92); drums -23, the other stem -13 and leaning right (+0.18).
@@ -357,5 +357,104 @@ Machine time: 4,170 s (69.5 min) for 24.5 minutes of deep-pass audio (1,469.5 s)
 - Key margins: Donkey Rhubarb 0.008 and Vaz Deferenz 0.001 (guesses), Icct Hedral 0.021 and Pancake Lizard 0.049 (usable). Chord names are guesses on dense pads. Tuning readings run from -1 to +43 cents.
 - Floor drops: Icct Hedral (59% on) is skipped by the rule; Pancake Lizard (74%) is borderline. Pitch under 60 Hz: kick pitches are good to about a semitone, partial-off labels are not measurable.
 - Missing audio: the 2 s tails of 03 and 05 (and any DAT glitches in them) are not in this analysis.
+
+---
+
+## AFX, Hangable Auto Bulb (10 tracks)
+
+Ears 6, 2026-10-18, Sonnet 5.5. The Drive folder holds 10 tracks, numbered 01 to 10; 04 Bit is 11 s long (too short for a pass), so 9 are usable. Deep pass on three, as the picker chose: the most typical, 01 Children Talking (5:22), and the two least like the rest, 09 Get a Baby (2:27) and 07 Every Day (3:50). The title track, 02 Hangable Auto Bulb (6:53), got no deep pass. The folder looks like two records joined: tracks 01 to 06 are near-mono (width -31 to -35 dB) and sub-heavy (sub 0.54 to 0.66 except 03), while 07 to 10 are wider (-15, -30, -15 and -21 dB); that fits *Hangable Auto Bulb* as the first six and *EP.2* as the last four, but the audio cannot tell me where the split is, so the plan's *EP.2* may already be inside this folder, unconfirmed.
+
+Machine time: 2,602 s (43.4 min) for 11.7 minutes of deep-pass audio (700.2 s): pick 368 s (10 tracks, 37 s a track; slow because I was running other work at the same time), MDX-Net split 1,971 s (2.8 times the audio; also slowed by that), measuring 263 s (0.38 times the audio). The plan's formula gives 1,370 s, so this is 1.9 times it.
+
+**Shared tracks.** No title repeats another pile 2 album. 03 Laughable Butane Bob (182.2 s, -9.9 LUFS), 05 Custodian Discount (270.5 s, -11.0), 06 Wabby Legs (335.1 s, -12.1) and 10 choirDrill (252.0 s, -9.7) are not within 3 s and 0.6 LU of any pile 1 Classics row.
+
+### The hook
+- Mono, sub-heavy tracks at 161 or 168 BPM with a sine-like sub bass that sits at 32 to 41 Hz (C1 to E1), a tritone between the bass notes, a kick that ducks the bass by 6 to 8 dB, and a few passages where the bass plays alone for 5 s.
+- **[JUDGMENT]** One line a listener would say. **Guess:** very low sine bass under fast, mono, dry drums, with the pad and voices as small mid-range accents.
+
+### Sounds
+
+**S1. Sub-sine bass at C1 to C#1 (Children Talking): bass-1, 358 notes, 38%**
+- In synth terms: 35 Hz (31 to 49), attack 72 ms, falls 37 dB/s, brightness 114 Hz, level -7.5 dB, centered (correlation 1.00). The bass stem holds 31% of the power and 96% of it is under 120 Hz; the drums stem holds 60% (53% under 120 Hz).
+- Hear it at: 5:12.8 (G#1, 1.53 s, +42 dB alone), 5:13.6 (G1, 4.72 s, +32 dB alone), 4:52.9 (C1, 4.73 s, +14 dB alone). From 5:13 the drums are out and the bass plays alone for about 5 s.
+- Check: the stem's strongest lines are 32.2 Hz (C1, 27 cents flat), 35.2 Hz (C#1, 27 cents sharp), 48.5 Hz (G1, 18 cents flat) and 26.8 Hz. Pitch under 40 Hz is good to about a semitone, and the bell-like label is the tool's guess below 60 Hz: ignore it. So the sub bass is a plain tone around 32 to 35 Hz, with G above it.
+- Building blocks: **[JUDGMENT]** **Guess:** a sine sub bass pitched to C1 and C#1; lower than the pile 1 sub notes (Isopropanol and the others stayed at 40 Hz and above) and below most speakers' limit, so it needs a level guard.
+
+**S2. A short sub thump and a walking bass at 31 to 41 Hz (Get a Baby): drums-1, 231 notes, 16%; bass-1, 208 notes, 35%**
+- In synth terms: drums-1 is a thump at 41 Hz (32 to 55), attack 25 ms, falls 277 dB/s (very short), brightness 179 Hz, level -3.8 dB, correlation 0.99. bass-1 sits at 37 Hz (31 to 42), harmonic, attack 38 ms, falls 15 dB/s, brightness 101 Hz, level -3.7 dB, centered. The bass stem holds 40% of the power, 95% of it under 120 Hz.
+- Hear it at: drums-1 0:44.1 (0.19 s, +16 dB alone), 0:31.0 (0.21 s, +16 dB alone), 0:57.1 (0.18 s, +15 dB alone; the tool gives no pitch for them); bass-1 2:15.7 (C1, 0.6 s, +11 dB alone), 2:16.3 (0.3 s, +10 dB alone), 2:15.0 (C1, 0.63 s, +6 dB alone; the bass is not clean).
+- Check: the bass lines are 31.0 Hz (B0), 36.9 (D1), 41.4 (E1): the tool's bass notes E 0.27, B 0.23, C 0.22, D 0.18, at 1.61 notes a second with 64% repeats. A four-note bass cycle at about 1.6 notes a second, all under 45 Hz.
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick again, here very short (277 dB/s) and low (41 Hz), over a four-note sub-bass cycle.
+
+**S3. A noisy low-mid pad with the voice-like part in the vocals stem (Every Day): other-1, 331 notes, 27%; vocals-1, 339 notes, 19%**
+- In synth terms: other-1 sits at 93 Hz (78 to 185), noisy partials, attack 110 ms, falls 15 dB/s, brightness 598 Hz, level -4.5 dB, correlation 0.82; the group is weak (silhouette 0.19). The other stem holds 33% of the power, 61% of it in 120 to 500 Hz. vocals-1 sits at D4 (286 Hz, 233 to 343), noisy partials, attack 86 ms, falls 67 dB/s, brightness 828 Hz, level -6.8 dB, centered. The vocals stem holds 20% of the power, 90% of it in 0.5 to 2 kHz.
+- Hear it at: other-1 2:40.1 (F#2, 0.18 s, +27 dB alone), 2:39.8 (F#2, 0.23 s, +22 dB alone), 2:39.7 (F#2, 0.21 s, +21 dB alone), right as the drums come back in at 2:39.5; vocals-1 2:38.0 (D4, 0.36 s, +7 dB alone), 0:43.7 (A#3, 1.28 s, +3 dB alone), 0:32.2 (A#3, 1.06 s, +4 dB alone). The vocals examples are not clean (+3 to +7 dB alone).
+- Check: the vocals stem on an instrumental is a guess. A pitched 0.5 to 2 kHz tone with 20% of the power is a lead or voice-like part, and I did not listen to decide which. If it is a voice, the rule applies: vowels, hums and choirs only, never words.
+- Building blocks: **[JUDGMENT]** **Guess:** a noisy low-mid pad (the existing pads) and a mid-range lead around D4 that waits for a listen.
+
+**S4. Kick-and-snap drums (Children Talking): drums-1, 145 notes, 15%**
+- In synth terms: the group fuses a low thump and a snap: fundamental 52 Hz (32 to 68), brightness 496 Hz (176 to 1,848), attack 36 ms, falls 34 dB/s, level -0.3 dB, centered. The drums stem is 53% under 120 Hz, 26% in 120 to 500 Hz, 8% in 2 to 5 kHz and 7% above 5 kHz: a kit with hats.
+- Hear it at: 2:08.4 (C#2, 0.1 s, +23 dB alone), 4:08.3 (D1, 0.4 s, +22 dB alone), 4:35.0 (C1, 0.21 s, +23 dB alone).
+- Building blocks: **[JUDGMENT]** **Guess:** the existing kick and snap, dry and mono.
+
+### Techniques
+
+**T1. A long intro with no low end, builds and big whole-mix swings (Children Talking)**
+- The low end (all stems summed, under 120 Hz) is out for the first 4 s and again 4.5 to 21.5 s: the bass stem enters at 0:19.5. A build is marked at 1:44.0 to 2:09.0, with the bass out at 1:47.5 and back at 1:51.0 and a 4.5 s floor drop at 1:46.5 (the tool's own count lists 1:47.8 for 2.0 s, 0.21 a minute); the mix falls 4.6 octaves from 1:49.0 to 1:54.5 and 3.2 octaves from 1:06.0 to 1:16.5 (57 more sweeps in `techniques.json`, so a lot of motion in the mix). The bass is out for 20 s from 3:09.0 to 3:29.0 and for the last 25 s of the track, from 5:18.5 (the last 5 s of the sums run, 5:17, is the tail). The low end is on 79% of the time.
+- Brightness numbers here are whole-mix, on a drum-led track.
+- **[JUDGMENT]** **Guess:** a 15 to 20 s intro without the low end, then a bass entrance; a 25 s build with a 4 s floor drop and a mix fall of about 4 octaves.
+
+**T2. The bass ducks at the kick (Every Day)**
+- Bass dips 5.8 dB at the kick (peak 165 ms after; kick every 0.35 s, which matches the 168 BPM beat of 0.357 s). The tool reads about 70% of the true depth, so the real dip is about 8 dB. Get a Baby reads 2.9 dB (kick every 0.30 s; the drum grid is 0.41/0.615 s, so that spacing does not fit and I do not trust it). Children Talking's other stem dips 3.6 dB but holds 2% of the power: void.
+- **[JUDGMENT]** **Guess:** an 8 dB duck on the bass at the kick, in loops at 168 BPM.
+
+**T3. Bass wobble (Children Talking), a moving pan (Get a Baby), and an echo I do not claim**
+- Children Talking: the bass wobbles 13 cents at 0.7 Hz (the tool read a 12-cent wow as 8.0, so closer to 20 cents). Every Day: the other stem wobbles 5 cents at 0.3 Hz. Get a Baby: nothing at 4 cents or more, but the other stem's pan range is 0.65, the widest movement in the pile so far (12% of the power).
+- The drum echo at 414 ms (+11.5 dB) on Get a Baby is the drum spacing (0.406 s), not an echo. Children Talking's 559 ms other-stem echo comes from a stem with 2% of the power: void.
+- **[JUDGMENT]** **Guess:** a 0.7 Hz bass wobble of 15 to 20 cents, and a wide pan on one pad layer (a range of 0.6).
+
+### Theory
+
+**Th1. Three grids: 161.5, 98 and 168 BPM (with a 3:2 pair)**
+- Children Talking: the drum grid has a beat of 0.372 s (0.58), 161.3 BPM; the tool says 80 (half-time) and the picker 161.5. Bar length unclear. Get a Baby: 0.615 s (0.56) = 97.6 BPM (the tool says 98, the picker 99.4); a second peak at 0.406 s (0.55) is two thirds of the beat, and the repeat at 1.637 s (0.57) is 4 of those, so the triplet feel (swing 0.67) is a full triplet; no cross-rhythm is claimed by the tool.
+- Every Day: the drum onsets at 0.360 s (0.68), 0.534 s (0.69), 0.894 s (0.69), 1.254 s (0.67) and 1.428 s (0.72) fit a beat of 0.357 s (168 BPM) with onsets on the half beats (1.5, 2.5, 3.5 beats); the kick spacing of 0.35 s (T2) agrees with 168. The tool and picker both say 112 (112 is 2/3 of 168, which is the 0.534 s peak), so it could be read as 112 with triplets or 168 with syncopation; the kick says 168. Swing 0.66.
+- **[JUDGMENT]** **Guess:** tempo draws of 161 to 168 for the fast pair and 98 for the slow one, with a triplet swing on the slow one.
+
+**Th2. A tritone between the bass notes, and a cycle of four notes**
+- Children Talking: the bass sits on G 0.48 of the time with C# 0.23, C 0.11 and G# 0.11 (0.37 notes a second, repeats 54%): G to C# is a tritone and C to C# a semitone, which the tool reads as G locrian (margin 0.015, a guess). Get a Baby: E 0.27, B 0.23, C 0.22, D 0.18 at 1.61 notes a second (E aeolian, margin 0.010, a guess). Every Day: E 0.47, G# 0.32, F# 0.12, D# 0.07 at 0.28 notes a second (E lydian, margin 0.004, a guess): a slow bass on a major third.
+- Chord names and top lines on these tracks come from stems with 2 to 33% of the power and are not reliable.
+- **[JUDGMENT]** **Guess:** a one-note bass pedal with a tritone neighbor held for several seconds; a four-note bass cycle at 1.6 notes a second.
+
+### Space
+- Mostly mono. Children Talking is a mono file: median width -27 dB (-29 to -25), correlation 1.00 in every band; every part under -26 dB. Get a Baby: median -13 dB (-17 to -9), sub -25 (0.99), low-mids and mids -11 (0.86), 2 to 5 kHz -15; the other stem is -6 dB (mono loss 0.9 dB), drums -17, bass -31. Every Day: median -13 dB (-15 to -11), sub -27, low-mids -12 (0.88); the other stem is -10 dB (mono loss 0.4 dB), drums -18, bass -31.
+- **[JUDGMENT]** **Guess:** a mono recipe for the sub-and-drums core and a half-wide recipe for the pad (Get a Baby, Every Day).
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 and S2 very low sine bass: toward booming, hypnotic x2; away from restful, bright x0.4 (needs a level guard).
+- S3 noisy low-mid pad: toward hazy, dreamy x1.5.
+- T1 long intro without the low end, then a bass entrance: toward hypnotic, anticipating x1.5.
+- T2 8 dB duck: toward bouncy, energetic x1.5.
+- Th2 tritone bass neighbor: toward mysterious, strange x2.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: Children Talking has 10% of its energy above 2 kHz by the stems sum (the hats), Get a Baby 1.4% and Every Day 11%; no polarity flag. Weight flag: 66% of Children Talking's energy and 69% of Get a Baby's is under 120 Hz, and the lowest bass notes (C1 at 32 Hz, B0 at 31 Hz) are under what small speakers play, so the level guard matters here more than anywhere in pile 1.
+- Voices: Children Talking is named for speech and carries a spread-out vocals stem (33% in 120 to 500 Hz, 34% in 0.5 to 2 kHz, 19% in 2 to 5 kHz); I have not listened. Get a Baby and Every Day have pitched mid-range vocals stems (57% and 90% in 0.5 to 2 kHz). Any real speech is words, which the rule keeps out of the app: only the pitched, wordless side (a vowel or hum) could ever be taken.
+- **[JUDGMENT]** **Guess:** take the very low sine bass (behind the level guard), the tritone neighbor, the 8 dB duck and the long no-low-end intro; leave any speech sample out entirely.
+
+### For later
+- Children Talking, vocals-1 (354 notes, D#3, noisy, falls 77 dB/s; hear 1:48.8, 0:01.5): the speech-like layer. **[JUDGMENT]** **Guess:** waits, and if it is speech it never enters as words.
+- Children Talking, drums-2 (221 notes): mid snap, falls 158 dB/s; hear 1:56.7, 4:33.3. **[JUDGMENT]** **Guess:** waits.
+- Every Day, other-2 (169 notes, C#4, noisy; hear 2:37.0, 3:31.0) and bass-1 (322 notes, G#1, falls 151 dB/s; hear 0:01.1, 0:46.5). **[JUDGMENT]** **Guess:** waits.
+- Get a Baby, drums-2 (269 notes, mid snap, falls 90 dB/s; hear 1:09.1, 1:29.0), bass-2 (70 notes, B1, harmonic; hear 0:57.3, 1:15.3), vocals-1 (176 notes, C4; hear 0:50.7, 0:30.3) and other-1 (112 notes, G2, slow swell; hear 2:18.0, 1:05.3). **[JUDGMENT]** **Guess:** waits.
+- Not given a deep pass, mix level only: 02 Hangable Auto Bulb (6:53, 161.5 BPM, tuning -41 cents, width -35 dB, 9.6 chord changes a minute); 03 Laughable Butane Bob (3:02, 107.7 BPM, tuning -38, 16.1 chord changes); 05 Custodian Discount (4:30, tuning -47, the largest offset, 19.7 chord changes); 06 Wabby Legs (5:35, 0.9 chord changes a minute, the least); 08 Arched Maid Via RDJ (5:23, sub 25%, 1.9 chord changes); 10 choirDrill (4:12, 172 BPM, width -21.5 dB, the widest of 01 to 06 and 10; the name suggests a choir, vowels and no words only); 04 Bit (11.1 s; wobble 8.3 cents against a folder median of 4.1, repetition 0.23 against 0.48). Four of the ten tracks read 38 to 47 cents off at mix level (flat on 02, 03 and 05; 01 sharp at +43), which is a lead for a quarter-tone detune. **[JUDGMENT]** **Guess:** 02 and 05 are the two worth a deep pass if Ears 8 wants one; the offset is the interesting part.
+
+### Reliability notes for this card
+- Separator: MDX-Net, not Demucs (see the top of this file). Children Talking's other stem holds 2% of the power and its vocals stem 7.6%; its pump, echo and top line are void.
+- Tempo: the tool's meter is half the drum grid on Children Talking (80 against 161.3); on Get a Baby the tool, picker and grid agree at 98; on Every Day the kick says 168 and the tool and picker say 112.
+- Key margins: 0.015, 0.010 and 0.004, all guesses. Chord names on all three are guesses.
+- Pitch under 60 Hz: partial-off labels (the bell-like on the sub basses) are not measurable; pitch under 40 Hz is good to about a semitone, so C1 (32.7 Hz) and B0 (30.9 Hz) are good to that.
+- Floor drops: Get a Baby and Every Day have none apart from the tail; Children Talking's are in T1.
+- Mix-level tuning readings run from -47 to +43 cents on this folder; the bass lines of Children Talking read -27 to +27 cents from the nearest note, which is noise-level at this register.
 
 ---
