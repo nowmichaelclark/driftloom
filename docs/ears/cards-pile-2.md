@@ -11,7 +11,7 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 | Donkey Rhubarb (EP) | 5 (4) | 4,170 s | done |
 | Hangable Auto Bulb (AFX) | 10 (3) | 2,602 s | done |
 | GAK (AFX) | 9 (3) | 3,213 s | done |
-| Analogue Bubblebath 4 | 5 | | |
+| Analogue Bubblebath 4 | 5 (4) | 4,434 s | done |
 
 ---
 
@@ -551,3 +551,125 @@ Machine time: 3,213 s (53.6 min) for 18.4 minutes of deep-pass audio (1,103.4 s)
 - Pitch under 60 Hz: kick pitches are good to about a semitone; partial-off labels are not measurable; the bell-like label on GAK 2's E2 bass (82 Hz) is above that limit but unconfirmed.
 
 ---
+
+---
+
+## Aphex Twin, Analogue Bubblebath 4 (EP, 5 tracks)
+
+Ears 6, 2026-10-18, Sonnet 5.5. Five tracks, 26.4 minutes, all measured at mix level; the fifth, 05 Untitled (0:27.6, -23.4 LUFS, crest 26 dB), is too short for the deep pass, so the other four got it (EP rule): 01 Untitled (6:22, -10.1 LUFS), 02 Cuckoo (6:04, -12.9), 03 Untitled (5:08, -8.7) and 04 Untitled (8:21, -13.8). Four slow, near-mono sub records: 63 to 93% of each track's energy is under 120 Hz, the centroids are 90 to 536 Hz, and only 0 to 9% of the energy is above 2 kHz.
+
+Machine time: 4,434 s (73.9 min) for 25.9 minutes of deep-pass audio (1,556.1 s): pick 141 s (5 tracks, 28 s a track), MDX-Net split 3,639 s (2.34 times the audio), measuring 654 s (118 to 235 s a track, 0.42 times the audio). The plan's formula gives 2,615 s, so this is 1.70 times it.
+
+**Shared tracks.** The titles are Untitled, so I compared by length and loudness: no track here is within 4 s and 1 LU of any Aphex Twin row in `data.csv` (the three near matches in the file are other artists). Ears 7 holds *Analogue Bubblebath 5* and *3.1*, which may also have Untitled tracks; the rows to compare against are 01 (382.0 s, -10.1 LUFS), 02 Cuckoo (364.5 s, -12.9), 03 (308.1 s, -8.7), 04 (501.5 s, -13.8) and 05 (27.6 s, -23.4). One loose echo of pile 1: Quoth on *Classics* has the same 1.73 s bar at 139 BPM as 01 here (a coincidence of tempo, not the same piece).
+
+### The hook
+- Four tracks built on one tuned sub kick and one sub bass note at a time, at 133 to 145 BPM: the kick sits on A1 (01, 04), C2 (Cuckoo) or G1 (03), the bass holds one pedal note (G in 03, A with a B above it in 04, D in Cuckoo), and three of the four drop the low end out for 3 to 12 s while a mid layer plays on (Cuckoo, 03, 04).
+- **[JUDGMENT]** One line a listener would say. **Guess:** a soft tuned sub-kick and one held sub note under a wide, quiet pad, with the low end dropping out for a few seconds and coming back.
+
+### Sounds
+The other stem holds only 0.8 to 3.5% of the power on all four tracks, so nothing mid-range or high is measured well here; the sounds below are the low ones, from the drums and bass stems.
+
+**S1. A short tuned sub kick on C2 (02 Cuckoo): drums-1, 423 notes, 55%**
+- In synth terms: a thump at 65 Hz (64 to 65, so C2 within a few cents), attack 38 ms, falls 181 dB/s, brightness 72 Hz and rising 0.63 octave over the note (a small click on the front), centered (correlation 1.00). The drums stem is the track: 92% of the power, 91% of it under 120 Hz, level against the mix -0.2 dB.
+- Hear it at: 4:35.0 (B1, 0.36 s, +37 dB alone), 4:43.7 (C2, 0.29 s, +36 dB alone), 1:05.9 (C2, 0.39 s, +34 dB alone).
+- Check: kick spacing is 0.435 s (drum grid 0.441 s, strength 0.65), which is 138 BPM. The bass here is on D (see Th3), so the kick sits a whole tone below the bass root.
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick already on the list from earlier cards, tuned a tone under the bass root.
+
+**S2. A soft, longer kick on A1 and B1 (01 and 04): 01 drums-1, 356 notes, 37%; 04 drums-1, 490 notes, 35%**
+- In synth terms: 01 is a thump at 54 Hz (42 to 63), attack 49 ms, falls 18 dB/s, brightness 101 Hz, level -1.3 dB, centered. 04 is a thump at 56 Hz (54 to 62), attack 52 ms, falls 23 dB/s, brightness 68 Hz, level -1.4 dB. They are about a tenth as fast to fall as the Cuckoo kick (18 to 23 against 181 dB/s), so these are boomy, held sub thumps, not clicks.
+- Hear it at: 01 0:24.3 (A1, 0.29 s, +8 dB alone), 1:17.9 (A1, 0.18 s, +8 dB alone), 0:55.4 (A1, 0.29 s, +8 dB alone); 04 0:15.6 (A1, 0.32 s, +34 dB alone), 6:02.8 (B1, 0.10 s, +14 dB alone), 0:24.9 (A1, 0.22 s, +13 dB alone).
+- Check: the 01 examples are only +8 dB alone, so they are not clean; the 04 example at 0:15.6 is. The drums stem holds 69% (01) and 60% (04) of the power and 93% and 96% of it is under 120 Hz, so it is carrying the sub with the bass; at 54 Hz the pitch is good to about a semitone.
+- Building blocks: **[JUDGMENT]** **Guess:** the same tuned kick with a long fall (about 20 dB/s) and no click.
+
+**S3. A pair of kicks on G1 (03): drums-1, 235 notes, 33%; drums-2, 176 notes, 29%**
+- In synth terms: drums-1 is a thump at 49 Hz (48 to 54), attack 55 ms, falls 27 dB/s, brightness 101 Hz rising 0.35 octave, level -0.2 dB, centered. drums-2 is the same pitch (49 Hz, 33 to 49) with a slow swell, attack 183 ms, falls 98 dB/s, brightness 100 Hz rising 0.37 octave. The drums stem is 89% of the power. The bass here is a pedal on G (stem line 48.6 Hz, G1 within 14 cents), so kick and bass share a pitch.
+- Hear it at: drums-1 3:20.6 (G1, 0.24 s, +22 dB alone), 0:04.5 (G1, 0.45 s, +20 dB alone), 3:23.9 (G1, 0.24 s, +20 dB alone); drums-2 0:18.6 (G1, 0.23 s, +22 dB alone), 3:22.7 (G1, 0.39 s, +19 dB alone), 0:34.9 (G1, 0.39 s, +18 dB alone).
+- Check: the examples are clean. drums-2's 183 ms swell is probably the bass pedal's attack leaking into the drums stem (the bass stem holds only 2.4%), so I would not call it a second kick without listening.
+- Building blocks: **[JUDGMENT]** **Guess:** one kick tuned to the bass note, with a swell version as the maybe.
+
+**S4. A held A1 pedal that swells in (04): bass-1, 409 notes, 44%**
+- In synth terms: around 55 Hz (53 to 56), attack 202 ms (61 to 373), falls 14 dB/s (-72 to +5, so many notes do not fall at all), harmonic share 1.00 (0.50 to 1.00), brightness 71 Hz, level -3.1 dB, centered. The bass stem holds 37% of the power, 99% of it under 120 Hz, so this is the one track on the record where the separator's bass numbers are usable. Its strongest line is 54.3 Hz (A1 less 22 cents, inside the tool's noise at this pitch).
+- Hear it at: 1:18.8 (A1, 0.25 s, +13 dB alone), 1:18.9 (G#1, 0.40 s, +12 dB alone), 2:10.6 (A1, 0.36 s, +10 dB alone).
+- Check: the notes are listed as harmonic (string, reed or pad-like) because a swelling sine-like note at 55 Hz has few visible partials; call it a sine or a low triangle with a 200 ms swell. Bass steps in the track are A 0.67, B 0.29, A# 0.03 at 1.88 notes a second, with 75% repeats.
+- Building blocks: **[JUDGMENT]** **Guess:** a sub sine with a slow swell (about 200 ms), stepping between A and the note a whole tone above.
+
+**S5. Notes below 40 Hz (01): bass-1, 467 notes, 25%**
+- In synth terms: a register of 37 Hz (32 to 39: D1 down to B0), harmonic share 0.24, attack 94 ms, falls 35 dB/s, level -5.3 dB, centered. The tool calls its partials bell-like or metal-like; under 60 Hz that label is the tool's limit, not a measurement. The bass stem is 24% of 01's power (92% under 120 Hz).
+- Hear it at: 4:15.7 (D1, 0.07 s, +2 dB alone), 1:50.0 (B0, 0.08 s, +1 dB alone), 3:44.2 (no pitch, 0.19 s, -1 dB alone).
+- Check: the examples are not clean (+2 to -1 dB alone), the strongest bass-stem line is 39.9 Hz (between D#1 and E1), and lines at 30.7 and 24.9 Hz are partly leakage. Treat the register as a deep sub that moves between about 31 and 41 Hz; a person has to confirm it by ear on speakers that reach that low.
+- Building blocks: **[JUDGMENT]** **Guess:** a sub sine from 31 to 41 Hz at low level; most speakers will not play it, so it is a feeling more than a sound.
+
+### Techniques
+
+**T1. The low end drops out for 3 to 12 s (02 Cuckoo, 03, 04)**
+- 02 Cuckoo: kick and bass out at 4:06.5 for 7.0 s (the stems check agrees); the drums come back at 4:13.0 but the bass waits until 4:35.0, so there is a 22 s stretch of kick without bass. The intro is also lowless: the sums find the low end under for 0:00 to 0:30.5, and the bass enters at 0:30 (the techniques stage counts 12.2 s from 0:18.2; the drums leave at 0:24.0, and the first seconds of a file count as intro).
+- 03: 1:59.8 for 6.8 s and 2:49.0 for 7.0 s (the sums say 6.5 s and 8.0 s). The drums leave at 2:01.0 and return at 2:04.5, leave at 2:50.5 and return at 2:55.0. The sums also find 4:12.5 for 4.5 s, which the techniques stage does not; it is a candidate only.
+- 04: a stutter of low-end gaps between 4:13 and 4:39: 4:13.5 for 4.0 s, 4:22.0 for 2.8 s, 4:25.0 for 3.5 s, 4:30.2 for 9.0 s (the sums add 4:18.0 for 3.0 s). The drums leave at 4:15.0, return at 4:20.5, leave at 4:26.5, return at 4:38.5. 04 also has a different intro: for the first 22 s the sums find four low-end gaps of 4.5 to 5.5 s (from 0:00, 0:05, 0:10.5 and 0:16.5) with a short return of low end between them, before the bass enters at 0:21.5.
+- 01 has no drop (the tool counts 0 a minute): its first 15.5 s are a beatless intro, and the kick, bass and other layer all enter together at 0:15.5.
+- **[JUDGMENT]** **Guess:** a 3 to 7 s floor drop in a loop of 5 minutes, drums returning 3 to 4 s before the bass; once, a stutter of 3 to 4 short drops in a row.
+
+**T2. Brightness arcs that follow the low end (Cuckoo, 03, 04)**
+- Cuckoo: the mix rises 2.3 octaves from 4:02.5 to 4:10.0 and falls 2.3 octaves from 4:10.0 to 4:19.5, around the 4:06.5 drop; another up-and-down pair at 5:35.0 to 5:48.5. 03: up 3.5 octaves from 1:56.0 to 2:03.0 and down 3.2 octaves from 2:03.0 to 2:09.0, around the 1:59.8 drop. 04: down 2.9 octaves 0:02.0 to 0:10.5 and 5.4 octaves 0:20.0 to 0:28.0, where the bass enters at 0:21.5.
+- With 86 to 96% of the energy under 120 Hz, the whole-mix centroid follows the low end leaving and arriving, not a filter on the upper layer. These are drop and entry effects, not sweeps I can claim; 01's and Cuckoo's 0.7 octave or greater sweeps (the tool lists 17 to 44 more per track in `techniques.json`) are the same.
+- **[JUDGMENT]** **Guess:** no separate filter sweep; the brightness arc comes free with a floor drop.
+
+**T3. Kick ducking, only 04 and 01 are readable**
+- 04: the bass stem dips 5.7 dB at the kick (peak 469 ms after; kick every 0.47 s), about 8 dB true after the 70% reading. 01: the bass dips 3.1 dB (peak 319 ms after; kick every 0.39 s in the tool, 0.43 s on the drum grid), about 4 dB true. Cuckoo's 17.8 dB (bass stem 3.9%) and 03's 6.8 dB (2.4%) are void: the kick and bass share the sub there and the bass stem is nearly empty. The other-stem dips (1.8 to 5.9 dB) are void too (0.8 to 3.5% of the power).
+- **[JUDGMENT]** **Guess:** a bass ducking 4 to 8 dB against the kick; no deeper claim.
+
+**T4. Wobble and echoes I do not claim**
+- 03's bass wobbles 10 cents at 2.4 Hz; the beat is 145.5 BPM, 2.43 Hz, so this is the kick, not tape (and the bass stem is 2.4%). Cuckoo's bass wobble (4 cents at 1.6 Hz, bass stem 3.9%) is at the threshold. 04's other stem moves up to 11 cents in 4 s (stem 3.1%): a guess. 01 has none.
+- Echoes: Cuckoo's drum echo at 439 ms is the beat (0.441 s on the drum grid). 01's other-stem echo at 664 ms is the 1.5-beat drum repeat (0.65 s). 03's other-stem 175 ms (+4.5 dB) is not at a beat fraction but sits on a 3.5% stem and the echo rule needs six notes ringing alone; unconfirmed. 04 has none found.
+- **[JUDGMENT]** **Guess:** no echo or tape wobble to take from this record.
+
+### Theory
+
+**Th1. Four tempos with their octaves settled by the drum grid**
+- 01: the drum-stem repeats are 0.43, 0.65, 1.08 and 1.73 s (strengths 0.52, 0.60, 0.60, 0.75), which are 1, 1.5, 2.5 and 4 times 0.43 s. So it is a 4-beat bar of 1.73 s at 139 BPM, with onsets 1.5 beats apart in the pattern; the tool's 92.3 to 93 BPM is two thirds of that, the dotted-beat pulse (8 of its beats = 3 bars of 1.73 s = the 5.2 s repeat the tool found). Swing 0.67 (triplet feel).
+- 02 Cuckoo: grid 0.871 s (0.81), kick every 0.435 s: 138 BPM; the tool's 69 is half. Straight eighths. 03: grid 1.649 s (0.74), beat 0.412 s: 145.5 BPM; the tool's 73 is half, the picker's 143.6 is right. 04: beat 0.453 s: 132.5 BPM, bar 1.81 s; the tool's 133 and the picker's 136 agree; swing 0.56.
+- **[JUDGMENT]** **Guess:** a tempo draw of 130 to 146, with a 1.5-beat pulse over the 4-beat bar once.
+
+**Th2. Loop lengths**
+- The tool finds bars of 5.2 s (01, 3 bars of 4/4), 3.5 s (Cuckoo, 8 beats), 3.3 s (03, 8 beats) and 1.8 s (04, one 4/4 bar). Repeat strength: 01 at 2 bars 0.65, Cuckoo at 1 bar 0.54, 03 at 1 bar 0.69, 04 at 4 bars 0.68 and 8 bars 0.59. Near-duplicate bars: 1% (01), 4% (Cuckoo), 10% (03), 20% (04): 04 is the loop-like one (277 bars, 20%).
+- **[JUDGMENT]** **Guess:** loops of 1 to 8 bars with little repeated exactly except in 04.
+
+**Th3. Bass pedals; the keys are guesses**
+- 03: a pedal on G (G 0.70, D 0.13, B 0.08, G# 0.04; 0.49 notes a second, 70% repeats), stem line 48.6 Hz = G1. 04: A 0.67, B 0.29, A# 0.03, so a pedal on A that steps up a whole tone and down a half step (75% repeats). Cuckoo: D 0.42, C 0.14, C# 0.12, F 0.11 at 1.10 notes a second (35% repeats; stem line 73.6 Hz = D2), from a 3.9% stem: a guess. 01: the stem lines 55.6 and 61.9 Hz are A1 and B1, with 39.9 Hz unsettled.
+- Keys, all guesses: 01 E phrygian (margin 0.001), Cuckoo D aeolian (0.003), 03 G phrygian (0.008), 04 F# lydian (0.101). 04's margin looks large but the correlations are low (major 0.18, minor 0.26) and its bass notes A and B are not in F# lydian; treat it as void. The upper pitch classes lean on C, F# and C# in 04: against a bass on A, A with C and F# outlines an F# diminished triad (a guess, from a 3.1% stem).
+- **[JUDGMENT]** **Guess:** a pedal-and-neighbor bass: a held root with one step a whole tone above, and for the key just minor with a flat second.
+
+Chord counts (8 to 31 a minute) and top lines (from other stems holding 0.8 to 3.5% of the power) are void on this record.
+
+### Space
+- All four are near-mono below 120 Hz (sub width -31 to -35 dB, correlation 1.00). The mix widths: 01 median -26 dB (10th to 90th percentile -30 to -13; mids -20, highs -22); 03 median -24 (-28 to -12; mids -15, 2 to 5 kHz -14); Cuckoo median -12 (-15 to -8; 500 Hz to 2 kHz -8, 2 to 5 kHz -7, above 5 kHz -6, correlation 0.60); 04 median -8 (-18 to -6; 120 to 500 Hz -8 with correlation 0.74, mids -7).
+- By part: Cuckoo's other stem is -6 dB wide and its vocals stem -10; 04's other stem is -6 dB wide and leans left (pan -0.29, pan range 0.30, no clear cycle); the drums and bass stems are -24 to -37 dB (near mono) everywhere.
+- **[JUDGMENT]** **Guess:** a mono sub and kick under a wide layer at -6 to -8 dB width for Cuckoo and 04, and a nearly mono, narrow layer for 01 and 03.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 and S2 tuned sub kicks: toward booming, hypnotic x2; away from bright, sparkly x0.3.
+- S4 swelling A pedal: toward deep, restful x1.5.
+- S5 notes below 40 Hz: toward booming x1.5 (only with the level guard).
+- T1 floor drop with a late bass return: toward tense, hypnotic x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: none. Air band 0 to 2%, 2 to 5 kHz 0 to 7% at mix level, centroids 90 to 536 Hz. No polarity flag. Weight flag: the sums of the deep-pass stems are 84 to 96% under 120 Hz, and 01 has notes at B0 (31 Hz), 04 is 93% sub: the level guard matters on this record. Loudness is -8.7 to -13.8 LUFS.
+- **[JUDGMENT]** **Guess:** take the tuned kicks, the held pedal and the floor drop at a modest low-end level; leave the sub below 40 Hz out unless it is level-guarded.
+
+### For later
+- 01, drums-2 (144 notes): low thump, soft attack, falls 38 dB/s; hear 6:18.5, 6:19.7 (the tail). **[JUDGMENT]** **Guess:** waits.
+- 01, vocals-1 (81 notes) and vocals-2 (76 notes): A#5 and A5, harmonic, slow swell; hear 1:23.3, 4:43.6 and 4:09.1, 1:57.8. Instrumental: hat and pad bleed in a 4.9% stem. **[JUDGMENT]** **Guess:** waits, probably not a voice.
+- 03, vocals-1 (371 notes): F2, mixed or noisy, falls 54 dB/s; hear 2:03.3, 2:03.1 (a 5.1% stem). **[JUDGMENT]** **Guess:** waits.
+- 04, bass-2 (91 notes): B1, bell-like by the tool, falls 7 dB/s; hear 7:45.6, 1:14.0. **[JUDGMENT]** **Guess:** waits, the B above the A pedal.
+- 04, other-1 (270 notes): F#3, bell-like, falls 24 dB/s, leans left (-0.15); hear 4:34.6, 4:33.3. **[JUDGMENT]** **Guess:** waits, a left-leaning pad.
+- 02 Cuckoo, other-1 (401 notes) A3, bell-like, falls 35 dB/s; hear 0:24.8, 0:24.5 (other stem 0.8%: void); vocals-2 (152 notes) G5; hear 4:12.8, 4:13.1. **[JUDGMENT]** **Guess:** waits.
+- Not given a deep pass: 05 Untitled (0:27.6, 118 BPM at mix level, pulse 0.08 against an album median of 0.79, repetition 0.12 against 0.54, -23.4 LUFS, crest 26 dB). **[JUDGMENT]** **Guess:** listen once; it is a fragment, not a groove.
+
+### Reliability notes for this card
+- Separator: MDX-Net, not Demucs (see the top of this file). The drums stem holds 60 to 92% of the power on all four tracks and 87 to 96% of that is under 120 Hz: it carries most of the sub. The bass stem is usable only on 04 (37%) and partly on 01 (24%); on Cuckoo (3.9%) and 03 (2.4%) bass numbers (notes, pumping, wobble) are guesses. The other stem is 0.8 to 3.5% everywhere: top lines, chords, other-stem echoes and pumping are void.
+- The vocals stems (0.0 to 5.1%) are hat and pad bleed on an instrumental, not a voice. No words anywhere.
+- Tempo: the tool is half on Cuckoo and 03 and two thirds on 01; the drum-grid reading is the one to use (Th1).
+- Key margins: 0.001, 0.003, 0.008 (guesses) and 0.101 (void: low correlations, notes off the key). Chord counts void.
+- Floor drops: the techniques stage and the sums agree on Cuckoo's 4:06.5, 03's two, and 04's 4:13 to 4:39 run; the first and last seconds of every file are intro and tail. The sums-only candidates (03 4:12.5, 04 4:18.0 and the 04 intro gaps) are not confirmed.
+- Pitch under 40 Hz is good to about a semitone; the bell-like labels under 60 Hz (S5) are the tool's limit.
+- Mix-level tuning: +37 (01), -33 (Cuckoo), +6 (03), +16 (04) cents; pile 1 ran -48 to +45, so these are within the noise.
