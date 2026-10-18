@@ -262,7 +262,7 @@ them is a hands session.
 | Ears 7 | **Done 2026-10-18** (PR to merge): pile 2 second half, five cards (*Bradley's Beat*, *Bradley's Robot*, *Analogue Bubblebath 3* (= *3.1*), *Analogue Bubblebath 5*, Caustic Window *Compilation*), `docs/ears/cards-pile-2.md`; Demucs stems; costs checked a fourth time; raw files in `docs/ears/raw/pile-2-second-half-raw.tar.gz` | Sonnet 5.5 | medium |
 | Ears 8 | **Done 2026-10-18** (PR #234 to merge): the first synthesis. Ten candidates ranked from the 16 cards, six sketched (`tools/ears/sketches/ears8-sketch.patch`, on top of Ears 4's) and rendered as clips in `~/ears8/clips/`; Mikey approved all seven and the sampler (2026-10-18, `docs/ears/batch-5.md`, with his note on how they go in). New tools: `low_guard.py`, `kick_check.py` | Opus 5.5 | high |
 | Ears 9 | **Next ears session** (after the builder session below, or alongside it). Pile 3 (Aphex Twin 1996–2001: *Richard D. James Album*, *Girl/Boy*, *Come to Daddy*, *51/13*, *Windowlicker*, *2 Remixes by AFX*, and the rest of *Drukqs*). Needs Mikey's upload first (`docs/ears/uploads.md`); about 1.9 hours of machine time with Demucs, so one session. Prompt: `docs/ears/prompt-ears-9.md` | Sonnet 5.5 | medium |
-| Ears 10, 11, 12 | Piles 4–6 | Sonnet 5.5 | medium |
+| Ears 10, 11, 12 | **Paused (Mikey, 2026-10-18)** until the sound batch is built and heard in the app (`docs/BRAIN.md`, Session 26). Piles 4–6 | Sonnet 5.5 | medium |
 | Ears 13 | Second synthesis (piles 3–6, plus Mikey's verdicts on batch 5) | Opus 5.5 | high |
 | Ears 14, 15, 16 | Piles 7–9 | Sonnet 5.5 | medium |
 | Ears 17 | Third synthesis | Opus 5.5 | high |
