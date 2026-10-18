@@ -673,3 +673,197 @@ Chord counts (8 to 31 a minute) and top lines (from other stems holding 0.8 to 3
 - Floor drops: the techniques stage and the sums agree on Cuckoo's 4:06.5, 03's two, and 04's 4:13 to 4:39 run; the first and last seconds of every file are intro and tail. The sums-only candidates (03 4:12.5, 04 4:18.0 and the 04 intro gaps) are not confirmed.
 - Pitch under 40 Hz is good to about a semitone; the bell-like labels under 60 Hz (S5) are the tool's limit.
 - Mix-level tuning: +37 (01), -33 (Cuckoo), +6 (03), +16 (04) cents; pile 1 ran -48 to +45, so these are within the noise.
+
+---
+
+## Bradley Strider, Bradley's Beat (Second Version) (1995)
+
+Ears 7, 2026-10-18, Sonnet 5.5. Two tracks, Part One (6:07) and Part Two (5:52), both measured in full. Stems from Demucs htdemucs. The record is one idea in two takes: a kick-led, sub-heavy, near-mono pattern at 143 to 148 BPM. The drums stem holds 91% (Part One) and 96% (Part Two) of the power, the mix has 72% and 64% of its energy under 120 Hz, only 1 to 2% above 2 kHz (loudness -16.9 and -17.3 LUFS, both quiet for the pile).
+
+Machine time: 837 s (14 min) for 12.0 minutes of deep-pass audio (719.4 s): pick 25 s, Demucs 456 s (228.5 s and 227.7 s, 0.62 times the audio), measuring 356 s (events, techniques, theory, space and check, 0.50 times the audio). The plan's formula (1.6 s per second of deep-pass audio plus 25 s a track) gives 1,201 s; the measured time is 0.70 of that. Demucs is faster than the formula assumed.
+
+**Shared tracks.** `twins.py` on this album's rows against the first half's picker rows (raw archive) and `data.csv` (Aphex): no probable twin. Part One (367.1 s, -16.9 LUFS) has the length of Icct Hedral (Edit) (367.1 s) but not its loudness (-10.6), so it is not that track.
+
+### Stem check (read first)
+- Part One: drums 91%, bass 6%, other 2%, vocals 0.3%. Bass stem real but small (78% under 120 Hz, strongest lines 83.0, 77.5, 86.0 Hz). Other stem 2.4%: top line, chords, other-stem pumping and echoes are void or guesses. Meter tool 73 BPM is half of the drum grid (beat 0.406 s, 147.8 BPM; 4-beat bar read 291, 2-beat bar 145.6). The picker's mix-level tempo says 143.6 for both tracks, so Part One is 144 to 148 by different readings; use 147.8 from the drum grid.
+- Part Two: drums 96%, bass 0.0% (empty: bass notes, bass behavior, bass pumping, wobble void), other 3.9%, vocals 0.6%. Meter 143 BPM agrees with the grid (0.418 s, 143.5 BPM).
+- Vocals stems (0.3 and 0.6%) are mid-pad and hat bleed on an instrumental, not voices; no words.
+- The drums stem holds the sub on both (74% and 69% of it under 120 Hz): the bass stem is empty on Part Two, so every low-end number there comes from the drums stem.
+
+### The hook
+- A bare, tuned-sharp kick-and-sub pattern, almost mono, with a few thin organ-like mid notes dropping in over it, and the low end leaving for 7 to 12 s at a time while the mid pad keeps going.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a tuned 50 to 56 Hz kick and a sub-heavy beat at 144 to 148 BPM that is mostly just the kick, with the floor falling out in a long gap near the 3-minute mark.
+
+### Sounds
+
+**S1. Tuned sub kick (both parts): Part Two drums-1, 451 notes, 60%; Part One drums-1, 98 notes, 21%**
+- In synth terms: Part Two: low thump at 56 Hz (50 to 62), attack 28 ms, falls 52 dB/s, brightness 176 Hz, harmonic share 0.75, level -0.1 dB, correlation 0.99, centered. Part One: 50 Hz (50 to 50, every note the same pitch, G1 at 49 Hz), attack 17 ms, falls 65 dB/s, harmonic share 1.00 (a pure sine), brightness 126 Hz, correlation 1.00.
+- Hear it at: Part Two 0:02.2 (A1, 0.10 s, +50 dB alone), 0:07.3 (A#1, 0.12 s, +50 dB alone); Part One 4:03.9 (G1, 0.77 s, +26 dB alone), 4:05.1 (G1, 0.79 s, +22 dB alone). The Part One examples are the long, held kick (0.4 to 0.8 s), not the pattern's kick.
+- Check: pitch under 60 Hz is good to about a semitone, so A1/A#1 for Part Two is a kick moving between neighbouring pitches. Part One's kick is a sine on a fixed note. Mix tuning reads +43 cents (Part One) and +34 cents (Part Two), so the kicks are about a third of a semitone sharp (G1 49.0 Hz would read near 50 Hz).
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick from the first half again; the new part is the pure-sine version with a long 0.4 to 0.8 s hold.
+
+**S2. Walking sub bass on E (Part One): bass-1, 444 notes, 23%**
+- In synth terms: 81 Hz (62 to 84), attack 25 ms, falls 89 dB/s (a short, plucked low note), harmonic share 0.79, brightness 95 Hz, level -10.8 dB, centered (correlation 1.00). Bass stem holds 6% of the power.
+- Hear it at: 5:39.1 (D#2, 0.31 s, +11 dB alone), 5:51.4 (E2, 0.29 s, +11 dB alone), 5:41.5 (E2, 0.32 s, +11 dB alone). The pitches sit near the pitch classes the tool names but the tuning reads +43 cents, so E2 here may be a kick-sharp D#2 to E2 pair.
+- Check: tool says walking, 1.42 notes a second, E 0.41, F 0.23, B 0.20, C 0.07, steps 52%, fourths and fifths 24%. The bass is a real, small stem (not empty), so the bass line is believable, but a 6% stem on a record where the drums hold the sub is the quieter half of the low end.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass, short plucked and sine-like, walking on E with a flat second.
+
+**S3. Thin organ-like mid note (Part Two): other-1, 276 notes, 14%**
+- In synth terms: 84 Hz (74 to 125), brightness 500 Hz, harmonic share 0.42 (noisy partials, partials 69 cents off whole multiples), attack 86 ms, falls 64 dB/s, level -10.3 dB, correlation 0.79. The other stem is 3.9% of the power, 52% of it in 120 to 500 Hz and 47% in 0.5 to 2 kHz.
+- Hear it at: 2:59.1 (E2, 0.15 s, +22 dB alone), 2:57.4 (B2, 0.14 s, +20 dB alone), 2:57.7 (B2, 0.16 s, +17 dB alone). All three sit in the 2:57 to 3:00 build, where nothing else plays except the kick.
+- Check: 276 notes at 84 Hz is low for a lead; with a 3.9% stem and a 52% share in 120 to 500 Hz, this is a quiet pad or bass-pad blend, not a lead. One group of three (silhouette 0.26).
+- Building blocks: **[JUDGMENT]** **Guess:** a soft, slightly inharmonic low-mid pad note; needs a listen.
+
+### Techniques
+
+**T1. A long floor drop with the mid pad staying (both parts)**
+- All stems summed, the low end under 120 Hz goes 15 dB down: Part One 3:44.5 for 12.5 s and 5:56.0 for 11.0 s (the second is the tail); Part Two 2:56.5 for 12.5 s, 5:35.0 for 3.0 s, 5:44.5 for 7.5 s. The stems-only count is smaller (Part One 0.55 a minute: 3:44.2 for 7.5 s, 3:51.5 for 2.0 s, 3:53.2 for 4.0 s; Part Two 0.19 a minute: 2:59.0 for 2.2 s), as the docs warn: the sums are the better read. Part Two's 12.5 s gap at 2:56.5 is followed by a mix build from 3:03.0 to 3:23.0 and a brightness rise of 2.0 octaves (2:51.0 to 3:00.0).
+- Check: both tracks' drop starts about 3:00, in the second half of the track, 12.5 s long; Part Two's is a break where the kick leaves and the build rises.
+- **[JUDGMENT]** **Guess:** a 10 to 12 s floor drop around the half-way mark, with a mid-pad build of 15 to 20 s after it.
+
+**T2. A kick-locked duck of 5 to 7 dB (Part One)**
+- Part One: the other stem dips 5.0 dB at the kick (peak 10 ms after) and the bass stem 5.3 dB (peak 80 ms after, kick every 0.41 s). The tool reads about 70% of the true depth, so the real dip is 7 dB or more. Part Two's other stem dips 2.5 dB; its bass-stem number (7.4 dB) is void (empty stem).
+- **[JUDGMENT]** **Guess:** a kick-locked duck of 5 to 7 dB on the bass and pad at 148 BPM.
+
+**T3. A drum echo of 414 ms (Part One), and a slow pan (both)**
+- Part One's drums echo at 414 ms (+9.4 dB, 2 later repeats), which is the beat (0.406 s) within 8 ms: a one-beat echo. Part Two: no reliable echo found (needs six notes ringing alone for 1.5 s). Part One's other stem pans 0.09 across a 49 s cycle and Part Two's drums 0.03 over the same 49 s, which looks like the analysis window, not a real auto-pan: do not claim.
+- **[JUDGMENT]** **Guess:** a one-beat echo on the drums at about +6 to +9 dB, only in a minority of loops.
+
+**T4. Vocal-stem entries (both)**
+- The vocals stem enters and leaves in 15 to 30 s blocks (Part One 64% of the time, Part Two 45%): this is the separator parking mid-pad notes in the vocals stem, not a voice (0.3 and 0.6% of the power). Treat as mid-pad entries: they mark where the pad plays.
+- **[JUDGMENT]** **Guess:** a mid pad that plays in 15 to 30 s blocks and leaves for the same time.
+
+### Theory
+
+**Th1. Two fast grids: 147.8 and 143.5 BPM, straight, with hundreds of beat-aligned kicks**
+- Part One: drum-grid beat 0.406 s (147.8 BPM), strong repeats at 0.824 s (2 beats) and 1.649 s (4); the tool says 73 (half-time), the picker says 143.6; swing straight (eighths). Part Two: beat 0.418 s (143.5 BPM), the meter tool agrees (143), the picker says 143.6; straight. Both pulse 0.90 to 0.91, the strongest in the pile. Bar length is unclear on both (scores 0.00 and 0.04) and many unrelated periodicities show (3:2, 4:3, 5:2, 5:3): the tool's reading of irregular timing, not a cross-rhythm claim.
+- **[JUDGMENT]** **Guess:** a tempo draw of 143 to 148, straight, with a kick on almost every beat.
+
+**Th2. Phrygian bass pedal on E with a major seventh (Part One), a Cmaj7 pedal (Part Two)**
+- Part One: key E phrygian, margin 0.009 (a guess); pitch classes E 0.15, F 0.15, F# 0.09, G 0.09, D# 0.09. Bass stem: E 0.41, F 0.23, B 0.20, C 0.07 (E, F and B are the root, the flat second and the fifth). The chord tool reads Fmaj7 44%, G#maj7 12%, Gsus2 9%, Cmaj7 8% and 60 changes a minute (4 of them lasting 1.5 s or more, 40% on a beat against 36% by chance): for a track whose other stem holds 2.4%, these chords are a guess, mostly the kick and sub's overtones. The picker's chord changes (2.6 a minute) is the more believable.
+- Part Two: key C lydian, margin 0.008 (a guess; fits C major pentatonic); C 0.17, B 0.17, A# 0.11, C# 0.10, E 0.09. The chord tool reads Cmaj7 64%, 16 changes a minute (7 of them lasting 1.5 s or more; 68% on a beat against 71% by chance). With the bass stem empty and the other stem 3.9%, this is a guess. The picker says 0.5 changes a minute, so the track is nearly one chord.
+- **[JUDGMENT]** **Guess:** a one-chord loop (E or C, with a major seventh above) with a phrygian flat second on the bass; chord changes of 0.5 to 3 a minute.
+
+### Space
+- Near mono: mix width median -23 dB (Part One, -21 to -16 over 2-s windows) and -19 dB (Part Two, -19 to -13). Sub -27 and -26 dB (correlation 1.00), 120 to 500 Hz -22 and -17, mids -10 (corr 0.83 to 0.84), presence -11 and -10, air -16 and -13. The drums (91 and 95% of the power) are -24 and -23 dB, the bass -28 dB (Part One); the little width there is lives in the 0.5 to 2 kHz mid pad (other stem -15 and -9 dB, mono loss 0.1 and 0.5 dB, 2 to 4% of the power). Mono loss is 0.0 dB for drums and bass.
+- **[JUDGMENT]** **Guess:** a near-mono recipe, bass and kick dead center, with a very small width on a mid pad.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 tuned sine kick, T1 floor drop: toward hypnotic, energetic, booming x2; away from restful, still x0.4.
+- S2 walking sub: toward hypnotic, mysterious x1.5.
+- S3 inharmonic mid pad: toward strange, dreamy x1.5.
+- T2 duck: toward bouncy, energetic x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: none. 1 to 2% of the energy is above 2 kHz (Part One 2%, Part Two 1%); no polarity flag. The flag this record raises is weight: 72 and 64% of the mix under 120 Hz, 91 to 96% of the power in the drums stem, so any use of the sine kick needs the low-end level guard.
+- **[JUDGMENT]** **Guess:** take the pure-sine kick (at a modest level), the plucked walking sub and the 12 s floor drop with a pad build; leave the one-beat echo until heard. Nothing is harsh.
+
+### For later
+- Part One, drums-2 (145 notes): low thump, falls 84 dB/s, brightens; hear 2:00.5, 2:03.8. **[JUDGMENT]** **Guess:** waits, the second kick layer.
+- Part One, other-1 (208 notes, F3, falls 84 dB/s, noisy) and other-2 (147 notes, D2, bell-like); hear 0:01.6, 5:48.8 and 0:01.5, 5:52.8. **[JUDGMENT]** **Guess:** waits, intro and tail notes.
+- Part Two, other-2 (190 notes, A#3, bell-like, falls 29 dB/s); hear 2:57.4, 2:59.4. **[JUDGMENT]** **Guess:** waits, a bell note in the build.
+- Part Two, drums-2 (49 notes, falls 120 dB/s); hear 0:27.4, 3:43.0. **[JUDGMENT]** **Guess:** waits.
+- Part Two, vocals-1 (316 notes, B3): separator bleed from the mid pad; hear 3:36.1, 3:32.8. **[JUDGMENT]** **Guess:** not a voice; waits.
+
+### Reliability notes for this card
+- Separator: Demucs htdemucs, 0.62 times the audio. Part Two's bass stem is empty (bass notes, pumping and wobble void); Part One's is 6%, so S2 is a small but real stem. The drums stem holds the sub on both.
+- Tempo: the meter tool is half-time on Part One (73 against the grid's 147.8); the picker's 143.6 differs from the grid by 4 BPM on Part One. Chord names (and the 60 and 16 changes a minute) are guesses on a track whose melodic stems hold 2 to 4% of the power. Key margins 0.009 and 0.008: guesses. Tuning +43 and +34 cents: confirmed only by the kick's Hz (G1 near 50 Hz), which is within a semitone's accuracy.
+- Brightness sweeps (43 and 25 more in techniques.json) are whole-mix numbers on a drum-led track and mostly hat and fill; the 2.0-octave rise at 2:51 is large enough to read as the build.
+
+---
+
+## Bradley Strider, Bradley's Beat (Second Version) (1995)
+
+Ears 7, 2026-10-18, Sonnet 5.5. Two tracks, Part One (6:07) and Part Two (5:52), both measured in full. Stems from Demucs htdemucs. The record is one idea in two takes: a kick-led, sub-heavy, near-mono pattern at 143 to 148 BPM. The drums stem holds 91% (Part One) and 96% (Part Two) of the power, the mix has 72% and 64% of its energy under 120 Hz, only 1 to 2% above 2 kHz (loudness -16.9 and -17.3 LUFS, both quiet for the pile).
+
+Machine time: 837 s (14 min) for 12.0 minutes of deep-pass audio (719.4 s): pick 25 s, Demucs 456 s (228.5 s and 227.7 s, 0.62 times the audio), measuring 356 s (events, techniques, theory, space and check, 0.50 times the audio). The plan's formula (1.6 s per second of deep-pass audio plus 25 s a track) gives 1,201 s; the measured time is 0.70 of that. Demucs is faster than the formula assumed.
+
+**Shared tracks.** `twins.py` on this album's rows against the first half's picker rows (raw archive) and `data.csv` (Aphex): no probable twin. Part One (367.1 s, -16.9 LUFS) has the length of Icct Hedral (Edit) (367.1 s) but not its loudness (-10.6), so it is not that track.
+
+### Stem check (read first)
+- Part One: drums 91%, bass 6%, other 2%, vocals 0.3%. Bass stem real but small (78% under 120 Hz, strongest lines 83.0, 77.5, 86.0 Hz). Other stem 2.4%: top line, chords, other-stem pumping and echoes are void or guesses. Meter tool 73 BPM is half of the drum grid (beat 0.406 s, 147.8 BPM; 4-beat bar read 291, 2-beat bar 145.6). The picker's mix-level tempo says 143.6 for both tracks, so Part One is 144 to 148 by different readings; use 147.8 from the drum grid.
+- Part Two: drums 96%, bass 0.0% (empty: bass notes, bass behavior, bass pumping, wobble void), other 3.9%, vocals 0.6%. Meter 143 BPM agrees with the grid (0.418 s, 143.5 BPM).
+- Vocals stems (0.3 and 0.6%) are mid-pad and hat bleed on an instrumental, not voices; no words.
+- The drums stem holds the sub on both (74% and 69% of it under 120 Hz): the bass stem is empty on Part Two, so every low-end number there comes from the drums stem.
+
+### The hook
+- A bare, tuned-sharp kick-and-sub pattern, almost mono, with a few thin organ-like mid notes dropping in over it, and the low end leaving for 7 to 12 s at a time while the mid pad keeps going.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a tuned 50 to 56 Hz kick and a sub-heavy beat at 144 to 148 BPM that is mostly just the kick, with the floor falling out in a long gap near the 3-minute mark.
+
+### Sounds
+
+**S1. Tuned sub kick (both parts): Part Two drums-1, 451 notes, 60%; Part One drums-1, 98 notes, 21%**
+- In synth terms: Part Two: low thump at 56 Hz (50 to 62), attack 28 ms, falls 52 dB/s, brightness 176 Hz, harmonic share 0.75, level -0.1 dB, correlation 0.99, centered. Part One: 50 Hz (50 to 50, every note the same pitch, G1 at 49 Hz), attack 17 ms, falls 65 dB/s, harmonic share 1.00 (a pure sine), brightness 126 Hz, correlation 1.00.
+- Hear it at: Part Two 0:02.2 (A1, 0.10 s, +50 dB alone), 0:07.3 (A#1, 0.12 s, +50 dB alone); Part One 4:03.9 (G1, 0.77 s, +26 dB alone), 4:05.1 (G1, 0.79 s, +22 dB alone). The Part One examples are the long, held kick (0.4 to 0.8 s), not the pattern's kick.
+- Check: pitch under 60 Hz is good to about a semitone, so A1/A#1 for Part Two is a kick moving between neighbouring pitches. Part One's kick is a sine on a fixed note. Mix tuning reads +43 cents (Part One) and +34 cents (Part Two), so the kicks are about a third of a semitone sharp (G1 49.0 Hz would read near 50 Hz).
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick from the first half again; the new part is the pure-sine version with a long 0.4 to 0.8 s hold.
+
+**S2. Walking sub bass on E (Part One): bass-1, 444 notes, 23%**
+- In synth terms: 81 Hz (62 to 84), attack 25 ms, falls 89 dB/s (a short, plucked low note), harmonic share 0.79, brightness 95 Hz, level -10.8 dB, centered (correlation 1.00). Bass stem holds 6% of the power.
+- Hear it at: 5:39.1 (D#2, 0.31 s, +11 dB alone), 5:51.4 (E2, 0.29 s, +11 dB alone), 5:41.5 (E2, 0.32 s, +11 dB alone). The pitches sit near the pitch classes the tool names but the tuning reads +43 cents, so E2 here may be a kick-sharp D#2 to E2 pair.
+- Check: tool says walking, 1.42 notes a second, E 0.41, F 0.23, B 0.20, C 0.07, steps 52%, fourths and fifths 24%. The bass is a real, small stem (not empty), so the bass line is believable, but a 6% stem on a record where the drums hold the sub is the quieter half of the low end.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass, short plucked and sine-like, walking on E with a flat second.
+
+**S3. Thin organ-like mid note (Part Two): other-1, 276 notes, 14%**
+- In synth terms: 84 Hz (74 to 125), brightness 500 Hz, harmonic share 0.42 (noisy partials, partials 69 cents off whole multiples), attack 86 ms, falls 64 dB/s, level -10.3 dB, correlation 0.79. The other stem is 3.9% of the power, 52% of it in 120 to 500 Hz and 47% in 0.5 to 2 kHz.
+- Hear it at: 2:59.1 (E2, 0.15 s, +22 dB alone), 2:57.4 (B2, 0.14 s, +20 dB alone), 2:57.7 (B2, 0.16 s, +17 dB alone). All three sit in the 2:57 to 3:00 build, where nothing else plays except the kick.
+- Check: 276 notes at 84 Hz is low for a lead; with a 3.9% stem and a 52% share in 120 to 500 Hz, this is a quiet pad or bass-pad blend, not a lead. One group of three (silhouette 0.26).
+- Building blocks: **[JUDGMENT]** **Guess:** a soft, slightly inharmonic low-mid pad note; needs a listen.
+
+### Techniques
+
+**T1. A long floor drop with the mid pad staying (both parts)**
+- All stems summed, the low end under 120 Hz goes 15 dB down: Part One 3:44.5 for 12.5 s and 5:56.0 for 11.0 s (the second is the tail); Part Two 2:56.5 for 12.5 s, 5:35.0 for 3.0 s, 5:44.5 for 7.5 s. The stems-only count is smaller (Part One 0.55 a minute: 3:44.2 for 7.5 s, 3:51.5 for 2.0 s, 3:53.2 for 4.0 s; Part Two 0.19 a minute: 2:59.0 for 2.2 s), as the docs warn: the sums are the better read. Part Two's 12.5 s gap at 2:56.5 is followed by a mix build from 3:03.0 to 3:23.0 and a brightness rise of 2.0 octaves (2:51.0 to 3:00.0).
+- Check: both tracks' drop starts about 3:00, in the second half of the track, 12.5 s long; Part Two's is a break where the kick leaves and the build rises.
+- **[JUDGMENT]** **Guess:** a 10 to 12 s floor drop around the half-way mark, with a mid-pad build of 15 to 20 s after it.
+
+**T2. A kick-locked duck of 5 to 7 dB (Part One)**
+- Part One: the other stem dips 5.0 dB at the kick (peak 10 ms after) and the bass stem 5.3 dB (peak 80 ms after, kick every 0.41 s). The tool reads about 70% of the true depth, so the real dip is 7 dB or more. Part Two's other stem dips 2.5 dB; its bass-stem number (7.4 dB) is void (empty stem).
+- **[JUDGMENT]** **Guess:** a kick-locked duck of 5 to 7 dB on the bass and pad at 148 BPM.
+
+**T3. A drum echo of 414 ms (Part One), and a slow pan (both)**
+- Part One's drums echo at 414 ms (+9.4 dB, 2 later repeats), which is the beat (0.406 s) within 8 ms: a one-beat echo. Part Two: no reliable echo found (needs six notes ringing alone for 1.5 s). Part One's other stem pans 0.09 across a 49 s cycle and Part Two's drums 0.03 over the same 49 s, too small to matter (under 0.1), so no auto-pan is claimed.
+- **[JUDGMENT]** **Guess:** a one-beat echo on the drums at about +6 to +9 dB, only in a minority of loops.
+
+**T4. Vocal-stem entries (both)**
+- The vocals stem enters and leaves in 15 to 30 s blocks (Part One 64% of the time, Part Two 45%): this is the separator parking mid-pad notes in the vocals stem, not a voice (0.3 and 0.6% of the power). Treat as mid-pad entries: they mark where the pad plays.
+- **[JUDGMENT]** **Guess:** a mid pad that plays in 15 to 30 s blocks and leaves for the same time.
+
+### Theory
+
+**Th1. Two fast grids: 147.8 and 143.5 BPM, straight, with a kick on almost every beat**
+- Part One: drum-grid beat 0.406 s (147.8 BPM), strong repeats at 0.824 s (2 beats) and 1.649 s (4); the tool says 73 (half-time), the picker says 143.6; swing straight (eighths). Part Two: beat 0.418 s (143.5 BPM), the meter tool agrees (143), the picker says 143.6; straight. Both pulse 0.90 to 0.91, the strongest in the pile. Bar length is unclear on both (scores 0.00 and 0.04) and many unrelated periodicities show (3:2, 4:3, 5:2, 5:3): the tool's reading of irregular timing, not a cross-rhythm claim.
+- **[JUDGMENT]** **Guess:** a tempo draw of 143 to 148, straight, with a kick on almost every beat.
+
+**Th2. Phrygian bass pedal on E with a major seventh (Part One), a Cmaj7 pedal (Part Two)**
+- Part One: key E phrygian, margin 0.009 (a guess); pitch classes E 0.15, F 0.15, F# 0.09, G 0.09, D# 0.09. Bass stem: E 0.41, F 0.23, B 0.20, C 0.07 (E, F and B are the root, the flat second and the fifth). The chord tool reads Fmaj7 44%, G#maj7 12%, Gsus2 9%, Cmaj7 8% and 60 changes a minute (4 of them lasting 1.5 s or more, 40% on a beat against 36% by chance): for a track whose other stem holds 2.4%, these chords are a guess, mostly the kick and sub's overtones. The picker's chord changes (2.6 a minute) is the more believable.
+- Part Two: key C lydian, margin 0.008 (a guess; fits C major pentatonic); C 0.17, B 0.17, A# 0.11, C# 0.10, E 0.09. The chord tool reads Cmaj7 64%, 16 changes a minute (7 of them lasting 1.5 s or more; 68% on a beat against 71% by chance). With the bass stem empty and the other stem 3.9%, this is a guess. The picker says 0.5 changes a minute, so the track is nearly one chord.
+- **[JUDGMENT]** **Guess:** a one-chord loop (E or C, with a major seventh above) with a phrygian flat second on the bass; chord changes of 0.5 to 3 a minute.
+
+### Space
+- Near mono: mix width median -23 dB (Part One, -21 to -16 over 2-s windows) and -19 dB (Part Two, -19 to -13). Sub -27 and -26 dB (correlation 1.00), 120 to 500 Hz -22 and -17, mids -10 (corr 0.83 to 0.84), presence -11 and -10, air -16 and -13. The drums (91 and 95% of the power) are -24 and -23 dB, the bass -28 dB (Part One); the little width there is lives in the 0.5 to 2 kHz mid pad (other stem -15 and -9 dB, mono loss 0.1 and 0.5 dB, 2 to 4% of the power). Mono loss is 0.0 dB for drums and bass.
+- **[JUDGMENT]** **Guess:** a near-mono recipe, bass and kick dead center, with a very small width on a mid pad.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 tuned sine kick, T1 floor drop: toward hypnotic, energetic, booming x2; away from restful, still x0.4.
+- S2 walking sub: toward hypnotic, mysterious x1.5.
+- S3 inharmonic mid pad: toward strange, dreamy x1.5.
+- T2 duck: toward bouncy, energetic x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: none. 1 to 2% of the energy is above 2 kHz (Part One 2%, Part Two 1%); no polarity flag. The flag this record raises is weight: 72 and 64% of the mix under 120 Hz, 91 to 96% of the power in the drums stem, so any use of the sine kick needs the low-end level guard.
+- **[JUDGMENT]** **Guess:** take the pure-sine kick (at a modest level), the plucked walking sub and the 12 s floor drop with a pad build; leave the one-beat echo until heard. Nothing is harsh.
+
+### For later
+- Part One, drums-2 (145 notes): low thump, falls 84 dB/s, brightens; hear 2:00.5, 2:03.8. **[JUDGMENT]** **Guess:** waits, the second kick layer.
+- Part One, other-1 (208 notes, F3, falls 84 dB/s, noisy) and other-2 (147 notes, D2, bell-like); hear 0:01.6, 5:48.8 and 0:01.5, 5:52.8. **[JUDGMENT]** **Guess:** waits, intro and tail notes.
+- Part Two, other-2 (190 notes, A#3, bell-like, falls 29 dB/s); hear 2:57.4, 2:59.4. **[JUDGMENT]** **Guess:** waits, a bell note in the build.
+- Part Two, drums-2 (49 notes, falls 120 dB/s); hear 0:27.4, 3:43.0. **[JUDGMENT]** **Guess:** waits.
+- Part Two, vocals-1 (316 notes, B3): separator bleed from the mid pad; hear 3:36.1, 3:32.8. **[JUDGMENT]** **Guess:** not a voice; waits.
+
+### Reliability notes for this card
+- Separator: Demucs htdemucs, 0.62 times the audio. Part Two's bass stem is empty (bass notes, pumping and wobble void); Part One's is 6%, so S2 is a small but real stem. The drums stem holds the sub on both.
+- Tempo: the meter tool is half-time on Part One (73 against the grid's 147.8); the picker's 143.6 differs from the grid by 4 BPM on Part One. Chord names (and the 60 and 16 changes a minute) are guesses on a track whose melodic stems hold 2 to 4% of the power. Key margins 0.009 and 0.008: guesses. Tuning +43 and +34 cents: confirmed only by the kick's Hz (G1 near 50 Hz), which is within a semitone's accuracy.
+- Brightness sweeps (43 and 25 more in techniques.json) are whole-mix numbers on a drum-led track and mostly hat and fill; the 2.0-octave rise at 2:51 is large enough to read as the build.
