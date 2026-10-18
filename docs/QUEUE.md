@@ -2685,6 +2685,67 @@ Mikey decides this line:
   the code except the tests' `44100` and the noise's poles. Memory: the web
   build 14,745,600 bytes; the `wide` build 17,563,648 (2.8 MB more).
 
+- **Item 46, the building-block interface: notes for the brain (Session 23,
+  hands, Opus 5.5, 2026-10-18, #238).** The interface is three things: `Block`
+  (with `Voice` for blocks played by note), `Context` and one registry list.
+  The voices, the bodies and five parts sit behind it, and every block gets the
+  test kit. The goldens, the baseline and every voice's samples are unchanged;
+  the numbers are in the PR. **What felt awkward behind the interface:**
+  1. **Modulation.** A block takes one signal in and puts one out. FM drives
+     a carrier's frequency with a signal, pitches move frame by frame
+     (`Param`), and filters step under a moving cutoff. So the voices call
+     their parts' finer methods, not `Block::render`. A recipe format needs a
+     way to feed a signal into a setting, as Web Audio connects a node into
+     an `AudioParam`. That is the biggest decision phase 5 faces.
+  2. **The envelope is not a block.** It is a `Param` (an event list) driving
+     a gain. In a recipe it is naturally data: events relative to the note.
+  3. **Shared processors.** The bodies are per channel and fed by a bus that
+     every note of a kind sums into (`Voice::BODY`). Their kinds are a fixed
+     array of three in the core. A recipe instrument with its own resonance
+     needs a way to declare a shared processor.
+  4. **Nylon's damp** is the one place the core still names a voice
+     (`Core::damp` reaches `Held::Nylon`, and `Core::note` reads a strum from
+     nylon's first extra value). A general "event to the sounding notes of a
+     channel" (damp, release, bend) would retire it.
+  5. **Size.** The sung voices are too big for a slot, so the registry has a
+     second kind of line (`pooled`). A recipe voice of arbitrary size needs a
+     memory story: size classes, or a budget per recipe.
+  6. **The note's twelve extra values are positional,** and each voice
+     documents its own layout. Recipes want named settings. Voice numbers are
+     the host's ABI and `js/core.js` mirrors them, so a new voice still
+     touches the page once.
+  7. **Several voice numbers per type** (tone, lead, wind, struck, sung)
+     branch on `note.voice`. As recipes they would be presets of one
+     instrument.
+
+  **For the block catalogue (promise 5):**
+  - **Primitives the kit would welcome:**
+    - a modal resonator: a bank of decaying sines, which the tubular and
+      temple bells hand-code today;
+    - a waveshaper: the master's saturator;
+    - a delay line as a block: the mix has one, but it is not a block;
+    - an LFO: every vibrato is a sine `TableOsc`;
+    - a formant bank: the sung tract;
+    - a waveguide or Karplus-Strong string: nylon is a wavetable now;
+    - a granular source: the noise grains with drawn rate and offset are
+      half of one already.
+  - **Today's blocks worth a look:**
+    - the oscillator's Chromium start rules, which are kept to the sample and
+      complex;
+    - coefficient recomputing under a moving cutoff, which is the cost;
+    - the noise, a fixed two-second buffer.
+  - **Stereo:** `Signal` is mono. The stereo render (promise 9, Session 24's
+    items) decides whether a block gets a second signal or a stereo variant.
+
+  The kit's first table, for the ears:
+  - The frame drum peaks at +1.0 dBFS on its own at velocity 0.8, before
+    the mix and the master's ceiling, and the kick at -1.1 dBFS.
+  - The texture drop's 2-5 kHz share is 96% (a ringing bandpass in that
+    band).
+  - The shaker's share is 24% and the snare's 41%.
+
+  None of these is new; the kit only makes them visible.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),

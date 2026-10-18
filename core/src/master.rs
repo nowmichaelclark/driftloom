@@ -33,17 +33,17 @@
 //! Chromium runs its compressors' mono input as two identical channels,
 //! which is the same thing.
 
+use crate::block::Signal;
 use crate::math;
-use crate::compressor::{Compressor, Settings};
+use crate::blocks::compressor::{Compressor, Settings};
 use crate::delay::{Delay, buffer_len};
-use crate::filter::{Biquad, Kind};
-use crate::osc::TableOsc;
+use crate::blocks::filter::{Biquad, Kind};
+use crate::blocks::osc::TableOsc;
 use crate::resample::{Down, Up};
 use crate::timeline::Timeline;
 use crate::wave::Waves;
 use crate::QUANTUM;
 
-type Block = [f32; QUANTUM];
 
 const WOBBLE_MAX: f64 = 0.2;
 const WOBBLE_TIME: f64 = 0.014;
@@ -142,8 +142,8 @@ pub struct Master {
     /// Both compressors routed around (the measure harness's `bypass`).
     bypass: bool,
     /// What reaches the bus compressor, and what leaves the ceiling.
-    before_comp: [Block; OUT],
-    out: [Block; OUT],
+    before_comp: [Signal; OUT],
+    out: [Signal; OUT],
 }
 
 impl Master {
@@ -218,7 +218,7 @@ impl Master {
     /// block rendered).
     pub fn start(&mut self, time: f64) {
         let rate = self.rate;
-        self.wow_start = crate::osc::frame_at(time, rate);
+        self.wow_start = crate::blocks::osc::frame_at(time, rate);
         self.wow_index = 0.0;
         self.flutter.schedule(time, f64::INFINITY, rate);
         // Nothing to move through before the block they start in.
@@ -289,17 +289,17 @@ impl Master {
     }
 
     /// What the last block sent to the speakers, a block a lane.
-    pub fn output(&self) -> &[Block; OUT] {
+    pub fn output(&self) -> &[Signal; OUT] {
         &self.out
     }
 
     /// What the last block brought to the bus compressor, a block a lane.
-    pub fn before_comp(&self) -> &[Block; OUT] {
+    pub fn before_comp(&self) -> &[Signal; OUT] {
         &self.before_comp
     }
 
     /// One block of `preBus` in, a block a lane; the speakers' out.
-    pub fn process(&mut self, block: u64, input: &[Block; OUT], waves: &Waves) -> &[Block; OUT] {
+    pub fn process(&mut self, block: u64, input: &[Signal; OUT], waves: &Waves) -> &[Signal; OUT] {
         let rate = self.rate;
         let r32 = f(rate);
         let wave = &waves.sine;
@@ -310,7 +310,7 @@ impl Master {
         self.catch_up(block, wave);
         let mut wow = [0.0f32; QUANTUM];
         let mut flutter = [0.0f32; QUANTUM];
-        let steady = |hz| crate::osc::Pitch::Steady {
+        let steady = |hz| crate::blocks::osc::Pitch::Steady {
             freq: hz,
             detune: 0.0,
         };
@@ -447,7 +447,7 @@ impl Master {
     // The wow LFO's block from frame `block` (`ProcessKRate`'s slow path):
     // each frame read at its place in the table, which then moves on by the
     // step, wrapped, in 64 bits. With no `out`, only its place moves.
-    fn wow(&mut self, block: u64, wave: &crate::wave::Wave, hz: f32, rate: f32, mut out: Option<&mut Block>) {
+    fn wow(&mut self, block: u64, wave: &crate::wave::Wave, hz: f32, rate: f32, mut out: Option<&mut Signal>) {
         let freq = hz.max(-rate / 2.0).min(rate / 2.0);
         let incr = freq * wave.rate_scale();
         let pick = wave.pick(freq);
@@ -562,7 +562,7 @@ mod tests {
         let (mut reference, _) = built(true);
         direct.start(0.7);
         reference.start(0.7);
-        let signal: Block = core::array::from_fn(|i| ((i as f32) * 0.07).sin() * 0.3);
+        let signal: Signal = core::array::from_fn(|i| ((i as f32) * 0.07).sin() * 0.3);
         let (mut worst, mut peak) = (0.0f32, 0.0f32);
         // Blocks rendered before the LFOs start, a gap that holds their
         // start, blocks rendered after it, and another gap: the real thing
@@ -596,7 +596,7 @@ mod tests {
             let mut first = 0.0f32;
             let mut last = 0.0f32;
             for b in 0..300u64 {
-                let input: Block = core::array::from_fn(|i| {
+                let input: Signal = core::array::from_fn(|i| {
                     let n = (b as usize * QUANTUM + i) as f64;
                     (0.5 * (2.0 * core::f64::consts::PI * 440.0 * n / RATE).sin()) as f32
                 });
@@ -633,7 +633,7 @@ mod tests {
             let hz = 1000.0;
             let mut peak = 0.0f32;
             for b in 0..200u64 {
-                let input: Block = core::array::from_fn(|i| {
+                let input: Signal = core::array::from_fn(|i| {
                     let n = (b as usize * QUANTUM + i) as f64;
                     (0.1 * (2.0 * core::f64::consts::PI * hz * n / RATE).sin()) as f32
                 });

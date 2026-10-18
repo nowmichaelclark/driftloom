@@ -58,7 +58,8 @@ export function newContext(Ctx, options = {}) {
 }
 
 // The voices the core plays, by the number it knows them by
-// (core/src/lib.rs), and the parts of a kalimba note (core/src/voice.rs).
+// (the registry, core/src/blocks/mod.rs), and the parts of a kalimba note
+// (core/src/blocks/kalimba.rs).
 export const CORE_VOICES = {
   kalimba: 0, fiddle: 1, pad: 2, fm: 3, sine: 4, tubular: 5,
   softpad: 6, analogpad: 7, analoglead: 8, sawpluck: 9, beep: 10, moog: 11, whistle: 12,
@@ -68,21 +69,21 @@ export const CORE_VOICES = {
   vowel: 25, hum: 26, choir: 27,
 };
 // A sung note's vowel and where it drifts to, as the core numbers them
-// (core/src/sung.rs); 4 is a hum opening.
+// (core/src/blocks/sung.rs); 4 is a hum opening.
 export const SUNG_VOWELS = { a: 0, e: 1, o: 2, u: 3 };
 export const SUNG_OPEN_HUM = 4;
 // The longest sung note the core takes (sung::LONGEST): its detune holds
 // the jitter's steps for this long. Longer ones play in JavaScript.
 export const SUNG_LONGEST = 13.5;
-// A bass note's voice in `parts`, and its two flags (core/src/bass.rs); a
+// A bass note's voice in `parts`, and its two flags (core/src/blocks/bass.rs); a
 // name that is not here is the original, `sub`, as the JavaScript voice has it.
 export const BASS_KINDS = { sub: 0, round: 1, fifths: 2, pluckbass: 3, moogbass: 4 };
 export const BASS_GLIDE = 8;
 export const BASS_CHUG = 16;
-// A texture note's, in `parts` (core/src/texture.rs).
+// A texture note's, in `parts` (core/src/blocks/texture.rs).
 export const TEXTURE_KINDS = { swell: 0, drop: 1, wind: 2, waves: 3 };
-// A drum's, in `parts` (core/src/drums.rs); the hats are the hat voice, and
-// their kinds (core/src/breath.rs) are `parts` of their own.
+// A drum's, in `parts` (core/src/blocks/drum.rs); the hats are the hat voice,
+// and their kinds (core/src/blocks/struck.rs) are `parts` of their own.
 export const DRUM_KINDS = {
   kick: 0, softkick: 1, snare: 2, clap: 3, rim: 4, frame: 5, tap: 6, jingle: 7, ojingle: 8,
 };

@@ -1,37 +1,59 @@
 //! The drums (queue item 27): `kick` and `softkick`, `snare` and `clap`,
 //! `rim`, and the hand kit's `frame`, `tap` and `jingle`/`ojingle`, each its
 //! JavaScript twin in `Synth.drum`, call for call. (The hats are
-//! `breath::Struck`, ported with the noise source.) The budget is asked in
-//! JavaScript, and so are the draws: the noise's rate and offset for every
-//! voice that has noise, and the jingle's five zils before them.
+//! `struck::Struck`, ported with the noise source.) The budget is asked in
+//! JavaScript; the draws are the voice's own (`Voice::settle`): the noise's
+//! rate and offset for every drum that has noise, and the jingle's five
+//! zils before them. The note's `parts` say which drum (`KICK` and the
+//! rest), and its extra values hold those draws.
 //!
 //! A drum is a few parts played together: a sine or triangle with its pitch
 //! and gain, usually a grain of noise through a filter and gain of its own,
 //! and for the frame and the jingle a second layer. Only the rim puts its
 //! filter after the oscillator.
 
+// Web Audio's parameters are 32-bit floats, set from the host's 64-bit
+// numbers: a voice narrows every value it hands one.
+#![allow(clippy::cast_possible_truncation)]
+// The names follow synth.js's (f, g, c...), so the port reads against it.
+#![allow(clippy::many_single_char_names)]
+// A note's setup is one JavaScript function, ported call for call: split,
+// it would no longer read against its twin.
+#![allow(clippy::too_many_lines)]
+
 use crate::QUANTUM;
-use crate::breath::noise_grain;
-use crate::filter::{Biquad, Kind};
-use crate::noise::NoiseSource;
-use crate::osc::{Part, Pitch, TableOsc, frame_at};
+use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
-use crate::voice::{A440, Block, UNITY, pitch_of, starts_in};
+use crate::rng::salt;
 use crate::wave::{Wave, Waves};
+
+use super::filter::{Biquad, Kind};
+use super::noise_source::NoiseSource;
+use super::osc::{Part, Pitch, TableOsc, frame_at};
+use super::shared::{A440, FILTER_TAIL, Q_DEFAULT, UNITY, noise_grain, pitch_of, starts_in};
 
 /// What a drum note's `parts` say.
 pub const KICK: u32 = 0;
+/// The soft kick.
 pub const SOFTKICK: u32 = 1;
+/// The snare.
 pub const SNARE: u32 = 2;
+/// The clap.
 pub const CLAP: u32 = 3;
+/// The rim.
 pub const RIM: u32 = 4;
+/// The frame drum.
 pub const FRAME: u32 = 5;
+/// The hand tap.
 pub const TAP: u32 = 6;
+/// The tambourine (`jingle`).
 pub const JINGLE: u32 = 7;
+/// The open tambourine (`ojingle`).
 pub const OPEN_JINGLE: u32 = 8;
 
 /// Whether a drum plays the noise, so the host must have it: all but the
 /// softkick and the rim.
+#[must_use]
 pub fn uses_noise(kind: u32) -> bool {
     kind != SOFTKICK && kind != RIM
 }
@@ -46,10 +68,6 @@ const OPEN_JINGLE_LEVEL: f64 = 0.04494;
 /// A tambourine's zils (`JINGLE_PARTIALS`), in Hz.
 pub const ZILS: usize = 5;
 const JINGLE_PARTIALS: [f64; ZILS] = [5300.0, 6650.0, 7900.0, 9400.0, 11200.0];
-/// A BiquadFilterNode's Q before anything sets it.
-const Q_DEFAULT: f32 = 1.0;
-/// How long a voice with a filter is kept past its last stop.
-const FILTER_TAIL: f64 = 0.2;
 
 /// Which wave the body plays.
 #[derive(Clone, Copy, PartialEq)]
@@ -58,6 +76,7 @@ enum Shape {
     Triangle,
 }
 
+/// A drum note: one of the nine drums, by its `parts`.
 pub struct Drum {
     kind: u32,
     /// The pitched part: the kick's, the soft kick's, the snare's and
@@ -88,6 +107,9 @@ pub struct Drum {
 }
 
 impl Drum {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    #[must_use]
     pub const fn new() -> Self {
         Drum {
             kind: KICK,
@@ -125,7 +147,7 @@ impl Drum {
         noise: usize,
         rate: f64,
     ) {
-        noise_grain(&mut self.src, time, dur, draws.0, draws.1, noise, rate);
+        noise_grain(&mut self.src, time, dur, (draws.0, draws.1), noise, rate);
         self.filter.reset();
         self.filter_kind = filter.0;
         self.cutoff = filter.1;
@@ -136,7 +158,7 @@ impl Drum {
     /// One drum. `draws` are what the voice draws, in order: the noise's
     /// rate and offset, and for the jingle the five zils first (so seven).
     #[allow(clippy::too_many_arguments)]
-    pub fn play(
+    pub(crate) fn play(
         &mut self,
         kind: u32,
         time: f64,
@@ -290,7 +312,7 @@ impl Drum {
                     stops = stops.max(osc.stop_frame());
                     starts = starts.min(osc.start_frame());
                 }
-                noise_grain(&mut self.src, time, ring, draws[5], draws[6], noise, rate);
+                noise_grain(&mut self.src, time, ring, (draws[5], draws[6]), noise, rate);
                 self.filter.reset();
                 self.filter_kind = Kind::Highpass;
                 self.cutoff = 7000.0;
@@ -316,15 +338,84 @@ impl Drum {
         }
     }
 
-    pub fn start_frame(&self) -> u64 {
+    // The body through its gain, added into `out`.
+    fn render_body(&mut self, block: u64, rate: f64, waves: &Waves, out: &mut Signal) {
+        let mut tone = [0.0f32; QUANTUM];
+        let (lo, hi) = self.render_body_into(block, rate, waves, &mut tone);
+        let mut gain = [0.0f32; QUANTUM];
+        self.gain.fill(block, rate, &mut gain);
+        for ((y, x), g) in out
+            .iter_mut()
+            .zip(tone.iter())
+            .zip(gain.iter())
+            .take(hi)
+            .skip(lo)
+        {
+            *y += *x * *g;
+        }
+    }
+
+    // The body oscillator alone.
+    fn render_body_into(
+        &mut self,
+        block: u64,
+        rate: f64,
+        waves: &Waves,
+        tone: &mut Signal,
+    ) -> (usize, usize) {
+        let mut freq = [0.0f32; QUANTUM];
+        let first = starts_in(self.body.start_frame(), block);
+        let pitch = pitch_of(
+            &mut self.pitch,
+            block,
+            rate,
+            first,
+            &mut freq,
+            Part::Steady(0.0),
+        );
+        let wave: &Wave = match self.shape {
+            Shape::Sine => &waves.sine,
+            Shape::Triangle => &waves.triangle,
+        };
+        self.body.render(block, wave, &pitch, rate as f32, tone)
+    }
+
+    fn start_frame(&self) -> u64 {
         self.start
     }
 
-    pub fn end_frame(&self) -> u64 {
+    fn end_frame(&self) -> u64 {
         self.end
     }
+}
 
-    pub fn render(&mut self, block: u64, rate: f64, waves: &Waves, noise: &[f32], out: &mut Block) {
+impl Block for Drum {
+    type Settings = Note;
+
+    const PROBES: &'static [Probe<Note>] = &[
+        Probe { name: "kick", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, KICK, NO_EXTRA) },
+        Probe { name: "softkick", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, SOFTKICK, NO_EXTRA) },
+        Probe { name: "snare", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, SNARE, NO_EXTRA) },
+        Probe { name: "clap", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, CLAP, NO_EXTRA) },
+        Probe { name: "rim", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, RIM, NO_EXTRA) },
+        Probe { name: "frame", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, FRAME, NO_EXTRA) },
+        Probe { name: "tap", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, TAP, NO_EXTRA) },
+        Probe { name: "jingle", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, JINGLE, NO_EXTRA) },
+        Probe { name: "open-jingle", settings: Note::probe(crate::DRUM, crate::DRUMS_CHANNEL, 60.0, OPEN_JINGLE, NO_EXTRA) },
+    ];
+
+    fn start(&mut self, note: &Note, cx: &Context) {
+        let [a, b, c, d, e, f, g, ..] = note.extra;
+        let (noise, rate) = (cx.noise.len(), cx.rate);
+        self.play(note.parts, note.time, note.vel, &[a, b, c, d, e, f, g], noise, rate);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.start_frame(), self.end_frame())
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
+        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
         let r = rate as f32;
         match self.kind {
             KICK | SOFTKICK | SNARE | CLAP | FRAME | TAP => {
@@ -374,7 +465,7 @@ impl Drum {
                 }
             }
             let mut x = [0.0f32; QUANTUM];
-            self.src.render(block, noise, &mut x);
+            self.src.fill(block, noise, &mut x);
             let mut gain = [0.0f32; QUANTUM];
             self.noise_gain.fill(block, rate, &mut gain);
             for (((y, s), v), g) in out
@@ -390,7 +481,7 @@ impl Drum {
             self.filter.flush();
         } else if uses_noise(self.kind) {
             let mut x = [0.0f32; QUANTUM];
-            self.src.render(block, noise, &mut x);
+            self.src.fill(block, noise, &mut x);
             let mut gain = [0.0f32; QUANTUM];
             self.noise_gain.fill(block, rate, &mut gain);
             for ((y, v), g) in out.iter_mut().zip(x.iter()).zip(gain.iter()) {
@@ -400,47 +491,28 @@ impl Drum {
             self.filter.flush();
         }
     }
+}
 
-    // The body through its gain, added into `out`.
-    fn render_body(&mut self, block: u64, rate: f64, waves: &Waves, out: &mut Block) {
-        let mut tone = [0.0f32; QUANTUM];
-        let (lo, hi) = self.render_body_into(block, rate, waves, &mut tone);
-        let mut gain = [0.0f32; QUANTUM];
-        self.gain.fill(block, rate, &mut gain);
-        for ((y, x), g) in out
-            .iter_mut()
-            .zip(tone.iter())
-            .zip(gain.iter())
-            .take(hi)
-            .skip(lo)
-        {
-            *y += *x * *g;
+impl Voice for Drum {
+    /// A tambourine's five zils' detunes, then its noise's rate and
+    /// offset; the noise's alone for the other drums that play it.
+    fn settle(note: &mut Note) {
+        let d = note.draws;
+        let x = &mut note.extra;
+        if note.parts == JINGLE || note.parts == OPEN_JINGLE {
+            for (i, v) in (0_u32..).zip(x.iter_mut().take(ZILS)) {
+                *v = d.unit(salt::ZIL, i);
+            }
+            x[5] = d.unit(salt::GRAIN, 0);
+            x[6] = d.unit(salt::GRAIN, 1);
+        } else if uses_noise(note.parts) {
+            x[0] = d.unit(salt::GRAIN, 0);
+            x[1] = d.unit(salt::GRAIN, 1);
         }
     }
 
-    // The body oscillator alone.
-    fn render_body_into(
-        &mut self,
-        block: u64,
-        rate: f64,
-        waves: &Waves,
-        tone: &mut Block,
-    ) -> (usize, usize) {
-        let mut freq = [0.0f32; QUANTUM];
-        let first = starts_in(self.body.start_frame(), block);
-        let pitch = pitch_of(
-            &mut self.pitch,
-            block,
-            rate,
-            first,
-            &mut freq,
-            Part::Steady(0.0),
-        );
-        let wave: &Wave = match self.shape {
-            Shape::Sine => &waves.sine,
-            Shape::Triangle => &waves.triangle,
-        };
-        self.body.render(block, wave, &pitch, rate as f32, tone)
+    fn uses_noise(note: &Note) -> bool {
+        uses_noise(note.parts)
     }
 }
 

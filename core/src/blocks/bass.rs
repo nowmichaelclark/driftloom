@@ -6,36 +6,54 @@
 //! triangle) through a resonant lowpass whose cutoff falls, under an
 //! envelope; for `sub` a sine of weight underneath it; for the plucked one
 //! a click of bandpassed noise instead; and for `fifths` no filter at all,
-//! just two sines. The only draws are the click's two, made in JavaScript
-//! and sent with the note.
+//! just two sines. The only draws are the click's two, which the voice
+//! settles from the note's key (`Voice::settle`).
+//!
+//! The note's `parts` are the voice (`SUB` and the rest) with the flags
+//! `GLIDE` and `CHUG`; its first two extra values, the pluck's click's
+//! rate and offset draws.
+
+// Web Audio's parameters are 32-bit floats, set from the host's 64-bit
+// numbers: a voice narrows every value it hands one.
+#![allow(clippy::cast_possible_truncation)]
+// The names follow synth.js's (f, g, c...), so the port reads against it.
+#![allow(clippy::many_single_char_names)]
+// A note's setup is one JavaScript function, ported call for call: split,
+// it would no longer read against its twin.
+#![allow(clippy::too_many_lines)]
 
 use crate::QUANTUM;
-use crate::breath::noise_grain;
-use crate::filter::{Biquad, Kind};
-use crate::noise::NoiseSource;
-use crate::osc::{Part, TableOsc, frame_at};
+use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
-use crate::voice::{A440, Block, UNITY, midi_to_freq, pitch_of, starts_in};
+use crate::rng::salt;
 use crate::wave::Waves;
+
+use super::filter::{Biquad, Kind};
+use super::noise_source::NoiseSource;
+use super::osc::{Part, TableOsc, frame_at};
+use super::shared::{
+    A440, CUTOFF_DEFAULT, FILTER_TAIL, Q_DEFAULT, UNITY, midi_to_freq, noise_grain, pitch_of,
+    starts_in,
+};
 
 /// What a bass note's `parts` say: the voice in the low three bits, and
 /// whether it glides in and whether it is a chug in two flags.
 pub const SUB: u32 = 0;
+/// `round`: a triangle, rounder.
 pub const ROUND: u32 = 1;
+/// `fifths`: two sines, a fifth apart, unfiltered.
 pub const FIFTHS: u32 = 2;
+/// `pluckbass`: with a click of noise.
 pub const PLUCKBASS: u32 = 3;
+/// `moogbass`.
 pub const MOOGBASS: u32 = 4;
+/// The bits of `parts` that say the voice.
 pub const KIND: u32 = 7;
+/// The flag for a note that glides in.
 pub const GLIDE: u32 = 8;
+/// The flag for a chug.
 pub const CHUG: u32 = 16;
 
-/// A filter's cutoff, before anything is set.
-const CUTOFF_DEFAULT: f32 = 350.0;
-/// A BiquadFilterNode's Q, before anything sets it (the click's).
-const Q_DEFAULT: f32 = 1.0;
-/// How long a filtered voice is kept past its oscillator's stop, for the
-/// resonance to ring out.
-const FILTER_TAIL: f64 = 0.2;
 /// The trims, each voice's measured level (`TRIM` in `bass()`).
 fn trim(kind: u32) -> f64 {
     match kind {
@@ -62,7 +80,7 @@ impl Sine {
         }
     }
 
-    fn render(&mut self, block: u64, rate: f64, waves: &Waves, out: &mut Block) {
+    fn render(&mut self, block: u64, rate: f64, waves: &Waves, out: &mut Signal) {
         let mut freq = [0.0f32; QUANTUM];
         let first = starts_in(self.osc.start_frame(), block);
         let pitch = pitch_of(
@@ -91,6 +109,7 @@ impl Sine {
     }
 }
 
+/// A bass note: one of the five bass voices, by its `parts`.
 pub struct Bass {
     /// The voice, as `parts` names it.
     kind: u32,
@@ -116,6 +135,9 @@ pub struct Bass {
 }
 
 impl Bass {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    #[must_use]
     pub const fn new() -> Self {
         Bass {
             kind: SUB,
@@ -141,7 +163,7 @@ impl Bass {
     /// `draws` are the click's `_noiseSource` rate and offset (pluckbass
     /// only); `noise` is the length of the host's noise.
     #[allow(clippy::too_many_arguments)]
-    pub fn play(
+    pub(crate) fn play(
         &mut self,
         parts: u32,
         midi: f64,
@@ -277,7 +299,7 @@ impl Bass {
 
         if self.click {
             // A little noise for the finger: a grain through a bandpass.
-            noise_grain(&mut self.src, time, 0.02, draws.0, draws.1, noise, rate);
+            noise_grain(&mut self.src, time, 0.02, draws, noise, rate);
             self.click_filter.reset();
             self.click_filter
                 .set(Kind::Bandpass, 900.0, Q_DEFAULT, 0.0, rate as f32);
@@ -294,15 +316,39 @@ impl Bass {
         self.end = ends;
     }
 
-    pub fn start_frame(&self) -> u64 {
+
+    fn start_frame(&self) -> u64 {
         self.start
     }
 
-    pub fn end_frame(&self) -> u64 {
+    fn end_frame(&self) -> u64 {
         self.end
     }
+}
 
-    pub fn render(&mut self, block: u64, rate: f64, waves: &Waves, noise: &[f32], out: &mut Block) {
+impl Block for Bass {
+    type Settings = Note;
+
+    const PROBES: &'static [Probe<Note>] = &[
+        Probe { name: "sub", settings: Note::probe(crate::BASS, crate::BASS_CHANNEL, 40.0, SUB, NO_EXTRA) },
+        Probe { name: "round", settings: Note::probe(crate::BASS, crate::BASS_CHANNEL, 40.0, ROUND, NO_EXTRA) },
+        Probe { name: "fifths", settings: Note::probe(crate::BASS, crate::BASS_CHANNEL, 40.0, FIFTHS, NO_EXTRA) },
+        Probe { name: "pluck", settings: Note::probe(crate::BASS, crate::BASS_CHANNEL, 40.0, PLUCKBASS, NO_EXTRA) },
+        Probe { name: "moog", settings: Note::probe(crate::BASS, crate::BASS_CHANNEL, 40.0, MOOGBASS, NO_EXTRA) },
+    ];
+
+    fn start(&mut self, note: &Note, cx: &Context) {
+        let [a, b, ..] = note.extra;
+        let (noise, rate) = (cx.noise.len(), cx.rate);
+        self.play(note.parts, note.midi, note.time, note.dur, note.vel, (a, b), noise, rate);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.start_frame(), self.end_frame())
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
+        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
         let r = rate as f32;
         if self.main {
             let mut freq = [0.0f32; QUANTUM];
@@ -343,7 +389,7 @@ impl Bass {
         }
         if self.click {
             let mut x = [0.0f32; QUANTUM];
-            self.src.render(block, noise, &mut x);
+            self.src.fill(block, noise, &mut x);
             let mut gain = [0.0f32; QUANTUM];
             self.click_gain.fill(block, rate, &mut gain);
             for ((y, v), g) in out.iter_mut().zip(x.iter()).zip(gain.iter()) {
@@ -351,6 +397,20 @@ impl Bass {
             }
             self.click_filter.flush();
         }
+    }
+}
+
+impl Voice for Bass {
+    /// The pluck's click: its rate and offset.
+    fn settle(note: &mut Note) {
+        if note.parts & KIND == PLUCKBASS {
+            note.extra[0] = note.draws.unit(salt::GRAIN, 0);
+            note.extra[1] = note.draws.unit(salt::GRAIN, 1);
+        }
+    }
+
+    fn uses_noise(note: &Note) -> bool {
+        note.parts & KIND == PLUCKBASS
     }
 }
 

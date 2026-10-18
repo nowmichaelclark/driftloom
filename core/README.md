@@ -1,0 +1,123 @@
+# dlcore: Driftloom's audio core
+
+The engine under Driftloom: the code that makes the sound. It is the same
+code in the website (as WebAssembly), in a native build, and in someone's
+game. It is plain Rust with `no_std`, no dependencies and no threads, and
+it allocates nothing after `Core::new`. The same notes make the same samples,
+bit for bit, on every target. Its promises and how each is measured are in
+[`docs/CORE.md`](../docs/CORE.md).
+
+This guide is for developers and AI agents. It covers how a host drives the
+core, how the sound is built, and how to add to it.
+
+## Hosting it
+
+A host owns one `Core` and makes a handful of calls:
+
+```rust
+use dlcore::{Core, Key, MELODY, KALIMBA, EXTRA};
+
+let mut core = Box::new(Core::new());          // megabytes of zeros: keep it off the stack
+core.start(48_000.0, 1)?;                      // any rate from 22,050 to 192,000 Hz; mono
+core.key(Key { seed: 7, pass: 0, step: 0, ord: 0 });      // where the next notes sit in their loop
+core.note(KALIMBA, MELODY, 0.5, 69.0, 0.4, 0.8, 3, [f64::NAN; EXTRA]);
+let mut out = vec![0.0f32; 441];               // any number of frames a call
+core.render(&mut [&mut out])?;
+```
+
+- **`start(rate, channels)`** sets the rate and the output layout. Mono is the only layout so far; anything else returns a plain error.
+- **`note(voice, channel, time, midi, dur, vel, parts, extra)`** queues a note. It answers whether the note is on time, late, missed or refused (`Taken`).
+- **`key(key)`** says where the notes that follow sit in their loop. Every chance a note leaves open is drawn from this key, so the same loop sounds the same everywhere.
+- **`render(out)`** fills the host's buffers with the next frames.
+- Also:
+  - `param` (the mix and the master chain);
+  - `damp` (a new strum);
+  - `cancel` and `cancel_from` (the music jumped);
+  - `quality`;
+  - the counts: `late`, `missed`, `dropped`.
+
+`examples/dlrender` is a whole native host in a few hundred lines. It reads
+a note list and writes a WAV:
+
+```sh
+cargo run --release --example dlrender -- --wav out.wav golden/03-tide.dlnotes
+```
+
+The web host is `js/worklet.js`, through the exports in `src/wasm.rs`.
+
+## How the sound is built: blocks
+
+Everything that makes or shapes sound is a **block**: one file in
+`src/blocks/`, behind one small interface in `src/block.rs`. There are only
+three things to know.
+
+1. **`Block`**:
+   - `start(settings, cx)`: the block is set once by its `Settings`.
+   - `render(block, cx, signal)`: the block renders 128 frames at a time into one `Signal`, in place. A *source* (an oscillator, a voice) adds its sound into the signal. A *processor* (`INPUT = true`: a filter, a body) replaces the signal with its output.
+   - `span()`: the frames the block sounds in.
+   - `PROBES`: how the test kit plays it.
+
+   A **`Voice`** is a block whose settings are a `Note`. It is the kind a host plays by number. It may also settle the note's chances (`settle`), say that it plays the noise (`uses_noise`), and play through a shared body (`BODY`).
+2. **`Context`**: everything a block may read besides its own state: the sample rate, the wavetables and the noise.
+3. **The registry**, the `registry!` list in `src/blocks/mod.rs`: one line a block. The line declares the block's file, and the core finds every voice through it, with no `dyn`. The kit finds everything there too.
+
+Every block keeps all of its state inline, in a plain struct whose
+`const fn new()` is all zeros. Nothing in a block allocates or panics.
+Inside a voice, a setting that moves over time is a `param::Param`, the
+core's AudioParam. The voices are built from the parts in the same
+directory (`osc`, `filter`, `noise_source`) and call them directly.
+
+## Adding a building block
+
+`src/blocks/tremolo.rs` is a demonstration: a tremolo, in the tests only.
+It is the whole recipe:
+
+1. **One new file**, `src/blocks/NAME.rs`, with:
+   - a struct holding the block's state;
+   - a `const fn new()` (all zeros) and `Default`;
+   - its `Settings`;
+   - `impl Block`, with at least one probe.
+2. **One line** in the registry's `parts` list in `src/blocks/mod.rs`, for example `tremolo::Tremolo;`. The tremolo's line also carries `#[cfg(test)]`, which keeps it out of the app.
+3. **Store its renders** for the kit: `KIT=update cargo test --lib kit`. This adds lines to `golden/blocks.txt`; commit them.
+
+That is all; the kit's test (`the_demonstration_block_is_one_file_and_one_line`)
+checks that the tremolo is named nowhere else.
+
+A **voice** is the same, with three differences:
+- It implements `Voice` as well as `Block`.
+- Its line goes in the `voices` list with the numbers a host plays it by: `kalimba::Kalimba = KALIMBA 0;`. The numbers are the host's, fixed for good, so take the next free one.
+- The page needs to know the number too (`CORE_VOICES` in `js/core.js`).
+
+A voice too big for a slot of the pool goes in `pooled`, with the size of
+its own pool.
+
+## The test kit
+
+`cargo test` plays every block in the registry alone, at 48 kHz, through
+each of its probes. For each probe it checks:
+- **level:** the samples are finite, the block is not silent, and it is not running away;
+- **tone:** the 2-5 kHz share of the A-weighted energy (the coffee-shop test);
+- **determinism:** two renders are the same;
+- **cost:** a release build checks it against a ceiling;
+- **a null test:** a hash against the stored render in `golden/blocks.txt`.
+
+An equal hash proves a change identical. Any other hash is a sound change.
+The test fails with the stored and new level and tone. A change on purpose
+is stored with `KIT=update`, and its PR says what moved and why, for an A/B.
+To hear a probe from two versions:
+
+```sh
+cargo run --release --example dlrender -- --block fiddle/long --wav new.wav
+# (the same on the old version, to old.wav)
+cargo run --release --example dlrender -- --compare old.wav new.wav
+```
+
+`KIT=report cargo test --release --lib every_block -- --nocapture` prints
+the whole table.
+
+## The other checks
+
+- **`golden/`:** whole loops as the app plays them. Each must hash the same on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every block size and at other rates (`golden/README.md`).
+- **`tools/baseline.mjs`:** the core in the real app, in Chromium: every voice, 40 loops, the refusals.
+- **`tools/build-core.sh --check`:** the committed `js/dlcore.wasm` is exactly what this source builds. Run `tools/build-core.sh` after any change here.
+- **Clippy, pedantic:** run `cargo clippy -- -W clippy::pedantic`. Every public item has a doc comment that gives the reason, not only the what.
