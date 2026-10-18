@@ -2,7 +2,7 @@
 
 Usage:
   python3 -I album.py ALBUM_DIR WORKDIR [--stages pick,split,events,techniques,theory,space,card]
-                      [--only "track name"] [--workers 2]
+                      [--only "track name"] [--workers 2] [--no-vocals]
 
 Everything is cached in WORKDIR/<album>/, so a stage is skipped when its
 output exists (delete the file to redo it). Long: run it in the background
@@ -15,14 +15,18 @@ output exists (delete the file to redo it). Long: run it in the background
   WORKDIR/<album>/<track>/techniques.json    step 4 (techniques.py)
   WORKDIR/<album>/<track>/theory.json        step 5 (theory.py)
   WORKDIR/<album>/<track>/space.json         step 6 (space.py)
-  WORKDIR/<album>/card.md                    step 7 (card.py)
+  WORKDIR/<album>/<track>/stem_check.json    step 7 (check_stems.py: void flags, drum grid)
+  WORKDIR/<album>/card.md                    step 8 (card.py)
+
+--no-vocals skips the MDX-Net vocals model on instrumental records (only matters
+when Demucs is unavailable).
 """
 import os, re, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from cardlib import load_json, save_json
 
-ALL = ["pick", "split", "events", "techniques", "theory", "space", "card"]
+ALL = ["pick", "split", "events", "techniques", "theory", "space", "check", "card"]
 
 
 def slug(s):
@@ -39,6 +43,9 @@ def log(work, msg):
 def main():
     a = sys.argv[1:]
     stages, only, workers = ALL, None, 2
+    skip_vocals = "--no-vocals" in a
+    if skip_vocals:
+        a.remove("--no-vocals")
     if "--stages" in a:
         i = a.index("--stages"); stages = a[i + 1].split(","); del a[i:i + 2]
     if "--only" in a:
@@ -78,7 +85,7 @@ def main():
         if "split" in stages and not os.path.exists(os.path.join(sdir, "split.json")):
             import split
             log(work, f"split: {track}")
-            info = split.split(src, sdir)
+            info = split.split(src, sdir, skip_vocals=skip_vocals)
             log(work, f"split: {track} -> {info['mode']}, {info['audio_seconds']} s of audio in {info['wall_seconds']} s")
         if not os.path.exists(os.path.join(sdir, "drums.wav")):
             continue
@@ -106,6 +113,12 @@ def main():
             t0 = time.time()
             space.run(sdir, src, os.path.join(tdir, "space.json"))
             log(work, f"space: done in {time.time() - t0:.0f} s")
+        if "check" in stages and not os.path.exists(os.path.join(tdir, "stem_check.json")):
+            import check_stems
+            r = check_stems.report(sdir)
+            r.pop("runs", None)
+            save_json(os.path.join(tdir, "stem_check.json"), r)
+            log(work, f"check: {track}: " + ("; ".join(r["flags"]) or "no flags"))
     if "card" in stages:
         import card
         card.write_album(work, os.path.join(work, "card.md"))
