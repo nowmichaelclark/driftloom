@@ -378,7 +378,7 @@ Machine time: 2,602 s (43.4 min) for 11.7 minutes of deep-pass audio (700.2 s): 
 - In synth terms: 35 Hz (31 to 49), attack 72 ms, falls 37 dB/s, brightness 114 Hz, level -7.5 dB, centered (correlation 1.00). The bass stem holds 31% of the power and 96% of it is under 120 Hz; the drums stem holds 60% (53% under 120 Hz).
 - Hear it at: 5:12.8 (G#1, 1.53 s, +42 dB alone), 5:13.6 (G1, 4.72 s, +32 dB alone), 4:52.9 (C1, 4.73 s, +14 dB alone). From 5:13 the drums are out and the bass plays alone for about 5 s.
 - Check: the stem's strongest lines are 32.2 Hz (C1, 27 cents flat), 35.2 Hz (C#1, 27 cents sharp), 48.5 Hz (G1, 18 cents flat) and 26.8 Hz. Pitch under 40 Hz is good to about a semitone, and the bell-like label is the tool's guess below 60 Hz: ignore it. So the sub bass is a plain tone around 32 to 35 Hz, with G above it.
-- Building blocks: **[JUDGMENT]** **Guess:** a sine sub bass pitched to C1 and C#1; lower than the pile 1 sub notes (Isopropanol and the others stayed at 40 Hz and above) and below most speakers' limit, so it needs a level guard.
+- Building blocks: **[JUDGMENT]** **Guess:** a sine sub bass pitched to C1 and C#1; below most small speakers' range, so it needs a level guard.
 
 **S2. A short sub thump and a walking bass at 31 to 41 Hz (Get a Baby): drums-1, 231 notes, 16%; bass-1, 208 notes, 35%**
 - In synth terms: drums-1 is a thump at 41 Hz (32 to 55), attack 25 ms, falls 277 dB/s (very short), brightness 179 Hz, level -3.8 dB, correlation 0.99. bass-1 sits at 37 Hz (31 to 42), harmonic, attack 38 ms, falls 15 dB/s, brightness 101 Hz, level -3.7 dB, centered. The bass stem holds 40% of the power, 95% of it under 120 Hz.
@@ -400,7 +400,7 @@ Machine time: 2,602 s (43.4 min) for 11.7 minutes of deep-pass audio (700.2 s): 
 ### Techniques
 
 **T1. A long intro with no low end, builds and big whole-mix swings (Children Talking)**
-- The low end (all stems summed, under 120 Hz) is out for the first 4 s and again 4.5 to 21.5 s: the bass stem enters at 0:19.5. A build is marked at 1:44.0 to 2:09.0, with the bass out at 1:47.5 and back at 1:51.0 and a 4.5 s floor drop at 1:46.5 (the tool's own count lists 1:47.8 for 2.0 s, 0.21 a minute); the mix falls 4.6 octaves from 1:49.0 to 1:54.5 and 3.2 octaves from 1:06.0 to 1:16.5 (57 more sweeps in `techniques.json`, so a lot of motion in the mix). The bass is out for 20 s from 3:09.0 to 3:29.0 and for the last 25 s of the track, from 5:18.5 (the last 5 s of the sums run, 5:17, is the tail). The low end is on 79% of the time.
+- The low end (all stems summed, under 120 Hz) is out for the first 4 s and again 4.5 to 21.5 s: the bass stem enters at 0:19.5. A build is marked at 1:44.0 to 2:09.0, with the bass out at 1:47.5 and back at 1:51.0 and a 4.5 s floor drop at 1:46.5 (the tool's own count lists 1:47.8 for 2.0 s, 0.21 a minute); the mix falls 4.6 octaves from 1:49.0 to 1:54.5 and 3.2 octaves from 1:06.0 to 1:16.5 (57 more sweeps in `techniques.json`, so a lot of motion in the mix). The bass is out for 20 s from 3:09.0 to 3:29.0 and again from 5:18.5 to the end at 5:22 (the 5 s sums run at 5:17 is the tail). The low end is on 79% of the time.
 - Brightness numbers here are whole-mix, on a drum-led track.
 - **[JUDGMENT]** **Guess:** a 15 to 20 s intro without the low end, then a bass entrance; a 25 s build with a 4 s floor drop and a mix fall of about 4 octaves.
 
