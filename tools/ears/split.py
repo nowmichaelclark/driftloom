@@ -1,6 +1,9 @@
 """Split a track into stems: drums, bass, other, vocals.
 
-Usage: python3 -I split.py IN OUT_DIR [--mode auto|demucs|mdx|hpss] [--seconds N]
+Usage: python3 -I split.py IN OUT_DIR [--mode auto|demucs|mdx|hpss] [--seconds N] [--no-vocals]
+
+--no-vocals skips the MDX-Net vocals model (silent vocals.wav): for instrumental
+records on the MDX path; Demucs makes all four stems in one pass either way.
 
 auto (default): Demucs htdemucs on the CPU when it is installed and the
 weights load; otherwise MDX-Net (the four UVR `kuielab_a_*.onnx` models, run
@@ -51,10 +54,14 @@ def demucs_split(src, out_dir, seconds=None):
 MDX_MODELS = {"drums": "Drums", "bass": "Bass", "other": "Other", "vocals": "Vocals"}
 
 
-def mdx_split(src, out_dir, seconds=None):
-    """Four MDX-Net models (kuielab_a_<stem>.onnx), one pass each."""
+def mdx_split(src, out_dir, seconds=None, skip_vocals=False):
+    """Four MDX-Net models (kuielab_a_<stem>.onnx), one pass each. With skip_vocals the
+    vocals model is not run and vocals.wav is silent (about a quarter less time; use it on
+    instrumental records, where that stem was only hat and pad bleed in Ears 6)."""
     mdx_dir = os.environ.get("MDX_DIR", "/tmp")
     for s in MDX_MODELS:
+        if skip_vocals and s == "vocals":
+            continue
         if not os.path.exists(os.path.join(mdx_dir, f"kuielab_a_{s}.onnx")):
             raise FileNotFoundError(f"kuielab_a_{s}.onnx not in {mdx_dir}")
     tmp = tempfile.mkdtemp(prefix="mdx_")
@@ -66,6 +73,8 @@ def mdx_split(src, out_dir, seconds=None):
     os.makedirs(out_dir, exist_ok=True)
     t0 = time.time()
     for s, label in MDX_MODELS.items():
+        if skip_vocals and s == "vocals":
+            continue
         subprocess.run(["audio-separator", wav, "--model_filename", f"kuielab_a_{s}.onnx",
                         "--model_file_dir", mdx_dir, "--output_dir", tmp, "--single_stem", label,
                         "--output_format", "WAV"], check=True,
@@ -75,7 +84,11 @@ def mdx_split(src, out_dir, seconds=None):
             raise RuntimeError(f"no {s} output")
         shutil.move(os.path.join(tmp, got[0]), os.path.join(out_dir, s + ".wav"))
     took = time.time() - t0
-    n = sf.info(os.path.join(out_dir, "drums.wav")).frames
+    info = sf.info(os.path.join(out_dir, "drums.wav"))
+    n = info.frames
+    if skip_vocals:
+        sf.write(os.path.join(out_dir, "vocals.wav"), np.zeros((n, info.channels), dtype=np.float32),
+                 info.samplerate, subtype="PCM_16")
     shutil.rmtree(tmp, ignore_errors=True)
     return took, n / 44100
 
@@ -106,7 +119,7 @@ def hpss_split(src, out_dir, seconds=None):
     return time.time() - t0, x.shape[1] / sr
 
 
-def split(src, out_dir, mode="auto", seconds=None):
+def split(src, out_dir, mode="auto", seconds=None, skip_vocals=False):
     used, note = None, ""
     if mode in ("auto", "demucs"):
         try:
@@ -119,7 +132,7 @@ def split(src, out_dir, mode="auto", seconds=None):
             note = f"demucs failed ({type(e).__name__}); fell back"
     if used is None and mode in ("auto", "mdx"):
         try:
-            took, dur = mdx_split(src, out_dir, seconds)
+            took, dur = mdx_split(src, out_dir, seconds, skip_vocals)
             used = "mdx-net-kuielab_a"
             note = (note + "; " if note else "") + "mdx-net stems"
         except Exception as e:
@@ -130,7 +143,8 @@ def split(src, out_dir, mode="auto", seconds=None):
         took, dur = hpss_split(src, out_dir, seconds)
         used = "hpss+bands"
     info = {"mode": used, "audio_seconds": round(dur, 1), "wall_seconds": round(took, 1),
-            "speed_x_realtime": round(dur / max(took, 1e-9), 2), "note": note, "source": os.path.basename(src)}
+            "speed_x_realtime": round(dur / max(took, 1e-9), 2), "note": note, "source": os.path.basename(src),
+            "vocals_skipped": bool(skip_vocals and used.startswith("mdx"))}
     with open(os.path.join(out_dir, "split.json"), "w") as f:
         json.dump(info, f, indent=1)
     return info
@@ -143,4 +157,7 @@ if __name__ == "__main__":
         i = a.index("--mode"); mode = a[i + 1]; del a[i:i + 2]
     if "--seconds" in a:
         i = a.index("--seconds"); secs = float(a[i + 1]); del a[i:i + 2]
-    print(split(a[0], a[1], mode, secs))
+    skip_v = "--no-vocals" in a
+    if skip_v:
+        a.remove("--no-vocals")
+    print(split(a[0], a[1], mode, secs, skip_v))
