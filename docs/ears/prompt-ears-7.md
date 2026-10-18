@@ -7,7 +7,7 @@ Ears 7 (Sonnet 5.5, medium effort). You're an ears session for Driftloom: you me
 
 Read first: the Project docs, and in the repo (github.com/nowmichaelclark/driftloom) docs/EARS.md, tools/ears/README.md, docs/ears/tools.md, docs/ears/plan.md, docs/ears/cards-pile-2.md (the first half, Ears 6: copy its format) and docs/ears/sessions.md. Standing rules: ears outputs live in the repo (docs/ears/, in a PR) and nowhere only in the Project; never real words in voices (vowels, hums, choirs only); no quotes at all; wholesome takes only, but harsh albums are fair game; ears sessions never put code into the app or core; Mikey decides what sounds good.
 
-Your job: album cards for the second half of pile 2: Analogue Bubblebath 5 and 3.1, Bradley's Robot, Bradley's Beat, and Caustic Window Joyrex J9i, J9ii and Compilation (skip any Joyrex track that is also on Compilation, as Mikey's upload checklist says). The audio is in the Drive folder for-claude - pile 2 (the second-half albums), or on Mikey's computer at /home/kruu-mikey/Music/Drift Loom Inspiration/for-claude - pile 2/ if you are running there.
+Your job: album cards for the second half of pile 2: Analogue Bubblebath 5 and 3.1, Bradley's Robot, Bradley's Beat, and Caustic Window Joyrex J9i, J9ii and Compilation (skip any Joyrex track that is also on Compilation, as Mikey's upload checklist says). The audio is in the Drive folder for-claude - pile 2 (same folders and file names as on Mikey's computer at /home/kruu-mikey/Music/Drift Loom Inspiration/for-claude - pile 2/, so use that path if you are running there). Do only the second-half albums; the first half is carded.
 
 Before the first album:
 1. Check the separator. Demucs weights are reachable again (dl.fbaipublicfiles.com was allowed on 2026-10-18; a 90 s test ran at 0.7 times the audio length). Run tools/ears/split.py on a 20 s clip with --mode demucs. If it fails, fall back to MDX-Net (README has the install line) and say so on every card.
@@ -18,4 +18,4 @@ Per album: download it into its own folder; run tools/ears/album.py in the backg
 At the end: update docs/ears/plan.md (mark Ears 7 done, correct costs if off, record any twins found), open the PR with gh api (GraphQL is not available; unset GH_TOKEN if it is invalid) for Mikey to merge, and tell Mikey in plain words what each album gave (the sounds, techniques and theory worth hearing) and the next session's label, model and effort (Ears 8, the first synthesis, Opus 5.5, high effort, per plan.md).
 ```
 
-Open items to confirm with Mikey at the start: whether *EP.2* is in the *Hangable Auto Bulb* folder (the folder holds 10 tracks, probably both EPs) and which Drive upload holds the missing *Donkey Rhubarb* tail on track 03 or 05 (they are identical).
+Settled with Mikey: EP.2 is inside the Hangable Auto Bulb folder (one folder, both EPs), and Donkey Rhubarb track 03 is kept as the copy of the identical 03 and 05 pair.
