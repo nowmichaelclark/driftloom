@@ -10,7 +10,7 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 | Ventolin (EP) | 14 (4) | 2,620 s | done |
 | Donkey Rhubarb (EP) | 5 (4) | 4,170 s | done |
 | Hangable Auto Bulb (AFX) | 10 (3) | 2,602 s | done |
-| GAK (AFX) | 9 | | |
+| GAK (AFX) | 9 (3) | 3,213 s | done |
 | Analogue Bubblebath 4 | 5 | | |
 
 ---
@@ -456,5 +456,98 @@ Machine time: 2,602 s (43.4 min) for 11.7 minutes of deep-pass audio (700.2 s): 
 - Pitch under 60 Hz: partial-off labels (the bell-like on the sub basses) are not measurable; pitch under 40 Hz is good to about a semitone, so C1 (32.7 Hz) and B0 (30.9 Hz) are good to that.
 - Floor drops: Get a Baby and Every Day have none apart from the tail; Children Talking's are in T1.
 - Mix-level tuning readings run from -47 to +43 cents on this folder; the bass lines of Children Talking read -27 to +27 cents from the nearest note, which is noise-level at this register.
+
+---
+
+## AFX, GAK (9 tracks)
+
+Ears 6, 2026-10-18, Sonnet 5.5. 9 tracks, all measured at mix level, 49 minutes. Deep pass on three, as the picker chose: the most typical, 01 GAK 1 (6:40), and the two least like the rest, 02 GAK 2 (6:18) and 03 GAK 3 (5:26). It is the lowest and loudest record so far: 59 to 93% of every track's energy is under 120 Hz, the centroid of 8 of the 9 tracks is under 210 Hz, and 06 gak bass,e,+2 is -4.7 LUFS (the loudest in the pile so far) with 93% of its energy under 120 Hz.
+
+Machine time: 3,213 s (53.6 min) for 18.4 minutes of deep-pass audio (1,103.4 s): pick 177 s (9 tracks, 20 s a track), MDX-Net split 2,575 s (2.33 times the audio), measuring 461 s (0.42 times the audio). The plan's formula gives 1,990 s, so this is 1.61 times it.
+
+**Shared tracks.** No title repeats another pile 2 album. 05 gak police er,2 (268.7 s, -8.1 LUFS), 09 gak 7 (360.7 s, -8.2) and the rest are not within 3 s and 0.6 LU of any pile 1 Classics row.
+
+### The hook
+- A bass-and-kick record at 121 BPM: a tuned kick on A1 or A#1, a bass line that hits the kick's gaps so hard that it ducks by 19 dB (GAK 2), sub notes down to B0 (31 Hz), a bar of 1.985 s that appears in two tracks, and one track (GAK 3) with a steady bright tone near 8.4 kHz.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a deep tuned kick and sub bass taking turns, at 121 BPM, with almost nothing else in the mix.
+
+### Sounds
+
+**S1. A very short tuned sub kick on A1 and A#1 (GAK 2, GAK 1): GAK 2 drums-1, 456 notes, 50%; GAK 1 drums-1, 391 notes, 25%**
+- In synth terms: GAK 2 drums-1 is a thump at 54 Hz (41 to 56), attack 20 ms, falls 216 dB/s, brightness 72 Hz and rising 0.46 octave over the note, level -0.1 dB, centered (correlation 1.00). GAK 1 drums-1 is shorter still: 54 Hz (39 to 61), attack 16 ms, falls 294 dB/s, brightness 142 Hz, level -2.2 dB. The drums stem holds 68% (GAK 2) and 35% (GAK 1) of the power, 87% and 65% of it under 120 Hz.
+- Hear it at: GAK 2 6:11.6 (A1, 0.34 s, +44 dB alone), 6:09.6 (A1, +44 dB alone), 6:09.1 (A1, +44 dB alone), where the kick plays alone at the end; GAK 1 1:33.0 (A#1, 0.17 s, +33 dB alone), 1:33.1 (B0, 0.22 s, +31 dB alone), 4:16.1 (A#1, 0.14 s, +26 dB alone).
+- Check: the examples are clean. Pitch under 60 Hz is good to about a semitone, so A1 (55 Hz) and A#1 (58 Hz) are the kick's notes, with a B0 (31 Hz) at 1:33.1.
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick again, as the shortest and deepest version (falls 200 to 300 dB/s).
+
+**S2. A ducking, jumping bass line (GAK 2, GAK 1): GAK 2 bass-1, 315 notes, 25%; GAK 1 bass-1, 277 notes, 36%**
+- In synth terms: GAK 2 bass-1 sits at E2 (82 Hz, 73 to 86), attack 23 ms, falls 117 dB/s, brightness 87 Hz, level -2.5 dB, centered; the tool calls its partials bell-like or metal-like (not whole multiples), which at 82 Hz is measurable but unconfirmed. GAK 1 bass-1 sits at 68 Hz (54 to 74), attack 35 ms, falls 49 dB/s, brightness 76 Hz, level -0.9 dB. The bass stem holds 31% (GAK 2) and 62% (GAK 1) of the power, 97% of it under 120 Hz.
+- Hear it at: GAK 2 0:00.6 (E2, 0.12 s, +39 dB alone), 0:00.0 (E2, 0.62 s, +25 dB alone), 4:22.6 (E2, 0.12 s, +25 dB alone); GAK 1 0:51.5 (A#1, 0.11 s, +20 dB alone), 6:18.6 (A1, 0.13 s, +18 dB alone), 1:47.1 (0.12 s, +17 dB alone).
+- Check: GAK 2's bass moves at 1.89 notes a second among B 0.31, D 0.21, E 0.20, F 0.19, with 43% fourths and fifths, 27% steps, 26% thirds and 3% repeats: it never repeats a note, one new note about every beat. GAK 1: B 0.32, D 0.26, A 0.21, A# 0.16 at 1.10 notes a second, 40% repeats.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass or a short metallic bass pluck (falls 117 dB/s) that never repeats a note, one note per beat.
+
+**S3. A steady bright tone near 8.4 kHz (GAK 3): vocals-1, 500 notes, 31%**
+- In synth terms: the separator's vocals stem holds 36% of GAK 3's power but not a voice: 99% of its energy is above 5 kHz, 86% in 7 to 9.5 kHz, with the strongest line at 8.4 kHz (measured by me; the tool's brightness at the start is 8.1 kHz, 8.02 to 8.21), spectral flatness 0.41 (between a tone and a noise band), and a level that does not move across the track (-27.6, -27.3, -26.8, -26.8, -26.3 dB in 60 s blocks). Level against the mix -1.9 dB, centered (correlation 0.99). The notes it lists are flicker in this band, with no pitch.
+- Hear it at: 0:23.5 (0.26 s, +19 dB alone), 1:38.5 (0.11 s, +19 dB alone), 0:24.0 (0.24 s, +17 dB alone).
+- Check: the group is weak (silhouette 0.00). The mix has 12% of its energy above 5 kHz (the picker row; the draft card's 32% above 2 kHz counts the stems differently and I did not reconcile it), against 0.2 to 1.6% in the other tracks of this album. A constant 8 kHz-region whine is a harsh flag. I did not listen, so I cannot say whether it is a pad's overtones, a noise band or a digital artifact.
+- Building blocks: **[JUDGMENT]** **Guess:** not a sound to build; if it is wanted, a faint high shimmer, far below the level it has here.
+
+### Techniques
+
+**T1. A bass that nearly switches off at every kick (GAK 2)**
+- The bass stem dips 18.6 dB at the kick (peak 105 ms after; kick every 0.49 s, which matches the 121 BPM beat), the other stem 2.5 dB. The tool reads about 70% of the true depth, so the real dip is about 26 dB: the bass is effectively gated at each kick, the hardest duck so far in the pile. GAK 1's bass dips 2.7 dB at a kick every 0.26 s (an eighth note at 121 BPM), about 4 dB true. GAK 3's other stem reads 23.6 dB, but it holds 0.6% of the power: void. The bass wobbles 7 cents at 0.4 Hz in GAK 2.
+- **[JUDGMENT]** **Guess:** a bass that is gated by the kick (a 20 dB or deeper duck) in a loop at 121 BPM, with a 0.4 Hz wobble of 7 cents.
+
+**T2. Long brightness arcs and short drum breaks (GAK 2, GAK 1, GAK 3)**
+- GAK 2: the mix falls 3.0 octaves from 0:47 to 1:02 and rises 3.4 octaves from 1:02.5 to 1:21.0, a 34 s down-and-up arc (61 more sweeps in `techniques.json`); the other stem enters and leaves in blocks (in at 0:28.5, out at 3:12.5, in at 3:16.5, out at 4:01.5, in at 4:08.5). GAK 1: a 12 s fall of 1.8 octaves from 1:42.5, then a rise of 2.3 octaves from 1:54.5 to 2:05.5, and the drums leave for 6 s (2:02.5 to 2:08.5), and again for 4 s (4:59.0 to 5:03.0), while the bass plays on. GAK 3: four-octave falls and rises of 5 s each in the first minute (down 4.2 octaves 0:02 to 0:07.5, down 3.4 at 0:12, up 3.4 at 0:17.5, up 4.1 at 0:38). There are no floor drops in any of the three (the sums find only the tails), so the low end never leaves.
+- These brightness numbers are whole-mix on tracks where the stems hold 62 to 99% of the power in two stems, so they follow the other stem's entries more than a filter; GAK 3's are driven by the steady 8.4 kHz band against a quiet mix.
+- **[JUDGMENT]** **Guess:** a 30 s brightness arc of 3 octaves down and 3 octaves up; a 4 to 6 s drum break with the bass kept.
+
+**T3. Echoes I do not claim (GAK 1, GAK 2, GAK 3)**
+- GAK 1: the drums echo at 249 ms (+9.5 dB, 4 later repeats), an eighth note at 121 BPM (248 ms), which is the kick's own spacing (a kick every 0.26 s), so it is the pattern. The other stem echoes at 374 ms (+3.6 dB, 3 repeats), a dotted eighth at 121 BPM (372 ms, which is also a strong drum-grid peak at 0.372 s); it is plausible but the stem holds 2.6% of the power and the echo rule needs six or more notes ringing alone, so it is unconfirmed. GAK 2's drum echo at 494 ms (+20.8 dB) is the beat. GAK 3: 474 ms drums and 479 ms other (the beat at 126 BPM is 476 ms): the beat, not echoes.
+- **[JUDGMENT]** **Guess:** no echo from this record; the dotted-eighth echo on the thin mid layer of GAK 1 is a maybe.
+
+### Theory
+
+**Th1. One bar of 1.985 s: 121 BPM with dotted-eighth and eighth pulses**
+- GAK 1 and GAK 2 both have their strongest drum-stem repeat at 1.985 s (0.91 and 0.94), a 4-beat bar at 120.9 BPM. GAK 1 also repeats at 0.372 s (0.68, a dotted eighth), 0.244 s (0.63, an eighth) and 0.743 s (0.63, a dotted quarter); GAK 2 at 0.499 s (0.73, the beat) and 0.743 s (0.73). The tool reads 81 BPM on both (two thirds of 121: the dotted-quarter pulse) and the picker 161.5 on GAK 1 (four thirds: the dotted eighth) and 123.0 on GAK 2 (agrees with 121). So the tempo is 121, and the three readings are different layers of one pattern. Swing 0.67 (triplet feel) on both. GAK 3: bar of 1.904 s (0.91) and a beat of 0.476 s (0.84): 126 BPM, straight eighths; the tool says 126, the picker 123.0.
+- **[JUDGMENT]** **Guess:** a tempo draw of 121 to 126 with a dotted-eighth pulse layered over the beat; a bar of 4 beats.
+
+**Th2. Bass notes B, D, A and E under a tuned kick; locrian-flavored, all guesses**
+- GAK 1: bass B 0.32, D 0.26, A 0.21, A# 0.16 (key margin 0.004, D locrian, a guess; top pitch classes D 0.21, C# 0.19, D# 0.13 from a stem holding 2.6% of the power: void). GAK 2: B, D, E, F (key margin 0.005, B locrian, a guess). GAK 3: G 0.39, A# 0.27, B 0.10, A 0.07 at 1.49 notes a second, with 8% octave jumps (key margin 0.010, G lydian, a guess).
+- The tool reports 45 to 84 chord changes a minute and 8 settled chords a minute for these tracks. That cannot be right for bass and kick alone (the picker's own count is 0.0 to 0.5): it is the tool following the bass line and kick bleed. Void.
+- **[JUDGMENT]** **Guess:** a four-note bass set (root, minor third, fifth below, and a neighbor) with one new note per beat, over a tuned kick.
+
+### Space
+- All three are near-mono, with a slightly wider top. GAK 1: median width -19 dB (-23 to -13), sub -25 (0.99), 120 to 500 Hz -17 (0.96), mids -13 (0.91), 2 to 5 kHz -10 (0.82), above 5 kHz -7 (0.67); drums -22, bass -27. GAK 2: median -23 dB (-27 to -20), sub -31 (1.00), mids -19, highs -16; drums -29, bass -33. GAK 3: median -18 dB (-22 to -14), sub -25, mids -19, 2 to 5 kHz -18, above 5 kHz -16 (0.96); drums -22, bass -26, the 8.4 kHz stem -16 dB (pan -0.09).
+- Movement: GAK 3's bass pan range is 0.07 cycling every 48 s, too small to hear. The others stay put.
+- **[JUDGMENT]** **Guess:** a mono recipe for the kick and bass, with a narrow high layer at -15 dB width.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 very short tuned kick: toward booming, hypnotic, energetic x2; away from restful, tender x0.3.
+- S2 jumping bass: toward bouncy, cheeky, hypnotic x1.5.
+- S3 steady 8 kHz tone: away from nearly every vibe (x0.2 to x0.3); a harsh-leaning layer, so it stays behind its own strange or experimental vibe at a very low level.
+- T1 20 dB bass gating: toward bouncy, energetic x2.
+- T2 30 s brightness arc: toward hypnotic, dreamy x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: GAK 3 has 12% of its energy above 5 kHz at mix level (the picker's air band), centroid 1,042 Hz against 103 to 208 Hz on the others, from the steady 8.4 kHz band: a bright or harsh flag, and the one thing on this record that is not wholesome as it stands. GAK 1 and GAK 2 sit at 1 to 2%. No polarity flag. Weight flag: the sums of the deep-pass stems are 79 to 89% under 120 Hz, and GAK 1 has notes at B0 (31 Hz): the level guard matters here more than anywhere else in the pile.
+- **[JUDGMENT]** **Guess:** take the very short tuned kick, the gated bass, the 30 s brightness arc and the one-note-per-beat bass at a modest low-end level; leave the 8.4 kHz band out.
+
+### For later
+- GAK 1, bass-2 (205 notes): C1, short pluck, falls 70 dB/s; hear 1:56.5, 0:54.7. **[JUDGMENT]** **Guess:** waits, a sub pluck under S2.
+- GAK 1, other-1 (183 notes): C#3, noisy, falls 41 dB/s, darkens; hear 5:03.4, 4:57.4. **[JUDGMENT]** **Guess:** waits.
+- GAK 1, drums-2 (109 notes): low thump, falls 37 dB/s, darkens; hear 6:31.5, 6:31.4. **[JUDGMENT]** **Guess:** waits.
+- GAK 2, bass-2 (97 notes): B1, falls 112 dB/s; hear 0:13.6, 0:00.8; drums-2 (44 notes, falls 249 dB/s; hear 0:24.3, 1:55.6). **[JUDGMENT]** **Guess:** waits.
+- GAK 3, bass-1 (137 notes): G1, odd harmonics stronger (square-like), falls 36 dB/s; hear 3:52.7, 5:19.9; bass-2 (123 notes, A#1; hear 5:20.7, 5:19.9); drums-2 (173 notes, falls 89 dB/s; hear 3:42.0, 2:11.9). **[JUDGMENT]** **Guess:** waits, a square-like sub bass is worth a listen.
+- Not given a deep pass, mix level only: 06 gak bass,e,+2 (3:29, -4.7 LUFS, the loudest, 93% under 120 Hz, crest 7.1 dB, tuning +28 cents, 3.9 onsets a second); 05 gak police er,2 (4:29, -8.1 LUFS, 62% under 120 Hz and 37% in 120 to 500 Hz, centroid 127 Hz); 04 GAK 4 (6:04, 118 BPM, a brightness sweep of 3.1 octaves against a folder median of 0.7); 08 gak6 e,+3 (5:25, wobble 8.5 cents against 6.8, sweep 2.1 octaves, tuning -25); 07 gak5 e,+3 (1:38, repetition 0.44 against 0.70); 09 gak 7 e,+3 (6:01, 95.7 BPM, -8.2 LUFS, width -14.6 dB). **[JUDGMENT]** **Guess:** 06 (a bass-only track at crest 7 dB) and 04 (the largest brightness arc) are the two worth a pass.
+
+### Reliability notes for this card
+- Separator: MDX-Net, not Demucs (see the top of this file). The sub is split between the drums stem (65 to 87% under 120 Hz) and the bass stem (87 to 97%); the other stems hold 0.6 to 2.6% of the power on all three, so the other-stem top lines (16 to 26 semitone ranges), pitch classes, chords, pumps and echoes are void or near it.
+- The vocals stems: GAK 1 (0.3%) and GAK 2 (0.0%) are empty; GAK 3's (36%) is the steady 8.4 kHz band described above, not a voice. No words anywhere.
+- Tempo: the tool's 81 BPM on GAK 1 and GAK 2 is two thirds of the 121 BPM drum grid; the picker's 161.5 for GAK 1 is four thirds. The grid reading is the one to use.
+- Key margins: 0.004, 0.005 and 0.010, all guesses. Chord counts: void (see Th2).
+- Floor drops: none apart from tails; the low end is on 97 to 99% of the time.
+- Pitch under 60 Hz: kick pitches are good to about a semitone; partial-off labels are not measurable; the bell-like label on GAK 2's E2 bass (82 Hz) is above that limit but unconfirmed.
 
 ---
