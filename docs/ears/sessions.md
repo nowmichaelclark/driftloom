@@ -6,7 +6,8 @@ account: the chat that produced `docs/ears/batch-1.md`, `batch-2.md`,
 until 2026-10-17, when they moved into the repo). Updated 2026-10-15 in
 Ears 2 for the stereo decision, the album list and Mikey's answers, in
 Ears 3 for the card tools, in Ears 4 (2026-10-16) for the tune round's
-outcome and lessons, and in Ears 5 (2026-10-17) for the repo rule. Ears 1 also built sketches into the app, which went wrong (see
+outcome and lessons, in Ears 5 (2026-10-17) for the repo rule, and in Ears 8
+(2026-10-18) for the first synthesis's lessons. Ears 1 also built sketches into the app, which went wrong (see
 below); its reports are sound, its app changes are not a model. Read this
 first in any new ears session, then `docs/ears/plan.md`.
 
@@ -196,6 +197,23 @@ the brain and hands counter (Session 1, 2, ... in `docs/BRAIN.md`).
   record (Ears 3: chord changes on *Geogaddi*, 16 to 28 a minute against
   Ears 1's "about 10"). Report both, say why they differ, and give the
   check that exists (the share of changes on a beat against chance).
+- **The first synthesis (Ears 8, `docs/ears/batch-5.md`):** a change to how
+  many notes one layer has shifts drift's random stream for every layer after
+  it (drift draws once per bass note), so the other layers' variations change
+  pass by pass and the A/B is no longer about the sketch. Replay the original's
+  draws, and check that the other layers' passes are identical.
+- A sound made longer at the same peak is louder by ear and puts more energy
+  under 60 Hz. Match it by ear (K-weighted energy) and cap its energy by band
+  against what it replaces, and scale only the new part (a kick's tail, not
+  its punch): scaling the whole kick lost the punch.
+- A sound that rings longer must not hold the voice budget longer than what
+  it replaces: a kick boom held for its length cost two pad notes; one kick
+  voice that the next hit chokes costs none.
+- Count a record only where its card's stem check says the stem is real
+  (6% of the power or more for a bass); several first counts in Ears 8 were one
+  too high until checked against the stem checks.
+- Rendering on Mikey's computer (7.6 GB): eight renders with stems at once ran
+  out of memory; three at a time is safe (`tools/ears/README.md`).
 - Read each tool's output on real music against its own rule before
   trusting it. Ears 3's floor drops listed "1.0 s" drops under a "2 s"
   rule: the edges sat half a second inside the true ones. Test signals

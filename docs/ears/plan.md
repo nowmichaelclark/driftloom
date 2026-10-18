@@ -1,7 +1,8 @@
 # Ears plan: every album on the list
 
-Ears 2 (Opus 5.5), 2026-10-15; updated in Ears 3 (tools and costs) and Ears 5
-(costs, pile 1 done). How the ears sessions get a few sounds,
+Ears 2 (Opus 5.5), 2026-10-15; updated in Ears 3 (tools and costs), Ears 5
+(costs, pile 1 done), Ears 6 and 7 (pile 2) and Ears 8 (the first synthesis,
+the labels shifted for pile 3). How the ears sessions get a few sounds,
 techniques and ideas from every album on Mikey's list. Read
 `docs/ears/sessions.md` first. Results go in this folder, in the repo:
 `docs/ears/batch-N.md` (verdicts) and `docs/ears/cards-*.md` (album cards).
@@ -259,13 +260,42 @@ them is a hands session.
 | Ears 5 | **Done 2026-10-16** (PR #223 to merge): pile 1 cards (five records), `docs/ears/cards-pile-1.md`; costs measured; `check_stems.py` added | Sonnet 5.5 | medium |
 | Ears 6 | **Done 2026-10-18** (PR #225 to merge): pile 2 first half, six records, `docs/ears/cards-pile-2.md`; costs checked a third time; `split.py` gained an MDX-Net step | Sonnet 5.5 | medium |
 | Ears 7 | **Done 2026-10-18** (PR to merge): pile 2 second half, five cards (*Bradley's Beat*, *Bradley's Robot*, *Analogue Bubblebath 3* (= *3.1*), *Analogue Bubblebath 5*, Caustic Window *Compilation*), `docs/ears/cards-pile-2.md`; Demucs stems; costs checked a fourth time; raw files in `docs/ears/raw/pile-2-second-half-raw.tar.gz` | Sonnet 5.5 | medium |
-| Ears 8 | **Next.** First synthesis: pick candidates across the cards so far, sketch them offline, render clips, write the next `docs/ears/batch-N.md` for verdicts | Opus 5.5 | high |
-| Ears 9, 10, 11 | Piles 4–6 | Sonnet 5.5 | medium |
-| Ears 12 | Second synthesis | Opus 5.5 | high |
-| Ears 13, 14, 15 | Piles 7–9 | Sonnet 5.5 | medium |
-| Ears 16 | Third synthesis | Opus 5.5 | high |
-| Ears 17, 18, 19 | Piles 10–12 (cards for the measured 32) | Sonnet 5.5 | medium |
-| Ears 20 | Last synthesis, and a pass across every card for theory and "For later" | Opus 5.5 | high |
+| Ears 8 | **Done 2026-10-18** (PR #234 to merge): the first synthesis. Ten candidates ranked from the 16 cards, six sketched (`tools/ears/sketches/ears8-sketch.patch`, on top of Ears 4's) and rendered as clips in `~/ears8/clips/`; Mikey approved all seven and the sampler (2026-10-18, `docs/ears/batch-5.md`, with his note on how they go in). New tools: `low_guard.py`, `kick_check.py` | Opus 5.5 | high |
+| Ears 9 | **Next ears session** (after the builder session below, or alongside it). Pile 3 (Aphex Twin 1996–2001: *Richard D. James Album*, *Girl/Boy*, *Come to Daddy*, *51/13*, *Windowlicker*, *2 Remixes by AFX*, and the rest of *Drukqs*). Needs Mikey's upload first (`docs/ears/uploads.md`); about 1.9 hours of machine time with Demucs, so one session. Prompt: `docs/ears/prompt-ears-9.md` | Sonnet 5.5 | medium |
+| Ears 10, 11, 12 | Piles 4–6 | Sonnet 5.5 | medium |
+| Ears 13 | Second synthesis (piles 3–6, plus Mikey's verdicts on batch 5) | Opus 5.5 | high |
+| Ears 14, 15, 16 | Piles 7–9 | Sonnet 5.5 | medium |
+| Ears 17 | Third synthesis | Opus 5.5 | high |
+| Ears 18 to 23 | Piles 10–12 (cards for the measured 32), two sessions each | Sonnet 5.5 | medium |
+| Ears 24 | Last synthesis, and a pass across every card for theory and "For later" | Opus 5.5 | high |
+
+**Next step: a builder session for the mixing logic (Mikey, 2026-10-18).**
+Batch 5's seven approved ideas need code in the generator and the synth, and
+ears sessions never write code into the app or the core, so the next step is
+a hands (builder) session, not an ears one. Its brief is the design note
+under batch 5's verdicts: today's behavior stays as one option in every
+choice; each approved idea becomes one option in a seeded per-loop choice;
+most loops get one or two changes; subDuck only with a kick and a sub;
+stagger and stutter only with a bass line; the floor drop's style can follow
+the bar length; a wandering loop can swap the kick (today's F1, short tuned,
+long boom) at section boundaries, with a crossfade or a wait for the old kick
+to ring out. The sketch (`tools/ears/sketches/ears8-sketch.patch`), its
+measurements and batch 5's For the brain section are the reference, not code
+to merge. It takes its label from the brain and hands counter (`docs/BRAIN.md`),
+not this table. Opus 5.5, high: it changes drift's random stream, the
+budget and the low end, all judgment calls. One question for the brain:
+`docs/BRAIN.md`'s plan to phase 2 puts new sounds after item 46 and in the
+core only, while this logic sits in today's JavaScript generator; the brain
+should say where it lands before the session starts. dropSpotlight, widePad
+and dottedPulse were not sketched and are still unreviewed; a later ears
+session sketches them.
+
+**Labels shifted (Ears 8, 2026-10-18).** The table had pile 3 nowhere: pile 2
+took two sessions (Ears 6 and 7) and the first synthesis came next, so pile 3
+is now Ears 9 and every later label moves up one. Piles 10 to 12 are written
+as two sessions each, as the cost check above already advised (7 hours a
+pile), which moves the last synthesis to Ears 24. Mikey can say if he wants
+them grouped differently.
 
 Pile 2 is too long for one session (7 to 8 hours of machine time, above).
 Ears 6 did the first half: *...I Care Because You Do*, *Ventolin*, *Donkey
@@ -297,7 +327,8 @@ choosing sounds.
 **Don't wait for the whole list.** The brain's plan has Session 24
 (brain, Opus) write the instrument batch. It can start with what's
 approved by then (roundBass, glass, floorDrop, arc, plus the verdicts
-from Ears 4 and Ears 8), and later synthesis sessions feed later batches.
+from Ears 4 and the seven approved in Ears 8's `batch-5.md`), and later synthesis sessions feed
+later batches.
 
 **Piles** (grouped by family so a synthesis session can merge
 near-duplicates). Piles 1–9 need uploading (Mikey's checklist: `docs/ears/uploads.md`);

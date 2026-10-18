@@ -17,6 +17,9 @@
 //                      a fixed reservation for a sketch would cost the rest)
 // PLAYWRIGHT_ROOT points at a folder holding the playwright package when it
 // isn't in `npm root -g`.
+// Ears 8: the index's "ears8" lists what each load's Ears 8 sketches drew
+// (tunedKick, subDuck, lateFloor, padSweep, echoTime) and every floor drop
+// with its pass, start time and shape; meta.e8pedal is the pedal bass's draw.
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -62,6 +65,8 @@ const STEM_TAPS = ['satIn'];
 window.renderOne = async (spec, seconds, rate, proto, space, opts = {}) => {
   globalThis.PROTO = proto || {};
   globalThis.SPACE = space || null;
+  // Ears 8: what each load's sketches drew, and where each floor drop fell.
+  globalThis.EARS8_LOG = [];
   const nStems = opts.stems ? STEM_LAYERS.length + STEM_SKETCHES.length + STEM_TAPS.length : 0;
   const ctx = new OfflineAudioContext(2 + nStems, Math.ceil(seconds * rate), rate);
   Math.random = mulberry32(spec.seed >>> 0 || 1);
@@ -153,6 +158,7 @@ window.renderOne = async (spec, seconds, rate, proto, space, opts = {}) => {
     b64, stemsB64, stemNames, sketch, lead: leadOf(spec), seed: spec.seed, bpm: spec.bpm ?? null,
     meta: r.meta || {}, bars: r.totalSteps ? r.totalSteps / 16 : null,
     asked, refused, who, askedWho, yields, ms, ...cs,
+    ears8: globalThis.EARS8_LOG.length ? globalThis.EARS8_LOG : null,
   };
 };
 window.ready = true;

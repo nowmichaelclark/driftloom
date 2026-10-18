@@ -21,6 +21,8 @@ audio.
 | `render2.mjs` | `render.mjs` with a job list (`node render2.mjs REPO OUTDIR JOBS.json`): per job a corpus index, length, tag, `proto` (prototype switches) and `space` (a space recipe for a sketch synth); writes 32-bit float WAVs and records refused notes and asks per voice, chord changes a minute and render time. Ears 4 added `stems` (a second WAV with each layer and each sketch on its own channel), `then`/`thenAt` (load another loop partway through, as Next does), `reserve` (price every note as if N more units were spent), sketch yields (a sketch that asks for room and holds none is counted apart from refused notes) and `PLAYWRIGHT_ROOT` |
 | `scan.mjs` | The corpus without rendering: per loop its profile, tempo, length, notes a second per layer, drums or not, voices, reverb space and chord changes, for picking busy and sparse loops (`node scan.mjs REPO > scan.json`) |
 | `sketch_check.py` | What a sketch adds and takes, against the same loop without it: added level, its loudest and median 2 s window against the loop, bands, refused notes per voice (any voice that loses a note is listed), each layer's own level from the stems, cost |
+| `low_guard.py` | **Ears 8:** the low-end guard and a sketch's level by ear, against the same loop without it: the 20-60 Hz and 60-120 Hz shares, the whole loop's loudness change, the part's own K-weighted loudness (render minus none) and its loudest 3 s, the 20-60 Hz level of the loudest 3 s, and the share of the part a phone can play (above 150 Hz): `python3 -I low_guard.py INDEX.json WAVDIR [OUT.json] [--from S]` |
+| `kick_check.py` | **Ears 8:** from one track's stems (split.py's, or a render's stems split into drums.wav and bass.wav): `kick` gives each kick's note (the strongest 30-130 Hz line 40-160 ms after the onset) and its fall in dB/s; `duck` gives the bass stem's level against time since the kick, averaged over every kick (a duck, or a bass playing between kicks); `swell` gives bass-note rise times. Written to check card numbers the tools flag (pitch under 60 Hz, pumping that reads 70% of the truth or locks on the wrong period) |
 | `warmth.py` | How warm a stab is, the same way on a record and a sketch: centroid, 2–4 kHz and 1–2 kHz against 250 Hz–1 kHz, attack rise time |
 | `seq_clips.py` | Clips from a list of segments (any files, any start and length), each matched to -18 LUFS, with timestamps |
 | `clips.py` | Before/after clips from a `render2.mjs` index (tags `<sound>-before`, `<sound>-after`): loudness-matched MP3s and what moved (bands, added level, refused notes) |
@@ -73,8 +75,23 @@ chords behind `globalThis.PROTO` (`dubStab`, `organ`, `wash`,
 where they differ, or a kind to force one draw, such as `dubStab: 'busy'`
 or `longChords: 'whole'`; `organDrive`, `washRel`, `stabLevel` override
 one value). The approved organ is `organVariant: 'chapelOrgan'`
-(round 7's mix; `organMix` reweights it).
+(round 7's mix; `organMix` reweights it). `ears8-sketch.patch` (Ears 8,
+applied on top of `ears4-sketch.patch`) holds the first synthesis's
+candidates behind `globalThis.PROTO`: `tunedKick`, `subDuck`, `lateFloor`,
+`padSweep`, `echoTime`, `pedalBass` and `floorDrop` (Ears 1's approved
+recipe as `'on'`, the new shapes as `'plus'` or by name); its header lists
+every switch. With it, `render2.mjs`'s index has an `ears8` list (what each
+load drew, and every floor drop's pass, time and shape) and `meta.e8pedal`.
 
 Render cost: two renders at once on a two-core workspace take about
 1–4 s per second of audio; the densest loops (cinder #16) about 4 s. Keep
 150 s renders to loops that need them.
+
+**Memory (Ears 8):** a 90 s render with `stems` holds about 175 MB of float
+audio, passed through the page as a base64 string, so each render process
+peaks near 1 GB. On Mikey's computer (7.6 GB) eight at once ran out of memory
+(the kernel killed a Chromium); three at a time with stems, or two alongside
+other work, is safe. Turn stems on only for the pairs whose per-layer levels
+you need. Playwright installs fine into a local folder (`npm install
+playwright@1.48.2` there, then `npx playwright install chromium`;
+`PLAYWRIGHT_ROOT=<folder>/node_modules`).
