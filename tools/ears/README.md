@@ -32,7 +32,7 @@ audio.
 | `stereo_clips.py` | Mono, room, wide and wide + drifting of one loop in one loudness-matched clip (any order of tags with lengths, and a start offset) |
 | `album.py` | **Ears 3:** runs the album-card pipeline end to end (stages `pick,split,events,techniques,theory,space,card`), cached in `WORKDIR/<album>/`, and writes `card.md`: `python3 -I album.py ALBUM_DIR WORKDIR [--stages a,b] [--only TRACK] [--workers 2]`. Run it in the background (`nohup`) and poll; the split stage is the slow one |
 | `pick.py` | Track picking from `analyze.py`'s mix numbers: the most typical track plus the 3 least like the rest (every track for an EP of 6 or fewer) |
-| `split.py` | Demucs htdemucs on CPU into drums, bass, other, vocals (`split.json` records the mode and time); falls back to harmonic/percussive plus band splits, with no vocals, if Demucs is missing |
+| `split.py` | Demucs htdemucs on CPU into drums, bass, other, vocals (`split.json` records the mode and time); if Demucs fails (its weights were blocked in the Ears 6 workspace) it tries the four MDX-Net `kuielab_a` models (ONNX, run through `audio-separator`, files in `$MDX_DIR` or `/tmp`; about 2.3 to 2.8 times the audio length), and only then the harmonic/percussive plus band split, with no vocals. `--mode auto\|demucs\|mdx\|hpss` forces one; `split.json` says which ran. MDX-Net is weaker: the drums stem swallows the sub, the bass stem is thin or empty where kick and bass share it, and the vocals stem on an instrumental is hat and pad bleed |
 | `events.py` | Note events per stem, grouped into instrument candidates: register, attack, decay, brightness, harmonicity, vibrato, detune, level against the mix, left-right position, timestamps of the clearest examples |
 | `techniques.py` | Sections, stem entries and exits, brightness sweeps, echo times, pumping locked to the kick, tape wobble and speed, stereo movement, floor drops (from stems) |
 | `theory.py` | Tempo and bar length, swing, cross-rhythm, key and mode, chords (changes, settled chords, on-beat share), bass behavior, top line, repetition and form |
@@ -42,7 +42,7 @@ audio.
 | `cardlib.py`, `calsig.py` | Shared helpers; the test-signal makers |
 | `calibrate.py`, `cal_*.py` | Calibration: test signals with known answers through every card tool; `python3 -I calibrate.py [--out FILE]` (about 80 s). Rows with tolerance `"limit"` are reported, not graded |
 
-Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). One album takes about 40 minutes of machine time on 2 CPU cores (28 to 43 over five albums), about 1.6 seconds per second of deep-pass audio plus 25 s per track in the album, mostly Demucs; see `docs/EARS.md`.
+Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). If the Demucs weights are blocked, install `audio-separator onnxruntime audioread` instead and download the four models `kuielab_a_{drums,bass,other,vocals}.onnx` from `https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/` into `/tmp` (or `$MDX_DIR`); `split.py` picks them up on its own. One album takes about 40 minutes of machine time on 2 CPU cores (28 to 43 over five albums), about 1.6 seconds per second of deep-pass audio plus 25 s per track in the album, mostly Demucs; see `docs/EARS.md`.
 
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median

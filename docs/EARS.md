@@ -254,7 +254,14 @@ audio plus 25 seconds per track in the album**. The parts: picking
 takes 11.6 minutes); Demucs 1.0 to 1.1 times the audio length (1.42 once,
 while other jobs shared the cores); the measuring stages about 3 minutes a
 track (134 to 226 s; across 19 runs events 6 to 184 s, theory 11 to 82 s,
-techniques 6 to 39 s, space 3 to 66 s) or 32 to 37 s per audio minute. A four-track album is
+techniques 6 to 39 s, space 3 to 66 s) or 32 to 37 s per audio minute. Ears 6
+(six pile 2 albums, 2,602 to 4,434 s each) had no Demucs: its weights were
+blocked, so `split.py` used MDX-Net, 2.3 to 2.8 times the audio length, and the
+formula came out 1.56 to 1.90 times low; with Demucs the formula is the
+figure to use, with MDX-Net multiply by about 1.7. MDX-Net stems are weaker:
+the drums stem holds 60 to 93% of the sub, the bass stem is empty or thin
+wherever kick and bass share it (run `check_stems.py` before trusting a bass
+number), and the vocals stem on an instrumental is bleed. A four-track album is
 run in the background and polled with sleeps (a shell command stops after
 10 minutes). Disk: about 1 GB for Demucs, ~160 MB of stems per track.
 

@@ -165,7 +165,7 @@ Machine time: 2,620 s (43.7 min) of compute for 13.8 minutes of deep-pass audio 
 - In synth terms: 66 Hz (55 to 74), attack 51 ms, falls 48 dB/s, brightness 77 Hz, level -2.7 dB, centered. The bass stem holds 44% of the track's power and 94% of it is under 120 Hz; the drums stem holds 24% and is 91% under 120 Hz.
 - Hear it at: 3:28.2 (C#2, 1.11 s, +10 dB alone), 4:30.9 (C#2, 1.94 s, +9 dB alone), 3:27.3 (D2, 0.85 s, +11 dB alone). Only +9 to +11 dB alone, so these are not clean.
 - Check: bass lines at 73.4 Hz (D2, exact), 61.7 (B1, exact), 65.5 (C2), 69.3 (C#2), 55.6 (A1, 19 cents sharp): the line moves among A, B, C, C#, D (1.03 notes a second, steps 37%, thirds 26%, fourths and fifths 22%).
-- Building blocks: **[JUDGMENT]** **Guess:** the same sub bass as S1 with a faster fall; "tuned bass line" and "tuned sub-kick" are already on the list.
+- Building blocks: **[JUDGMENT]** **Guess:** the same sub bass as S1 with a faster fall; a tuned bass line and a tuned sub-kick are already on the list.
 
 **S3. A mid tone the separator calls vocals, and wide ticks (praze-an-beeble): vocals-1, 233 notes, 30%; drums-1, 309 notes, 27%**
 - In synth terms: vocals-1 is a bell-like tone around 154 Hz (48 to 315), partials off whole multiples, attack 48 ms, falls 311 dB/s (a short pluck), brightness 666 Hz (267 to 1,384), level -0.0 dB, centered. The vocals stem holds 51% of the power: 61% of it in 120 to 500 Hz and 36% in 0.5 to 2 kHz. drums-1 is a high tick, fundamental 52 Hz (37 to 741: the group fuses a thump and ticks), attack 30 ms, falls 123 dB/s, brightness 2.8 kHz (1.2 to 3.9), level -0.9 dB, correlation 0.89, wide.
