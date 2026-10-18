@@ -63,11 +63,32 @@ def _one(args):
     return row
 
 
+def find_twins(rows):
+    """Pairs of tracks that are probably the same audio: length within 3 s, loudness within 0.3 LU,
+    centroid within 2% and the sub share within 0.02. Returns [(first, later)]."""
+    ok = [r for r in rows if "error" not in r and "skip" not in r and r.get("seconds")]
+    pairs = []
+    for i, a in enumerate(ok):
+        for b in ok[i + 1:]:
+            try:
+                if (abs(a["seconds"] - b["seconds"]) <= 3 and abs(a["lufs"] - b["lufs"]) <= 0.3
+                        and abs(a["centroid_hz"] - b["centroid_hz"]) <= 0.02 * max(a["centroid_hz"], 1)
+                        and abs(a["sub_lt120"] - b["sub_lt120"]) <= 0.02):
+                    pairs.append((a["track"], b["track"]))
+            except (KeyError, TypeError):
+                continue
+    return pairs
+
+
 def choose(rows, n_far=None):
     """rows: analyze rows. Returns the pick report (no audio needed)."""
-    ok = [r for r in rows if "error" not in r and "skip" not in r and r.get("seconds", 0) >= MIN_DEEP_S]
+    twins = find_twins(rows)
+    later = {b for _, b in twins}
+    ok = [r for r in rows if "error" not in r and "skip" not in r and r.get("seconds", 0) >= MIN_DEEP_S
+          and r["track"] not in later]
     report = {"usable": [r["track"] for r in ok],
-              "too_short_or_silent": [r["track"] for r in rows if r not in ok]}
+              "duplicates": [list(p) for p in twins],
+              "too_short_or_silent": [r["track"] for r in rows if r not in ok and r["track"] not in later]}
     if not ok:
         report["picks"] = []
         return report

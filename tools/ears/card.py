@@ -25,8 +25,13 @@ def slug(s):
     return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_")[:60]
 
 
+DUP_NAMES = set()   # short names that repeat on this album (Untitled, Untitled): keep the number
+STEM_SOURCE = {"label": "Demucs htdemucs", "mode": None}
+
+
 def short(track):
-    return re.sub(r"^\d+\s+", "", track)
+    s = re.sub(r"^\d+\s+", "", track)
+    return track if s in DUP_NAMES else s
 
 
 def f0(v, nd=1):
@@ -40,7 +45,7 @@ def pc(v):
 def load_track(work, track):
     d = os.path.join(work, slug(track))
     out = {"track": track, "dir": d}
-    for k in ("events", "techniques", "theory", "space"):
+    for k in ("events", "techniques", "theory", "space", "stem_check"):
         p = os.path.join(d, k + ".json")
         out[k] = load_json(p) if os.path.exists(p) else None
     return out
@@ -94,7 +99,7 @@ def sound_block(i, c):
         lines.append(f"- Group quality: weak (silhouette {c['silhouette']:.2f}, {c['groups_in_stem']} group{'s' if c['groups_in_stem'] != 1 else ''} in the stem). "
                      "The notes in this stem do not fall into clearly separate instruments; treat this as one blended texture and listen before trusting the split.")
     lines.append(f"- Building blocks it would need: {J} name the closest existing Driftloom block, or the one missing.")
-    lines.append(f"- Yardstick: the percentile ranges above, measured on the {c['stem']} stem (Demucs), not on the raw mix.")
+    lines.append(f"- Yardstick: the percentile ranges above, measured on the {c['stem']} stem ({STEM_SOURCE['label']}), not on the raw mix.")
     return "\n".join(lines)
 
 
@@ -289,12 +294,61 @@ def for_later(rep, picked):
     return L
 
 
+def set_stem_source(work, tracks):
+    """Name the separator the stems really came from (split.json), so the card never says Demucs by default."""
+    modes = set()
+    for t in tracks:
+        p = os.path.join(work, "stems", slug(t["track"]), "split.json")
+        if os.path.exists(p):
+            modes.add(load_json(p).get("mode"))
+    if not modes:
+        return
+    names = {"demucs-htdemucs": "Demucs htdemucs", "mdx-net-kuielab_a": "MDX-Net kuielab_a",
+             "hpss+bands": "the harmonic/percussive fallback"}
+    STEM_SOURCE["label"] = " and ".join(names.get(m, str(m)) for m in sorted(modes, key=str))
+    STEM_SOURCE["mode"] = modes
+    if "mdx-net-kuielab_a" in modes:
+        STEM_SOURCE["warn"] = (", weaker than Demucs: the drums stem takes in much of the sub and the bass stem is thin "
+                               "where kick and bass share it")
+    elif "hpss+bands" in modes:
+        STEM_SOURCE["warn"] = ": this is not a real separation, so per-stem numbers are about bands and transients, not instruments"
+
+
+def stem_check_lines(tracks):
+    """The void flags and the tempo-octave check, from stem_check.json, at the top of the card."""
+    import check_stems
+    L = ["### Stem check (read before trusting any number below)"]
+    any_row = False
+    for t in tracks:
+        sc = t.get("stem_check")
+        if not sc:
+            continue
+        any_row = True
+        sh = sc["shares"]
+        parts = ", ".join(f"{k} {100 * v:.0f}%" for k, v in sh.items())
+        L.append(f"- **{short(t['track'])}**: share of power {parts}.")
+        for f in sc["flags"]:
+            L.append(f"  - {f}.")
+        bpm = (t["theory"] or {}).get("meter", {}).get("bpm") if t.get("theory") else None
+        note = check_stems.tempo_note(bpm, sc.get("grid_bpm_beat"))
+        if note:
+            L.append(f"  - {note}.")
+    if not any_row:
+        L.append("- stem_check.json missing: run album.py with the check stage, or check_stems.py by hand.")
+    L.append("")
+    return L
+
+
 # --- the album card ------------------------------------------------------------------------------
 def write_album(work, out_path):
     rep = load_json(os.path.join(work, "pick.json"))
     album = rep["album"]
     tracks = [load_track(work, p) for p in rep["picks"]]
     tracks = [t for t in tracks if t["events"]]
+    names = [re.sub(r"^\d+\s+", "", t["track"]) for t in tracks]
+    DUP_NAMES.clear()
+    DUP_NAMES.update(n for n in names if names.count(n) > 1)
+    set_stem_source(work, tracks)
     # Ears 1's chord number for each picked track, from the mix-level rows
     e1 = {r["track"]: r.get("chord_changes_per_min") for r in rep["rows"]}
     md = []
@@ -303,8 +357,12 @@ def write_album(work, out_path):
     md.append(f"How it was made: {rep.get('rule', '')}. Deep pass on: " + "; ".join(short(t["track"]) for t in tracks) +
               f". Typical track: {short(rep['typical']) if rep.get('typical') else 'none (EP)'}. Least like the rest: "
               + (", ".join(short(x) for x in rep.get("unlike", [])) or "n/a") + ".")
-    md.append(f"Stems from Demucs htdemucs (drums, bass, other, vocals). Lines marked {J} need a person or a later session; every other line is a measurement or a threshold read off one.")
+    md.append(f"Stems from {STEM_SOURCE['label']} (drums, bass, other, vocals){STEM_SOURCE.get('warn', '')}. Lines marked {J} need a person or a later session; every other line is a measurement or a threshold read off one.")
     md.append("")
+    if rep.get("duplicates"):
+        md.append("Probable duplicate audio (same length, loudness and tone), left out of the deep pass: " +
+                  "; ".join(f"{short(b)} repeats {short(a)}" for a, b in rep["duplicates"]) + ". Check the upload.")
+    md += stem_check_lines(tracks)
     md.append("### The hook")
     md.append(f"- Numbers that repeat across the deep-pass tracks: " + hook_numbers(tracks) + ".")
     md.append(f"- {J} The one thing that makes a listener say \"that's them\", in one line, after listening at the timestamps under Sounds.")
