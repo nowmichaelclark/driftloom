@@ -3241,3 +3241,13 @@ Mikey decides this line:
   44.1 kHz 36 of 40 baseline loops change in detail, by at most 0.03 LU.
   Listen for: nothing; the control album should sound the same, a 44.1 kHz
   phone's hats, breaths and textures a hair different at most.
+- #238, the building-block interface (core phase 1, item 46, v100),
+  https://e76eec03-driftloom.nowmichaelclark.workers.dev: every voice, the
+  bodies and the oscillator, filter, noise source and compressor sit behind one
+  interface (`core/src/block.rs`) and one registry list
+  (`core/src/blocks/mod.rs`), and each block gets a test kit (level, tone,
+  cost, determinism, a null test against `core/golden/blocks.txt`). A new
+  block is one file plus one line; `core/README.md` shows how. It is a
+  refactor: the goldens and the baseline are bit for bit unchanged, and the
+  instruction counts are within 0.4% of before. Listen for: nothing; it
+  should sound exactly the same.
