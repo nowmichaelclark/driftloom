@@ -569,7 +569,11 @@ start.)
 
 ## Clips
 
-In `~/ears8/clips/` (not committed; 79 MB, 29 MP3s and `timestamps.json`).
+Were in `~/ears8/clips/` (never committed; 79 MB, 29 MP3s and `timestamps.json`;
+deleted after Mikey's verdicts, 2026-10-18). To hear them again, apply the two
+patches to a copy of `cf67c3f` and re-render from the job lists and clip plan in
+the raw archive (`work/make_jobs.py`, `work/clip_plan.py`); the timestamps are
+kept there as `work/clips-timestamps.json`.
 Every segment is matched to -18 LUFS, so a change in loudness is not what you
 hear; a balance change is. Loop names are the corpus numbers Ears 4 used.
 
@@ -628,5 +632,6 @@ ranks.
 header lists every switch), `tools/ears/low_guard.py` and `kick_check.py` (new),
 `tools/ears/render2.mjs` (logs the Ears 8 draws and drops), this report, and
 the measurements behind it in `docs/ears/raw/ears8-synthesis-raw.tar.gz` (no
-audio). The renders and stems stayed on Mikey's computer (`~/ears8/work/`),
-as audio always does.
+audio; since 2026-10-18 it also holds the session's helper scripts and render
+logs). The renders and stems never left Mikey's computer and were deleted after
+his verdicts; the patches and job lists rebuild them.
