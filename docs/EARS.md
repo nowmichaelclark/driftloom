@@ -138,7 +138,8 @@ kHz; round 1 1.9, round 4 0.5).
 The 16 album cards of piles 1 and 2 turned into ten ranked candidates, the top
 six (and a seventh, cheap one) sketched offline on today's `main`
 (`tools/ears/sketches/ears8-sketch.patch`, applied after Ears 4's) and
-rendered as clips for Mikey; verdicts go in `docs/ears/batch-5.md`. Ranked by
+rendered as clips for Mikey. **Mikey approved all seven, and the sampler
+of them together (2026-10-18; `docs/ears/batch-5.md`, Verdicts).** Ranked by
 how many records repeat the idea, each with a yardstick there:
 
 | Candidate | Records | What it adds | Measured on the sketch |
@@ -152,7 +153,18 @@ how many records repeat the idea, each with a yardstick there:
 | echoTime | 2, and leads | the echo's time drawn per loop | subtle (16 to 20 LU under the loop) |
 
 All six together pass every stereo guard in the approved baseline, as the
-baseline alone does. Waiting, not sketched: a low bell or lead alone in a
+baseline alone does.
+
+**How they go in (Mikey, 2026-10-18).** Today's behavior stays as one option
+in each choice, never replaced; each approved idea is one option in a seeded
+per-loop choice, and most loops get only one or two. subDuck needs a kick and
+a sub; stagger and stutter need a bass line; the floor drop's style can follow
+the bar length; a wandering loop can swap between today's F1 kick, the short
+tuned kick and the long boom at section boundaries, with a crossfade or a wait
+for the old kick to ring out. A builder (hands) session writes this logic
+next (`docs/ears/plan.md`); ears sessions don't.
+
+Still unreviewed (not sketched): a low bell or lead alone in a
 floor drop (5 records), a wide low pad (8; for the space session), a dotted
 pulse (3). Lessons for any sketch, in `docs/ears/sessions.md`: match a new
 part by ear and cap its energy by band; a change in one layer's event count

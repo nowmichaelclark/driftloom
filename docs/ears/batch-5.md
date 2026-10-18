@@ -12,20 +12,44 @@ every segment matched to -18 LUFS.
 
 ## Verdicts
 
-For Mikey to fill in: approved, tune (with a note), or dropped.
+Mikey, 2026-10-18: every sketched candidate approved, and the
+`00-everything` sampler too.
 
 | # | Candidate | What it is | Verdict |
 |---|---|---|---|
-| 1 | tunedKick | The kick lands on the key's note (G1 to D2), short as today or a long boom | |
-| 2 | lateFloor | After a load the kit and the bass wait 8 to 30 s, then arrive | |
-| 3 | floorDrop shapes | The approved floor drop gets three more shapes: stagger, stutter, long | |
-| 4 | pedalBass | The bass holds the key's note in a rhythm under moving chords, with one neighbor | |
-| 5 | subDuck | The bass alone dips at each kick, so kick and sub take turns | |
-| 6 | padSweep | A lowpass on the chord layer swings open and shut every 12 to 28 s | |
-| 7 | echoTime | The echo's time drawn per loop (today: always a dotted eighth) | |
-| 8 | dropSpotlight | A low bell or a held lead plays alone in a floor drop | (not sketched) |
-| 9 | widePad | A wide, noisy low pad over a mono sub | (not sketched; for the space session) |
-| 10 | dottedPulse | A percussion part every three eighths against the bar | (not sketched) |
+| 0 | 00-everything | The sampler: all of them as each loop would draw them | **Approved** |
+| 1 | tunedKick | The kick lands on the key's note (G1 to D2), short as today or a long boom | **Approved** |
+| 2 | lateFloor | After a load the kit and the bass wait 8 to 30 s, then arrive | **Approved** |
+| 3 | floorDrop shapes | The approved floor drop gets three more shapes: stagger, stutter, long | **Approved** |
+| 4 | pedalBass | The bass holds the key's note in a rhythm under moving chords, with one neighbor | **Approved** |
+| 5 | subDuck | The bass alone dips at each kick, so kick and sub take turns | **Approved** |
+| 6 | padSweep | A lowpass on the chord layer swings open and shut every 12 to 28 s | **Approved** |
+| 7 | echoTime | The echo's time drawn per loop (today: always a dotted eighth) | **Approved** |
+| 8 | dropSpotlight | A low bell or a held lead plays alone in a floor drop | Not sketched, still unreviewed |
+| 9 | widePad | A wide, noisy low pad over a mono sub | Not sketched, still unreviewed (for the space session) |
+| 10 | dottedPulse | A percussion part every three eighths against the bar | Not sketched, still unreviewed |
+
+**How they go in (Mikey, 2026-10-18).** Keep today's behavior as one
+option in each choice; never replace it. Each approved idea becomes one
+option in a per-loop choice, seeded so a loop replays the same way.
+
+- The floor drop's style can follow the bar length.
+- A wandering loop (Let the loop wander) can vary the kick at section
+  boundaries between today's F1 kick, the short tuned kick and the long
+  tuned boom.
+- subDuck applies only when the loop has both a kick and a sub.
+- The stagger and stutter drop shapes need a bass line.
+- Most loops get only one or two of the changes, not all of them.
+- A kick swap in the middle of a loop needs a crossfade, or a wait for the
+  old kick to ring out.
+
+dropSpotlight, widePad and dottedPulse were not sketched, so they are
+still unreviewed: a later ears session sketches them for Mikey's ears
+before anything is built from them.
+
+**Next:** a builder (hands) session writes this mixing logic. Ears
+sessions don't put code into the app or the core (`docs/ears/plan.md`,
+Piles and sessions).
 
 **Listen in this order** (folder `~/ears8/clips/`, each file without first,
 then with): `00-everything` (all six as each loop would draw them, for a
@@ -580,7 +604,7 @@ keeps 0.35) so each 90 s render has one. Echo times were not re-measured on the
 renders (the tool needs notes ringing alone). Pile 3 onward may change the
 ranks.
 
-## For the brain (if approved)
+## For the brain (approved 2026-10-18; see the note under Verdicts)
 
 - **tunedKick:** a kick building block with a target note, a fall rate, and an
   optional tail level; one kick voice per loop that each hit retriggers (choked),
