@@ -8,11 +8,12 @@ still the one who decides whether anything sounds good.
 
 The full reports are in `docs/ears/` (index: `docs/ears/README.md`):
 `batch-1.md` (20 albums), `batch-2.md` (12 more), `batch-3.md` and
-`batch-4.md` (the sketches and stereo, by round), `sessions.md` (how to run
-an ears session, and the rule that ears outputs live in the repo),
-`plan.md`, `cards-pile-1.md` and `cards-test.md` (album cards),
-`prototypes.md`, and the raw measurements in `data.csv`. The tools are in
-`tools/ears/`.
+`batch-4.md` (the sketches and stereo, by round), `batch-5.md` (the first
+synthesis of the album cards), `sessions.md` (how to run an ears session,
+and the rule that ears outputs live in the repo), `plan.md`,
+`cards-pile-1.md`, `cards-pile-2.md` and `cards-test.md` (album cards),
+`prototypes.md`, and the raw measurements in `data.csv` and `raw/`. The
+tools are in `tools/ears/`.
 
 ## Who does what
 
@@ -131,6 +132,33 @@ and speaks only the notes that change, in two flavors after real organs
 speech with a chiff and a celeste rank); the wash opens to about 2.5 kHz
 again and takes two soft resonances tuned to the loop's key (centroid 0.9
 kHz; round 1 1.9, round 4 0.5).
+
+### The first synthesis (Ears 8, 2026-10-18)
+
+The 16 album cards of piles 1 and 2 turned into ten ranked candidates, the top
+six (and a seventh, cheap one) sketched offline on today's `main`
+(`tools/ears/sketches/ears8-sketch.patch`, applied after Ears 4's) and
+rendered as clips for Mikey; verdicts go in `docs/ears/batch-5.md`. Ranked by
+how many records repeat the idea, each with a yardstick there:
+
+| Candidate | Records | What it adds | Measured on the sketch |
+|---|---|---|---|
+| tunedKick | 14 of 16 | the kick on the key's note (G1 to D2; today it lands on F1 in every key), short or a long boom | on its note 89 to 94% of hits; loudness matched by ear; no refusals; the boom's sub within +3 dB of today's kick |
+| lateFloor | 10 | the kit and bass enter 8 to 30 s after a load | the intro 0.6 to 1.0 LU quieter; refusals equal or fewer |
+| floorDrop shapes | 11 | stagger, stutter and long, beside the approved single drop | refusals no more than the approved drop's |
+| pedalBass | 10 | the bass holds the tonic in a rhythm under moving chords, with one neighbor | no refusals added; drift's other variations unchanged |
+| subDuck | 7 | the bass alone dips 5 to 9 dB at each kick | 4.6 to 5.4 dB down 25 ms after, back by 150 ms |
+| padSweep | 6 | a lowpass on the chords swinging 2 to 3.5 octaves every 12 to 28 s | no refusals, loudness unchanged |
+| echoTime | 2, and leads | the echo's time drawn per loop | subtle (16 to 20 LU under the loop) |
+
+All six together pass every stereo guard in the approved baseline, as the
+baseline alone does. Waiting, not sketched: a low bell or lead alone in a
+floor drop (5 records), a wide low pad (8; for the space session), a dotted
+pulse (3). Lessons for any sketch, in `docs/ears/sessions.md`: match a new
+part by ear and cap its energy by band; a change in one layer's event count
+shifts drift's stream for every layer after it; a long sound must not hold
+the voice budget longer than the part it replaces. New tools:
+`low_guard.py`, `kick_check.py`.
 
 ## Stereo, measured (Ears 2, 2026-10-15)
 

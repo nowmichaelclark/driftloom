@@ -1,0 +1,534 @@
+Ears 8 sketch (2026-10-18): a local, offline sketch for rendering clips; never app code.
+Against main at cf67c3f (js/ unchanged since a23153d), applied ON TOP of ears4-sketch.patch:
+  git apply tools/ears/sketches/ears4-sketch.patch && git apply tools/ears/sketches/ears8-sketch.patch
+The first synthesis's candidates (docs/ears/batch-5.md), behind globalThis.PROTO, each drawing from a
+stream of its own so the loop is otherwise unchanged (with PROTO empty the render matches main):
+  tunedKick  'on' | 'short' | 'long'   the kick and soft kick land on the key's note, G1-D2 (D# to F#
+             take their fifth), with today's sweep and level by ear (K-weighted energy matched at load).
+             short: today's shape falling at 180-260 dB/s. long: today's punch, then a tail 7-17 dB down
+             ringing at 45-80 dB/s, as loud as fits within +1 dB by ear and +3 dB of today's kick's energy
+             under 60 Hz and at 60-120 Hz; choked by the next kick, held in the budget 0.36 s a hit
+  subDuck    'on' (half the kick-and-bass loops) | 'force'   the bass channel alone dips 5-9 dB at each
+             kick and is back in 0.15-0.25 s
+  lateFloor  'on' (3 in 10) | 'force' | 'together' | 'kitFirst' | 'bassFirst'   after a load the kit and
+             the bass wait 8-30 s (lateSecs pins it), on a two-bar line, then enter together or 2 bars apart;
+             only where chords, melody or texture play from the first second
+  padSweep   'on' (3 in 10 sustained-chord loops) | 'force'   a lowpass on the chord layer swings 2-3.5
+             octaves up from 450-800 Hz and back, once every 12-28 s, starting closed
+  echoTime   'on' | a fraction of the beat   the echo's time per loop: 3/4 (45%), 1 (25%), 1/2, 2/3 (15% each)
+  pedalBass  'on' (about 3 in 10 held, pulse, dub and walking basses) | 'force' | 'held' | 'half' |
+             'quarter' | 'offbeat'   the bass holds the key's tonic in a rhythm under the chords and now
+             and then steps to one neighbor (+2, -2, +1 where the mode has it, or the fifth) and back, in
+             the octave nearest the loop's own bass and no longer than its usual note; drift replays the
+             original bass's draws, so no other layer's variation moves
+  floorDrop  'on' (Ears 1's approved recipe, ported) | 'plus' | 'single' | 'stagger' | 'stutter' | 'long'
+             'plus' draws a shape per drop: single 40, stagger 25 (the bass back 1-2 bars after the kick),
+             stutter 20 (3-4 short drops, one every 2 or 4 bars), long 15 (10-20 s, or the whole pass in a
+             loop of 8 bars or fewer); floorDropRate overrides the 0.35 a pass
+The engine logs each load's draws and each drop to globalThis.EARS8_LOG (render2.mjs puts it in its index).
+
+diff --git a/js/engine.js b/js/engine.js
+index a14db41..7fd4756 100644
+--- a/js/engine.js
++++ b/js/engine.js
+@@ -248,6 +248,9 @@ export class Engine {
+     this.pumpAmount = character.pump ?? 0;
+     this.synth.setEchoTime((60 / spec.bpm) * 0.75);
+     if (globalThis.PROTO && Object.keys(globalThis.PROTO).length) this._earsLoad(spec);
++    // Ears 8 sketches (local and offline, never app code).
++    this._e8 = globalThis.PROTO && Object.keys(globalThis.PROTO).length ? this._e8Load(spec) : null;
++    this.synth._e8 = this._e8 ? this._e8.synth : null;
+     for (const [layer, muted] of Object.entries(spec.mutes || {})) {
+       this.synth.setMute(layer, muted);
+     }
+@@ -679,6 +682,8 @@ export class Engine {
+       // Fresh variation at the top of each pass. The base pattern is never
+       // touched, so the piece always returns to the version you saved.
+       this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
++      // Ears 8 sketch: where the floor drops fell, for the ears tools.
++      if (this.live.e8Drop && globalThis.EARS8_LOG) globalThis.EARS8_LOG.push({ pass: this.loopCount, at: +this.nextStepTime.toFixed(2), ...this.live.e8Drop });
+       if (this.onLoop) this.onLoop(this.loopCount);
+       // A track with a set length hands over once it has run its passes.
+       const limit = this.spec && this.spec.playFor;
+@@ -955,6 +960,139 @@ export class Engine {
+     }
+   }
+ 
++  // ---------------------------------------------- ears sketches (Ears 8)
++  // Local and offline, never app code: the first synthesis's candidates,
++  // switched on by globalThis.PROTO. Each draws from a stream of its own
++  // (the loop's seed and a salt), so the loop itself is unchanged; 'on'
++  // draws whether and how, a named kind forces one draw for a clip.
++  //   tunedKick  the kick (and the soft kick) lands on the key's note, G1-D2,
++  //              short as today or a long boom, its energy held near today's
++  //   subDuck    the bass alone dips 5-9 dB at each kick, back in 0.15-0.25 s
++  //   lateFloor  after a load, the kit and the bass wait 8-30 s, then enter
++  //              together or one 2 bars after the other
++  //   padSweep   a lowpass on the chord layer swings 2-3.5 octaves, 12-28 s
++  //   echoTime   the echo's time drawn per loop: 3/4 beat (today), 1, 1/2, 2/3
++  // (pedalBass and floorDrop are in the generator.)
++  _e8Load(spec) {
++    const P = globalThis.PROTO || {};
++    const base = this.base;
++    const spb = base.stepsPerBar || 16;
++    const barSec = spb * this.stepDur;
++    const has = (l, f = () => true) => (base.tracks[l] || []).some((e) => e.vel && f(e)) && !(spec.mutes || {})[l];
++    const kick = has('drums', (e) => e.inst === 'kick' || e.inst === 'softkick');
++    const E = { synth: {}, info: {} };
++    const pick = (v, kinds, r) => (typeof v === 'string' && v !== 'on' && kinds.some(([k]) => k === v) ? v : r.weighted(kinds));
++    if (P.tunedKick && kick) {
++      const r = new Rng(((spec.seed ^ 0x7c1d) >>> 0) || 1);
++      // The key's note between G1 (49 Hz) and D2 (73 Hz), where the records'
++      // kicks sit; D# to F# take their fifth (A# to C#) instead.
++      const pc = ((spec.root % 12) + 12) % 12;
++      const use = pc >= 3 && pc <= 6 ? (pc + 7) % 12 : pc;
++      const midi = 24 + use + (use < 7 ? 12 : 0); // 31 (G1) .. 38 (D2)
++      const kind = pick(P.tunedKick, [['short', 50], ['long', 50]], r);
++      const dbps = kind === 'short' ? r.range(180, 260) : r.range(45, 80);
++      const hz = 440 * Math.pow(2, (midi - 69) / 12);
++      // A short kick is today's kick on the new note (its sweep and level,
++      // matched by ear). A long boom is today's kick that stops falling at a
++      // tail level and rings on at the drawn rate, so it keeps today's punch.
++      // The tail's level is the highest that keeps the kick, by ear (K-
++      // weighting's 38 Hz high-pass), no louder than today's, and its own
++      // energy under 60 Hz and at 60-120 Hz within 3 dB of today's kick.
++      const H2 = (f) => Math.pow(f, 4) / (Math.pow(f * f - 38 * 38, 2) + Math.pow(f * 38 / 0.5, 2));
++      const SUB = (f) => (f < 60 ? 1 : 0);
++      const LOW = (f) => (f >= 60 && f < 120 ? 1 : 0);
++      // f0 and sweep: today's start and sweep time; att: the attack; punch:
++      // today's fall in dB/s; tail: the tail's level (1 = none, as today).
++      const energy = (f0, f1, sweep, att, punch, tail, rate, w) => {
++        const t1 = att + -20 * Math.log10(tail) / punch;
++        const end = t1 + (80 + 20 * Math.log10(tail)) / rate;
++        let e = 0;
++        for (let t = 0; t < end; t += 0.0005) {
++          const f = t < sweep ? f0 * Math.pow(f1 / f0, t / sweep) : f1;
++          const a = t < att ? t / att : t < t1 ? Math.pow(10, -punch * (t - att) / 20) : tail * Math.pow(10, -rate * (t - t1) / 20);
++          e += a * a * w(f);
++        }
++        return e;
++      };
++      const fit = (f0, today, sweep, att) => {
++        const ref = (w) => energy(f0, today, sweep, att, 213, 1, 213, w);
++        const ok = (lift, tail, rate, loud) => [[H2, loud], [SUB, 2], [LOW, 2]]
++          .every(([w, room]) => lift * lift * energy(f0, hz, sweep, att, 213, tail, rate, w) <= room * ref(w) * 1.0001);
++        // The punch (or the whole short kick) at today's loudness.
++        let lo = 0, hi = 1.5;
++        for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (ok(m, 1, kind === 'short' ? dbps : 213, 1)) lo = m; else hi = m; }
++        const lift = lo;
++        if (kind === 'short') return { lift, tail: 1 };
++        // The tail: as loud as fits, adding at most 1 dB by ear.
++        let tlo = 0.001, thi = 1;
++        for (let i = 0; i < 24; i++) { const m = Math.sqrt(tlo * thi); if (ok(lift, m, dbps, 1.26)) tlo = m; else thi = m; }
++        return { lift, tail: tlo };
++      };
++      const hard = fit(128, 44, 0.09, 0.004);
++      const soft = fit(96, 46, 0.14, 0.009);
++      E.synth.kick = { hz, dbps, kind, ...hard, softLift: soft.lift, softTail: soft.tail };
++      E.info.tunedKick = { kind, note: midi, hz: +hz.toFixed(1), dbps: Math.round(dbps), lift: +hard.lift.toFixed(2), tailDb: +(20 * Math.log10(hard.tail)).toFixed(1) };
++    }
++    if (P.subDuck && kick && has('bass')) {
++      const r = new Rng(((spec.seed ^ 0x5dc4) >>> 0) || 1);
++      if (P.subDuck !== 'on' || r.chance(0.5)) {
++        E.duck = true;
++        E.synth.duck = { db: r.range(5, 9), rec: Math.min(r.range(0.15, 0.25), 0.8 * 60 / spec.bpm) };
++        E.info.subDuck = { db: +E.synth.duck.db.toFixed(1), rec: +E.synth.duck.rec.toFixed(3) };
++      }
++    }
++    // Only where something else plays from the first second: a loop of
++    // drums and bass alone would start silent.
++    if (P.lateFloor && (has('drums') || has('bass')) && (has('chords') || has('melody') || has('texture'))) {
++      const r = new Rng(((spec.seed ^ 0x1a7e) >>> 0) || 1);
++      if (P.lateFloor !== 'on' || r.chance(0.3)) {
++        // 8-30 s (the records: 13-35 s, about 22 typical), on a two-bar line.
++        const secs = typeof P.lateSecs === 'number' ? P.lateSecs : r.range(8, 30);
++        const bars = Math.max(2, Math.round(secs / barSec / 2) * 2);
++        const order = pick(P.lateFloor, [['together', 40], ['kitFirst', 35], ['bassFirst', 25]], r);
++        const lag = 2;
++        E.late = {
++          drums: (order === 'bassFirst' ? bars + lag : bars) * spb,
++          bass: (order === 'kitFirst' ? bars + lag : bars) * spb,
++        };
++        E.info.lateFloor = { order, bars, secs: +(bars * barSec).toFixed(1) };
++      }
++    }
++    if (P.padSweep && has('chords')) {
++      const r = new Rng(((spec.seed ^ 0x5e3e) >>> 0) || 1);
++      const SUSTAINED = ['pad', 'softpad', 'moogpad', 'analogpad', 'accordion', 'organ', 'choir', 'vowel', 'hum'];
++      const sustained = (base.tracks.chords || []).some((e) => e.vel && SUSTAINED.includes(e.voice));
++      if (P.padSweep !== 'on' || (sustained && r.chance(0.3))) {
++        const lo = r.range(450, 800);
++        const oct = r.range(2, 3.5);
++        const period = r.range(12, 28);
++        this.synth.e8Sweep({ lo, oct, period, q: r.range(0.7, 1.2) }, this.ctx.currentTime + 0.05);
++        E.info.padSweep = { lo: Math.round(lo), oct: +oct.toFixed(2), period: +period.toFixed(1) };
++      }
++    }
++    if (!E.info.padSweep) this.synth.e8Sweep(null, this.ctx.currentTime);
++    if (P.echoTime) {
++      const r = new Rng(((spec.seed ^ 0xec40) >>> 0) || 1);
++      const frac = typeof P.echoTime === 'number' ? P.echoTime : r.weighted([[0.75, 45], [1, 25], [0.5, 15], [2 / 3, 15]]);
++      this.synth.setEchoTime((60 / spec.bpm) * frac);
++      E.info.echoTime = +frac.toFixed(3);
++    }
++    // Read by the ears tools: what each load drew, and the first pass's drop.
++    if (globalThis.EARS8_LOG) {
++      globalThis.EARS8_LOG.push({ load: +this.ctx.currentTime.toFixed(2), seed: spec.seed, ...E.info });
++      if (this.live && this.live.e8Drop) globalThis.EARS8_LOG.push({ pass: this.loopCount, at: 'load', ...this.live.e8Drop });
++    }
++    return E;
++  }
++
++  // Whether a layer sits out at this step (lateFloor).
++  _e8Out(layer, abs) {
++    // Counted from the load (a load starts at step 0; a reroll keeps its
++    // place, so it never sits out again).
++    const E = this._e8;
++    return !!E.late && abs < E.late[layer];
++  }
++
+   // True when every layer is scheduled out for the bar containing this step,
+   // either by the loop's entry schedule or by a drift rest.
+   _isSilentBar(absStep) {
+@@ -1030,17 +1168,21 @@ export class Engine {
+         // skip the humanising jitter that would smear them.
+         const micro = e.micro ? e.micro * sd : 0;
+         const key = keyOf('drums');
++        if (this._e8 && this._e8Out('drums', abs)) continue;
+         const jitter = e.roll ? 0 : (draw(key, 'drums', HOST_JITTER) - 0.5) * 0.008;
+         const at = t + micro + jitter;
+         this._play(at, () => this.synth.drum(e.inst, at, e.vel), key);
+         if (pump && (e.inst === 'kick' || e.inst === 'softkick')) this._play(at, () => this.synth.duck(t + micro, pump * e.vel));
++        if (this._e8 && this._e8.duck && (e.inst === 'kick' || e.inst === 'softkick')) this._play(at, () => this.synth.e8Duck(at, e.vel));
+       }
+     }
+     if (!mutes.bass) {
+       const s = at('bass');
+       for (const e of p.tracks.bass) {
+         if (e.step !== s || !e.vel) continue;
+-        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug), keyOf('bass'));
++        const key = keyOf('bass');
++        if (this._e8 && this._e8Out('bass', abs)) continue;
++        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug), key);
+       }
+     }
+     // An ensemble does not attack together. The composer's detune keeps
+diff --git a/js/generator.js b/js/generator.js
+index b1b6a64..003b75c 100644
+--- a/js/generator.js
++++ b/js/generator.js
+@@ -1091,6 +1091,31 @@ function genBass(spec, harmony) {
+     : r.weighted(c.bassStyles);
+   if (c.drone && new Rng(((spec.layerSeeds.bass ^ DRONE_SALT) >>> 0) || 1).chance(c.drone)) style = 'drone';
+   if (chugs(spec)) style = 'chug';
++  // EARS SKETCH (Ears 8; local and offline, never app code): pedalBass. The
++  // bass holds the key's tonic under whatever the chords do (as the drone
++  // does) but plays it in a rhythm, and now and then steps to one neighbor
++  // and back: a whole tone up, the tone below, the flat second in a mode
++  // that has one, or the fifth. The records' basses sit on one note 60-98%
++  // of the time while the chords move. A stream of its own, so no other
++  // draw moves; 'on' takes over about a third of the held, pulse, dub and
++  // walking basses, 'force' every one, and a rhythm name forces that rhythm.
++  const PB = (globalThis.PROTO || {}).pedalBass;
++  let pedal = null;
++  if (PB && ['held', 'pulse', 'dub', 'walk'].includes(style)) {
++    const pr = new Rng(((spec.layerSeeds.bass ^ 0x9eda1) >>> 0) || 1);
++    const RHYTHMS = [['held', 25], ['half', 30], ['quarter', 25], ['offbeat', 20]];
++    if (PB !== 'on' || pr.chance(0.35)) {
++      const rhythm = RHYTHMS.some(([k]) => k === PB) ? PB : pr.weighted(RHYTHMS);
++      const has = (st) => scale.includes(((st % 12) + 12) % 12);
++      const nbs = [];
++      if (has(2)) nbs.push([2, 3]);
++      if (has(10)) nbs.push([-2, 2]);
++      if (has(1)) nbs.push([1, 3]);
++      if (has(7)) nbs.push([7, 2]);
++      pedal = { rhythm, nb: nbs.length ? pr.weighted(nbs) : 0, share: pr.range(0.1, 0.25), pr, was: style };
++      style = 'pedal';
++    }
++  }
+   const voice = r.weighted(c.bassVoices || [['sub', 1]]);
+   const glideChance = c.glide || 0;
+   const octaveShift = r.chance(0.25) ? -12 : 0;
+@@ -1103,6 +1128,51 @@ function genBass(spec, harmony) {
+     events.push({ step: step % total, dur, midi: m, vel, glide, voice });
+   };
+ 
++  if (pedal) {
++    const { rhythm, nb, share, pr } = pedal;
++    // How many notes the bass would have had: drift draws once per bass note,
++    // and replays that many so nothing it draws after the bass moves.
++    // It also keeps the loop's own bass where it was: the octave nearest
++    // the original's middle note, and notes no longer than its usual one,
++    // so the low end and the voice budget stay as the loop had them.
++    const orig = (() => {
++      const keep = globalThis.PROTO;
++      globalThis.PROTO = { ...keep, pedalBass: undefined };
++      try { return genBass(spec, harmony).events; } finally { globalThis.PROTO = keep; }
++    })();
++    const n0 = orig.length;
++    const mid = (arr) => { const a = arr.slice().sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };
++    const origMidi = mid(orig.filter((e) => e.vel).map((e) => e.midi));
++    const origDur = mid(orig.filter((e) => e.vel).map((e) => e.dur));
++    const GRID = {
++      '4/4': { held: [[0, 15]], half: [[0, 7], [8, 7]], quarter: [[0, 3], [4, 3], [8, 3], [12, 3]], offbeat: [[2, 2], [6, 2], [10, 2], [14, 2]] },
++      '6/8': { held: [[0, 11]], half: [[0, 5], [6, 5]], quarter: [[0, 2], [3, 2], [6, 2], [9, 2]], offbeat: [[3, 2], [9, 2]] },
++      '3/4': { held: [[0, 11]], half: [[0, 7], [8, 3]], quarter: [[0, 3], [4, 3], [8, 3]], offbeat: [[2, 2], [6, 2], [10, 2]] },
++    };
++    const grid = (GRID[metre] || GRID['4/4'])[rhythm].map(([st, d]) => [Math.round(st * spb / (metre === '4/4' ? 16 : 12)), d]);
++    // The tonic where place() will put it, moved up an octave when the
++    // neighbor below would fall off the bottom and fold up a seventh.
++    let t = scalePitch(spec.root, scale, 0, 0) - 24 + octaveShift;
++    while (t > 52) t -= 12;
++    while (t < 28) t += 12;
++    if (origMidi != null) {
++      while (t - 12 >= 28 && Math.abs(t - 12 - origMidi) < Math.abs(t - origMidi)) t -= 12;
++      while (t + 12 <= 52 && Math.abs(t + 12 - origMidi) < Math.abs(t - origMidi)) t += 12;
++    }
++    if (t + Math.min(0, nb) < 28 && t + 12 <= 52) t += 12;
++    let prevNb = false;
++    for (let bar = 0; bar < spec.bars; bar++) {
++      grid.forEach(([st, d], i) => {
++        const first = i === 0 && rhythm !== 'offbeat';
++        const step = !first && !prevNb && nb && pr.chance(share);
++        prevNb = step;
++        const m = (step && t + nb >= 28 && t + nb <= 52 ? t + nb : t) - octaveShift;
++        place(bar * spb + st, origDur ? Math.min(d, Math.max(1, origDur)) : d, m, first ? 0.66 : rhythm === 'offbeat' ? 0.58 : 0.48 + pr.f() * 0.1);
++      });
++    }
++    return { events, style, voice, pedal: { rhythm, nb, share: +share.toFixed(2), was: pedal.was, n0 } };
++  }
++
+   if (style === 'drone') {
+     // Re-struck each bar so a voice that decays keeps sounding. The fifths
+     // voice already sounds the fifth, so it takes the tonic alone.
+@@ -2713,7 +2783,7 @@ export function render(spec) {
+     },
+     harmony,
+     tracks,
+-    meta: { bassVoice: bass.voice, bassStyle: bass.style, kit: drums.kit, melodyVoice: melody.voice, melodyCell: melody.cell, textureKind: texture.kind,
++    meta: { e8pedal: bass.pedal || null, bassVoice: bass.voice, bassStyle: bass.style, kit: drums.kit, melodyVoice: melody.voice, melodyCell: melody.cell, textureKind: texture.kind,
+       // Only present when there is one, so a loop that is not a choir
+       // carries a meta object identical to the one it carried before this
+       // existed.
+@@ -3001,7 +3071,11 @@ export function drift(pattern, rng, amount) {
+     if (rng.chance(0.07 * a)) e.vel = 0;
+   }
+   // Bass finds a passing tone.
+-  for (const e of p.tracks.bass) {
++  // EARS SKETCH (Ears 8): a pedal bass replays the draws its loop's own bass
++  // would have made here, and finds its passing tones at the very end.
++  const pedalN = pattern.meta && pattern.meta.e8pedal ? pattern.meta.e8pedal.n0 : null;
++  if (pedalN != null) for (let k = 0; k < pedalN; k++) if (rng.chance(0.07 * a)) rng.pick([-2, 3, 5, 7, 12]);
++  for (const e of pedalN != null ? [] : p.tracks.bass) {
+     if (rng.chance(0.07 * a)) {
+       let m = e.midi + rng.pick([-2, 3, 5, 7, 12]);
+       while (m > 52) m -= 12;
+@@ -3016,7 +3090,18 @@ export function drift(pattern, rng, amount) {
+   }
+   // And now and then the whole thing stops. Unpredictable, over a loop you
+   // already know, which is the part a fixed rest can never give you.
+-  if (rng.chance(0.1 * a)) {
++  // EARS SKETCH (Ears 8): floorDrop. 'on' is Ears 1's approved recipe (the
++  // stop becomes kick and bass out for a bar or two, everything else
++  // playing on, at 0.35 a pass). 'plus' adds the records' other shapes,
++  // drawn per drop at the end of this function (its last draws, so nothing
++  // above moves): single (as approved), stagger (the bass back a bar or two
++  // after the kick), stutter (3-4 short drops, one every 2 or 4 bars) and
++  // long (10-20 s, or the whole pass in a loop of 8 bars or fewer). A shape
++  // name forces it; floorDropRate overrides the 0.35 for a clip.
++  const FD = (globalThis.PROTO || {}).floorDrop;
++  const FDrate = (globalThis.PROTO || {}).floorDropRate ?? 0.35;
++  let dropAt = null;
++  if (rng.chance((FD ? FDrate : 0.1) * a)) {
+     const spb = pattern.stepsPerBar || 16;
+     const bars = Math.max(1, Math.floor(p.totalSteps / spb));
+     if (bars >= 4) {
+@@ -3026,13 +3111,17 @@ export function drift(pattern, rng, amount) {
+       const start = Math.min(latest, Math.max(2, rng.int(1, latest) & ~1));
+       const from = start * spb;
+       const to = (start + span) * spb;
+-      for (const layer of Object.keys(p.tracks)) {
+-        for (const e of p.tracks[layer]) {
+-          if (e.step >= from && e.step < to) e.vel = 0;
++      if (FD) {
++        dropAt = { start, span, bars, spb };
++      } else {
++        for (const layer of Object.keys(p.tracks)) {
++          for (const e of p.tracks[layer]) {
++            if (e.step >= from && e.step < to) e.vel = 0;
++          }
+         }
++        p.driftSilentBars = [];
++        for (let k = 0; k < span; k++) p.driftSilentBars.push(start + k);
+       }
+-      p.driftSilentBars = [];
+-      for (let k = 0; k < span; k++) p.driftSilentBars.push(start + k);
+     }
+   }
+ 
+@@ -3044,5 +3133,53 @@ export function drift(pattern, rng, amount) {
+       if (e.step >= half && e.step < half + p.totalSteps / 2) e.vel = 0;
+     }
+   }
++
++  if (pedalN != null) {
++    for (const e of p.tracks.bass) {
++      if (rng.chance(0.07 * a)) {
++        let m = e.midi + rng.pick([-2, 3, 5, 7, 12]);
++        while (m > 52) m -= 12;
++        while (m < 28) m += 12;
++        e.midi = m;
++      }
++    }
++  }
++
++  if (dropAt) {
++    const { start, span, bars, spb } = dropAt;
++    const KICKS = ['kick', 'softkick', 'frame'];
++    const out = (b0, b1, which = ['drums', 'bass']) => {
++      const lo = Math.max(0, b0) * spb, hi = Math.min(bars, b1) * spb;
++      for (const layer of which) {
++        for (const e of p.tracks[layer]) {
++          if (layer === 'drums' && !KICKS.includes(e.inst)) continue;
++          if (e.step >= lo && e.step < hi) e.vel = 0;
++        }
++      }
++    };
++    const SHAPES = [['single', 40], ['stagger', 25], ['stutter', 20], ['long', 15]];
++    let kind = FD === 'on' || FD === true ? 'single' : SHAPES.some(([k]) => k === FD) ? FD : rng.weighted(SHAPES);
++    const barSec = spb * 60 / spec.bpm / 4;
++    let at = start, len = span;
++    if (kind === 'stagger') {
++      out(start, start + span);
++      out(start + span, start + span + (barSec < 2.5 ? 2 : 1), ['bass']);
++    } else if (kind === 'stutter') {
++      const k = barSec < 2.2 ? 2 : 1;
++      const n = rng.chance(0.5) ? 3 : 4;
++      const fit = Math.min(n, Math.floor((bars + k) / (2 * k)));
++      if (fit < 2) kind = 'single';
++      at = Math.max(0, Math.min(start, bars - (2 * k * (fit - 1) + k)));
++      len = k;
++      if (kind === 'stutter') for (let i = 0; i < fit; i++) out(at + 2 * k * i, at + 2 * k * i + k);
++    } else if (kind === 'long') {
++      len = Math.max(4, Math.min(8, Math.round(12 / barSec)));
++      at = bars <= 8 ? 0 : start;
++      len = bars <= 8 ? bars : Math.min(len, bars - at);
++      out(at, at + len);
++    }
++    if (kind === 'single') { at = start; len = span; out(start, start + span); }
++    p.e8Drop = { kind, bar: at, len, barSec: +barSec.toFixed(2) };
++  }
+   return p;
+ }
+diff --git a/js/synth.js b/js/synth.js
+index 4f3dfa0..7f801b8 100644
+--- a/js/synth.js
++++ b/js/synth.js
+@@ -1358,6 +1358,59 @@ export class Synth {
+     g.linearRampToValueAtTime(1, time + recover);
+   }
+ 
++  // Ears 8 sketch (subDuck): the bass channel alone dips at the kick and
++  // comes back over 0.15-0.25 s, so the kick and the sub take turns. On the
++  // channel's own gain, so the bass stem shows it.
++  e8Duck(time, vel = 1) {
++    const D = this._e8 && this._e8.duck;
++    if (!D) return;
++    const ch = this.channels.bass;
++    const g = ch.gain.gain;
++    const base = ch.base.gain;
++    const low = base * Math.pow(10, -D.db * Math.min(1, vel / 0.8) / 20);
++    g.cancelScheduledValues(time);
++    g.setValueAtTime(base, time);
++    g.linearRampToValueAtTime(low, time + 0.008);
++    g.linearRampToValueAtTime(base, time + D.rec);
++  }
++
++  // Ears 8 sketch (padSweep): a lowpass on the chord layer whose cutoff
++  // swings up and back, from lo to lo * 2^oct, once every period seconds,
++  // starting closed. The channel's level moves to a new node in front of
++  // the filter, so mutes and the stems still act on the chord layer.
++  e8Sweep(cfg, t0) {
++    const ctx = this.ctx;
++    const ch = this.channels.chords;
++    // A later loop that draws no sweep leaves the filter open and still.
++    if (ch.e8) {
++      const { lp, depth, lfo } = ch.e8;
++      if (!cfg) { depth.gain.setValueAtTime(0, t0); lp.frequency.setValueAtTime(20000, t0); return; }
++      lp.Q.setValueAtTime(cfg.q, t0);
++      lp.frequency.setValueAtTime(cfg.lo * Math.pow(2, cfg.oct / 2), t0);
++      depth.gain.setValueAtTime((cfg.oct / 2) * 1200, t0);
++      lfo.frequency.setValueAtTime(1 / cfg.period, t0);
++      return;
++    }
++    if (!cfg) return;
++    const { lo, oct, period, q } = cfg;
++    const pre = ctx.createGain();
++    pre.gain.value = ch.gain.gain.value;
++    const lp = ctx.createBiquadFilter();
++    lp.type = 'lowpass';
++    lp.Q.value = q;
++    lp.frequency.value = lo * Math.pow(2, oct / 2);
++    const lfo = ctx.createOscillator();
++    lfo.setPeriodicWave(ctx.createPeriodicWave(new Float32Array([0, -1]), new Float32Array([0, 0])));
++    lfo.frequency.value = 1 / period;
++    const depth = ctx.createGain();
++    depth.gain.value = (oct / 2) * 1200;
++    lfo.connect(depth).connect(lp.detune);
++    lfo.start(t0);
++    pre.connect(lp).connect(ch.gain);
++    ch.gain.gain.value = 1;
++    this.channels.chords = { ...ch, gain: pre, e8: { lp, lfo, depth, post: ch.gain } };
++  }
++
+   setEchoTime(seconds, instant = false) {
+     this._mixState().echo = seconds;
+     const core = this._coreMix();
+@@ -1594,6 +1647,47 @@ export class Synth {
+     const v = Math.max(0, Math.min(1, vel));
+     if (this.engine === 'rust' && this._coreDrum(inst, time, v, cost)) return;
+ 
++    // Ears 8 sketch (tunedKick): today's kick and soft kick, the same sweep,
++    // landing on the key's note instead of 44 or 46 Hz and falling at the
++    // loop's drawn rate, at today's loudness (the engine works out the lift).
++    const K = (inst === 'kick' || inst === 'softkick') && this._e8 && this._e8.kick;
++    if (K) {
++      const soft = inst === 'softkick';
++      const osc = ctx.createOscillator();
++      osc.type = 'sine';
++      const g = ctx.createGain();
++      const lift = soft ? K.softLift : K.lift;
++      const tail = soft ? K.softTail : K.tail;
++      const att = soft ? 0.009 : 0.004;
++      const peak = v * (soft ? SOFTKICK_LEVEL : 1.1) * lift;
++      // Today's fall (213 dB/s) down to the tail's level, then the tail's own.
++      const t1 = att + -20 * Math.log10(tail) / 213;
++      const len = t1 + Math.max(0.05, 20 * Math.log10(peak * tail / 0.0001) / K.dbps);
++      osc.frequency.setValueAtTime(soft ? 96 : 128, time);
++      osc.frequency.exponentialRampToValueAtTime(K.hz, time + (soft ? 0.14 : 0.09));
++      g.gain.setValueAtTime(soft ? 0 : 0.0001, time);
++      if (soft) g.gain.linearRampToValueAtTime(peak, time + att);
++      else g.gain.exponentialRampToValueAtTime(peak, time + att);
++      if (tail < 1) g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak * tail), time + t1);
++      g.gain.exponentialRampToValueAtTime(0.0001, time + len);
++      osc.connect(g).connect(out);
++      osc.start(time);
++      osc.stop(time + len + 0.02);
++      // One kick at a time, as on a drum machine: a boom still ringing is
++      // choked by the next kick, so the kick stays one voice, held in the
++      // budget 0.36 s a hit as the soft kick is (today's kick holds 0.45 s);
++      // held longer, a boom on grove #62 cost two pad notes in a loop
++      // already at its budget.
++      const last = this._e8kickLast;
++      if (last && last.end > time && last.time < time) {
++        last.g.gain.cancelAndHoldAtTime(time);
++        last.g.gain.setTargetAtTime(0.0001, time, 0.005);
++      }
++      this._e8kickLast = { g, time, end: time + len };
++      this._release(time, 0.36, cost);
++      return;
++    }
++
+     if (inst === 'kick') {
+       const osc = ctx.createOscillator();
+       osc.type = 'sine';

@@ -16,6 +16,9 @@ hands are in `docs/EARS.md`.
 | `batch-4.md` | The tune round (Ears 4): every sketch approved, the chapel organ, stereo's baseline. |
 | `cards-test.md` | The two test cards (*Geogaddi*, *Galaxy Garden*) the card tools produced in Ears 3. |
 | `cards-pile-1.md` | Pile 1 album cards (Ears 5): Aphex Twin 1992-94 and Polygon Window. |
+| `cards-pile-2.md` | Pile 2 album cards (Ears 6 and 7): the Aphex EPs and aliases. |
+| `batch-5.md` | The first synthesis (Ears 8): ten candidates ranked from the 16 cards, six sketched and rendered, verdicts for Mikey to fill in. |
+| `prompt-ears-*.md` | The opening message for a coming ears session, to paste. |
 | `prototypes.md` | The first sketches (Ears 1; the app branch they lived on went wrong, so ideas only). |
 | `space-sketch.md` | The stereo recipes as a diff (Ears 2; a reference, never app code). |
 | `tools.md` | Ears 1's scripts as written then. The current versions are in `tools/ears/`. |
