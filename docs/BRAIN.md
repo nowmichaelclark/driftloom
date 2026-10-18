@@ -584,8 +584,9 @@ Stated decisions, not inferences. Dated where the date matters.
     new piles until the batch is built and heard in the app. The
     approved backlog is large, and sketches can sound different in the
     app than as clips (the first ears session's lesson); hearing it in
-    the app first makes later syntheses sharper and saves tokens. Mikey
-    decides.
+    the app first makes later syntheses sharper and saves tokens.
+    **Agreed by Mikey, 2026-10-18:** Ears 10 on wait until Session 26's
+    album has been heard.
   - **Session 27** (hands): the first item of phase 2.
   - **New profiles wait until phase 2 lands**, then go in as data
     (before phase 3 and Luanti). Phase order in the charter unchanged.
