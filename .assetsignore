@@ -16,3 +16,8 @@ design
 .github
 .gitignore
 node_modules
+
+# Git history is not part of the site. Workers Builds clones the repo into the
+# assets folder, and the pack file passed the 25 MiB asset limit (the preview
+# build failed on it); keep .git out of the upload.
+.git
