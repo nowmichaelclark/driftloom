@@ -2437,6 +2437,22 @@ sounds are queued after the core becomes the default, built in the core
 one at a time with the refusal and level checks (`docs/BRAIN.md`, State).
 Inspiration comes only from wholesome, comforting music.
 
+## Known issues
+
+- **"Let the loop wander" repeats itself since item 44** (Mikey,
+  2026-10-18). Since #211 each pass's wandering is drawn from the loop's
+  code and the pass number, so replaying a saved loop wanders exactly as
+  it did last time, at every slider setting. Mikey: the wander slider
+  (0 to 2.4) says how far a loop wanders, and **all the way to the right
+  it should feel experimental: not repeatable.** Not urgent. Brain's
+  sketch for when it is queued (the generator's port, phase 2, is the
+  natural place): the core's draws stay a pure function of what the host
+  sends (promise 3 holds); the host adds a per-play salt to the wander's
+  seed at the top of the slider (or across its upper range, Mikey's
+  call), so the same code with the slider lower still wanders the same
+  way, and a share code or export says which it was. Decide with Mikey
+  where repeatable ends.
+
 ## Merge policy
 
 Mikey decides this line:

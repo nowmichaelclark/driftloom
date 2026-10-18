@@ -548,7 +548,9 @@ Stated decisions, not inferences. Dated where the date matters.
     2 starts (data in `js/vibes.js`).
   - **Session 22** (brain, Opus, 2026-10-18): **done.** Items 42-45
     verified, 47's PR read; the control album "Phase 1 check" heard by
-    Mikey the same day: no difference. See the log.
+    Mikey the same day: no difference. See the log; one known issue for phase 2
+    (wander at the slider's top should not repeat; `docs/QUEUE.md`,
+    "Known issues").
   - **Session 23** (hands, Opus, high): item 46, the building-block
     interface.
   - **Session 24** (brain, Opus): phase 1 review; then write **the
@@ -717,9 +719,10 @@ belongs before or with 46's refactor. 45's other rates were hashed on
 three goldens only (13-dust, 16-grove, 18-shatter), which is enough
 for now. **For Mikey, small:** since 44, "Let the loop wander" is
 drawn from the loop's code, so a saved loop wanders the same way every
-time it is played (still different pass to pass). Brain's view: keep
-it (same code, same music); a listener who wants new wanderings rolls
-a new loop.
+time it is played. **Mikey pushed back (2026-10-18):** at the top of the
+wander slider a loop should wander in an experimental, non-repeatable
+way. Not a fix now; filed under "Known issues" in `docs/QUEUE.md`, for
+phase 2's generator port.
 **The control album, "Phase 1 check"** (`docs/ALBUMS.md`): blind A/B,
 v92 (PR #204's preview) against v99 (PR #236's, which is main), nine
 corpus loops covering every kind of moved draw, one pass each, and a
