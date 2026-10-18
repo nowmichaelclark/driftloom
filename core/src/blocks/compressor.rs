@@ -39,10 +39,10 @@
 //! so they are plain numbers here (`set`); Chromium reads each one's value
 //! once a block, as this does.
 
+use crate::block::{Block, Context, Probe, Signal};
 use crate::math;
 use crate::QUANTUM;
 
-type Block = [f32; QUANTUM];
 
 /// The lookahead's ring (`kMaxPreDelayFrames`).
 const RING: usize = 1024;
@@ -94,10 +94,15 @@ const E_BASE: f32 = -0.042_416_883_008_123_074_f32 * ZONE1 + 0.111_569_382_798_7
 /// ratio, attack and release in seconds.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Settings {
+    /// Where compression starts, in dB.
     pub threshold: f32,
+    /// How wide the soft knee is, in dB.
     pub knee: f32,
+    /// How many dB in for one dB out, above the threshold.
     pub ratio: f32,
+    /// How fast it clamps down, in seconds.
     pub attack: f32,
+    /// How fast it lets go, in seconds.
     pub release: f32,
 }
 
@@ -137,6 +142,7 @@ fn flush(x: f32) -> f32 {
     if x.abs() < f32::MIN_POSITIVE { 0.0 } else { x }
 }
 
+/// A `DynamicsCompressorNode` on `C` channels, as Chromium renders one.
 pub struct Compressor<const C: usize> {
     rate: f32,
     settings: Settings,
@@ -173,6 +179,7 @@ pub struct Compressor<const C: usize> {
 impl<const C: usize> Compressor<C> {
     /// All zeros, so a host's static core costs nothing in the `.wasm`;
     /// `init` builds it.
+    #[must_use]
     pub const fn new() -> Self {
         Compressor {
             rate: 0.0,
@@ -291,7 +298,7 @@ impl<const C: usize> Compressor<C> {
 
     /// One block (`Process`): `input`, one block a channel, compressed
     /// into `out`.
-    pub fn process(&mut self, input: &[Block; C], out: &mut [Block; C]) {
+    pub fn process(&mut self, input: &[Signal; C], out: &mut [Signal; C]) {
         let Settings {
             threshold,
             knee,
@@ -429,7 +436,7 @@ impl<const C: usize> Compressor<C> {
         let frames = ((seconds * self.rate) as usize).min(RING - 1);
         if self.last_pre_delay_frames != frames {
             self.last_pre_delay_frames = frames;
-            for ring in self.ring.iter_mut() {
+            for ring in &mut self.ring {
                 ring.fill(0.0);
             }
             self.read = 0;
@@ -501,6 +508,41 @@ impl<const C: usize> Compressor<C> {
             self.k = k;
         }
         self.k
+    }
+}
+
+/// A gentle compressor, low enough to work on the kit's probe signal (the
+/// master's own bus settings would barely touch it).
+const BUS: Settings = Settings { threshold: -18.0, knee: 6.0, ratio: 3.0, attack: 0.01, release: 0.25 };
+/// Set hard, as a limiter.
+const HARD: Settings = Settings { threshold: -24.0, knee: 0.0, ratio: 20.0, attack: 0.002, release: 0.1 };
+
+/// A mono compressor, as a block: set once, then a signal through it.
+/// The master chain drives its own compressors through their own calls
+/// (`init`, `process`, `reduction`); this is the same compressor, alone.
+impl Block for Compressor<1> {
+    type Settings = Settings;
+
+    const PROBES: &'static [Probe<Settings>] = &[
+        Probe { name: "bus", settings: BUS },
+        Probe { name: "hard", settings: HARD },
+    ];
+
+    const INPUT: bool = true;
+
+    fn start(&mut self, settings: &Settings, cx: &Context) {
+        self.init(cx.rate, *settings);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (0, u64::MAX)
+    }
+
+    fn render(&mut self, _: u64, _: &Context, signal: &mut Signal) {
+        let input = [*signal];
+        let mut out = [[0.0; QUANTUM]];
+        self.process(&input, &mut out);
+        *signal = out[0];
     }
 }
 
@@ -665,7 +707,7 @@ mod tests {
         one.init(RATE, COMP);
         two.init(RATE, COMP);
         for b in 0..200usize {
-            let x: Block = core::array::from_fn(|i| ((b * QUANTUM + i) as f32 * 0.05).sin() * 0.9);
+            let x: Signal = core::array::from_fn(|i| ((b * QUANTUM + i) as f32 * 0.05).sin() * 0.9);
             let mut a = [[0.0; QUANTUM]];
             let mut s = [[0.0; QUANTUM]; 2];
             one.process(&[x], &mut a);

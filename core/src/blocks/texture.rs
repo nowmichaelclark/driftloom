@@ -1,32 +1,43 @@
 //! The textures that are not `fm()` calls (queue item 27): `swell`, `drop`,
 //! `wind` and `waves`, each its JavaScript twin in `Synth.texture`, call
 //! for call. (`bell` and `chime` are `fm()` calls, and the FM voice plays
-//! them.) The budget is asked in JavaScript, note by note, and so are the
-//! draws: the drop's three, the wind's one and the waves' two arrive with
-//! the note.
+//! them.) The budget is asked in JavaScript, note by note; the draws (the
+//! drop's three, the wind's one and the waves' two) are the voice's own
+//! (`Voice::settle`).
+//!
+//! The note's `parts` say which texture (`SWELL` and the rest); its extra
+//! values are those draws, and for the wind its band in Hz (the host's, NaN
+//! for the usual one).
+
+// Web Audio's parameters are 32-bit floats, set from the host's 64-bit
+// numbers: a voice narrows every value it hands one.
+#![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::breath::noise_grain;
-use crate::filter::{Biquad, Kind};
-use crate::noise::NoiseSource;
-use crate::osc::{Pitch, TableOsc, frame_at};
+use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
-use crate::voice::{Block, UNITY, midi_to_freq};
-use crate::wave::Waves;
+use crate::rng::salt;
+
+use super::filter::{Biquad, Kind};
+use super::noise_source::NoiseSource;
+use super::osc::{Pitch, TableOsc, frame_at};
+use super::shared::{CUTOFF_DEFAULT, FILTER_TAIL, UNITY, midi_to_freq, noise_grain};
 
 /// What a texture note's `parts` say.
 pub const SWELL: u32 = 0;
+/// A drop: a grain of noise through a ringing bandpass.
 pub const DROP: u32 = 1;
+/// The wind: looped noise through a band that sways.
 pub const WIND: u32 = 2;
+/// The waves: noise under a lowpass, swelling and falling away.
 pub const WAVES: u32 = 3;
 
 /// Whether a texture plays the noise.
+#[must_use]
 pub fn uses_noise(kind: u32) -> bool {
     kind != SWELL
 }
 
-/// A BiquadFilterNode's frequency before anything sets it.
-const CUTOFF_DEFAULT: f32 = 350.0;
 /// Where the wind's band sits unless the loop names one.
 const WIND_BAND: f32 = 620.0;
 /// How far the wind's slow sine moves its band, in Hz.
@@ -40,9 +51,8 @@ const WAVES_Q: f32 = -3.0;
 /// The drop's bandpass Q, and the wind's.
 const DROP_Q: f32 = 9.0;
 const WIND_Q: f32 = 1.1;
-/// How long a filtered voice is kept past its source, for the filter to ring.
-const FILTER_TAIL: f64 = 0.2;
 
+/// A texture note: one of the four textures, by its `parts`.
 pub struct Texture {
     kind: u32,
     /// The swell's sine, or the wind's slow one.
@@ -60,6 +70,9 @@ pub struct Texture {
 }
 
 impl Texture {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    #[must_use]
     pub const fn new() -> Self {
         Texture {
             kind: SWELL,
@@ -80,7 +93,7 @@ impl Texture {
     /// wind's slow sine's rate (and the loop's band in Hz, NaN if it names
     /// none); the waves' rate and offset.
     #[allow(clippy::too_many_arguments)]
-    pub fn play(
+    pub(crate) fn play(
         &mut self,
         kind: u32,
         midi: f64,
@@ -108,7 +121,7 @@ impl Texture {
                 self.end = self.osc.stop_frame();
             }
             DROP => {
-                noise_grain(&mut self.src, time, 0.12, draws[0], draws[1], noise, rate);
+                noise_grain(&mut self.src, time, 0.12, (draws[0], draws[1]), noise, rate);
                 let c = &mut self.cutoff;
                 c.reset(CUTOFF_DEFAULT);
                 c.set_value_at_time((2400.0 + draws[2] * 3000.0) as f32, time);
@@ -167,15 +180,38 @@ impl Texture {
         }
     }
 
-    pub fn start_frame(&self) -> u64 {
+
+    fn start_frame(&self) -> u64 {
         self.start
     }
 
-    pub fn end_frame(&self) -> u64 {
+    fn end_frame(&self) -> u64 {
         self.end
     }
+}
 
-    pub fn render(&mut self, block: u64, rate: f64, waves: &Waves, noise: &[f32], out: &mut Block) {
+impl Block for Texture {
+    type Settings = Note;
+
+    const PROBES: &'static [Probe<Note>] = &[
+        Probe { name: "swell", settings: Note::probe(crate::TEXTURE, crate::TEXTURE_CHANNEL, 79.0, SWELL, NO_EXTRA) },
+        Probe { name: "drop", settings: Note::probe(crate::TEXTURE, crate::TEXTURE_CHANNEL, 79.0, DROP, NO_EXTRA) },
+        Probe { name: "wind", settings: Note::probe(crate::TEXTURE, crate::TEXTURE_CHANNEL, 79.0, WIND, NO_EXTRA) },
+        Probe { name: "waves", settings: Note::probe(crate::TEXTURE, crate::TEXTURE_CHANNEL, 79.0, WAVES, NO_EXTRA) },
+    ];
+
+    fn start(&mut self, note: &Note, cx: &Context) {
+        let [a, b, c, ..] = note.extra;
+        let (noise, rate) = (cx.noise.len(), cx.rate);
+        self.play(note.parts, note.midi, note.time, note.dur, note.vel, [a, b, c], noise, rate);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.start_frame(), self.end_frame())
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
+        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
         let r = rate as f32;
         let mut gain = [0.0f32; QUANTUM];
         self.gain.fill(block, rate, &mut gain);
@@ -199,7 +235,7 @@ impl Texture {
             }
             DROP => {
                 let mut x = [0.0f32; QUANTUM];
-                self.src.render(block, noise, &mut x);
+                self.src.fill(block, noise, &mut x);
                 let mut cutoff = [0.0f32; QUANTUM];
                 self.cutoff.fill(block, rate, &mut cutoff);
                 for (((y, v), c), g) in out
@@ -215,7 +251,7 @@ impl Texture {
             }
             WIND => {
                 let mut x = [0.0f32; QUANTUM];
-                self.src.render(block, noise, &mut x);
+                self.src.fill(block, noise, &mut x);
                 // The band's own value and the slow sine through its gain,
                 // summed at every frame as an AudioParam sums its input.
                 let steady = Pitch::Steady {
@@ -238,7 +274,7 @@ impl Texture {
             }
             _ => {
                 let mut x = [0.0f32; QUANTUM];
-                self.src.render(block, noise, &mut x);
+                self.src.fill(block, noise, &mut x);
                 let mut cutoff = [0.0f32; QUANTUM];
                 self.cutoff.fill(block, rate, &mut cutoff);
                 for (((y, v), c), g) in out
@@ -256,6 +292,32 @@ impl Texture {
                 self.second.flush();
             }
         }
+    }
+}
+
+impl Voice for Texture {
+    /// The drop's rate, offset and band; the wind's slow sine's rate (its
+    /// band is the host's); the waves' rate and offset.
+    fn settle(note: &mut Note) {
+        let d = note.draws;
+        let x = &mut note.extra;
+        match note.parts {
+            DROP => {
+                x[0] = d.unit(salt::GRAIN, 0);
+                x[1] = d.unit(salt::GRAIN, 1);
+                x[2] = d.unit(salt::GRAIN, 2);
+            }
+            WIND => x[0] = d.unit(salt::TEXTURE_RATE, 0),
+            WAVES => {
+                x[0] = d.unit(salt::GRAIN, 0);
+                x[1] = d.unit(salt::GRAIN, 1);
+            }
+            _ => {}
+        }
+    }
+
+    fn uses_noise(note: &Note) -> bool {
+        uses_noise(note.parts)
     }
 }
 

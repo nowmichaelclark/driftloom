@@ -40,7 +40,8 @@
 
 use crate::math;
 use crate::QUANTUM;
-use crate::wave::Wave;
+use crate::block::{Block, Context, Probe, Signal};
+use crate::wave::{Wave, Waves};
 
 /// `TimeToSampleFrame`'s first step: the time in frames, to 1/1024 of one.
 pub fn frames(time: f64, rate: f64) -> f64 {
@@ -62,12 +63,27 @@ pub fn frame_at(time: f64, rate: f64) -> u64 {
 /// the frequency and the detune in cents at every frame. Either part of a
 /// moving pitch may itself be steady.
 pub enum Pitch<'a> {
-    Steady { freq: f32, detune: f32 },
-    Moving { freq: Part<'a>, detune: Part<'a> },
+    /// One frequency in Hz and one detune in cents for the whole block.
+    Steady {
+        /// The frequency, in Hz.
+        freq: f32,
+        /// The detune, in cents.
+        detune: f32,
+    },
+    /// A frequency and a detune that may change at every frame.
+    Moving {
+        /// The frequency, in Hz.
+        freq: Part<'a>,
+        /// The detune, in cents.
+        detune: Part<'a>,
+    },
 }
 
+/// One part of a moving pitch: steady for the block, or a value a frame.
 pub enum Part<'a> {
+    /// The same value at every frame.
     Steady(f32),
+    /// A value for each frame of the block.
     Moving(&'a [f32; QUANTUM]),
 }
 
@@ -81,6 +97,9 @@ pub struct TableOsc {
 }
 
 impl TableOsc {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    #[must_use]
     pub const fn new() -> Self {
         TableOsc {
             index: 0.0,
@@ -90,6 +109,8 @@ impl TableOsc {
         }
     }
 
+    /// Start at `start` seconds and stop at `stop`, at `rate` Hz, from the
+    /// top of the table (`OscillatorNode.start`, `.stop`).
     pub fn schedule(&mut self, start: f64, stop: f64, rate: f64) {
         self.start = frame_at(start, rate);
         self.stop = frame_at(stop, rate);
@@ -102,6 +123,8 @@ impl TableOsc {
         self.index
     }
 
+    /// The first frame it plays.
+    #[must_use]
     pub fn start_frame(&self) -> u64 {
         self.start
     }
@@ -116,6 +139,8 @@ impl TableOsc {
         }
     }
 
+    /// The frame it stops on: it plays nothing from here on.
+    #[must_use]
     pub fn stop_frame(&self) -> u64 {
         self.stop
     }
@@ -255,6 +280,104 @@ impl TableOsc {
         let f = within(freq, rate / 2.0);
         let step = (QUANTUM as f32 * (f * wave.rate_scale())) as f64;
         self.index = wrap_to(self.index + blocks as f64 * step, wave.size() as f64);
+    }
+}
+
+/// The tables an `Oscillator` block can play: Web Audio's built-in shapes.
+#[derive(Clone, Copy)]
+pub enum Shape {
+    /// `'sine'`.
+    Sine,
+    /// `'triangle'`.
+    Triangle,
+    /// `'sawtooth'`.
+    Saw,
+    /// `'square'`.
+    Square,
+}
+
+impl Shape {
+    fn table(self, waves: &Waves) -> &Wave {
+        match self {
+            Shape::Sine => &waves.sine,
+            Shape::Triangle => &waves.triangle,
+            Shape::Saw => &waves.saw,
+            Shape::Square => &waves.square,
+        }
+    }
+}
+
+/// An oscillator's settings when it plays as a block: a steady pitch from
+/// `start` to `stop` seconds.
+#[derive(Clone, Copy)]
+pub struct Settings {
+    /// The table.
+    pub shape: Shape,
+    /// The frequency, in Hz.
+    pub freq: f32,
+    /// The detune, in cents.
+    pub detune: f32,
+    /// When it starts, in seconds.
+    pub start: f64,
+    /// When it stops, in seconds.
+    pub stop: f64,
+}
+
+/// The oscillator as a block: `TableOsc` at a steady pitch, added into the
+/// signal. The voices drive their `TableOsc`s directly instead, with
+/// pitches that move frame by frame and tables of their own.
+pub struct Oscillator {
+    osc: TableOsc,
+    shape: Shape,
+    freq: f32,
+    detune: f32,
+}
+
+impl Oscillator {
+    /// A silent oscillator, all zeros.
+    #[must_use]
+    pub const fn new() -> Self {
+        Oscillator { osc: TableOsc::new(), shape: Shape::Sine, freq: 0.0, detune: 0.0 }
+    }
+}
+
+impl Default for Oscillator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Block for Oscillator {
+    type Settings = Settings;
+
+    const PROBES: &'static [Probe<Settings>] = &[
+        Probe { name: "sine", settings: Settings { shape: Shape::Sine, freq: 440.0, detune: 0.0, start: 0.05, stop: 0.55 } },
+        Probe { name: "triangle", settings: Settings { shape: Shape::Triangle, freq: 330.0, detune: 0.0, start: 0.0123, stop: 0.5 } },
+        Probe { name: "saw", settings: Settings { shape: Shape::Saw, freq: 220.0, detune: -7.0, start: 0.05, stop: 0.55 } },
+        Probe { name: "square", settings: Settings { shape: Shape::Square, freq: 196.0, detune: 3.0, start: 0.05, stop: 0.55 } },
+    ];
+
+    fn start(&mut self, s: &Settings, cx: &Context) {
+        self.shape = s.shape;
+        self.freq = s.freq;
+        self.detune = s.detune;
+        self.osc.schedule(s.start, s.stop, cx.rate);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.osc.start_frame(), self.osc.stop_frame())
+    }
+
+    // The table is read at a 32-bit rate, as Web Audio's is.
+    #[allow(clippy::cast_possible_truncation)]
+    fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal) {
+        let pitch = Pitch::Steady { freq: self.freq, detune: self.detune };
+        let mut wave = [0.0; QUANTUM];
+        let table = self.shape.table(cx.waves);
+        let (lo, hi) = self.osc.render(block, table, &pitch, cx.rate as f32, &mut wave);
+        for (y, w) in signal.iter_mut().zip(wave.iter()).take(hi).skip(lo) {
+            *y += *w;
+        }
     }
 }
 

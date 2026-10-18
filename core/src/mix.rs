@@ -35,12 +35,12 @@
 //! Chromium does not fix the order it adds them in, so sums here can differ
 //! in the last bit.
 
+use crate::block::Signal;
 use crate::delay::{Delay, buffer_len};
-use crate::filter::{Biquad, Kind};
+use crate::blocks::filter::{Biquad, Kind};
 use crate::timeline::Timeline;
 use crate::{BASS_CHANNEL, CHANNELS, CHORDS, DRUMS_CHANNEL, MELODY, QUANTUM, TEXTURE_CHANNEL};
 
-type Block = [f32; QUANTUM];
 
 /// The highest sample rate the mix holds its delays for (`crate::MAX_RATE`).
 /// A host at a higher rate gets no mix (`Mix::ready`).
@@ -136,15 +136,15 @@ pub struct Mix {
     comb_lps: [Biquad; 6],
     /// Each comb's delay output from the block before: what its lowpass
     /// filters this block.
-    comb_last: [Block; 6],
+    comb_last: [Signal; 6],
     pre_delay: Delay,
     echo: Delay,
     echo_lp: Biquad,
     /// The echo's lowpass output from the block before: what its feedback
     /// takes this block.
-    echo_last: Block,
+    echo_last: Signal,
     memory: [f32; MEMORY],
-    bus: Block,
+    bus: Signal,
 }
 
 impl Mix {
@@ -228,7 +228,7 @@ impl Mix {
     }
 
     /// The last block's bus.
-    pub fn bus(&self) -> &Block {
+    pub fn bus(&self) -> &Signal {
         &self.bus
     }
 
@@ -261,7 +261,7 @@ impl Mix {
 
     /// One block: the channels, as the voices and the host left them, in;
     /// the bus out.
-    pub fn process(&mut self, block: u64, channels: &[Block; CHANNELS]) -> &Block {
+    pub fn process(&mut self, block: u64, channels: &[Signal; CHANNELS]) -> &Signal {
         if !self.ready {
             self.bus.fill(0.0);
             return &self.bus;

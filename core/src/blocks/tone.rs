@@ -1,17 +1,22 @@
-//! The wave-table voices: pads, leads and the square beep. Each is a port of
-//! its JavaScript twin in `js/synth.js`, call for call, like the voices in
-//! `voice`, and each is the same shape -- a few oscillators on one wave,
-//! through a lowpass, under an envelope -- so two structs cover seven
-//! voices. `Tone` has a steady pitch (the pads, analoglead, the saw pluck
-//! and the square beep); `Lead` has a pitch that moves (the moog, and the
-//! whistle with its slide) and a vibrato that ramps in.
+//! The wave-table voices with a steady pitch: the soft pad, the analog
+//! pad, the analog lead, the saw pluck and the square beep, each a port of
+//! its JavaScript twin in `js/synth.js`, call for call, and each the same
+//! shape -- a few oscillators on one wave, through a lowpass, under an
+//! envelope -- so one type plays five voice numbers. They read no extra
+//! values and draw nothing.
+
+// Web Audio's parameters are 32-bit floats, set from the host's 64-bit
+// numbers: a voice narrows every value it hands one.
+#![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::filter::{Biquad, Kind};
-use crate::osc::{Part, Pitch, TableOsc, frame_at};
+use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
-use crate::voice::{A440, Block, UNITY, midi_to_freq, pitch_of, release, starts_in};
 use crate::wave::{Wave, Waves};
+
+use super::filter::{Biquad, Kind};
+use super::osc::{Part, Pitch, TableOsc, frame_at};
+use super::shared::{CUTOFF_DEFAULT, FILTER_TAIL, Q_DEFAULT, UNITY, midi_to_freq, release};
 
 /// Which table a `Tone` plays.
 #[derive(Clone, Copy, PartialEq)]
@@ -37,16 +42,6 @@ fn table(source: Source, waves: &Waves) -> &Wave {
 
 /// The most oscillators a `Tone` has (the pads' three saws).
 const TONES: usize = 3;
-/// How long a voice is kept after its oscillators stop, in seconds, so the
-/// lowpass can ring out: an oscillator that stops while the note is still
-/// sounding (the leads and the beep stop on a schedule, not on silence)
-/// leaves a resonant filter ringing, and a node keeps rendering its tail.
-/// A cutoff of 200 Hz at a Q of 8 dB rings for about 30 ms; this is well
-/// past that.
-const FILTER_TAIL: f64 = 0.2;
-/// A BiquadFilterNode's frequency, and its Q, before anything is set.
-const CUTOFF_DEFAULT: f32 = 350.0;
-const Q_DEFAULT: f32 = 1.0;
 
 /// A tone with a steady pitch: `count` oscillators on one table, `detune`
 /// cents apart, summed into a lowpass whose cutoff may move, then a gain.
@@ -70,6 +65,9 @@ pub struct Tone {
 }
 
 impl Tone {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    #[must_use]
     pub const fn new() -> Self {
         Tone {
             source: Source::Saw,
@@ -120,7 +118,7 @@ impl Tone {
 
     /// `softpad`: three saws (-9, 0, +11 cents) under a lowpass that opens
     /// across the first half of the note.
-    pub fn soft_pad(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
+    pub(crate) fn soft_pad(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
         let stop = time + dur + 1.8;
         self.start(
             Source::Saw,
@@ -143,7 +141,7 @@ impl Tone {
 
     /// `analogpad`: three saws (-11, 0, +9) under a lowpass that opens to
     /// six times the note.
-    pub fn analog_pad(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
+    pub(crate) fn analog_pad(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
         let f = midi_to_freq(midi);
         let stop = time + dur + 1.6;
         self.start(
@@ -170,7 +168,7 @@ impl Tone {
     }
 
     /// `analoglead`: two soft saws (-7, +6) under a fixed lowpass.
-    pub fn analog_lead(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
+    pub(crate) fn analog_lead(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
         self.start(
             Source::LeadAnalog,
             &[-7.0, 6.0],
@@ -189,7 +187,7 @@ impl Tone {
     }
 
     /// `pluck('saw')`: one soft saw under a fixed lowpass with a little edge.
-    pub fn saw_pluck(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
+    pub(crate) fn saw_pluck(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
         self.start(Source::LeadSaw, &[0.0], midi, time, time + dur + 0.6, rate);
         self.q = 4.0;
         self.cutoff.reset(1400.0);
@@ -201,7 +199,7 @@ impl Tone {
 
     /// `pluck()`'s default, the square beep: a square wave with a constant
     /// 5.4 Hz vibrato of 3.5 cents, under a lowpass at 2.6 kHz.
-    pub fn beep(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
+    pub(crate) fn beep(&mut self, midi: f64, time: f64, dur: f64, vel: f64, rate: f64) {
         let stop = time + dur + 0.5;
         self.start(Source::Square, &[0.0], midi, time, stop, rate);
         self.vibrato = true;
@@ -216,15 +214,44 @@ impl Tone {
         g.set_target_at_time(0.0001, time + dur * 0.55, 0.12);
     }
 
-    pub fn start_frame(&self) -> u64 {
+
+    fn start_frame(&self) -> u64 {
         self.oscs[0].start_frame()
     }
 
-    pub fn end_frame(&self) -> u64 {
+    fn end_frame(&self) -> u64 {
         self.end
     }
+}
 
-    pub fn render(&mut self, block: u64, rate: f64, waves: &Waves, out: &mut Block) {
+impl Block for Tone {
+    type Settings = Note;
+
+    const PROBES: &'static [Probe<Note>] = &[
+        Probe { name: "softpad", settings: Note::probe(crate::SOFTPAD, crate::CHORDS, 55.0, 0, NO_EXTRA) },
+        Probe { name: "analogpad", settings: Note::probe(crate::ANALOGPAD, crate::CHORDS, 55.0, 0, NO_EXTRA) },
+        Probe { name: "analoglead", settings: Note::probe(crate::ANALOGLEAD, crate::MELODY, 67.0, 0, NO_EXTRA) },
+        Probe { name: "saw", settings: Note::probe(crate::SAWPLUCK, crate::MELODY, 67.0, 0, NO_EXTRA) },
+        Probe { name: "pluck", settings: Note::probe(crate::BEEP, crate::MELODY, 67.0, 0, NO_EXTRA) },
+    ];
+
+    fn start(&mut self, note: &Note, cx: &Context) {
+        let (midi, time, dur, vel, rate) = (note.midi, note.time, note.dur, note.vel, cx.rate);
+        match note.voice {
+            crate::SOFTPAD => self.soft_pad(midi, time, dur, vel, rate),
+            crate::ANALOGPAD => self.analog_pad(midi, time, dur, vel, rate),
+            crate::ANALOGLEAD => self.analog_lead(midi, time, dur, vel, rate),
+            crate::SAWPLUCK => self.saw_pluck(midi, time, dur, vel, rate),
+            _ => self.beep(midi, time, dur, vel, rate),
+        }
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.start_frame(), self.end_frame())
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
+        let (rate, waves) = (cx.rate, cx.waves);
         let r = rate as f32;
         let wave = table(self.source, waves);
         // The vibrato's detune, in cents: its sine through its depth.
@@ -283,188 +310,9 @@ impl Tone {
     }
 }
 
+impl Voice for Tone {}
+
 impl Default for Tone {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// The vibrato of the moog and the whistle, in Hz.
-const LEAD_VIBRATO: f32 = 5.6;
-
-/// Which of the two a `Lead` is.
-#[derive(Clone, Copy, PartialEq)]
-pub enum LeadKind {
-    Moog,
-    Whistle,
-}
-
-/// `voice('moog')` and `voice('whistle')`: one oscillator (the moog's own
-/// wave, or the built-in triangle) whose pitch is automated, with a
-/// vibrato on its detune that ramps in, through a resonant lowpass whose
-/// cutoff moves, under a gain. The whistle may scoop or slide into the
-/// note (`_slide`); JavaScript draws that and sends where from and how
-/// long it takes.
-pub struct Lead {
-    kind: LeadKind,
-    osc: TableOsc,
-    pitch: Param,
-    lfo: TableOsc,
-    depth: Param,
-    cutoff: Param,
-    q: f32,
-    filter: Biquad,
-    gain: Param,
-    end: u64,
-}
-
-impl Lead {
-    pub const fn new() -> Self {
-        Lead {
-            kind: LeadKind::Moog,
-            osc: TableOsc::new(),
-            pitch: Param::new(0.0),
-            lfo: TableOsc::new(),
-            depth: Param::new(0.0),
-            cutoff: Param::new(0.0),
-            q: 0.0,
-            filter: Biquad::new(),
-            gain: Param::new(0.0),
-            end: 0,
-        }
-    }
-
-    /// `slide` is where the pitch comes from in Hz and how long it takes to
-    /// arrive, in seconds, if the whistle slides into this note.
-    #[allow(clippy::too_many_arguments)]
-    pub fn play(
-        &mut self,
-        kind: LeadKind,
-        midi: f64,
-        time: f64,
-        dur: f64,
-        vel: f64,
-        slide: Option<(f64, f64)>,
-        rate: f64,
-    ) {
-        let whistle = kind == LeadKind::Whistle;
-        let f = midi_to_freq(midi);
-        self.kind = kind;
-        let stop = time + dur + 0.5;
-        let p = &mut self.pitch;
-        p.reset(A440);
-        match slide.filter(|_| whistle) {
-            Some((from, reach)) => {
-                p.set_value_at_time(from as f32, time);
-                p.exponential_ramp_to_value_at_time(f as f32, time + reach, time);
-            }
-            None => {
-                p.set_value_at_time(f as f32, time);
-            }
-        }
-        let d = &mut self.depth;
-        d.reset(UNITY);
-        d.set_value_at_time(0.0, time);
-        d.linear_ramp_to_value_at_time(if whistle { 12.0 } else { 5.0 }, time + dur.min(0.6), time);
-        let c = &mut self.cutoff;
-        c.reset(CUTOFF_DEFAULT);
-        if whistle {
-            self.q = 8.0;
-            c.set_value_at_time((f * 7.0).min(9000.0) as f32, time);
-            c.exponential_ramp_to_value_at_time(
-                (f * 1.6).max(220.0) as f32,
-                time + (dur * 0.8).max(0.12),
-                time,
-            );
-        } else {
-            self.q = 5.0;
-            c.set_value_at_time(1600.0, time);
-            c.exponential_ramp_to_value_at_time(1100.0, time + (dur * 0.8).max(0.12), time);
-        }
-        let g = &mut self.gain;
-        g.reset(UNITY);
-        g.set_value_at_time(0.0001, time);
-        g.exponential_ramp_to_value_at_time(
-            (vel * if whistle { 0.1121 } else { 0.0947 }) as f32,
-            time + 0.014,
-            time,
-        );
-        g.set_target_at_time(0.0001, time + dur * 0.75, 0.1);
-        self.filter.reset();
-        self.osc.schedule(time, stop, rate);
-        self.lfo.schedule(time, stop, rate);
-        self.end = frame_at(stop + FILTER_TAIL, rate);
-    }
-
-    pub fn start_frame(&self) -> u64 {
-        self.osc.start_frame()
-    }
-
-    pub fn end_frame(&self) -> u64 {
-        self.end
-    }
-
-    pub fn render(&mut self, block: u64, rate: f64, waves: &Waves, out: &mut Block) {
-        let r = rate as f32;
-        // The detune, in cents: the vibrato's sine through its depth. It
-        // moves for the whole note, even before the depth has risen.
-        let steady = Pitch::Steady {
-            freq: LEAD_VIBRATO,
-            detune: 0.0,
-        };
-        let mut sine = [0.0f32; QUANTUM];
-        let (lo, hi) = self.lfo.render(block, &waves.sine, &steady, r, &mut sine);
-        // Feeding only the detune, the depth is first rendered when the
-        // note starts: its events are clamped to that block.
-        if starts_in(self.lfo.start_frame(), block) {
-            self.depth.clamp_before(block, rate);
-        }
-        let mut depth = [0.0f32; QUANTUM];
-        self.depth.fill(block, rate, &mut depth);
-        let mut cents = [0.0f32; QUANTUM];
-        for ((c, w), d) in cents
-            .iter_mut()
-            .zip(sine.iter())
-            .zip(depth.iter())
-            .take(hi)
-            .skip(lo)
-        {
-            *c = *w * *d;
-        }
-        let mut freq = [0.0f32; QUANTUM];
-        let first = starts_in(self.osc.start_frame(), block);
-        let pitch = pitch_of(
-            &mut self.pitch,
-            block,
-            rate,
-            first,
-            &mut freq,
-            Part::Moving(&cents),
-        );
-        let wave = match self.kind {
-            LeadKind::Moog => &waves.lead_moog,
-            LeadKind::Whistle => &waves.triangle,
-        };
-        let mut tone = [0.0f32; QUANTUM];
-        self.osc.render(block, wave, &pitch, r, &mut tone);
-        let mut cutoff = [0.0f32; QUANTUM];
-        self.cutoff.fill(block, rate, &mut cutoff);
-        let mut gain = [0.0f32; QUANTUM];
-        self.gain.fill(block, rate, &mut gain);
-        for (((y, x), c), g) in out
-            .iter_mut()
-            .zip(tone.iter())
-            .zip(cutoff.iter())
-            .zip(gain.iter())
-        {
-            self.filter.set(Kind::Lowpass, *c, self.q, 0.0, r);
-            *y += self.filter.step(*x) * *g;
-        }
-        self.filter.flush();
-    }
-}
-
-impl Default for Lead {
     fn default() -> Self {
         Self::new()
     }

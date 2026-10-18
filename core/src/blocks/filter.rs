@@ -9,16 +9,23 @@
 //! every sample; `set` caches the last ones, so a filter whose parameters
 //! hold still costs a comparison a sample.
 
+use crate::block::{Block, Context, Probe, Signal};
 use crate::math;
 
+/// A filter's response, as Web Audio names them.
 #[derive(Clone, Copy, PartialEq)]
 pub enum Kind {
+    /// `'lowpass'`: Q in dB.
     Lowpass,
+    /// `'highpass'`: Q in dB.
     Highpass,
+    /// `'bandpass'`: Q linear.
     Bandpass,
+    /// `'peaking'`: a boost or cut of `gain` dB around the frequency.
     Peaking,
 }
 
+/// One biquad: its coefficients and the two samples of memory each side.
 #[derive(Clone, Copy)]
 pub struct Biquad {
     b0: f64,
@@ -66,6 +73,9 @@ impl Decibels {
 }
 
 impl Biquad {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    #[must_use]
     pub const fn new() -> Self {
         Biquad {
             b0: 0.0,
@@ -206,6 +216,7 @@ impl Biquad {
         self.ready = other.ready;
     }
 
+    /// One sample through the filter.
     pub fn step(&mut self, x: f32) -> f32 {
         let x = x as f64;
         let wide = self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2
@@ -236,6 +247,54 @@ impl Biquad {
                 *v = 0.0;
             }
         }
+    }
+}
+
+/// A filter's settings when it plays as a block, held still: its kind, its
+/// frequency in Hz, its Q (in dB for a lowpass or a highpass, as Web Audio
+/// has it) and its gain in dB (a peaking filter's).
+#[derive(Clone, Copy)]
+pub struct Settings {
+    /// Which response.
+    pub kind: Kind,
+    /// The corner or center frequency, in Hz.
+    pub freq: f32,
+    /// The resonance.
+    pub q: f32,
+    /// A peaking filter's boost, in dB.
+    pub gain: f32,
+}
+
+/// A filter as a block: set once, a signal through it. The voices step
+/// theirs sample by sample instead (`step`), under a frequency that moves.
+impl Block for Biquad {
+    type Settings = Settings;
+
+    const PROBES: &'static [Probe<Settings>] = &[
+        Probe { name: "lowpass", settings: Settings { kind: Kind::Lowpass, freq: 1000.0, q: -3.0, gain: 0.0 } },
+        Probe { name: "highpass", settings: Settings { kind: Kind::Highpass, freq: 2000.0, q: 6.0, gain: 0.0 } },
+        Probe { name: "bandpass", settings: Settings { kind: Kind::Bandpass, freq: 1200.0, q: 2.2, gain: 0.0 } },
+        Probe { name: "peaking", settings: Settings { kind: Kind::Peaking, freq: 800.0, q: 1.2, gain: 9.0 } },
+    ];
+
+    const INPUT: bool = true;
+
+    // Web Audio's filter parameters are 32-bit floats.
+    #[allow(clippy::cast_possible_truncation)]
+    fn start(&mut self, s: &Settings, cx: &Context) {
+        self.reset();
+        self.set(s.kind, s.freq, s.q, s.gain, cx.rate as f32);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (0, u64::MAX)
+    }
+
+    fn render(&mut self, _: u64, _: &Context, signal: &mut Signal) {
+        for x in signal.iter_mut() {
+            *x = self.step(*x);
+        }
+        self.flush();
     }
 }
 

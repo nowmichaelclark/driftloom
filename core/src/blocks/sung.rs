@@ -24,20 +24,36 @@
 //! other, so the sung voices have a pool of their own (`POOL`), sized from
 //! the voice budget: a hum, the cheapest, costs 16 of its 260 units.
 
+// Web Audio's parameters are 32-bit floats, set from the host's 64-bit
+// numbers: a voice narrows every value it hands one.
+#![allow(clippy::cast_possible_truncation)]
+// The names follow synth.js's (f, g, c...), so the port reads against it.
+#![allow(clippy::many_single_char_names)]
+// A note's setup is one JavaScript function, ported call for call: split,
+// it would no longer read against its twin.
+#![allow(clippy::too_many_lines)]
+// Counts and places (a singer, a step, a vowel) as floats and back, each
+// well inside both.
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+
 use crate::QUANTUM;
-use crate::filter::{Biquad, Kind};
-use crate::noise::NoiseSource;
-use crate::osc::{Part, Pitch, TableOsc, frame_at};
+use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::{Draws, salt};
-use crate::voice::{Block, UNITY, midi_to_freq, pitch_of, release, starts_in};
-use crate::wave::Waves;
 
-/// Which sung voice, by its place after `LAST` in lib.rs.
+use super::filter::{Biquad, Kind};
+use super::noise_source::NoiseSource;
+use super::osc::{Part, Pitch, TableOsc, frame_at};
+use super::shared::{FILTER_TAIL, QUIET, UNITY, midi_to_freq, pitch_of, release, starts_in};
+
+/// Which sung voice: `VOWEL`, `HUM` or `CHOIR`.
 #[derive(Clone, Copy, PartialEq)]
 pub enum Kind3 {
+    /// One singer on a vowel.
     Vowel,
+    /// One singer, mouth closed.
     Hum,
+    /// Three singers into one tract.
     Choir,
 }
 
@@ -49,6 +65,8 @@ pub const POOL: usize = 32;
 /// core sings: the jitter's first step is at 0.12 s and they come at least
 /// 0.09 s apart (`SUNG_LONGEST` in synth.js, which keeps longer notes).
 pub const MAX_STEPS: usize = 150;
+/// The longest sung note the core takes, in seconds; a longer one plays in
+/// JavaScript.
 pub const LONGEST: f64 = 13.5;
 const _: () = assert!(0.12 + MAX_STEPS as f64 * 0.09 > LONGEST);
 /// A singer's detune: the scoop's two events and the jitter's.
@@ -72,11 +90,6 @@ const OPEN_HUM: [[f64; 3]; 3] = [[330.0, 70.0, 16.5], [1200.0, 110.0, 10.0], [23
 const LEVEL_CHOIR: f64 = 0.112;
 const LEVEL_HUM: f64 = 0.085;
 const LEVEL_VOWEL: f64 = 0.174;
-/// How long the voice is kept past its sources' stop, for its filters.
-const FILTER_TAIL: f64 = 0.2;
-/// A gain behind the noise holds its first event's value before it (item
-/// 26b), as the breath's and the envelope's do.
-const QUIET: f32 = 0.0001;
 
 struct Singer {
     osc: TableOsc,
@@ -119,6 +132,7 @@ impl Formant {
     }
 }
 
+/// A sung note: a vowel, a hum or the choir.
 pub struct Sung {
     /// Taken by a sounding note.
     pub busy: bool,
@@ -138,6 +152,11 @@ pub struct Sung {
 }
 
 impl Sung {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    // Built in a `const` for the static core, never on a stack at run time.
+    #[allow(clippy::large_stack_arrays)]
+    #[must_use]
     pub const fn new() -> Self {
         Sung {
             busy: false,
@@ -163,7 +182,7 @@ impl Sung {
     /// (`opts.detune`); `draws`, where the note sits in its loop, which
     /// settles every other choice the singers make (see `rng::salt`).
     #[allow(clippy::too_many_arguments)]
-    pub fn play(
+    pub(crate) fn play(
         &mut self,
         kind: Kind3,
         midi: f64,
@@ -186,15 +205,15 @@ impl Sung {
         let formants = if humming {
             HUM
         } else {
-            let v = if vowel >= 0.0 && vowel < 4.0 { vowel as usize } else { 0 };
+            let v = if (0.0..4.0).contains(&vowel) { vowel as usize } else { 0 };
             VOWELS.get(v).copied().unwrap_or(VOWELS[0])
         };
         let to = match target {
-            t if t == 4.0 => Some(OPEN_HUM),
+            4.0 => Some(OPEN_HUM),
             t if (0.0..4.0).contains(&t) => VOWELS.get(t as usize).copied(),
             _ => None,
         };
-        let held = ((dur - 0.5) / 1.5).max(0.0).min(1.0);
+        let held = ((dur - 0.5) / 1.5).clamp(0.0, 1.0);
         let depth = 0.34 + held * 0.66;
 
         let stop_at = time + dur + 0.9;
@@ -308,15 +327,53 @@ impl Sung {
         self.end = frame_at(stop + FILTER_TAIL, rate);
     }
 
-    pub fn start_frame(&self) -> u64 {
+
+    fn start_frame(&self) -> u64 {
         self.start
     }
 
-    pub fn end_frame(&self) -> u64 {
+    fn end_frame(&self) -> u64 {
         self.end
     }
+}
 
-    pub fn render(&mut self, block: u64, rate: f64, waves: &Waves, noise: &[f32], out: &mut Block) {
+/// A probe's sung note: the vowel a, drifting nowhere, at its own trim,
+/// with no standing detune.
+const SUNG: [f64; crate::EXTRA] = {
+    let mut x = NO_EXTRA;
+    x[0] = 0.0;
+    x[2] = 1.0;
+    x[3] = 0.0;
+    x
+};
+
+impl Block for Sung {
+    type Settings = Note;
+
+    const PROBES: &'static [Probe<Note>] = &[
+        Probe { name: "vowel", settings: Note::probe(crate::VOWEL, crate::MELODY, 67.0, 0, SUNG) },
+        Probe { name: "hum", settings: Note::probe(crate::HUM, crate::MELODY, 67.0, 0, SUNG) },
+        Probe { name: "choir", settings: Note::probe(crate::CHOIR, crate::MELODY, 67.0, 0, SUNG) },
+    ];
+
+    fn start(&mut self, note: &Note, cx: &Context) {
+        let kind = match note.voice {
+            crate::HUM => Kind3::Hum,
+            crate::CHOIR => Kind3::Choir,
+            _ => Kind3::Vowel,
+        };
+        let [vowel, target, trim, lean, ..] = note.extra;
+        let (noise, rate) = (cx.noise.len(), cx.rate);
+        let (midi, time, dur, vel) = (note.midi, note.time, note.dur, note.vel);
+        self.play(kind, midi, time, dur, vel, vowel, target, trim, lean, &note.draws, noise, rate);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.start_frame(), self.end_frame())
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
+        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
         let r = rate as f32;
         let wave = if self.humming {
             &waves.triangle
@@ -372,7 +429,7 @@ impl Sung {
         let mut amp = [0.0f32; QUANTUM];
         self.amp.fill(block, rate, &mut amp);
         let mut air = [0.0f32; QUANTUM];
-        self.breath.render(block, noise, &mut air);
+        self.breath.fill(block, noise, &mut air);
         let mut breath_gain = [0.0f32; QUANTUM];
         self.breath_gain.fill(block, rate, &mut breath_gain);
         self.lowpass.set(Kind::Lowpass, self.corner, 0.7, 0.0, r);
@@ -390,11 +447,17 @@ impl Sung {
                 * breath_gain.get(i).copied().unwrap_or(0.0);
             *y += (tract + b) * amp.get(i).copied().unwrap_or(0.0);
         }
-        for fm in self.formants.iter_mut() {
+        for fm in &mut self.formants {
             fm.filter.flush();
         }
         self.lowpass.flush();
         self.breath_filter.flush();
+    }
+}
+
+impl Voice for Sung {
+    fn uses_noise(_: &Note) -> bool {
+        true
     }
 }
 

@@ -1,20 +1,27 @@
-//! Driftloom's audio core: the synth's voices, in Rust.
+//! Driftloom's audio core: its own engine, in Rust.
 //!
-//! It knows nothing about browsers. A host owns a `Core`, hands it notes as
-//! they are decided, and asks it for one block of samples at a time per
-//! output channel. The web app's host is an AudioWorklet (`js/worklet.js`,
+//! It decides nothing and knows nothing about browsers: a host owns a
+//! `Core`, starts it at a sample rate (`start`), hands it notes as they are
+//! decided (`note`), and asks it for samples (`render`), any number of
+//! frames a call. The web app's host is an `AudioWorklet` (`js/worklet.js`,
 //! through the WebAssembly exports in `wasm.rs`); a native or game host
-//! would wrap the same three calls.
+//! wraps the same calls (`core/README.md`).
+//!
+//! The sound is made of building blocks (`block`, `blocks`): voices,
+//! oscillators, filters, the noise, the bodies, the compressor. Each is one
+//! file behind one small interface, registered in one list, and checked by
+//! its own test kit.
 //!
 //! Everything is allocated up front: a fixed pool of voices, fixed-size
 //! automation, fixed output buffers. Nothing allocates after `Core::new`,
 //! and nothing reachable from `process` can panic.
 //!
-//! The JavaScript synth is the reference. A ported voice is proven against
-//! it by rendering the same notes through both and subtracting
-//! (`tools/measure.mjs --null`), which is why the building blocks follow
-//! Web Audio -- and, where Chromium's rendering differs from a plain
-//! reading of the spec, Chromium -- to the sample.
+//! The core is Driftloom's own engine, not a copy of Chromium. It was
+//! ported from the JavaScript synth and proven against it to the sample,
+//! which is why many blocks still say what Chromium does; the JavaScript
+//! synth is now only the fallback a host without the core plays (until the
+//! end of phase 3), not the reference. Changes are judged by the charter's
+//! measures (`docs/CORE.md`): the goldens, the baseline, the kit, and ears.
 
 // No standard library (queue item 43): the core needs no allocator, no
 // threads and no platform math, so it builds for a console or a
@@ -23,50 +30,37 @@
 // build, the test host and the integration tests included, links it without.
 #![cfg_attr(not(test), no_std)]
 
-pub mod articulate;
-pub mod bass;
-pub mod breath;
-pub mod compressor;
+pub mod block;
+pub mod blocks;
 pub mod delay;
-pub mod drums;
-pub mod filter;
-pub mod folk;
-pub mod lead;
 pub mod master;
 pub mod math;
 pub mod mix;
 pub mod noise;
-pub mod osc;
 pub mod param;
 pub mod resample;
 pub mod rng;
-pub mod sung;
-pub mod texture;
 pub mod timeline;
-pub mod voice;
 pub mod wave;
 
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 
-use bass::Bass;
-use breath::{Panflute, Stab, Struck, TEMPLE_SINES, TempleBell, Wind};
-use drums::Drum;
-use folk::{Accordion, Body, Nylon};
-use lead::{Lead, LeadKind, Tone};
+use block::{Block, Context, Note, Signal};
+use blocks::body::{self, Body};
+use blocks::{Held, Pools};
+use blocks::osc::frame_at;
 use master::{Master, OUT};
 use mix::Mix;
 use noise::Noise;
+pub use blocks::voices::*;
 pub use rng::Key;
 use rng::Draws;
-use sung::{Kind3, Sung};
-use texture::Texture;
-use voice::{Fiddle, Fm, FmOptions, Kalimba, PadNote, SineNote, Tubular, Vibrato, midi_to_freq};
 use wave::{Fft, Waves};
 
 /// The core's internal block, Web Audio's render quantum. The core works in
 /// blocks of this many frames, on frame numbers that are multiples of it,
-/// as an AudioWorklet is called. A host with another block size does not
+/// as an `AudioWorklet` is called. A host with another block size does not
 /// notice: `Core::render` takes any number of frames a call and buffers.
 pub const QUANTUM: usize = 128;
 
@@ -90,10 +84,15 @@ pub const MIN_RATE: f64 = 22_050.0;
 /// compressor, the master and kill gains and the ceiling, out to the
 /// speakers (`output`).
 pub const CHANNELS: usize = 5;
+/// The melody's channel.
 pub const MELODY: u32 = 0;
+/// The chords' channel.
 pub const CHORDS: u32 = 1;
+/// The bass's channel.
 pub const BASS_CHANNEL: u32 = 2;
+/// The textures' channel.
 pub const TEXTURE_CHANNEL: u32 = 3;
+/// The drums' channel.
 pub const DRUMS_CHANNEL: u32 = 4;
 
 /// Voices sounding at once. The JavaScript voice budget decides what plays,
@@ -112,31 +111,27 @@ pub const POOL: usize = 256;
 /// costs anything in the `.wasm`.
 pub const QUEUE: usize = 4096;
 
-/// Whether a note of this voice plays the noise, so the core must have it.
-fn plays_noise(voice: u32, parts: u32) -> bool {
-    match voice {
-        STAB..=HAT => voice != STAB,
-        BASS => parts & bass::KIND == bass::PLUCKBASS,
-        TEXTURE => texture::uses_noise(parts),
-        DRUM => drums::uses_noise(parts),
-        VOWEL..=CHOIR => true,
-        _ => false,
-    }
-}
-
 /// The master chain's parameters (`Core::param`), after the mix's
 /// (`mix::LAST_PARAM`): the tone lowpass's frequency, the wobble's two
 /// depths, the saturator's drive and the LFOs' start; the master gain and
 /// the kill gain; whether the compressors are routed around; and how they
 /// start.
 pub const TONE_FREQ: u32 = mix::LAST_PARAM + 1;
+/// The wobble's slow depth (wow).
 pub const WOW_DEPTH: u32 = TONE_FREQ + 1;
+/// The wobble's fast depth (flutter).
 pub const FLUTTER_DEPTH: u32 = TONE_FREQ + 2;
+/// The saturator's drive.
 pub const SAT_DRIVE: u32 = TONE_FREQ + 3;
+/// When the wobble's LFOs were built.
 pub const LFO_START: u32 = TONE_FREQ + 4;
+/// The master gain.
 pub const VOLUME: u32 = TONE_FREQ + 5;
+/// The kill gain.
 pub const KILL: u32 = TONE_FREQ + 6;
+/// Whether both compressors are routed around.
 pub const BYPASS: u32 = TONE_FREQ + 7;
+/// Whether both compressors start cold, as Chromium's do.
 pub const COLD: u32 = TONE_FREQ + 8;
 
 /// Why `Core::start` or `Core::render` would not.
@@ -196,149 +191,20 @@ pub const MISS: f64 = 0.03;
 /// was full when it arrived; every voice was busy when it started; every
 /// sung voice was.
 pub const QUEUE_FULL: usize = 0;
+/// Every slot of the voice pool was busy when the note started.
 pub const VOICES_BUSY: usize = 1;
+/// Every voice of a pooled kind (the sung voices) was busy when it started.
 pub const SUNG_BUSY: usize = 2;
 const CAUSES: usize = 3;
 
 /// How many extra values a note carries. Fixed, so a note is a plain value
 /// and nothing allocates: the widest voice, the temple bell, settles ten
-/// draws into them.
+/// draws into them. What each voice reads from them is in its own file
+/// (`blocks`).
 pub const EXTRA: usize = 12;
 
-/// The voices the core can play, by number. What each reads from a note's
-/// extra values (`Core::note`); values a voice does not name are unused.
-///
-/// A note's extra values are what the host decides: the note a voice is
-/// joined to, an `fm()` option, a vowel. What a voice leaves to chance is
-/// not the host's to send (queue item 44): `articulate::settle` fills those
-/// places from the seeded generator (`rng`) as the note arrives, and the
-/// list below names them as *draws*, in [0, 1) unless it says otherwise.
-///
-/// - KALIMBA: `parts`, the strike and the body the budget let through.
-/// - FIDDLE: the note it is joined to (NaN if none). Its vibrato's rate,
-///   rate at the end and depth are drawn (none for a note under half a
-///   second).
-/// - PAD: how many notes the chord has.
-/// - FM: `fm()`'s options, resolved, in this order: ratio, index, attack,
-///   decay, detune (cents). Every voice that is an `fm()` call -- keys,
-///   bell, celeste, musicbox, rhodes, marimba, harp, piano -- is this.
-/// - SINE: none.
-/// - TUBULAR: five draws, for its partials' detunes, in partial order.
-/// - SOFTPAD, ANALOGPAD, ANALOGLEAD, SAWPLUCK, BEEP, MOOG: none.
-/// - WHISTLE: the note it is joined to (NaN if none). Whether it slides
-///   into its pitch, from where and how long it takes, is drawn.
-/// - NYLON: whether it is a string of a strum (1) or not (0 or NaN): the
-///   next strum into its channel damps it (`Core::damp`).
-/// - ACCORDION: the note it is joined to (NaN if none). How late its
-///   second reed comes in is drawn.
-/// - STAB: none.
-/// - OCARINA, FLUTE: the note it is joined to (NaN if none). Whether it
-///   slides, from where and how long it takes, and the breath's rate, are
-///   drawn.
-/// - PANFLUTE: the vibrato's rate (none for a note under half a second)
-///   and the breath's rate are drawn.
-/// - KNOCK: the prepared piano's knock: its noise's rate and offset, and its
-///   bandpass's frequency, are drawn.
-/// - TEMPLEBELL: the eight partials' detunes, in partial order, and the
-///   strike's rate and offset, are drawn.
-/// - HAT: `parts` is which (`breath::HAT`, `OPEN_HAT`, `SHAKER`). Its
-///   noise's rate and offset are drawn.
-/// - BASS: `parts` is the voice (`bass::SUB` and the rest) with the flags
-///   `bass::GLIDE` and `CHUG`. The pluck's click's rate and offset are
-///   drawn. Every bass voice but `rhodesbass`, which is an FM note.
-/// - TEXTURE: `parts` is which (`texture::SWELL` and the rest). The drop's
-///   rate, offset and band are drawn; the wind's slow sine's rate is, and
-///   its band in Hz is the host's (NaN for the usual one); the waves' rate
-///   and offset are drawn. `bell` and `chime` are FM notes.
-/// - DRUM: `parts` is which (`drums::KICK` and the rest; the hats are HAT).
-///   The noise's rate and offset are drawn, for every drum but the soft
-///   kick and the rim, and a jingle's five zils' detunes.
-/// - VOWEL, HUM, CHOIR: the vowel (0-3: a, e, o, u), where it drifts to
-///   (the same, 4 for an opening hum, NaN for nowhere), the note's formant
-///   trim, and the composer's standing detune in cents. The scoop into the
-///   note, the jitter, the vibrato and the breath are drawn, in the voice
-///   (`sung`), from the note's key.
-///
-/// The noise voices -- those from the ocarina on, the pluck, the drop, the
-/// wind, the waves and the drums but two -- play the noise the core makes as
-/// it starts (`noise`); at a rate too high to hold it the core has none,
-/// drops them, and the host plays them in JavaScript.
-pub const KALIMBA: u32 = 0;
-pub const FIDDLE: u32 = 1;
-pub const PAD: u32 = 2;
-pub const FM: u32 = 3;
-pub const SINE: u32 = 4;
-pub const TUBULAR: u32 = 5;
-pub const SOFTPAD: u32 = 6;
-pub const ANALOGPAD: u32 = 7;
-pub const ANALOGLEAD: u32 = 8;
-pub const SAWPLUCK: u32 = 9;
-pub const BEEP: u32 = 10;
-pub const MOOG: u32 = 11;
-pub const WHISTLE: u32 = 12;
-pub const NYLON: u32 = 13;
-pub const ACCORDION: u32 = 14;
-pub const STAB: u32 = 15;
-pub const OCARINA: u32 = 16;
-pub const FLUTE: u32 = 17;
-pub const PANFLUTE: u32 = 18;
-pub const KNOCK: u32 = 19;
-pub const TEMPLEBELL: u32 = 20;
-pub const HAT: u32 = 21;
-pub const BASS: u32 = 22;
-pub const TEXTURE: u32 = 23;
-pub const DRUM: u32 = 24;
-pub const VOWEL: u32 = 25;
-pub const HUM: u32 = 26;
-pub const CHOIR: u32 = 27;
-/// The last voice there is.
-const LAST: u32 = CHOIR;
-
-fn sung_kind(voice: u32) -> Option<Kind3> {
-    match voice {
-        VOWEL => Some(Kind3::Vowel),
-        HUM => Some(Kind3::Hum),
-        CHOIR => Some(Kind3::Choir),
-        _ => None,
-    }
-}
-
-// `process` hands each voice the bus of its body by these places.
-const _: () =
-    assert!(folk::FIDDLE == 0 && folk::NYLON == 1 && folk::ACCORDION == 2 && folk::KINDS == 3);
-
-// A voice lives in a slot of a fixed pool, so its size is the pool's price
-// and boxing it would allocate; the biggest, tubular, sets the slot's size.
-//
-// `repr(u8)` keeps the tag first, with the first voice's tag zero. Without
-// it the compiler hides the other voices' tags in a spare value of a byte
-// inside the biggest one, a free slot is no longer all zeros, and the pool
-// is written into the `.wasm` -- 3 MB, where all zeros cost nothing.
-#[allow(clippy::large_enum_variant)]
-#[repr(u8)]
-enum Voice {
-    Kalimba(Kalimba),
-    Fiddle(Fiddle),
-    Pad(PadNote),
-    Fm(Fm),
-    Sine(SineNote),
-    Tubular(Tubular),
-    Tone(Tone),
-    Lead(Lead),
-    Nylon(Nylon),
-    Accordion(Accordion),
-    Stab(Stab),
-    Wind(Wind),
-    Panflute(Panflute),
-    Struck(Struck),
-    TempleBell(TempleBell),
-    Bass(Bass),
-    Texture(Texture),
-    Drum(Drum),
-    /// A sung note, by its place in `Core::sung`.
-    Sung(usize),
-}
-
+/// A slot of the voice pool: a sounding note, and what the core needs to
+/// know of it without asking its voice.
 struct Slot {
     busy: bool,
     channel: usize,
@@ -349,7 +215,7 @@ struct Slot {
     strummed: bool,
     strum: u32,
     until: f64,
-    voice: Voice,
+    voice: Held,
 }
 
 impl Slot {
@@ -362,7 +228,7 @@ impl Slot {
             strummed: false,
             strum: 0,
             until: 0.0,
-            voice: Voice::Kalimba(Kalimba::new()),
+            voice: Held::FREE,
         }
     }
 }
@@ -370,46 +236,38 @@ impl Slot {
 /// A note waiting for its start.
 #[derive(Clone, Copy)]
 struct Waiting {
-    voice: u32,
-    channel: u32,
+    note: Note,
+    /// The frame it starts on.
     start: u64,
-    time: f64,
-    midi: f64,
-    dur: f64,
-    vel: f64,
-    parts: u32,
-    extra: [f64; EXTRA],
     /// When the note ends, on the time it was asked for (a late note's
     /// start moves; this does not).
     until: f64,
-    /// A strummed nylon string's strum (see `Slot`), and the time the next
-    /// strum damps it, if it has come before the note started.
+    /// A strummed nylon string's strum (see `Slot`).
     strummed: bool,
     strum: u32,
-    damped: bool,
-    damp: f64,
-    /// Where the note sits in its loop, for the draws it makes.
-    draws: Draws,
 }
 
 const NOTHING: Waiting = Waiting {
-    voice: 0,
-    channel: 0,
+    note: Note {
+        voice: 0,
+        channel: 0,
+        time: 0.0,
+        midi: 0.0,
+        dur: 0.0,
+        vel: 0.0,
+        parts: 0,
+        extra: [0.0; EXTRA],
+        draws: Draws::new(Key { seed: 0, pass: 0, step: 0, ord: 0 }, 0),
+        damp: None,
+    },
     start: 0,
-    time: 0.0,
-    midi: 0.0,
-    dur: 0.0,
-    vel: 0.0,
-    parts: 0,
-    extra: [0.0; EXTRA],
     until: 0.0,
     strummed: false,
     strum: 0,
-    damped: false,
-    damp: 0.0,
-    draws: Draws::new(Key { seed: 0, pass: 0, step: 0, ord: 0 }, 0),
 };
 
+/// The core: the one thing a host holds. `const` and all
+/// zeros when new, so a host can keep one in a static.
 pub struct Core {
     rate: f64,
     /// The first frame of the next block to render.
@@ -422,13 +280,14 @@ pub struct Core {
     fft: Fft,
     /// The voices with a body sum here, per channel and kind of body, then
     /// go through it.
-    buses: [[[f32; QUANTUM]; folk::KINDS]; CHANNELS],
-    bodies: [[Body; folk::KINDS]; CHANNELS],
+    buses: [[Signal; body::KINDS]; CHANNELS],
+    bodies: [[Body; body::KINDS]; CHANNELS],
     /// Which strum each channel is on (`Core::damp`).
     strums: [u32; CHANNELS],
     noise: Noise,
-    /// The sung voices, which are too big for a slot (`sung`).
-    sung: [Sung; sung::POOL],
+    /// The voices too big for a slot (the sung voices), each kind in a
+    /// pool of its own (`blocks`).
+    pools: Pools,
     /// Where the notes the host sends next sit in their loop (`key`).
     key: Key,
     /// What the host plays into each channel itself, for this block: notes
@@ -450,6 +309,10 @@ pub struct Core {
 impl Core {
     /// An empty core. `const` and all zeros, so a host can keep one in a
     /// static without building it on the stack.
+    // Built in a `const` for a host's static core, never on a stack at run
+    // time.
+    #[allow(clippy::large_stack_arrays)]
+    #[must_use]
     pub const fn new() -> Self {
         const FREE: Slot = Slot::new();
         Core {
@@ -461,11 +324,11 @@ impl Core {
             out: [[0.0; QUANTUM]; CHANNELS],
             waves: Waves::new(),
             fft: Fft::new(),
-            buses: [[[0.0; QUANTUM]; folk::KINDS]; CHANNELS],
-            bodies: [const { [const { Body::new() }; folk::KINDS] }; CHANNELS],
+            buses: [[[0.0; QUANTUM]; body::KINDS]; CHANNELS],
+            bodies: [const { [const { Body::new() }; body::KINDS] }; CHANNELS],
             strums: [0; CHANNELS],
             noise: Noise::new(),
-            sung: [const { Sung::new() }; sung::POOL],
+            pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
             inputs: [[0.0; QUANTUM]; CHANNELS],
             unserved: 0,
@@ -488,11 +351,12 @@ impl Core {
         self.dropped = [0; CAUSES];
         self.clear();
         self.noise.make(rate);
-        let r = rate as f32;
-        self.waves.build(r, &mut self.fft);
-        for channel in self.bodies.iter_mut() {
+        #[allow(clippy::cast_possible_truncation)] // the tables are 32-bit
+        self.waves.build(rate as f32, &mut self.fft);
+        let cx = Context { rate, waves: &self.waves, noise: self.noise.samples() };
+        for channel in &mut self.bodies {
             for (kind, body) in channel.iter_mut().enumerate() {
-                body.set(kind, r);
+                body.start(&kind, &cx);
             }
         }
         self.strums = [0; CHANNELS];
@@ -568,6 +432,23 @@ impl Core {
         Ok(())
     }
 
+    /// What every block reads besides its own state (`block::Context`):
+    /// the rate, the wavetables and the noise, as `init` made them. A host
+    /// needs it only to play a block alone, as the test kit and
+    /// `dlrender --block` do.
+    #[must_use]
+    pub fn context(&self) -> Context<'_> {
+        Context { rate: self.rate, waves: &self.waves, noise: self.noise.samples() }
+    }
+
+    /// The time of the next block to render, in seconds.
+    // A frame count as a float: exact below 2^53 frames, some 5,900 years
+    // at 48 kHz.
+    #[allow(clippy::cast_precision_loss)]
+    fn now(&self) -> f64 {
+        self.next as f64 / self.rate
+    }
+
     /// The first frame of the next block to render: every frame before it
     /// has been rendered, and a note starting before it is late.
     #[must_use]
@@ -585,20 +466,21 @@ impl Core {
 
     /// Whether the core mixes at this sample rate (`mix::MAX_RATE`). A
     /// host whose core does not plays the mix itself.
+    #[must_use]
     pub fn mixing(&self) -> bool {
         self.mix.ready() && self.master_ready
     }
 
     /// Move one of the mix's parameters (`mix::GAINS` and the rest) or the
     /// master chain's (`TONE_FREQ` and the rest, below) the way the
-    /// AudioParam call `op` would (`mix::SET`, `LINEAR`, `TARGET`,
+    /// `AudioParam` call `op` would (`mix::SET`, `LINEAR`, `TARGET`,
     /// `CANCEL`): to `value` at `time` seconds, with time constant `tau` for
     /// a target. A time already rendered is the next block's start, as
     /// Chromium has it. False if there is no such parameter or call, or the
     /// parameter holds as many events as it can.
     ///
-    /// Four are not AudioParams: `SAT_DRIVE` gives the saturator the curve
-    /// `tanhCurve(value)`, from the next block, as setting a WaveShaper's
+    /// Four are not `AudioParam`s: `SAT_DRIVE` gives the saturator the curve
+    /// `tanhCurve(value)`, from the next block, as setting a `WaveShaper`'s
     /// `curve` does; `LFO_START` says when the synth built the wobble's
     /// LFOs, `time`; `BYPASS` routes around both compressors if `value` is
     /// not 0, at once (the measure harness's `bypass`); `COLD` starts both
@@ -609,7 +491,9 @@ impl Core {
         if !(value.is_finite() && time.is_finite() && tau.is_finite()) || self.rate <= 0.0 {
             return false;
         }
-        let now = self.next as f64 / self.rate;
+        let now = self.now();
+        // An `AudioParam`'s value is a 32-bit float.
+        #[allow(clippy::cast_possible_truncation)]
         let v = value as f32;
         match id {
             TONE_FREQ => mix::apply(self.master.tone_freq(), op, v, time, tau, now),
@@ -646,18 +530,21 @@ impl Core {
 
     /// The last block rendered, through the mix and the master chain: what
     /// the speakers get, a block an output channel (`master::OUT`).
+    #[must_use]
     pub fn output(&self) -> &[[f32; QUANTUM]; OUT] {
         self.master.output()
     }
 
     /// The last block as it reached the bus compressor, a block an output
     /// channel: the measure harness reads it.
+    #[must_use]
     pub fn bus(&self) -> &[[f32; QUANTUM]; OUT] {
         self.master.before_comp()
     }
 
     /// The bus compressor's `reduction` (0) or the ceiling's (1), in dB,
     /// as of the last block.
+    #[must_use]
     pub fn reduction(&self, which: usize) -> f32 {
         self.master.reduction(which)
     }
@@ -672,12 +559,10 @@ impl Core {
     /// away.
     pub fn clear(&mut self) {
         self.waiting = 0;
-        for slot in self.slots.iter_mut() {
+        for slot in &mut self.slots {
             slot.busy = false;
         }
-        for v in self.sung.iter_mut() {
-            v.busy = false;
-        }
+        self.pools.clear();
     }
 
     /// Drop every note still waiting for its start time, and leave the ones
@@ -697,7 +582,7 @@ impl Core {
         let mut i = 0;
         while i < self.waiting {
             let Some(&w) = self.queue.get(i) else { break };
-            if w.time < time {
+            if w.note.time < time {
                 i += 1;
                 continue;
             }
@@ -723,17 +608,20 @@ impl Core {
 
     /// Notes that arrived after their start time had been rendered, the
     /// missed ones included.
+    #[must_use]
     pub fn late(&self) -> u32 {
         self.late
     }
 
     /// Notes that arrived more than `MISS` late, and were left out.
+    #[must_use]
     pub fn missed(&self) -> u32 {
         self.missed
     }
 
     /// Notes dropped: the queue was full when they arrived, or every voice
     /// was busy when they started. Missed notes are not among them.
+    #[must_use]
     pub fn dropped(&self) -> u32 {
         self.dropped
             .iter()
@@ -742,6 +630,7 @@ impl Core {
 
     /// Notes dropped for one cause (`QUEUE_FULL`, `VOICES_BUSY`,
     /// `SUNG_BUSY`).
+    #[must_use]
     pub fn dropped_by(&self, cause: usize) -> u32 {
         self.dropped.get(cause).copied().unwrap_or(0)
     }
@@ -753,13 +642,16 @@ impl Core {
     }
 
     /// Notes sounding or waiting to.
+    #[must_use]
     pub fn busy(&self) -> usize {
         self.waiting + self.slots.iter().filter(|s| s.busy).count()
     }
 
-    /// A note: `voice`, into `channel` (MELODY or CHORDS), at `time`
-    /// seconds on the host's clock, with the voice's own `parts` and
-    /// `extra` values (see the voices, above). A note whose start has
+    /// A note: `voice` (a number from the registry, `blocks::voices`), into
+    /// `channel` (`MELODY` and the rest), at `time` seconds on the host's
+    /// clock, with the voice's own `parts` and `extra` values (each voice's
+    /// file in `blocks` says what it reads). What the note leaves to chance
+    /// is settled here, from the last `key` (`Voice::settle`). A note whose start has
     /// already been rendered starts at once: the whole of it, from its
     /// first sample, at the start of the next block -- unless it is more
     /// than `MISS` late, when it is left out.
@@ -775,8 +667,20 @@ impl Core {
         parts: u32,
         extra: [f64; EXTRA],
     ) -> Taken {
-        if voice > LAST
-            || (plays_noise(voice, parts) && !self.noise.ready())
+        let mut note = Note {
+            voice,
+            channel,
+            time,
+            midi,
+            dur,
+            vel,
+            parts,
+            extra,
+            draws: Draws::new(self.key, channel),
+            damp: None,
+        };
+        if !blocks::known(voice)
+            || (blocks::uses_noise(&note) && !self.noise.ready())
             || channel as usize >= CHANNELS
             || !(time.is_finite() && dur.is_finite() && midi.is_finite() && vel.is_finite())
         {
@@ -786,16 +690,15 @@ impl Core {
         let until = time + dur;
         let strummed = voice == NYLON && extra[0] > 0.0;
         let strum = self.strums.get(channel as usize).copied().unwrap_or(0);
-        let mut time = time;
         let mut taken = Taken::OnTime;
-        if osc::frame_at(time, rate) < self.next {
-            let now = self.next as f64 / rate;
+        if frame_at(time, rate) < self.next {
+            let now = self.now();
             self.late = self.late.saturating_add(1);
             if now - time > MISS {
                 self.missed = self.missed.saturating_add(1);
                 return Taken::Missed;
             }
-            time = now;
+            note.time = now;
             taken = Taken::Late;
         }
         if self.waiting >= QUEUE {
@@ -807,25 +710,13 @@ impl Core {
         };
         // What the note leaves to chance is settled now, from where it sits
         // in its loop, and not by the host.
-        let draws = Draws::new(self.key, channel);
-        let mut extra = extra;
-        articulate::settle(voice, parts, midi, dur, &draws, &mut extra);
+        blocks::settle(&mut note);
         *gap = Waiting {
-            voice,
-            channel,
-            start: osc::frame_at(time, rate),
-            time,
-            midi,
-            dur,
-            vel,
-            parts,
-            extra,
+            note,
+            start: frame_at(note.time, rate),
             until,
             strummed,
             strum,
-            damped: false,
-            damp: 0.0,
-            draws,
         };
         self.waiting += 1;
         taken
@@ -855,20 +746,19 @@ impl Core {
             return;
         }
         for w in self.queue.iter_mut().take(self.waiting) {
-            if w.strummed && w.channel == channel && w.strum == strum && w.until > time {
-                w.damped = true;
-                w.damp = time;
+            if w.strummed && w.note.channel == channel && w.strum == strum && w.until > time {
+                w.note.damp = Some(time);
             }
         }
-        let now = self.next as f64 / self.rate;
+        let now = self.now();
         let at = if time < now { now } else { time };
-        for slot in self.slots.iter_mut() {
+        for slot in &mut self.slots {
             if slot.busy
                 && slot.strummed
                 && slot.channel == channel as usize
                 && slot.strum == strum
                 && slot.until > time
-                && let Voice::Nylon(v) = &mut slot.voice
+                && let Held::Nylon(v) = &mut slot.voice
             {
                 v.damp(at);
             }
@@ -884,248 +774,22 @@ impl Core {
         let Some(slot) = self.slots.iter_mut().find(|s| !s.busy) else {
             return;
         };
-        let rate = self.rate;
-        let noise = self.noise.samples().len();
-        let [a, b, c, d, e, f, g, ..] = w.extra;
-        let (begin, end) = match w.voice {
-            FIDDLE => {
-                let prev = if a.is_finite() { Some(a) } else { None };
-                let vib = if b.is_finite() && c.is_finite() && d.is_finite() {
-                    Some(Vibrato {
-                        rate: b,
-                        rate_end: c,
-                        depth: d,
-                    })
-                } else {
-                    None
-                };
-                let mut v = Fiddle::new();
-                v.play(w.midi, w.time, w.dur, w.vel, prev, vib, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Fiddle(v);
-                span
+        let cx = Context { rate: self.rate, waves: &self.waves, noise: self.noise.samples() };
+        let Some((begin, end)) = blocks::begin(&mut slot.voice, &mut self.pools, &w.note, &cx) else {
+            if let Some(n) = self.dropped.get_mut(SUNG_BUSY) {
+                *n = n.saturating_add(1);
             }
-            PAD => {
-                let mut v = PadNote::new();
-                v.play(w.midi, w.time, w.dur, w.vel, a.max(1.0), rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Pad(v);
-                span
-            }
-            FM => {
-                let options = FmOptions {
-                    ratio: a,
-                    index: b,
-                    attack: c,
-                    decay: d,
-                    detune: e,
-                };
-                let mut v = Fm::new();
-                v.strike(midi_to_freq(w.midi), w.time, w.dur, w.vel, &options, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Fm(v);
-                span
-            }
-            SINE => {
-                let mut v = SineNote::new();
-                v.play(w.midi, w.time, w.dur, w.vel, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Sine(v);
-                span
-            }
-            TUBULAR => {
-                let mut v = Tubular::new();
-                v.play(w.midi, w.time, w.dur, w.vel, [a, b, c, d, e], rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Tubular(v);
-                span
-            }
-            SOFTPAD | ANALOGPAD | ANALOGLEAD | SAWPLUCK | BEEP => {
-                let mut v = Tone::new();
-                match w.voice {
-                    SOFTPAD => v.soft_pad(w.midi, w.time, w.dur, w.vel, rate),
-                    ANALOGPAD => v.analog_pad(w.midi, w.time, w.dur, w.vel, rate),
-                    ANALOGLEAD => v.analog_lead(w.midi, w.time, w.dur, w.vel, rate),
-                    SAWPLUCK => v.saw_pluck(w.midi, w.time, w.dur, w.vel, rate),
-                    _ => v.beep(w.midi, w.time, w.dur, w.vel, rate),
-                }
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Tone(v);
-                span
-            }
-            MOOG | WHISTLE => {
-                let kind = if w.voice == MOOG {
-                    LeadKind::Moog
-                } else {
-                    LeadKind::Whistle
-                };
-                let slide = if a.is_finite() && b.is_finite() {
-                    Some((a, b))
-                } else {
-                    None
-                };
-                let mut v = Lead::new();
-                v.play(kind, w.midi, w.time, w.dur, w.vel, slide, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Lead(v);
-                span
-            }
-            NYLON => {
-                let mut v = Nylon::new();
-                v.play(w.midi, w.time, w.dur, w.vel, rate);
-                if w.damped {
-                    v.damp(w.damp);
-                }
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Nylon(v);
-                span
-            }
-            ACCORDION => {
-                let mut v = Accordion::new();
-                v.play(
-                    w.midi,
-                    w.time,
-                    w.dur,
-                    w.vel,
-                    w.channel == CHORDS,
-                    a.is_finite(),
-                    b,
-                    rate,
-                );
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Accordion(v);
-                span
-            }
-            STAB => {
-                let mut v = Stab::new();
-                v.play(w.midi, w.time, w.dur, w.vel, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Stab(v);
-                span
-            }
-            OCARINA | FLUTE => {
-                let slide = if a.is_finite() && b.is_finite() {
-                    Some((a, b))
-                } else {
-                    None
-                };
-                let mut v = Wind::new();
-                v.play(
-                    w.voice == FLUTE,
-                    w.midi,
-                    w.time,
-                    w.dur,
-                    w.vel,
-                    slide,
-                    c,
-                    noise,
-                    rate,
-                );
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Wind(v);
-                span
-            }
-            PANFLUTE => {
-                let vibrato = if a.is_finite() { Some(a) } else { None };
-                let mut v = Panflute::new();
-                v.play(w.midi, w.time, w.dur, w.vel, vibrato, b, noise, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Panflute(v);
-                span
-            }
-            KNOCK | HAT => {
-                let mut v = Struck::new();
-                if w.voice == KNOCK {
-                    v.knock(w.time, w.vel, a, b, c, noise, rate);
-                } else {
-                    v.hat(w.parts, w.time, w.vel, a, b, noise, rate);
-                }
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Struck(v);
-                span
-            }
-            TEMPLEBELL => {
-                let mut draws = [0.0; TEMPLE_SINES];
-                for (d, &x) in draws.iter_mut().zip(w.extra.iter()) {
-                    *d = x;
-                }
-                let strike = (
-                    w.extra.get(TEMPLE_SINES).copied().unwrap_or(0.0),
-                    w.extra.get(TEMPLE_SINES + 1).copied().unwrap_or(0.0),
-                );
-                let mut v = TempleBell::new();
-                v.play(
-                    w.midi,
-                    w.time,
-                    w.dur,
-                    w.vel,
-                    w.channel == CHORDS,
-                    &draws,
-                    strike,
-                    noise,
-                    rate,
-                );
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::TempleBell(v);
-                span
-            }
-            BASS => {
-                let mut v = Bass::new();
-                v.play(w.parts, w.midi, w.time, w.dur, w.vel, (a, b), noise, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Bass(v);
-                span
-            }
-            DRUM => {
-                let mut v = Drum::new();
-                v.play(w.parts, w.time, w.vel, &[a, b, c, d, e, f, g], noise, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Drum(v);
-                span
-            }
-            TEXTURE => {
-                let mut v = Texture::new();
-                v.play(w.parts, w.midi, w.time, w.dur, w.vel, [a, b, c], noise, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Texture(v);
-                span
-            }
-            VOWEL..=CHOIR => {
-                let kind = sung_kind(w.voice).unwrap_or(Kind3::Vowel);
-                let Some((i, v)) = self.sung.iter_mut().enumerate().find(|(_, v)| !v.busy) else {
-                    if let Some(n) = self.dropped.get_mut(SUNG_BUSY) {
-                        *n = n.saturating_add(1);
-                    }
-                    return;
-                };
-                v.play(
-                    kind, w.midi, w.time, w.dur, w.vel, a, b, c, d, &w.draws, noise, rate,
-                );
-                v.busy = true;
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Sung(i);
-                span
-            }
-            _ => {
-                let mut v = Kalimba::new();
-                v.play(w.midi, w.time, w.dur, w.vel, w.parts, rate);
-                let span = (v.start_frame(), v.end_frame());
-                slot.voice = Voice::Kalimba(v);
-                span
-            }
+            return;
         };
-        slot.channel = w.channel as usize;
+        slot.channel = w.note.channel as usize;
         slot.strummed = w.strummed;
         slot.strum = w.strum;
         slot.until = w.until;
         slot.begin = begin;
         slot.end = end;
         slot.busy = end > begin;
-        if !slot.busy
-            && let Voice::Sung(i) = slot.voice
-            && let Some(v) = self.sung.get_mut(i)
-        {
-            v.busy = false;
+        if !slot.busy {
+            blocks::free(&slot.voice, &mut self.pools);
         }
     }
 
@@ -1142,7 +806,7 @@ impl Core {
         let block = block.max(self.next);
         let end = block + QUANTUM as u64;
         self.next = end;
-        for ch in self.out.iter_mut() {
+        for ch in &mut self.out {
             ch.fill(0.0);
         }
         // Notes starting in this block take their voices. The queue is not
@@ -1165,64 +829,35 @@ impl Core {
         for bus in self.buses.iter_mut().flatten() {
             bus.fill(0.0);
         }
-        let rate = self.rate;
+        let cx = Context { rate: self.rate, waves: &self.waves, noise: self.noise.samples() };
         for slot in self.slots.iter_mut().filter(|s| s.busy) {
             if slot.begin >= end {
                 continue;
             }
-            let (Some(out), Some([fiddles, nylons, accordions])) = (
+            let (Some(out), Some(buses)) = (
                 self.out.get_mut(slot.channel),
                 self.buses.get_mut(slot.channel),
             ) else {
                 continue;
             };
-            match &mut slot.voice {
-                Voice::Kalimba(v) => v.render(block, rate, &self.waves, out),
-                Voice::Fiddle(v) => v.render(block, rate, &self.waves, fiddles),
-                Voice::Nylon(v) => v.render(block, rate, &self.waves, nylons),
-                Voice::Accordion(v) => v.render(block, rate, &self.waves, accordions),
-                Voice::Stab(v) => v.render(block, rate, &self.waves, out),
-                Voice::Wind(v) => v.render(block, rate, &self.waves, self.noise.samples(), out),
-                Voice::Panflute(v) => v.render(block, rate, &self.waves, self.noise.samples(), out),
-                Voice::Struck(v) => v.render(block, rate, self.noise.samples(), out),
-                Voice::TempleBell(v) => {
-                    v.render(block, rate, &self.waves, self.noise.samples(), out)
-                }
-                Voice::Bass(v) => v.render(block, rate, &self.waves, self.noise.samples(), out),
-                Voice::Texture(v) => {
-                    v.render(block, rate, &self.waves, self.noise.samples(), out)
-                }
-                Voice::Drum(v) => v.render(block, rate, &self.waves, self.noise.samples(), out),
-                Voice::Pad(v) => v.render(block, rate, &self.waves, out),
-                Voice::Fm(v) => v.render(block, rate, &self.waves, out),
-                Voice::Sine(v) => v.render(block, rate, &self.waves, out),
-                Voice::Tubular(v) => v.render(block, rate, &self.waves, out),
-                Voice::Tone(v) => v.render(block, rate, &self.waves, out),
-                Voice::Lead(v) => v.render(block, rate, &self.waves, out),
-                Voice::Sung(i) => {
-                    if let Some(v) = self.sung.get_mut(*i) {
-                        v.render(block, rate, &self.waves, self.noise.samples(), out);
-                    }
-                }
-            }
+            blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses);
             if slot.end <= end {
                 slot.busy = false;
-                if let Voice::Sung(i) = slot.voice
-                    && let Some(v) = self.sung.get_mut(i)
-                {
-                    v.busy = false;
-                }
+                blocks::free(&slot.voice, &mut self.pools);
             }
         }
         // Every note with a body, through its channel's body of its kind.
         for ((out, buses), bodies) in self
             .out
             .iter_mut()
-            .zip(self.buses.iter())
+            .zip(self.buses.iter_mut())
             .zip(self.bodies.iter_mut())
         {
-            for (bus, body) in buses.iter().zip(bodies.iter_mut()) {
-                body.run(bus, out);
+            for (bus, body) in buses.iter_mut().zip(bodies.iter_mut()) {
+                body.render(block, &cx, bus);
+                for (y, x) in out.iter_mut().zip(bus.iter()) {
+                    *y += *x;
+                }
             }
         }
         // The host's own notes, then the mix. A channel's tail stops at the
@@ -1246,10 +881,13 @@ impl Default for Core {
     }
 }
 
+// Tests count with casts of values they have just bounded.
 #[cfg(test)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 mod tests {
     use super::*;
-    use voice::{BODY, STRIKE};
+    use blocks::kalimba::{BODY, STRIKE};
+    use blocks::{bass, drum, midi_to_freq, texture};
 
     const RATE: f64 = 44100.0;
 
@@ -1500,7 +1138,7 @@ mod tests {
     fn energy(core: &mut Core, channel: usize, seconds: f64) -> (f32, f32) {
         let (mut peak, mut sum) = (0.0f32, 0.0f32);
         for b in 0..(seconds * RATE) as usize / QUANTUM {
-            for &x in core.process((b * QUANTUM) as u64)[channel].iter() {
+            for &x in &core.process((b * QUANTUM) as u64)[channel] {
                 peak = peak.max(x.abs());
                 sum += x * x;
             }
@@ -1705,7 +1343,7 @@ mod tests {
         let peak = blocks.iter().flatten().fold(0.0f32, |a, &b| a.max(b.abs()));
         assert!(peak > 0.01 && peak < 0.5, "peak {peak}");
         assert_eq!(core.busy(), 0);
-        assert!(core.sung.iter().all(|v| !v.busy));
+        assert!(core.pools.idle());
     }
 
     #[test]
@@ -1795,7 +1433,7 @@ mod tests {
         // chain, which delays what it carries.
         let mut core = boxed();
         core.note(KALIMBA, MELODY, 0.0123, 72.0, 0.3, 0.6, STRIKE | BODY, NO);
-        let at = usize::try_from(osc::frame_at(0.0123, RATE)).expect("a small frame");
+        let at = usize::try_from(frame_at(0.0123, RATE)).expect("a small frame");
         let mut start = None;
         for b in 0..8 {
             let melody = core.process((b * QUANTUM) as u64)[0];
@@ -1828,8 +1466,8 @@ mod tests {
             (TEXTURE, TEXTURE_CHANNEL, texture::DROP, 0.5),
             (TEXTURE, TEXTURE_CHANNEL, texture::WIND, 2.0),
             (TEXTURE, TEXTURE_CHANNEL, texture::WAVES, 2.0),
-            (DRUM, DRUMS_CHANNEL, drums::JINGLE, 0.1),
-            (DRUM, DRUMS_CHANNEL, drums::SNARE, 0.1),
+            (DRUM, DRUMS_CHANNEL, drum::JINGLE, 0.1),
+            (DRUM, DRUMS_CHANNEL, drum::SNARE, 0.1),
             (VOWEL, MELODY, 0, 3.0),
             (HUM, MELODY, 0, 3.0),
             (CHOIR, MELODY, 0, 3.0),
@@ -1879,7 +1517,7 @@ mod tests {
 
     #[test]
     fn a_slide_comes_from_the_note_before_or_from_just_under() {
-        use articulate::slide_of;
+        use blocks::slide_of;
         // Never for a short note, and never when the draw is past the chance.
         assert_eq!(slide_of(69.0, 0.1, f64::NAN, 0.0), None);
         assert_eq!(slide_of(69.0, 1.0, f64::NAN, 0.5), None);
