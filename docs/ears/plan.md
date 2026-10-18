@@ -229,7 +229,7 @@ them is a hands session.
 | Ears 3 | **Done 2026-10-15** (PR #221, merged): card tools, calibrated; tried on *Geogaddi* and *Galaxy Garden*; cards in `docs/ears/cards-test.md` | Sonnet 5.5 | high |
 | Ears 4 | **Done 2026-10-16** (PR #222, merged): the tune round. dubStab, longChords, wash, the stereo baseline and the chapel organ all approved; `docs/ears/batch-4.md` | Opus 5.5 | high |
 | Ears 5 | **Done 2026-10-16** (PR #223 to merge): pile 1 cards (five records), `docs/ears/cards-pile-1.md`; costs measured; `check_stems.py` added | Sonnet 5.5 | medium |
-| Ears 6 | **Done 2026-10-18** (PR to merge): pile 2 first half, six records, `docs/ears/cards-pile-2.md`; costs checked a third time; `split.py` gained an MDX-Net step | Sonnet 5.5 | medium |
+| Ears 6 | **Done 2026-10-18** (PR #225 to merge): pile 2 first half, six records, `docs/ears/cards-pile-2.md`; costs checked a third time; `split.py` gained an MDX-Net step | Sonnet 5.5 | medium |
 | Ears 7 | **Next.** Pile 2, second half (pile 3 then needs a session of its own, so the labels below shift by one here and by four in all) | Sonnet 5.5 | medium |
 | Ears 8 | First synthesis: pick candidates across the cards so far, sketch them offline, render clips, write the next `docs/ears/batch-N.md` for verdicts | Opus 5.5 | high |
 | Ears 9, 10, 11 | Piles 4–6 | Sonnet 5.5 | medium |
