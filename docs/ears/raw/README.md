@@ -1,0 +1,10 @@
+# Raw ears measurements
+
+`pile-2-first-half-raw.tar.gz` (3.5 MB): every album.py output from Ears 6 except audio and stems. Six albums (I Care Because You Do, Ventolin, Donkey Rhubarb, Hangable Auto Bulb, GAK, Analogue Bubblebath 4), 128 files, one folder per album:
+
+- `pick.json`: the picker's mix-level row for every track (all tracks, not just the deep pass) and the picks
+- `<track>/events.json`, `techniques.json`, `theory.json`, `space.json`: the full per-track measurements the cards summarize (note groups with every fingerprint number, all sweeps, all chord and bass readings)
+- `stems/<track>/split.json`: which separator ran and how long it took (the stems themselves are not kept; MDX-Net stems, about 6 GB, rebuild with `tools/ears/split.py`)
+- `progress.log`, `card.md`: stage timings and the unedited draft card
+
+Unpack with `tar xzf pile-2-first-half-raw.tar.gz -C SOMEWHERE`. Later piles can add their own archive here. The cards in `docs/ears/cards-pile-*.md` stay the readable record.
