@@ -1,9 +1,14 @@
 """Split a track into stems: drums, bass, other, vocals.
 
-Usage: python3 -I split.py IN OUT_DIR [--mode auto|demucs|hpss] [--seconds N]
+Usage: python3 -I split.py IN OUT_DIR [--mode auto|demucs|mdx|hpss] [--seconds N]
 
 auto (default): Demucs htdemucs on the CPU when it is installed and the
-weights load, otherwise harmonic/percussive separation plus band splits.
+weights load; otherwise MDX-Net (the four UVR `kuielab_a_*.onnx` models, run
+by `audio-separator`, from MDX_DIR or /tmp; they come from the TRvlvr
+model_repo GitHub release, which a workspace that blocks the Demucs weights
+still reaches); otherwise harmonic/percussive separation plus band splits.
+Ears 6 used MDX-Net for pile 2 (Demucs weights were blocked): its drums stem
+takes in some low end, so check_stems.py matters more.
 Writes OUT_DIR/{drums,bass,other,vocals}.wav (44.1 kHz stereo) and
 OUT_DIR/split.json with the mode used and the time taken, so a card says
 which separator its stems came from.
@@ -38,6 +43,38 @@ def demucs_split(src, out_dir, seconds=None):
     os.makedirs(out_dir, exist_ok=True)
     for s in ("drums", "bass", "other", "vocals"):
         shutil.move(os.path.join(src_dir, s + ".wav"), os.path.join(out_dir, s + ".wav"))
+    n = sf.info(os.path.join(out_dir, "drums.wav")).frames
+    shutil.rmtree(tmp, ignore_errors=True)
+    return took, n / 44100
+
+
+MDX_MODELS = {"drums": "Drums", "bass": "Bass", "other": "Other", "vocals": "Vocals"}
+
+
+def mdx_split(src, out_dir, seconds=None):
+    """Four MDX-Net models (kuielab_a_<stem>.onnx), one pass each."""
+    mdx_dir = os.environ.get("MDX_DIR", "/tmp")
+    for s in MDX_MODELS:
+        if not os.path.exists(os.path.join(mdx_dir, f"kuielab_a_{s}.onnx")):
+            raise FileNotFoundError(f"kuielab_a_{s}.onnx not in {mdx_dir}")
+    tmp = tempfile.mkdtemp(prefix="mdx_")
+    wav = os.path.join(tmp, "in.wav")
+    cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", src, "-ar", "44100", "-ac", "2"]
+    if seconds:
+        cmd += ["-t", str(seconds)]
+    subprocess.run(cmd + [wav], check=True)
+    os.makedirs(out_dir, exist_ok=True)
+    t0 = time.time()
+    for s, label in MDX_MODELS.items():
+        subprocess.run(["audio-separator", wav, "--model_filename", f"kuielab_a_{s}.onnx",
+                        "--model_file_dir", mdx_dir, "--output_dir", tmp, "--single_stem", label,
+                        "--output_format", "WAV"], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        got = [f for f in os.listdir(tmp) if f.startswith("in_(") and f"({label})" in f]
+        if not got:
+            raise RuntimeError(f"no {s} output")
+        shutil.move(os.path.join(tmp, got[0]), os.path.join(out_dir, s + ".wav"))
+    took = time.time() - t0
     n = sf.info(os.path.join(out_dir, "drums.wav")).frames
     shutil.rmtree(tmp, ignore_errors=True)
     return took, n / 44100
@@ -79,7 +116,16 @@ def split(src, out_dir, mode="auto", seconds=None):
         except Exception as e:  # install or weights missing, or it crashed
             if mode == "demucs":
                 raise
-            note = f"demucs failed ({type(e).__name__}); fell back to hpss"
+            note = f"demucs failed ({type(e).__name__}); fell back"
+    if used is None and mode in ("auto", "mdx"):
+        try:
+            took, dur = mdx_split(src, out_dir, seconds)
+            used = "mdx-net-kuielab_a"
+            note = (note + "; " if note else "") + "mdx-net stems"
+        except Exception as e:
+            if mode == "mdx":
+                raise
+            note += f"; mdx failed ({type(e).__name__}); fell back"
     if used is None:
         took, dur = hpss_split(src, out_dir, seconds)
         used = "hpss+bands"

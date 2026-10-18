@@ -197,11 +197,26 @@ times the audio length; measuring about 3 minutes a track. Five albums took
 by a quarter. Pile 2 (14 records, mostly EPs where every track gets the deep
 pass) now looks like **7 to 8 hours**: 13 EPs of 3 to 6 tracks at 4 to 6
 minutes each, plus *...I Care Because You Do* (12 tracks, so 4 get the deep
-pass). That is an estimate; Ears 6 should time its first EP and correct it.
+pass). That was an estimate; Ears 6 checked it (next paragraph).
 Piles 10 to 12 (10 to 12 albums each) are likewise about 7 hours each. Split
 pile 2 and piles 10 to 12 into two sessions each (the later labels shift
 by four). The other piles of 6 to 8 albums are 4 to 5 hours and fit one
 session.
+
+**Third check (Ears 6, pile 2 first half).** The Demucs weights were blocked
+in that workspace (HTTP 403), so the stems came from MDX-Net
+(`kuielab_a`, four ONNX models), which runs 0.41 times real time, **2.3 to 2.8
+times the audio length** including about 14 s of model load per model, against
+1.0 to 1.1 for Demucs. With that split, six albums took 4,352, 2,620, 4,170,
+2,602, 3,213 and 4,434 s (**21,391 s, 5.9 hours**) for 16 to 41 minutes of
+deep-pass audio each, which is **1.56 to 1.90 times** the formula above. The
+other parts matched Ears 5: picking 16 to 37 s a track, measuring 0.38 to
+0.45 times the audio. So the formula holds if the split is Demucs (not
+re-measured here) and should be multiplied by about 1.7 when the split is
+MDX-Net. Pile 2's second half is 7 albums, mostly EPs: plan for about 5 to 6
+hours if the weights stay blocked. Run it as a chain script that resumes from
+the cache (the workspace restarted once and killed the processes; the disk
+survived).
 
 ## Piles and sessions
 
@@ -214,8 +229,8 @@ them is a hands session.
 | Ears 3 | **Done 2026-10-15** (PR #221, merged): card tools, calibrated; tried on *Geogaddi* and *Galaxy Garden*; cards in `docs/ears/cards-test.md` | Sonnet 5.5 | high |
 | Ears 4 | **Done 2026-10-16** (PR #222, merged): the tune round. dubStab, longChords, wash, the stereo baseline and the chapel organ all approved; `docs/ears/batch-4.md` | Opus 5.5 | high |
 | Ears 5 | **Done 2026-10-16** (PR #223 to merge): pile 1 cards (five records), `docs/ears/cards-pile-1.md`; costs measured; `check_stems.py` added | Sonnet 5.5 | medium |
-| Ears 6 | **Next.** Pile 2, first half (see the note below the table): cards | Sonnet 5.5 | medium |
-| Ears 7 | Pile 2, second half (pile 3 then needs a session of its own, so the labels below shift by one here and by four in all) | Sonnet 5.5 | medium |
+| Ears 6 | **Done 2026-10-18** (PR #225 to merge): pile 2 first half, six records, `docs/ears/cards-pile-2.md`; costs checked a third time; `split.py` gained an MDX-Net step | Sonnet 5.5 | medium |
+| Ears 7 | **Next.** Pile 2, second half (pile 3 then needs a session of its own, so the labels below shift by one here and by four in all) | Sonnet 5.5 | medium |
 | Ears 8 | First synthesis: pick candidates across the cards so far, sketch them offline, render clips, write the next `docs/ears/batch-N.md` for verdicts | Opus 5.5 | high |
 | Ears 9, 10, 11 | Piles 4–6 | Sonnet 5.5 | medium |
 | Ears 12 | Second synthesis | Opus 5.5 | high |
@@ -225,8 +240,13 @@ them is a hands session.
 | Ears 20 | Last synthesis, and a pass across every card for theory and "For later" | Opus 5.5 | high |
 
 Pile 2 is too long for one session (7 to 8 hours of machine time, above).
-Ears 6 does the first half: *...I Care Because You Do*, *Ventolin*, *Donkey
-Rhubarb*, *Hangable Auto Bulb*, *EP.2*, GAK and *Analogue Bubblebath 4*.
+Ears 6 did the first half: *...I Care Because You Do*, *Ventolin*, *Donkey
+Rhubarb*, *Hangable Auto Bulb*, GAK and *Analogue Bubblebath 4*. *EP.2* did
+not get a card of its own: the *Hangable Auto Bulb* folder holds 10 tracks
+that look like both EPs (01 to 06 near-mono, 07 to 10 wider), which is
+unconfirmed; Mikey can say whether *EP.2* is in that folder or still to
+upload. Donkey Rhubarb tracks 03 and 05 are identical audio, so check the
+Drive upload.
 Ears 7 does the second: *Analogue Bubblebath 5* and *3.1*, *Bradley's
 Robot*, *Bradley's Beat*, and Caustic Window *Joyrex J9i*, *J9ii* and
 *Compilation* (skip any Joyrex track that is also on *Compilation*, as
