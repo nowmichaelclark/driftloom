@@ -218,6 +218,29 @@ hours if the weights stay blocked. Run it as a chain script that resumes from
 the cache (the workspace restarted once and killed the processes; the disk
 survived).
 
+**Fourth check (Ears 7, pile 2 second half), with Demucs.** The weights were
+reachable again. Five albums took 837, 1,554, 1,022, 1,293 and 3,606 s
+(**8,312 s, 2.3 hours**) for 12 to 51 minutes of deep-pass audio each, which is
+**0.56 to 0.71 times the formula** (12,586 s by the formula). Demucs ran at
+**0.59 to 0.72 times the audio length** (a 20 s clip: 1.4 times, mostly start-up),
+measuring at 0.38 to 0.50 times, picking at 8 to 13 s a track in this folder
+(Ears 5 had 22 to 26 s). So with Demucs the formula over-estimates by about a
+third: use **1.1 s per second of deep-pass audio plus 12 s per track in the
+album** (the five albums' total comes out within 2% of the measured one, single albums within 16%), or keep the old formula as
+a safe ceiling. MDX-Net remains 1.56 to 1.90 times the old formula. The machine
+used for Ears 7 had 8 cores; the earlier sessions' 2-core figure may have
+depended on that, so re-measure if the workspace changes. Pile 2 (both halves,
+11 albums carded) took 8.3 hours of machine time in all (21,391 s with
+MDX-Net + 8,312 s with Demucs = 29,703 s).
+
+**Twins (Ears 7).** `twins.py` on every new picker row, the first half's rows
+and `data.csv` (Aphex): none. Near misses that are not twins: *Analogue
+Bubblebath 5* track 04 and *Bradley's Robot* B2 share a drum grid (97.6 BPM, the
+picker's 143.6) but not a length or a loudness; *Bradley's Beat* Part One has
+the length of *Icct Hedral (Edit)* (367.1 s) but not its loudness. *Joyrex J9ii*
+is entirely on the *Compilation* (tracks 09, 11, 12, 13; lengths agree within 1
+to 4 s), so it has no card of its own; *J9i* is not in the folder.
+
 **Keep the raw files.** Every session that runs `album.py` ends by archiving
 its workdir's JSON, logs and draft cards into `docs/ears/raw/` (rule and recipe
 in `sessions.md`); the cards are a summary and the raw files are what later
@@ -235,8 +258,8 @@ them is a hands session.
 | Ears 4 | **Done 2026-10-16** (PR #222, merged): the tune round. dubStab, longChords, wash, the stereo baseline and the chapel organ all approved; `docs/ears/batch-4.md` | Opus 5.5 | high |
 | Ears 5 | **Done 2026-10-16** (PR #223 to merge): pile 1 cards (five records), `docs/ears/cards-pile-1.md`; costs measured; `check_stems.py` added | Sonnet 5.5 | medium |
 | Ears 6 | **Done 2026-10-18** (PR #225 to merge): pile 2 first half, six records, `docs/ears/cards-pile-2.md`; costs checked a third time; `split.py` gained an MDX-Net step | Sonnet 5.5 | medium |
-| Ears 7 | **Next.** Pile 2, second half (pile 3 then needs a session of its own, so the labels below shift by one here and by four in all) | Sonnet 5.5 | medium |
-| Ears 8 | First synthesis: pick candidates across the cards so far, sketch them offline, render clips, write the next `docs/ears/batch-N.md` for verdicts | Opus 5.5 | high |
+| Ears 7 | **Done 2026-10-18** (PR to merge): pile 2 second half, five cards (*Bradley's Beat*, *Bradley's Robot*, *Analogue Bubblebath 3* (= *3.1*), *Analogue Bubblebath 5*, Caustic Window *Compilation*), `docs/ears/cards-pile-2.md`; Demucs stems; costs checked a fourth time; raw files in `docs/ears/raw/pile-2-second-half-raw.tar.gz` | Sonnet 5.5 | medium |
+| Ears 8 | **Next.** First synthesis: pick candidates across the cards so far, sketch them offline, render clips, write the next `docs/ears/batch-N.md` for verdicts | Opus 5.5 | high |
 | Ears 9, 10, 11 | Piles 4–6 | Sonnet 5.5 | medium |
 | Ears 12 | Second synthesis | Opus 5.5 | high |
 | Ears 13, 14, 15 | Piles 7–9 | Sonnet 5.5 | medium |
@@ -252,7 +275,7 @@ that look like both EPs (01 to 06 near-mono, 07 to 10 wider), which is
 unconfirmed; Mikey can say whether *EP.2* is in that folder or still to
 upload. Donkey Rhubarb tracks 03 and 05 are identical audio, so check the
 Drive upload.
-Ears 7 does the second: *Analogue Bubblebath 5* and *3.1*, *Bradley's
+Ears 7 did the second (done; see the table): *Analogue Bubblebath 5* and *3.1* (the same record as *3*), *Bradley's
 Robot*, *Bradley's Beat*, and Caustic Window *Joyrex J9i*, *J9ii* and
 *Compilation* (skip any Joyrex track that is also on *Compilation*, as
 Mikey's upload checklist says). Splitting every long pile shifts the later

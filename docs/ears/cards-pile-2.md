@@ -1,4 +1,8 @@
-# Ears cards, pile 2, first half
+# Ears cards, pile 2
+
+First half (Ears 6, MDX-Net stems) at the top; the second half (Ears 7, Demucs stems) starts at the Bradley's Beat card and has its own notes just below the first table.
+
+## First half (Ears 6)
 
 Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/album.py` (stage by stage), checked against the limits in `docs/EARS.md`. Lines marked **[JUDGMENT]** are for Ears 8; each carries a short first guess marked **Guess**. Machine time per album is on each card; the totals and the cost check are in `docs/ears/plan.md`.
 
@@ -12,6 +16,36 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 | Hangable Auto Bulb (AFX) | 10 (3) | 2,602 s | done |
 | GAK (AFX) | 9 (3) | 3,213 s | done |
 | Analogue Bubblebath 4 | 5 (4) | 4,434 s | done |
+
+## Second half (Ears 7)
+
+Ears 7 (Sonnet 5.5, medium), 2026-10-18. Same format and same tools as the first half, with one difference that matters: **the stems on these five cards came from Demucs htdemucs**, not MDX-Net (the weights were reachable again on 2026-10-18; a 20 s clip split in 27.5 s, and real tracks ran at 0.59 to 0.72 times the audio length). So the drums stem swallows less of the sub than on the first half's cards, but it still holds most of it on kick-led tracks (on every second-half track the drums stem has 50 to 95% of its energy under 120 Hz), and each card's stem check says where the bass stem is empty. Python ran with `python3 -P`, not `-I` (see `tools/ears/README.md`). Lines marked **[JUDGMENT]** are for Ears 8 and carry a short Guess. The raw measurements are in `docs/ears/raw/pile-2-second-half-raw.tar.gz`.
+
+**What was in the folder, and what got a card.**
+
+| Folder | Card | Why |
+|---|---|---|
+| (1995) Analogue Bubblebath 5 | carded | 9 tracks, 8 deep passes (track 03 is 37 s) |
+| 1997 - Analogue Bubblebath 3 | carded | the same record as *3.1* (Mikey), one card; 13 tracks, 4 deep passes |
+| Bradley Strider - Bradley's Robot (1993) | carded | 4 untitled sides, all deep |
+| Bradley Strider - Bradley's Beat (Second Version) | carded | 2 tracks, both deep |
+| Caustic Window - Compilation | carded | 13 tracks, 4 deep passes |
+| RICHARD D JAMES (CAUSTIC WINDOW) - JOYREX J9ii | no card of its own | all four tracks (Fantasia, Clayhill Dub, The Garden of Linmiri, We Are the Music Makers (Hardcore Mix)) are tracks 09, 11, 12 and 13 of the Compilation; Fantasia got the deep pass there |
+| Joyrex J9i | not in the folder | Mikey: most of it is on the Compilation |
+
+| Album | Tracks (deep pass) | Machine time | Formula | Status |
+|---|---|---|---|---|
+| Bradley's Beat | 2 (2) | 837 s | 1,201 s | done |
+| Bradley's Robot | 4 (4) | 1,554 s | 2,552 s | done |
+| Analogue Bubblebath 3 | 13 (4) | 1,022 s | 1,819 s | done |
+| Caustic Window, Compilation | 13 (4) | 1,293 s | 1,922 s | done |
+| Analogue Bubblebath 5 | 9 (8) | 3,606 s | 5,092 s | done |
+
+Total 8,312 s (2.3 hours) against 12,586 s by the plan's formula: 0.66 times. Twins: none (`twins.py` on all the new picker rows, the first half's rows and `data.csv`).
+
+---
+
+## First half cards
 
 ---
 
