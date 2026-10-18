@@ -259,7 +259,7 @@ techniques 6 to 39 s, space 3 to 66 s) or 32 to 37 s per audio minute. Ears 6
 blocked, so `split.py` used MDX-Net, 2.3 to 2.8 times the audio length, and the
 formula came out 1.56 to 1.90 times low; with Demucs the formula is the
 figure to use, with MDX-Net multiply by about 1.7. Demucs became reachable again on 2026-10-18; a 90 s clip took 0.7 times its length on 2 cores
-(a 30 s clip 2.9 times, with the weights downloading). MDX-Net stems are weaker:
+(a 30 s clip 2.9 times, with the weights downloading). Ears 7 then ran five albums on Demucs: Demucs 0.59 to 0.72 times the audio, the whole run 0.56 to 0.71 times the formula (8,312 s against 12,586 s), so with Demucs the formula over-estimates by about a third (`docs/ears/plan.md`, fourth check). MDX-Net stems are weaker:
 the drums stem holds 60 to 93% of the sub, the bass stem is empty or thin
 wherever kick and bass share it (`album.py` now runs `check_stems.py` and the card opens with
 its flags; read them before trusting a bass number), and the vocals stem on an instrumental is bleed. A four-track album is

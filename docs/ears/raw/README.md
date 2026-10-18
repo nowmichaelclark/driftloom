@@ -8,3 +8,5 @@
 - `progress.log`, `card.md`: stage timings and the unedited draft card
 
 Unpack with `tar xzf pile-2-first-half-raw.tar.gz -C SOMEWHERE`. Later piles can add their own archive here. The cards in `docs/ears/cards-pile-*.md` stay the readable record.
+
+`pile-2-second-half-raw.tar.gz`: the same for Ears 7 (Demucs htdemucs stems, not MDX-Net). Five albums (Bradley's Beat, Bradley's Robot, Analogue Bubblebath 3, Caustic Window Compilation, Analogue Bubblebath 5), one folder per album, same layout as above (`pick.json`, `<track>/{events,techniques,theory,space,stem_check}.json`, `stems/<track>/split.json`, `progress.log`, `card.md`). `stem_check.json` is new since Ears 6b: each track's stem shares, band shares, strongest low lines, drum-onset grid and the summed-stems floor-drop runs. `split.json` here says `demucs-htdemucs` and the seconds it took. No audio, stems or joined wavs. The cards are in `docs/ears/cards-pile-2.md` (second half). Unpack with `tar xzf pile-2-second-half-raw.tar.gz -C SOMEWHERE`.

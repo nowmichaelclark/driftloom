@@ -1,4 +1,8 @@
-# Ears cards, pile 2, first half
+# Ears cards, pile 2
+
+First half (Ears 6, MDX-Net stems) at the top; the second half (Ears 7, Demucs stems) starts at the Bradley's Beat card and has its own notes just below the first table.
+
+## First half (Ears 6)
 
 Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/album.py` (stage by stage), checked against the limits in `docs/EARS.md`. Lines marked **[JUDGMENT]** are for Ears 8; each carries a short first guess marked **Guess**. Machine time per album is on each card; the totals and the cost check are in `docs/ears/plan.md`.
 
@@ -12,6 +16,36 @@ Ears 6 (Sonnet 5.5, medium), started 2026-10-18. Album cards from `tools/ears/al
 | Hangable Auto Bulb (AFX) | 10 (3) | 2,602 s | done |
 | GAK (AFX) | 9 (3) | 3,213 s | done |
 | Analogue Bubblebath 4 | 5 (4) | 4,434 s | done |
+
+## Second half (Ears 7)
+
+Ears 7 (Sonnet 5.5, medium), 2026-10-18. Same format and same tools as the first half, with one difference that matters: **the stems on these five cards came from Demucs htdemucs**, not MDX-Net (the weights were reachable again on 2026-10-18; a 20 s clip split in 27.5 s, and real tracks ran at 0.59 to 0.72 times the audio length). So the drums stem swallows less of the sub than on the first half's cards, but it still holds most of it on kick-led tracks (on every second-half track the drums stem has 50 to 95% of its energy under 120 Hz), and each card's stem check says where the bass stem is empty. Python ran with `python3 -P`, not `-I` (see `tools/ears/README.md`). Lines marked **[JUDGMENT]** are for Ears 8 and carry a short Guess. The raw measurements are in `docs/ears/raw/pile-2-second-half-raw.tar.gz`.
+
+**What was in the folder, and what got a card.**
+
+| Folder | Card | Why |
+|---|---|---|
+| (1995) Analogue Bubblebath 5 | carded | 9 tracks, 8 deep passes (track 03 is 37 s) |
+| 1997 - Analogue Bubblebath 3 | carded | the same record as *3.1* (Mikey), one card; 13 tracks, 4 deep passes |
+| Bradley Strider - Bradley's Robot (1993) | carded | 4 untitled sides, all deep |
+| Bradley Strider - Bradley's Beat (Second Version) | carded | 2 tracks, both deep |
+| Caustic Window - Compilation | carded | 13 tracks, 4 deep passes |
+| RICHARD D JAMES (CAUSTIC WINDOW) - JOYREX J9ii | no card of its own | all four tracks (Fantasia, Clayhill Dub, The Garden of Linmiri, We Are the Music Makers (Hardcore Mix)) are tracks 09, 11, 12 and 13 of the Compilation; Fantasia got the deep pass there |
+| Joyrex J9i | not in the folder | Mikey: most of it is on the Compilation |
+
+| Album | Tracks (deep pass) | Machine time | Formula | Status |
+|---|---|---|---|---|
+| Bradley's Beat | 2 (2) | 837 s | 1,201 s | done |
+| Bradley's Robot | 4 (4) | 1,554 s | 2,552 s | done |
+| Analogue Bubblebath 3 | 13 (4) | 1,022 s | 1,819 s | done |
+| Caustic Window, Compilation | 13 (4) | 1,293 s | 1,922 s | done |
+| Analogue Bubblebath 5 | 9 (8) | 3,606 s | 5,092 s | done |
+
+Total 8,312 s (2.3 hours) against 12,586 s by the plan's formula: 0.66 times. Twins: none (`twins.py` on all the new picker rows, the first half's rows and `data.csv`).
+
+---
+
+## First half cards
 
 ---
 
@@ -673,3 +707,607 @@ Chord counts (8 to 31 a minute) and top lines (from other stems holding 0.8 to 3
 - Floor drops: the techniques stage and the sums agree on Cuckoo's 4:06.5, 03's two, and 04's 4:13 to 4:39 run; the first and last seconds of every file are intro and tail. The sums-only candidates (03 4:12.5, 04 4:18.0 and the 04 intro gaps) are not confirmed.
 - Pitch under 40 Hz is good to about a semitone; the bell-like labels under 60 Hz (S5) are the tool's limit.
 - Mix-level tuning: +37 (01), -33 (Cuckoo), +6 (03), +16 (04) cents; pile 1 ran -48 to +45, so these are within the noise.
+
+---
+
+## Bradley Strider, Bradley's Beat (Second Version) (1995)
+
+Ears 7, 2026-10-18, Sonnet 5.5. Two tracks, Part One (6:07) and Part Two (5:52), both measured in full. Stems from Demucs htdemucs. The record is one idea in two takes: a kick-led, sub-heavy, near-mono pattern at 143 to 148 BPM. The drums stem holds 91% (Part One) and 96% (Part Two) of the power, the mix has 72% and 64% of its energy under 120 Hz, only 1 to 2% above 2 kHz (loudness -16.9 and -17.3 LUFS, both quiet for the pile).
+
+Machine time: 837 s (14 min) for 12.0 minutes of deep-pass audio (719.4 s): pick 25 s, Demucs 456 s (228.5 s and 227.7 s, 0.62 times the audio), measuring 356 s (events, techniques, theory, space and check, 0.50 times the audio). The plan's formula (1.6 s per second of deep-pass audio plus 25 s a track) gives 1,201 s; the measured time is 0.70 of that. Demucs is faster than the formula assumed.
+
+**Shared tracks.** `twins.py` on this album's rows against the first half's picker rows (raw archive) and `data.csv` (Aphex): no probable twin. Part One (367.1 s, -16.9 LUFS) has the length of Icct Hedral (Edit) (367.1 s) but not its loudness (-10.6), so it is not that track.
+
+### Stem check (read first)
+- Part One: drums 91%, bass 6%, other 2%, vocals 0.3%. Bass stem real but small (78% under 120 Hz, strongest lines 83.0, 77.5, 86.0 Hz). Other stem 2.4%: top line, chords, other-stem pumping and echoes are void or guesses. Meter tool 73 BPM is half of the drum grid (beat 0.406 s, 147.8 BPM; 4-beat bar read 291, 2-beat bar 145.6). The picker's mix-level tempo says 143.6 for both tracks, so Part One is 144 to 148 by different readings; use 147.8 from the drum grid.
+- Part Two: drums 96%, bass 0.0% (empty: bass notes, bass behavior, bass pumping, wobble void), other 3.9%, vocals 0.6%. Meter 143 BPM agrees with the grid (0.418 s, 143.5 BPM).
+- Vocals stems (0.3 and 0.6%) are mid-pad and hat bleed on an instrumental, not voices; no words.
+- The drums stem holds the sub on both (74% and 69% of it under 120 Hz): the bass stem is empty on Part Two, so every low-end number there comes from the drums stem.
+
+### The hook
+- A bare, tuned-sharp kick-and-sub pattern, almost mono, with a few thin organ-like mid notes dropping in over it, and the low end leaving for 7 to 12 s at a time while the mid pad keeps going.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a tuned 50 to 56 Hz kick and a sub-heavy beat at 144 to 148 BPM that is mostly just the kick, with the floor falling out in a long gap near the 3-minute mark.
+
+### Sounds
+
+**S1. Tuned sub kick (both parts): Part Two drums-1, 451 notes, 60%; Part One drums-1, 98 notes, 21%**
+- In synth terms: Part Two: low thump at 56 Hz (50 to 62), attack 28 ms, falls 52 dB/s, brightness 176 Hz, harmonic share 0.75, level -0.1 dB, correlation 0.99, centered. Part One: 50 Hz (50 to 50, every note the same pitch, G1 at 49 Hz), attack 17 ms, falls 65 dB/s, harmonic share 1.00 (a pure sine), brightness 126 Hz, correlation 1.00.
+- Hear it at: Part Two 0:02.2 (A1, 0.10 s, +50 dB alone), 0:07.3 (A#1, 0.12 s, +50 dB alone); Part One 4:03.9 (G1, 0.77 s, +26 dB alone), 4:05.1 (G1, 0.79 s, +22 dB alone). The Part One examples are the long, held kick (0.4 to 0.8 s), not the pattern's kick.
+- Check: pitch under 60 Hz is good to about a semitone, so A1/A#1 for Part Two is a kick moving between neighbouring pitches. Part One's kick is a sine on a fixed note. Mix tuning reads +43 cents (Part One) and +34 cents (Part Two), so the kicks are about a third of a semitone sharp (G1 49.0 Hz would read near 50 Hz).
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick from the first half again; the new part is the pure-sine version with a long 0.4 to 0.8 s hold.
+
+**S2. Walking sub bass on E (Part One): bass-1, 444 notes, 23%**
+- In synth terms: 81 Hz (62 to 84), attack 25 ms, falls 89 dB/s (a short, plucked low note), harmonic share 0.79, brightness 95 Hz, level -10.8 dB, centered (correlation 1.00). Bass stem holds 6% of the power.
+- Hear it at: 5:39.1 (D#2, 0.31 s, +11 dB alone), 5:51.4 (E2, 0.29 s, +11 dB alone), 5:41.5 (E2, 0.32 s, +11 dB alone). The pitches sit near the pitch classes the tool names but the tuning reads +43 cents, so E2 here may be a kick-sharp D#2 to E2 pair.
+- Check: tool says walking, 1.42 notes a second, E 0.41, F 0.23, B 0.20, C 0.07, steps 52%, fourths and fifths 24%. The bass is a real, small stem (not empty), so the bass line is believable, but a 6% stem on a record where the drums hold the sub is the quieter half of the low end.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass, short plucked and sine-like, walking on E with a flat second.
+
+**S3. Thin organ-like mid note (Part Two): other-1, 276 notes, 14%**
+- In synth terms: 84 Hz (74 to 125), brightness 500 Hz, harmonic share 0.42 (noisy partials, partials 69 cents off whole multiples), attack 86 ms, falls 64 dB/s, level -10.3 dB, correlation 0.79. The other stem is 3.9% of the power, 52% of it in 120 to 500 Hz and 47% in 0.5 to 2 kHz.
+- Hear it at: 2:59.1 (E2, 0.15 s, +22 dB alone), 2:57.4 (B2, 0.14 s, +20 dB alone), 2:57.7 (B2, 0.16 s, +17 dB alone). All three sit in the 2:57 to 3:00 build, where nothing else plays except the kick.
+- Check: 276 notes at 84 Hz is low for a lead; with a 3.9% stem and a 52% share in 120 to 500 Hz, this is a quiet pad or bass-pad blend, not a lead. One group of three (silhouette 0.26).
+- Building blocks: **[JUDGMENT]** **Guess:** a soft, slightly inharmonic low-mid pad note; needs a listen.
+
+### Techniques
+
+**T1. A long floor drop with the mid pad staying (both parts)**
+- All stems summed, the low end under 120 Hz goes 15 dB down: Part One 3:44.5 for 12.5 s and 5:56.0 for 11.0 s (the second is the tail); Part Two 2:56.5 for 12.5 s, 5:35.0 for 3.0 s, 5:44.5 for 7.5 s. The stems-only count is smaller (Part One 0.55 a minute: 3:44.2 for 7.5 s, 3:51.5 for 2.0 s, 3:53.2 for 4.0 s; Part Two 0.19 a minute: 2:59.0 for 2.2 s), as the docs warn: the sums are the better read. Part Two's 12.5 s gap at 2:56.5 is followed by a mix build from 3:03.0 to 3:23.0 and a brightness rise of 2.0 octaves (2:51.0 to 3:00.0).
+- Check: both tracks' drop starts about 3:00, in the second half of the track, 12.5 s long; Part Two's is a break where the kick leaves and the build rises.
+- **[JUDGMENT]** **Guess:** a 10 to 12 s floor drop around the half-way mark, with a mid-pad build of 15 to 20 s after it.
+
+**T2. A kick-locked duck of 5 to 7 dB (Part One)**
+- Part One: the other stem dips 5.0 dB at the kick (peak 10 ms after) and the bass stem 5.3 dB (peak 80 ms after, kick every 0.41 s). The tool reads about 70% of the true depth, so the real dip is 7 dB or more. Part Two's other stem dips 2.5 dB; its bass-stem number (7.4 dB) is void (empty stem).
+- **[JUDGMENT]** **Guess:** a kick-locked duck of 5 to 7 dB on the bass and pad at 148 BPM.
+
+**T3. A drum echo of 414 ms (Part One), and a slow pan (both)**
+- Part One's drums echo at 414 ms (+9.4 dB, 2 later repeats), which is the beat (0.406 s) within 8 ms: a one-beat echo. Part Two: no reliable echo found (needs six notes ringing alone for 1.5 s). Part One's other stem pans 0.09 across a 49 s cycle and Part Two's drums 0.03 over the same 49 s, too small to matter (under 0.1), so no auto-pan is claimed.
+- **[JUDGMENT]** **Guess:** a one-beat echo on the drums at about +6 to +9 dB, only in a minority of loops.
+
+**T4. Vocal-stem entries (both)**
+- The vocals stem enters and leaves in 15 to 30 s blocks (Part One 64% of the time, Part Two 45%): this is the separator parking mid-pad notes in the vocals stem, not a voice (0.3 and 0.6% of the power). Treat as mid-pad entries: they mark where the pad plays.
+- **[JUDGMENT]** **Guess:** a mid pad that plays in 15 to 30 s blocks and leaves for the same time.
+
+### Theory
+
+**Th1. Two fast grids: 147.8 and 143.5 BPM, straight, with a kick on almost every beat**
+- Part One: drum-grid beat 0.406 s (147.8 BPM), strong repeats at 0.824 s (2 beats) and 1.649 s (4); the tool says 73 (half-time), the picker says 143.6; swing straight (eighths). Part Two: beat 0.418 s (143.5 BPM), the meter tool agrees (143), the picker says 143.6; straight. Both pulse 0.90 to 0.91, the strongest in the pile. Bar length is unclear on both (scores 0.00 and 0.04) and many unrelated periodicities show (3:2, 4:3, 5:2, 5:3): the tool's reading of irregular timing, not a cross-rhythm claim.
+- **[JUDGMENT]** **Guess:** a tempo draw of 143 to 148, straight, with a kick on almost every beat.
+
+**Th2. Phrygian bass pedal on E with a major seventh (Part One), a Cmaj7 pedal (Part Two)**
+- Part One: key E phrygian, margin 0.009 (a guess); pitch classes E 0.15, F 0.15, F# 0.09, G 0.09, D# 0.09. Bass stem: E 0.41, F 0.23, B 0.20, C 0.07 (E, F and B are the root, the flat second and the fifth). The chord tool reads Fmaj7 44%, G#maj7 12%, Gsus2 9%, Cmaj7 8% and 60 changes a minute (4 of them lasting 1.5 s or more, 40% on a beat against 36% by chance): for a track whose other stem holds 2.4%, these chords are a guess, mostly the kick and sub's overtones. The picker's chord changes (2.6 a minute) is the more believable.
+- Part Two: key C lydian, margin 0.008 (a guess; fits C major pentatonic); C 0.17, B 0.17, A# 0.11, C# 0.10, E 0.09. The chord tool reads Cmaj7 64%, 16 changes a minute (7 of them lasting 1.5 s or more; 68% on a beat against 71% by chance). With the bass stem empty and the other stem 3.9%, this is a guess. The picker says 0.5 changes a minute, so the track is nearly one chord.
+- **[JUDGMENT]** **Guess:** a one-chord loop (E or C, with a major seventh above) with a phrygian flat second on the bass; chord changes of 0.5 to 3 a minute.
+
+### Space
+- Near mono: mix width median -23 dB (Part One, -21 to -16 over 2-s windows) and -19 dB (Part Two, -19 to -13). Sub -27 and -26 dB (correlation 1.00), 120 to 500 Hz -22 and -17, mids -10 (corr 0.83 to 0.84), presence -11 and -10, air -16 and -13. The drums (91 and 95% of the power) are -24 and -23 dB, the bass -28 dB (Part One); the little width there is lives in the 0.5 to 2 kHz mid pad (other stem -15 and -9 dB, mono loss 0.1 and 0.5 dB, 2 to 4% of the power). Mono loss is 0.0 dB for drums and bass.
+- **[JUDGMENT]** **Guess:** a near-mono recipe, bass and kick dead center, with a very small width on a mid pad.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 tuned sine kick, T1 floor drop: toward hypnotic, energetic, booming x2; away from restful, still x0.4.
+- S2 walking sub: toward hypnotic, mysterious x1.5.
+- S3 inharmonic mid pad: toward strange, dreamy x1.5.
+- T2 duck: toward bouncy, energetic x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: none. 1 to 2% of the energy is above 2 kHz (Part One 2%, Part Two 1%); no polarity flag. The flag this record raises is weight: 72 and 64% of the mix under 120 Hz, 91 to 96% of the power in the drums stem, so any use of the sine kick needs the low-end level guard.
+- **[JUDGMENT]** **Guess:** take the pure-sine kick (at a modest level), the plucked walking sub and the 12 s floor drop with a pad build; leave the one-beat echo until heard. Nothing is harsh.
+
+### For later
+- Part One, drums-2 (145 notes): low thump, falls 84 dB/s, brightens; hear 2:00.5, 2:03.8. **[JUDGMENT]** **Guess:** waits, the second kick layer.
+- Part One, other-1 (208 notes, F3, falls 84 dB/s, noisy) and other-2 (147 notes, D2, bell-like); hear 0:01.6, 5:48.8 and 0:01.5, 5:52.8. **[JUDGMENT]** **Guess:** waits, intro and tail notes.
+- Part Two, other-2 (190 notes, A#3, bell-like, falls 29 dB/s); hear 2:57.4, 2:59.4. **[JUDGMENT]** **Guess:** waits, a bell note in the build.
+- Part Two, drums-2 (49 notes, falls 120 dB/s); hear 0:27.4, 3:43.0. **[JUDGMENT]** **Guess:** waits.
+- Part Two, vocals-1 (316 notes, B3): separator bleed from the mid pad; hear 3:36.1, 3:32.8. **[JUDGMENT]** **Guess:** not a voice; waits.
+
+### Reliability notes for this card
+- Separator: Demucs htdemucs, 0.62 times the audio. Part Two's bass stem is empty (bass notes, pumping and wobble void); Part One's is 6%, so S2 is a small but real stem. The drums stem holds the sub on both.
+- Tempo: the meter tool is half-time on Part One (73 against the grid's 147.8); the picker's 143.6 differs from the grid by 4 BPM on Part One. Chord names (and the 60 and 16 changes a minute) are guesses on a track whose melodic stems hold 2 to 4% of the power. Key margins 0.009 and 0.008: guesses. Tuning +43 and +34 cents: confirmed only by the kick's Hz (G1 near 50 Hz), which is within a semitone's accuracy.
+- Brightness sweeps (43 and 25 more in techniques.json) are whole-mix numbers on a drum-led track and mostly hat and fill; the 2.0-octave rise at 2:51 is large enough to read as the build.
+
+---
+
+## Bradley Strider, Bradley's Robot (1993, vinyl rip)
+
+Ears 7, 2026-10-18, Sonnet 5.5. Four untitled sides, A1, A2, B1, B2, all measured in full (5:57, 7:45, 5:58, 5:52; 25.5 minutes). Stems from Demucs htdemucs. A dark, sub-heavy, mostly drums-and-bass record at 98 to 133 BPM; the drums stem holds 69 to 86% of the power on every side, and 58 to 88% of the energy is under 120 Hz. Side A1 is the exception: wide (-7 dB), bright (centroid 624 Hz, 5% above 2 kHz) and built from pad and bell notes. Loudness -15.6, -17.7, -15.7 and -12.3 LUFS. The mix tuning reads +29, +7, +28 and +29 cents: three of four sides are about a quarter of a semitone sharp together, which is a vinyl pitch (a transfer about 1.7% fast), not a tuning choice.
+
+Track names: the files are "01. Untitled (A1)" and so on; the card calls them A1, A2, B1, B2 (tracks 01 to 04).
+
+Machine time: 1,554 s (25.9 min) for 25.5 minutes of deep-pass audio (1,532 s): pick 52 s, Demucs 915 s (216.1, 278.0, 212.4 and 208.8 s: 0.60 times the audio), measuring 587 s (0.38 times; 112 to 160 s a side). The formula (1.6 s per second of deep-pass audio plus 25 s a track) gives 2,552 s; measured is 0.61 of it.
+
+**Shared tracks.** `twins.py`: no probable twin (lengths 357.0, 465.0, 358.0, 352.0 s; none within 3 s and 0.6 LU of another album's row).
+
+### Stem check (read first)
+- A1: drums 84%, bass 1.2% (empty: bass notes, pumping and wobble void), other 13%, vocals 1.2% (bleed in 0.5 to 2 kHz, not a voice). Meter 133 BPM agrees with the drum-grid beat, 132.5 BPM (the picker says 136). The bass stem's strongest line is 62.1 Hz, but 96% of its energy is under 120 Hz at 1% of the power: the sub is in the drums stem (68% of it under 120 Hz).
+- A2: drums 69%, bass 30% (real; strongest line 75.4 Hz), other 0.6% (top line, chords void), vocals 0.0%. Meter 123 agrees with the grid (123.0). The other stem's strongest line is 27.1 Hz at 0 dB: a sub-bass line the separator parked in "other", below the 40 Hz limit of the tools.
+- B1: drums 85%, bass 13%, other 2.1%, vocals 0.0%. Meter 83 is two thirds of the grid beat 126.1 BPM (a triplet reading, matching the swing of 0.67), picker 123.
+- B2: drums 86%, bass 12%, other 1.5%, vocals 0.0%. Meter 97 agrees with the grid beat (97.6); the picker says 143.6, which is 1.47 times 97.6, i.e. the triplet reading again.
+- B1 and B2: the bass stem holds only 16% and 47% of its energy under 120 Hz (84% and 52% in 120 to 500 Hz), so these basses sit higher than the sub and the sub is in the drums stem.
+- A1's 3:2 meter and its bar: the drum-onset repeat at 1.800 s fits a 4-beat bar at 133.3 BPM.
+
+### The hook
+- A dark, near-mono bass-and-kick record (B1 and B2 mostly drums with a mid bass line and one swung triplet shuffle, A2 a single sub-heavy groove with a hard-ducked bass) with one wide, bell-and-pad side (A1) where the low end drops out for 11 to 23 s at a time.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a slow, swung, sub-heavy machine groove whose bass ducks hard at the kick, with the floor falling out for 20 s while bell-like pads carry on.
+
+### Sounds
+
+**S1. Tuned sub kicks of four kinds (all four sides): A1 drums-1, 419 notes, 49%; B2 drums-1, 342 notes, 43% and drums-2, 116 notes, 20%; B1 drums-1, 351 notes, 28% and drums-2, 149 notes, 18%**
+- In synth terms: A1 62 Hz (52 to 68), attack 44 ms, falls 32 dB/s, harmonic share 0.93, correlation 0.82; B2 drums-1 55 Hz (34 to 72), attack 39 ms, falls 36 dB/s, harmonic share 0.58 (so not a clean sine), correlation 0.98; B1 drums-1 56 Hz (50 to 61), attack 32 ms, falls 43 dB/s, harmonic share 0.96; the drums-2 groups are the same kick, longer and darker (55 to 57 Hz, falls 30 to 31 dB/s, brightness 119 to 162 Hz).
+- Hear it at: A1 2:37.4 (B1 note, 0.19 s, +23 dB alone), 2:40.5 (G#1, 0.24 s); B1 5:52.8 (G1, 0.22 s, +48 dB alone), 5:45.2 (A#1, 0.12 s, +47 dB alone), 5:42.2 (A1, 0.20 s, +46 dB alone); B2 0:03.5 (G#2, 0.17 s, +41 dB alone), 4:29.3 (G#1, 0.17 s, +38 dB alone), 0:01.9 (G2, +43 dB alone).
+- Check: all pitches are about 30 cents sharp from the vinyl speed; under 60 Hz the pitch is good to about a semitone, so the register ranges (B2 34 to 72 Hz) mix kick and bass-note bleed. The B2 4:32.5 example has no pitch (the tool says "?"). A1's correlation of 0.82 says the kick has some width (unlike the other three at 0.98 to 1.00).
+- Building blocks: **[JUDGMENT]** **Guess:** the tuned sub-kick again, with a slightly longer (200 ms) darker version as a second layer.
+
+**S2. Sub bass with a hard duck, on D (A2): bass-1, 366 notes, 35%**
+- In synth terms: 75 Hz (67 to 100), D2, harmonic share 0.98 (a clean sine), attack 58 ms, falls 36 dB/s, brightness 75 Hz, level -3.2 dB, centered (correlation 1.00). The bass stem holds 30% of the power, 99.5% of it under 120 Hz. A second group (bass-2, 134 notes, around F1, soft attack, falls 62 dB/s) sits lower.
+- Hear it at: 7:43.7 (D2, 0.28 s, +32 dB alone), 7:43.8 (D2, 0.33 s), 7:44.2 (D2, 0.28 s). All three are in the last seconds of the track, where nothing else plays, so they are clean examples.
+- Check: the tool says the bass dips 21.9 dB at the kick (the tool reads about 70% of the real depth) with the dip peaking 429 ms after a kick that comes every 0.49 s: the peak is almost the whole beat, so this is a bass that is almost gone at the kick and swells back over most of the beat, a hard sidechain pump. See T1.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass as a sine on D, played through a hard duck.
+
+**S3. Bell-and-pad notes on a bright wide side (A1): other-1, 294 notes, 23%**
+- In synth terms: around F#3 (186 Hz, 158 to 270), bell- or metal-like (harmonic share 0.48, partials 79 cents off whole multiples), attack 31 ms, falls 44 dB/s, brightness 1,073 Hz (571 to 1,803), level -1.4 dB, left-right correlation 0.63. A second group (other-2, 206 notes, around B1, noisy partials, falls 55 dB/s) adds low rumble. The other stem holds 13% of the power: 48% in 120 to 500 Hz, 33% in 0.5 to 2 kHz, 17% in 2 to 5 kHz.
+- Hear it at: 2:10.1 (A3, 0.23 s, +48 dB alone), 2:14.0 (F#3, 0.22 s, +46 dB alone), 2:13.6 (A3, 0.09 s, +46 dB alone). All fall in the floor drop at 2:06.5, which is why they are clean.
+- Check: weak groups (silhouette 0.20, two groups in the stem): a blended bell-and-pad texture rather than one instrument. The bell label comes from partials off whole multiples; at 186 Hz that is a detuned pad or a bell, to be settled by ear.
+- Building blocks: **[JUDGMENT]** **Guess:** glass (soft bells) with a slightly sharp, noisy partial set, panned wide.
+
+**S4. A snap with a short fall (A2): drums-1, 305 notes, 25%**
+- In synth terms: brightness 527 Hz (314 to 903), attack 73 ms, falls 106 dB/s, harmonic share 0.90, correlation 0.99. The tool labels the register as 59 Hz (the kick under it); the 106 dB/s fall and 527 Hz brightness are the believable numbers, so this is the clap or snare-like hit.
+- Hear it at: 2:13.7 (A#1, 0.14 s, +42 dB alone), 7:25.2 (B1, 0.14 s, +42 dB alone), 2:05.9 (A#1, 0.17 s, +41 dB alone).
+- **[JUDGMENT]** **Guess:** waits, a short dry snare-like layer.
+
+### Techniques
+
+**T1. A hard sidechain pump on the sub (A2), and its absence elsewhere**
+- A2's bass stem dips 21.9 dB at the kick (peak 429 ms after, beat 0.49 s); its other stem dips 3.5 dB (peak 10 ms after). A1 (bass 2.3 dB, but its bass stem is 1.2% of the power: void), B1 (bass 2.5 dB) and B2 (under 1.5 dB) show little. The tool reads about 70% of the true depth, so A2's real dip is deeper than 22 dB: the sub is cut out at each kick and returns over the beat.
+- Check: a 22 dB dip with the maximum depression at 87% of the beat looks more like the kick period and the bass period beating against each other than a classic duck, so confirm by ear (a bass that breathes on the beat).
+- **[JUDGMENT]** **Guess:** an optional hard duck of 12 to 20 dB on the sub in drum loops, rare.
+
+**T2. Floor drops of 11 to 23 s with pads left ringing (A1), and a 20 s build (B1)**
+- A1 (all stems summed, under 120 Hz 15 dB down): the first 54.5 s (intro: drums enter at 0:47), then 2:06.5 for 11.0 s, 2:52.0 for 23.0 s, 4:27.5 for 21.5 s, 5:52.5 for 4.5 s (the tail). The drums stem agrees (out 2:07.5 to 2:16.5, 2:53.0 to 3:14.5, 4:28.5 to 4:48.5), and the bells (S3) keep playing. The low end is on only 65% of the track, so the stems-only floor-drop count is skipped (rule: under 75%). The bass stem is void for A1; the drums stem comes back each time with a brightness rise (+3.1 oct at 2:47.5 to 2:55.5, +2.5 oct at 1:49 to 1:54).
+- B1 opens with a build, 0:00 to 0:21; its low end has two short gaps (3:30.5 for 2.0 s, 5:54.5 for 3.5 s). B2 and A2: no floor drops (B2 sums: none; A2: only the first 3.0 s).
+- **[JUDGMENT]** **Guess:** a floor drop of 10 to 23 s, the pad staying, with a 5 to 8 s brightness rise (2 to 3 octaves) before the low end returns; A1 only.
+
+**T3. A 21-cent wobble on the pad (A2) and a 414 ms echo (B2)**
+- A2's other stem wobbles about 21 cents at 0.5 Hz, but the stem holds 0.6% of the power: void. B2's other stem echoes at 414 ms (+3.3 dB, 2 later repeats), against a 0.615 s beat, which is 0.67 of it (a dotted or triplet fraction); the tool needs six or more notes ringing alone for 1.5 s, which a 1.5% stem rarely gives: unconfirmed.
+- **[JUDGMENT]** **Guess:** waits; both need a listen.
+
+**T4. Long builds by brightness (all)**
+- Brightness of the mix swings 2 to 4.5 octaves on the drum-led sides (A2: 67 more swings than the eight listed; B2: +4.5 oct at 3:04.5 to 3:11.0, +3.1 at 4:40.5 to 4:48.0). These are whole-mix numbers on tracks where hats and fills lead, so most are filter or hat moves; B2's +4.5 octave rise at 3:04.5, in a track with 12.3 LUFS the loudest of the four, is the clearest build.
+- **[JUDGMENT]** **Guess:** a 7 s brightness rise of 3 to 4 octaves into the last third of a loop.
+
+### Theory
+
+**Th1. A triplet shuffle at 126 BPM and another at 98 BPM**
+- B1: drum-grid beat 126.1 BPM (strong repeat 1.916 s = a 4-beat bar at 125.3), off-beats at 0.67 of the beat: a triplet shuffle; the tool reports 83 (two thirds of 126). B2: grid beat 97.6 BPM, off-beat 0.66; the picker's 143.6 is the 3:2 reading. A1: 132.5 BPM, straight eighths; A2: 123.0 BPM, straight eighths (the strongest repeat, 1.95 s, is a 4-beat bar at 123.1). A2's pulse is 0.94, the highest of the four.
+- **[JUDGMENT]** **Guess:** a tempo draw of 98 to 133 with a triplet-shuffle option (0.66 off-beat) on the two slower values.
+
+**Th2. Phrygian and locrian colors over a bass that moves little**
+- A1: A phrygian, margin 0.012 (a guess); bass void; pitch classes A 0.11, F 0.09, F# 0.09, A# 0.09, C 0.09; chord names Amaj7 26%, Fmaj7 22% (37 changes a minute, 8 lasting 1.5 s or more, 79% on a beat against 67% by chance). A2: D locrian, margin 0.001 (a coin toss); bass on A 0.56, D 0.19, F 0.09, D# 0.04, 1.31 notes a second, repeats 40%; chords D#maj7 29%, Fmaj7 21% (45 changes a minute, other stem 0.6%: a guess; the picker says 0.0). B1: G phrygian, margin 0.011; bass G 0.42, F 0.27, D 0.16, A 0.12 at 0.89 notes a second; chord names D#maj7 29%, F5 17%, G5 12% (49 changes a minute, 13 lasting 1.5 s or more; 40% on a beat against 42% by chance: not beat-locked). B2: A ionian (major), margin 0.031 (the one usable key); bass A 0.38, C 0.33, B 0.15, D 0.05 at 0.09 notes a second (a note every 11 s: a drone that barely moves); chords Dmaj7 63%, Amaj7 13%, Emaj7 8%, 10 changes a minute, median chord 2.4 s (0.8 to 14.7 s).
+- Check: the chord tool counts 37 to 49 changes a minute on three of four sides while the picker counts 0 to 5: the chord numbers here come from stems that are mostly drums (kick overtones and pad movement); take the picker's 0 to 5 as the harmonic rhythm.
+- **[JUDGMENT]** **Guess:** a bass that holds a note for 10 s over a major-seventh pad (B2), and a bass that walks A, D, F at about one note a second (A2); chord changes at 0 to 5 a minute.
+
+**Th3. Form: fours and eights**
+- Strongest repeats: A1 4 bars (0.72), 1 bar and 8 bars; A2 4 bars (0.84), 8 bars (0.71), 2 bars; B1 4 bars (0.60); B2 1 bar (0.68), 6 bars. Near-duplicate bars: 7%, 27%, 5%, 5%. A2 is the most repetitive (27%).
+- **[JUDGMENT]** **Guess:** 4-bar phrases with an 8-bar response, little exact repeating.
+
+### Space
+- A1 is wide, the only wide side in the pile's second half so far: mix width median -3 dB (-6 to -2 over 2-s windows), sub -13 (correlation 0.90), 120 to 500 Hz -3 (0.37), 0.5 to 2 kHz -3 (0.29), 2 to 5 kHz -4, air -11; drums -7 dB, other -5 dB (mono loss 1.2 dB, pan -0.09), bass pan -0.14 with a range of 0.40. The other stem's pan cycles every 4 s with a range of 0.15 (about the analysis window: not claimed as an auto-pan).
+- A2 is near mono below 500 Hz (sub -28 dB, correlation 1.00; bass -34 dB) and wide above: median -14 dB, 0.5 to 2 kHz -6, 2 to 5 kHz -1 (correlation 0.11, the widest band in the pile), air -6. The width is hats and a quiet other stem (-5 dB, 0.6% of the power) with 5.6% of the drums stem above 5 kHz.
+- B1: near mono, width -17 dB median (-19 to -14), sub -25, mids -6, bass -18, pan -0.07; B2: width -14 dB median (-15 to -13), even across bands (-20 to -11), bass -28 dB, other pan -0.20 (leans left; 1.5% of the power).
+- Mono loss is under 0.2 dB for the drums and bass of A2, B1 and B2.
+- **[JUDGMENT]** **Guess:** a wide bell-and-pad recipe over a mono-ish kick (A1), and a near-mono low end with very wide hats (A2).
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 tuned kicks and S2 ducked sine bass: toward hypnotic, booming, energetic x2; away from restful, bright x0.4.
+- S3 wide bells over a vanishing floor (T2): toward mysterious, dreamy, hazy x2; away from bouncy x0.5.
+- Th1 triplet shuffle: toward bouncy, zany x1.5.
+- T4 brightness rise: toward energetic x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: none beyond A1 and A2. A1 has 5% of its energy above 2 kHz and A2 6% (B1 1%, B2 2%), the most in this pile's second half so far, and A2's 2 to 5 kHz band is nearly uncorrelated (0.11); no polarity flag. The weight flag is the same as Bradley's Beat: 58 to 88% of the energy under 120 Hz, so any sub or kick needs the low-end level guard.
+- **[JUDGMENT]** **Guess:** take the tuned kicks, the sine sub on D with a duck (milder than 22 dB), the long floor drop with bells left ringing, the triplet shuffle and the B2 major-seventh drone; leave the hard 22 dB duck as a rare, loud-vibe option. The record is dark and heavy, not harsh.
+
+### For later
+- B2, bass-1 (363 notes, around G#1, bell-like, falls 25 dB/s); hear 4:54.6, 3:29.8. **[JUDGMENT]** **Guess:** waits, a low plucked bass.
+- B1, other-1 (332 notes, F3, bell-like, falls 38 dB/s) and other-2 (168 notes, G1, noisy); hear 0:03.5, 0:02.7 and 3:44.0, 0:02.2. **[JUDGMENT]** **Guess:** waits, the build's notes.
+- B1, bass-1 (268 notes, A1) and bass-2 (232 notes, F3, bell-like); hear 3:11.9, 3:10.7 and 3:11.2, 3:10.8. **[JUDGMENT]** **Guess:** waits, the 3:10 section.
+- A2, drums-2 (147 notes, falls 266 dB/s, brightens) hear 7:13.6, 7:21.4 and bass-2 (134 notes, F1, soft attack, falls 62 dB/s) hear 7:43.3, 7:43.2. **[JUDGMENT]** **Guess:** waits.
+- A1, other-2 (206 notes, around B1, noisy); hear 2:13.7, 2:08.6. **[JUDGMENT]** **Guess:** waits, a low rumble.
+
+### Reliability notes for this card
+- Separator: Demucs (0.60 times the audio). A1's bass stem is 1.2% (bass notes, pumping, wobble and the bass line A, B, C void; the A1 chord and pitch-class numbers still use the other stem at 13%). The drums stem holds the sub on A1, B1 and B2. A2's other stem (0.6%) makes its top line, chords, other-stem wobble (21 cents) void; its 27.1 Hz line is below the tools' reach.
+- Tempo: the meter tool is two thirds of the grid on B1 (83 against 126.1) and the picker is 1.47 times it on B2 (143.6 against 97.6): both are the triplet relation, so the grid is the figure. A1's picker (136) is 3 BPM off the grid (132.5).
+- Key margins: A1 0.012, A2 0.001, B1 0.011 (guesses); B2 0.031 (usable). Tuning +29, +7, +28, +29: use the kick Hz as a check (B1's kick lines near 56 Hz sit within a semitone's accuracy).
+- Chord counts 37 to 49 a minute on three sides disagree with the picker's 0 to 5 and with the 2-s counter's 0 to 2: take them as upper bounds on busy stems, and the chord names as guesses.
+- A2's 22 dB pump and the 429 ms peak: confirm by ear before using.
+
+---
+
+## Aphex Twin, Analogue Bubblebath 3 (1997)
+
+Ears 7, 2026-10-18, Sonnet 5.5. 13 tracks, all measured at mix level, 54.5 minutes. The folder is named *Analogue Bubblebath 3* (1997); Mikey confirmed it is the same record as *3.1*, so this one card covers both. Deep pass on four, as the picker chose: the most typical, 06 .000890569 (4:48), and the three least like the rest, 12 [untitled] (0:54), 04 .942937 (4:37) and 13 (CAT 00897-A2) (5:15). The tracks are named by catalogue numbers and decimals, so the card uses the file names. Loudness -13.5, -17.3, -9.7 and -15.5 LUFS. Stems from Demucs htdemucs.
+
+Machine time: 1,022 s (17.0 min) for 15.6 minutes of deep-pass audio (933.8 s): pick 103 s (13 tracks, 7.9 s a track), Demucs 554 s (173.9, 35.2, 163.1 and 181.9 s: 0.59 times the audio), measuring 365 s (events, techniques, theory, space and check; 0.39 times the audio). The formula (1.6 s per second of deep-pass audio plus 25 s a track in the album) gives 1,819 s; measured is 0.56 of it. Demucs plus a short album runs well under the formula.
+
+**Shared tracks.** `twins.py` on this album's rows against the first half's picker rows and `data.csv` (Aphex): no probable twin. Against Ears 6's Analogue Bubblebath 4 (382.0 s, -10.1; 364.5 s, -12.9; 308.1 s, -8.7; 501.5 s, -13.8; 27.6 s, -23.4): no row is within 3 s and 0.6 LU. 03 .0180871R and 05 .0180871L share a catalogue number, but their lengths (256.2 and 232.6 s) and tone differ (centroid 2,288 against 162 Hz): a left and a right mix, or two mixes of one idea, not twins; neither got a deep pass.
+
+### Stem check (read first)
+- 06 .000890569: drums 85%, bass 0.5% (empty: bass notes, pumping, wobble and the pedal reading are void), other 12%, vocals 2.4%. The drums stem has 88% of its energy under 120 Hz, so the sub lives in the drums stem. Meter 94 is two thirds of the drum-grid beat 139.5 BPM (beat 0.430 s, 4-beat bar 1.707 s = 140.6).
+- 12 [untitled]: drums 25%, bass 2.3% (thin), other 72%, vocals 0.0%. The drums stem holds 87% of its energy in 0.5 to 2 kHz and the track has 5% of its energy under 120 Hz: there is no kick here, so the drums stem is pad and bell bleed. Meter 124 and the grid's 178.0 BPM (0.337 s repeat) are void: the track has no beat (pulse 0.28).
+- 04 .942937: drums 88%, bass 0.8% (empty: bass pedal, pumping, wobble void), other 9%, vocals 2.8%. The drums stem holds 68% of its energy above 5 kHz: a hat-led track, not a kick-led one. Meter 73 agrees with the grid beat 72.8 BPM (a 2-beat bar 1.660 s = 144.6 BPM if counted double).
+- 13 (CAT 00897-A2): drums 89%, bass 0.2% (empty: void), other 8%, vocals 2.6%. The sub is in the other stem here (40% of it under 120 Hz, strongest line 91.8 Hz) and the drums stem (52% under 120 Hz). Meter 74 is half the grid beat 147.8 BPM.
+- Vocals stems (0 to 2.8%) are pad and hat bleed on an instrumental, not voices; no words. Their "bell-like" groups (G6 on 04, F3 on 13) are that bleed.
+
+### The hook
+- A bright, wide, strange side of the Analogue Bubblebath series: one hat-led track with nothing under 120 Hz but pad filter sweeps of three to five octaves, one wide beatless bell-pad piece whose channels cancel when folded to mono, a triplet-shuffled drum track at 140 BPM whose low end leaves for 13 s at a time, and a sub that is a sine at D1 (37 Hz) in the other stem.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a dry, hat-and-pad track at 73 BPM whose pad is swept three octaves in seven seconds, over a mono hat that never moves.
+
+### Sounds
+
+**S1. Wide bell-pad that cancels in mono (12 [untitled]): other-1, 169 notes, 60%; drums-1 (pad bleed), 79 notes, 16%**
+- In synth terms: 261 Hz (185 to 597), around C4, bell- or metal-like (harmonic share 0.29, partials 75 cents off whole multiples), attack 132 ms (29 to 334, a slow swell), falls 27 dB/s, brightness 1,183 Hz, level -4.4 dB, left-right correlation -0.05 (-0.30 to 0.68). The drums-1 group (really a second pad voice) is 185 Hz, attack 170 ms, falls 17 dB/s, correlation -0.16. The other stem holds 72% of the power, 90% of it in 0.5 to 2 kHz.
+- Hear it at: 0:19.3 (F#3, 0.18 s, +23 dB alone), 0:21.2 (F#3, 0.33 s, +22 dB alone); drums-1 0:39.1 (E4, 0.41 s, +16 dB alone), 0:40.1 (A#3, 0.19 s, +14 dB alone).
+- Check: this is a 54 s piece, so 169 notes is dense; the correlation near zero or negative means the left and right carry different notes. Folded to mono it loses 3.8 dB (other) and 4.2 dB (drums stem): see the space section and the wholesome take. The key reading C aeolian (margin 0.011) is a guess.
+- Building blocks: **[JUDGMENT]** **Guess:** glass (soft bells) played as a slow, wide cluster; the new part is the unrelated left and right.
+
+**S2. High hat-tick lead (04 .942937): drums-1, 424 notes, 56%**
+- In synth terms: a high tick at 3,098 Hz (2,400 to 3,579), falls 88 dB/s, attack 75 ms (the tool cannot see a tick this short), centered, correlation 1.00. The tool's "register 56 Hz" is not believable: 68% of the drums stem is above 5 kHz.
+- Hear it at: 3:15.8 (F#1 label, 0.17 s, +33 dB alone), 3:22.4 (0.13 s, +33 dB alone), 3:19.1 (0.13 s, +32 dB alone). The pitch labels are artefacts; listen for the ticks.
+- Check: with 88% of the power in a stem that is mostly hats, this is the hat or click voice, not a kick. A second drums group (drums-2, 76 notes, falls 76 dB/s, 3:19.3, 3:12.6) is a snap.
+- **[JUDGMENT]** **Guess:** a dry, bright tick percussion at 73 BPM with a swing of 0.60.
+
+**S3. A drum kick that is a short click at 75 Hz (06 .000890569): drums-1, 471 notes, 51%**
+- In synth terms: 75 Hz (67 to 75), falls 478 dB/s (a very short click), brightness 108 Hz rising 2.15 octaves over the note, harmonic share 0.94, correlation 0.96. The tool's attack of 93 ms is not believable. Hear it at 2:57.8 (0.22 s, +43 dB alone), 2:58.7 (+40 dB alone).
+- Check: with a fall of 478 dB/s, the note is gone in about 50 ms: a click with a tail the tool cannot see. The pitch labels at 2:57.8 are "?".
+- **[JUDGMENT]** **Guess:** a short kick click at 75 Hz with a brightness rise; the tuned-kick family, drier.
+
+**S4. Kick click at 78 Hz and a D1 sub sine in the other stem (13 CAT 00897-A2): drums-1, 412 notes, 36%; other-1, 438 notes, 26%**
+- In synth terms: drums-1: 78 Hz (76 to 80), falls 396 dB/s, harmonic share 0.74, correlation 1.00, level -0.2 dB. other-1: 37 Hz (32 to 48), around D1, attack 99 ms, falls 49 dB/s, brightness 346 Hz, level -9.7 dB, correlation 0.69. The other stem holds 8% of the power, 40% of it under 120 Hz.
+- Hear it at: drums-1 1:53.5 (E2, 0.09 s, +26 dB alone), 1:42.1 (D#2, +25 dB alone); other-1 3:15.0 (?, 0.4 s, +42 dB alone), 4:08.4 (D1, 0.33 s, +40 dB alone).
+- Check: pitch under 40 Hz is good to about a semitone, and partials under 60 Hz cannot be measured, so ignore the "bell-like" label: this is a sub sine near 37 Hz, very low, with some noise (harmonic share 0.21, partials 114 cents off). The drums-1 pitch at 78 Hz sits close to the strongest line of the other stem (91.8 Hz, F#2): a bass line at F#. The bass stem (0.2%) is empty.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass as a D1 sub sine; the kick click as in S3.
+
+**S5. Held low bell notes of 6 s (04 .942937): other-1, 435 notes, 24%; and a pad with a fast wobble (06 .000890569): other-1, 316 notes, 28%**
+- In synth terms: 04's other-1 is 88 Hz (64 to 110), around F2, bell-like (harmonic share 0.50), attack 99 ms, falls 25 dB/s, level -7.0 dB, leans right (pan +0.14, correlation 0.46). 06's other-1 is 158 Hz (122 to 216), around D#3, noisy partials, attack 123 ms (35 to 676), falls 17 dB/s, level -8.2 dB, pan +0.09, correlation 0.86, vibrato up to 17 cents.
+- Hear it at: 04: 4:17.4 (F2, 6.02 s, +10 dB alone), 4:07.6 (F2, 6.0 s, +8 dB alone); 06: 4:16.3 (G#3, 0.3 s, +56 dB alone), 4:16.0 (B2, 0.15 s, +56 dB alone), 4:15.7 (F#3, 0.12 s, +55 dB alone). 06's examples sit in the 4:07 floor drop, so they are clean.
+- Check: weak group on 06 (silhouette 0.25); S5 is a blended texture. 04's held F2 notes at 4:07 and 4:17 are 6 s long and sit inside the floor drops (T1).
+- **[JUDGMENT]** **Guess:** a slow, noisy pad leaning a little right; the 6 s low bell note is the new part.
+
+### Techniques
+
+**T1. Floor drops of 13 s with the pad ringing (06), and hat-only gaps (04, 13)**
+- 06 (stems only, 0.70 a minute): 0:21.5 for 13.8 s, 1:17.0 for 13.5 s, 4:07.8 for 13.2 s. The sums (under 120 Hz, 15 dB down) agree: 0:00 for 35.5 s (intro, drums enter at 0:34.5), 1:17.0 for 13.5 s, 4:07.5 for 13.5 s, 4:35.0 for 13.0 s (the tail). The low end is on 73% of the track, so the stems-only count is skipped by rule (under 75%) and the sums are the figure. The drums stem exits at 1:18.0 and 4:09.0, back at 1:29.5 and 4:20.5: gaps of 11 s.
+- 04: 4:07.0 for 7.0 s and 4:17.5 for 19.0 s by the sums (stems: 4:07.8 for 6.5 s and 4:17.8 for 5.0 s, 0.48 a minute); with the hats gone the rest is pad.
+- 13: the sums find 0:15.0 for 6.5 s, 1:01.0 for 7.5 s, 2:08.5 for 2.5 s, 2:11.5 for 2.0 s, 5:03.5 for 6.5 s (tail) and the intro 7.0 s; the stems count 1.27 a minute: 0:15.5 for 6.0 s, 1:00.8 for 8.0 s, 2:06.0 for 11.0 s, 4:03.0 for 7.2 s, 4:10.0 for 8.8 s, 4:23.8 for 2.0 s. The sums undercount the 2:06 gap because the sub is in the other stem too.
+- **[JUDGMENT]** **Guess:** 8 to 13 s floor drops, two or three a loop, the pad left ringing, on one slow-to-medium beat loop.
+
+**T2. Large filter sweeps on the pad (04 .942937)**
+- The mix rises 5.2 octaves from 0:12.0 to 0:20.0 and falls 2.6 (0:00 to 0:12.0); at the end it falls 4.2 octaves at 4:00.5 to 4:11.0, rises 4.2 at 4:11.0 to 4:16.0 and falls 4.1 at 4:16.0 to 4:25.5. The other stem alone rises 1.5 octaves at 0:12.5 to 0:20.0 and falls 3.5 octaves at 0:26.5 to 0:33.5. Whole-mix numbers on a hat-led track are mostly the hats opening and closing, but the other stem's 3.5 octaves in 7 s is a real filter move on the pad. The build at 0:00 to 0:21.0 is flagged by the tool.
+- **[JUDGMENT]** **Guess:** a pad lowpass sweep of 3 octaves in 7 s, and a five-octave brightness rise in 8 s at the start of the loop.
+
+**T3. A 19-cent, 4 Hz wobble on the pad (06)**
+- 06's other stem wobbles about 19 cents at 4.1 Hz (the tool read a 12-cent wow as 8.0 in calibration, so the true wobble may be near 28 cents); the stem is 12% of the power. 04's reads 5 cents at 2.2 Hz (below the threshold, not claimed).
+- **[JUDGMENT]** **Guess:** a fast pad wobble of 15 to 28 cents at 4 Hz on one loop in several; check it by ear.
+
+**T4. A drum echo of 718 ms (13), not claimed**
+- 13's drums echo at 718 ms (+7.7 dB, 1 later repeat); 718 ms is 1.77 times the 0.406 s beat, not a clean fraction (a dotted quarter would be 609 ms). The tool needs six or more notes ringing alone for 1.5 s, which a drum stem seldom gives: unconfirmed.
+- **[JUDGMENT]** **Guess:** waits; needs a listen.
+
+**T5. Pumping numbers that do not hold (all)**
+- 06 reports the bass dipping 11.3 dB at the kick, but its bass stem is 0.5%: void. 04's other stem dips 2.8 dB with a kick every 0.39 s, which does not fit the 0.824 s beat (half is 0.412 s): the kick finder locked on something else, so do not trust it. 13's bass reads 6.1 dB with a 0.2% stem: void.
+
+### Theory
+
+**Th1. Three grids: 139.5, 72.8 and 147.8 BPM; two with swing, one beatless**
+- 06: grid beat 139.5 BPM (4-beat bar 1.707 s); the tool's 94 is two thirds of it (a triplet reading, matching the off-beat at 0.67 of the beat: a triplet shuffle); the picker said 112.3, which is 0.80 of the grid (a factor of 4/5 off, as the docs warn for broken beats). 04: 72.8 BPM, off-beat at 0.60 of the beat (a lighter swing). 13: 147.8 BPM (the tool's 74 is half), off-beat at 0.75 of the beat, i.e. a 16th-note swing (a dotted-eighth feel); the picker said 99.4 (two thirds of 147.8: triplet reading). 12: no beat.
+- **[JUDGMENT]** **Guess:** a tempo draw of 73 or 140 to 148, with a shuffle option from 0.60 to 0.75.
+
+**Th2. A lydian color with a major-second chord (04 and 13), and a three-chord piece in 12**
+- 04: F lydian, margin 0.024 (usable); E 0.17, A 0.14, C 0.10, D 0.09, G 0.09. Chords Amin7 32%, Fmaj7 18%, Gmaj7 18%, Asus2 8%: the Fmaj7 and Gmaj7 pair is the lydian II, 21 changes a minute with 16 lasting 1.5 s or more (median chord 2.0 s), 44% of changes on a beat against 36% by chance. Bass void; the picker counts 3.0 changes a minute, the better figure for the harmony's speed. 13: F# lydian, margin 0.024 (usable); F# 0.16, F 0.13, G 0.10, E 0.09, C 0.09; chords F#maj7 71%, Gmaj7 6%, Cmaj7 4%, Fmaj7 3%: a one-chord pedal. 23 changes a minute but only 9% of them land on a beat against 37% by chance, far under the chance rate: the chord tool is reading the kick's overtones, not chords. 06: G# phrygian, margin 0.013 (a guess); C# 0.16, E 0.11, C 0.10, F# 0.10, G# 0.10; chords F#min7 15%, C#min7 14%, A#dim 11%; 44 changes a minute (16 lasting 1.5 s or more), 43% on a beat against 47% by chance; picker 2.9 a minute. The bass-stem reading (a G# pedal, 91% repeats) is void (0.5%).
+- 12: the chord tool finds G#maj7 26%, C#maj7 25%, D#maj7 19%, C7 12%, 8 changes a minute with a median chord of 5.2 s (3.3 to 13.7 s) and 7 distinct chords: a slow three-chord cycle that is I, IV and V of G# (or V, I, II of C#); the key tool says C aeolian (margin 0.011), so the tonic is a guess.
+- **[JUDGMENT]** **Guess:** a pedal chord with a major seventh, and a lydian second-degree neighbour (Fmaj7 to Gmaj7 over an Amin7) at 3 changes a minute; a slow I-IV-V cycle at one change in 5 s for the wide bell piece.
+
+**Th3. Form: 4, 8 and 32 bars (04), little repetition elsewhere**
+- 04: bars of 3.3 s; repeats at 4 bars (0.70), 8 (0.47), 32 (0.33); 39% of bars near-duplicate an earlier one, the most repetitive of the four. 13: bars of 1.6 s; 1 bar (0.74), 8 (0.32), 32 (0.24); 29% near-duplicates. 06: 22% (1 bar, 0.77). 12: 6%.
+- **[JUDGMENT]** **Guess:** 4-bar phrases that repeat at 8 and 32 bars on the slow loop.
+
+### Space
+- 06 is mid-wide with an out-of-phase top: median width -6 dB (-10 to -2 over 2-s windows), sub -22 (correlation 0.99), 120 to 500 Hz -14, 0.5 to 2 kHz -10, presence -3 (0.33) and air **+5 dB with a correlation of -0.52**, so the hats' top is partly opposite in polarity. Drums -12 dB, other -10 dB (pan +0.19, mono loss 0.4 dB).
+- 12 is wide in every band above the sub: median +1 dB (-1 to +2), 120 to 500 Hz +1 dB (correlation -0.13), 0.5 to 2 kHz +2 (-0.20), presence 0 (-0.05), sub -17 (0.96). **Mono loss is 3.8 dB for the other stem and 4.2 dB for the drums stem.**
+- 04 is mono above 2 kHz and lopsided below: median -11 dB (-24 to -7), sub -23 (0.99), 120 to 500 Hz -7 (0.68), 0.5 to 2 kHz -7, presence and air -26 (1.00); the hats are dead mono, the width is the other stem (-4 dB, pan +0.26, mono loss 1.6 dB, 21% of the power).
+- 13 is mid-wide: median -14 dB (-18 to -7), sub -15 (0.94), the rest -10 to -16; drums -19, other -7 (the sub in the other stem is wider than the kick: width -7 dB, mono loss 0.7 dB).
+- **[JUDGMENT]** **Guess:** a recipe with mono hats over a wide pad (04); never reuse 12's opposite-polarity width as it is, and fold-check any wide pad.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1 wide bell-pad: toward dreamy, strange, hazy x2; away from energetic x0.4 (with the polarity guard).
+- S2 and T2 hat ticks and the 3-octave pad sweeps: toward hypnotic, strange x1.5; away from restful x0.5.
+- S3, S4 short kick click and D1 sub sine: toward booming, hypnotic x2; away from bright, still x0.4.
+- T1 13 s floor drops: toward hypnotic, mysterious x1.5.
+- Th1 shuffle: toward bouncy, zany x1.5.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: 04 .942937 has 44% of its energy above 2 kHz (hats at 3,098 Hz; 68% of the drums stem above 5 kHz) and 06 has 8%; 13 11%. A hat-tick lead that bright must sit behind particular vibes and a level guard. Polarity flags: 12 [untitled] folds to mono 3.8 dB down (correlation -0.05 to -0.20 across bands), and 06's air band has a correlation of -0.52: neither may be copied as it is, because Driftloom's guard says the mono fold sounds like the stereo render within 0.5 LU.
+- **[JUDGMENT]** **Guess:** take the long pad filter sweep, the 13 s floor drops with the pad ringing, the D1 sub sine, the lydian second-degree chord pair and the 6 s low bell; leave the 3 to 4 kHz hat ticks behind a bright, strange vibe and the out-of-phase width until it folds clean.
+
+### For later
+- 13 CAT 00897-A2, drums-2 (72 notes, snap, falls 403 dB/s); hear 1:33.1, 1:36.3. **[JUDGMENT]** **Guess:** waits, a snare-like hit.
+- 06, other-2 (166 notes, E2, noisy, falls 14 dB/s); hear 0:22.6, 0:22.4. **[JUDGMENT]** **Guess:** waits, the pad of the first floor drop.
+- 12, drums-2 (12 notes, left-leaning -0.22) and other-2 (17 notes, G1 pad, falls 8 dB/s); hear 0:50.4, 0:49.6 and 0:42.6, 0:43.1. **[JUDGMENT]** **Guess:** waits, tail notes.
+- Bleed groups: 13 vocals-1 (411 notes, F3), 04 vocals-1 (406 notes, G6) and 06 vocals-1 (392 notes, F3); hear 0:02.4, 3:17.0, 4:32.9. **[JUDGMENT]** **Guess:** not voices; ignore.
+- Not given a deep pass (mix-level only): 11 [untitled] (4:41.8, -18.1 LUFS, sub 1%, width -3.4 dB, pulse 0.41, tuning +49 cents, the widest and least bassy of the album: a beatless wide pad, the strongest candidate for a later deep pass); 02 .1993841 (8:02.9, -8.2 LUFS, the loudest, width -23 dB, 8.6 chord changes a minute); 03 .0180871R (4:16.2, 162 BPM, centroid 2,288 Hz, width -24.5 dB) and 05 .0180871L (3:52.6, 129 BPM, centroid 162 Hz, tuning +34 cents); 07 .55278037732581 (4:20.3, -10.2 LUFS, 152 BPM, 0.9 chord changes a minute); 08 CAT 00897-AA1 (4:05.6, 123 BPM, tuning -27 cents, 5.9 chord changes a minute); 09 CAT 00897-A1 (5:06.6, 99 BPM, sub 26%, no chord change); 10 AFX 6_B (0:36.0, too short); 01 .215061 (3:54.2, 136 BPM). **[JUDGMENT]** **Guess:** 11 [untitled] and 02 .1993841 are the two worth a listen.
+
+### Reliability notes for this card
+- Separator: Demucs (0.59 times the audio). On every deep-pass track but 12 the bass stem is 0.2 to 0.8%: all bass-stem numbers void (06's G# pedal and 11.3 dB pump, 04's bass notes, 13's 6.1 dB pump). 12 has no beat and its "drums" stem is pad bleed (87% in 0.5 to 2 kHz): its tempo, entries and exits are void.
+- Tempo: meter at two thirds of the grid on 06 and half of it on 13; the picker is off by 4/5 on 06 (112.3 for 139.5) and by two thirds on 13 (99.4 for 147.8). Use the grid.
+- Key margins: 06 0.013 and 12 0.011 (guesses), 04 0.024 and 13 0.024 (usable). Chord names on 06 and 13 are guesses on kick-led music (13's 9% on-beat share is far below chance). Tuning: 06 -21, 04 -11, 13 -22, 12 -18 cents at mix level; none checked against a direct line.
+- Pitch under 60 Hz (13's D1 sub, 37 Hz) is good to a semitone only; the "bell-like" labels there are not measurable. 04's pitch labels on the hat ticks are artefacts. The vibes line gives 44% above 2 kHz for 04 against the drums stem's 68% above 5 kHz: the two agree it is a bright track.
+
+---
+
+## Caustic Window, Compilation
+
+Ears 7, 2026-10-18, Sonnet 5.5. 13 tracks, all measured at mix level, 64.7 minutes. Deep pass on four, as the picker chose: the most typical, 01 Joyrex J4 (4:30), and the three least like the rest, 03 Cordialatron (4:44), 02 AFX 114 (1:21) and 09 Fantasia (6:03). Loudness -9.9, -12.7, -8.4 and -8.3 LUFS: the loudest record of the second half, five of the 13 tracks are above -9 LUFS. Stems from Demucs htdemucs. The mix-level tuning runs from -45 to +47 cents across the 13 tracks (Fantasia -45, Clayhill Dub -44, Humanoid Must Not Escape +47, We Are the Music Makers +45), which is a half-semitone offset: every key and chord name on this card is a guess where the offset is large.
+
+**What this card covers.** *Joyrex J9ii* (the folder holds Fantasia, Clayhill Dub, The Garden of Linmiri and We Are the Music Makers (Hardcore Mix)) is all on this record as tracks 09, 11, 12 and 13, so by Mikey's skip rule it has no card of its own. Lengths from the J9ii files (358.4, 203.2, 368.3 and 236.1 s) agree with these tracks (362.5, 204.9, 370.2 and 239.2 s) to within 1 to 4 s, with the J9ii figures a little short for every track, as expected for the same audio; I did not compare waveforms. J9i is not in the folder (Mikey: most of it is on this record). Fantasia got the deep pass here; the other three J9ii tracks are mix-level only (see For later).
+
+Machine time: 1,293 s (21.6 min) for 16.6 minutes of deep-pass audio (998.0 s): pick 112 s (13 tracks, 8.6 s a track), Demucs 718 s (161.7, 197.2, 56.4 and 303.0 s: 0.72 times the audio; Fantasia ran at 0.84, the others at 0.60 to 0.69, probably because I was reading files at the time), measuring 463 s (0.46 times). The formula (1.6 s per second of deep-pass audio plus 25 s a track in the album) gives 1,922 s; measured is 0.67 of it.
+
+**Shared tracks.** `twins.py` on this album's rows against the first half's rows and `data.csv` (Aphex): no probable twin (Caustic Window is not Aphex, so `--artist Aphex` was used on the earlier piles only; the 13 rows were also compared with Analogue Bubblebath 3, 4 and 5 and Bradley's Beat and Robot: none). The only repeat is the J9ii one above.
+
+### Stem check (read first)
+- 01 Joyrex J4: drums 81%, bass 15% (real; 81% of it under 120 Hz, strongest line 55.0 Hz), other 2.5% (top line, chords, other-stem pumping and echoes void or guesses), vocals 0.6%. Drum grid: beat 0.406 s = 147.8 BPM (4-beat bar 1.637 s = 146.6); the tool's 98 is two thirds of it (a triplet reading, matching the swing 0.67); the picker says 117.5.
+- 03 Cordialatron: drums 47%, bass 27% (99% of it under 120 Hz, strongest line 41.2 Hz = E1), other 25%, vocals 0.0%. Grid: beat 0.708 s = 84.7 BPM and a bar of 1.881 s = 127.6 BPM; the picker says 129.2, so the tempo is about 128 with a triplet pulse at 84.7 (2/3 of 127.6); the tool's 64 is half of 127.6.
+- 02 AFX 114: drums 72%, bass 0.4% (empty: bass notes, pumping, wobble void), other 28%, vocals 0.0%. The sub is in the other stem (49% of it under 120 Hz) and the drums stem (41%). The repeat of 1.614 s is a bar: 148.7 BPM as 4 beats (the card's draft says "37.2 BPM", which is the bar rate, not a beat); the tool's 74 is half of 148.7; the picker says 117.5.
+- 09 Fantasia: drums 74%, bass 1.9% (void), other 3.7% (top line, chords, other-stem numbers guesses), vocals 21%. Bar 1.567 s = 153.2 BPM as 4 beats (the draft's "38.3 BPM" is the bar rate); the tool's 102 is two thirds of 153.2, a triplet reading; the picker says 123. The vocals stem holds 21% of the power: a sustained lead the separator called voice-like (see S7); I did not listen to decide. No words are claimed.
+
+### The hook
+- A loud, hard, mono-sub record from the early 90s: a kick tuned to C2 and a filter-closing bass over a triplet shuffle at 147.8 BPM, a bare E1 drone sub that comes and goes in 3 to 8 s blocks, a nearly fully mono 6-minute track with a lead that sings alone over a 7 s break, and a fast 81 s piece of 600 ms boom kicks with the hats out of phase.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a mono, hard-limited 148 BPM shuffle where one sustained lead plays alone for a few seconds each time the floor drops out.
+
+### Sounds
+
+**S1. Long boom kick with a rising filter (AFX 114): drums-1, 105 notes, 48%**
+- In synth terms: 56 Hz (51 to 63), attack 100 ms (36 to 326), falls 39 dB/s, brightness 207 Hz rising 2.03 octaves over the note (0.28 to 3.71), harmonic share 0.20 (mostly noise), level -1.6 dB, correlation 0.67. About one kick every 0.81 s (74 BPM, the half-time of 148.7), each 0.35 to 0.62 s long.
+- Hear it at: 0:01.5 (A1, 0.35 s, +16 dB alone), 0:09.3 (G#1, 0.62 s, +14 dB alone), 0:23.8 (G#1, 0.60 s, +14 dB alone).
+- Check: the pitch is about 55 Hz (A1 55.0, G#1 51.9) with the track's tuning of +29 cents; a harmonic share of 0.20 and a correlation of 0.67 say it is a noisy, slightly wide kick, not a clean sine. The attack is not believable at this register (under 60 Hz).
+- Building blocks: **[JUDGMENT]** **Guess:** a tuned sub-kick with a 600 ms tail and a filter that opens 2 octaves during the note; closest to the tuned kick, longer.
+
+**S2. Tuned kick on C2 (Joyrex J4): drums-1, 394 notes, 41%**
+- In synth terms: 65 Hz (50 to 69), C2 (65.4 Hz), attack 38 ms, falls 24 dB/s, harmonic share 0.88, brightness 186 Hz, correlation 0.99, level -0.3 dB. A second group (drums-2, 106 notes, falls 215 dB/s) is the short click.
+- Hear it at: 3:44.3 (C2, 0.13 s, +43 dB alone), 1:08.8 (C2, 0.14 s, +42 dB alone), 1:10.2 (C2, 0.33 s, +41 dB alone).
+- Check: tuning +23 cents at mix level, so the kick is a hair sharp of C2. Clean examples (+41 to +43 dB alone) at 1:08.8 to 1:10.2, which sits just before the +3.1 octave rise at 1:10.5.
+- **[JUDGMENT]** **Guess:** the tuned sub-kick again, set to the key's root; the family of sounds from the first half.
+
+**S3. Filter-closing bass with a slow swell (Joyrex J4): bass-1, 187 notes, 20%**
+- In synth terms: 54 Hz (39 to 74), attack 295 ms (68 to 595, a slow swell), falls 13 dB/s, brightness 886 Hz at the start and darkening 0.81 octave over the note (2.79 octaves at the 10th percentile), harmonic share 0.29 (noisy partials, partials 104 cents off whole multiples), level -8.7 dB, correlation 0.96. The tool labels it bell-like; at 54 Hz the labels are not measurable. A second group (bass-2, 120 notes, around F2, falls 99 dB/s) is a short pluck.
+- Hear it at: 1:37.8 (B1, 0.38 s, +28 dB alone), 1:40.8 (G1, 0.52 s, +25 dB alone), 1:40.3 (F#1, 0.39 s, +25 dB alone). All sit in the drums-out gap at 1:38.5 to 1:41.5.
+- Check: the bass line is believable (the bass stem is 15%): D# 0.34, F 0.24, A 0.17, C 0.12, 0.50 notes a second; D# and A are a tritone apart.
+- **[JUDGMENT]** **Guess:** roundBass with a slow attack and a lowpass that closes about 0.8 octave over each note.
+
+**S4. A bare E1 drone sub that enters in short blocks (Cordialatron): bass-1, 62 notes, 14%**
+- In synth terms: 41 Hz (41 to 42), E1 (41.2 Hz), harmonic share 1.00 (a pure sine), attack 45 ms, falls 28 dB/s, vibrato 7 cents (0 to 18), brightness 118 Hz, level -2.2 dB, centered (correlation 1.00). The bass stem plays 26% of the time (in at 0:08.0, 0:41.5, 0:49.0, 1:00.0, 1:11.5; out at 0:14.0, 0:44.0, 0:55.5, 1:06.5, 1:21.5): blocks of 3 to 6 s.
+- Hear it at: 2:57.9 (E1, 0.11 s, +14 dB alone), 2:42.3 (E1, 0.82 s, +9 dB alone), 0:38.5 (E1, 0.86 s, +6 dB alone).
+- Check: pitch under 40 Hz is good to a semitone, but E1 is 41.2 Hz and the strongest line in the stem is 41.2 Hz exactly, so E is believable. The bass line is one note: E 0.98, repeats 89%, 0.19 notes a second.
+- **[JUDGMENT]** **Guess:** a sine sub drone on one note, dropped in for 3 to 6 s at a time; roundBass without its upper harmonics.
+
+**S5. A wide, noisy mid pad (Cordialatron): other-1, 500 notes, 38%**
+- In synth terms: 116 Hz (65 to 292), around A#2, brightness 595 Hz, harmonic share 0.70, attack 99 ms, falls 25 dB/s, level -3.3 dB, left-right correlation 0.45 (0.21 to 0.69). Weak (silhouette 0.15, one group): a blended texture, not one instrument. The other stem is 25% of the power (44% in 120 to 500 Hz, 53% in 0.5 to 2 kHz).
+- Hear it at: 0:21.7 (C3, 0.26 s, +56 dB alone), 0:24.4 (A#2, 0.29 s, +55 dB alone), 0:25.4 (C3, 0.23 s, +56 dB alone). All fall inside the first floor drop (0:15.0 to 0:30.0), so they are clean.
+- **[JUDGMENT]** **Guess:** a wide, noisy pad at A#2 to C3 with unrelated left and right; the width is the new part.
+
+**S6. A D#1 sub in the other stem (AFX 114): other-1, 345 notes, 22%**
+- In synth terms: 38 Hz (32 to 43), attack 55 ms, falls 85 dB/s, brightness 145 Hz, harmonic share 0.22, level -10.0 dB, correlation 0.99. Hear it at 0:49.6 (? label, 0.24 s, +9 dB alone), 1:10.3 (C1, +6 dB alone). A second group (other-2, 96 notes, around F1, falls 85 dB/s) is the same kind.
+- Check: partials under 60 Hz cannot be measured, pitch under 40 Hz is good to a semitone, and the +5 to +9 dB examples are not clean. Treat it as a sub rumble in the other stem, since the bass stem is empty.
+- **[JUDGMENT]** **Guess:** waits; part of the sub, not a separate instrument.
+
+**S7. A sustained lead in the vocals stem (Fantasia): vocals-1, 462 notes, 40%**
+- In synth terms: around G#2 by the median (102 Hz, 58 to 306), but the clean examples are D#4 and F4 (311 and 349 Hz); brightness 1,816 Hz (705 to 4,149), harmonic share 0.40, attack 129 ms (39 to 702), falls 30 dB/s, level -7.6 dB, correlation 1.00, vibrato up to 37 cents. The vocals stem is 21% of the power.
+- Hear it at: 2:27.1 (D#4, 1.4 s, +40 dB alone), 2:28.5 (F4, 0.41 s, +42 dB alone), 2:23.9 (D#4, 1.4 s, +37 dB alone). All fall in the 2:22.5 to 2:29.5 break, where the drums, bass and other stems all leave and only this stem plays.
+- Check: the examples show that a lead with held 1.4 s notes plays alone for 7 s; whether it is a voice or a synth lead I cannot tell without a listen, and Driftloom's rule is vowels, hums and choirs only. The 462 notes with a median at 102 Hz say the group also holds low bleed from the kick.
+- **[JUDGMENT]** **Guess:** a held mono lead that plays alone during a floor drop; needs a listen before anything about "voice".
+
+### Techniques
+
+**T1. Floor drops and breaks where one part plays alone (Cordialatron, Fantasia)**
+- Cordialatron (sums, under 120 Hz 15 dB down): 0:15.0 for 15.0 s, 1:30.0 for 8.0 s, **2:00.5 for 30.0 s**, 3:19.5 for 11.0 s, 4:15.5 for 8.0 s, 4:31.0 for 13.0 s (the tail, the track ends at 4:44). The stems-only count is 1.18 a minute (0:15.0 for 15.2 s, 1:30.2 for 7.8 s, 2:03.2 for 14.5 s, 2:23.0 for 7.8 s, 4:15.8 for 7.8 s); the low end is on only 57% of the track, so by rule the stems count is skipped and the sums are the figure. The drums stem leaves at 0:15.5, 1:31.5, 2:04.0, 2:24.5, 4:17.0 and returns at 0:29.5, 1:37.5, 2:15.0, 2:30.0, 4:23.0.
+- Fantasia: the stems count 2.03 a minute (0:24.5 for 7.8 s, 1:46.0 for 3.0 s, 1:54.0 for 4.5 s, 2:22.2 for 7.5 s, 3:14.0 for 3.0 s, 4:21.8 for 3.0 s, 4:30.5 for 3.8 s, 4:50.2 for 3.2 s); the sums find 16 runs (3.0 to 12.5 s) because the sub is in the drums stem too. The 2:22.2 break is the one where the lead plays alone (S7).
+- Joyrex J4 and AFX 114: no drops (sums: J4 only the first 2.5 s and the tail at 4:22.5 for 7.5 s; AFX 114 a 3.0 s tail).
+- **[JUDGMENT]** **Guess:** floor drops of 3 to 15 s, a few per loop, on the faster loops, with one 30 s break on a calm loop; a held lead left on during the break.
+
+**T2. Big pad filter sweeps (AFX 114) and a build (Joyrex J4)**
+- AFX 114's other stem rises 2.7 octaves (0:28.5 to 0:34.0), rises 2.9 (0:38.0 to 0:47.5) and falls 4.1 (0:47.5 to 0:56.0), rises 1.9 (0:56.5 to 1:01.5); the mix rises 3.6 octaves at 1:13.0 to 1:20.5. Joyrex J4: the mix falls 1.6 octaves at 1:02.5 to 1:10.5 and rises 3.1 at 1:10.5 to 1:16.5, then falls 1.4 at 1:41.5; Fantasia: -4.2 octaves at 0:17.0, +3.0 at 0:22.5, -3.1 at 1:02.5, +2.6 at 1:09.0 (68 more in techniques.json). Whole-mix swings on drum-led tracks are mostly hats and fills, but AFX 114's other-stem sweeps are real filter moves on a pad.
+- **[JUDGMENT]** **Guess:** a 4-octave pad lowpass sweep over 8 to 9 s, up then down, on the sub-heavy loops.
+
+**T3. A triplet drum echo of 234 ms (Cordialatron)**
+- Cordialatron's drums echo at 234 ms (+9.9 dB, 4 later repeats): 234 ms is a third of the 0.708 s beat (0.33), a triplet eighth, in line with the triplet pulse at 84.7 BPM. The tool needs six notes ringing alone for 1.5 s, which a drums stem rarely gives, so I treat the time as likely and the level as unconfirmed.
+- **[JUDGMENT]** **Guess:** a triplet-eighth echo on percussion at +6 to +10 dB, four repeats.
+
+**T4. Pumping figures that do not hold (all four)**
+- The tool reports ducking at the kick: J4 other 2.8 dB and bass 4.2 dB (kick every 0.41 s, fits the 0.406 s beat: believable but small); AFX 114 other 4.0 and bass 4.1 dB (kick every 0.31 s, does not fit a 0.81 s kick: do not trust; the bass stem is 0.4%); Cordialatron other 3.4 and bass 7.8 dB (kick every 0.64 s, does not fit the 0.708 s beat: do not trust); Fantasia other 3.4 and bass 5.7 dB (kick every 0.24 s, does not fit the 0.392 s beat: do not trust, and the bass stem is 1.9%).
+- **[JUDGMENT]** **Guess:** only J4's 3 to 4 dB duck is worth carrying.
+
+### Theory
+
+**Th1. Tempi and swing: 148 triplet shuffle, 128 with a triplet pulse, 149 and 153 slow-kick**
+- J4: 147.8 BPM, triplet shuffle (off-beat 0.67). Cordialatron: about 128 (127.6), off-beat 0.75, with a pulse at 84.7. AFX 114: 148.7 with a kick every other beat (74 BPM), off-beat 0.62 (triplet feel). Fantasia: 153.2, off-beat 0.67. Pulse strength: J4 0.87, Cordialatron 0.91, AFX 114 0.45 (weak: slow kick), Fantasia 0.48 (weak).
+- **[JUDGMENT]** **Guess:** a tempo draw of 128 to 153, triplet shuffle on the fast ones.
+
+**Th2. An E drone a semitone under an F minor harmony (Cordialatron)**
+- The bass stem is E for 98% of its time (41.2 Hz), 0.19 notes a second, 89% repeats; the key tool says F dorian, margin 0.031 (usable), pitch classes F 0.16, D# 0.12, G# 0.12, A# 0.11, C 0.11 (an F minor pentatonic with no D natural); chords Fmin7 22%, A#5 9%, A#7 8%, D#sus2 6%. So an E sits a semitone under F: against F minor that is a major-seventh below the root's octave, a very close, dissonant sub. Cordialatron's 46 chord changes a minute (12 lasting 1.5 s or more) have only 16% on a beat against 32% by chance: the chord tool is following the other stem's movement, not a chord rhythm; the picker counts 11.8 a minute. Tuning -15 cents, so a half-step clash is not an offset artefact.
+- **[JUDGMENT]** **Guess:** a drone a semitone below the tonic as a rare, "strange" colour; leave it out of calm vibes.
+
+**Th3. Diminished and lydian colours over a pedal (J4, AFX 114, Fantasia)**
+- J4: D# lydian, margin 0.015 (a guess); bass D# 0.34, F 0.24, A 0.17, C 0.12; chords Amaj7 21%, Adim 14%, F7 12%, Fmaj7 11% (28 changes a minute, 9 lasting 1.5 s or more, 50% on a beat against 49% by chance); picker 2.0 a minute. A is a tritone above the D# pedal, which is the lydian fourth. AFX 114: C# ionian, margin 0.002 (a coin toss); chords C#dim 71%, Fmaj7 8%, C#maj7 7%, 9 changes a minute; top line 3 semitones wide, 69% steps: a drone. Fantasia: G lydian, margin 0.031 (usable, but the mix reads -45 cents); chords Dmaj7 61%, Gmaj7 20% (8 changes a minute, median chord 4.0 s); bass void; top line 34 semitones wide (10th to 90th percentile) with 37% leaps and 16 notes a phrase, which looks like bleed across stems.
+- **[JUDGMENT]** **Guess:** a held major-seventh chord with its lydian IV on top (Dmaj7 to Gmaj7), a diminished triad drone, and a bass a tritone below its chord.
+
+**Th4. Form (J4)**
+- J4: bars of 1.2 s, repeats at 1 bar (0.74), 8 (0.48), 16 (0.28); 32% of bars near-duplicate an earlier one. Cordialatron: 2, 4, 8 bars (0.52, 0.47, 0.46); 18%. Fantasia 11%, AFX 114 0% (too short to say).
+- **[JUDGMENT]** **Guess:** 8- and 16-bar phrases for the shuffle loop.
+
+### Space
+- J4: near mono, median -13 dB (-16 to -8), sub -16, 120 to 500 -13, mids -11, presence -20 (0.98), air -11. Drums -20 dB, bass -15, other -7 (mono loss 0.8 dB, 3% of the power).
+- Cordialatron is **wide above a mono sub**: median -4 dB (-6 to -2), sub -27 (1.00), 120 to 500 -5 (0.54), mids -4 (0.46), presence -4 (0.42), air -2 (0.24). Bass -28 dB, drums -11 (widest in the air band, -2 dB), other -4 (mono loss 1.5 dB, 31% of the power).
+- AFX 114: **hats out of phase**: median -6 dB (-7 to -4), sub -24, 120 to 500 -22, mids -13, presence +1 dB (correlation -0.13), **air +8 dB (correlation -0.73)**. The drums stem is -6 dB wide, mono loss 0.9 dB, widest in the air band (+8 dB). 18% of the energy is above 2 kHz.
+- Fantasia is **fully mono**: median -29 dB (-30 to -27) in every band (correlation 1.00 from the sub to the air); drums -32 dB, vocals -30, other -28. 14% of the energy is above 2 kHz.
+- **[JUDGMENT]** **Guess:** a wide pad over a mono sub (Cordialatron), a dead-mono hard record (Fantasia), and no out-of-phase hats (AFX 114) without the mono-fold guard.
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1, S2 booming kicks and S3, S4 closing bass and E drone: toward booming, hypnotic, energetic x2; away from restful, still x0.4.
+- S5 wide noisy pad: toward hazy, dreamy x1.5.
+- S7 lead alone over a break: toward mysterious, dreamy x1.5.
+- T1 floor drops and breaks: toward energetic, hypnotic x1.5.
+- T2 big pad sweeps: toward strange x1.5.
+- Th2 E under F minor: toward strange, mysterious x1.5; away from happy, peaceful, restful x0.2.
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: AFX 114 has 18% of its energy above 2 kHz, Fantasia 14%, Cordialatron 8%, J4 5%. Polarity flag: AFX 114's hats (air correlation -0.73, +8 dB wide, mono loss 0.9 dB for the drums stem): do not copy as it is. A dissonance flag: Cordialatron's E drone under F minor. Weight: J4 and Fantasia have 72 to 86% of the drums stem under 120 Hz, and the record is loud (-8.3 to -9.9 LUFS for three of four), so any kick or sub needs the low-end level guard. Fantasia is fully mono, a plus for the mono switch.
+- **[JUDGMENT]** **Guess:** take the C2 tuned kick, the closing bass, the E sine drone in 3 to 6 s blocks (on the root, not a semitone below), the wide pad over a mono sub, the pad sweep, the 30 s break and the triplet echo; leave AFX 114's out-of-phase hats and the semitone clash for strange vibes only.
+
+### For later
+- J4, drums-2 (106 notes, low thump, falls 215 dB/s); hear 3:46.3, 1:11.6; bass-2 (120 notes, F2, falls 99 dB/s); hear 0:21.5, 0:19.8. **[JUDGMENT]** **Guess:** waits, the click and a pluck.
+- Cordialatron, drums-1 (139 notes) and drums-2 (72 notes), mid snaps that brighten, falls 92 and 95 dB/s; hear 0:56.0, 0:44.7 and 0:40.9, 0:33.4. **[JUDGMENT]** **Guess:** waits, the snare-like hit.
+- AFX 114, drums-2 (76 notes, snap, falls 83 dB/s); hear 1:18.0, 0:00.0; other-2 (96 notes, F1); hear 0:50.4, 0:49.8. **[JUDGMENT]** **Guess:** waits.
+- Fantasia, other-1 (345 notes, around C2, noisy, falls 36 dB/s; hear 1:56.8, 1:57.0) and drums-2 (112 notes, snap, slow swell; hear 2:55.2, 3:29.5). **[JUDGMENT]** **Guess:** waits.
+- Not given a deep pass (mix-level only): 04 Italic Eyeball (4:25.7, 143.6 BPM, sub 88%, width -18.7); 06 Astroblaster (5:29.2, 152 BPM, 0.4 chord changes a minute); 07 On the Romance Tip (5:06.1, 144 BPM, width -5.3 dB, the widest, tuning +35 cents, almost no pitch bends or wobble); 08 Joyrex J5 (6:54.8, -8.7 LUFS, 152 BPM, sub 83%); 10 Humanoid Must Not Escape (5:42.8, 144 BPM, sub 71%, tuning +47); 05 Pigeon Street (0:23.1, too short). The J9ii tracks: 11 Clayhill Dub (3:24.9, 161.5 BPM, sub 96% of the energy, centroid 63 Hz, width -28 dB, tuning -44: the most sub-only track of the half), 12 The Garden of Linmiri (6:10.2, 152 BPM, width -23 dB), 13 We Are the Music Makers (Hardcore Mix) (3:59.2, 107.7 BPM, width -30 dB, tuning +45). **[JUDGMENT]** **Guess:** On the Romance Tip (wide) and Clayhill Dub (sub-only) are the two worth a listen.
+
+### Reliability notes for this card
+- Separator: Demucs (0.72 times the audio). Bass stems: AFX 114 (0.4%) and Fantasia (1.9%) are empty, so their bass notes, pumping and wobble (Fantasia bass 11 cents at 3.3 Hz) are void; J4 and Cordialatron have real bass stems. AFX 114's and Fantasia's "bell-like" labels at 38 Hz and 100 Hz are not measurable.
+- Tempo: the draft card's beat figures of 37.2 BPM (AFX 114) and 38.3 BPM (Fantasia) are the bar rate: the bar of 1.614 s and 1.567 s as 4 beats is 148.7 and 153.2 BPM. The picker is 117.5 for J4 and AFX 114 and 123 for Fantasia (a factor of 4/5, and 4/5 again), as the docs warn for broken beats.
+- Key margins: J4 0.015, AFX 114 0.002 (guesses), Cordialatron 0.031 and Fantasia 0.031 (usable, but tuning -15 and -45 cents on the mix). Chord names are guesses on dense tracks, and Cordialatron's chord rhythm is not beat-locked (16% against 32%).
+- Pumping: three of four kick periods do not fit their beat: void. Fantasia's top line (34 semitones, 37% leaps) is bleed across stems, not a melody.
+- The 7 s break at 2:22.5 on Fantasia is clean; every "+40 dB alone" example on this card sits in such a break, so the levels read high against the full mix.
+
+---
+
+## Aphex Twin, Analogue Bubblebath 5 (1995)
+
+Ears 7, 2026-10-18, Sonnet 5.5. Nine untitled tracks, 51.3 minutes, all measured at mix level. The picker named every track over 45 s for the deep pass (eight: 01, 02, 04, 05, 06, 07, 08, 09); track 03 is 37 s long and -35.5 LUFS, too short and too quiet, so it is mix-level only. Every track is a kick-led, sub-heavy, mostly near-mono groove at 61 to 185 BPM, quiet for the pile (-13.1 to -21.5 LUFS), with 1 to 9% of the energy above 2 kHz and the drums stem holding 44 to 98% of the power. The tracks are numbered 01 to 09 in the folder; the card uses those numbers and their lengths. Stems from Demucs htdemucs. The mix-level tuning reads -16 cents on three tracks (01, 05, 06), so those share a reference; the others read -32 to +31.
+
+Machine time: 3,606 s (60.1 min) for 50.7 minutes of deep-pass audio (3,042 s): pick 117 s (9 tracks, 13 s a track), Demucs 2,033 s (400.1, 250.3, 176.2, 232.3, 253.2, 204.1, 264.1 and 252.2 s: 0.67 times the audio), measuring 1,456 s (0.48 times; 150 to 230 s a track). The formula (1.6 s per second of deep-pass audio plus 25 s a track) gives 5,092 s; measured is 0.71 of it.
+
+**Shared tracks.** `twins.py` on this album's rows against the other four new albums, the first half's rows and `data.csv` (Aphex): no probable twin. Against the Ears 6 numbers for Analogue Bubblebath 4 (382.0 s, -10.1 LUFS; 364.5 s, -12.9; 308.1 s, -8.7; 501.5 s, -13.8; 27.6 s, -23.4): no row is within 3 s and 0.6 LU of a row here. One near miss of a different kind: 04 (untitled) has the drum grid of Bradley's Robot B2 (beat 97.6 BPM, picker 143.6, meter 98), but a different length (265.0 against 352.0 s) and loudness (-15.4 against -12.3 LUFS), so not the same track.
+
+### Stem check (read first)
+- 01: drums 44%, bass 42% (real; 97% of it under 120 Hz, strongest line 80.9 Hz), other 11%, vocals 2.6% (bleed). Meter 61 agrees with the grid beat (0.987 s, 60.8 BPM).
+- 02: drums 63%, bass 0.9% (empty: bass notes, pumping, wobble and the G pedal void), other 33%, vocals 2.7% (bleed). Meter 76 agrees with the grid (0.789 s, 76.0 BPM).
+- 04: drums 74%, bass 25% (real), other 1.0% (top line, chords, other-stem pumping, echoes void), vocals 0.0%. Meter 98 agrees with the grid beat (0.615 s, 97.6 BPM); the picker's 143.6 is 1.47 times that (the 3:2 relation).
+- 05: drums 98%, bass 0.2% (empty: void), other 2.2% (void/guesses), vocals 0.0%. A track that is almost all drums stem (87% of it under 120 Hz): the sub is the kick. Meter 92 is half of the grid's 184.6 BPM (repeat 0.325 s), and the picker also says 92.3, so the beat is 92 or 185 depending on whether the kick is on the quarter or the eighth.
+- 06: drums 51%, bass 37% (real; 92% under 120 Hz, strongest line 58.3 Hz), other 10%, vocals 1.3% (bleed). Meter 89 is half of the grid beat 178.0 BPM (0.337 s; a 4-beat bar of 1.358 s is 176.7); the picker's 117.5 is two thirds of 178.
+- 07: drums 74%, bass 23% (real), other 2.9% (void/guesses), vocals 0.0%. Meter 122 agrees with the grid (0.488 s, 123.0 BPM).
+- 08: drums 69%, bass 7.5% (only 33% of it under 120 Hz: a higher bass), other 24%, vocals 0.0%. Meter 106 is twice the grid beat of 52.7 BPM (repeat 1.138 s); a 4-beat bar of 2.276 s is 105.4 BPM, so the tempo is 105.4 and the picker's 107.7 agrees.
+- 09: drums 85% (95% of it under 120 Hz), bass 13%, other 1.5% (void/guesses), vocals 0.6% (bleed). Meter 69 is half of the grid beat 136.1 BPM (0.441 s); the picker's 136.0 agrees.
+- No vocals stem holds a voice (0 to 2.7%, bleed on instrumentals); no words anywhere.
+
+### The hook
+- A record of long, quiet, near-mono groove studies: a plain sine kick and a plucked sine bass moving around one note, with huge filter sweeps (4 to 6.5 octaves) over a minute, one track that is nothing but a kick, and a few wide, low pads.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a bare sine kick and a plucked sine bass on one note for minutes, while a filter slowly opens six octaves above them.
+
+### Sounds
+
+**S1. A plain sine kick (05): drums-1, 371 notes, 56%**
+- In synth terms: 50 Hz (43 to 89), harmonic share 0.90, attack 33 ms, falls 53 dB/s, brightness 99 Hz, correlation 0.99, level 0.0 dB (the drums stem is the track). Hear it at: 0:08.4 (F#1, 0.23 s, +46 dB alone), 0:16.8 (F#1, 0.12 s, +46 dB alone), 0:01.1 (B1, 0.14 s, +46 dB alone). The examples are clean because the stem is alone.
+- Check: F#1 is 46.2 Hz, so a 50 Hz median is the kick's note with the sub's tuning of -16 cents; pitch under 60 Hz is good to a semitone. A second group (drums-2, 129 notes, snap, falls 24 dB/s; hear 0:32.0, 0:13.8) is the clap.
+- **[JUDGMENT]** **Guess:** the tuned sub-kick at its plainest (a sine, 50 ms thump).
+
+**S2. Plucked sine bass on one note, E2 (01) and A#1 (06): 01 bass-1, 495 notes, 34%; 06 bass-1, 488 notes, 42%**
+- In synth terms: 01: 82 Hz (81 to 83, one pitch, E2 = 82.4 Hz), harmonic share 0.99 (a pure sine), attack 33 ms, falls 119 dB/s (a pluck), brightness 82 Hz, level -3.0 dB, correlation 1.00. 06: 58 Hz (37 to 68), A#1 (58.3 Hz), harmonic share 0.91, attack 54 ms, falls 84 dB/s, level -4.5 dB. The bass line is a pedal in both: 01 on E for 94% of its time (91% repeats, 1.52 notes a second), 06 on A# for 93% (79% repeats, 0.41 a second).
+- Hear it at: 01: 0:25.7 (E2, 0.24 s, +20 dB alone), 0:31.6 (E2, 0.29 s, +18 dB alone), 0:20.7 (E2, +18 dB alone); 06: 3:39.3 (A#1, 0.35 s, +20 dB alone), 0:32.4 (A#1, 0.33 s, +19 dB alone), 3:39.2 (A#1, +20 dB alone).
+- Check: both bass stems are real (42% and 37% of the power), so the pedal readings are believable. The tool's "bell-like" label on 06 is the partial structure of a sine under 60 Hz, not measurable.
+- **[JUDGMENT]** **Guess:** roundBass as a sine pluck, repeated on the root at 0.4 to 1.5 notes a second.
+
+**S3. A walking sub bass that darkens (04): bass-1, 458 notes, 40%**
+- In synth terms: 46 Hz (36 to 51), F#1, harmonic share 0.95, attack 42 ms, falls 61 dB/s, brightness 211 Hz and darkening 0.44 octave over the note, level -6.1 dB, correlation 0.99. The bass line moves: F# 0.41, G# 0.22, A 0.15, G 0.12, steps 65%, 0.51 notes a second.
+- Hear it at: 3:30.3 (? label, 0.21 s, +24 dB alone), 4:01.4 (? label, 0.27 s, +22 dB alone), 1:32.6 (D#1, 0.48 s, +18 dB alone). Pitch under 40 Hz is good to a semitone only.
+- **[JUDGMENT]** **Guess:** roundBass with a closing lowpass, walking by steps around its root.
+
+**S4. A short sub click at 39 Hz (02): drums-1, 396 notes, 39%**
+- In synth terms: 39 Hz (38 to 43), falls 741 dB/s (a click that is gone in a few ms), harmonic share 0.57, brightness 117 Hz, correlation 0.99; the tool's attack of 58 ms is not believable at that fall. Hear it at 5:54.3 (F#1, 0.16 s, +36 dB alone), 5:53.9 (F#1, +34 dB alone), 5:53.1 (E1, +31 dB alone).
+- Check: with the bass stem at 0.9%, the kick and the sub are one thing in the drums stem (86% of it under 120 Hz).
+- **[JUDGMENT]** **Guess:** a very short sub click; the dry kick from Analogue Bubblebath 3.
+
+**S5. A warm string-like pad at D#3 (02): other-1, 463 notes, 38%**
+- In synth terms: 156 Hz (133 to 177), around D#3, harmonic share 0.87 (string, reed or pad-like), brightness 763 Hz (288 to 4,541), attack 45 ms (19 to 143), falls 37 dB/s, level -1.3 dB, left-right correlation 0.86. The other stem is 33% of the power, 48% of it in 120 to 500 Hz and 29% in 0.5 to 2 kHz, with 13% above 5 kHz.
+- Hear it at: 3:04.4 (C3, 0.26 s, +45 dB alone), 3:06.8 (? label, 0.46 s, +43 dB alone), 5:35.6 (? label, 0.14 s, +44 dB alone). The 3:04 to 3:07 examples sit in the quiet bass-out stretch, so they are clean.
+- **[JUDGMENT]** **Guess:** a warm pad with a wide spread of brightness (from 288 Hz to 4.5 kHz), slightly wide.
+
+**S6. A wide low noisy pad at C2 (08): other-1, 429 notes, 35%**
+- In synth terms: 66 Hz (44 to 75), around C2, harmonic share 0.79, noisy partials, attack 145 ms (39 to 366), falls 17 dB/s, brightness 380 Hz, level -3.5 dB, left-right correlation 0.56 (the widest sound on the album). The other stem is 24% of the power (74% of it in 120 to 500 Hz).
+- Hear it at: 1:09.8 (C2, 0.39 s, +15 dB alone), 1:19.1 (? label, 0.24 s, +14 dB alone), 1:57.6 (? label, 0.35 s, +13 dB alone). Under 60 Hz the label is not measurable.
+- **[JUDGMENT]** **Guess:** a slow, wide, low pad; the width is the new part.
+
+**S7. A tuned C2 kick (09): drums-1, 237 notes, 29%**
+- In synth terms: 65 Hz (64 to 65, C2 = 65.4 Hz), harmonic share 1.00, attack 29 ms, falls 191 dB/s, brightness 72 Hz and rising 1.14 octaves over the note, correlation 0.99, level -0.4 dB. Hear it at: 1:06.1 (C2, 0.23 s, +22 dB alone), 4:22.0 (C2, 0.24 s, +19 dB alone), 4:19.8 (C2, 0.26 s, +19 dB alone). The mix reads -32 cents, so the kick is a third of a semitone flat of C2, within the reading's accuracy.
+- **[JUDGMENT]** **Guess:** the tuned sub-kick on C2, shared with the Joyrex J4 kick on the Compilation card.
+
+### Techniques
+
+**T1. Huge whole-mix brightness sweeps (01, 05, 09)**
+- 01: the mix falls 6.5 octaves from 0:06.0 to 0:20.0, rises 6.5 from 0:32.0 to 0:56.5 and falls 6.3 from 0:57.5 to 1:08.5; later rises of 3.3 (1:21.5 to 1:32.5) and 4.0 octaves (1:36.0 to 1:46.0) (86 more in techniques.json); the tool flags a build from 0:00 to 0:22. 05: falls 3.6 and rises 4.1 octaves at 0:04.0 to 0:15.5, rises 3.2 at 0:20.0 (65 more). 09: falls 4.1 octaves from 0:17.0 to 0:36.5 (the build 0:13.0 to 0:36.0), rises 3.7 at 4:03.5 and 5:48.5. These are whole-mix numbers on tracks where the kick is 44 to 98% of the power, so the swing is mostly the hats and the other stem entering and leaving, but a 6.5 octave swing in 14 s is a deliberate move on a pad or hat.
+- **[JUDGMENT]** **Guess:** a 4 to 6 octave pad lowpass sweep over 14 to 25 s, up and down, on a loop that is otherwise a kick and one bass note.
+
+**T2. Floor drops: one 39 s and several 5 to 12 s (01, 02, 06, 09)**
+- 01: the stems give 5:17.2 for 39.2 s (0.12 a minute); the sums find 5:17.5 for 23.5 s and 5:41.5 for 15.0 s plus 0:00 for 7.5 s, 0:08 for 2.5 s, 0:14 for 2.0 s, 8:04.5 for 2.0 s and 9:09.5 for 9.5 s (the tail, the track ends at 9:19). The drums leave at 5:19.5 and return at 5:26.5 and 5:56.0, the bass at 5:18.0 and 5:56.5. 02: 3:39.5 for 5.2 s, 4:05.2 for 6.0 s, 4:11.5 for 10.0 s (0.56 a minute), with the sums adding 4:14.5 for 6.5 s and the tail 5:54.5. 06: 0:19.8 for 4.8 s; the sums add 0:00 for 24.5 s (intro) and 6:13.0 for 4.0 s. 09: 0:18.2 for 12.2 s and 4:07.2 for 6.8 s (stems, 0.37 a minute); sums 0:00 for 30.5 s (intro), 4:07.0 for 7.0 s, 5:52.5 for 13.5 s (tail). 04, 05, 07 and 08 have none that is not an intro or tail (05's low end is on 67% of the time, so its stems count is skipped; its 6:21.5 run of 21.5 s is the tail).
+- **[JUDGMENT]** **Guess:** a 5 to 12 s floor drop, one or two a loop, plus a rare 40 s break on the longest loops.
+
+**T3. Drum echoes (02, 04, 07)**
+- 04: drums echo at 634 ms (reported strength +14.4 dB, 2 later repeats), against a beat of 0.615 s: one beat within 3%. 02: 254 ms (+22.1 dB, 1 repeat), a third of the 0.789 s beat (0.32). 07: 614 ms (+19.8 dB, 1 repeat), which is 1.26 beats at 123 BPM (0.488 s): five sixteenths, not a clean fraction. 05's other-stem echo (718 ms, +3.2 dB) is on a 2.2% stem: void. The tool wants six notes ringing alone for 1.5 s, which a drums stem rarely gives, so the times are leads, not confirmed.
+- **[JUDGMENT]** **Guess:** a one-beat echo (04) and a triplet-eighth echo (02) on percussion; 07's five-sixteenths is unconfirmed.
+
+**T4. A hard duck on the sub in 07, and none that holds elsewhere**
+- 07: the bass stem dips 22.2 dB at the kick, peak 693 ms after, with the kick every 0.73 s (1.5 beats of 0.488 s, so the period fits a dotted-quarter kick): the sub is cut at each kick and swells back over the whole period, the same shape as Bradley's Robot A2 (21.9 dB, 429 ms after a 0.49 s kick). 06: the bass dips 5.4 dB with the peak 55 ms after a kick every 0.35 s (the beat is 0.337 s: fits). 02 (bass 0.9%), 04 (4.1 dB, kick every 0.31 s against a 0.615 s beat: does not fit), 05 (bass 0.2%), 09 (4.2 dB, 414 ms after, kick every 0.43 s against a 0.441 s beat: fits) and 01 (18.1 dB, kick every 0.37 s against a 0.987 s beat: does not fit, void) are void or small.
+- **[JUDGMENT]** **Guess:** an optional hard duck of 15 to 22 dB on the sub in some drum loops, rare; milder ducks of 4 to 5 dB at the kick in others.
+
+**T5. A slow 18-cent wobble on the low pad (08) and fast wobbles on thin stems (07, 09)**
+- 08: the other stem (24% of the power) wobbles about 18 cents at 1.1 Hz (the tool read a 12-cent wow as 8.0, so the true figure may be near 25 cents). 07's other stem (2.9%): 15 cents at 4.3 Hz, and 09's (1.5%): 12 cents at 1.1 Hz are void or guesses. 02's bass 7 cents at 0.6 Hz: void (bass stem 0.9%). A fast pad wobble of 4 Hz at 15 to 19 cents has now read on Analogue Bubblebath 3 track 06 (19 cents, 12% stem) and here on 07 (void): a lead, not a finding.
+- **[JUDGMENT]** **Guess:** a 1 Hz pad wobble of 15 to 25 cents on some loops.
+
+### Theory
+
+**Th1. Eight tempi from 61 to 185, with a triplet swing on the three slowest-feeling**
+- 01: 60.8 BPM, off-beat 0.63 (a light triplet feel); 02: 76.0, off-beat 0.67 (a triplet shuffle); 04: 97.6, 0.67; 05: 92 or 185 (kick on the quarter or the eighth), straight; 06: 178.0 (89 felt), straight; 07: 123.0, straight; 08: 105.4 (the beat of 52.7 is half), straight; 09: 136.1 (69 felt), straight. The picker's tempo is off by a simple ratio on 04 (1.47 times), 06 (two thirds) and 02 (112.3 against 76.0, 1.48 times: the 3:2 relation).
+- **[JUDGMENT]** **Guess:** a tempo draw of 61 to 185 across the library; a triplet shuffle (0.63 to 0.67) on the slower ones.
+
+**Th2. One-note basses and a few key readings**
+- 01: E lydian, margin 0.005 (a guess); E 0.23, D# 0.17, C# 0.13, F 0.12; bass E 0.94; chords Emaj7 56%, C#min 15% (20 changes a minute, 13 lasting 1.5 s or more): the Emaj7 over an E pedal with the D# (the major seventh) as the second pitch class is a lydian-style sound. 06: A# aeolian, margin 0.010 (a guess); bass A# 0.93; chords C#maj7 63% (C#maj7 over A# is the same notes as an A# minor seventh) (11 changes a minute, 5 lasting 1.5 s or more). 04: F# lydian, margin 0.015 (a guess); the bass walks F#, G#, A, G; chords Dmaj7 42% (37 changes a minute, 8 lasting 1.5 s or more). 02: G aeolian, margin 0.024 (usable) with the bass void; chords D#sus2 20%, F7 18%, F 14% (38 changes a minute: the picker says 16.2). 05: D# phrygian, margin 0.009 (a guess); bass void; chords D#maj7 25%, C#maj7 16%, Esus2 15%, Emaj7 15% (48 changes a minute, 46 distinct chords: a noise count, kick overtones on a 98% drums stem). 07: A mixolydian, margin 0.000 (a coin toss). 08: D aeolian, margin 0.010 (a guess); bass D 0.27, C 0.25, A# 0.19, F 0.17 (D, C, A#, F is a D minor with a flat sixth and a flat seventh); chords A#maj7 20%, D5 14%, D7 11% (45 changes a minute). 09: G dorian, margin 0.011 (a guess); chords Gmaj7 35%, Fmaj7 20% (33 a minute, 15 lasting 1.5 s or more).
+- Check: the picker counts 0.0 to 6.4 chord changes a minute on seven of eight tracks (02 is 16.2, 09 is 17.9), against the chord tool's 11 to 48; use the picker's as the speed of the harmony and the chord tool's names as a guess.
+- **[JUDGMENT]** **Guess:** a pedal on one note (E or A#) with a major-seventh chord above it, held for 5 to 10 s; harmony changes at 0 to 6 a minute.
+
+**Th3. Form: one very repetitive track and one with a 16- and 32-bar span**
+- 06: bars of 2.7 s; 1 bar repeats at 0.84 and 43% of bars near-duplicate an earlier one (the most repetitive of the album). 08: bars of 1.1 s (368 of them); strongest repeats at 16 bars (0.69), 32 (0.53), 8 (0.45); 17% near-duplicates. 01: 2 bars (0.79), 4 (0.63), 6 (0.47); 25%. 02: 4% (through-composed, bars of 7.1 s, bar length unclear). 04: 13%; 05: 18%; 07: 12%; 09: 16%. The bar length is uncertain on 01, 02 and 09, so their lags are weak.
+- **[JUDGMENT]** **Guess:** 16- and 32-bar spans on the slow loops; one loop in several that barely repeats.
+
+### Space
+- The album is mostly near-mono: median widths 04 -23 dB (-25 to -22; every band at correlation 0.96 to 0.99), 06 -21 (-23 to -16), 07 -14 (-17 to -12), 05 -13 (-17 to -9), 01 -9 (-24 to -4), 02 -10 (-13 to -6), 09 -10 (-13 to -5), 08 -7 (-17 to -6, the widest). The sub is at -16 to -21 dB and correlation 0.97 to 0.99 on all eight.
+- Where the width lives: 01's other stem (17% of the power, width -4 dB, mono loss 1.5 dB); 02's mids (0.5 to 2 kHz -4 dB, correlation 0.45) and its other stem (-8 dB, mono loss 0.6 dB); 05's other stem (-2 dB, mono loss 2.0 dB, 4% of the power) and a vocals stem at +1 dB (mono loss 3.7 dB) on 0.0% of the power, so ignore it; 08's other stem (-5 dB, mono loss 1.3 dB, 30% of the power) and its lows (120 to 500 Hz -7 dB); 07's other stem pans left (-0.36) and its vocals stem (0% of the power) pans -0.40; 09's high end is **unrelated left and right** (air band 0 dB, correlation 0.01; presence -5 dB, 0.51), a different thing from opposite polarity (mono loss for 09's other stem is 1.2 dB).
+- Pan cycles: 01's drums 0.05 over 50 s, 04's other 0.53 every 2 s (1% stem), 05's 0.43 every 4 s (2% stem), 08's drums 0.13 every 2 s: the 2 to 4 s cycles look like the analysis window and the stems are thin, so no auto-pan is claimed.
+- **[JUDGMENT]** **Guess:** near-mono bass and kick everywhere; a wide low pad over them (08), and a high end made of unrelated channels (09).
+
+### Vibes (all guesses; weights lean x1.5 to x3 toward, x0.2 to x0.5 away, never 0)
+- S1, S4, S7 kicks: toward hypnotic, booming x2; away from restful, bright x0.4.
+- S2, S3 sine and walking bass: toward hypnotic, mysterious x1.5.
+- S5 warm string pad and S6 wide low pad: toward dreamy, hazy, meditative x2; away from energetic x0.4.
+- T1 6-octave sweeps: toward hypnotic, strange x1.5.
+- T4 hard duck: toward bouncy, energetic x1.5 (rare).
+- **[JUDGMENT]** Ears 8 settles all of this.
+
+### Wholesome take
+- Brightness flags: none. 1 to 9% of the energy is above 2 kHz (02 9%, 01 7%, 06 5%, 05 and 08 2%, 04, 07 and 09 1%); no opposite-polarity part carries power (05's vocals stem is 0.0%). The flags are weight and quiet: 50 to 95% of the drums stems' energy is under 120 Hz, and the record is quiet (-13 to -22 LUFS), so the low-end level guard applies and these loops read thin on a phone. The sine kick on 05 is 98% of the track's power.
+- **[JUDGMENT]** **Guess:** take the sine kick, the plucked sine bass on one note, the walking dark bass, the warm string pad, the wide low pad, the slow filter sweeps over 14 to 25 s and the 5 to 12 s floor drops; leave the 22 dB duck as a rare, loud-vibe option. The whole record is gentle, dark and slow, not harsh.
+
+### For later
+- 07, bass-1 (459 notes, G#1, harmonic, falls 115 dB/s; hear 1:24.4, 3:50.9) and drums-1 and drums-2 (256 and 116 notes; hear 4:44.7, 4:46.7 and 4:40.4, 4:46.2). **[JUDGMENT]** **Guess:** waits, the dry kick and the plucked bass.
+- 06, drums-1 (353 notes, falls 71 dB/s; hear 4:07.9, 4:16.0). **[JUDGMENT]** **Guess:** waits, a second kick.
+- 09, bass-1 (452 notes, F#2, falls 40 dB/s; hear 2:20.4, 2:37.4). **[JUDGMENT]** **Guess:** waits.
+- 08, drums-1 (329 notes, soft attack, falls 38 dB/s; hear 0:19.2, 0:16.9). **[JUDGMENT]** **Guess:** waits.
+- 04, drums-1 (190 notes, falls 139 dB/s; hear 0:49.6, 3:46.5). **[JUDGMENT]** **Guess:** waits.
+- Not given a deep pass: 03 (untitled) (0:37.0, -35.5 LUFS, 86 BPM by the mix-level count, pulse 0.27, width -4.9 dB: the quietest and widest, under 45 s). **[JUDGMENT]** **Guess:** worth a listen as a quiet wide interlude.
+
+### Reliability notes for this card
+- Separator: Demucs (0.67 times the audio). Bass stems of 02 (0.9%) and 05 (0.2%) are empty: bass notes, pumping, wobble and the G pedal (02) are void. 05's stems are one thing (drums 98%): its chords, key and top line are void. Other stems of 04 (1.0%), 07 (2.9%), 09 (1.5%) and 05 (2.2%) are void for top line, chords, other-stem pumping and echoes.
+- Tempo: the meter tool is half of the grid on 05, 06 and 09 and twice on 08; the picker is off by a ratio on 02, 04 and 06. Use the grid. 05's pulse is 92 or 185 and I cannot tell which from the stems.
+- Key margins: usable only for 02 (0.024); 01 0.005, 04 0.015, 05 0.009, 06 0.010, 07 0.000, 08 0.010, 09 0.011 are guesses. Chord names and chord counts are a guess everywhere (the picker says 0.0 to 6.4 a minute for seven tracks).
+- Top lines (range 8 to 26 semitones, 8 to 43% leaps; 09's 26-semitone range and 05's 1,019 notes on a 2.2% stem) are bleed or noise, not melodies.
+- Pitch under 60 Hz, and the "?" labels, are good to a semitone only; 02's 39 Hz and 04's 46 Hz kick and bass are at the limit.
+- Pumping: only 06 (5.4 dB) and 09 (4.2 dB) have a kick period that fits the beat; 07's 22.2 dB fits a dotted-quarter kick.
