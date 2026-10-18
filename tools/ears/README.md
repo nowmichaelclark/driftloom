@@ -43,6 +43,8 @@ audio.
 | `cardlib.py`, `calsig.py` | Shared helpers; the test-signal makers |
 | `calibrate.py`, `cal_*.py` | Calibration: test signals with known answers through every card tool; `python3 -I calibrate.py [--out FILE]` (about 80 s). Rows with tolerance `"limit"` are reported, not graded |
 
+**`python3 -P` instead of `-I` (Ears 7):** `-I` also hides the user site-packages, which is where `pip install --break-system-packages` puts numpy, torch and demucs on a machine without root, so every script died on `import numpy`. `-P` keeps the same protection that matters here (no current-folder or script-folder entry on `sys.path`, so a planted `json.py` next to downloaded audio is not imported) and still sees installed packages. Use `-I` where the packages are system-wide; use `-P` where they are in `~/.local`. If pip fails with a disk quota error, set `TMPDIR` to a folder on the home disk (`/tmp` was a small tmpfs).
+
 Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). If the Demucs weights are blocked, install `audio-separator onnxruntime audioread` instead and download the four models `kuielab_a_{drums,bass,other,vocals}.onnx` from `https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/` into `/tmp` (or `$MDX_DIR`); `split.py` picks them up on its own. One album takes about 40 minutes of machine time on 2 CPU cores (28 to 43 over five albums), about 1.6 seconds per second of deep-pass audio plus 25 s per track in the album, mostly Demucs; see `docs/EARS.md`.
 
 Definitions the reports use: medians per file; "steady beat" means pulse
