@@ -4,7 +4,7 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
-## "Phase 1 check" (2026-10-18, blind A/B, v92 against v99) -- out for listening
+## "Phase 1 check" (2026-10-18, blind A/B, v92 against v99) -- heard 2026-10-18: "everything sounds the same on both versions"
 
 Core phase 1 (items 42-45) was meant to change nothing a listener hears:
 the core's own math (sound moved under -225 dB), the random draws moved

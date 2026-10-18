@@ -478,6 +478,7 @@ Stated decisions, not inferences. Dated where the date matters.
 | Depth (blind, 8) | development heard at 24 and 32 bars; weak at 16 (second pass #108) |
 | Depth two (blind, 6 x 16 bars) | 4/4 developing "goes somewhere"; simple: 1 goes somewhere, 1 loops (and looping is welcome sometimes) |
 | Rust, all voices (10, core on, phone) | "it sounded great!" |
+| Phase 1 check (blind A/B, 9, v92 vs v99) | "everything sounds the same on both versions"; no difference he could hear |
 
 ## Methods that proved themselves
 
@@ -546,8 +547,8 @@ Stated decisions, not inferences. Dated where the date matters.
     dubStab, organ, wash and longChords). Vibes may be added until phase
     2 starts (data in `js/vibes.js`).
   - **Session 22** (brain, Opus, 2026-10-18): **done.** Items 42-45
-    verified, 47's PR read; the control album "Phase 1 check" is out
-    (`docs/ALBUMS.md`). See the log.
+    verified, 47's PR read; the control album "Phase 1 check" heard by
+    Mikey the same day: no difference. See the log.
   - **Session 23** (hands, Opus, high): item 46, the building-block
     interface.
   - **Session 24** (brain, Opus): phase 1 review; then write **the
@@ -722,8 +723,10 @@ a new loop.
 **The control album, "Phase 1 check"** (`docs/ALBUMS.md`): blind A/B,
 v92 (PR #204's preview) against v99 (PR #236's, which is main), nine
 corpus loops covering every kind of moved draw, one pass each, and a
-null track that is bit-identical on both. Next: Session 23 (hands,
-Opus 5.5, high), item 46.
+null track that is bit-identical on both. **Heard the same evening:
+"everything sounds the same on both versions"** -- phase 1 changed
+nothing he can hear, as intended. Next: Session 23 (hands, Opus 5.5,
+high), item 46.
 
 **Brain, 2026-10-13 evening (Opus 5.5), next picks.** Recorded Mikey's
 choice of the next-picks design (Painter 5) under "The core"; queued

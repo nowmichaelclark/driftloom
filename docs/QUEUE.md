@@ -1422,8 +1422,8 @@ phase 2, as data. See `docs/BRAIN.md`, "The plan to phase 2".
 Items in order; each a PR (a/b splits welcome).
 
 **Brain check, Session 22 (2026-10-18): items 42-45 pass their
-yardsticks** (`docs/BRAIN.md`, the log); the control album is out with
-Mikey. **Next: item 46.** For 46, one thing from the check: the files
+yardsticks** (`docs/BRAIN.md`, the log); Mikey heard the control album:
+no difference. **Next: item 46.** For 46, one thing from the check: the files
 it moves carry old pedantic clippy warnings; clean the ones in code the
 refactor rewrites, and say how many are left in the PR, rather than
 leaving the standing rule unmet without a word.
