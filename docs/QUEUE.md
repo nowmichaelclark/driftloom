@@ -2448,10 +2448,10 @@ Inspiration comes only from wholesome, comforting music.
   sketch for when it is queued (the generator's port, phase 2, is the
   natural place): the core's draws stay a pure function of what the host
   sends (promise 3 holds); the host adds a per-play salt to the wander's
-  seed at the top of the slider (or across its upper range, Mikey's
-  call), so the same code with the slider lower still wanders the same
-  way, and a share code or export says which it was. Decide with Mikey
-  where repeatable ends.
+  seed across the slider's whole upper range (**decided by Mikey,
+  2026-10-18**; where that range starts is to be tuned by ear as we
+  go), so the same code with the slider lower still wanders the same
+  way, and a share code or export says which it was.
 
 ## Merge policy
 
