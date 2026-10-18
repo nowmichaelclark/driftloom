@@ -461,7 +461,7 @@ Machine time: 2,602 s (43.4 min) for 11.7 minutes of deep-pass audio (700.2 s): 
 
 ## AFX, GAK (9 tracks)
 
-Ears 6, 2026-10-18, Sonnet 5.5. 9 tracks, all measured at mix level, 49 minutes. Deep pass on three, as the picker chose: the most typical, 01 GAK 1 (6:40), and the two least like the rest, 02 GAK 2 (6:18) and 03 GAK 3 (5:26). It is the lowest and loudest record so far: 59 to 93% of every track's energy is under 120 Hz, the centroid of 8 of the 9 tracks is under 210 Hz, and 06 gak bass,e,+2 is -4.7 LUFS (the loudest in the pile so far) with 93% of its energy under 120 Hz.
+Ears 6, 2026-10-18, Sonnet 5.5. 9 tracks, all measured at mix level, 49 minutes. Deep pass on three, as the picker chose: the most typical, 01 GAK 1 (6:40), and the two least like the rest, 02 GAK 2 (6:18) and 03 GAK 3 (5:26). It is the lowest and loudest record so far: 59 to 93% of every track's energy is under 120 Hz, the centroid of 7 of the 9 tracks is under 210 Hz, and 06 gak bass,e,+2 is -4.7 LUFS (the loudest in the pile so far) with 93% of its energy under 120 Hz.
 
 Machine time: 3,213 s (53.6 min) for 18.4 minutes of deep-pass audio (1,103.4 s): pick 177 s (9 tracks, 20 s a track), MDX-Net split 2,575 s (2.33 times the audio), measuring 461 s (0.42 times the audio). The plan's formula gives 1,990 s, so this is 1.61 times it.
 
