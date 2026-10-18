@@ -213,7 +213,7 @@ deep-pass audio each, which is **1.56 to 1.90 times** the formula above. The
 other parts matched Ears 5: picking 16 to 37 s a track, measuring 0.38 to
 0.45 times the audio. So the formula holds if the split is Demucs (not
 re-measured here) and should be multiplied by about 1.7 when the split is
-MDX-Net. Pile 2's second half is 7 albums, mostly EPs: plan for about 5 to 6
+MDX-Net. Demucs became reachable again on 2026-10-18 (a 90 s clip: 0.7 times its length), so Ears 7 should be back near the original formula. Pile 2's second half is 7 albums, mostly EPs: plan for about 5 to 6
 hours if the weights stay blocked. Run it as a chain script that resumes from
 the cache (the workspace restarted once and killed the processes; the disk
 survived).
