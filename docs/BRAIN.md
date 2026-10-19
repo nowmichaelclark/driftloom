@@ -737,6 +737,13 @@ changes a loop"; the core's stereo master links its compressors (one
 gain from the mono detector) so stereo folds like mono; the arc starts
 bright. Phase 2's items wait for Session 26. Docs only.
 
+**Brain, 2026-10-19 (Session 22, continued), after item 46.** Read
+#238's report and notes (not its figures; Session 24 checks those).
+Nothing to redo. Advised, and Mikey agreed: item 46b (modulation input
+and the stereo signal shape, bit-identical) before the sound batch, so
+the new instruments aren't built twice; a clippy cleanup later; the
+frame drum's solo peak into group (a). Written into "Start here".
+
 **Session 22 (brain, Opus 5.5, 2026-10-18), phase 1 check.** Items
 42-45 (#204, #208, #211, #213) checked against their yardsticks; all
 pass. What the brain ran itself, not taken from the reports:
