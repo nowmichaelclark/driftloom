@@ -19,6 +19,14 @@ report calls for a fix, it comes first. 37 stays on hold. A new
 Claude Code session starts here: read the standing rules and the merge
 policy, then take the next item.
 
+**Status, 2026-10-19 (brain, Session 24):** the core's phase 1 is done
+(items 42-47 merged; 46 checked by the brain). **Next: item 46b** (the
+interface finished for the batch: modulation, stereo shape, channel
+events), **then the sound batch, items 54-73** in three groups
+(instruments, stereo in the core, the mixing logic), then the brain's
+check and Mikey's album (Session 26), then phase 2. All of it sits under
+item 46, below. Item 74 (clippy) is low priority.
+
 **Next picks (2026-10-13):** Mikey chose the design
 (`design/next-picks.md`); Painter 6 builds the screens on the app track.
 Wiring each pick for real is items 48-53, inside phases 2 and 3; see
@@ -31,9 +39,10 @@ and app-track sessions stay out of `core/`.
 
 **Stereo across the board, with a mono switch (Mikey, 2026-10-15;
 replaces the earlier mono lines):** stereo is coming, after the
-instrument batch and before phase 2, from items Session 24 writes
-(`docs/CORE.md`, promise 9). Until those items, build nothing toward
-stereo beyond item 45's channel-layout seam.
+instrument batch and before phase 2: items 64-66 (`docs/CORE.md`, promise
+9), on the stereo shape item 46b decides. Until those items, build
+nothing toward stereo beyond item 45's channel-layout seam and 46b's
+shape.
 
 **The engine, from here (Mikey, 2026-10-10):** the Rust core is
 Driftloom's own engine, not a copy of Chromium. Matching Chromium was
@@ -1428,6 +1437,22 @@ it moves carry old pedantic clippy warnings; clean the ones in code the
 refactor rewrites, and say how many are left in the PR, rather than
 leaving the standing rule unmet without a word.
 
+**Brain check, Session 24 (2026-10-19): item 46 (#238) passes its
+yardsticks, so phase 1 is done.** Run by the brain on `main` (7f0e6af), not
+taken from the report: `build-core.sh --check`; `cargo test --release` (the
+kit with its cost check); goldens `--strict` on x86-64 and wasm32,
+`--strict --flush`, `--blocks all` on both, `--rates` on both: every hash
+equal, and #238 touched no hash file and not `test/core-baseline.json`;
+`node tools/baseline.mjs`: nothing moved; instruction counts (cachegrind)
+against #237 on busy-cinder -0.37%, 09-shrine -0.05%, 15-wayfare -0.11%,
+07-dust +0.34%; no panic, trap or allocation in the release library's
+assembly; "one file plus one line" checked independently (a throwaway
+block added in a scratch copy: the kit found it, asked for its stored
+render, then passed, and flagged a 2% gain change as a sound change).
+Pedantic clippy: 405 warnings left, in files 46 didn't rewrite (item 74,
+low priority). **Next: item 46b, then the sound batch (items 54-73),
+below item 46.**
+
 ## 42. Golden renders on every target
 
 **Why:** promise 3 says the same code makes the same samples on every
@@ -1638,6 +1663,568 @@ also the ground phase 5 (instruments as recipes) builds on.
   behind the interface, and what a block catalogue (charter, promise 5)
   should consider.
 
+## 46b. The interface, finished for the batch: modulation, stereo, channel events
+
+**Hands: Session 25-0, Opus 5.5, high** (an interface design, like 46).
+Written by the brain, Session 24 (2026-10-19), at Mikey's request.
+
+**Why:** item 46's notes for the brain ("Notes from Claude Code", item 46)
+name what doesn't fit the interface yet, and the sound batch below needs
+three of those things eight times over: padSweep and the arc are slow
+oscillators moving a cutoff, glass is FM, the stereo render needs to know
+what a block is when there are two channels, the organ is retuned, held
+and let go chord by chord, the tuned kick chokes its own last hit, and
+nylon's damp is the one place the core still names a voice. Deciding each
+once, here, keeps the batch from inventing it eight ways. Like 46, a
+refactor: nothing anyone can hear changes.
+
+**What** -- propose all three in the PR body before the code, as 46 did;
+keep the interface small (46's three concepts may grow by one or two, not
+by ten):
+
+1. **A modulation input.** A way to drive a block's setting with a
+   signal, as Web Audio connects a node into an `AudioParam`.
+   - A block names its inputs (`"freq"`, `"cutoff"`, `"gain"`...), so a
+     recipe (phase 5) can wire them by name; nothing positional.
+   - Say what rate a signal drives a setting at: every frame (FM needs
+     it), once a block (enough for a slow sweep, and cheaper), or the
+     block's choice. A setting with nothing wired reads its value or its
+     `Param` exactly as today.
+   - A control source is a block like any other (an LFO is today's sine
+     `TableOsc`); the envelope stays a `Param` (data), as 46 found.
+   - Static dispatch, no allocation, no `dyn` on the per-sample path.
+   - Use it inside today's voices only where the samples stay identical:
+     at least FM's modulator into the carrier's frequency and one
+     vibrato, or say why not. List the places left as they are and why.
+2. **The stereo signal shape.** What a block takes and gives when the
+   render is stereo, chosen now so items 64-65 build the stereo render on
+   it. Your design (a second signal, a stereo variant of the trait, a
+   channel count in the type...), held to promise 9:
+   - **The mono render pays nothing:** no per-sample branch, mono goldens
+     and their costs unchanged.
+   - A mono block in a stereo render runs once, not once a side; width is
+     made by processors that take mono and give stereo (placement,
+     spread) or take stereo and give stereo (the room, the echo, the width
+     ceiling, the master).
+   - Build the type and the trait shape only. No stereo render yet, and
+     `Core::start` still refuses two channels.
+3. **Channel events, and a channel's own blocks.** An event sent to a
+   channel at a time (`Core::event(channel, time, kind, value)` or your
+   shape), which reaches every voice sounding there through an optional
+   `Voice` hook (default: ignore it), and reaches the blocks a channel
+   holds for the whole loop.
+   - **Kinds to start with:** damp (nylon's), choke (a voice whose next
+     hit cuts its last: the tuned kick, item 67), release, and retune (a
+     new chord for a held instrument: the organ, item 61, where notes two
+     chords share keep sounding).
+   - **Nylon's damp through it,** bit for bit: `Core::damp` no longer
+     reaches into `Held::Nylon`, and `Core::note` no longer reads a strum
+     from nylon's extra value. After this no voice is named outside its
+     file and its registry line (the numbers mirrored in `js/core.js`
+     aside). The web host's call changes in the same PR (it's ours).
+   - **A channel's own blocks:** today's per-channel bodies, generalized
+     just enough that a channel can hold a processor (padSweep's lowpass,
+     subDuck's gain) or a source that lives for the loop (the organ, the
+     wash), set by events, outside the voice pool and its budget. Move the
+     bodies onto it if they stay bit-identical; otherwise propose the
+     shape and leave building it to item 61.
+   - The channel count stays 5 here; the wash's channel (item 62) adds
+     the sixth.
+- **The test kit grows with it:**
+  - a probe can wire a modulation input (a block played with an LFO on a
+    setting), so modulated blocks are checked like the rest;
+  - a stereo block gets **the ears' stereo guards for free:** folded to
+    mono against its mono input (loudness within 0.5 LU, worst octave
+    within 1 dB), side under mid above 200 Hz and below 120 Hz (-20 dB or
+    lower), correlation (median 0.7 or more, 5th percentile 0.3 or more)
+    and left/right balance (within 2 dB). These are the limits in
+    `docs/ears/batch-4.md` ("Guards") that Mikey's approved baseline met.
+- **Two demonstrations, each one new file plus one line** (test only,
+  like the tremolo): a modulated block (the tremolo redone as an LFO
+  wired into a gain's input is enough), and a stereo one (a balance:
+  mono in, stereo out), each through the kit with no test written for it.
+- `core/README.md`: how to wire a modulation input, how a block goes
+  stereo, how a voice answers a channel event.
+
+**Yardsticks:**
+- A refactor: goldens on every mode (`--strict`, `--flush`,
+  `--blocks all`, `--rates`), `tools/baseline.mjs` and `core/golden/blocks.txt`
+  unchanged byte for byte (new test-only lines aside).
+- Costs: instruction counts within 1% of `main` on every golden (the 5%
+  rule is the hard limit; this one is a refactor).
+- The demonstrations: one file and one line each, checked by a test as 46
+  checks the tremolo.
+- Nylon's damp: a test that a damped strum renders as before, and a grep
+  test that no voice's type is named outside its file and registry line.
+- **A note for the brain:** which of the batch's items (below) should
+  use which part of this, and what is still awkward for phase 5 (46's
+  notes 5-7: memory for big voices, named extra values, several numbers
+  per type).
+
+## Before phase 2: the sound batch (items 54-73, then 74)
+
+**Read first:** `docs/ears/batch-4.md` (dubStab, the organ, the wash,
+longChords, the stereo baseline: recipes, levels, guards),
+`docs/ears/batch-5.md` (the mixing logic: tunedKick, lateFloor, floorDrop shapes,
+pedalBass, subDuck, padSweep, echoTime), `docs/ears/prototypes.md`
+(roundBass, glass, floorDrop, arc), and `docs/EARS.md`. **The sketches are
+the reference:** `tools/ears/sketches/ears4-sketch.patch` (and
+`space-sketch.patch` inside it) and `ears8-sketch.patch` (applied after
+it), offline JavaScript Mikey heard and approved. The prototypes' branch
+(`ears/prototypes`, #152) holds roundBass, glass, floorDrop and arc.
+**Mikey approved all of it** (2026-10-10, 10-16, 10-18): build what he
+heard, in the core, then he hears it in the app (Session 26's album).
+
+Three groups, in this order, a fresh hands session for each (or when
+usage runs out), one PR per item: **(a) instruments, items 54-63,
+Session 25a; (b) stereo in the core, 64-66, Session 25b; (c) the mixing
+logic, 67-73, Session 25c.** All Opus 5.5, high. Item 74 (clippy) is low
+priority, for any session with usage to spare. Every item stands on 46b.
+
+**Rules for the batch** (with the standing rules and the core rules
+above):
+
+- **Where it is decided, where it sounds** (brain, 2026-10-18): *when* a
+  sound plays and *which loops* get it is the JavaScript side's (the
+  generator, or the engine at load where the sketch decides it), allowed
+  until phase 2 starts and then ported with everything else, as part of
+  what the port must match. *What* plays is the core's, built on 46b's
+  interface: each new sound a block or a voice in `core/src/blocks/`, one
+  file and one line, probed by the kit, with its stored render.
+- **Core only.** The JavaScript synth (the fallback) builds nothing new:
+  for a new voice number it plays the nearest existing voice, or leaves
+  the part out where nothing fits; each item says which. `js/core.js`
+  mirrors the new numbers.
+- **Mikey's rules for every choice** (2026-10-18): today's behavior stays
+  one option in every choice, never replaced; each choice is drawn per
+  loop, seeded from the loop's code on a stream of its own (so no other
+  draw moves and a loop replays the same way); **most loops get one or
+  two of the changes** (item 54 sets how). Exceptions, as approved:
+  roundBass is every loop's bass, longChords keeps its own approved
+  spread (today's lengths 56%), and floorDrop replaces full stops as
+  approved; the stereo baseline is every loop's.
+- **Measured against the ears.** Each new sound is measured the way its
+  report measured the sketch, on the report's corpus loops (corpus seed
+  20261009; `tools/ears/`: `render2.mjs`, `sketch_check.py`, `warmth.py`,
+  `low_guard.py`, `kick_check.py`, `stereo_guard.py`), core build against
+  sketch: level by ear (its loudest 3 s against the loop, K-weighted)
+  within 1.5 LU of the sketch's figure, its own tone figure (centroid,
+  attack, band shares) where the report gives one, and refused notes no
+  more than the sketch's (none, in every report). Plus the standing
+  rules: `VOICE_COST` from render timing, the tone probe's 2-5 kHz share
+  at or below the flute's for anything that plays in the melody's
+  register, refusals on full and lite. Say where the core's version must
+  differ from the sketch, and why.
+- **Peaks:** from item 55 on, no voice peaks over -1 dBFS alone at the
+  kit's probe (the kick's neighborhood today).
+- **Baselines:** each item that changes sound updates the core baseline
+  and says what moved; **the balance lock is re-baselined once per group**
+  (`stats.mjs --check`, then `--n 10000`), on purpose, at the group's
+  last item, saying what moved.
+- **For the album:** each Done line names two corpus loops that draw the
+  item's sound, with a time, so Session 26 can build a labeled album
+  (keep / tune / drop) without searching.
+- **Stop and leave a note** where a recipe can't be met in the core as
+  heard, rather than build something Mikey didn't hear.
+
+**Group (a): instruments (Session 25a).**
+
+## 54. The per-loop choices (no sound change)
+
+**Why:** Mikey's rule, "most loops get one or two of the changes", needs
+one place that decides how many and which, so every later item only adds
+an option.
+
+**What** (JavaScript, beside the generator's draws):
+- A list of choices, each with its options and weights; today is always
+  one option. Each choice has an eligibility test (subDuck needs a kick
+  and a sub; stutter and stagger a bass line; padSweep a sustained chord
+  voice; lateFloor something that plays from the first second...) and
+  vibe weights (toward x1.5 to x3, away x0.2 to x0.5, never 0; the table
+  in `docs/ears/batch-5.md`, "The [JUDGMENT] lines").
+- Per loop, on a stream of its own: draw **how many** changes (none 15%,
+  one 45%, two 30%, three 10%: a taste call, written "for Mikey's ears";
+  one constant), then **which** eligible choices (weighted, without
+  repeats), then each one's non-today option. The rest stay today.
+- What counts as a change: the new parts (glass, dubStab, the organ, the
+  wash, the arc) and Ears 8's ideas (tunedKick, lateFloor, floorDrop
+  shapes, pedalBass, subDuck, padSweep, echoTime). Not counted: roundBass,
+  longChords, the single floorDrop and the stereo baseline (see the rules
+  above).
+- `stats.mjs` reports, over 10,000 loops, the share of loops by number of
+  changes and by choice; a test checks the counts' shares within two
+  points of the weights and that every choice is reachable.
+- Choices hold for the loop; "Let the loop wander" doesn't redraw them
+  (item 67's kick swap is the one exception). Nothing goes in the share
+  code: the code's seed gives them, and pins come with phase 2's
+  requests.
+
+**Yardsticks:** with the list empty, every loop renders as before (core
+baseline, balance lock and `test/generator.test.mjs` unchanged); the
+shares test passes.
+
+## 55. The frame drum's solo peak (and a voice ceiling in the kit)
+
+**Why:** item 46's kit showed the frame drum peaking at **+1.0 dBFS on its
+own** at velocity 0.8 (the kick -1.1, the soft kick -1.2), before the mix
+and the master's ceiling. A game or a host that plays a voice alone, and
+the batch's new voices, shouldn't rely on the master to catch it.
+
+**What:**
+- Bring the frame drum's solo peak to -1 dBFS or under at the kit's probe
+  by its shape (its strike's transient), not by level: its K-weighted
+  loudness alone within 0.3 dB of today, and its layer's level in the
+  baseline loops within 0.3 dB. The conservative change, "for Mikey's
+  ears".
+- The kit's ceiling for voices becomes -1 dBFS at the probe (other blocks
+  keep 46's +6 dBFS); any voice over it fails, with its name.
+- Check every voice and drum kind against it; report any other over it
+  (none expected but the frame).
+
+**Yardsticks:** the kit passes with the new ceiling; the frame's
+loudness as above; baseline updated (only loops with a frame drum move;
+say which and by how much); a sound change: in Session 26's album.
+
+## 56. roundBass
+
+**Reference:** `docs/ears/prototypes.md` and the `ears/prototypes` branch.
+- **Generator:** the bass register 36-57 instead of 28-52, never the extra
+  octave down. Every loop (approved as the bass, not a choice).
+- **Core:** soft 2nd, 3rd and 4th harmonics under a 900 Hz lowpass on
+  every bass voice but `rhodesbass` (an FM voice), so the bass reads on a
+  phone. A block the bass voices share, not five copies.
+- **Fallback:** the JavaScript synth gets the register (the generator's)
+  but not the harmonics.
+- **Measured:** on dust: 40-60 Hz 18% → about 6% of the energy, 120-250
+  Hz 10% → about 27% (the prototype's); the bass layer's level within 1
+  dB of today by ear; no refusals added.
+
+## 57. longChords
+
+**Reference:** `docs/ears/batch-4.md` (rounds 3 and 4), the sketch's
+`longChords: 'on'`. Generator only (no new sound):
+- Drawn per loop from the chords' own stream: today's lengths 56%, twice
+  today 16%, about 8 s 10%, about 16 s 9%, the whole loop 9%; calm loops
+  (energy under 0.35, or floating, meditative, hushed, misty, foggy,
+  hypnotic) take the long ones 1.8 times as often, driving loops (energy
+  over 0.65) half as often.
+- Held chords trimmed: twice today -0.7 dB, about 8 s -1.3 dB, 16 s and
+  the whole loop -2 dB. Repeated pad chords tied into one note.
+- **The chords keep the octave today's progression gets** (round 4: 0 of
+  87 held loops move; the flip in `separateRegisters` is what Mikey heard
+  as loud and rough). Check it: the 200-loop scan, 0 flips.
+- **Yardsticks:** the round 4 figures on grove #47, dust #51, thaw #2;
+  refusals equal or fewer (round 4: fewer).
+
+## 58. floorDrop
+
+**Reference:** `docs/ears/prototypes.md`; Ears 8 ported it as
+`floorDrop: 'on'` (`ears8-sketch.patch`). Generator only:
+- drift's "the whole thing stops" becomes the kick and the bass out for
+  one or two bars while everything else plays on, at 0.35 a pass instead
+  of 0.1; rests no longer fade the tails. Loops of 4 bars or more.
+- **Yardsticks:** grove: floor drops about 0.6 a minute, full stops 0;
+  never a full stop; refusals as the Ears 8 report gives for the
+  approved recipe (undertow's rise from 272 is the recipe's own; say if
+  the core's differs).
+
+## 59. glass
+
+**Reference:** `docs/ears/prototypes.md`; the prototypes' branch.
+- **Generator** (a choice in item 54's list): on a chord's first beat (55%
+  of the time), two or three of its notes ring out in E5-G6, a dotted
+  eighth apart, into the texture channel.
+- **Core:** a soft FM bell, ratio 3.5 (on 46b's modulation input), its
+  level set against the chord voice it comes from (the prototype's rough
+  edge: it scaled itself by chords a bar instead); a probe in the kit.
+- **Fallback:** the FM bell voice the JavaScript synth already has.
+- **Measured:** thaw: 1-2 kHz 2.8% → about 6%; on vapor (under one chord a
+  bar) it adds no more than about 1.3 LU; the tone probe's 2-5 kHz share
+  at or below the flute's (it plays high).
+
+## 60. dubStab
+
+**Reference:** `docs/ears/batch-4.md`, round 4 (approved).
+- **Generator** (a choice in item 54's list): busy loops only (drums and
+  7 or more notes a second); density drawn rare 34, sparse 36, some 20,
+  busy 14 (chances per bar on the offbeat after beats one and three, as
+  the sketch); only over a groove (drums or bass in the bar and four notes
+  among the other layers), never in a rest or full stop; voiced G3-C5.
+- **Core:** a voice of its own, not today's `stab` (two saws through a
+  bandpass): a triangle under two saws 6 cents either side, a 22 ms
+  attack, a lowpass closing from 2.4-3.4 kHz toward 700 Hz, the lows
+  trimmed under 320 Hz, a tail of 0.24-0.34 s, a darker, lighter throw
+  into the echo, half round 3's reverb.
+- **The budget:** it asks whether there is room (its cost plus 20 units
+  under the full ceiling) and holds nothing, so it never costs another
+  note.
+- **Fallback:** today's `stab`, at the same level.
+- **Measured:** centroid near 285-302 Hz and attack near 22 ms
+  (`warmth.py`; "Quadrant Dub I" reads 377 Hz and 12 ms); its loudest 3 s
+  against the loop: wayfare #23 about -10 LU, grove #62 -13.5, cinder #12
+  -14.
+
+## 61. The chapel organ
+
+**Reference:** `docs/ears/batch-4.md`, rounds 5-7: one organ, the mix
+Mikey chose (`organVariant: 'chapelOrgan'`: 55% chapel, 25% round 5's
+pipe, 10% distant cathedral, 10% celeste).
+- **Generator** (a choice in item 54's list): when it plays it holds the
+  chords; it moves at most once a bar and holds through a passing chord
+  (one that keeps the lowest note and two of the notes); it lets go in a
+  bar the loop leaves silent and after a bar or so where the chords rest
+  for more than two bars.
+- **Core:** an instrument a channel holds for the loop (46b's channel
+  blocks), **outside the voice budget, priced as fixed overhead**:
+  - four voices, retuned at each chord through 46b's retune event; a note
+    two chords share keeps sounding, untouched; only changed notes are
+    let go and spoken again;
+  - the stops mixed as pipe loudness (the chapel's 8' and 4' flutes
+    leading, a little 16', 2 2/3', 2' and mixture); speech about 0.14 s
+    with a chiff about half round 5's; a celeste rank about 3.7 cents
+    sharp at about 0.36; release about 0.47 s; a 3.75 dB dip at 800 Hz;
+    a darker tone (1.4-2.5 kHz), a slow level shimmer (no pitch-bending
+    chorus), no drive; about 0.53 of it into the room;
+  - the loop's soft registration (the 25% from round 5's pipe), so loops
+    still differ.
+- **Fallback:** none fits (the JavaScript synth leaves it out).
+- **Measured:** its loudest 3 s against the loop: haven #38 about -14 LU,
+  glade #21 -10.7, grove #62 -11.1 (round 7); refused notes of other parts
+  unchanged (it's outside the budget); its fixed cost reported (render
+  timing, full and lite).
+
+## 62. The wash
+
+**Reference:** `docs/ears/batch-4.md`, round 5 (approved).
+- **Generator** (a choice in item 54's list): a swell every 17-26 s
+  (drawn per loop), aimed 17-21 dB under the loop.
+- **Core:**
+  - **a channel of its own** (the sixth), with the texture's level and
+    sends; `js/core.js` and the mix grow by one channel;
+  - two decorrelated noise loops through a pair of gentle lowpasses
+    sweeping 350 Hz up to about 2.5 kHz and back, slow rise and fall;
+  - two soft resonances tuned to the loop's key (its root or fifth in
+    600-1200 Hz, and an octave and a fifth above), like wind across a
+    bottle;
+  - **a level follower:** a slow envelope (about 1.4 s) of the five other
+    layers' sum sets the wash's level, so it is heard under a beat and
+    stays behind a sparse loop.
+- **Fallback:** none fits (left out).
+- **Measured:** centroid about 0.9 kHz; its loudest 3 s against the loop:
+  grove #62 (beat) about -16.9 LU, vapor #4 -13, haven #43 -15.9; plays
+  through a full stop only as the sketch does (say what it does).
+
+## 63. The arc
+
+**Reference:** `docs/ears/prototypes.md` and its branch.
+- **Generator** (a choice in item 54's list): the arc's period drawn 2-5
+  minutes (the prototype's 120 s was for the demo).
+- **Core:** a second lowpass after the master's tone filter, breathing
+  300 Hz → 9 kHz → 300 Hz, lingering on the dark side; the echo's
+  feedback rises a little as it opens (46b's modulation input).
+- **Starts open, at a drawn point of its swing that is bright** (a taste
+  call, "for Mikey's ears"): the prototype started every loop closed at
+  300 Hz, the second suspect when sounds went missing on its preview.
+  Say what you chose.
+- **Measured:** haven: -15 dB above 500 Hz at the closed points, unchanged
+  when open; refusals unchanged (it is a filter); the group's balance
+  lock re-baselined here, saying what moved.
+
+**Group (b): stereo in the core (Session 25b).**
+
+## 64. The stereo render
+
+**Why:** promise 9 (`docs/CORE.md`): stereo across the board, a mono
+switch, two first-class renders.
+
+**What:**
+- `Core::start` accepts two channels. The stereo render is a render of
+  its own on 46b's stereo shape, not a mono mix spread across two: **the
+  mono render stays bit-identical and pays nothing** (mono goldens, mono
+  baseline and mono costs unchanged).
+- The mix's mid is today's mono mix: before the master, (L + R) / 2 of the
+  stereo render equals the mono render's mix, exactly where the
+  arithmetic allows (say where it can't).
+- The master in stereo: the compressors **linked** (one gain for both
+  sides, from the mono detector) so they act as in mono; the saturator per
+  side (its fold residual measured; the ears read -20 to -41 dB against
+  mono, from the saturator and compressors).
+- **The width ceiling** (a block; `docs/ears/batch-3.md`, "Stereo"): the
+  side turned down wherever it rises above its target against the mid,
+  above 200 Hz, over 2 s windows (down in about 0.5 s, back over about 3
+  s); the mid untouched, so the fold doesn't change.
+- Goldens: a stereo set beside the mono set, on every target and mode.
+- The web host renders stereo through the worklet's two outputs;
+  everything still centered here (L = R), the spaces come in 65.
+
+**Yardsticks:** mono goldens, baseline and costs unchanged; the stereo
+goldens equal on every target; with no space recipe, L = R and each
+equals the mono output to the stated limit; cost of the stereo render
+reported (target: under 1.5 times mono on the baseline loops).
+
+## 65. The approved stereo baseline, as space recipes
+
+**Reference:** `docs/ears/batch-4.md`, round 4: the blend of round 3's
+**room** (weight 0.64) and **ensemble** (weight 0.5), **steady** (no
+breath, no drift: moving stereo is a later, experimental option, in a
+session of its own). Built as data: a space recipe gives ranges, the core
+draws within them from the loop's seed (promise 9), and every variable
+is a named setting.
+- **Room:** every dry part centered; the reverb's side made from the
+  reverb through four delay allpasses (5-23 ms) above 180 Hz; no echo
+  width.
+- **Ensemble:** chords and texture widened symmetrically (a slowly
+  swaying 9-15 ms copy, above 200 Hz, as side only; 1.6 times round 2's
+  spread, then the whole matched to the target width); the light kit
+  (hats, shakers, jingles) placed 0.08-0.15 to one side, as one; a light
+  texture (chimes, bells, drops; glass) placed by 0.1-0.25; placement a
+  balance above 150 Hz, so low notes stay centered by construction.
+- **Never placed:** the melody, chords and pads (widened only), the bass,
+  the kick and the other heavy drums. The organ rides the chords' spread
+  and the room; the wash's two noises go out as its own width, within the
+  ceiling.
+- **Width by loop:** every width scaled by how busy the loop is (0.25 under
+  half a note a second, up to 1 at 5.5) and by 0.75 when the reverb's space
+  is over 0.7; ceilings -7 dB on busy loops, -9 sparse, -12 very sparse.
+  What the core needs to know about the loop (how busy, how wet) the host
+  tells it at load.
+- **Target:** side about 18 dB under mid above 200 Hz (median), as
+  approved.
+
+**Yardsticks** (`stereo_guard.py`, on the report's loops and the
+baseline's 40, against the mono render): fold within ±0.5 LU and every
+octave within ±1 dB; side 20 dB or more under mid below 120 Hz;
+correlation median 0.7 or more, 5th percentile 0.3 or more; balance within
+±2 dB; bounce and travel near round 4's (1.2 dB, 0.5 dB); refused notes as
+in mono; cost under 1.5 times mono, lite included. The new instruments
+(54-63) checked inside it.
+
+## 66. The Mono switch, and stereo by default
+
+- **Mono** joins the settings (Mikey's exception to "theme and lighter on
+  processor are the only settings"; `docs/CORE.md`, promise 9), off by
+  default: the app plays the stereo render; on, it plays the mono render
+  (exactly today's balance). Kept with the other settings; a Painter
+  session can restyle it later.
+- Saved like the other settings; Diagnostics shows the layout.
+- Share codes and exports don't carry it (it is the listener's).
+- **Yardsticks:** switching while a loop plays doesn't click or restart
+  it; the mono render is bit-identical to mono before item 64; the app's
+  tests pass; a phone's render cost in stereo reported in Diagnostics
+  (promise 9: stereo must not double the cost on a phone). The group's
+  balance lock re-baselined here, saying what moved (expected: nothing in
+  mono). **Session 26 runs the blind stereo-against-mono A/B.**
+
+**Group (c): the mixing logic (Session 25c).**
+
+**Reference for all of them:** `docs/ears/batch-5.md` (each candidate's
+recipe, yardstick and guards) and `ears8-sketch.patch`; Mikey's rules in
+"How they go in". Each is a choice in item 54's list, today one option.
+
+## 67. tunedKick
+
+- **Core:** a kick that lands on a target note, a fall rate and an
+  optional tail level, as one voice per loop that each hit retriggers
+  (46b's choke), priced as one short hit (held 0.36 s in the budget, as
+  the soft kick; today's kick holds 0.45 s). Today's kick and soft kick,
+  the same sweep, landing on the key's note between G1 and D2 (49-73 Hz;
+  a key of D# to F# takes its fifth). Level matched by ear at load
+  (K-weighted energy against today's kick); the long boom's tail as loud
+  as fits within +1 dB by ear and +3 dB of today's kick's own energy under
+  60 Hz and at 60-120 Hz. Centered always.
+- **Generator:** today, short (falling 180-260 dB/s) or long (today's
+  punch, then a tail 7-17 dB down ringing at 45-80 dB/s); booming x2.5
+  toward long, and the rest of the vibe table.
+- **A wandering loop may swap its kick** at a section boundary between
+  today's F1 kick, the short tuned kick and the long boom, with a
+  crossfade or a wait for the old kick to ring out (Mikey's rule).
+- **Yardstick:** batch-5's, by `kick_check.py kick` on the drum stem:
+  85% or more of kicks on the drawn note; falls within 20% of the drawn
+  family; the loop within ±0.5 LU of today (+1 for a boom above B1); the
+  kick's low bands within 3 dB of today's; refusals no more than today.
+
+## 68. subDuck
+
+- **Core:** a duck on the bass channel alone (46b's channel block), keyed
+  by the kick: 5-9 dB (scaled by the kick's velocity), back in 0.15-0.25
+  s; depth and recovery per-loop data.
+- **Generator:** only on a loop with a kick and a sub.
+- **Yardstick:** the bass stem 5-9 dB down 10-50 ms after each kick
+  against the same loop without it, back within 1 dB by 0.25 s; other
+  layers untouched; never deeper than 9 dB.
+
+## 69. lateFloor
+
+Generator only. After a load (never a reroll or a resumed loop), the kit
+and the bass sit out 8-30 s, rounded to two bars, then enter together
+(40%), the kit first and the bass two bars later (35%), or the bass first
+(25%). Only on loops with drums or bass and something else that plays
+from the first second. **Yardstick:** batch-5's (absent for the drawn
+time within one step, present after; other layers' notes and levels
+within 0.5 dB; refusals equal or fewer).
+
+## 70. floorDrop shapes
+
+Generator only, on item 58's floor drop: each drop draws a shape, single
+(40), stagger (25: the kick back on time, the bass one or two bars
+later), stutter (20: three or four one-bar drops, two at fast tempos, one
+every two or four bars), long (15: 10-20 s, or the whole pass in a loop
+of 8 bars or fewer). Drawn **at the end of drift's draws**, so no other
+variation moves; stagger and stutter only with a bass line; the style may
+follow the bar length (Mikey's rule: say how you did it). **Yardstick:**
+batch-5's; rate per pass unchanged; never a full stop; refusals no more
+than the single drop's.
+
+## 71. pedalBass
+
+Generator only: a bass style `pedal` that can take over a held, pulse,
+dub or walking bass: the tonic in a rhythm drawn per loop (held, half
+bars, beats, or off the beat between the kicks), stepping in 10-25% of
+its notes to one neighbor drawn per loop (a whole tone up, the tone
+below, the flat second where the mode has one, or the fifth); the loop's
+bass voice, the octave nearest its own bass (in roundBass's register).
+**Drift must spend the original bass's draws** (or drift's bass draws
+move to a stream of their own), or every later variation shifts: check
+0 passes differ. **Yardstick:** batch-5's; the low-end shares within 3
+points of the loop's own bass in the new register.
+
+## 72. padSweep
+
+- **Core:** a lowpass with a slow LFO on the chord channel (46b's
+  modulation input and channel block): closed at 450-800 Hz, swinging 2
+  to 3.5 octaves up and back every 12-28 s, Q 0.7-1.2; per-loop data.
+  Hand it over across a load as the sketch couldn't check.
+- **Generator:** sustained chord voices only.
+- **Yardstick:** the chord layer's brightness swinging two octaves or more
+  at the drawn period; the other layers and the refused notes unchanged.
+
+## 73. echoTime
+
+- **Generator:** the echo's time drawn per loop: three quarters of a beat
+  (today, 45%), one beat (25%), half a beat (15%), two thirds (15%); one
+  beat toward spacious and floating, half a beat toward nimble and
+  skipping.
+- **Core:** the echo time a per-loop parameter (check what `setEchoTime`
+  already sends; build only what is missing).
+- **Yardstick:** the echo time as drawn, within 4 ms. The group's
+  balance lock re-baselined here, saying what moved.
+
+## 74. Clippy pedantic in the files 46 left (low priority)
+
+**Hands:** Sonnet 5.5, high, any session with usage to spare; it may go
+between items of the batch, never inside one. **Why:** the core rule
+("clean in the files the PR touches") can't be met in eleven files that
+carry 405 old pedantic warnings (#238's table: `wave.rs` 69, `timeline.rs`
+68, `blocks/compressor.rs` 56, `resample.rs` 41, `param.rs` 38,
+`master.rs` 38, `blocks/osc.rs` 31, `blocks/noise_source.rs` 22, `mix.rs`
+16, `delay.rs` 16, `blocks/filter.rs` 14). Fix them, or allow a lint
+locally with a one-line reason where following it would make the code
+worse; one PR, or one per file if that is cleaner. **Yardsticks:** a
+refactor: goldens on every mode, baseline and `blocks.txt` unchanged
+byte for byte; costs within 1%; `cargo clippy --all-targets -- -W
+clippy::pedantic` reports zero, and CI gains that check so it stays
+zero.
+
 ## Next picks, wired for real (items 48-53)
 
 **Read first:** `design/next-picks.md` (the design Mikey chose on
@@ -1656,7 +2243,8 @@ replace that plumbing with the real thing, in the core.
 **Where they sit in the phases.** They are not a phase of their own:
 items 48-52 belong to **phase 2** (the generator in Rust, built around
 the request) and item 53 to **phase 3** (off the page). The brain's
-phase review (Session 24) orders them among phase 2's own items; 48
+review orders them among phase 2's own items when it writes them
+(Session 26, after the sound batch; moved from Session 24); 48
 goes first, since the others stand on it. Don't start them before phase
 2 starts: the generator they change is the Rust one.
 
@@ -2452,6 +3040,14 @@ Inspiration comes only from wholesome, comforting music.
   2026-10-18**; where that range starts is to be tuned by ear as we
   go), so the same code with the slider lower still wanders the same
   way, and a share code or export says which it was.
+  **Where it is written down (brain, Session 24, 2026-10-19):** to be
+  built in phase 2's port, not before; carried in `docs/CORE.md` (phase
+  2, beside the octave fix) and in `docs/BRAIN.md` ("Start here"), so
+  whoever writes phase 2's items queues it. Until then the sound batch
+  leaves it as it is: item 54's per-loop choices are drawn once a loop
+  and are not redrawn by the wander, whatever the slider says (item 67's
+  kick swap aside); with the salt, the upper range's wandering would vary
+  play to play, while the loop's choices stay its own.
 
 ## Merge policy
 
