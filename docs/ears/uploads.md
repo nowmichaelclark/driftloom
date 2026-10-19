@@ -117,6 +117,73 @@ works; pile 1 is the one the first card session (Ears 5) will reach for.
 | Xiu Xiu | Eraserhead | 2026 | 46:32 | 7 | — |
 | TOWERS | TOWERS | 2019 | — | — | — |
 
+## Piles 13–18: Mikey's second list (2026-10-19)
+
+Added by the brain at Mikey's request: 29 records, of which two were
+already on the list (Cluster *Sowiesoso* is in Drive, pile 10; Steve
+Roach *Structures From Silence* is in pile 4), so **27 new**. Grouped by
+family, like piles 1–9, so a synthesis can merge near-duplicates. Years
+and lengths are left for the ears session to read from the files. Upload
+**whole albums** unless the Notes say otherwise. Two placements (marked
+*) are guesses the first ears session to open them should confirm.
+
+### Pile 13: Drone and long tones → `for-claude - pile 13`
+
+| Artist | Album | Notes |
+|---|---|---|
+| Éliane Radigue | Trilogie de la mort | Long (three pieces, hours); the picker takes what it needs |
+| Yoshi Wada | Earth Horns With Electronic Drone | — |
+| Terry Riley | A Rainbow in Curved Air | — |
+| Tetsu Inoue | World Receiver | — |
+| Jon Hassell & Brian Eno | Fourth World Vol. 1: Possible Musics | — |
+
+### Pile 14: The kosmische circle → `for-claude - pile 14`
+
+| Artist | Album | Notes |
+|---|---|---|
+| Kraftwerk | Trans Europa Express | — |
+| Hans-Joachim Roedelius | Selbstportrait II | — |
+| Conrad Schnitzler | Blau | Not Monoton's *Blau* (already measured) |
+| Günter Schickert | Überfällig | — |
+| Franco Battiato | Clic | — |
+
+### Pile 15: Strings, keys and hands → `for-claude - pile 15`
+
+| Artist | Album | Notes |
+|---|---|---|
+| John Fahey | Volume 6: Days Have Gone By | — |
+| Doug Snyder & Bob Thompson | Daily Dance | — |
+| Conlon Nancarrow | Studies for Player Piano | Many volumes exist; one or two are enough |
+| Takeshi Muto | Expect More From a Past Life | * placement to confirm |
+
+### Pile 16: Ambient techno and dub → `for-claude - pile 16`
+
+| Artist | Album | Notes |
+|---|---|---|
+| GAS | Nah und fern | A box set (hours); whole is fine, the picker samples it. *Narkopop* is measured already |
+| Move D & Benjamin Brunn | Let's Call It a Day | — |
+| Pub | >Single | — |
+| Vladislav Delay | Entain | — |
+| African Head Charge | Drastic Season | — |
+
+### Pile 17: Detroit, electro and deep house → `for-claude - pile 17`
+
+| Artist | Album | Notes |
+|---|---|---|
+| B12 | Electro-Soma | — |
+| Soul Oddity | Tone Capsule | — |
+| Mind Design | View From the Edge | — |
+| Virgo | Landform Code | — |
+| Mr. YT | Brand New Day | * placement to confirm |
+
+### Pile 18: Live, sharp and strange → `for-claude - pile 18`
+
+| Artist | Album | Notes |
+|---|---|---|
+| Autechre | AE_LIVE 2022 | Many full shows; one or two are enough |
+| Fred Frith | Guitar Solos | — |
+| Various | Round Black Ghosts | Compilation |
+
 ## Already in Drive: nothing to upload
 
 These 32 are in Drive from the first ears batches (`for-claude`,

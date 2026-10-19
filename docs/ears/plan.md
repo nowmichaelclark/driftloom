@@ -267,7 +267,9 @@ them is a hands session.
 | Ears 14, 15, 16 | Piles 7–9 | Sonnet 5.5 | medium |
 | Ears 17 | Third synthesis | Opus 5.5 | high |
 | Ears 18 to 23 | Piles 10–12 (cards for the measured 32), two sessions each | Sonnet 5.5 | medium |
-| Ears 24 | Last synthesis, and a pass across every card for theory and "For later" | Opus 5.5 | high |
+| Ears 24 | Fourth synthesis (piles 10–12) | Opus 5.5 | high |
+| Ears 25 to about 31 | Piles 13–18 (Mikey's second list, 2026-10-19; `docs/ears/uploads.md`): one session a pile, two for 13 and 16 if the long records (Radigue, *Nah und fern*) push past about 2.5 hours of machine time | Sonnet 5.5 | medium |
+| Ears 32 | Last synthesis (piles 13–18), and a pass across every card for theory and "For later" | Opus 5.5 | high |
 
 **Next step: a builder session for the mixing logic (Mikey, 2026-10-18).**
 Batch 5's seven approved ideas need code in the generator and the synth, and
@@ -371,6 +373,28 @@ near-duplicates). Piles 1–9 need uploading (Mikey's checklist: `docs/ears/uplo
     *Ghosts V*, Strom, Pendant, *[lust]*, *Private Parts*, *Cupid's Head*,
     *Orbus Terrarum*, *Yililok*, *Drukqs* (the measured part)
 12. **Cards, batch two:** all 12
+13. **Drone and long tones:** Radigue, Wada, Riley, Tetsu Inoue, Hassell
+    & Eno
+14. **The kosmische circle:** Kraftwerk *Trans Europa Express*,
+    Roedelius, Schnitzler *Blau*, Schickert, Battiato
+15. **Strings, keys and hands:** Fahey, Snyder & Thompson, Nancarrow,
+    Takeshi Muto (placement to confirm)
+16. **Ambient techno and dub:** GAS *Nah und fern*, Move D & Benjamin
+    Brunn, Pub, Vladislav Delay, African Head Charge
+17. **Detroit, electro and deep house:** B12, Soul Oddity, Mind Design,
+    Virgo, Mr. YT (placement to confirm)
+18. **Live, sharp and strange:** Autechre *AE_LIVE 2022*, Fred Frith,
+    *Round Black Ghosts*
+
+**Piles 13–18 (Mikey's second list, 2026-10-19).** 29 records named; two
+were on the list already (*Sowiesoso*, pile 10; *Structures From
+Silence*, pile 4), so 27 new, about 100 in all. They go after pile 12 by
+default, under the same pause (no new piles until the sound batch is
+heard in the app). Any order works: Mikey may move them ahead of piles
+10–12 (cards for records already measured at mix level), which would
+bring new ears to the list sooner. Piles 16–18 hold some sharper
+records (dub, glitch, live electronics, prepared guitar): fair game for
+sounds and ideas under the 2026-10-15 rule, kept behind their vibes.
 
 The order runs the Aphex range first (the biggest family on the list),
 then widens. Any order works.
