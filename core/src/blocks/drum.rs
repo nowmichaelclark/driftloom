@@ -63,6 +63,10 @@ pub fn uses_noise(kind: u32) -> bool {
 const SOFTKICK_LEVEL: f64 = 1.15;
 const FRAME_LEVEL: f64 = 1.097;
 const TAP_LEVEL: f64 = 0.2918;
+/// How long the frame drum's skin rings, in seconds (queue item 55; it was
+/// 0.32). Its second mode keeps the old ring (`FRAME_MODE_RING`).
+const FRAME_RING: f64 = 0.40;
+const FRAME_MODE_RING: f64 = 0.32;
 const JINGLE_LEVEL: f64 = 0.02227;
 const OPEN_JINGLE_LEVEL: f64 = 0.04494;
 /// A tambourine's zils (`JINGLE_PARTIALS`), in Hz.
@@ -250,7 +254,7 @@ impl Drum {
                 let low = kind == FRAME;
                 let level = v * if low { FRAME_LEVEL } else { TAP_LEVEL };
                 let pitch = if low { 92.0 } else { 210.0 };
-                let ring = if low { 0.32 } else { 0.12 };
+                let ring = if low { FRAME_RING } else { 0.12 };
                 // The skin: round, a little higher as it is struck.
                 self.shape = Shape::Sine;
                 self.body_events(time, rate, pitch * 1.18, Some((pitch, 0.05)));
@@ -266,7 +270,7 @@ impl Drum {
                 g.reset(UNITY);
                 g.set_value_at_time(0.0001, time);
                 g.exponential_ramp_to_value_at_time((level * 0.35) as f32, time + 0.003, time);
-                g.exponential_ramp_to_value_at_time(0.0001, time + ring * 0.45, time);
+                g.exponential_ramp_to_value_at_time(0.0001, time + if low { FRAME_MODE_RING } else { ring } * 0.45, time);
                 self.mode.schedule(time, time + ring + 0.02, rate);
                 // The tipper's slap on the skin.
                 self.grain(
@@ -329,9 +333,23 @@ impl Drum {
 
     // The body's frequency: set at the start, and for most falling to a
     // second value by a time.
+    //
+    // The frame drum's pitch rests at its first frequency (queue item 55);
+    // every other drum's at Web Audio's default, 440 Hz. In the block a
+    // drum starts in, its moving pitch is read from the block's start, as
+    // Chromium reads it (see `osc`), so for up to a block before the strike
+    // the skin played at its resting pitch: a blip of 440 Hz as long as the
+    // strike happened to fall into its block. It set how the skin's first
+    // crest met the second mode's, so a frame drum alone peaked anywhere
+    // from -1.1 to +1.2 dBFS at velocity 0.8, and its loudness wandered by
+    // half a dB, by where it landed. At its own pitch the frame peaks at
+    // -1.0 to -1.1 dBFS wherever it lands, and its skin rings a little
+    // longer (`FRAME_RING`) to keep its loudness (for Mikey's ears: the
+    // strike loses a click it had by chance; the other drums keep theirs).
     fn body_events(&mut self, time: f64, _rate: f64, from: f64, to: Option<(f64, f64)>) {
+        let rest = if self.kind == FRAME { from as f32 } else { A440 };
         let p = &mut self.pitch;
-        p.reset(A440);
+        p.reset(rest);
         p.set_value_at_time(from as f32, time);
         if let Some((hz, within)) = to {
             p.exponential_ramp_to_value_at_time(hz as f32, time + within, time);

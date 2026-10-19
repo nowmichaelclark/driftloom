@@ -15,7 +15,7 @@
 12-vapor frames=1200000 out=d1e78fca040aded8 melody=09ad23ef56d0d12f chords=e529c8d1b519aabe bass=8d49004491655e91 texture=ea7358a3ed8d85a5 drums=220acbc2c817fb25 bus=4c0ecc0c3afa5d99
 13-dust frames=336000 out=82eb05c6fb5a1b49 melody=11c35ebf0322fc1a chords=ea6d216afbb27d30 bass=b211f986805d7fc8 texture=1922d9393223e649 drums=ad796ab604b482fc bus=4943c836691a84a6
 14-bloom frames=336000 out=35de45dd3dc76b27 melody=2deb1c7bfad9bc4d chords=92c70a537b8ff945 bass=d674e570ab80484d texture=2373bb15fd5f4b25 drums=2373bb15fd5f4b25 bus=07f0f1c0af85f5c5
-15-wayfare frames=384000 out=f924c3b30467eba4 melody=35898091bd3ef1dd chords=c173469d08dc1b02 bass=3aee93d5c9c6a71f texture=ea5af3aa240c5fb3 drums=ac9e4cedfdc8f175 bus=8687c32584f6ed5e
+15-wayfare frames=384000 out=83be09a55d8b3469 melody=f980e11fdba542d7 chords=c173469d08dc1b02 bass=3aee93d5c9c6a71f texture=ea5af3aa240c5fb3 drums=1a6baa7ffc8c1bcd bus=676299eeaa6b49e6
 16-grove frames=240000 out=d87b624b748bf645 melody=683f703c7ee56b04 chords=149f4368c4b65d9f bass=345e95ed42dc8c8a texture=850d39efb46487a6 drums=0a6e72c8d4b64781 bus=f18c7d72364bca33
 17-bloom frames=432000 out=fe6c85c78decc6b6 melody=4fd4603c874796aa chords=e2b3b70356a60ee2 bass=b62a8bed6ec27b8d texture=097113bcce1e7b25 drums=fce2b38a493b5d20 bus=70d7f9b5ee585981
 18-shatter frames=384000 out=59ab0e96086bef7d melody=c3d84f1d16a25bc2 chords=31453d17a2eea1b3 bass=f7fda69a4012a812 texture=14edccbf0239c909 drums=6b8d5f9386ceed19 bus=540eaa17b3000f90

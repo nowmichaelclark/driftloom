@@ -3534,6 +3534,29 @@ Mikey decides this line:
   4. Every channel holds one of each channel block (5 a name; 6 after the
      wash). An idle one must cost nothing; each says so in its `render`.
 
+- **Item 55, the frame drum's peak: the cause, and the other drums (Session
+  25a, 2026-10-19).** The frame's +1.0 dBFS was luck, not its shape: a drum's
+  moving pitch is read from its first block's start (Chromium's rule, kept to
+  the sample in `osc`), so for up to a block before the strike the skin
+  played at its resting pitch, Web Audio's default 440 Hz. How much of that
+  blip a hit got depended on where it fell in its 128-frame block, and with it
+  how the skin's first crest met the second mode's: the same frame hit alone
+  peaked anywhere from -1.1 to +1.2 dBFS and its loudness wandered by half a
+  dB, by its start time (16 start times at 44.1 and 48 kHz). A lag or a
+  polarity on the mode lowered the probe's peak but moved each hit's loudness
+  by up to 0.6 dB either way, and noan-nou (four frame hits in 20 s) failed the
+  layer yardstick with every one tried. So the frame's pitch now rests at its
+  own first frequency (no blip), and its skin rings 0.40 s instead of 0.32 to
+  keep its loudness: every start time peaks -1.0 to -1.1 dBFS. **The kick,
+  soft kick, snare, clap, rim and tap carry the same blip** (their pitch rests
+  at 440 Hz too), and their strikes vary hit to hit the same way: at the kit's
+  probe the kick and the soft kick peak at -1.1 and -1.2 dBFS, under the new
+  ceiling, but across 16 start times at 44.1 and 48 kHz each reaches -0.8
+  dBFS (the snare, clap and tap stay under -9). Item 55 leaves them, as it
+  asks. Worth a look with the ears (a click by chance, or part of the kick
+  Mikey likes?) before a later item removes it; tunedKick (item 67) rebuilds
+  the kick's pitch anyway.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4060,3 +4083,9 @@ Mikey decides this line:
   goldens, baseline and stored block renders bit for bit unchanged,
   instruction counts +0.02% to +0.10%. Listen for: nothing; it should sound
   exactly the same.
+- #245, the per-loop choices (item 54, v103),
+  https://f9a244e1-driftloom.nowmichaelclark.workers.dev: `js/choices.js` draws,
+  once a loop and on a stream of its own, how many of the sound batch's changes
+  it gets (none 15%, one 45%, two 30%, three 10%) and which; the list is empty
+  until the batch's items add to it, so nothing changes yet. Listen for:
+  nothing.
