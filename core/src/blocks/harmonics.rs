@@ -19,7 +19,7 @@ use super::osc::frame_at;
 use super::shared::{FILTER_TAIL, UNITY, midi_to_freq};
 
 /// The partials, as multiples of the note's frequency (the 2nd, 3rd and 4th,
-/// which `render` makes from the note's phase), and each one's level
+/// which `render` makes from the note's phase, as cosines), and each one's level
 /// (the prototype's `[[2, 1], [3, 0.45], [4, 0.18]]`).
 const PARTIALS: [(f64, f32); 3] = [(2.0, 1.0), (3.0, 0.45), (4.0, 0.18)];
 /// The lowpass over them: 900 Hz, its Q in dB (the prototype's 0.5).
@@ -139,12 +139,15 @@ impl Block for Harmonics {
                 continue;
             }
             let (s1, c1) = (self.sin, self.cos);
-            // sin 2x, cos 2x, sin 3x, sin 4x.
+            // cos 2x, cos 3x, cos 4x: a quarter cycle off the note's own
+            // overtones, so the two add as their energies do, as two
+            // oscillators started by chance would on average (the
+            // prototype's), and the same wherever the note lands.
             let s2 = 2.0 * s1 * c1;
             let c2 = 1.0 - 2.0 * s1 * s1;
-            let s3 = s2 * c1 + c2 * s1;
-            let s4 = 2.0 * s2 * c2;
-            *y = (l2 * s2 + l3 * s3 + l4 * s4) as f32;
+            let c3 = c2 * c1 - s2 * s1;
+            let c4 = 1.0 - 2.0 * s2 * s2;
+            *y = (l2 * c2 + l3 * c3 + l4 * c4) as f32;
             self.sin = s1 * self.step_cos + c1 * self.step_sin;
             self.cos = c1 * self.step_cos - s1 * self.step_sin;
         }

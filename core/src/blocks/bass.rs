@@ -38,7 +38,7 @@ use super::harmonics::{self, Harmonics};
 use super::noise_source::NoiseSource;
 use super::osc::{Part, TableOsc, frame_at};
 use super::shared::{
-    A440, CUTOFF_DEFAULT, FILTER_TAIL, Q_DEFAULT, UNITY, midi_to_freq, noise_grain, pitch_of,
+    CUTOFF_DEFAULT, FILTER_TAIL, Q_DEFAULT, UNITY, midi_to_freq, noise_grain, pitch_of,
     starts_in,
 };
 
@@ -224,9 +224,17 @@ impl Bass {
 
         if self.main {
             self.triangle = kind == ROUND || kind == PLUCKBASS;
-            // The pitch, gliding in from two thirds if asked.
+            // The pitch, gliding in from two thirds if asked. It rests at
+            // its first frequency, not Web Audio's 440 Hz (queue item 56):
+            // in the block a note starts in its moving pitch is read from
+            // the block's start (Chromium's rule, see `osc`), so the note
+            // began with a blip of 440 Hz as long as it happened to fall
+            // into its block, under an envelope still near silence. That
+            // left the note's phase to chance, and with it how its
+            // overtones meet the harmonics', which moved a note's level by
+            // a dB or two with where it landed (and so with the rate).
             let p = &mut self.pitch;
-            p.reset(A440);
+            p.reset(if glide { (f * 0.66) as f32 } else { f as f32 });
             if glide {
                 p.set_value_at_time((f * 0.66) as f32, time);
                 p.exponential_ramp_to_value_at_time(f as f32, time + 0.08, time);
@@ -302,7 +310,7 @@ impl Bass {
             // The sine under it: the weight of the note.
             if kind == SUB {
                 let s = &mut self.sines[0];
-                s.pitch.reset(A440);
+                s.pitch.reset(f as f32);
                 s.pitch.set_value_at_time(f as f32, time);
                 let g = &mut s.gain;
                 g.reset_at(UNITY, rate);
@@ -316,7 +324,7 @@ impl Bass {
         } else {
             // Root and fifth, sines only.
             for (s, (mult, level)) in self.sines.iter_mut().zip([(1.0, 0.3), (1.5, 0.14)]) {
-                s.pitch.reset(A440);
+                s.pitch.reset((f * mult) as f32);
                 s.pitch.set_value_at_time((f * mult) as f32, time);
                 let g = &mut s.gain;
                 g.reset_at(UNITY, rate);

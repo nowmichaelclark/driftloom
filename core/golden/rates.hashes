@@ -1,14 +1,14 @@
 # The golden lists named in rates.txt at the sample rates it names (tools/golden.sh --rates --update).
 # One line a list and rate, in the golden hashes' form. The same on every target.
-13-dust@22050 frames=154350 out=415c4c6aaf0bcc0b melody=a7c437ce706c7d0c chords=ee2992fd352219ba bass=511ac1a45bf44840 texture=77d7581fa0bfa9ef drums=1fa840dee23c0715 bus=e9af319b09794c8b
-16-grove@22050 frames=110250 out=1ee29ad216bf4b0f melody=aa558927f7fe367a chords=712a344fd33a4f86 bass=32cb0706120047b8 texture=ff8b2eea48e67eb5 drums=008ac88e26600b77 bus=cffc348184f06585
-18-shatter@22050 frames=176400 out=5da8084679cdc5c7 melody=93fd1d2a597b9e86 chords=d458812aa11cbe92 bass=63097b4909da3fd5 texture=fd821be95b519b21 drums=2bf0697e68fdf8ec bus=ea48bf0d94c8a2bd
-13-dust@44100 frames=308700 out=11159292d6300971 melody=55edb43d8c99ddf0 chords=f789f9d2532fab77 bass=0186b6ef71bcdd28 texture=7bb9c8fe46e51140 drums=706368659ec70659 bus=b9336d2465503607
-16-grove@44100 frames=220500 out=81e99c73c5aefe8d melody=edc87f676e50f76d chords=cdd72f5d50b75213 bass=8ad01a5ccc7cb7bd texture=5d7455c93a5526f6 drums=74d1432969a99625 bus=a9c059e00c2733da
-18-shatter@44100 frames=352800 out=529b53f98f6bbde5 melody=d224ec2cc526b29c chords=77fdaf2440f5e852 bass=8416754aa02706d3 texture=0e1c27df54c042b6 drums=ddb532c3cd9cde56 bus=5ac4ab56c2d2e9d0
-13-dust@96000 frames=672000 out=d95fd1bd71745080 melody=d941361e20c13be9 chords=8cb7e2e1892f71db bass=7c8111fcc3796c2d texture=31a8d198e4847f9f drums=b7c5c0aefeeeeb2d bus=6e9325de4ed0f4b7
-16-grove@96000 frames=480000 out=0ca2c68eb9060b52 melody=d5e9db6e6630610b chords=5b6be7c9e521a292 bass=c525f7ba14b04a43 texture=dfd05de4911db395 drums=f8113405753b243d bus=612fb264f3da4884
-18-shatter@96000 frames=768000 out=ffd7a77835e214d8 melody=1a58d0e034372ec2 chords=2cdb33d2f8137f1c bass=6b31aba1cd9ae3db texture=31ab7e37d2a34781 drums=d1911e7f4aabc98d bus=5d855c39f511dd6b
-13-dust@192000 frames=1344000 out=67e250372f97031c melody=a9f2f6fb19be3a74 chords=4c0eb56829f4c8cb bass=accbe0215720e059 texture=ca60efdd83e7d09d drums=74695ec6c41f9252 bus=adcb3447643ce1d4
-16-grove@192000 frames=960000 out=9d9d5f7d843000f5 melody=2b463d13b8b21c89 chords=dc44cc6b74f94aac bass=c2bc83c7aaedcd7f texture=530f33074e22a18c drums=8e5aac797766f986 bus=8b36167f29a805be
-18-shatter@192000 frames=1536000 out=d77818380f493aff melody=95a35764b61e2400 chords=b5cff6251819fbd5 bass=a3dad6cefd489404 texture=7a0d56a12954525b drums=cffeece861bc4c8e bus=f460606676b93f7d
+13-dust@22050 frames=154350 out=b9fe32e7f01a6233 melody=a7c437ce706c7d0c chords=ee2992fd352219ba bass=faa541e6470312bd texture=77d7581fa0bfa9ef drums=1fa840dee23c0715 bus=94514b386b4eed58
+16-grove@22050 frames=110250 out=84e25c5e791fb268 melody=aa558927f7fe367a chords=712a344fd33a4f86 bass=d146a8f2c230e1e6 texture=ff8b2eea48e67eb5 drums=008ac88e26600b77 bus=f8991185e643d099
+18-shatter@22050 frames=176400 out=56ada10f5097cd5a melody=93fd1d2a597b9e86 chords=d458812aa11cbe92 bass=6e2b1cc80269b83f texture=fd821be95b519b21 drums=2bf0697e68fdf8ec bus=58c9d6bf7bc18bb2
+13-dust@44100 frames=308700 out=b3f022bb2fbd833d melody=55edb43d8c99ddf0 chords=f789f9d2532fab77 bass=780e580728828173 texture=7bb9c8fe46e51140 drums=706368659ec70659 bus=a47e9bce24221cc2
+16-grove@44100 frames=220500 out=7fcfa925f93f2e67 melody=edc87f676e50f76d chords=cdd72f5d50b75213 bass=66b281e608456cf7 texture=5d7455c93a5526f6 drums=74d1432969a99625 bus=b39bb3cc1fe4d85f
+18-shatter@44100 frames=352800 out=cc94405f70e7c003 melody=d224ec2cc526b29c chords=77fdaf2440f5e852 bass=faf20db4fdc493f8 texture=0e1c27df54c042b6 drums=ddb532c3cd9cde56 bus=b818204d66664d23
+13-dust@96000 frames=672000 out=f0258551545f0b69 melody=d941361e20c13be9 chords=8cb7e2e1892f71db bass=0d3387922814ca8d texture=31a8d198e4847f9f drums=b7c5c0aefeeeeb2d bus=3c56a8aa4d22b977
+16-grove@96000 frames=480000 out=fc334d63a112119f melody=d5e9db6e6630610b chords=5b6be7c9e521a292 bass=4c321c76c4522b5f texture=dfd05de4911db395 drums=f8113405753b243d bus=8147b80c4093afc6
+18-shatter@96000 frames=768000 out=71bd946cf946299d melody=1a58d0e034372ec2 chords=2cdb33d2f8137f1c bass=f79b1a7e65665bb1 texture=31ab7e37d2a34781 drums=d1911e7f4aabc98d bus=81bdc7371fc82678
+13-dust@192000 frames=1344000 out=bff84411ddfcb468 melody=a9f2f6fb19be3a74 chords=4c0eb56829f4c8cb bass=2ebf5a164b54b280 texture=ca60efdd83e7d09d drums=74695ec6c41f9252 bus=e1612191a6a45b2d
+16-grove@192000 frames=960000 out=a2c5ab46f4efc35a melody=2b463d13b8b21c89 chords=dc44cc6b74f94aac bass=7bb62de917d9e8e5 texture=530f33074e22a18c drums=8e5aac797766f986 bus=a85f12159e3e58f5
+18-shatter@192000 frames=1536000 out=60d3f44f81b27507 melody=95a35764b61e2400 chords=b5cff6251819fbd5 bass=b3ddd01e1fca6d15 texture=7a0d56a12954525b drums=cffeece861bc4c8e bus=07e5176e0e4d689a
