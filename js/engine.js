@@ -688,14 +688,14 @@ export class Engine {
     }
   }
 
-  // True when every layer is scheduled out for the bar containing this step,
-  // either by the loop's entry schedule or by a drift rest.
+  // True when every layer is scheduled out for the bar containing this step
+  // by the loop's entry schedule. (Drift's full stop, the other way a bar
+  // fell silent, became a floor drop in queue item 58: the loop plays on.)
   _isSilentBar(absStep) {
     const p = this.live;
     if (!p) return false;
     const spb = p.stepsPerBar || 16;
     const bar = Math.floor((absStep % p.totalSteps) / spb);
-    if (p.driftSilentBars && p.driftSilentBars.indexOf(bar) !== -1) return true;
     if (p.silentBars && p.silentBars.indexOf(bar) !== -1) return true;
     if (!p.form) return false;
     for (const layer of LAYERS) {
