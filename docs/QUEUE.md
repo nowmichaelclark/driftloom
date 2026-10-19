@@ -3557,6 +3557,35 @@ Mikey decides this line:
   Mikey likes?) before a later item removes it; tunedKick (item 67) rebuilds
   the kick's pitch anyway.
 
+- **Item 61, the organ: where it stands (Session 25a, 2026-10-19).** Not
+  merged; the session stopped after item 55. The work is on the branch
+  `claude/item-61-organ-wip`, stacked on unfinished wip commits for items
+  56-60 (its item 55 commit is an early version that #246 replaced; take
+  only the organ's files from it). Done there, core only: `organ.rs`, a
+  channel block in the chords' channel (four voices of pipe and celeste
+  from one wavetable the drawbars build, retuned by `blocks::retune` with
+  a chiff on a new note, a soft shaper, low, carve and tone filters, a slow
+  shimmer, a send into the room), 21 settings, and sends for channel
+  blocks (`Channel::SENDS`). Not done: the host side (the engine's hold
+  logic from the sketch; the synth driving it with `dl_set`, `dl_retune`
+  and `dl_event`), the kit store (`KIT=update`), goldens, baseline, the
+  cost and the yardsticks. Four fixes the kit's first run found, all in on
+  the branch:
+  1. **The probe's real level.** The probe first played at level 1.0,
+     about 20 dB over the organ in a loop; it now plays at 0.098, the
+     sketch's level in a loop of three or more notes a second.
+  2. **The opening chord after the kit's settings.** The probe's chord
+     started in `start`, before the kit set the setting under test, so
+     `speak` and `chiff` changed nothing a probe could hear. The chord is
+     now applied on the first rendered block, after the settings.
+  3. **Released during the probe.** The probe held its chord to the end,
+     so `release` was never heard; it now lets go at 1.2 s.
+  4. **A NaN probe opts a setting out.** `verb` only reaches the room, which
+     a mono probe does not hear, so it could never pass "heard". A setting
+     whose `probe` is NaN is skipped by the kit and `dlrender` (documented
+     on `Setting::probe`). Still open: `chiff` at the probe renders the same
+     as without it, so check the chiff before storing the kit.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
