@@ -8,7 +8,7 @@
 import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf } from './generator.js';
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
-import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM } from './draw.js';
+import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS } from './draw.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -118,6 +118,15 @@ const HARMONY_VEL = 0.6;
 // downstroke (on the beat) and high to low on the upstroke (off it), and
 // the upstroke is the lighter of the two. Every other chord voice keeps the
 // fixed 11 ms spread. It was 15-30 ms, heard as smeared.
+// glass (queue item 59): how often a chord's first beat rings out, the
+// register (E5-G6), the bell (the prototype's FM options and cost), and its
+// level: the prototype's 0.62 at a chord of average velocity, following the
+// chord's own velocity (the prototype scaled it by chords a bar instead).
+const GLASS = {
+  chance: 0.55, low: 76, high: 91, vel: 0.62, chordVel: 0.525,
+  bell: { ratio: 3.5, index: 150, decay: 1.8, attack: 0.003, detune: 3, cost: 6 },
+};
+
 const STRUM = { min: 0.01, max: 0.02, up: 0.75 };
 
 export class Engine {
@@ -688,6 +697,32 @@ export class Engine {
     }
   }
 
+  // glass (queue item 59): on a chord's first beat, 55% of the time, two or
+  // three of its notes ring out in E5-G6 as a soft FM bell (ratio 3.5), a
+  // dotted eighth apart, into the texture channel. Every decision is a draw
+  // from where the chord sits (js/draw.js), so a step decided again sounds
+  // the same and each pass rings its own way, as the prototype's did. Its
+  // level follows the chord it comes from (GLASS.vel).
+  _glass(p, s, t, sd, key) {
+    let ord = 0;
+    for (const e of p.tracks.chords) {
+      if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
+      const at = { ...key, ord: ord++ };
+      if (draw(at, 'texture', HOST_GLASS, 0) >= GLASS.chance) continue;
+      const count = draw(at, 'texture', HOST_GLASS, 1) < 0.5 ? 3 : 2;
+      const pcs = e.notes.slice().sort((a, b) => a - b);
+      const first = Math.floor(draw(at, 'texture', HOST_GLASS, 2) * pcs.length);
+      for (let i = 0; i < count; i++) {
+        let m = pcs[(first + i) % pcs.length];
+        while (m < GLASS.low) m += 12;
+        while (m > GLASS.high) m -= 12;
+        const when = t + i * 3 * sd;
+        const vel = GLASS.vel * (e.vel / GLASS.chordVel) * (1 - i * 0.18);
+        this._play(when, () => this.synth.fm(m, when, Math.max(0.6, 2.5 * sd), vel, { ...GLASS.bell, out: this.synth.channels.texture.gain }));
+      }
+    }
+  }
+
   // True when every layer is scheduled out for the bar containing this step
   // by the loop's entry schedule. (Drift's full stop, the other way a bar
   // fell silent, became a floor drop in queue item 58: the loop plays on.)
@@ -809,6 +844,7 @@ export class Engine {
           });
         }
       }
+      if (p.choices && p.choices.glass === 'on') this._glass(p, s, t, sd, { seed, pass, step });
     }
     if (!mutes.melody) {
       const s = at('melody');

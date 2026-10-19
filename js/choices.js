@@ -45,7 +45,18 @@ const LEAN_MAX = 3;
 // for, before the vibes lean it (1 if missing); `options` past the first
 // are what it plays when picked, by their weights. `ctx` is what the
 // generator knows of the loop when it draws (see `choicesOf`).
-export const CHOICES = [];
+export const CHOICES = [
+  // glass (queue item 59; the prototypes, approved by Mikey 2026-10-10): on
+  // a chord's first beat, now and then, two or three of its notes ring out
+  // high as a soft FM bell. For any loop with chords. No vibe leans: the
+  // batch's table has none for the instruments (for Mikey's ears).
+  { id: 'glass', options: [['today', 1], ['on', 1]], eligible: (ctx) => hasChords(ctx) },
+];
+
+// Whether the loop plays a chord with notes.
+function hasChords(ctx) {
+  return !!ctx.tracks && ctx.tracks.chords.some((e) => e.vel && e.notes && e.notes.length);
+}
 
 // The lean of a choice for a loop's vibes, each vibe's raised to its
 // strength times its weight, as the generator leans its pools (vibeLean).
