@@ -12,7 +12,8 @@
 
 use core::cell::UnsafeCell;
 
-use crate::{Core, Key, Taken};
+use crate::block::Event;
+use crate::{Core, Key, Tap, Taken};
 
 /// What the module does if the core panics: nothing reachable from the
 /// exports can (`lib.rs`), but a `no_std` module must say. It traps, which
@@ -99,6 +100,40 @@ pub extern "C" fn dl_key(seed: u32, pass: u32, step: u32, ord: u32) {
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_damp(channel: u32, time: f64) {
     core().damp(channel, time);
+}
+
+/// An event of `kind` into `channel` at `time`, with `value`; see
+/// `Core::event`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_event(channel: u32, kind: u32, time: f64, value: f64) -> u32 {
+    u32::from(core().event(channel, Event::new(kind, time, value)))
+}
+
+/// A retune of `channel` to a chord of up to six notes at `time` (NaN past
+/// the last); see `Core::event` and `event::RETUNE`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_retune(channel: u32, time: f64, n1: f64, n2: f64, n3: f64, n4: f64, n5: f64, n6: f64) -> u32 {
+    u32::from(core().event(channel, Event::retune(time, &[n1, n2, n3, n4, n5, n6])))
+}
+
+/// Set a setting of one of `channel`'s own blocks at `time`; see
+/// `Core::set`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_set(channel: u32, block: u32, setting: u32, value: f64, time: f64) -> u32 {
+    u32::from(core().set(channel, block as usize, setting as usize, value, time))
+}
+
+/// Route `from_channel` (or one of its own blocks, `from_block`; 4294967295
+/// for the whole channel) into a setting of one of `channel`'s own blocks
+/// from `time`, or undo the route with `from_channel` 4294967295; see
+/// `Core::route`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_route(channel: u32, block: u32, setting: u32, from_channel: u32, from_block: u32, time: f64) -> u32 {
+    let from = (from_channel != u32::MAX).then_some(Tap {
+        channel: from_channel,
+        block: (from_block != u32::MAX).then_some(from_block as usize),
+    });
+    u32::from(core().route(channel, block as usize, setting as usize, from, time))
 }
 
 /// The mix as the synth builds it on full quality (1) or lite (0); see

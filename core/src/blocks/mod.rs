@@ -12,11 +12,11 @@
 //! for starting, rendering and letting go of each (static dispatch: the
 //! same code a hand-written `match` makes, and no `dyn` anywhere).
 
-use crate::block::{Block, Context, Event, Note, Signal, Voice};
+use crate::block::{Block, Channel, Context, Event, Mods, Note, Signal, Voice};
 
 mod shared;
 
-pub use shared::{midi_to_freq, slide_of};
+pub use shared::{Turn, midi_to_freq, retune, slide_of};
 
 #[cfg(test)]
 mod kit;
@@ -67,6 +67,10 @@ pub trait Visit {
     fn voice<V: Voice + Default>(&mut self, name: &'static str);
     /// Any other block.
     fn part<B: Block + Default>(&mut self, name: &'static str);
+    /// A channel's own block: by default, as any other.
+    fn channel<C: Channel + Default>(&mut self, name: &'static str) {
+        self.part::<C>(name);
+    }
 }
 
 /// The list. Four kinds of line:
@@ -78,68 +82,181 @@ pub trait Visit {
 /// - `pooled`: `file::Type [size] = NAME number, ...;` -- a voice too big for
 ///   a slot, held in a pool of its own of `size`.
 /// - `channel`: `file::Type = NAME (settings), ...;` -- a channel's own
-///   block (queue item 46b): one of each name in every channel, started
-///   with its settings, running on a bus its voices sum into (today the
-///   bodies). A voice plays through one by naming it, `Voice::THROUGH =
-///   Some(own::NAME)`. A shared resonance or space is one file and one line
-///   here.
+///   block (queue items 46b and 46c, `block::Channel`): one of each name in
+///   every channel, started with its settings, outside the voice pool. It
+///   runs on a bus its voices sum into (the bodies; a voice plays through
+///   one by naming it, `Voice::THROUGH = Some(own::NAME)`), or on the whole
+///   channel (`Channel::WHOLE`: a sweep, a duck), or adds its own sound (a
+///   source: an organ, a wash). A host reaches it by its number: settings,
+///   events, and signals routed from other channels. A shared resonance,
+///   space or held instrument is one file and one line here. It may carry
+///   `#[cfg(...)]`.
 /// - `parts`: `file::Type;` -- a block the voices are built from, which no
 ///   host plays by number. It may carry `#[cfg(...)]`.
 macro_rules! registry {
+    // The list as it is written: each `channel` line is given an attribute
+    // it may lack (`cfg(all())`, always true), one at a time, so the arm
+    // that builds everything holds exactly one a line and can repeat it at
+    // every name the line declares.
     (
+        voices $v:tt
+        pooled $p:tt
+        channel { $($c:tt)* }
+        parts $q:tt
+    ) => {
+        registry!(@channel [$v $p $q] [] $($c)*);
+    };
+    (@channel $lists:tt [$($done:tt)*] #[$a:meta] $m:ident :: $t:ident = $( $n:ident ( $s:expr ) ),+ ; $($rest:tt)*) => {
+        registry!(@channel $lists [$($done)* #[$a] $m::$t = $( $n ($s) ),+ ;] $($rest)*);
+    };
+    (@channel $lists:tt [$($done:tt)*] $m:ident :: $t:ident = $( $n:ident ( $s:expr ) ),+ ; $($rest:tt)*) => {
+        registry!(@channel $lists [$($done)* #[cfg(all())] $m::$t = $( $n ($s) ),+ ;] $($rest)*);
+    };
+    (@channel [$v:tt $p:tt $q:tt] [$($done:tt)*]) => {
+        registry!(@build voices $v pooled $p channel { $($done)* } parts $q);
+    };
+    (@build
         voices { $( $vm:ident :: $vt:ident = $( $vn:ident $vv:literal ),+ ; )* }
         pooled { $( $pm:ident :: $pt:ident [ $ps:expr ] = $( $pn:ident $pv:literal ),+ ; )* }
-        channel { $( $cm:ident :: $ct:ident = $( $cn:ident ( $cs:expr ) ),+ ; )* }
+        channel { $( #[$ca:meta] $cm:ident :: $ct:ident = $( $cn:ident ( $cs:expr ) ),+ ; )* }
         parts { $( $(#[$qa:meta])* $qm:ident :: $qt:ident $(< $qg:tt >)? ; )* }
     ) => {
         $( pub mod $vm; )*
         $( pub mod $pm; )*
-        $( pub mod $cm; )*
+        $( #[$ca] pub mod $cm; )*
         $( $(#[$qa])* pub mod $qm; )*
 
-        /// A channel's own blocks, by number: the bus each runs on, which a
+        /// A channel's own blocks, by number: how a host names one
+        /// (`Core::set`, `Core::route`), and the bus each runs on, which a
         /// voice names in `Voice::THROUGH`.
         pub mod own {
             #[allow(non_camel_case_types, clippy::upper_case_acronyms, dead_code)]
             #[repr(usize)]
-            enum Number { $($( $cn, )+)* }
+            enum Number { $($( #[$ca] $cn, )+)* Count }
             $($(
+                #[$ca]
                 #[doc = concat!("The channel's own `blocks::", stringify!($cm), "::", stringify!($ct), "`, set by `", stringify!($cs), "`.")]
                 pub const $cn: usize = Number::$cn as usize;
             )+)*
             /// How many a channel has.
-            pub const COUNT: usize = [$($( Number::$cn, )+)*].len();
+            pub const COUNT: usize = Number::Count as usize;
+            /// Whether any works on a whole channel (`Channel::WHOLE`): with
+            /// none, the core adds the host's notes and stops the channel's
+            /// tail at the silence floor in one pass.
+            pub const ANY_WHOLE: bool = {
+                #[allow(unused_mut)]
+                let mut any = false;
+                $(
+                    #[$ca]
+                    {
+                        any = any || <super::$cm::$ct as super::Channel>::WHOLE;
+                    }
+                )*
+                any
+            };
         }
 
         /// One channel's own blocks.
         #[allow(non_snake_case)]
         pub(crate) struct Own {
-            $($( $cn: $cm::$ct, )+)*
+            $($( #[$ca] $cn: $cm::$ct, )+)*
         }
 
         impl Own {
             /// Every one at rest, all zeros.
             pub(crate) const fn new() -> Self {
-                Own { $($( $cn: $cm::$ct::new(), )+)* }
+                Own { $($( #[$ca] $cn: $cm::$ct::new(), )+)* }
             }
 
             /// Start each with its settings.
             pub(crate) fn start(&mut self, cx: &Context) {
-                $($( self.$cn.start(&$cs, cx); )+)*
+                $($( #[$ca] self.$cn.start(&$cs, cx); )+)*
             }
 
-            /// Run each on its bus, in order, and add it into the channel's
-            /// signal `out`.
-            pub(crate) fn render(&mut self, block: u64, cx: &Context, buses: &mut [Signal; own::COUNT], out: &mut Signal) {
+            /// Run each that works on a bus (not `Channel::WHOLE`) on its
+            /// bus, in order, with the signals in `mods` driving its
+            /// settings, and add it into the channel's signal `out`.
+            pub(crate) fn buses(
+                &mut self,
+                block: u64,
+                cx: &Context,
+                buses: &mut [Signal; own::COUNT],
+                out: &mut Signal,
+                mods: &[Mods; own::COUNT],
+            ) {
                 $($(
-                    if let Some(bus) = buses.get_mut(own::$cn) {
-                        self.$cn.render(block, cx, bus);
+                    #[$ca]
+                    if !<$cm::$ct as Channel>::WHOLE
+                        && let (Some(bus), Some(m)) = (buses.get_mut(own::$cn), mods.get(own::$cn))
+                    {
+                        self.$cn.render_mod(block, cx, bus, m);
                         for (y, x) in out.iter_mut().zip(bus.iter()) {
                             *y += *x;
                         }
                     }
                 )+)*
             }
+
+            /// Run each that works on the whole channel (`Channel::WHOLE`)
+            /// on `out`, in order, with the signals in `mods` driving its
+            /// settings.
+            #[allow(unused_variables)]
+            pub(crate) fn whole(&mut self, block: u64, cx: &Context, out: &mut Signal, mods: &[Mods; own::COUNT]) {
+                $($(
+                    #[$ca]
+                    if <$cm::$ct as Channel>::WHOLE
+                        && let Some(m) = mods.get(own::$cn)
+                    {
+                        self.$cn.render_mod(block, cx, out, m);
+                    }
+                )+)*
+            }
+
+            /// Hand each a channel event (`Block::event`).
+            pub(crate) fn event(&mut self, event: &Event) {
+                $($( #[$ca] <$cm::$ct as Block>::event(&mut self.$cn, event); )+)*
+            }
+
+            /// Set setting number `setting` of block number `n`
+            /// (`Block::set`): false if there is no such block or setting.
+            pub(crate) fn set(&mut self, n: usize, setting: usize, value: f64, time: f64, cx: &Context) -> bool {
+                $($(
+                    #[$ca]
+                    if n == own::$cn {
+                        if setting >= <$cm::$ct as Block>::SETTINGS.len() {
+                            return false;
+                        }
+                        <$cm::$ct as Block>::set(&mut self.$cn, setting, value, time, cx);
+                        return true;
+                    }
+                )+)*
+                let _ = (setting, value, time, cx);
+                false
+            }
+        }
+
+        /// How many settings a host sets on block number `n` of a channel's
+        /// own (`Block::SETTINGS`): zero for no such block.
+        pub(crate) fn own_settings(n: usize) -> usize {
+            $($(
+                #[$ca]
+                if n == own::$cn {
+                    return <$cm::$ct as Block>::SETTINGS.len();
+                }
+            )+)*
+            0
+        }
+
+        /// How many settings a signal can drive on block number `n` of a
+        /// channel's own (`Block::MODS`): zero for no such block.
+        pub(crate) fn own_mods(n: usize) -> usize {
+            $($(
+                #[$ca]
+                if n == own::$cn {
+                    return <$cm::$ct as Block>::MODS.len();
+                }
+            )+)*
+            0
         }
 
         /// The voices' numbers, as a host plays them (`Core::note`).
@@ -285,13 +402,13 @@ macro_rules! registry {
             }
         }
 
-        /// Hand the voice in `held` a channel event (`Voice::event`).
+        /// Hand the voice in `held` a channel event (`Block::event`).
         pub(crate) fn event(held: &mut Held, pools: &mut Pools, event: &Event) {
             match held {
-                $( Held::$vt(v) => <$vm::$vt as Voice>::event(v, event), )*
+                $( Held::$vt(v) => <$vm::$vt as Block>::event(v, event), )*
                 $( Held::$pt(i) => {
                     if let Some(v) = pools.$pm.voices.get_mut(*i) {
-                        <$pm::$pt as Voice>::event(v, event);
+                        <$pm::$pt as Block>::event(v, event);
                     }
                 } )*
             }
@@ -309,7 +426,7 @@ macro_rules! registry {
         pub fn each(visit: &mut impl Visit) {
             $( visit.voice::<$vm::$vt>(stringify!($vm)); )*
             $( visit.voice::<$pm::$pt>(stringify!($pm)); )*
-            $( visit.part::<$cm::$ct>(stringify!($cm)); )*
+            $( #[$ca] visit.channel::<$cm::$ct>(stringify!($cm)); )*
             $( $(#[$qa])* visit.part::<$qm::$qt $(<$qg>)?>(stringify!($qm)); )*
         }
     };
@@ -344,6 +461,9 @@ registry! {
     }
     channel {
         body::Body = FIDDLE_BODY (body::FIDDLE), NYLON_BODY (body::NYLON), ACCORDION_BODY (body::ACCORDION);
+        #[cfg(test)] swell::Swell = SWELL (swell::REST);
+        #[cfg(test)] chorale::Chorale = CHORALE (chorale::REST);
+        #[cfg(test)] duck::Duck = DUCK (duck::REST);
     }
     parts {
         osc::Oscillator;

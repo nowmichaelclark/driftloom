@@ -26,6 +26,12 @@ const NYLON_LEVEL: f64 = 0.1029;
 const NYLON_BRIGHT_SHARE: f64 = 0.6;
 const NYLON_BRIGHT_TAU: f64 = 0.08;
 const NYLON_MELLOW_TAU: f64 = 0.55;
+/// A string of a strum's extra values, as the kit's strum probe plays one.
+const STRUM: [f64; crate::EXTRA] = {
+    let mut x = NO_EXTRA;
+    x[0] = 1.0;
+    x
+};
 /// The release a strummed string is damped on, as a time constant in
 /// seconds.
 pub const NYLON_DAMP: f64 = 0.08;
@@ -98,11 +104,22 @@ impl Block for Nylon {
 
     const PROBES: &'static [Probe<Note>] = &[
         Probe { name: "pluck", settings: Note::probe(crate::NYLON, crate::MELODY, 67.0, 0, NO_EXTRA) },
+        Probe { name: "strum", settings: Note::probe(crate::NYLON, crate::MELODY, 59.0, 0, STRUM) },
     ];
+
+    // A strummed string listens for the next strum.
+    const HEARS: &'static [u32] = &[event::DAMP];
 
     fn start(&mut self, note: &Note, cx: &Context) {
         self.play(note.midi, note.time, note.dur, note.vel, cx.rate);
         self.strummed = note.extra[0] > 0.0;
+    }
+
+    /// A strummed string lets go at a damp: the next strum.
+    fn event(&mut self, event: &Event) {
+        if self.strummed && event.kind == event::DAMP {
+            self.damp(event.time);
+        }
     }
 
     fn span(&self) -> (u64, u64) {
@@ -142,13 +159,6 @@ impl Block for Nylon {
 
 impl Voice for Nylon {
     const THROUGH: Option<usize> = Some(own::NYLON_BODY);
-
-    /// A strummed string lets go at a damp: the next strum.
-    fn event(&mut self, event: &Event) {
-        if self.strummed && event.kind == event::DAMP {
-            self.damp(event.time);
-        }
-    }
 }
 
 impl Default for Nylon {
