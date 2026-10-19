@@ -44,7 +44,7 @@ drum/softkick 761f9cc1a9e258d4 -16.64 -1.18 0.0
 drum/snare f01d4575a7224626 -34.15 -10.33 40.7
 drum/clap 7c12f1e426f31b72 -35.33 -12.92 19.7
 drum/rim e8555cb3f686f171 -50.28 -26.14 7.2
-drum/frame 70d6c9d11a90f140 -16.74 1.02 0.2
+drum/frame 78ef1e3aebb6ee2a -16.95 -1.11 0.3
 drum/tap 83896402da469777 -32.07 -12.14 0.2
 drum/jingle 1248b6714429e064 -47.61 -22.96 0.1
 drum/open-jingle 897118e8e5232f52 -39.25 -16.90 0.1

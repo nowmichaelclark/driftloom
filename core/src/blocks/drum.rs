@@ -63,6 +63,15 @@ pub fn uses_noise(kind: u32) -> bool {
 const SOFTKICK_LEVEL: f64 = 1.15;
 const FRAME_LEVEL: f64 = 1.097;
 const TAP_LEVEL: f64 = 0.2918;
+/// How long after the skin the frame drum's second mode speaks, in seconds
+/// (queue item 55). Struck together, the skin's first crest and the mode's
+/// met 4 ms in and peaked at +1.0 dBFS alone at velocity 0.8, the loudest
+/// voice in the core. Speaking 2.4 ms later, the mode meets the skin's
+/// next trough instead: -1.1 dBFS, with the drum's K-weighted energy 0.2 dB
+/// under before (for Mikey's ears: the smallest lag that clears -1 dBFS
+/// within 0.3 dB of its loudness; the skin, the slap, the mode's polarity
+/// and every level are as they were).
+const FRAME_MODE_LAG: f64 = 0.0024;
 const JINGLE_LEVEL: f64 = 0.02227;
 const OPEN_JINGLE_LEVEL: f64 = 0.04494;
 /// A tambourine's zils (`JINGLE_PARTIALS`), in Hz.
@@ -260,14 +269,17 @@ impl Drum {
                 g.exponential_ramp_to_value_at_time(level as f32, time + 0.004, time);
                 g.exponential_ramp_to_value_at_time(0.0001, time + ring, time);
                 self.body.schedule(time, time + ring + 0.02, rate);
-                // A second mode above it, dying faster.
+                // A second mode above it, dying faster. The frame's speaks a
+                // moment after the skin (`FRAME_MODE_LAG`), so the two don't
+                // crest together (queue item 55).
                 self.mode_freq = (pitch * 1.59) as f32;
+                let at = if low { time + FRAME_MODE_LAG } else { time };
                 let g = &mut self.mode_gain;
                 g.reset(UNITY);
-                g.set_value_at_time(0.0001, time);
-                g.exponential_ramp_to_value_at_time((level * 0.35) as f32, time + 0.003, time);
-                g.exponential_ramp_to_value_at_time(0.0001, time + ring * 0.45, time);
-                self.mode.schedule(time, time + ring + 0.02, rate);
+                g.set_value_at_time(0.0001, at);
+                g.exponential_ramp_to_value_at_time((level * 0.35) as f32, at + 0.003, at);
+                g.exponential_ramp_to_value_at_time(0.0001, at + ring * 0.45, at);
+                self.mode.schedule(at, at + ring + 0.02, rate);
                 // The tipper's slap on the skin.
                 self.grain(
                     time,
@@ -286,7 +298,7 @@ impl Drum {
                     time,
                 );
                 g.exponential_ramp_to_value_at_time(0.0001, time + 0.04, time);
-                stops = stops.max(self.body.stop_frame());
+                stops = stops.max(self.body.stop_frame()).max(self.mode.stop_frame());
                 starts = starts.min(self.body.start_frame());
             }
             _ => {
