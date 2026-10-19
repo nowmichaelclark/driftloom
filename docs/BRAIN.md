@@ -552,10 +552,39 @@ Stated decisions, not inferences. Dated where the date matters.
     (wander across the slider's upper range should not repeat; `docs/QUEUE.md`,
     "Known issues").
   - **Session 23** (hands, Opus, high): item 46, the building-block
-    interface.
-  - **Session 24** (brain, Opus): phase 1 review; then write **the
+    interface. **Done (#238, v100, 2026-10-18)**; its notes for the
+    brain are under "Notes from Claude Code" in `docs/QUEUE.md`.
+  - **Session 24** (brain, Opus): phase 1 review (check #238's figures
+    yourself; Session 22 only read its notes). **Then, decided by Mikey
+    2026-10-19 on Session 22's advice, queue item 46b first, ahead of
+    the batch:** 46's interface has no way for a signal to drive a
+    setting (FM, vibrato, a filter sweep: the voices reach past
+    `Block::render` to their parts' own methods) and its `Signal` is
+    mono. Most of the batch's instruments need modulation and group (b)
+    needs stereo, so built now they would be hand-coded the old way and
+    rebuilt in phase 5. **46b adds two seams, bit-identical like 46:**
+    a modulation input (a signal into a block's setting, as Web Audio
+    connects a node into an `AudioParam`; today's FM, vibratos and
+    sweeps moved onto it where natural) and the stereo signal shape (a
+    second signal or a stereo variant, decided so the mono render pays
+    nothing, promise 9). Cheaply alongside: a general "event to the
+    sounding notes of a channel" (damp, release, bend), which retires
+    nylon's special case in `Core::damp`. Not the recipe format (phase
+    5). Yardsticks as 46: goldens, baseline, costs within 5%, the kit.
+    Hands: **Session 25-0, Opus 5.5, high**, before 25a. **Also queue,
+    lower:** a clippy cleanup of the 405 pedantic warnings left in files
+    46 didn't rewrite (mechanical, bit-identical; Sonnet or Haiku 5.5,
+    any time before phase 2's port); the frame drum peaking at +1.0
+    dBFS on its own (fine in the app behind the master's ceiling, not
+    for a game host playing voices bare) into group (a)'s level checks,
+    a sound change so a blind A/B; the drop texture's 96% share in the
+    2-5 kHz band, for Mikey's ears only if a batch album includes it.
+    Leave alone: the stale `articulate.rs` comment in `js/synth.js`
+    (retires with the JavaScript synth) and 46's other awkward spots
+    (sung pool size, positional extras, voice numbers per type): phase
+    5's. Then write **the
     sound batch** into the queue, three groups, from `docs/ears/`
-    (batch-4 and batch-5 and Mikey's verdicts):
+    (batch-4 and batch-5 and Mikey's verdicts), built on 46b:
     (a) **instruments**: dubStab, longChords, wash, the chapel organ,
     roundBass, glass, floorDrop, arc; built in the core on 46's
     interface, core-only (the JavaScript-synth fallback substitutes an
@@ -579,6 +608,7 @@ Stated decisions, not inferences. Dated where the date matters.
     nothing collides with 46. One builder session for both halves.
     Then phase 2's items (ordering 48-53 among them). The balance lock
     is re-baselined on purpose, once per group, and says what moved.
+  - **Session 25-0** (hands, Opus 5.5, high): item 46b.
   - **Session 25a / 25b / 25c** (hands, Opus 5.5, high): the three
     groups in that order, one PR per item; a new session per group (or
     when usage runs out), same brief.
@@ -686,6 +716,13 @@ Stated decisions, not inferences. Dated where the date matters.
   (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Brain, 2026-10-19 (Session 22, continued), after item 46.** Read
+#238's report and notes (not its figures; Session 24 checks those).
+Nothing to redo. Advised, and Mikey agreed: item 46b (modulation input
+and the stereo signal shape, bit-identical) before the sound batch, so
+the new instruments aren't built twice; a clippy cleanup later; the
+frame drum's solo peak into group (a). Written into "Start here".
 
 **Session 22 (brain, Opus 5.5, 2026-10-18), phase 1 check.** Items
 42-45 (#204, #208, #211, #213) checked against their yardsticks; all
