@@ -23,6 +23,7 @@ import { Rng } from '../js/rng.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
 import { encodeSong } from '../js/share.js';
 import { VIBE_IDS } from '../js/vibes.js';
+import { CHOICES, CHANGE_COUNTS, changesIn } from '../js/choices.js';
 
 // ------------------------------------------------------------ arguments
 
@@ -65,6 +66,8 @@ driftloom generation statistics
                       compare it with no vibes        (default --n 2000)
   --vibe-each         one line per vibe on its own, against no vibes
                                                       (default --n 400)
+  --choices           the per-loop choices: loops by how many changes
+                      they got, and by choice and option (default --n 10000)
   --write-baseline [file]  write the balance lock      (default ${BASELINE_DEFAULT})
   --check [file]      rerun the locked corpus against it; non-zero exit on a miss
   --help              this
@@ -103,6 +106,11 @@ driftloom generation statistics
   the instruments a loop plays, the spread (sd) of its hit velocities,
   and hits per bar. Written for wayfare, whose one-bar groove played the
   same bar over and over.
+
+  --choices reports queue item 54's draw (js/choices.js) over the corpus:
+  the share of loops with none, one, two or three of the sound batch's
+  changes beside the weights they were drawn with (a loop eligible for
+  fewer gets fewer), and how often each choice plays each option.
 
   --write-baseline and --check are the balance lock. The baseline records
   the melodic character of a corpus -- how often a loop has a melody,
@@ -201,6 +209,9 @@ function parseArgs(argv) {
       }
       case '--vibe-each':
         opts.vibeEach = true;
+        break;
+      case '--choices':
+        opts.choices = true;
         break;
       case '--write-baseline':
         opts.writeBaseline = text(BASELINE_DEFAULT);
@@ -1229,6 +1240,44 @@ function vibeEachReport(opts) {
   return out.join('\n');
 }
 
+// The per-loop choices (queue item 54) over --n loops (10,000 unless given).
+function choicesReport(opts) {
+  const n = opts.nGiven ? opts.n : 10000;
+  const master = new Rng(opts.seed || 1);
+  const byCount = new Map();
+  const byOption = new Map();
+  for (let i = 0; i < n; i++) {
+    const { choices } = render(newSpec(master.seed32()));
+    const k = changesIn(choices);
+    byCount.set(k, (byCount.get(k) || 0) + 1);
+    for (const c of CHOICES) {
+      const key = `${c.id}: ${choices[c.id]}`;
+      byOption.set(key, (byOption.get(key) || 0) + 1);
+    }
+  }
+  const total = CHANGE_COUNTS.reduce((a, [, w]) => a + w, 0);
+  const out = ['', 'the per-loop choices (js/choices.js)', `  ${n} loops drawn from corpus seed ${opts.seed}`, ''];
+  out.push(line('changes', ['loops', 'drawn at']));
+  out.push(rule(2));
+  const most = Math.max(...CHANGE_COUNTS.map(([k]) => k), ...byCount.keys());
+  for (let k = 0; k <= most; k++) {
+    const w = (CHANGE_COUNTS.find(([c]) => c === k) || [k, 0])[1];
+    out.push(line(`${k}`, [pct(byCount.get(k) || 0, n), pct(w, total)]));
+  }
+  out.push('');
+  if (!CHOICES.length) {
+    out.push('  no choices listed yet: every loop plays today');
+  } else {
+    out.push(line('choice: option', ['loops']));
+    out.push(rule(1));
+    for (const c of CHOICES) {
+      for (const [option] of c.options) out.push(line(`${c.id}: ${option}`, [pct(byOption.get(`${c.id}: ${option}`) || 0, n)]));
+    }
+  }
+  out.push('');
+  return out.join('\n');
+}
+
 // ----------------------------------------------------------------- main
 
 const opts = parseArgs(process.argv.slice(2));
@@ -1260,6 +1309,11 @@ if (opts.vibes) {
 
 if (opts.vibeEach) {
   console.log(vibeEachReport(opts));
+  process.exit(0);
+}
+
+if (opts.choices) {
+  console.log(choicesReport(opts));
   process.exit(0);
 }
 

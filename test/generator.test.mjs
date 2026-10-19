@@ -13,6 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -900,6 +901,64 @@ console.log('\nBorrowed bright modes (queue item 36)');
     check(`${label} encodes and decodes to the same notes`, !!spec && back.scale === spec.scale
       && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks));
   }
+}
+
+// ---------------------------------------------------------------------
+console.log('\nThe per-loop choices (queue item 54)');
+{
+  // Every loop carries its choices; while none are listed, every one is today.
+  let empty = true;
+  for (let i = 0; i < 200; i++) {
+    const p = render(newSpec(9000 + i));
+    if (!p.choices || Object.keys(p.choices).length !== CHOICES.length || changesIn(p.choices) !== 0) empty = false;
+  }
+  check('every loop carries its choices, all today while the list is empty', CHOICES.length > 0 || empty);
+  // "Let the loop wander" never redraws them: a pass keeps the loop's own.
+  const loop = render(newSpec(31337));
+  check('wandering keeps the loop\'s choices', drift(loop, new Rng(3), 2.4).choices === loop.choices);
+
+  // A list of five, every one eligible, to check the draw itself.
+  const always = () => true;
+  const list = ['a', 'b', 'c', 'd', 'e'].map((id, i) => ({
+    id, options: [['today', 1], ['one', 2], ['two', 1]], weight: 1 + i * 0.25, eligible: always,
+    vibes: id === 'a' ? { hypnotic: 3, bouncy: 0.2 } : null,
+  }));
+  list.push({ id: 'never', options: [['today', 1], ['on', 1]], eligible: () => false });
+  const N = 10000;
+  const counts = new Map();
+  const reached = new Set();
+  let never = 0;
+  for (let i = 0; i < N; i++) {
+    const c = drawChoices(i * 7919 + 13, {}, null, list);
+    const k = changesIn(c, list);
+    counts.set(k, (counts.get(k) || 0) + 1);
+    for (const x of list) if (c[x.id] !== 'today') reached.add(`${x.id}:${c[x.id]}`);
+    if (c.never !== 'today') never++;
+  }
+  const total = CHANGE_COUNTS.reduce((a, [, w]) => a + w, 0);
+  const off = CHANGE_COUNTS.map(([k, w]) => Math.abs((counts.get(k) || 0) / N - w / total) * 100);
+  check('loops get none, one, two or three changes within two points of the weights', off.every((d) => d <= 2),
+    off.map((d) => d.toFixed(2)).join(' '));
+  check('every choice and option is reachable', list.filter((x) => x.id !== 'never')
+    .every((x) => x.options.slice(1).every(([o]) => reached.has(`${x.id}:${o}`))), [...reached].join(' '));
+  check('a choice a loop is not eligible for is never drawn', never === 0);
+  // A loop eligible for fewer changes than it drew gets all it can.
+  const two = list.slice(0, 2);
+  let most = 0;
+  for (let i = 0; i < 2000; i++) most = Math.max(most, changesIn(drawChoices(i, {}, null, two), two));
+  check('a loop eligible for two gets two at most', most === 2);
+  // The same seed, the same choices; the vibes lean them, never to zero.
+  check('the same seed draws the same choices', JSON.stringify(drawChoices(77, {}, null, list)) === JSON.stringify(drawChoices(77, {}, null, list)));
+  const share = (vibes) => {
+    let a = 0;
+    for (let i = 0; i < 4000; i++) if (drawChoices(i, {}, vibes, list).a !== 'today') a++;
+    return a / 4000;
+  };
+  const plain = share(null);
+  const toward = share({ vibes: { hypnotic: 1 }, strength: 0.9 });
+  const away = share({ vibes: { bouncy: 1 }, strength: 0.9 });
+  check('a vibe the choice leans toward draws it more, and one it leans away from less, never to none',
+    toward > plain && away < plain && away > 0, `${away.toFixed(3)} ${plain.toFixed(3)} ${toward.toFixed(3)}`);
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
