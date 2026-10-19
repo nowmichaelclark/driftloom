@@ -1144,9 +1144,6 @@ impl Core {
             ) else {
                 continue;
             };
-            if !sent && blocks::sends(&slot.voice) {
-                self.sends = [[0.0; QUANTUM]; 2];
-            }
             blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses, &mut self.sends, &mut sent);
             if slot.end <= end {
                 slot.busy = false;
@@ -1169,7 +1166,7 @@ impl Core {
                     *m = m.with(r.setting, &r.drive);
                 }
             }
-            own.buses(block, &cx, buses, out, &mods);
+            own.buses(block, &cx, buses, out, &mods, &mut self.sends, &mut sent);
             if own::ANY_WHOLE {
                 for (y, x) in out.iter_mut().zip(input.iter()) {
                     *y += *x;
