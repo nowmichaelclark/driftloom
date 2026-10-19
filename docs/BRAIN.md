@@ -584,7 +584,14 @@ Stated decisions, not inferences. Dated where the date matters.
     nothing collides with 46. One builder session for both halves.
     Then phase 2's items (ordering 48-53 among them). The balance lock
     is re-baselined on purpose, once per group, and says what moved.
-  - **Session 25-0** (hands, Opus 5.5, high): item 46b.
+  - **Session 25-0** (hands, Opus 5.5, high): item 46b. **Done (#241,
+    v101, 2026-10-19)**: every yardstick met; the stereo shape is a second
+    signal beside the mono one, and the web `.wasm` rebuilt without the
+    stereo code is the same bytes, so mono pays nothing.
+  - **Item 46c** (brain, 2026-10-19, from 46b's notes): channel blocks
+    with per-loop settings and modulation, events that reach a held note
+    every time (the organ's retune), cross-channel signals (subDuck).
+    Items 61, 62, 63, 68 and 72 depend on it. Session 25a takes it first.
   - **Session 25a / 25b / 25c** (hands, Opus 5.5, high): the three
     groups in that order (a: items 54-63; b: 64-66; c: 67-73), one PR per
     item; a new session per group (or when usage runs out), same brief.
@@ -704,6 +711,14 @@ Stated decisions, not inferences. Dated where the date matters.
   (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Brain, 2026-10-19 (Session 22, continued), after item 46b.** #241
+read (its report and notes; the figures not rerun): the stereo shape is a
+second signal, the mono render untouched (same `.wasm` bytes without the
+stereo code), demonstrations test-only, the baseline green in CI. Its
+notes showed four batch items assuming seams 46b did not build (per-loop
+settings and modulation on channel blocks, repeated retunes, sidechains):
+queued as item 46c, first in Session 25a.
 
 **Session 24 (brain, Opus 5.5, 2026-10-19), phase 1 review and the sound
 batch.** Item 46 (#238) checked against its yardsticks, run here, not

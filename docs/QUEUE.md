@@ -1761,6 +1761,54 @@ by ten):
   notes 5-7: memory for big voices, named extra values, several numbers
   per type).
 
+## 46c. The channel seams the batch still needs (before item 61)
+
+**Why** (brain, 2026-10-19, from 46b's own notes for the brain): 46b
+landed clean (#241, v101), but four batch items assume things it did not
+build, and its note says so:
+- **Channel blocks take no per-loop settings, modulation or events**
+  (note 1). Item 61's organ registration, 62's wash, 63's arc period and
+  echo feedback, 68's duck depth and recovery and 72's sweep period are
+  all per-loop data on a channel's own block.
+- **Each note hears each kind of event once** (note 2). Item 61's organ
+  is retuned at every chord, many times while held.
+- **No cross-channel signals** (note 4). Item 68's subDuck is the kick's
+  signal driving the bass channel's gain; 62's wash follows other
+  layers.
+Built inside those items, each would grow its own path. One small item
+first, so the batch has one way of doing each. Hands: **the start of
+Session 25a (Opus 5.5, high)**, before item 54, or at the latest before
+item 61.
+
+**What:**
+- **A host path into a channel's own blocks:** per-loop settings set by
+  the host (as `Core::param` reaches the mix today), and the same
+  modulation inputs voice blocks have, so a channel block can carry its
+  own `Lfo` with a per-loop rate and depth.
+- **Each event kind declares its reach:** once (today's damp, exactly as
+  now) or every time (a retune or bend heard by a held note as often as
+  it is sent). A **retune** event for held voices: a note two chords
+  share keeps sounding untouched; only changed notes are let go and
+  spoken again (item 61's rule).
+- **Cross-channel signals:** one channel's signal (or a chosen tap of it)
+  can drive another channel's block setting. Decide the order and say it
+  in the PR: render the source channel first within the block, or one
+  block's delay; deterministic either way, the same on every target and
+  block size.
+- **Three test-only demonstrations,** each one file plus one line, through
+  the kit with no test written for it: a channel block whose rate is set
+  per loop, a held voice retuned many times, and a gain on one channel
+  ducked by another's signal.
+- `core/README.md`: the three, in the walk-through.
+- Note 6 (the oscillator's start rule changing when any signal is
+  connected) goes in the README as a caution; no change.
+
+**Yardsticks:** as 46b. A refactor: goldens on every mode,
+`tools/baseline.mjs` and `core/golden/blocks.txt` unchanged byte for byte
+(new test-only lines aside); costs not above `main` by more than 1% on any
+golden (cheaper is fine; 46b came in at -3.6% to +0.46%); no allocation,
+`dyn` or panic on the render path; the mono render pays nothing.
+
 ## Before phase 2: the sound batch (items 54-73, then 74)
 
 **Read first:** `docs/ears/batch-4.md` (dubStab, the organ, the wash,
