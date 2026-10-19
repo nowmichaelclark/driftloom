@@ -9,6 +9,10 @@
 //! just two sines. The only draws are the click's two, which the voice
 //! settles from the note's key (`Voice::settle`).
 //!
+//! Every one adds its soft harmonics (`harmonics`, queue item 56's
+//! roundBass): the 2nd, 3rd and 4th partials under a 900 Hz lowpass, so the
+//! note reads on a phone.
+//!
 //! The note's `parts` are the voice (`SUB` and the rest) with the flags
 //! `GLIDE` and `CHUG`; its first two extra values, the pluck's click's
 //! rate and offset draws.
@@ -23,12 +27,14 @@
 #![allow(clippy::too_many_lines)]
 
 use crate::QUANTUM;
+use crate::math;
 use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 use crate::wave::Waves;
 
 use super::filter::{self, Biquad, Filter, Kind};
+use super::harmonics::{self, Harmonics};
 use super::noise_source::NoiseSource;
 use super::osc::{Part, TableOsc, frame_at};
 use super::shared::{
@@ -63,6 +69,29 @@ fn trim(kind: u32) -> f64 {
         _ => 1.0,
     }
 }
+
+/// roundBass's trims (queue item 56), in dB, each voice's: the harmonics
+/// add 3 to 7 dB by ear (K-weighted, across the register), so the whole
+/// note, harmonics and all, comes down by that much and the bass layer
+/// keeps today's level; `REGISTER_DB` takes back what the higher register
+/// adds on top. The harmonics keep the prototype's balance against the
+/// note, so the timbre is what Mikey heard (for his ears: the prototype
+/// played the bass about 6 dB louder by ear than today; the item asks the
+/// level to stay).
+fn round_trim(kind: u32) -> f64 {
+    let db = match kind {
+        SUB => -5.5,
+        ROUND => -4.8,
+        FIFTHS => -3.6,
+        PLUCKBASS => -3.2,
+        _ => -6.7,
+    } + REGISTER_DB;
+    math::pow(10.0, db / 20.0)
+}
+
+/// What the higher register (36-57, from 28-52) adds by ear on the layer,
+/// taken back, in dB.
+const REGISTER_DB: f64 = -1.0;
 
 /// A sine, its frequency set once, under its own gain.
 struct Sine {
@@ -130,6 +159,8 @@ pub struct Bass {
     src: NoiseSource,
     click_filter: Biquad,
     click_gain: Param,
+    /// The soft harmonics every bass note adds (roundBass).
+    harmonics: Harmonics,
     start: u64,
     end: u64,
 }
@@ -155,6 +186,7 @@ impl Bass {
             src: NoiseSource::new(),
             click_filter: Biquad::new(),
             click_gain: Param::new(0.0),
+            harmonics: Harmonics::new(),
             start: 0,
             end: 0,
         }
@@ -179,7 +211,7 @@ impl Bass {
         let chug = parts & CHUG != 0;
         self.kind = kind;
         let f = midi_to_freq(midi);
-        let vel = vel * trim(kind);
+        let vel = vel * trim(kind) * round_trim(kind);
         let stop = time + dur + 0.4;
         // A chug note lets go in under half the time.
         let let_go = |release: f64| if chug { release * 0.45 } else { release };
@@ -313,6 +345,13 @@ impl Bass {
             starts = starts.min(self.src.start_frame());
             ends = ends.max(self.src.end_frame() + frame_at(FILTER_TAIL, rate));
         }
+        // The harmonics, softly, under every voice (queue item 56).
+        self.harmonics.set(
+            &harmonics::Settings { midi, time, dur, vel, release: let_go(0.09), stop },
+            rate,
+        );
+        starts = starts.min(self.harmonics.span().0);
+        ends = ends.max(self.harmonics.span().1);
         self.start = starts;
         self.end = ends;
     }
@@ -383,6 +422,7 @@ impl Block for Bass {
         for s in self.sines.iter_mut().take(self.sine_count) {
             s.render(block, rate, waves, out);
         }
+        self.harmonics.render(block, cx, out);
         if self.click {
             let mut x = [0.0f32; QUANTUM];
             self.src.fill(block, noise, &mut x);

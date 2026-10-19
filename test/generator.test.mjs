@@ -65,8 +65,15 @@ for (let i = 0; i < SEEDS; i++) {
   for (const e of d.tracks.melody) {
     if (e.midi < 40 || e.midi > 108) problems.push(`drifted melody ${e.midi}`);
   }
+  // The bass sits in 36-57 (roundBass, queue item 56), wandering too; a
+  // spelled chord may move a note a semitone after it is placed (cinder's
+  // G# over E), and a drone's fifth sits a fifth over its root.
+  const top = (p.meta.bassStyle === 'drone' ? 64 : 57) + 1;
+  for (const e of p.tracks.bass) {
+    if (e.midi < 35 || e.midi > top) problems.push(`bass ${e.midi}`);
+  }
   for (const e of d.tracks.bass) {
-    if (e.midi < 24 || e.midi > 55) problems.push(`drifted bass ${e.midi}`);
+    if (e.midi < 35 || e.midi > top) problems.push(`drifted bass ${e.midi}`);
   }
 }
 

@@ -1031,13 +1031,18 @@ function genBass(spec, harmony) {
   if (chugs(spec)) style = 'chug';
   const voice = r.weighted(c.bassVoices || [['sub', 1]]);
   const glideChance = c.glide || 0;
-  const octaveShift = r.chance(0.25) ? -12 : 0;
+  // roundBass (queue item 56, approved by Mikey 2026-10-10): the bass sits
+  // in 36-57, its bottom an octave higher than the old 28-52, and never
+  // takes the extra octave down, so it reads on a phone (the core adds soft
+  // harmonics too). The draw that once chose that octave is still made, so
+  // no later draw moves.
+  r.chance(0.25);
   const events = [];
 
   const place = (step, dur, midi, vel, glide = false) => {
-    let m = midi + octaveShift;
-    while (m > 52) m -= 12;
-    while (m < 28) m += 12;
+    let m = midi;
+    while (m > 57) m -= 12;
+    while (m < 36) m += 12;
     events.push({ step: step % total, dur, midi: m, vel, glide, voice });
   };
 
@@ -2914,12 +2919,13 @@ export function drift(pattern, rng, amount) {
     if (rng.chance(0.04 * a) && e.midi + 12 <= 95) e.midi += 12;
     if (rng.chance(0.07 * a)) e.vel = 0;
   }
-  // Bass finds a passing tone.
+  // Bass finds a passing tone, in the bass's own register (36-57 since
+  // roundBass, queue item 56).
   for (const e of p.tracks.bass) {
     if (rng.chance(0.07 * a)) {
       let m = e.midi + rng.pick([-2, 3, 5, 7, 12]);
-      while (m > 52) m -= 12;
-      while (m < 28) m += 12;
+      while (m > 57) m -= 12;
+      while (m < 36) m += 12;
       e.midi = m;
     }
   }

@@ -30,11 +30,11 @@ struck/open-hat c004848c97ce1340 -42.41 -17.59 10.5
 struck/shaker 5a463721f67fa8d1 -47.46 -21.92 24.2
 temple_bell/melody 626942fbf9ab52f2 -33.73 -9.23 2.6
 temple_bell/chords dfed4f3879953f46 -31.34 -7.59 0.0
-bass/sub 37ac167c4fc477f0 -27.20 -18.54 0.0
-bass/round 9053af2433622fbc -23.54 -13.92 0.0
-bass/fifths ab123a276acf48d7 -25.39 -14.27 0.0
-bass/pluck 0c239a6618d27835 -21.09 -12.33 0.0
-bass/moog c82b7c30dbdfd17d -23.60 -8.85 0.0
+bass/sub 543b3c215ac99c84 -28.74 -17.16 0.0
+bass/round d32294cbc63844a4 -25.27 -12.84 0.0
+bass/fifths d3867b995eb423b1 -26.95 -13.71 0.0
+bass/pluck d0e0eba1b80ab1cc -22.71 -10.68 0.0
+bass/moog 9b8c0ae59ea71520 -24.74 -13.25 0.0
 texture/swell b45a909220903ff6 -22.29 -12.40 0.0
 texture/drop 95c8d51bcab1b9b4 -54.87 -31.41 96.1
 texture/wind 3c79f02846e7ce93 -32.80 -18.22 9.2
@@ -106,3 +106,4 @@ chorale/triad 9f88c5e57536d8c8 -20.18 -12.40 0.0
 chorale/triad@retune c21184f7cd85d6d4 -20.18 -10.68 0.0
 duck/half 2b52ba0cc00e226c -20.27 -8.81 34.1
 duck/half~key 1d445a06366ecb08 -22.35 -10.79 34.1
+harmonics/e2 dcae6559f7e7f3fe -24.57 -13.83 0.0

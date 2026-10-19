@@ -27,7 +27,7 @@ note 24 4 0.04634454727172852 0 0 0.84 0 nan nan nan nan nan nan nan nan nan nan
 key 3907144398 0 0 1
 note 21 4 0.052207293987274174 0 0 0.6076630396302789 0 nan nan nan nan nan nan nan nan nan nan nan nan
 key 3907144398 0 0 0
-note 22 2 0.05 32 3.631578947368421 0.55 2 nan nan nan nan nan nan nan nan nan nan nan nan
+note 22 2 0.05 44 3.631578947368421 0.55 2 nan nan nan nan nan nan nan nan nan nan nan nan
 key 3907144398 0 0 0
 note 26 0 0.04346092891693115 70 0.631578947368421 0.8592664628217288 0 0 4 0.9874694249047083 8.380115454783663 nan nan nan nan nan nan nan nan
 key 3907144398 0 0 0
@@ -149,7 +149,7 @@ note 24 4 7.625130600728489 0 0 0.84 0 nan nan nan nan nan nan nan nan nan nan n
 key 3907144398 1 0 1
 note 21 4 7.62912204626987 0 0 0.6076630396302789 0 nan nan nan nan nan nan nan nan nan nan nan nan
 key 3907144398 1 0 0
-note 22 2 7.628947368421055 32 3.631578947368421 0.55 2 nan nan nan nan nan nan nan nan nan nan nan nan
+note 22 2 7.628947368421055 44 3.631578947368421 0.55 2 nan nan nan nan nan nan nan nan nan nan nan nan
 key 3907144398 1 0 0
 note 26 0 7.622818422116733 70 0.631578947368421 0.8592664628217288 0 0 nan 1 8.380115454783663 nan nan nan nan nan nan nan nan
 key 3907144398 1 3 0
