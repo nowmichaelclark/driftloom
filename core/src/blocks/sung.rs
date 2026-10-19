@@ -37,14 +37,15 @@
 #![allow(clippy::cast_precision_loss, clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::{Draws, salt};
 
-use super::filter::{Biquad, Kind};
+use super::filter::{self, Biquad, Filter, Kind};
+use super::lfo::Lfo;
 use super::noise_source::NoiseSource;
-use super::osc::{Part, Pitch, TableOsc, frame_at};
-use super::shared::{FILTER_TAIL, QUIET, UNITY, midi_to_freq, pitch_of, release, starts_in};
+use super::osc::{self, Oscillator, Shape, frame_at};
+use super::shared::{FILTER_TAIL, QUIET, UNITY, midi_to_freq, release, starts_in};
 
 /// Which sung voice: `VOWEL`, `HUM` or `CHOIR`.
 #[derive(Clone, Copy, PartialEq)]
@@ -91,31 +92,24 @@ const LEVEL_CHOIR: f64 = 0.112;
 const LEVEL_HUM: f64 = 0.085;
 const LEVEL_VOWEL: f64 = 0.174;
 
+/// One singer: an oscillator at the note's frequency, never automated,
+/// whose `DETUNE` takes its own scoop and jitter plus a vibrato.
 struct Singer {
-    osc: TableOsc,
-    /// The frequency: the note's, never automated.
-    pitch: Param,
+    osc: Oscillator<0>,
     detune: Param<DETUNE_EVENTS>,
-    lfo: TableOsc,
-    lfo_rate: f32,
-    depth: Param,
+    lfo: Lfo,
 }
 
 impl Singer {
     const fn new() -> Self {
-        Singer {
-            osc: TableOsc::new(),
-            pitch: Param::new(0.0),
-            detune: Param::new(0.0),
-            lfo: TableOsc::new(),
-            lfo_rate: 0.0,
-            depth: Param::new(0.0),
-        }
+        Singer { osc: Oscillator::new(), detune: Param::new(0.0), lfo: Lfo::new() }
     }
 }
 
+/// One formant of the tract: a peaking filter whose frequency, Q and gain
+/// move together, each driven by its envelope (`FREQ`, `Q`, `GAIN`).
 struct Formant {
-    filter: Biquad,
+    filter: Filter,
     freq: Param,
     q: Param,
     gain: Param,
@@ -124,7 +118,7 @@ struct Formant {
 impl Formant {
     const fn new() -> Self {
         Formant {
-            filter: Biquad::new(),
+            filter: Filter::new(),
             freq: Param::new(0.0),
             q: Param::new(0.0),
             gain: Param::new(0.0),
@@ -238,7 +232,8 @@ impl Sung {
         let land_at = time + dur * 0.85;
         let part = |from: f64, to: f64| from + (to - from) * depth;
         for (i, (fm, &[hz, bw, gain_db])) in self.formants.iter_mut().zip(formants.iter()).enumerate() {
-            fm.filter.reset();
+            // Every setting is all envelope, into the filter's inputs.
+            fm.filter.set(filter::Settings { kind: Kind::Peaking, freq: 0.0, q: 0.0, gain: 0.0 }, rate as f32);
             fm.freq.reset_at(hz as f32, rate);
             fm.q.reset_at((hz / bw) as f32, rate);
             fm.gain.reset_at(gain_db as f32, rate);
@@ -267,7 +262,8 @@ impl Sung {
             // three singers differ from one another.
             let base = salt::SUNG_SINGER * i as u32;
             let u = |kind: u32, n: u32| draws.unit(kind, base + n);
-            s.pitch.reset(f as f32);
+            let shape = if humming { Shape::Triangle } else { Shape::Glottal };
+            s.osc.set(shape, f as f32, 0.0, time, stop, rate);
             let spread = lean
                 + if choral {
                     (i as f64 - 1.0) * (7.0 + u(salt::SUNG_SPREAD, 0) * 6.0)
@@ -294,9 +290,9 @@ impl Sung {
                 det.linear_ramp_to_value_at_time((spread + (v - 0.5) * 11.0) as f32, t, time);
                 t += 0.09 + u(salt::SUNG_JITTER, 2 * step + 1) * 0.08;
             }
-            s.lfo_rate = (4.3 + u(salt::SUNG_VIBRATO, 0) * 1.8) as f32;
+            s.lfo.set((4.3 + u(salt::SUNG_VIBRATO, 0) * 1.8) as f32, UNITY, time, stop, rate);
             let peak = (if humming { 5.0 } else { 9.0 }) + u(salt::SUNG_VIBRATO, 1) * 4.0;
-            let dp = &mut s.depth;
+            let dp = s.lfo.depth();
             dp.reset_at(UNITY, rate);
             dp.set_value_at_time(0.0, time);
             dp.linear_ramp_to_value_at_time(
@@ -304,8 +300,6 @@ impl Sung {
                 time + (dur * 0.55).min(0.9) + u(salt::SUNG_VIBRATO, 2) * 0.2,
                 time,
             );
-            s.osc.schedule(time, stop, rate);
-            s.lfo.schedule(time, stop, rate);
         }
 
         let breath_rate = 0.8 + draws.unit(salt::SUNG_BREATH, 0) * 0.4;
@@ -326,7 +320,6 @@ impl Sung {
         self.start = frame_at(time, rate);
         self.end = frame_at(stop + FILTER_TAIL, rate);
     }
-
 
     fn start_frame(&self) -> u64 {
         self.start
@@ -373,58 +366,33 @@ impl Block for Sung {
     }
 
     fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
-        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
+        let (rate, noise) = (cx.rate, cx.noise);
         let r = rate as f32;
-        let wave = if self.humming {
-            &waves.triangle
-        } else {
-            &waves.glottal
-        };
         // The singers, summed into the tract.
         let mut voices = [0.0f32; QUANTUM];
         for s in self.singers.iter_mut().take(self.count) {
             // The detune: its own events, plus the vibrato through its depth.
-            // Both are first rendered when the singer starts: clamped then.
-            let first = starts_in(s.osc.start_frame(), block);
-            if first {
+            // Both are first rendered when the singer starts: clamped then
+            // (the vibrato's depth by the vibrato itself, which starts with
+            // the singer).
+            if starts_in(s.osc.start_frame(), block) {
                 s.detune.clamp_before(block, rate);
-                s.depth.clamp_before(block, rate);
             }
             let mut cents = [0.0f32; QUANTUM];
             s.detune.fill(block, rate, &mut cents);
-            let steady = Pitch::Steady {
-                freq: s.lfo_rate,
-                detune: 0.0,
-            };
-            let mut sine = [0.0f32; QUANTUM];
-            let (lo, hi) = s.lfo.render(block, &waves.sine, &steady, r, &mut sine);
-            let mut depth = [0.0f32; QUANTUM];
-            s.depth.fill(block, rate, &mut depth);
-            for ((c, w), g) in cents
-                .iter_mut()
-                .zip(sine.iter())
-                .zip(depth.iter())
-                .take(hi)
-                .skip(lo)
-            {
-                *c += *w * *g;
-            }
-            let mut freq = [0.0f32; QUANTUM];
-            let pitch = pitch_of(&mut s.pitch, block, rate, first, &mut freq, Part::Moving(&cents));
-            let mut tone = [0.0f32; QUANTUM];
-            let (lo, hi) = s.osc.render(block, wave, &pitch, r, &mut tone);
-            for (v, x) in voices.iter_mut().zip(tone.iter()).take(hi).skip(lo) {
-                *v += *x;
-            }
+            s.lfo.render(block, cx, &mut cents);
+            s.osc.render_mod(block, cx, &mut voices, &Mods::NONE.with(osc::DETUNE, &cents));
         }
-        // The tract's parameters, frame by frame: the filters work their
-        // coefficients out again only when these move.
-        let mut params = [[[0.0f32; QUANTUM]; 3]; 3];
-        for (fm, p) in self.formants.iter().zip(params.iter_mut()) {
-            let [hz, q, gain] = p;
-            fm.freq.fill(block, rate, hz);
-            fm.q.fill(block, rate, q);
-            fm.gain.fill(block, rate, gain);
+        // The tract's formants, each a filter whose frequency, Q and gain
+        // move frame by frame: their coefficients are worked out again only
+        // when these do.
+        for fm in &mut self.formants {
+            let (mut hz, mut q, mut gain) = ([0.0f32; QUANTUM], [0.0f32; QUANTUM], [0.0f32; QUANTUM]);
+            fm.freq.fill(block, rate, &mut hz);
+            fm.q.fill(block, rate, &mut q);
+            fm.gain.fill(block, rate, &mut gain);
+            let mods = Mods::NONE.with(filter::FREQ, &hz).with(filter::Q, &q).with(filter::GAIN, &gain);
+            fm.filter.render_mod(block, cx, &mut voices, &mods);
         }
         let mut amp = [0.0f32; QUANTUM];
         self.amp.fill(block, rate, &mut amp);
@@ -436,19 +404,10 @@ impl Block for Sung {
         self.breath_filter
             .set(Kind::Bandpass, self.breath_hz, 0.8, 0.0, r);
         for (i, y) in out.iter_mut().enumerate() {
-            let mut x = voices.get(i).copied().unwrap_or(0.0);
-            for (fm, p) in self.formants.iter_mut().zip(params.iter()) {
-                let at = |k: usize| p.get(k).and_then(|a| a.get(i)).copied().unwrap_or(0.0);
-                fm.filter.set(Kind::Peaking, at(0), at(1), at(2), r);
-                x = fm.filter.step(x);
-            }
-            let tract = self.lowpass.step(x);
+            let tract = self.lowpass.step(voices.get(i).copied().unwrap_or(0.0));
             let b = self.breath_filter.step(air.get(i).copied().unwrap_or(0.0))
                 * breath_gain.get(i).copied().unwrap_or(0.0);
             *y += (tract + b) * amp.get(i).copied().unwrap_or(0.0);
-        }
-        for fm in &mut self.formants {
-            fm.filter.flush();
         }
         self.lowpass.flush();
         self.breath_filter.flush();

@@ -464,18 +464,25 @@ pub fn line(list: &List, hashes: &[String]) -> String {
 /// A mono 32-bit float WAV: the format every tool reads, and exact (a
 /// 16-bit file would round the samples a comparison is after).
 pub fn wav(samples: &[f32], rate: f64) -> Vec<u8> {
+    wav_channels(samples, rate, 1)
+}
+
+/// The same with `channels` channels, `samples` interleaved: a stereo
+/// block's two sides (`dlrender --block NAME/PROBE:stereo`).
+pub fn wav_channels(samples: &[f32], rate: f64, channels: u16) -> Vec<u8> {
     let data = samples.len() * 4;
     let rate = rate as u32;
+    let frame = 4 * u32::from(channels);
     let mut out = Vec::with_capacity(44 + data);
     out.extend_from_slice(b"RIFF");
     out.extend_from_slice(&(36 + data as u32).to_le_bytes());
     out.extend_from_slice(b"WAVEfmt ");
     out.extend_from_slice(&16u32.to_le_bytes());
     out.extend_from_slice(&3u16.to_le_bytes()); // IEEE float
-    out.extend_from_slice(&1u16.to_le_bytes()); // mono
+    out.extend_from_slice(&channels.to_le_bytes());
     out.extend_from_slice(&rate.to_le_bytes());
-    out.extend_from_slice(&(rate * 4).to_le_bytes());
-    out.extend_from_slice(&4u16.to_le_bytes());
+    out.extend_from_slice(&(rate * frame).to_le_bytes());
+    out.extend_from_slice(&(frame as u16).to_le_bytes());
     out.extend_from_slice(&32u16.to_le_bytes());
     out.extend_from_slice(b"data");
     out.extend_from_slice(&(data as u32).to_le_bytes());

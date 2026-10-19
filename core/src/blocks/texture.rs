@@ -14,11 +14,12 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 
-use super::filter::{Biquad, Kind};
+use super::filter::{self, Filter, Kind};
+use super::lfo::Lfo;
 use super::noise_source::NoiseSource;
 use super::osc::{Pitch, TableOsc, frame_at};
 use super::shared::{CUTOFF_DEFAULT, FILTER_TAIL, UNITY, midi_to_freq, noise_grain};
@@ -55,15 +56,16 @@ const WIND_Q: f32 = 1.1;
 /// A texture note: one of the four textures, by its `parts`.
 pub struct Texture {
     kind: u32,
-    /// The swell's sine, or the wind's slow one.
+    /// The swell's sine.
     osc: TableOsc,
     freq: f32,
+    /// The wind's slow sine, into its band (its filter's `FREQ`).
+    sway: Lfo<0>,
     src: NoiseSource,
-    filter: Biquad,
+    filter: Filter,
     /// The waves' second lowpass.
-    second: Biquad,
+    second: Filter,
     cutoff: Param,
-    band: f32,
     gain: Param,
     start: u64,
     end: u64,
@@ -78,11 +80,11 @@ impl Texture {
             kind: SWELL,
             osc: TableOsc::new(),
             freq: 0.0,
+            sway: Lfo::new(),
             src: NoiseSource::new(),
-            filter: Biquad::new(),
-            second: Biquad::new(),
+            filter: Filter::new(),
+            second: Filter::new(),
             cutoff: Param::new(0.0),
-            band: 0.0,
             gain: Param::new(0.0),
             start: 0,
             end: 0,
@@ -105,8 +107,9 @@ impl Texture {
         rate: f64,
     ) {
         self.kind = kind;
-        self.filter.reset();
-        self.second.reset();
+        let r = rate as f32;
+        // A cutoff that is all envelope goes into the filter's frequency.
+        let swept = |kind, q| filter::Settings { kind, freq: 0.0, q, gain: 0.0 };
         let g = &mut self.gain;
         match kind {
             SWELL => {
@@ -125,6 +128,7 @@ impl Texture {
                 let c = &mut self.cutoff;
                 c.reset(CUTOFF_DEFAULT);
                 c.set_value_at_time((2400.0 + draws[2] * 3000.0) as f32, time);
+                self.filter.set(swept(Kind::Bandpass, DROP_Q), r);
                 // Its gain holds its first value ahead of the event (item 26b).
                 g.reset_at(0.0001, rate);
                 g.set_value_at_time(0.0001, time);
@@ -137,13 +141,14 @@ impl Texture {
                 let stop = time + dur + 1.0;
                 self.src
                     .looped(time, stop, WIND_BREATH, noise, rate);
-                self.band = if draws[1].is_finite() {
+                let band = if draws[1].is_finite() {
                     draws[1] as f32
                 } else {
                     WIND_BAND
                 };
-                self.freq = (0.07 + draws[0] * 0.06) as f32;
-                self.osc.schedule(time, stop, rate);
+                let settings = filter::Settings { kind: Kind::Bandpass, freq: band, q: WIND_Q, gain: 0.0 };
+                self.filter.set(settings, r);
+                self.sway.set((0.07 + draws[0] * 0.06) as f32, WIND_SWING, time, stop, rate);
                 g.reset_at(0.0001, rate);
                 g.set_value_at_time(0.0001, time);
                 g.linear_ramp_to_value_at_time(
@@ -152,7 +157,7 @@ impl Texture {
                     time,
                 );
                 g.set_target_at_time(0.0001, time + dur * 0.75, (dur * 0.2).max(0.4));
-                self.start = self.src.start_frame().min(self.osc.start_frame());
+                self.start = self.src.start_frame().min(self.sway.start_frame());
                 self.end = self.src.end_frame() + frame_at(FILTER_TAIL, rate);
             }
             _ => {
@@ -170,6 +175,8 @@ impl Texture {
                 c.set_value_at_time((WAVES_CUTOFF * 0.7) as f32, time);
                 c.linear_ramp_to_value_at_time(WAVES_CUTOFF as f32, crest, time);
                 c.linear_ramp_to_value_at_time((WAVES_CUTOFF * 0.7) as f32, time + dur, time);
+                self.filter.set(swept(Kind::Lowpass, WAVES_Q), r);
+                self.second.set(swept(Kind::Lowpass, WAVES_Q), r);
                 g.reset_at(0.0001, rate);
                 g.set_value_at_time(0.0001, time);
                 g.linear_ramp_to_value_at_time((vel * WAVES_LEVEL) as f32, crest, time);
@@ -179,7 +186,6 @@ impl Texture {
             }
         }
     }
-
 
     fn start_frame(&self) -> u64 {
         self.start
@@ -238,60 +244,37 @@ impl Block for Texture {
                 self.src.fill(block, noise, &mut x);
                 let mut cutoff = [0.0f32; QUANTUM];
                 self.cutoff.fill(block, rate, &mut cutoff);
-                for (((y, v), c), g) in out
-                    .iter_mut()
-                    .zip(x.iter())
-                    .zip(cutoff.iter())
-                    .zip(gain.iter())
-                {
-                    self.filter.set(Kind::Bandpass, *c, DROP_Q, 0.0, r);
-                    *y += self.filter.step(*v) * *g;
-                }
-                self.filter.flush();
+                self.filter.render_mod(block, cx, &mut x, &Mods::NONE.with(filter::FREQ, &cutoff));
+                add(out, &x, &gain);
             }
             WIND => {
                 let mut x = [0.0f32; QUANTUM];
                 self.src.fill(block, noise, &mut x);
-                // The band's own value and the slow sine through its gain,
+                // The band's own value and the slow sine through its depth,
                 // summed at every frame as an AudioParam sums its input.
-                let steady = Pitch::Steady {
-                    freq: self.freq,
-                    detune: 0.0,
-                };
-                let mut slow = [0.0f32; QUANTUM];
-                self.osc.render(block, &waves.sine, &steady, r, &mut slow);
-                for (((y, v), s), g) in out
-                    .iter_mut()
-                    .zip(x.iter())
-                    .zip(slow.iter())
-                    .zip(gain.iter())
-                {
-                    let band = self.band + *s * WIND_SWING;
-                    self.filter.set(Kind::Bandpass, band, WIND_Q, 0.0, r);
-                    *y += self.filter.step(*v) * *g;
-                }
-                self.filter.flush();
+                let mut sway = [0.0f32; QUANTUM];
+                self.sway.render(block, cx, &mut sway);
+                self.filter.render_mod(block, cx, &mut x, &Mods::NONE.with(filter::FREQ, &sway));
+                add(out, &x, &gain);
             }
             _ => {
                 let mut x = [0.0f32; QUANTUM];
                 self.src.fill(block, noise, &mut x);
                 let mut cutoff = [0.0f32; QUANTUM];
                 self.cutoff.fill(block, rate, &mut cutoff);
-                for (((y, v), c), g) in out
-                    .iter_mut()
-                    .zip(x.iter())
-                    .zip(cutoff.iter())
-                    .zip(gain.iter())
-                {
-                    self.filter.set(Kind::Lowpass, *c, WAVES_Q, 0.0, r);
-                    self.second.set(Kind::Lowpass, *c, WAVES_Q, 0.0, r);
-                    let once = self.filter.step(*v);
-                    *y += self.second.step(once) * *g;
-                }
-                self.filter.flush();
-                self.second.flush();
+                let swept = Mods::NONE.with(filter::FREQ, &cutoff);
+                self.filter.render_mod(block, cx, &mut x, &swept);
+                self.second.render_mod(block, cx, &mut x, &swept);
+                add(out, &x, &gain);
             }
         }
+    }
+}
+
+/// `x` under `gain`, added into `out`.
+fn add(out: &mut Signal, x: &Signal, gain: &Signal) {
+    for ((y, v), g) in out.iter_mut().zip(x.iter()).zip(gain.iter()) {
+        *y += *v * *g;
     }
 }
 

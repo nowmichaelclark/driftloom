@@ -20,9 +20,24 @@
 //!   new, for an A/B (`dlrender --block NAME/PROBE --wav` renders either
 //!   version, and `--compare` gives the residual).
 //!
+//! And, from what a block declares (queue item 46b):
+//!
+//! - **modulation:** for each setting in its `MODS`, each probe again with
+//!   that setting driven by a 3 Hz sine of the setting's `swing`
+//!   (`block::drive`), checked as above and nulled as `block/probe~setting`;
+//!   a setting that changes nothing on any probe is not wired, and fails;
+//! - **stereo:** a mono block in a stereo signal (`Block::render_stereo`'s
+//!   defaults: a source centered, a processor fed the same on both sides,
+//!   and a processor as a `Pair`) must put its mono render on each side,
+//!   bit for bit, so stereo costs mono nothing in sound; a block with a
+//!   stereo render of its own (`STEREO`) is checked as above on both sides,
+//!   nulled as `block/probe:stereo`, and must put different sides out on
+//!   at least one probe, or it is not stereo.
+//!
 //! A block added to the registry has no line yet, and the kit says so; a
 //! block whose sound changes on purpose, likewise. Either way, store the new
-//! renders with
+//! renders (lines already stored keep their place; new ones go at the end)
+//! with
 //!
 //! ```sh
 //! KIT=update cargo test --lib kit
@@ -37,7 +52,7 @@
 use std::fmt::Write as _;
 use std::time::Instant;
 
-use crate::block::{Block, Context, Note, Probe, Voice, solo};
+use crate::block::{Block, Context, Note, Pair, Play, Probe, Voice, solo};
 use crate::Core;
 
 use super::{Visit, each};
@@ -70,6 +85,8 @@ struct Row {
     tone: f64,
     /// Render time over the audio's length.
     cost: f64,
+    /// A stereo row whose two sides differ.
+    apart: bool,
     /// What is wrong with it, beside the null test.
     faults: Vec<String>,
 }
@@ -94,73 +111,173 @@ impl Visit for Kit<'_> {
         if self.only.is_some_and(|only| only != name) {
             return;
         }
-        for probe in V::PROBES {
-            // As `Core::note` settles a note when it arrives.
-            let mut note: Note = probe.settings;
-            V::settle(&mut note);
-            self.play::<V>(name, &Probe { name: probe.name, settings: note });
-        }
+        // As `Core::note` settles a note when it arrives.
+        let probes: Vec<Probe<Note>> = V::PROBES
+            .iter()
+            .map(|probe| {
+                let mut note: Note = probe.settings;
+                V::settle(&mut note);
+                Probe { name: probe.name, settings: note }
+            })
+            .collect();
+        self.check::<V>(name, &probes);
     }
 
     fn part<B: Block + Default>(&mut self, name: &'static str) {
         if self.only.is_some_and(|only| only != name) {
             return;
         }
-        for probe in B::PROBES {
-            self.play::<B>(name, probe);
-        }
+        self.check::<B>(name, B::PROBES);
     }
 }
 
-impl Kit<'_> {
-    fn play<B: Block + Default>(&mut self, block: &str, probe: &Probe<B::Settings>) {
-        let render = || {
-            let mut b = Box::new(B::default());
-            let mut out = Vec::new();
-            solo(&mut *b, &probe.settings, &self.cx, LONGEST, |s| out.extend_from_slice(s));
-            out
-        };
-        // The cost is the quickest of three renders: the first pays for
-        // cold caches, and any one can be interrupted.
-        let mut took = f64::MAX;
-        let mut timed = || {
-            let begun = Instant::now();
-            let out = render();
-            took = took.min(begun.elapsed().as_secs_f64());
-            out
-        };
-        let first = timed();
-        let again = timed();
-        timed();
-        let mut faults = Vec::new();
-        let bits = |v: &[f32]| v.iter().map(|x| x.to_bits()).collect::<Vec<_>>();
-        if bits(&first) != bits(&again) {
-            faults.push("not deterministic: a second render differs".to_owned());
+/// One probe's render: its samples (a stereo one's interleaved, left
+/// first), and the quickest of the renders timed, in seconds.
+struct Render {
+    samples: Vec<f32>,
+    took: f64,
+}
+
+/// Play `settings` through a fresh `B` the way `play` says, `times` times
+/// (at least once), and keep the first render with the quickest time: the
+/// first pays for cold caches, and any one can be interrupted. Faults if
+/// two renders differ.
+fn render<B: Block>(fresh: impl Fn() -> Box<B>, settings: &B::Settings, cx: &Context, play: Play, times: usize, faults: &mut Vec<String>) -> Render {
+    let mut first: Option<Vec<f32>> = None;
+    let mut took = f64::MAX;
+    for _ in 0..times.max(1) {
+        let mut b = fresh();
+        let mut out = Vec::new();
+        let begun = Instant::now();
+        solo(&mut *b, settings, cx, LONGEST, play, |s| out.extend_from_slice(s));
+        took = took.min(begun.elapsed().as_secs_f64());
+        match &first {
+            None => first = Some(out),
+            Some(was) if bits(was) != bits(&out) => faults.push("not deterministic: a second render differs".to_owned()),
+            Some(_) => {}
         }
-        if first.iter().any(|x| !x.is_finite()) {
+    }
+    Render { samples: first.unwrap_or_default(), took }
+}
+
+/// Samples as their bit patterns, so NaN equals itself.
+fn bits(v: &[f32]) -> Vec<u32> {
+    v.iter().map(|x| x.to_bits()).collect()
+}
+
+/// A stereo render's two sides, from its interleaved samples.
+fn sides(v: &[f32]) -> (Vec<f32>, Vec<f32>) {
+    (v.iter().step_by(2).copied().collect(), v.iter().skip(1).step_by(2).copied().collect())
+}
+
+impl Kit<'_> {
+    /// Every check the kit runs on one block, from what it declares.
+    fn check<B: Block + Default>(&mut self, block: &str, probes: &[Probe<B::Settings>]) {
+        let fresh = || Box::new(B::default());
+        let mut plain = Vec::new();
+        for probe in probes {
+            let row = self.row(block, probe.name, "", &probe.settings, Play::Mono, fresh);
+            plain.push(row);
+        }
+        // Each setting a signal can drive, driven on every probe.
+        for (n, setting) in B::MODS.iter().enumerate() {
+            let mut heard = false;
+            let mut first = None;
+            for (probe, &was) in probes.iter().zip(plain.iter()) {
+                let suffix = format!("~{}", setting.name);
+                let row = self.row(block, probe.name, &suffix, &probe.settings, Play::Driven(n), fresh);
+                heard |= self.rows.get(row).is_some_and(|r| r.hash != self.rows.get(was).map_or(0, |w| w.hash));
+                first.get_or_insert(row);
+            }
+            if !heard && let Some(r) = first.and_then(|i| self.rows.get_mut(i)) {
+                r.faults.push(format!("its setting {} changes nothing on any probe: not wired", setting.name));
+            }
+        }
+        if B::STEREO {
+            // A stereo block: its stereo render, checked and stored.
+            let mut apart = false;
+            let mut first = None;
+            for probe in probes {
+                let row = self.row(block, probe.name, ":stereo", &probe.settings, Play::Stereo, fresh);
+                apart |= self.rows.get(row).is_some_and(|r| r.apart);
+                first.get_or_insert(row);
+            }
+            if !apart && let Some(r) = first.and_then(|i| self.rows.get_mut(i)) {
+                r.faults.push("both sides are the same on every probe: not stereo".to_owned());
+            }
+        } else if let (Some(probe), Some(&at)) = (probes.first(), plain.first()) {
+            // A mono block in a stereo signal puts its mono render on each
+            // side, bit for bit: as it is, and a processor as a pair too.
+            let mut faults = Vec::new();
+            let mono = render(fresh, &probe.settings, &self.cx, Play::Mono, 1, &mut faults).samples;
+            let guard = |what: &str, stereo: Vec<f32>, faults: &mut Vec<String>| {
+                let (l, r) = sides(&stereo);
+                if bits(&l) != bits(&mono) || bits(&r) != bits(&mono) {
+                    faults.push(format!("in a stereo signal{what}, a side is not its mono render"));
+                }
+            };
+            let stereo = render(fresh, &probe.settings, &self.cx, Play::Stereo, 1, &mut faults).samples;
+            guard("", stereo, &mut faults);
+            if B::INPUT {
+                let pair = || Box::new(Pair(B::default(), B::default()));
+                let stereo = render(pair, &probe.settings, &self.cx, Play::Stereo, 1, &mut faults).samples;
+                guard(" as a pair", stereo, &mut faults);
+            }
+            if let Some(r) = self.rows.get_mut(at) {
+                r.faults.extend(faults);
+            }
+        }
+    }
+
+    /// Render one probe as `play` says, measure it, and keep its row: its
+    /// place among the rows.
+    fn row<B: Block>(
+        &mut self,
+        block: &str,
+        probe: &str,
+        suffix: &str,
+        settings: &B::Settings,
+        play: Play,
+        fresh: impl Fn() -> Box<B>,
+    ) -> usize {
+        let mut faults = Vec::new();
+        // The plain render is timed three times for its cost; the others
+        // are rendered twice, for determinism.
+        let times = if play == Play::Mono { 3 } else { 2 };
+        let Render { samples, took } = render(fresh, settings, &self.cx, play, times, &mut faults);
+        let (mid, apart) = if play == Play::Stereo {
+            let (l, r) = sides(&samples);
+            let mid = l.iter().zip(r.iter()).map(|(a, b)| (a + b) * 0.5).collect();
+            (mid, bits(&l) != bits(&r))
+        } else {
+            (samples.clone(), false)
+        };
+        if samples.iter().any(|x| !x.is_finite()) {
             faults.push("a sample is not finite".to_owned());
         }
-        let (rms, peak) = level(&first);
+        let (rms, peak) = level(&samples);
         if rms < -90.0 {
             faults.push(format!("silent: {rms:.1} dBFS RMS"));
         }
         if peak >= CEILING {
             faults.push(format!("runs away: peak {peak:.2} dBFS"));
         }
-        let seconds = first.len() as f64 / RATE;
+        let seconds = mid.len() as f64 / RATE;
         let cost = took / seconds.max(1e-9);
-        if !cfg!(debug_assertions) && cost > COST_LIMIT {
+        if play == Play::Mono && !cfg!(debug_assertions) && cost > COST_LIMIT {
             faults.push(format!("costs {:.2}% of real time, over {:.0}%", cost * 100.0, COST_LIMIT * 100.0));
         }
         self.rows.push(Row {
-            name: format!("{block}/{}", probe.name),
-            hash: fnv(&first),
+            name: format!("{block}/{probe}{suffix}"),
+            hash: fnv(&samples),
             rms,
             peak,
-            tone: tone(&first) * 100.0,
+            tone: tone(&mid) * 100.0,
             cost,
+            apart,
             faults,
         });
+        self.rows.len() - 1
     }
 }
 
@@ -288,12 +405,24 @@ fn every_block_passes_its_kit() {
     let rows = run(None);
     let mode = std::env::var("KIT").unwrap_or_default();
     if mode == "update" {
+        // Lines already stored keep their place; new ones go at the end.
+        let was = std::fs::read_to_string(STORED).unwrap_or_default();
         let mut file = String::from(
             "# The test kit's stored renders (core/src/blocks/kit.rs): one line a probe,\n\
              # block/probe, FNV-1a 64 of its samples, RMS and peak in dBFS, 2-5 kHz share in %.\n\
              # Rewritten by `KIT=update cargo test --lib kit`; a change here is a sound change.\n",
         );
-        for row in &rows {
+        let kept: Vec<&str> = was
+            .lines()
+            .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+            .filter_map(|l| l.split_once(' ').map(|(name, _)| name))
+            .collect();
+        for name in &kept {
+            if let Some(row) = rows.iter().find(|r| r.name == *name) {
+                let _ = writeln!(file, "{}", row.line());
+            }
+        }
+        for row in rows.iter().filter(|r| !kept.contains(&r.name.as_str())) {
             let _ = writeln!(file, "{}", row.line());
         }
         std::fs::write(STORED, file).expect("the stored renders are written");
@@ -305,11 +434,11 @@ fn every_block_passes_its_kit() {
         .filter_map(|l| l.split_once(' '))
         .collect();
     let mut faults = Vec::new();
-    let mut table = String::from("block/probe                    rms dB  peak dB  2-5 kHz   cost\n");
+    let mut table = String::from("block/probe                          rms dB  peak dB  2-5 kHz   cost\n");
     for row in &rows {
         let _ = writeln!(
             table,
-            "{:<28} {:>8.2} {:>8.2} {:>7.1}% {:>6.3}%",
+            "{:<34} {:>8.2} {:>8.2} {:>7.1}% {:>6.3}%",
             row.name,
             row.rms,
             row.peak,
@@ -343,13 +472,12 @@ fn every_block_passes_its_kit() {
     assert!(rows.len() > 60, "every block's probes: {} rows", rows.len());
 }
 
-/// A new block is one new file plus one line in the registry (the charter's
-/// measure, promise 5). The demonstration block, the tremolo, is named in
-/// exactly those two places in the whole core -- its own file, and one line
-/// of `blocks/mod.rs` -- and the kit plays it all the same.
-#[test]
-fn the_demonstration_block_is_one_file_and_one_line() {
+/// Where a block's module is named in the core's source, outside its own
+/// file and the kit: every line with `NAME::`, `NAME.rs` or `mod NAME` at a
+/// word's start.
+fn named(name: &str) -> Vec<String> {
     let src = concat!(env!("CARGO_MANIFEST_DIR"), "/src");
+    let own = format!("{name}.rs");
     let mut mentions = Vec::new();
     let mut dirs = vec![std::path::PathBuf::from(src)];
     while let Some(dir) = dirs.pop() {
@@ -359,20 +487,45 @@ fn the_demonstration_block_is_one_file_and_one_line() {
                 dirs.push(path);
                 continue;
             }
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if name == "tremolo.rs" || name == "kit.rs" {
+            let file = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if file == own || file == "kit.rs" {
                 continue;
             }
             let text = std::fs::read_to_string(&path).unwrap_or_default();
-            for line in text.lines().filter(|l| l.to_lowercase().contains("tremolo")) {
-                mentions.push(format!("{name}: {}", line.trim()));
+            for line in text.lines() {
+                let found = [format!("{name}::"), own.clone(), format!("mod {name}")].iter().any(|token| {
+                    line.match_indices(token.as_str()).any(|(at, _)| {
+                        !line[..at].chars().next_back().is_some_and(|c| c.is_alphanumeric() || c == '_')
+                    })
+                });
+                if found {
+                    mentions.push(format!("{file}: {}", line.trim()));
+                }
             }
         }
     }
-    assert_eq!(mentions, vec!["mod.rs: #[cfg(test)] tremolo::Tremolo;".to_owned()], "where the tremolo is named");
-    let rows = run(Some("tremolo"));
-    for probe in ["tremolo/slow", "tremolo/deep"] {
-        let row = rows.iter().find(|r| r.name == probe).expect("the kit plays the tremolo");
-        assert!(row.faults.is_empty(), "{probe}: {:?}", row.faults);
+    mentions
+}
+
+/// A new block is one new file plus one line in the registry (the charter's
+/// measure, promise 5). Each demonstration block -- the tremolo (item 46),
+/// the amplifier whose gain a signal drives and the stereo panner (item
+/// 46b) -- is named in exactly those two places in the whole core, its own
+/// file and one line of `blocks/mod.rs`, and the kit plays it all the same:
+/// the amplifier's modulation probe and the panner's stereo render too.
+#[test]
+fn each_demonstration_block_is_one_file_and_one_line() {
+    for (name, probes) in [
+        ("tremolo", &["tremolo/slow", "tremolo/deep"][..]),
+        ("amp", &["amp/half", "amp/half~gain"][..]),
+        ("pan", &["pan/left", "pan/right", "pan/left:stereo", "pan/right:stereo"][..]),
+    ] {
+        let line = format!("mod.rs: #[cfg(test)] {name}::{}{};", name[..1].to_uppercase(), &name[1..]);
+        assert_eq!(named(name), vec![line], "where the {name} is named");
+        let rows = run(Some(name));
+        for probe in probes {
+            let row = rows.iter().find(|r| r.name == *probe).unwrap_or_else(|| panic!("the kit plays {probe}"));
+            assert!(row.faults.is_empty(), "{probe}: {:?}", row.faults);
+        }
     }
 }

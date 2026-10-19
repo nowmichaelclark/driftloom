@@ -12,17 +12,15 @@
 #![allow(clippy::many_single_char_names)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 
 use super::filter::{Biquad, Kind};
+use super::lfo::Lfo;
 use super::noise_source::NoiseSource;
-use super::osc::{Part, Pitch, TableOsc, frame_at};
-use super::shared::{
-    A440, FILTER_TAIL, QUIET, UNITY, breath_rate, midi_to_freq, pitch_of, settle_slide, starts_in,
-    through,
-};
+use super::osc::{self, Oscillator, Shape, frame_at};
+use super::shared::{A440, FILTER_TAIL, QUIET, UNITY, breath_rate, midi_to_freq, settle_slide, through};
 
 /// The ocarina's and the flute's levels (tone and breath scale together).
 const OCARINA_LEVEL: f64 = 0.1115;
@@ -31,14 +29,12 @@ const FLUTE_LEVEL: f64 = 0.1357;
 const WIND_VIBRATO: f32 = 5.2;
 
 /// Ocarina and flute: a nearly pure tone (a sine, or the flute's triangle)
-/// that may slide into the note, a vibrato on the detune that arrives late,
-/// and a looped breath through a bandpass (`voice('ocarina' | 'flute')`).
+/// that may slide into the note, a vibrato (an LFO into its `DETUNE`) that
+/// arrives late, and a looped breath through a bandpass
+/// (`voice('ocarina' | 'flute')`).
 pub struct Wind {
-    flute: bool,
-    osc: TableOsc,
-    pitch: Param,
-    lfo: TableOsc,
-    depth: Param,
+    osc: Oscillator,
+    lfo: Lfo,
     gain: Param,
     air: NoiseSource,
     filter: Biquad,
@@ -52,11 +48,8 @@ impl Wind {
     #[must_use]
     pub const fn new() -> Self {
         Wind {
-            flute: false,
-            osc: TableOsc::new(),
-            pitch: Param::new(0.0),
-            lfo: TableOsc::new(),
-            depth: Param::new(0.0),
+            osc: Oscillator::new(),
+            lfo: Lfo::new(),
             gain: Param::new(0.0),
             air: NoiseSource::new(),
             filter: Biquad::new(),
@@ -81,10 +74,12 @@ impl Wind {
         noise: usize,
         rate: f64,
     ) {
-        self.flute = flute;
         let f = midi_to_freq(midi);
         let level = if flute { FLUTE_LEVEL } else { OCARINA_LEVEL };
-        let p = &mut self.pitch;
+        let stop = time + dur + 0.4;
+        let table = if flute { Shape::Triangle } else { Shape::Sine };
+        self.osc.set(table, A440, 0.0, time, stop, rate);
+        let p = self.osc.freq();
         match slide {
             Some((from, reach)) => {
                 p.reset_at(A440, rate);
@@ -93,7 +88,8 @@ impl Wind {
             }
             None => p.reset_at(f as f32, rate),
         }
-        let d = &mut self.depth;
+        self.lfo.set(WIND_VIBRATO, UNITY, time, stop, rate);
+        let d = self.lfo.depth();
         d.reset_at(UNITY, rate);
         d.set_value_at_time(0.0, time);
         d.linear_ramp_to_value_at_time(if flute { 9.0 } else { 6.0 }, time + dur.min(0.5), time);
@@ -119,12 +115,8 @@ impl Wind {
             time,
         );
         a.set_target_at_time(0.0001, let_go, 0.09);
-        let stop = time + dur + 0.4;
-        self.osc.schedule(time, stop, rate);
-        self.lfo.schedule(time, stop, rate);
         self.end = frame_at(air_stop + FILTER_TAIL, rate);
     }
-
 
     fn start_frame(&self) -> u64 {
         self.osc.start_frame()
@@ -156,57 +148,18 @@ impl Block for Wind {
     }
 
     fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
-        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
-        let r = rate as f32;
-        let steady = Pitch::Steady {
-            freq: WIND_VIBRATO,
-            detune: 0.0,
-        };
-        let mut sine = [0.0f32; QUANTUM];
-        let (lo, hi) = self.lfo.render(block, &waves.sine, &steady, r, &mut sine);
-        // Feeding only the detune, the depth is first rendered when the
-        // note starts.
-        if starts_in(self.lfo.start_frame(), block) {
-            self.depth.clamp_before(block, rate);
-        }
-        let mut depth = [0.0f32; QUANTUM];
-        self.depth.fill(block, rate, &mut depth);
+        let (rate, noise) = (cx.rate, cx.noise);
+        // The vibrato, in cents, into the detune: connected, so the pitch
+        // moves for the whole note. Feeding only the detune, the depth is
+        // first rendered when the note starts.
         let mut cents = [0.0f32; QUANTUM];
-        for ((c, w), d) in cents
-            .iter_mut()
-            .zip(sine.iter())
-            .zip(depth.iter())
-            .take(hi)
-            .skip(lo)
-        {
-            *c = *w * *d;
-        }
-        let mut freq = [0.0f32; QUANTUM];
-        let first = starts_in(self.osc.start_frame(), block);
-        let pitch = pitch_of(
-            &mut self.pitch,
-            block,
-            rate,
-            first,
-            &mut freq,
-            Part::Moving(&cents),
-        );
-        let wave = if self.flute {
-            &waves.triangle
-        } else {
-            &waves.sine
-        };
+        self.lfo.render(block, cx, &mut cents);
         let mut tone = [0.0f32; QUANTUM];
-        let (lo, hi) = self.osc.render(block, wave, &pitch, r, &mut tone);
+        self.osc.render_mod(block, cx, &mut tone, &Mods::NONE.with(osc::DETUNE, &cents));
+        let (lo, hi) = self.osc.played();
         let mut gain = [0.0f32; QUANTUM];
         self.gain.fill(block, rate, &mut gain);
-        for ((y, x), g) in out
-            .iter_mut()
-            .zip(tone.iter())
-            .zip(gain.iter())
-            .take(hi)
-            .skip(lo)
-        {
+        for ((y, x), g) in out.iter_mut().zip(tone.iter()).zip(gain.iter()).take(hi).skip(lo) {
             *y += *x * *g;
         }
         let mut air = [0.0f32; QUANTUM];

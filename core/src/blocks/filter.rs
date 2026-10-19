@@ -9,7 +9,7 @@
 //! every sample; `set` caches the last ones, so a filter whose parameters
 //! hold still costs a comparison a sample.
 
-use crate::block::{Block, Context, Probe, Signal};
+use crate::block::{Block, Context, Mod, Mods, Probe, Signal};
 use crate::math;
 
 /// A filter's response, as Web Audio names them.
@@ -250,9 +250,9 @@ impl Biquad {
     }
 }
 
-/// A filter's settings when it plays as a block, held still: its kind, its
-/// frequency in Hz, its Q (in dB for a lowpass or a highpass, as Web Audio
-/// has it) and its gain in dB (a peaking filter's).
+/// A filter's settings when it plays as a block: its kind, its frequency
+/// in Hz, its Q (in dB for a lowpass or a highpass, as Web Audio has it)
+/// and its gain in dB (a peaking filter's).
 #[derive(Clone, Copy)]
 pub struct Settings {
     /// Which response.
@@ -265,9 +265,51 @@ pub struct Settings {
     pub gain: f32,
 }
 
-/// A filter as a block: set once, a signal through it. The voices step
-/// theirs sample by sample instead (`step`), under a frequency that moves.
-impl Block for Biquad {
+/// The filter's settings a signal can drive (`Block::MODS`): its
+/// frequency, in Hz -- a sweep, an envelope or an LFO into the cutoff.
+pub const FREQ: usize = 0;
+/// Its Q.
+pub const Q: usize = 1;
+/// Its gain, in dB.
+pub const GAIN: usize = 2;
+
+/// A filter as a block: a `Biquad` and its settings, a signal through it.
+/// Undriven, it holds its settings still (coefficients worked out once, at
+/// `start`). With a signal driving a setting (`FREQ`, `Q`, `GAIN`), each
+/// frame's setting is its own value plus the signal's, and the
+/// coefficients are worked out again whenever the three move, as a
+/// `BiquadFilterNode` does under a moving parameter. The raw `Biquad`
+/// stays the arithmetic the mix, the master and the bodies step directly.
+#[derive(Clone, Copy)]
+pub struct Filter {
+    biquad: Biquad,
+    settings: Settings,
+}
+
+impl Filter {
+    /// Silent and all zeros.
+    #[must_use]
+    pub const fn new() -> Self {
+        Filter { biquad: Biquad::new(), settings: Settings { kind: Kind::Lowpass, freq: 0.0, q: 0.0, gain: 0.0 } }
+    }
+
+    /// Set it to `settings`, at rest, at `rate` Hz: `Block::start` with a
+    /// rate rather than a `Context`. A voice whose cutoff is all signal
+    /// sets `freq` to zero and drives `FREQ` with the whole curve.
+    pub fn set(&mut self, settings: Settings, rate: f32) {
+        self.settings = settings;
+        self.biquad.reset();
+        self.biquad.set(settings.kind, settings.freq, settings.q, settings.gain, rate);
+    }
+}
+
+impl Default for Filter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Block for Filter {
     type Settings = Settings;
 
     const PROBES: &'static [Probe<Settings>] = &[
@@ -279,22 +321,51 @@ impl Block for Biquad {
 
     const INPUT: bool = true;
 
+    const MODS: &'static [Mod] =
+        &[Mod { name: "freq", swing: 600.0 }, Mod { name: "q", swing: 1.0 }, Mod { name: "gain", swing: 6.0 }];
+
     // Web Audio's filter parameters are 32-bit floats.
     #[allow(clippy::cast_possible_truncation)]
     fn start(&mut self, s: &Settings, cx: &Context) {
-        self.reset();
-        self.set(s.kind, s.freq, s.q, s.gain, cx.rate as f32);
+        self.set(*s, cx.rate as f32);
     }
 
     fn span(&self) -> (u64, u64) {
         (0, u64::MAX)
     }
 
-    fn render(&mut self, _: u64, _: &Context, signal: &mut Signal) {
-        for x in signal.iter_mut() {
-            *x = self.step(*x);
+    fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal) {
+        self.render_mod(block, cx, signal, &Mods::NONE);
+    }
+
+    // Web Audio's filter parameters are 32-bit floats.
+    #[allow(clippy::cast_possible_truncation)]
+    fn render_mod(&mut self, _: u64, cx: &Context, signal: &mut Signal, mods: &Mods) {
+        let s = self.settings;
+        match (mods.get(FREQ), mods.get(Q), mods.get(GAIN)) {
+            (None, None, None) => {
+                for x in signal.iter_mut() {
+                    *x = self.biquad.step(*x);
+                }
+            }
+            // A sweep, the common case: the frequency alone.
+            (Some(freq), None, None) => {
+                let r = cx.rate as f32;
+                for (x, f) in signal.iter_mut().zip(freq.iter()) {
+                    self.biquad.set(s.kind, s.freq + *f, s.q, s.gain, r);
+                    *x = self.biquad.step(*x);
+                }
+            }
+            (freq, q, gain) => {
+                let r = cx.rate as f32;
+                let at = |m: Option<&Signal>, i: usize, own: f32| m.and_then(|m| m.get(i)).map_or(own, |v| own + *v);
+                for (i, x) in signal.iter_mut().enumerate() {
+                    self.biquad.set(s.kind, at(freq, i, s.freq), at(q, i, s.q), at(gain, i, s.gain), r);
+                    *x = self.biquad.step(*x);
+                }
+            }
         }
-        self.flush();
+        self.biquad.flush();
     }
 }
 

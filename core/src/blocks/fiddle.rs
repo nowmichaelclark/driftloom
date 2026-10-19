@@ -3,22 +3,21 @@
 //! The note's extra values: the note it is joined to (NaN if none), then
 //! three draws, its vibrato's rate, rate at the end and depth (none for a
 //! note under half a second). It plays through the fiddle body
-//! (`body::FIDDLE`).
+//! (`own::FIDDLE_BODY`).
 
 // Web Audio's parameters are 32-bit floats, set from the host's 64-bit
 // numbers: a voice narrows every value it hands one.
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 
-use super::body;
-use super::osc::{Part, TableOsc};
-use super::shared::{
-    A440, SLUR_ATTACK, UNITY, VIBRATO_MIN_DUR, given, midi_to_freq, pitch_of, speak, starts_in,
-};
+use super::lfo::Lfo;
+use super::own;
+use super::osc::{self, Oscillator, Shape};
+use super::shared::{A440, SLUR_ATTACK, UNITY, VIBRATO_MIN_DUR, given, midi_to_freq, speak};
 
 /// The fiddle's level, to its layer's median (`FIDDLE_LEVEL` in synth.js).
 const FIDDLE_LEVEL: f64 = 0.0736;
@@ -39,15 +38,12 @@ pub struct Vibrato {
 
 /// Fiddle: a bowed string. The `bowed` wave through the violin's body (one
 /// per channel, in `Core`), an attack sized to the note, a slur from the
-/// note before when it is joined to it, and on long notes a vibrato that
-/// rides on the detune, arriving once the note has settled.
+/// note before when it is joined to it, and on long notes a vibrato (an
+/// LFO into its `DETUNE`) arriving once the note has settled.
 pub struct Fiddle {
-    osc: TableOsc,
-    pitch: Param,
+    osc: Oscillator,
     vibrato: bool,
-    lfo: TableOsc,
-    lfo_rate: Param,
-    lfo_depth: Param,
+    lfo: Lfo,
     envelope: Param,
 }
 
@@ -56,15 +52,7 @@ impl Fiddle {
     /// starting it sets every value a render reads.
     #[must_use]
     pub const fn new() -> Self {
-        Fiddle {
-            osc: TableOsc::new(),
-            pitch: Param::new(0.0),
-            vibrato: false,
-            lfo: TableOsc::new(),
-            lfo_rate: Param::new(0.0),
-            lfo_depth: Param::new(0.0),
-            envelope: Param::new(0.0),
-        }
+        Fiddle { osc: Oscillator::new(), vibrato: false, lfo: Lfo::new(), envelope: Param::new(0.0) }
     }
 
     /// `prev` is the note this one is joined to, if any (`opts.prev`).
@@ -84,34 +72,28 @@ impl Fiddle {
         // slide, unless the step is a repeat or wider than a fourth.
         // A repeat is the same number the host sent twice.
         #[allow(clippy::float_cmp)]
-        let slurred = match prev {
+        match prev {
             Some(p) if midi != p && (midi - p).abs() <= SLUR_MAX_STEP => {
-                self.pitch.reset(A440);
-                self.pitch.set_value_at_time(midi_to_freq(p) as f32, time);
+                self.osc.set(Shape::Bowed, A440, 0.0, time, time + dur + 0.4, rate);
+                let pitch = self.osc.freq();
+                pitch.set_value_at_time(midi_to_freq(p) as f32, time);
                 let reach = (dur * 0.12).clamp(0.02, 0.045);
-                self.pitch
-                    .exponential_ramp_to_value_at_time(f as f32, time + reach, time);
-                true
+                pitch.exponential_ramp_to_value_at_time(f as f32, time + reach, time);
             }
-            _ => false,
-        };
-        if !slurred {
-            self.pitch.reset(f as f32);
+            _ => self.osc.set(Shape::Bowed, f as f32, 0.0, time, time + dur + 0.4, rate),
         }
         self.vibrato = vib.is_some();
         if let Some(v) = vib {
-            self.lfo_rate.reset(A440);
-            self.lfo_rate.set_value_at_time(v.rate as f32, time);
-            self.lfo_rate
-                .linear_ramp_to_value_at_time(v.rate_end as f32, time + dur, time);
+            self.lfo.set(A440, UNITY, time, time + dur + 0.4, rate);
+            let r = self.lfo.rate();
+            r.set_value_at_time(v.rate as f32, time);
+            r.linear_ramp_to_value_at_time(v.rate_end as f32, time + dur, time);
             let onset = (dur * 0.3).min(0.3);
-            let d = &mut self.lfo_depth;
-            d.reset(UNITY);
+            let d = self.lfo.depth();
             d.set_value_at_time(0.0, time);
             d.set_value_at_time(0.0, time + onset);
             d.linear_ramp_to_value_at_time((v.depth * 0.6) as f32, time + onset + 0.2, time);
             d.linear_ramp_to_value_at_time(v.depth as f32, time + dur, time);
-            self.lfo.schedule(time, time + dur + 0.4, rate);
         }
         let attack = if prev.is_some() {
             SLUR_ATTACK
@@ -123,9 +105,7 @@ impl Fiddle {
         g.set_value_at_time(0.0001, time);
         g.linear_ramp_to_value_at_time((vel * FIDDLE_LEVEL) as f32, time + attack, time);
         g.set_target_at_time(0.0001, time + dur * 0.9, 0.07);
-        self.osc.schedule(time, time + dur + 0.4, rate);
     }
-
 
     fn start_frame(&self) -> u64 {
         self.osc.start_frame()
@@ -161,70 +141,29 @@ impl Block for Fiddle {
     /// Add this block into `out`, the fiddle's bus for its channel: the body
     /// comes after, shared by every fiddle note in the channel.
     fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
-        let (rate, waves) = (cx.rate, cx.waves);
-        let r = rate as f32;
-        // The detune, in cents: the vibrato's sine through its depth.
-        // Connected to the vibrato, the detune moves for the whole note,
-        // even before the vibrato's own start.
+        // The vibrato, in cents, into the detune. Connected to it, the
+        // detune moves for the whole note, even before the vibrato's own
+        // start.
         let mut cents = [0.0f32; QUANTUM];
-        if self.vibrato {
-            let mut lfo_freq = [0.0f32; QUANTUM];
-            let first = starts_in(self.lfo.start_frame(), block);
-            let lfo_pitch = pitch_of(
-                &mut self.lfo_rate,
-                block,
-                rate,
-                first,
-                &mut lfo_freq,
-                Part::Steady(0.0),
-            );
-            let mut wave = [0.0f32; QUANTUM];
-            let (lo, hi) = self
-                .lfo
-                .render(block, &waves.sine, &lfo_pitch, r, &mut wave);
-            // Feeding only the detune, the depth is first rendered when the
-            // fiddle starts: clamped then, as above.
-            if first {
-                self.lfo_depth.clamp_before(block, rate);
-            }
-            let mut depth = [0.0f32; QUANTUM];
-            self.lfo_depth.fill(block, rate, &mut depth);
-            for ((c, w), d) in cents
-                .iter_mut()
-                .zip(wave.iter())
-                .zip(depth.iter())
-                .take(hi)
-                .skip(lo)
-            {
-                *c = *w * *d;
-            }
-        }
-        let detune = if self.vibrato {
-            Part::Moving(&cents)
+        let mods = if self.vibrato {
+            self.lfo.render(block, cx, &mut cents);
+            Mods::NONE.with(osc::DETUNE, &cents)
         } else {
-            Part::Steady(0.0)
+            Mods::NONE
         };
-        let mut freq = [0.0f32; QUANTUM];
-        let first = starts_in(self.osc.start_frame(), block);
-        let pitch = pitch_of(&mut self.pitch, block, rate, first, &mut freq, detune);
         let mut wave = [0.0f32; QUANTUM];
-        let (lo, hi) = self.osc.render(block, &waves.bowed, &pitch, r, &mut wave);
+        self.osc.render_mod(block, cx, &mut wave, &mods);
+        let (lo, hi) = self.osc.played();
         let mut envelope = [0.0f32; QUANTUM];
-        self.envelope.fill(block, rate, &mut envelope);
-        for ((y, w), g) in out
-            .iter_mut()
-            .zip(wave.iter())
-            .zip(envelope.iter())
-            .take(hi)
-            .skip(lo)
-        {
+        self.envelope.fill(block, cx.rate, &mut envelope);
+        for ((y, w), g) in out.iter_mut().zip(wave.iter()).zip(envelope.iter()).take(hi).skip(lo) {
             *y += *w * *g;
         }
     }
 }
 
 impl Voice for Fiddle {
-    const BODY: Option<usize> = Some(body::FIDDLE);
+    const THROUGH: Option<usize> = Some(own::FIDDLE_BODY);
 
     /// The vibrato's rate, where it ends and its depth, for a note of half
     /// a second or more.

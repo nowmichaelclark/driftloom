@@ -14,6 +14,15 @@
 //! - [`Block`]: what a block takes in and puts out (one [`Signal`], in
 //!   place), what sets it (its `Settings`), and when it sounds (its span).
 //!   A [`Voice`] is a block whose settings are a [`Note`].
+//!   Three seams are optional parts of it (queue item 46b), each with a
+//!   default, so a block that does not use one writes nothing for it:
+//!   - **modulation:** a signal into a setting ([`Block::MODS`],
+//!     [`Block::render_mod`]), as Web Audio connects a node into an
+//!     `AudioParam`;
+//!   - **stereo:** a second signal ([`Stereo`], [`Block::render_stereo`]),
+//!     which the core's mono render never calls, so it pays nothing for it;
+//!   - **channel events:** a damp, a release or a bend sent to the notes
+//!     still held in a channel ([`Event`], [`Voice::event`]).
 //! - [`Context`]: what a block may read besides its own state -- the sample
 //!   rate, the wavetables and the noise -- and nothing else.
 //! - The registry (`blocks`): one line a block. The line declares the
@@ -25,12 +34,96 @@
 //! through `dyn`: the core dispatches on a `match` the registry writes, and
 //! a voice calls its parts directly, by type.
 
+use crate::math;
 use crate::rng::{Draws, Key};
 use crate::wave::Waves;
 use crate::{EXTRA, QUANTUM};
 
 /// One block of samples, mono: the unit every block works in.
 pub type Signal = [f32; QUANTUM];
+
+/// One block of samples, stereo: the left side, then the right. A second
+/// signal beside the first rather than a wider `Signal`, so the mono render
+/// keeps its shape and pays nothing for stereo (`docs/CORE.md`, promise 9).
+pub type Stereo = [Signal; 2];
+
+/// A setting of a block that a signal can drive (`Block::MODS`).
+#[derive(Clone, Copy)]
+pub struct Mod {
+    /// What the setting is, in plain ASCII (`"freq"`), for the kit's report.
+    pub name: &'static str,
+    /// How far the test kit swings it when it probes it, in the setting's
+    /// own unit (Hz, cents, dB...): a swing a listener would hear, inside
+    /// what the block takes.
+    pub swing: f32,
+}
+
+/// The most settings one block lets a signal drive.
+pub const MAX_MODS: usize = 4;
+
+/// What drives a block's settings for one render: for each setting in its
+/// `MODS`, by number, a signal or nothing. At every frame a driven setting
+/// is its own value -- its automation, if it has some -- plus the signal,
+/// as Web Audio sums an `AudioParam`'s value and the nodes connected into
+/// it. A setting with a signal connected moves for the whole block, even
+/// where the signal is zero (Chromium's rule, which an oscillator's start
+/// depends on). Several signals into one setting are summed by whoever
+/// connects them. Borrowed, on the stack: nothing allocates.
+#[derive(Clone, Copy)]
+pub struct Mods<'a>([Option<&'a Signal>; MAX_MODS]);
+
+impl<'a> Mods<'a> {
+    /// No setting driven: the block renders as `Block::render` does.
+    pub const NONE: Mods<'static> = Mods([None; MAX_MODS]);
+
+    /// These, with `signal` driving setting number `setting` (a number past
+    /// `MAX_MODS` is ignored).
+    #[must_use]
+    pub fn with(mut self, setting: usize, signal: &'a Signal) -> Self {
+        if let Some(slot) = self.0.get_mut(setting) {
+            *slot = Some(signal);
+        }
+        self
+    }
+
+    /// The signal driving setting number `setting`, if one does.
+    #[must_use]
+    pub fn get(&self, setting: usize) -> Option<&'a Signal> {
+        self.0.get(setting).copied().flatten()
+    }
+}
+
+/// The kinds of channel event (`Event::kind`). The numbers are the host's.
+pub mod event {
+    /// A damp: the note lets go at the event's time, on its own short
+    /// release (a new strum stopping the strings of the one before).
+    pub const DAMP: u32 = 0;
+    /// A release: the note lets go at the event's time, on its own
+    /// release, as if its length had ended there.
+    pub const RELEASE: u32 = 1;
+    /// A bend: the note's pitch moves by `value` cents from the event's
+    /// time.
+    pub const BEND: u32 = 2;
+    /// How many kinds there are.
+    pub const KINDS: usize = 3;
+}
+
+/// Something a host sends to the notes of a channel (`Core::event`) rather
+/// than to one note: which kind (`event::DAMP` and the rest), when, and its
+/// value (a bend's cents; nothing for the others). Each note still held at
+/// `time` that arrived since the channel's last event of the same kind
+/// hears it, once (`Voice::event`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Event {
+    /// Which kind (`event::DAMP`, `event::RELEASE`, `event::BEND`).
+    pub kind: u32,
+    /// When, in seconds on the host's clock. A note already sounding when
+    /// the event arrives hears it at this time, or at the next block if
+    /// that has been rendered; a note still waiting hears it as it starts.
+    pub time: f64,
+    /// Its value: a bend's cents.
+    pub value: f64,
+}
 
 /// What every block may read while it starts and renders, besides its own
 /// state. Read-only, built once when the core starts at a rate: the same
@@ -64,7 +157,12 @@ pub struct Probe<S: 'static> {
 /// *processor* (`INPUT = true`: a filter, a body, a compressor) replaces
 /// the signal with its output. It is set by its `Settings`, a plain value
 /// handed over at `start`; inside a voice, a setting that moves over time
-/// is a `param::Param`, as Web Audio's `AudioParam` is.
+/// is a `param::Param`, as Web Audio's `AudioParam` is, and a setting a
+/// signal drives is one of its `MODS` (`render_mod`).
+///
+/// A block is mono. In a stereo signal ([`Stereo`], `render_stereo`) a mono
+/// source plays centered and a mono processor hears its two sides folded
+/// to one; a block with a stereo render of its own says `STEREO`.
 ///
 /// Every block also has an inherent `const fn new()`, all zeros, and
 /// `Default`: the registry builds pools of blocks in a `const`, which a
@@ -95,6 +193,87 @@ pub trait Block {
     /// Render the `QUANTUM` frames from frame `block` (a multiple of
     /// `QUANTUM`, in order) into `signal`.
     fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal);
+
+    /// The settings a signal can drive, by number: `mods.get(i)` in
+    /// `render_mod` drives `MODS[i]`. The kit probes each one.
+    const MODS: &'static [Mod] = &[];
+
+    /// Render as `render` does, with the signals in `mods` driving the
+    /// settings in `MODS` (see [`Mods`]). A block with `MODS` writes this,
+    /// and its `render` is `render_mod` with [`Mods::NONE`], which the
+    /// compiler folds away; one without leaves both as they are.
+    fn render_mod(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods) {
+        let _ = mods;
+        self.render(block, cx, signal);
+    }
+
+    /// Whether it has a stereo render of its own (`render_stereo`): a
+    /// panner, a room. Its `render` is then what a mono render plays.
+    const STEREO: bool = false;
+
+    /// Render the block from frame `block` into a stereo signal, both
+    /// sides. Called only by a stereo render, never by the core's mono one,
+    /// so a block pays nothing for it unless it is used.
+    ///
+    /// By default, for a mono block: a source renders once and adds the
+    /// same samples into both sides (centered: each side is its mono render,
+    /// bit for bit); a processor hears the two sides folded to one,
+    /// `(left + right) / 2`, and puts its output on both (fed the same on
+    /// both sides, each side is its mono render, bit for bit). For a mono
+    /// processor that should run on each side apart, use [`Pair`].
+    fn render_stereo(&mut self, block: u64, cx: &Context, signal: &mut Stereo) {
+        let [left, right] = signal;
+        let mut mono = [0.0; QUANTUM];
+        if Self::INPUT {
+            for ((m, l), r) in mono.iter_mut().zip(left.iter()).zip(right.iter()) {
+                *m = f32::midpoint(*l, *r);
+            }
+            self.render(block, cx, &mut mono);
+            *left = mono;
+            *right = mono;
+        } else {
+            self.render(block, cx, &mut mono);
+            for ((l, r), m) in left.iter_mut().zip(right.iter_mut()).zip(mono.iter()) {
+                *l += *m;
+                *r += *m;
+            }
+        }
+    }
+}
+
+/// A mono processor as dual mono: one copy of it on each side of a stereo
+/// signal, each with its own state. Its mono render is the left copy's.
+pub struct Pair<B>(pub B, pub B);
+
+impl<B: Block> Block for Pair<B> {
+    type Settings = B::Settings;
+    const PROBES: &'static [Probe<B::Settings>] = B::PROBES;
+    const INPUT: bool = B::INPUT;
+    const MODS: &'static [Mod] = B::MODS;
+    const STEREO: bool = true;
+
+    fn start(&mut self, settings: &Self::Settings, cx: &Context) {
+        self.0.start(settings, cx);
+        self.1.start(settings, cx);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        self.0.span()
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal) {
+        self.0.render(block, cx, signal);
+    }
+
+    fn render_mod(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods) {
+        self.0.render_mod(block, cx, signal, mods);
+    }
+
+    fn render_stereo(&mut self, block: u64, cx: &Context, signal: &mut Stereo) {
+        let [left, right] = signal;
+        self.0.render(block, cx, left);
+        self.1.render(block, cx, right);
+    }
 }
 
 /// A note, as a host hands it to `Core::note`: everything a voice is set by.
@@ -122,9 +301,6 @@ pub struct Note {
     pub extra: [f64; EXTRA],
     /// Where the note sits in its loop, for every draw it makes (`rng`).
     pub draws: Draws,
-    /// When a later strum damps it, if one came before it started: only a
-    /// strummed nylon string is damped (`Core::damp`).
-    pub damp: Option<f64>,
 }
 
 impl Note {
@@ -142,7 +318,6 @@ impl Note {
             parts,
             extra,
             draws: Draws::new(Key { seed: 46, pass: 0, step: 0, ord: 0 }, channel),
-            damp: None,
         }
     }
 }
@@ -152,13 +327,23 @@ pub const NO_EXTRA: [f64; EXTRA] = [f64::NAN; EXTRA];
 
 /// A block played by a note: a voice the host plays by number.
 ///
-/// Its three hooks are optional; a voice that draws nothing, plays no noise
-/// and has no body writes `impl Voice for MyVoice {}`.
+/// Its four hooks are optional; a voice that draws nothing, plays no noise,
+/// plays through nothing and hears no channel event writes
+/// `impl Voice for MyVoice {}`.
 pub trait Voice: Block<Settings = Note> {
-    /// The body it plays through, one of `blocks::body`'s kinds: its notes
-    /// sum into that body's bus in their channel, and the core runs the
-    /// body once on the sum (as `_body()` in synth.js), not once a note.
-    const BODY: Option<usize> = None;
+    /// The channel's own block it plays through (`blocks::own`, the
+    /// registry's `channel` list: today the bodies): its notes sum into that
+    /// block's bus in their channel, and the core runs the block once on the
+    /// sum (as `_body()` in synth.js), not once a note.
+    const THROUGH: Option<usize> = None;
+
+    /// Hear a channel event (`Core::event`), at `event.time`: a damp, a
+    /// release or a bend. A voice that does nothing with a kind ignores it,
+    /// which is the default. Called once the note has started; a note that
+    /// heard the event while it waited hears it right after `start`.
+    fn event(&mut self, event: &Event) {
+        let _ = event;
+    }
 
     /// Settle what the note leaves to chance, as it arrives: overwrite the
     /// places in `note.extra` the voice reads its draws from, from
@@ -178,11 +363,25 @@ pub trait Voice: Block<Settings = Note> {
     }
 }
 
+/// How `solo` plays a block alone (the test kit, `dlrender --block`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Play {
+    /// Its mono render, `Block::render`.
+    Mono,
+    /// Its mono render with setting number `n` of its `MODS` driven by
+    /// `drive`: `Block::render_mod`.
+    Driven(usize),
+    /// Its stereo render, `Block::render_stereo`, a processor fed the same
+    /// on both sides; each block handed over is the two sides interleaved,
+    /// left first.
+    Stereo,
+}
+
 /// Play one block alone, as the test kit and `dlrender --block` do: start
-/// it with `settings`, then render it from frame 0, a block at a time, and
-/// hand each block to `take`. A source plays until its span ends, or for
-/// `longest` seconds at most; a processor plays one second of the core's
-/// noise (`feed`). Returns how many blocks it rendered.
+/// it with `settings`, then render it from frame 0, a block at a time, the
+/// way `play` says, and hand each block to `take`. A source plays until its
+/// span ends, or for `longest` seconds at most; a processor plays one second
+/// of the core's noise (`feed`). Returns how many blocks it rendered.
 // A few seconds of frames, a positive count well inside a u64.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn solo<B: Block>(
@@ -190,7 +389,8 @@ pub fn solo<B: Block>(
     settings: &B::Settings,
     cx: &Context,
     longest: f64,
-    mut take: impl FnMut(&Signal),
+    play: Play,
+    mut take: impl FnMut(&[f32]),
 ) -> u64 {
     block.start(settings, cx);
     let q = QUANTUM as u64;
@@ -200,16 +400,48 @@ pub fn solo<B: Block>(
     } else {
         block.span().1.min(seconds(longest)).div_ceil(q)
     };
+    let swing = |n: usize| B::MODS.get(n).map_or(0.0, |m| m.swing);
     for n in 0..blocks {
         let frame = n * q;
         let mut signal = [0.0; QUANTUM];
         if B::INPUT {
             feed(frame, cx, &mut signal);
         }
-        block.render(frame, cx, &mut signal);
-        take(&signal);
+        match play {
+            Play::Mono => {
+                block.render(frame, cx, &mut signal);
+                take(&signal);
+            }
+            Play::Driven(setting) => {
+                let mut m = [0.0; QUANTUM];
+                drive(frame, swing(setting), cx.rate, &mut m);
+                block.render_mod(frame, cx, &mut signal, &Mods::NONE.with(setting, &m));
+                take(&signal);
+            }
+            Play::Stereo => {
+                let mut both = [signal, signal];
+                block.render_stereo(frame, cx, &mut both);
+                let [l, r] = both;
+                let mut out = [0.0; 2 * QUANTUM];
+                for ((pair, a), b) in out.as_chunks_mut::<2>().0.iter_mut().zip(l.iter()).zip(r.iter()) {
+                    *pair = [*a, *b];
+                }
+                take(&out);
+            }
+        }
     }
     blocks
+}
+
+/// What the test kit drives a setting with when it probes it: a 3 Hz sine
+/// of `swing` (the setting's `Mod::swing`), from frame `frame` on.
+// A frame count as a float: exact far past any probe's length.
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+pub fn drive(frame: u64, swing: f32, rate: f64, signal: &mut Signal) {
+    for (i, x) in (frame..).zip(signal.iter_mut()) {
+        let t = i as f64 / rate;
+        *x = (f64::from(swing) * math::sin(core::f64::consts::TAU * 3.0 * t)) as f32;
+    }
 }
 
 /// What a processor is fed when it plays alone: the core's noise from

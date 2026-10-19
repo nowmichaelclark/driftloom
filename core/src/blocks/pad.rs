@@ -8,11 +8,11 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::math;
 use crate::param::Param;
 
-use super::filter::{Biquad, Kind};
+use super::filter::{self, Filter, Kind};
 use super::osc::{Pitch, TableOsc};
 use super::shared::{CUTOFF_DEFAULT, UNITY, midi_to_freq, release};
 
@@ -28,7 +28,7 @@ pub struct PadNote {
     pitch: f32,
     gain: Param,
     cutoff: Param,
-    filter: Biquad,
+    filter: Filter,
 }
 
 impl PadNote {
@@ -41,7 +41,7 @@ impl PadNote {
             pitch: 0.0,
             gain: Param::new(0.0),
             cutoff: Param::new(0.0),
-            filter: Biquad::new(),
+            filter: Filter::new(),
         }
     }
 
@@ -63,7 +63,7 @@ impl PadNote {
         c.reset(CUTOFF_DEFAULT);
         c.set_value_at_time(700.0, time);
         c.linear_ramp_to_value_at_time(1900.0, time + dur * 0.5, time);
-        self.filter.reset();
+        self.filter.set(filter::Settings { kind: Kind::Lowpass, freq: 0.0, q: PAD_Q, gain: 0.0 }, rate as f32);
         for osc in &mut self.oscs {
             osc.schedule(time, stop + 0.01, rate);
         }
@@ -110,21 +110,16 @@ impl Block for PadNote {
             }
         }
         // The filter runs every frame of the block, as a node does: before
-        // the triangles start its input is silence.
+        // the triangles start its input is silence. Its cutoff is all
+        // envelope, into its frequency.
         let mut cutoff = [0.0f32; QUANTUM];
         self.cutoff.fill(block, rate, &mut cutoff);
+        self.filter.render_mod(block, cx, &mut sum, &Mods::NONE.with(filter::FREQ, &cutoff));
         let mut gain = [0.0f32; QUANTUM];
         self.gain.fill(block, rate, &mut gain);
-        for (((y, x), c), g) in out
-            .iter_mut()
-            .zip(sum.iter())
-            .zip(cutoff.iter())
-            .zip(gain.iter())
-        {
-            self.filter.set(Kind::Lowpass, *c, PAD_Q, 0.0, r);
-            *y += self.filter.step(*x) * *g;
+        for ((y, x), g) in out.iter_mut().zip(sum.iter()).zip(gain.iter()) {
+            *y += *x * *g;
         }
-        self.filter.flush();
     }
 }
 
