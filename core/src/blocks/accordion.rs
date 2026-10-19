@@ -3,7 +3,7 @@
 //!
 //! The note's first extra value is the note it is joined to (NaN if none);
 //! the second is drawn, how late its second reed comes in. It plays
-//! through the accordion body (`body::ACCORDION`).
+//! through the accordion body (`own::ACCORDION_BODY`).
 
 // Web Audio's parameters are 32-bit floats, set from the host's 64-bit
 // numbers: a voice narrows every value it hands one.
@@ -14,7 +14,7 @@ use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 
-use super::body;
+use super::own;
 use super::osc::{Pitch, TableOsc};
 use super::shared::{SLUR_ATTACK, UNITY, midi_to_freq, speak};
 
@@ -158,7 +158,7 @@ impl Block for Accordion {
 }
 
 impl Voice for Accordion {
-    const BODY: Option<usize> = Some(body::ACCORDION);
+    const THROUGH: Option<usize> = Some(own::ACCORDION_BODY);
 
     /// How late its second reed comes in.
     fn settle(note: &mut Note) {

@@ -13,14 +13,13 @@
 #![allow(clippy::many_single_char_names)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 
-use super::filter::{Biquad, Kind};
-use super::osc::{Part, Pitch, TableOsc, frame_at};
-use super::shared::{
-    A440, CUTOFF_DEFAULT, FILTER_TAIL, UNITY, midi_to_freq, pitch_of, settle_slide, starts_in,
-};
+use super::filter::{self, Filter, Kind};
+use super::lfo::Lfo;
+use super::osc::{self, Oscillator, Shape, frame_at};
+use super::shared::{A440, CUTOFF_DEFAULT, FILTER_TAIL, UNITY, midi_to_freq, settle_slide};
 
 /// The vibrato of the moog and the whistle, in Hz.
 const LEAD_VIBRATO: f32 = 5.6;
@@ -36,19 +35,15 @@ pub enum LeadKind {
 
 /// `voice('moog')` and `voice('whistle')`: one oscillator (the moog's own
 /// wave, or the built-in triangle) whose pitch is automated, with a
-/// vibrato on its detune that ramps in, through a resonant lowpass whose
-/// cutoff moves, under a gain. The whistle may scoop or slide into the
-/// note (`_slide`); where from and how long it takes are drawn
-/// (`Voice::settle`).
+/// vibrato into its detune that ramps in, through a resonant lowpass whose
+/// cutoff an envelope sweeps (into its `FREQ`), under a gain. The whistle
+/// may scoop or slide into the note (`_slide`); where from and how long it
+/// takes are drawn (`Voice::settle`).
 pub struct Lead {
-    kind: LeadKind,
-    osc: TableOsc,
-    pitch: Param,
-    lfo: TableOsc,
-    depth: Param,
+    osc: Oscillator,
+    lfo: Lfo,
     cutoff: Param,
-    q: f32,
-    filter: Biquad,
+    filter: Filter,
     gain: Param,
     end: u64,
 }
@@ -59,14 +54,10 @@ impl Lead {
     #[must_use]
     pub const fn new() -> Self {
         Lead {
-            kind: LeadKind::Moog,
-            osc: TableOsc::new(),
-            pitch: Param::new(0.0),
-            lfo: TableOsc::new(),
-            depth: Param::new(0.0),
+            osc: Oscillator::new(),
+            lfo: Lfo::new(),
             cutoff: Param::new(0.0),
-            q: 0.0,
-            filter: Biquad::new(),
+            filter: Filter::new(),
             gain: Param::new(0.0),
             end: 0,
         }
@@ -87,10 +78,10 @@ impl Lead {
     ) {
         let whistle = kind == LeadKind::Whistle;
         let f = midi_to_freq(midi);
-        self.kind = kind;
         let stop = time + dur + 0.5;
-        let p = &mut self.pitch;
-        p.reset(A440);
+        let shape = if whistle { Shape::Triangle } else { Shape::LeadMoog };
+        self.osc.set(shape, A440, 0.0, time, stop, rate);
+        let p = self.osc.freq();
         match slide.filter(|_| whistle) {
             Some((from, reach)) => {
                 p.set_value_at_time(from as f32, time);
@@ -100,14 +91,16 @@ impl Lead {
                 p.set_value_at_time(f as f32, time);
             }
         }
-        let d = &mut self.depth;
-        d.reset(UNITY);
+        self.lfo.set(LEAD_VIBRATO, UNITY, time, stop, rate);
+        let d = self.lfo.depth();
         d.set_value_at_time(0.0, time);
         d.linear_ramp_to_value_at_time(if whistle { 12.0 } else { 5.0 }, time + dur.min(0.6), time);
         let c = &mut self.cutoff;
         c.reset(CUTOFF_DEFAULT);
+        let q = if whistle { 8.0 } else { 5.0 };
+        // The cutoff is all envelope, into the filter's frequency.
+        self.filter.set(filter::Settings { kind: Kind::Lowpass, freq: 0.0, q, gain: 0.0 }, rate as f32);
         if whistle {
-            self.q = 8.0;
             c.set_value_at_time((f * 7.0).min(9000.0) as f32, time);
             c.exponential_ramp_to_value_at_time(
                 (f * 1.6).max(220.0) as f32,
@@ -115,7 +108,6 @@ impl Lead {
                 time,
             );
         } else {
-            self.q = 5.0;
             c.set_value_at_time(1600.0, time);
             c.exponential_ramp_to_value_at_time(1100.0, time + (dur * 0.8).max(0.12), time);
         }
@@ -128,12 +120,8 @@ impl Lead {
             time,
         );
         g.set_target_at_time(0.0001, time + dur * 0.75, 0.1);
-        self.filter.reset();
-        self.osc.schedule(time, stop, rate);
-        self.lfo.schedule(time, stop, rate);
         self.end = frame_at(stop + FILTER_TAIL, rate);
     }
-
 
     fn start_frame(&self) -> u64 {
         self.osc.start_frame()
@@ -164,63 +152,23 @@ impl Block for Lead {
     }
 
     fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
-        let (rate, waves) = (cx.rate, cx.waves);
-        let r = rate as f32;
-        // The detune, in cents: the vibrato's sine through its depth. It
-        // moves for the whole note, even before the depth has risen.
-        let steady = Pitch::Steady {
-            freq: LEAD_VIBRATO,
-            detune: 0.0,
-        };
-        let mut sine = [0.0f32; QUANTUM];
-        let (lo, hi) = self.lfo.render(block, &waves.sine, &steady, r, &mut sine);
-        // Feeding only the detune, the depth is first rendered when the
-        // note starts: its events are clamped to that block.
-        if starts_in(self.lfo.start_frame(), block) {
-            self.depth.clamp_before(block, rate);
-        }
-        let mut depth = [0.0f32; QUANTUM];
-        self.depth.fill(block, rate, &mut depth);
+        let rate = cx.rate;
+        // The vibrato, in cents, into the detune: connected, it moves for the
+        // whole note, even before the depth has risen. Feeding only the
+        // detune, the depth is first rendered when the note starts.
         let mut cents = [0.0f32; QUANTUM];
-        for ((c, w), d) in cents
-            .iter_mut()
-            .zip(sine.iter())
-            .zip(depth.iter())
-            .take(hi)
-            .skip(lo)
-        {
-            *c = *w * *d;
-        }
-        let mut freq = [0.0f32; QUANTUM];
-        let first = starts_in(self.osc.start_frame(), block);
-        let pitch = pitch_of(
-            &mut self.pitch,
-            block,
-            rate,
-            first,
-            &mut freq,
-            Part::Moving(&cents),
-        );
-        let wave = match self.kind {
-            LeadKind::Moog => &waves.lead_moog,
-            LeadKind::Whistle => &waves.triangle,
-        };
+        self.lfo.render(block, cx, &mut cents);
         let mut tone = [0.0f32; QUANTUM];
-        self.osc.render(block, wave, &pitch, r, &mut tone);
+        self.osc.render_mod(block, cx, &mut tone, &Mods::NONE.with(osc::DETUNE, &cents));
+        // The filter runs every frame of the block, its cutoff swept.
         let mut cutoff = [0.0f32; QUANTUM];
         self.cutoff.fill(block, rate, &mut cutoff);
+        self.filter.render_mod(block, cx, &mut tone, &Mods::NONE.with(filter::FREQ, &cutoff));
         let mut gain = [0.0f32; QUANTUM];
         self.gain.fill(block, rate, &mut gain);
-        for (((y, x), c), g) in out
-            .iter_mut()
-            .zip(tone.iter())
-            .zip(cutoff.iter())
-            .zip(gain.iter())
-        {
-            self.filter.set(Kind::Lowpass, *c, self.q, 0.0, r);
-            *y += self.filter.step(*x) * *g;
+        for ((y, x), g) in out.iter_mut().zip(tone.iter()).zip(gain.iter()) {
+            *y += *x * *g;
         }
-        self.filter.flush();
     }
 }
 

@@ -23,12 +23,12 @@
 #![allow(clippy::too_many_lines)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 use crate::wave::Waves;
 
-use super::filter::{Biquad, Kind};
+use super::filter::{self, Biquad, Filter, Kind};
 use super::noise_source::NoiseSource;
 use super::osc::{Part, TableOsc, frame_at};
 use super::shared::{
@@ -120,7 +120,7 @@ pub struct Bass {
     pitch: Param,
     cutoff: Param,
     q: f32,
-    filter: Biquad,
+    filter: Filter,
     gain: Param,
     /// The sine underneath (`sub`, `pluckbass`), or both of `fifths`'.
     sines: [Sine; 2],
@@ -147,7 +147,7 @@ impl Bass {
             pitch: Param::new(0.0),
             cutoff: Param::new(0.0),
             q: 0.0,
-            filter: Biquad::new(),
+            filter: Filter::new(),
             gain: Param::new(0.0),
             sines: [const { Sine::new() }; 2],
             sine_count: 0,
@@ -261,7 +261,8 @@ impl Bass {
                 }
                 g.set_target_at_time(0.0001, time + dur, release);
             }
-            self.filter.reset();
+            // The cutoff is all envelope, into the filter's frequency.
+            self.filter.set(filter::Settings { kind: Kind::Lowpass, freq: 0.0, q: self.q, gain: 0.0 }, rate as f32);
             self.osc.schedule(time, stop, rate);
             starts = starts.min(self.osc.start_frame());
             ends = ends.max(self.osc.stop_frame() + frame_at(FILTER_TAIL, rate));
@@ -368,21 +369,16 @@ impl Block for Bass {
             };
             let mut tone = [0.0f32; QUANTUM];
             self.osc.render(block, wave, &pitch, r, &mut tone);
+            // The filter runs every frame of the block, as a node does, its
+            // cutoff swept.
             let mut cutoff = [0.0f32; QUANTUM];
             self.cutoff.fill(block, rate, &mut cutoff);
+            self.filter.render_mod(block, cx, &mut tone, &Mods::NONE.with(filter::FREQ, &cutoff));
             let mut gain = [0.0f32; QUANTUM];
             self.gain.fill(block, rate, &mut gain);
-            // The filter runs every frame of the block, as a node does.
-            for (((y, x), c), g) in out
-                .iter_mut()
-                .zip(tone.iter())
-                .zip(cutoff.iter())
-                .zip(gain.iter())
-            {
-                self.filter.set(Kind::Lowpass, *c, self.q, 0.0, r);
-                *y += self.filter.step(*x) * *g;
+            for ((y, x), g) in out.iter_mut().zip(tone.iter()).zip(gain.iter()) {
+                *y += *x * *g;
             }
-            self.filter.flush();
         }
         for s in self.sines.iter_mut().take(self.sine_count) {
             s.render(block, rate, waves, out);

@@ -40,8 +40,11 @@
 
 use crate::math;
 use crate::QUANTUM;
-use crate::block::{Block, Context, Probe, Signal};
+use crate::block::{Block, Context, Mod, Mods, Probe, Signal};
+use crate::param::{MAX_EVENTS, Param};
 use crate::wave::{Wave, Waves};
+
+use super::shared::starts_in;
 
 /// `TimeToSampleFrame`'s first step: the time in frames, to 1/1024 of one.
 pub fn frames(time: f64, rate: f64) -> f64 {
@@ -156,6 +159,27 @@ impl TableOsc {
         out: &mut [f32; QUANTUM],
     ) -> (usize, usize) {
         out.fill(0.0);
+        self.play::<false>(block, wave, pitch, rate, out)
+    }
+
+    /// The same, but added into `out` where it plays and leaving the rest
+    /// alone: the `Oscillator` block's way, with no copy between.
+    pub fn add(&mut self, block: u64, wave: &Wave, pitch: &Pitch, rate: f32, out: &mut [f32; QUANTUM]) -> (usize, usize) {
+        self.play::<true>(block, wave, pitch, rate, out)
+    }
+
+    // `render` and `add`: each sample written, or added (`ADD`). Frame
+    // counts and table sizes are far below 2^23, so their casts to floats
+    // are exact; the 32-bit narrowing is Chromium's own.
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    fn play<const ADD: bool>(
+        &mut self,
+        block: u64,
+        wave: &Wave,
+        pitch: &Pitch,
+        rate: f32,
+        out: &mut [f32; QUANTUM],
+    ) -> (usize, usize) {
         let end = block + QUANTUM as u64;
         let first = self.start >= block && self.start < end;
         // A start a hair past its frame (see `frame_at`) starts on that
@@ -189,11 +213,12 @@ impl TableOsc {
                 let pick = wave.pick(f);
                 let mut index = self.index;
                 for y in out.iter_mut().skip(lo).take(n) {
-                    *y = wave.read(index, pick);
-                    index = wrap_to(index + incr as f64, size);
+                    let v = wave.read(index, pick);
+                    *y = if ADD { *y + v } else { v };
+                    index = wrap_to(index + f64::from(incr), size);
                 }
                 // Chromium moves on by the whole block at once.
-                self.index = wrap_to(self.index + (n as f32 * incr) as f64, size);
+                self.index = wrap_to(self.index + f64::from(n as f32 * incr), size);
             }
             Pitch::Moving { freq, detune } => {
                 // The step at every frame, as Chromium works it out: the
@@ -216,7 +241,7 @@ impl TableOsc {
                     }
                     Part::Steady(c) => scale *= math::exp2f(c / 1200.0),
                 }
-                for i in incr.iter_mut() {
+                for i in &mut incr {
                     *i = within(*i, nyquist) * scale;
                 }
                 // The first block reads its steps from the block's start;
@@ -226,7 +251,8 @@ impl TableOsc {
                 let steps = incr.get(lo - shift..hi - shift).unwrap_or(&[]);
                 let mut index = self.index;
                 for (y, &step) in out.iter_mut().skip(lo).zip(steps) {
-                    *y = wave.read(index, wave.pick(inverse * step));
+                    let v = wave.read(index, wave.pick(inverse * step));
+                    *y = if ADD { *y + v } else { v };
                     index = wrap_to(index + step as f64, size);
                 }
                 self.index = index;
@@ -283,7 +309,8 @@ impl TableOsc {
     }
 }
 
-/// The tables an `Oscillator` block can play: Web Audio's built-in shapes.
+/// The tables an `Oscillator` block can play: Web Audio's built-in shapes
+/// and the core's own waves (`wave::Waves`).
 #[derive(Clone, Copy)]
 pub enum Shape {
     /// `'sine'`.
@@ -294,26 +321,56 @@ pub enum Shape {
     Saw,
     /// `'square'`.
     Square,
+    /// The fiddle's bowed string.
+    Bowed,
+    /// `_makeWave(1.5)`, the saw lead's.
+    LeadSaw,
+    /// The moog's.
+    LeadMoog,
+    /// `_makeWave(1.7)`, the analog lead's.
+    LeadAnalog,
+    /// The accordion's reed.
+    Reed,
+    /// The pan flute's pipe.
+    Pipe,
+    /// The nylon guitar's mellow layer.
+    NylonMellow,
+    /// The nylon guitar's bright layer.
+    NylonBright,
+    /// The sung voices' glottal pulse.
+    Glottal,
 }
 
 impl Shape {
-    fn table(self, waves: &Waves) -> &Wave {
+    /// Its table among `waves`.
+    #[must_use]
+    pub fn table(self, waves: &Waves) -> &Wave {
         match self {
             Shape::Sine => &waves.sine,
             Shape::Triangle => &waves.triangle,
             Shape::Saw => &waves.saw,
             Shape::Square => &waves.square,
+            Shape::Bowed => &waves.bowed,
+            Shape::LeadSaw => &waves.lead_saw,
+            Shape::LeadMoog => &waves.lead_moog,
+            Shape::LeadAnalog => &waves.lead_analog,
+            Shape::Reed => &waves.reed,
+            Shape::Pipe => &waves.pipe,
+            Shape::NylonMellow => &waves.nylon_mellow,
+            Shape::NylonBright => &waves.nylon_bright,
+            Shape::Glottal => &waves.glottal,
         }
     }
 }
 
-/// An oscillator's settings when it plays as a block: a steady pitch from
-/// `start` to `stop` seconds.
+/// An oscillator's settings when it plays as a block: a table, a pitch
+/// (automate the frequency after starting it, through `Oscillator::freq`),
+/// and when it starts and stops.
 #[derive(Clone, Copy)]
 pub struct Settings {
     /// The table.
     pub shape: Shape,
-    /// The frequency, in Hz.
+    /// The frequency, in Hz: its value before any automation.
     pub freq: f32,
     /// The detune, in cents.
     pub detune: f32,
@@ -323,31 +380,84 @@ pub struct Settings {
     pub stop: f64,
 }
 
-/// The oscillator as a block: `TableOsc` at a steady pitch, added into the
-/// signal. The voices drive their `TableOsc`s directly instead, with
-/// pitches that move frame by frame and tables of their own.
-pub struct Oscillator {
+/// The oscillator's setting a signal can drive (`Block::MODS`): its
+/// frequency, in Hz -- FM, where a modulator drives a carrier.
+pub const FREQ: usize = 0;
+/// Its detune, in cents -- a vibrato.
+pub const DETUNE: usize = 1;
+
+/// The oscillator as a block: `TableOsc` playing one of the core's tables,
+/// added into the signal. Its frequency is a `Param` (`freq`: an
+/// `OscillatorNode`'s `frequency`, which a voice automates for a slur or a
+/// slide), holding up to `N` events, so a steady oscillator (`N = 0`) pays
+/// nothing for one; its detune is steady. A signal can drive either
+/// (`FREQ`, `DETUNE`), added to it frame by frame, as Web Audio sums an
+/// `AudioParam` and the node connected into it.
+///
+/// The pitch is steady for a block (one frequency, read once, with the
+/// start rules that go with it; see the module notes) when the frequency's
+/// automation is not moving and no signal drives it; otherwise it moves,
+/// frame by frame -- a driven setting moves even where its signal is zero.
+pub struct Oscillator<const N: usize = MAX_EVENTS> {
     osc: TableOsc,
     shape: Shape,
-    freq: f32,
+    freq: Param<N>,
     detune: f32,
+    /// The frames of the last block it rendered that it sounded in.
+    played: (usize, usize),
 }
 
-impl Oscillator {
+impl<const N: usize> Oscillator<N> {
     /// A silent oscillator, all zeros.
     #[must_use]
     pub const fn new() -> Self {
-        Oscillator { osc: TableOsc::new(), shape: Shape::Sine, freq: 0.0, detune: 0.0 }
+        Oscillator { osc: TableOsc::new(), shape: Shape::Sine, freq: Param::new(0.0), detune: 0.0, played: (0, 0) }
+    }
+
+    /// Set it to play `shape` at `freq` Hz (the frequency's value before
+    /// any automation) and `detune` cents, from `start` to `stop` seconds,
+    /// at `rate` Hz, from the top of the table: `Block::start` with the
+    /// numbers, for a voice that has a rate rather than a `Context`.
+    pub fn set(&mut self, shape: Shape, freq: f32, detune: f32, start: f64, stop: f64, rate: f64) {
+        self.shape = shape;
+        self.freq.reset(freq);
+        self.detune = detune;
+        self.osc.schedule(start, stop, rate);
+        self.played = (0, 0);
+    }
+
+    /// Its frequency, to automate after `set` (a slur, a slide).
+    pub fn freq(&mut self) -> &mut Param<N> {
+        &mut self.freq
+    }
+
+    /// The first frame it plays.
+    #[must_use]
+    pub fn start_frame(&self) -> u64 {
+        self.osc.start_frame()
+    }
+
+    /// The frame it stops on.
+    #[must_use]
+    pub fn stop_frame(&self) -> u64 {
+        self.osc.stop_frame()
+    }
+
+    /// The frames of the last block it rendered that it sounded in, from
+    /// and to: zeros outside them. A voice applies its envelope there.
+    #[must_use]
+    pub fn played(&self) -> (usize, usize) {
+        self.played
     }
 }
 
-impl Default for Oscillator {
+impl<const N: usize> Default for Oscillator<N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Block for Oscillator {
+impl<const N: usize> Block for Oscillator<N> {
     type Settings = Settings;
 
     const PROBES: &'static [Probe<Settings>] = &[
@@ -357,27 +467,68 @@ impl Block for Oscillator {
         Probe { name: "square", settings: Settings { shape: Shape::Square, freq: 196.0, detune: 3.0, start: 0.05, stop: 0.55 } },
     ];
 
+    const MODS: &'static [Mod] = &[Mod { name: "freq", swing: 40.0 }, Mod { name: "detune", swing: 50.0 }];
+
     fn start(&mut self, s: &Settings, cx: &Context) {
-        self.shape = s.shape;
-        self.freq = s.freq;
-        self.detune = s.detune;
-        self.osc.schedule(s.start, s.stop, cx.rate);
+        self.set(s.shape, s.freq, s.detune, s.start, s.stop, cx.rate);
     }
 
     fn span(&self) -> (u64, u64) {
         (self.osc.start_frame(), self.osc.stop_frame())
     }
 
-    // The table is read at a 32-bit rate, as Web Audio's is.
-    #[allow(clippy::cast_possible_truncation)]
     fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal) {
-        let pitch = Pitch::Steady { freq: self.freq, detune: self.detune };
-        let mut wave = [0.0; QUANTUM];
-        let table = self.shape.table(cx.waves);
-        let (lo, hi) = self.osc.render(block, table, &pitch, cx.rate as f32, &mut wave);
-        for (y, w) in signal.iter_mut().zip(wave.iter()).take(hi).skip(lo) {
-            *y += *w;
+        self.render_mod(block, cx, signal, &Mods::NONE);
+    }
+
+    // The table is read at a 32-bit rate, as Web Audio's is; a block's
+    // first frame as seconds is well under 2^52 frames.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+    fn render_mod(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods) {
+        let rate = cx.rate;
+        let from = block as f64 / rate;
+        // Whether the automation moves is decided before its events are
+        // clamped to the block the oscillator starts in, as Chromium
+        // decides it first (`shared::pitch_of`, which this generalizes).
+        let moving = self.freq.moving_from(from, QUANTUM as f64 / rate);
+        if starts_in(self.osc.start_frame(), block) {
+            self.freq.clamp_before(block, rate);
         }
+        // The buffers are only made when a part moves.
+        let driven = mods.get(FREQ);
+        let freq: Signal;
+        let freq_part = if moving || driven.is_some() {
+            let mut f = if moving {
+                let mut f = [0.0f32; QUANTUM];
+                self.freq.fill(block, rate, &mut f);
+                f
+            } else {
+                [self.freq.value_at(from); QUANTUM]
+            };
+            if let Some(m) = driven {
+                for (f, x) in f.iter_mut().zip(m.iter()) {
+                    *f += *x;
+                }
+            }
+            freq = f;
+            Part::Moving(&freq)
+        } else {
+            Part::Steady(self.freq.value_at(from))
+        };
+        let cents: Signal;
+        let detune_part = match mods.get(DETUNE) {
+            Some(m) => {
+                cents = core::array::from_fn(|i| self.detune + m.get(i).copied().unwrap_or(0.0));
+                Part::Moving(&cents)
+            }
+            None => Part::Steady(self.detune),
+        };
+        let pitch = match (freq_part, detune_part) {
+            (Part::Steady(freq), Part::Steady(detune)) => Pitch::Steady { freq, detune },
+            (freq, detune) => Pitch::Moving { freq, detune },
+        };
+        let table = self.shape.table(cx.waves);
+        self.played = self.osc.add(block, table, &pitch, rate as f32, signal);
     }
 }
 

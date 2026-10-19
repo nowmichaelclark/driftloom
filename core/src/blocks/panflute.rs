@@ -9,18 +9,16 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::math;
 use crate::param::Param;
 use crate::rng::salt;
 
 use super::filter::{Biquad, Kind};
 use super::noise_source::NoiseSource;
-use super::osc::{Part, Pitch, TableOsc, frame_at};
-use super::shared::{
-    A440, FILTER_TAIL, QUIET, UNITY, VIBRATO_MIN_DUR, breath_rate, given, midi_to_freq, pitch_of,
-    starts_in, through,
-};
+use super::lfo::Lfo;
+use super::osc::{self, Oscillator, Shape, frame_at};
+use super::shared::{A440, FILTER_TAIL, QUIET, UNITY, VIBRATO_MIN_DUR, breath_rate, given, midi_to_freq, through};
 
 /// `PANFLUTE_LEVEL`, the breath and the chiff as shares of it, and the dip
 /// in cents the pipe speaks from.
@@ -33,12 +31,10 @@ const PANFLUTE_DIP: f64 = 30.0;
 /// vibrato on long notes, and a looped breath through a bandpass that spikes
 /// as the pipe catches -- the chiff -- and settles (`voice('panflute')`).
 pub struct Panflute {
-    osc: TableOsc,
-    pitch: Param,
+    osc: Oscillator,
     vibrato: bool,
-    lfo: TableOsc,
-    lfo_rate: f32,
-    depth: Param,
+    /// The vibrato: an LFO into the pipe's `DETUNE`.
+    lfo: Lfo,
     gain: Param,
     air: NoiseSource,
     filter: Biquad,
@@ -52,12 +48,9 @@ impl Panflute {
     #[must_use]
     pub const fn new() -> Self {
         Panflute {
-            osc: TableOsc::new(),
-            pitch: Param::new(0.0),
+            osc: Oscillator::new(),
             vibrato: false,
-            lfo: TableOsc::new(),
-            lfo_rate: 0.0,
-            depth: Param::new(0.0),
+            lfo: Lfo::new(),
             gain: Param::new(0.0),
             air: NoiseSource::new(),
             filter: Biquad::new(),
@@ -82,21 +75,21 @@ impl Panflute {
     ) {
         let f = midi_to_freq(midi);
         let level = vel * PANFLUTE_LEVEL;
-        let p = &mut self.pitch;
+        let stop = time + dur + 0.4;
+        self.osc.set(Shape::Pipe, A440, 0.0, time, stop, rate);
+        let p = self.osc.freq();
         p.reset_at(A440, rate);
         p.set_value_at_time((f * math::pow(2.0, -PANFLUTE_DIP / 1200.0)) as f32, time);
         p.exponential_ramp_to_value_at_time(f as f32, time + 0.05, time);
-        let stop = time + dur + 0.4;
         self.vibrato = vibrato.is_some();
         if let Some(draw) = vibrato {
-            self.lfo_rate = (4.8 + draw * 0.8) as f32;
             let onset = (dur * 0.3).min(0.3);
-            let d = &mut self.depth;
+            self.lfo.set((4.8 + draw * 0.8) as f32, UNITY, time, stop, rate);
+            let d = self.lfo.depth();
             d.reset_at(UNITY, rate);
             d.set_value_at_time(0.0, time);
             d.set_value_at_time(0.0, time + onset);
             d.linear_ramp_to_value_at_time(8.0, time + onset + 0.3, time);
-            self.lfo.schedule(time, stop, rate);
         }
         let let_go = time + dur * 0.85;
         let g = &mut self.gain;
@@ -123,10 +116,8 @@ impl Panflute {
             time,
         );
         a.set_target_at_time(0.0001, let_go, 0.08);
-        self.osc.schedule(time, stop, rate);
         self.end = frame_at(stop + FILTER_TAIL, rate);
     }
-
 
     fn start_frame(&self) -> u64 {
         self.osc.start_frame()
@@ -155,50 +146,21 @@ impl Block for Panflute {
     }
 
     fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
-        let (rate, waves, noise) = (cx.rate, cx.waves, cx.noise);
-        let r = rate as f32;
+        let (rate, noise) = (cx.rate, cx.noise);
+        // The vibrato, in cents, into the detune.
         let mut cents = [0.0f32; QUANTUM];
-        if self.vibrato {
-            let steady = Pitch::Steady {
-                freq: self.lfo_rate,
-                detune: 0.0,
-            };
-            let mut sine = [0.0f32; QUANTUM];
-            let (lo, hi) = self.lfo.render(block, &waves.sine, &steady, r, &mut sine);
-            if starts_in(self.lfo.start_frame(), block) {
-                self.depth.clamp_before(block, rate);
-            }
-            let mut depth = [0.0f32; QUANTUM];
-            self.depth.fill(block, rate, &mut depth);
-            for ((c, w), d) in cents
-                .iter_mut()
-                .zip(sine.iter())
-                .zip(depth.iter())
-                .take(hi)
-                .skip(lo)
-            {
-                *c = *w * *d;
-            }
-        }
-        let detune = if self.vibrato {
-            Part::Moving(&cents)
+        let mods = if self.vibrato {
+            self.lfo.render(block, cx, &mut cents);
+            Mods::NONE.with(osc::DETUNE, &cents)
         } else {
-            Part::Steady(0.0)
+            Mods::NONE
         };
-        let mut freq = [0.0f32; QUANTUM];
-        let first = starts_in(self.osc.start_frame(), block);
-        let pitch = pitch_of(&mut self.pitch, block, rate, first, &mut freq, detune);
         let mut tone = [0.0f32; QUANTUM];
-        let (lo, hi) = self.osc.render(block, &waves.pipe, &pitch, r, &mut tone);
+        self.osc.render_mod(block, cx, &mut tone, &mods);
+        let (lo, hi) = self.osc.played();
         let mut gain = [0.0f32; QUANTUM];
         self.gain.fill(block, rate, &mut gain);
-        for ((y, x), g) in out
-            .iter_mut()
-            .zip(tone.iter())
-            .zip(gain.iter())
-            .take(hi)
-            .skip(lo)
-        {
+        for ((y, x), g) in out.iter_mut().zip(tone.iter()).zip(gain.iter()).take(hi).skip(lo) {
             *y += *x * *g;
         }
         let mut air = [0.0f32; QUANTUM];

@@ -26,7 +26,11 @@
 //!                                           one building block alone, as the
 //!                                           test kit plays it (queue item 46):
 //!                                           its hash, and its samples for an
-//!                                           A/B between two versions
+//!                                           A/B between two versions;
+//!                                           NAME/PROBE~SETTING with that
+//!                                           setting driven, NAME/PROBE:stereo
+//!                                           a stereo block's two sides
+//!                                           (queue item 46b)
 //! ```
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any error.
@@ -35,10 +39,10 @@ mod notelist;
 
 use std::process::ExitCode;
 
-use dlcore::block::{Block, Context, Note, Voice, solo};
+use dlcore::block::{Block, Context, Note, Play, Voice, solo};
 use dlcore::blocks::{Visit, each};
 use dlcore::Core;
-use notelist::{Blocks, Fnv, SIGNALS, line, parse, read_wav, render, render_blocks, render_flushing, wav};
+use notelist::{Blocks, Fnv, SIGNALS, line, parse, read_wav, render, render_blocks, render_flushing, wav, wav_channels};
 
 const USAGE: &str = "usage: dlrender [--twice] [--flush] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
@@ -183,15 +187,24 @@ fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String>
     struct Find<'a> {
         name: &'a str,
         cx: Context<'a>,
-        out: Option<Vec<f32>>,
+        /// The samples (a stereo row's interleaved) and how many channels.
+        out: Option<(Vec<f32>, u16)>,
     }
     impl Find<'_> {
         fn play<B: Block + Default>(&mut self, block: &str, probe: &str, settings: &B::Settings) {
-            if self.name == format!("{block}/{probe}") {
-                let mut b = Box::new(B::default());
-                let mut out = Vec::new();
-                solo(&mut *b, settings, &self.cx, 12.0, |s| out.extend_from_slice(s));
-                self.out = Some(out);
+            let row = format!("{block}/{probe}");
+            let mut ways = vec![(row.clone(), Play::Mono)];
+            ways.extend(B::MODS.iter().enumerate().map(|(n, m)| (format!("{row}~{}", m.name), Play::Driven(n))));
+            if B::STEREO {
+                ways.push((format!("{row}:stereo"), Play::Stereo));
+            }
+            for (name, play) in ways {
+                if self.name == name {
+                    let mut b = Box::new(B::default());
+                    let mut out = Vec::new();
+                    solo(&mut *b, settings, &self.cx, 12.0, play, |s| out.extend_from_slice(s));
+                    self.out = Some((out, if play == Play::Stereo { 2 } else { 1 }));
+                }
             }
         }
     }
@@ -210,7 +223,7 @@ fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String>
         }
     }
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
-    let samples = std::thread::scope(|scope| {
+    let (samples, channels) = std::thread::scope(|scope| {
         std::thread::Builder::new()
             .stack_size(stack)
             .spawn_scoped(scope, || {
@@ -228,7 +241,8 @@ fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String>
     hash.samples(&samples);
     println!("{name} {}", hash.hex());
     if let Some(out) = wav_to {
-        std::fs::write(out, wav(&samples, rate)).map_err(|e| format!("{out}: {e}"))?;
+        let bytes = if channels == 1 { wav(&samples, rate) } else { wav_channels(&samples, rate, channels) };
+        std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
     }
     Ok(())
 }

@@ -52,8 +52,8 @@ pub(crate) const SLUR_ATTACK: f64 = 0.012;
 /// it moves, as Chromium decides that first too.
 // A block's first frame as seconds: well under 2^52 frames.
 #[allow(clippy::cast_precision_loss)]
-pub(crate) fn pitch_of<'a>(
-    p: &mut Param,
+pub(crate) fn pitch_of<'a, const N: usize>(
+    p: &mut Param<N>,
     block: u64,
     rate: f64,
     first: bool,

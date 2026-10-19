@@ -2,20 +2,20 @@
 //! (`voice('nylon')`).
 //!
 //! The note's first extra value says whether it is a string of a strum (1)
-//! or not (0 or NaN): the next strum into its channel damps it
-//! (`Core::damp`, which hands the damp over in `Note::damp`). It draws
-//! nothing, and plays through the nylon body (`body::NYLON`).
+//! or not (0 or NaN): a strummed string hears the next strum into its
+//! channel, a `DAMP` channel event (`Core::damp`, `Voice::event`). It draws
+//! nothing, and plays through the channel's nylon body (`own::NYLON_BODY`).
 
 // Web Audio's parameters are 32-bit floats, set from the host's 64-bit
 // numbers: a voice narrows every value it hands one.
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::QUANTUM;
-use crate::block::{Block, Context, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::block::{Block, Context, Event, NO_EXTRA, Note, Probe, Signal, Voice, event};
 use crate::math;
 use crate::param::Param;
 
-use super::body;
+use super::own;
 use super::osc::{Pitch, TableOsc};
 use super::shared::{UNITY, midi_to_freq};
 
@@ -40,6 +40,8 @@ pub struct Nylon {
     oscs: [TableOsc; 2],
     gains: [Param; 2],
     pitch: f32,
+    /// Whether it is a string of a strum, which the next strum damps.
+    strummed: bool,
 }
 
 impl Nylon {
@@ -51,6 +53,7 @@ impl Nylon {
             oscs: [TableOsc::new(), TableOsc::new()],
             gains: [Param::new(0.0), Param::new(0.0)],
             pitch: 0.0,
+            strummed: false,
         }
     }
 
@@ -75,12 +78,11 @@ impl Nylon {
 
     /// Let the string go at `time`, on the note's own release
     /// (`damp()` in synth.js).
-    pub(crate) fn damp(&mut self, time: f64) {
+    fn damp(&mut self, time: f64) {
         for g in &mut self.gains {
             g.set_target_at_time(0.0001, time, NYLON_DAMP);
         }
     }
-
 
     fn start_frame(&self) -> u64 {
         self.oscs[0].start_frame()
@@ -100,9 +102,7 @@ impl Block for Nylon {
 
     fn start(&mut self, note: &Note, cx: &Context) {
         self.play(note.midi, note.time, note.dur, note.vel, cx.rate);
-        if let Some(time) = note.damp {
-            self.damp(time);
-        }
+        self.strummed = note.extra[0] > 0.0;
     }
 
     fn span(&self) -> (u64, u64) {
@@ -141,7 +141,14 @@ impl Block for Nylon {
 }
 
 impl Voice for Nylon {
-    const BODY: Option<usize> = Some(body::NYLON);
+    const THROUGH: Option<usize> = Some(own::NYLON_BODY);
+
+    /// A strummed string lets go at a damp: the next strum.
+    fn event(&mut self, event: &Event) {
+        if self.strummed && event.kind == event::DAMP {
+            self.damp(event.time);
+        }
+    }
 }
 
 impl Default for Nylon {

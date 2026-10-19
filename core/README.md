@@ -29,9 +29,10 @@ core.render(&mut [&mut out])?;
 - **`note(voice, channel, time, midi, dur, vel, parts, extra)`** queues a note. It answers whether the note is on time, late, missed or refused (`Taken`).
 - **`key(key)`** says where the notes that follow sit in their loop. Every chance a note leaves open is drawn from this key, so the same loop sounds the same everywhere.
 - **`render(out)`** fills the host's buffers with the next frames.
+- **`event(channel, Event { kind, time, value })`** sends a damp, a release or a bend to the notes still held in a channel. Each note hears each kind at most once: the notes that arrived since the channel's last event of that kind. A voice decides what it does with one; today only a strummed nylon string listens, to a damp.
 - Also:
   - `param` (the mix and the master chain);
-  - `damp` (a new strum);
+  - `damp` (a new strum: a damp event, the web host's call);
   - `cancel` and `cancel_from` (the music jumped);
   - `quality`;
   - the counts: `late`, `missed`, `dropped`.
@@ -57,15 +58,21 @@ three things to know.
    - `span()`: the frames the block sounds in.
    - `PROBES`: how the test kit plays it.
 
-   A **`Voice`** is a block whose settings are a `Note`. It is the kind a host plays by number. It may also settle the note's chances (`settle`), say that it plays the noise (`uses_noise`), and play through a shared body (`BODY`).
+   A **`Voice`** is a block whose settings are a `Note`. It is the kind a host plays by number. It may also settle the note's chances (`settle`), say that it plays the noise (`uses_noise`), play through one of its channel's own blocks (`THROUGH`), and hear channel events (`event`).
+
+   Three seams are optional parts of `Block`, each with a default, so a block that doesn't use one writes nothing for it:
+   - **Modulation:** `MODS` names the settings a signal can drive, and `render_mod(block, cx, signal, mods)` renders with them driven. At every frame a driven setting is its own value plus the signal, as Web Audio sums an `AudioParam` and the node connected into it. A vibrato is an `Lfo` into an `Oscillator`'s `DETUNE`; FM is an `Lfo` at audio rate into its `FREQ`; a filter sweep is an envelope into a `Filter`'s `FREQ`.
+   - **Stereo:** `render_stereo(block, cx, &mut [left, right])`. The core's mono render never calls it, so mono pays nothing. By default a mono source plays centered (its mono render on each side, bit for bit), and a mono processor hears the two sides folded to one; `Pair` runs one copy of a processor on each side. A block with a stereo render of its own (a panner, a room) says `STEREO = true`.
+   - **Channel events:** `Voice::event(&Event)`, above.
 2. **`Context`**: everything a block may read besides its own state: the sample rate, the wavetables and the noise.
-3. **The registry**, the `registry!` list in `src/blocks/mod.rs`: one line a block. The line declares the block's file, and the core finds every voice through it, with no `dyn`. The kit finds everything there too.
+3. **The registry**, the `registry!` list in `src/blocks/mod.rs`: one line a block. The line declares the block's file, and the core finds every voice through it, with no `dyn`. The kit finds everything there too. Its `channel` list names a channel's own blocks: shared processors each channel keeps, which its voices sum into (today the fiddle, nylon and accordion bodies). A shared resonance or space is one file and one line there.
 
 Every block keeps all of its state inline, in a plain struct whose
 `const fn new()` is all zeros. Nothing in a block allocates or panics.
 Inside a voice, a setting that moves over time is a `param::Param`, the
-core's AudioParam. The voices are built from the parts in the same
-directory (`osc`, `filter`, `noise_source`) and call them directly.
+core's AudioParam, and a setting another block drives is one of the part's
+`MODS`. The voices are built from the parts in the same directory (`osc`,
+`lfo`, `filter`, `noise_source`) and call them directly, by type.
 
 ## Adding a building block
 
@@ -80,8 +87,13 @@ It is the whole recipe:
 2. **One line** in the registry's `parts` list in `src/blocks/mod.rs`, for example `tremolo::Tremolo;`. The tremolo's line also carries `#[cfg(test)]`, which keeps it out of the app.
 3. **Store its renders** for the kit: `KIT=update cargo test --lib kit`. This adds lines to `golden/blocks.txt`; commit them.
 
-That is all; the kit's test (`the_demonstration_block_is_one_file_and_one_line`)
+That is all; the kit's test (`each_demonstration_block_is_one_file_and_one_line`)
 checks that the tremolo is named nowhere else.
+
+Two more demonstrations show the seams are one file and one line too:
+
+- `src/blocks/amp.rs`, an amplifier whose gain a signal can drive. It lists its setting in `MODS` (with the swing the kit should probe it at) and writes `render_mod`. The kit probes the input with no test written for it.
+- `src/blocks/pan.rs`, a stereo panner. It says `STEREO = true` and writes `render_stereo`. The kit checks and stores its two sides.
 
 A **voice** is the same, with three differences:
 - It implements `Voice` as well as `Block`.
@@ -99,7 +111,9 @@ each of its probes. For each probe it checks:
 - **tone:** the 2-5 kHz share of the A-weighted energy (the coffee-shop test);
 - **determinism:** two renders are the same;
 - **cost:** a release build checks it against a ceiling;
-- **a null test:** a hash against the stored render in `golden/blocks.txt`.
+- **a null test:** a hash against the stored render in `golden/blocks.txt`;
+- **modulation:** each setting in `MODS`, driven on every probe by a slow sine (`osc/sine~freq`), checked the same way. A setting that changes nothing on any probe fails: it isn't wired;
+- **stereo:** a mono block in a stereo signal must put its mono render on each side, bit for bit (a source centered, a processor fed the same on both sides, and as a `Pair`). A `STEREO` block's two sides are checked and stored (`pan/left:stereo`), and must differ on at least one probe.
 
 An equal hash proves a change identical. Any other hash is a sound change.
 The test fails with the stored and new level and tone. A change on purpose
@@ -107,7 +121,7 @@ is stored with `KIT=update`, and its PR says what moved and why, for an A/B.
 To hear a probe from two versions:
 
 ```sh
-cargo run --release --example dlrender -- --block fiddle/long --wav new.wav
+cargo run --release --example dlrender -- --block fiddle/long --wav new.wav   # or osc/sine~freq, pan/left:stereo
 # (the same on the old version, to old.wav)
 cargo run --release --example dlrender -- --compare old.wav new.wav
 ```

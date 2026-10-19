@@ -223,6 +223,14 @@ impl<const N: usize> Param<N> {
         }
     }
 
+    /// Its value for good, if it has no events: only its intrinsic value,
+    /// which `fill` would give at every frame. A block multiplies by it
+    /// rather than filling a block of the same number.
+    #[must_use]
+    pub fn steady(&self) -> Option<f32> {
+        if self.len == 0 { Some(self.intrinsic) } else { None }
+    }
+
     /// The value at time `t`, in seconds.
     pub fn value_at(&self, t: f64) -> f32 {
         let events = self.list();

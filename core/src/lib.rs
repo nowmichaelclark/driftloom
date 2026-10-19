@@ -10,7 +10,10 @@
 //! The sound is made of building blocks (`block`, `blocks`): voices,
 //! oscillators, filters, the noise, the bodies, the compressor. Each is one
 //! file behind one small interface, registered in one list, and checked by
-//! its own test kit.
+//! its own test kit. A signal can drive a block's setting (modulation), a
+//! block can have a stereo render, and a host can send an event to the
+//! notes of a channel (`event`); the mono render pays nothing for the
+//! stereo seam (queue item 46b).
 //!
 //! Everything is allocated up front: a fixed pool of voices, fixed-size
 //! automation, fixed output buffers. Nothing allocates after `Core::new`,
@@ -46,9 +49,8 @@ pub mod wave;
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 
-use block::{Block, Context, Note, Signal};
-use blocks::body::{self, Body};
-use blocks::{Held, Pools};
+use block::{Context, Event, Note, Signal, event};
+use blocks::{Held, Own, Pools, own};
 use blocks::osc::frame_at;
 use master::{Master, OUT};
 use mix::Mix;
@@ -210,10 +212,9 @@ struct Slot {
     channel: usize,
     begin: u64,
     end: u64,
-    /// A strummed nylon string: which strum into its channel it belongs
-    /// to, and when its note ends (`Core::damp`).
-    strummed: bool,
-    strum: u32,
+    /// When its note arrived, counted across the core, and when it ends:
+    /// which channel events it hears (`Core::event`).
+    seq: u64,
     until: f64,
     voice: Held,
 }
@@ -225,8 +226,7 @@ impl Slot {
             channel: 0,
             begin: 0,
             end: 0,
-            strummed: false,
-            strum: 0,
+            seq: 0,
             until: 0.0,
             voice: Held::FREE,
         }
@@ -242,9 +242,14 @@ struct Waiting {
     /// When the note ends, on the time it was asked for (a late note's
     /// start moves; this does not).
     until: f64,
-    /// A strummed nylon string's strum (see `Slot`).
-    strummed: bool,
-    strum: u32,
+    /// When it arrived, counted across the core (see `Slot`).
+    seq: u64,
+    /// The channel events it heard while it waited, one of each kind at
+    /// most: which kinds (a bit each), and each one's time and value. It
+    /// hears them as it starts. Zeros for none, so the queue stays all zeros
+    /// and costs nothing in the `.wasm`.
+    heard: u8,
+    events: [(f64, f64); event::KINDS],
 }
 
 const NOTHING: Waiting = Waiting {
@@ -258,12 +263,12 @@ const NOTHING: Waiting = Waiting {
         parts: 0,
         extra: [0.0; EXTRA],
         draws: Draws::new(Key { seed: 0, pass: 0, step: 0, ord: 0 }, 0),
-        damp: None,
     },
     start: 0,
     until: 0.0,
-    strummed: false,
-    strum: 0,
+    seq: 0,
+    heard: 0,
+    events: [(0.0, 0.0); event::KINDS],
 };
 
 /// The core: the one thing a host holds. `const` and all
@@ -278,12 +283,14 @@ pub struct Core {
     out: [[f32; QUANTUM]; CHANNELS],
     waves: Waves,
     fft: Fft,
-    /// The voices with a body sum here, per channel and kind of body, then
-    /// go through it.
-    buses: [[Signal; body::KINDS]; CHANNELS],
-    bodies: [[Body; body::KINDS]; CHANNELS],
-    /// Which strum each channel is on (`Core::damp`).
-    strums: [u32; CHANNELS],
+    /// The voices that play through a channel's own block (a body) sum
+    /// here, per channel and block, then go through it (`blocks::own`).
+    buses: [[Signal; own::COUNT]; CHANNELS],
+    own: [Own; CHANNELS],
+    /// How many notes have arrived, and for each channel and kind of event
+    /// how many had when the last such event came (`Core::event`).
+    arrived: u64,
+    last: [[u64; event::KINDS]; CHANNELS],
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -324,9 +331,10 @@ impl Core {
             out: [[0.0; QUANTUM]; CHANNELS],
             waves: Waves::new(),
             fft: Fft::new(),
-            buses: [[[0.0; QUANTUM]; body::KINDS]; CHANNELS],
-            bodies: [const { [const { Body::new() }; body::KINDS] }; CHANNELS],
-            strums: [0; CHANNELS],
+            buses: [[[0.0; QUANTUM]; own::COUNT]; CHANNELS],
+            own: [const { Own::new() }; CHANNELS],
+            arrived: 0,
+            last: [[0; event::KINDS]; CHANNELS],
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -354,12 +362,11 @@ impl Core {
         #[allow(clippy::cast_possible_truncation)] // the tables are 32-bit
         self.waves.build(rate as f32, &mut self.fft);
         let cx = Context { rate, waves: &self.waves, noise: self.noise.samples() };
-        for channel in &mut self.bodies {
-            for (kind, body) in channel.iter_mut().enumerate() {
-                body.start(&kind, &cx);
-            }
+        for own in &mut self.own {
+            own.start(&cx);
         }
-        self.strums = [0; CHANNELS];
+        self.arrived = 0;
+        self.last = [[0; event::KINDS]; CHANNELS];
         self.inputs = [[0.0; QUANTUM]; CHANNELS];
         self.unserved = 0;
         self.quality(true);
@@ -677,7 +684,6 @@ impl Core {
             parts,
             extra,
             draws: Draws::new(self.key, channel),
-            damp: None,
         };
         if !blocks::known(voice)
             || (blocks::uses_noise(&note) && !self.noise.ready())
@@ -688,8 +694,6 @@ impl Core {
         }
         let rate = self.rate;
         let until = time + dur;
-        let strummed = voice == NYLON && extra[0] > 0.0;
-        let strum = self.strums.get(channel as usize).copied().unwrap_or(0);
         let mut taken = Taken::OnTime;
         if frame_at(time, rate) < self.next {
             let now = self.now();
@@ -715,52 +719,68 @@ impl Core {
             note,
             start: frame_at(note.time, rate),
             until,
-            strummed,
-            strum,
+            seq: self.arrived,
+            heard: 0,
+            events: [(0.0, 0.0); event::KINDS],
         };
         self.waiting += 1;
+        self.arrived = self.arrived.wrapping_add(1);
         taken
     }
 
-    /// A new strum into `channel` at `time` (`damp()` in synth.js): the
-    /// strings of the strum before it that are still held -- every nylon
-    /// note marked as a strum's since the last damp into the channel, whose
-    /// note ends after `time` -- let go at `time` on their own release,
-    /// `setTargetAtTime(0.0001, time, 0.08)` added to both their gains.
+    /// A new strum into `channel` at `time` (`damp()` in synth.js): a
+    /// `DAMP` event (`event`), which the strummed nylon strings of the strum
+    /// before it hear. The web host's call, kept as it was.
+    pub fn damp(&mut self, channel: u32, time: f64) {
+        self.event(channel, Event { kind: event::DAMP, time, value: 0.0 });
+    }
+
+    /// Send `event` to the notes of `channel` (queue item 46b): every note
+    /// in it still held at the event's time (its note ends after it) that
+    /// arrived since the channel's last event of the same kind -- so each
+    /// note hears each kind at most once, which is how a damp reaches the
+    /// strum before it and no further. What a note does with it is its
+    /// voice's (`Voice::event`): today only a strummed nylon string listens,
+    /// to a damp.
     ///
-    /// Web Audio adds that event to a timeline that may already be
+    /// Web Audio adds such an event to a timeline that may already be
     /// rendering. Chromium renders an event added ahead of the clock exactly
-    /// as one scheduled with the note, so a string already sounding takes it
-    /// as it is, and a string still waiting takes it when it starts. One
+    /// as one scheduled with the note, so a note already sounding takes it
+    /// as it is, and a note still waiting takes it when it starts. One
     /// whose time has already been rendered is not caught up: Chromium
     /// moves an event added in the past to the start of the next block it
-    /// renders (`ClampNewEventsToCurrentTime`), and the curve starts there,
-    /// from the last value it rendered.
-    pub fn damp(&mut self, channel: u32, time: f64) {
-        let Some(serial) = self.strums.get_mut(channel as usize) else {
+    /// renders (`ClampNewEventsToCurrentTime`), and a sounding note hears
+    /// it there. A kind the core does not have is ignored.
+    pub fn event(&mut self, channel: u32, event: Event) {
+        let Some(last) = self
+            .last
+            .get_mut(channel as usize)
+            .and_then(|kinds| kinds.get_mut(event.kind as usize))
+        else {
             return;
         };
-        let strum = *serial;
-        *serial = serial.wrapping_add(1);
+        let since = *last;
+        *last = self.arrived;
+        let time = event.time;
         if !time.is_finite() {
             return;
         }
+        let kind = event.kind as usize;
         for w in self.queue.iter_mut().take(self.waiting) {
-            if w.strummed && w.note.channel == channel && w.strum == strum && w.until > time {
-                w.note.damp = Some(time);
+            if w.note.channel == channel
+                && w.seq >= since
+                && w.until > time
+                && let Some(heard) = w.events.get_mut(kind)
+            {
+                *heard = (time, event.value);
+                w.heard |= 1 << kind;
             }
         }
         let now = self.now();
-        let at = if time < now { now } else { time };
+        let at = Event { time: if time < now { now } else { time }, ..event };
         for slot in &mut self.slots {
-            if slot.busy
-                && slot.strummed
-                && slot.channel == channel as usize
-                && slot.strum == strum
-                && slot.until > time
-                && let Held::Nylon(v) = &mut slot.voice
-            {
-                v.damp(at);
+            if slot.busy && slot.channel == channel as usize && slot.seq >= since && slot.until > time {
+                blocks::event(&mut slot.voice, &mut self.pools, &at);
             }
         }
     }
@@ -781,9 +801,14 @@ impl Core {
             }
             return;
         };
+        // The channel events it heard while it waited, as they came.
+        for (kind, &(time, value)) in (0u32..).zip(w.events.iter()) {
+            if w.heard & (1 << kind) != 0 {
+                blocks::event(&mut slot.voice, &mut self.pools, &Event { kind, time, value });
+            }
+        }
         slot.channel = w.note.channel as usize;
-        slot.strummed = w.strummed;
-        slot.strum = w.strum;
+        slot.seq = w.seq;
         slot.until = w.until;
         slot.begin = begin;
         slot.end = end;
@@ -846,19 +871,10 @@ impl Core {
                 blocks::free(&slot.voice, &mut self.pools);
             }
         }
-        // Every note with a body, through its channel's body of its kind.
-        for ((out, buses), bodies) in self
-            .out
-            .iter_mut()
-            .zip(self.buses.iter_mut())
-            .zip(self.bodies.iter_mut())
-        {
-            for (bus, body) in buses.iter_mut().zip(bodies.iter_mut()) {
-                body.render(block, &cx, bus);
-                for (y, x) in out.iter_mut().zip(bus.iter()) {
-                    *y += *x;
-                }
-            }
+        // Every note that plays through one of its channel's own blocks (a
+        // body), through it.
+        for ((out, buses), own) in self.out.iter_mut().zip(self.buses.iter_mut()).zip(self.own.iter_mut()) {
+            own.render(block, &cx, buses, out);
         }
         // The host's own notes, then the mix. A channel's tail stops at the
         // silence floor on its way in (`math`, "Subnormal numbers").
@@ -1533,5 +1549,88 @@ mod tests {
         // The slide's reach follows the note, between 30 and 90 ms.
         assert!((slide_of(69.0, 0.2, 67.0, 0.1).expect("slides").1 - 0.044).abs() < 1e-12);
         assert!((slide_of(69.0, 0.18, 67.0, 0.1).expect("slides").1 - 0.0396).abs() < 1e-12);
+    }
+
+    /// A nylon note's extra values: a string of a strum.
+    fn strummed() -> [f64; EXTRA] {
+        let mut x = NO;
+        x[0] = 1.0;
+        x
+    }
+
+    /// Every channel's samples, block by block, for `seconds`.
+    fn all(core: &mut Core, seconds: f64) -> Vec<f32> {
+        let mut out = Vec::new();
+        for b in 0..(seconds * RATE) as usize / QUANTUM {
+            out.extend(core.process((b * QUANTUM) as u64).iter().flatten());
+        }
+        out
+    }
+
+    // A damp reaches the strings that arrived since the channel's last damp,
+    // and each of them once: a second damp with no new strings changes
+    // nothing, and a damp into another channel reaches no one here.
+    #[test]
+    fn each_note_hears_each_kind_of_event_once() {
+        let (mut once, mut twice, mut never, mut elsewhere) = (boxed(), boxed(), boxed(), boxed());
+        for core in [&mut once, &mut twice, &mut never, &mut elsewhere] {
+            core.note(NYLON, CHORDS, 0.1, 55.0, 2.5, 0.8, 0, strummed());
+        }
+        once.damp(CHORDS, 0.5);
+        twice.damp(CHORDS, 0.5);
+        twice.damp(CHORDS, 1.0);
+        elsewhere.damp(MELODY, 0.5);
+        let (a, b, c, d) = (all(&mut once, 3.0), all(&mut twice, 3.0), all(&mut never, 3.0), all(&mut elsewhere, 3.0));
+        assert_eq!(a, b, "a second damp reached the strum it had already damped");
+        assert_ne!(a, c, "the damp was not heard");
+        assert_eq!(c, d, "a damp into another channel was heard");
+    }
+
+    // A note still waiting hears an event as it starts, as one already
+    // sounding hears it: the same samples either way (Chromium renders an
+    // event added ahead of the clock as one scheduled with the note).
+    #[test]
+    fn a_waiting_note_hears_an_event_as_it_starts() {
+        let (mut ahead, mut sounding) = (boxed(), boxed());
+        for core in [&mut ahead, &mut sounding] {
+            core.note(NYLON, CHORDS, 0.2, 55.0, 2.0, 0.8, 0, strummed());
+        }
+        ahead.damp(CHORDS, 0.9);
+        let mut a = all(&mut ahead, 0.5);
+        let mut b = all(&mut sounding, 0.5);
+        assert_eq!(sounding.busy(), 1);
+        sounding.damp(CHORDS, 0.9);
+        a.extend(all_from(&mut ahead, 0.5, 3.0));
+        b.extend(all_from(&mut sounding, 0.5, 3.0));
+        assert_eq!(a, b);
+    }
+
+    /// Every channel's samples from `from` to `to` seconds.
+    fn all_from(core: &mut Core, from: f64, to: f64) -> Vec<f32> {
+        let mut out = Vec::new();
+        for b in (from * RATE) as usize / QUANTUM..(to * RATE) as usize / QUANTUM {
+            out.extend(core.process((b * QUANTUM) as u64).iter().flatten());
+        }
+        out
+    }
+
+    // Only a strummed nylon string listens to a damp, and no voice listens
+    // yet to a release or a bend, or to a kind the core does not have: they
+    // change nothing until a voice opts in (`Voice::event`).
+    #[test]
+    fn a_voice_hears_only_what_it_listens_to() {
+        let (mut plain, mut sent) = (boxed(), boxed());
+        for core in [&mut plain, &mut sent] {
+            core.note(NYLON, CHORDS, 0.1, 55.0, 2.0, 0.8, 0, NO);
+            core.note(FIDDLE, MELODY, 0.1, 67.0, 2.0, 0.8, 0, NO);
+            core.note(KALIMBA, MELODY, 0.1, 72.0, 2.0, 0.8, STRIKE | BODY, NO);
+        }
+        for channel in [MELODY, CHORDS] {
+            sent.damp(channel, 0.5);
+            sent.event(channel, Event { kind: event::RELEASE, time: 0.6, value: 0.0 });
+            sent.event(channel, Event { kind: event::BEND, time: 0.7, value: 100.0 });
+            sent.event(channel, Event { kind: 99, time: 0.8, value: 0.0 });
+        }
+        assert_eq!(all(&mut plain, 3.0), all(&mut sent, 3.0));
     }
 }

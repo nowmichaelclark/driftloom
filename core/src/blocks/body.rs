@@ -3,7 +3,7 @@
 //! A body is an instrument's fixed resonances (`BODIES` in synth.js): one
 //! chain of filters per kind and channel, shared by every note that voice
 //! plays into the channel, as `_body()` builds them. Notes sum into their
-//! body's bus; the body runs on the sum (`Voice::BODY`). The fiddle, the
+//! body's bus; the body runs on the sum (`Voice::THROUGH`), as one of a channel's own blocks (`blocks::own`, the registry's `channel` list). The fiddle, the
 //! nylon guitar and the accordion play through one.
 
 use crate::block::{Block, Context, Probe, Signal};
