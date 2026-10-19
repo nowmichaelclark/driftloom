@@ -3586,6 +3586,59 @@ Mikey decides this line:
      on `Setting::probe`). Still open: `chiff` at the probe renders the same
      as without it, so check the chiff before storing the kit.
 
+- **Item 56, roundBass: stopped at its yardsticks, which disagree (Session
+  25a-2, hands, Opus 5.5, 2026-10-19).** Built and checked, but not merged:
+  the item's two figures can't both be met with the sound Mikey heard, so it
+  needs a decision. The work is the open item 56 PR (branch
+  `claude/affectionate-knuth-x5pe4b`), finished apart from that: the kit
+  stored, goldens (note lists re-exported for the new register), the
+  baseline updated, tests three times. Items 57-60 are not started (wip
+  commits still on `claude/item-61-organ-wip`).
+  - **The figures,** on the first 12 corpus loops led by dust (seed
+    20261009, 60 s each, full, the core's taps): today, the core build, and
+    the sketch (the prototype's recipe, register and harmonics, pasted into
+    today's JavaScript synth and rendered on the same loops):
+
+    | | today | core build | sketch | item 56 asks |
+    |---|---|---|---|---|
+    | 40-60 Hz share of the mix | 27.6% | 5.5% | 3.9% | about 6% |
+    | 120-250 Hz share (mean; median) | 10.1%; 9.8% | 23.4%; 18.6% | 31.1%; 28.1% | about 27% |
+    | bass layer by ear (K-weighted, mean; median) | | +0.24; +0.40 dB | +5.76; +6.43 dB | within 1 dB of today |
+    | the whole mix by ear | | -0.04 dB | +2.04 dB | |
+    | refused notes | 393 | 393 | 393 | none added |
+
+  - **Why:** the core's bass has the sketch's timbre exactly (inside the
+    bass layer, 120-250 Hz is 52.6% of the core's energy and 52.8% of the
+    sketch's; 20-60 Hz 0.2% in both). What differs is level: the prototype
+    added its harmonics on top of the note, about 6 dB by ear, and its
+    "about 27%" was measured with that louder bass. The build trims each
+    voice (3.2 to 6.7 dB, and 1 dB for the register) to meet "within 1 dB
+    of today", and at today's level the harmonics take a smaller share of
+    the mix. The batch rule ("within 1.5 LU of the sketch's figure") sides
+    with the sketch; item 56 sides with today.
+  - **The choice** (a decision for the brain or Mikey's ears):
+    (a) today's level, as built: the bass reads on a phone through its
+    harmonics, at the loudness it has now (120-250 Hz about 23%);
+    (b) the sketch's level, what Mikey heard: drop `round_trim` in
+    `core/src/blocks/bass.rs` (bass about +5.5 dB by ear, the mix about
+    +2 dB before the master, 120-250 Hz about 31%), and re-measure the
+    other layers against it;
+    (c) between, say +3 dB.
+    Raising the harmonics against the note instead would meet both
+    figures but is a brighter bass than the one Mikey approved, so I did
+    not build it.
+  - **Also in the PR:** "Let the loop wander" kept folding the bass's
+    passing tones into the old 28-52 (the prototype's too); they now stay
+    in 36-57, for Mikey's ears. The 40 baseline loops: the bass layer
+    +0.31 dB on average (median +0.30, -2.38 to +5.88, noan-nou the most), the
+    mix +0.04
+    dB, refusals and the balance lock unchanged. **Cost:** in the core a
+    bass note costs about 0.067% of real time more (the harmonics block,
+    about 1.5 core sine notes; a bass note 40-70% more in the kit). `VOICE_COST`
+    stays as it is: it prices the fallback's render time, whose bass
+    gets only the register, and raising it would add refusals the item
+    rules out. Worth a look when the budget is next revisited.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4118,3 +4171,11 @@ Mikey decides this line:
   it gets (none 15%, one 45%, two 30%, three 10%) and which; the list is empty
   until the batch's items add to it, so nothing changes yet. Listen for:
   nothing.
+- #246, the frame drum's solo peak (item 55, v104),
+  https://05aa78b0-driftloom.nowmichaelclark.workers.dev: the frame drum's
+  pitch rests at its own first frequency instead of 440 Hz, so it loses a click
+  it only had by chance (the same hit alone peaked anywhere from -1.1 to +1.2
+  dBFS by where it fell in its block, now -1.0 to -1.1), and its skin rings
+  0.40 s instead of 0.32 to keep its loudness; the kit fails any voice over -1
+  dBFS alone. Listen for the frame drum losing that click and ringing a little
+  longer. For the album: cinder #12 at 0:03.4 and tide #52 at 0:00.
