@@ -11,6 +11,7 @@ import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWei
 import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
+import { drawChoices } from './choices.js';
 
 export const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 export const LAYER_LABELS = {
@@ -2541,6 +2542,13 @@ export function render(spec) {
     }
   }
 
+  // The per-loop choices (queue item 54, js/choices.js): which of the sound
+  // batch's changes this loop gets. Drawn once, from the loop's seed on a
+  // stream of its own, after the layers and their schedules, so each
+  // choice's eligibility can ask what the loop plays; every other draw is
+  // untouched, and with no choices listed nothing here changes a note.
+  const choices = drawChoices(spec.seed, { spec, tracks, harmony, bass, melody, drums, texture, choir }, vibesOf(spec));
+
   // Kept until here, after the entry schedules and the gaps, because the
   // question it answers is about what you hear. Deciding it on every event
   // the generator produced gives the wrong answer once the bars of a
@@ -2616,6 +2624,9 @@ export function render(spec) {
     },
     harmony,
     tracks,
+    // Every choice's option for this loop ('today' for those it did not
+    // draw); see js/choices.js.
+    choices,
     meta: { bassVoice: bass.voice, bassStyle: bass.style, kit: drums.kit, melodyVoice: melody.voice, melodyCell: melody.cell, textureKind: texture.kind,
       // Only present when there is one, so a loop that is not a choir
       // carries a meta object identical to the one it carried before this
