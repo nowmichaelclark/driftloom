@@ -6,7 +6,8 @@
 //! processor fed one second of the core's noise), twice, and checks:
 //!
 //! - **level:** every sample finite, not silent, and not running away (its
-//!   peak under `CEILING`); RMS and peak are reported in dBFS;
+//!   peak under `CEILING`; a voice's under `VOICE_CEILING`, queue item 55);
+//!   RMS and peak are reported in dBFS;
 //! - **tone:** the share of its A-weighted energy between 2 and 5 kHz, as
 //!   `tools/measure.mjs` reckons it (the coffee-shop test), reported;
 //! - **determinism:** the second render is the first, bit for bit;
@@ -65,11 +66,15 @@ const LONGEST: f64 = 12.0;
 /// one note or one block of processing taking a fiftieth of the audio's
 /// length would leave room for only fifty at once.
 const COST_LIMIT: f64 = 0.02;
-/// The loudest a block may peak on its own, in dBFS. Not full scale: a raw
-/// oscillator sits at it and the noise above it, and a voice may pass it
-/// before the mix and the master's ceiling (the frame drum does, at +1 dB).
-/// Past this, a block is running away.
+/// The loudest a block other than a voice may peak on its own, in dBFS. Not
+/// full scale: a raw oscillator sits at it and the noise above it. Past
+/// this, a block is running away.
 const CEILING: f64 = 6.0;
+/// The loudest a voice may peak alone at its probe, in dBFS (queue item 55):
+/// a game or a host that plays one voice alone, and every new voice of the
+/// sound batch, may not lean on the mix and the master's ceiling to catch
+/// it. The frame drum was the one over it (+1.0 dBFS), until item 55.
+const VOICE_CEILING: f64 = -1.0;
 /// Where the stored renders are kept.
 const STORED: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/golden/blocks.txt");
 
@@ -103,6 +108,9 @@ struct Kit<'a> {
     cx: Context<'a>,
     /// Only this block, if named.
     only: Option<&'static str>,
+    /// The loudest the block being checked may peak (`CEILING`, or
+    /// `VOICE_CEILING` for a voice).
+    ceiling: f64,
     rows: Vec<Row>,
 }
 
@@ -120,6 +128,7 @@ impl Visit for Kit<'_> {
                 Probe { name: probe.name, settings: note }
             })
             .collect();
+        self.ceiling = VOICE_CEILING;
         self.check::<V>(name, &probes);
     }
 
@@ -127,6 +136,7 @@ impl Visit for Kit<'_> {
         if self.only.is_some_and(|only| only != name) {
             return;
         }
+        self.ceiling = CEILING;
         self.check::<B>(name, B::PROBES);
     }
 }
@@ -277,7 +287,9 @@ impl Kit<'_> {
         if rms < -90.0 {
             faults.push(format!("silent: {rms:.1} dBFS RMS"));
         }
-        if peak >= CEILING {
+        if self.ceiling < CEILING && peak > self.ceiling {
+            faults.push(format!("a voice peaking at {peak:.2} dBFS alone, over the voices' ceiling of {:.0} dBFS", self.ceiling));
+        } else if peak >= self.ceiling {
             faults.push(format!("runs away: peak {peak:.2} dBFS"));
         }
         let seconds = mid.len() as f64 / RATE;
@@ -410,7 +422,7 @@ fn run(only: Option<&'static str>) -> Vec<Row> {
         .spawn(move || {
             let mut core = Box::new(Core::new());
             core.init(RATE);
-            let mut kit = Kit { cx: core.context(), only, rows: Vec::new() };
+            let mut kit = Kit { cx: core.context(), only, ceiling: CEILING, rows: Vec::new() };
             each(&mut kit);
             kit.rows
         })
