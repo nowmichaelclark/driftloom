@@ -196,7 +196,7 @@ fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String>
             let mut ways = vec![(row.clone(), Play::Mono)];
             ways.extend(B::MODS.iter().enumerate().map(|(n, m)| (format!("{row}~{}", m.name), Play::Driven(n))));
             ways.extend(B::HEARS.iter().map(|&kind| (format!("{row}@{}", dlcore::block::event::name(kind)), Play::Heard(kind))));
-            ways.extend(B::SETTINGS.iter().enumerate().map(|(n, s)| (format!("{row}={}", s.name), Play::Set(n))));
+            ways.extend(B::SETTINGS.iter().enumerate().filter(|(_, s)| s.probe.is_finite()).map(|(n, s)| (format!("{row}={}", s.name), Play::Set(n))));
             if B::STEREO {
                 ways.push((format!("{row}:stereo"), Play::Stereo));
             }

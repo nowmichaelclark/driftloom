@@ -485,6 +485,7 @@ registry! {
     }
     channel {
         body::Body = FIDDLE_BODY (body::FIDDLE), NYLON_BODY (body::NYLON), ACCORDION_BODY (body::ACCORDION);
+        organ::Organ = ORGAN (organ::REST);
         #[cfg(test)] swell::Swell = SWELL (swell::REST);
         #[cfg(test)] chorale::Chorale = CHORALE (chorale::REST);
         #[cfg(test)] duck::Duck = DUCK (duck::REST);

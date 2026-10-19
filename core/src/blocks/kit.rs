@@ -208,7 +208,13 @@ impl Kit<'_> {
         let ways = B::HEARS
             .iter()
             .map(|&kind| (format!("@{}", crate::block::event::name(kind)), Play::Heard(kind), format!("it hears {}s", crate::block::event::name(kind))))
-            .chain(B::SETTINGS.iter().enumerate().map(|(n, s)| (format!("={}", s.name), Play::Set(n), format!("its setting {}", s.name))));
+            .chain(
+                B::SETTINGS
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, s)| s.probe.is_finite())
+                    .map(|(n, s)| (format!("={}", s.name), Play::Set(n), format!("its setting {}", s.name))),
+            );
         for (suffix, play, what) in ways {
             let mut heard = false;
             let mut first = None;

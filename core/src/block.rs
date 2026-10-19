@@ -229,7 +229,9 @@ pub struct Setting {
     /// What the setting is, in plain ASCII (`"rate"`), for the kit's report.
     pub name: &'static str,
     /// What the test kit sets it to when it probes it: a value a listener
-    /// would hear differ from the probe's own, inside what the block takes.
+    /// would hear differ from the probe's own, inside what the block takes;
+    /// NaN for a setting a probe cannot hear (one that only reaches the
+    /// block's sends), which the kit leaves alone.
     pub probe: f64,
 }
 
