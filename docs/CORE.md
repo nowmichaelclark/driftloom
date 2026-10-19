@@ -320,7 +320,16 @@ one before it.
    `separateRegisters` flipped it in 11 of 87 loops when only the chord
    lengths changed); *measured* by a corpus check that varies one
    non-harmonic choice per loop and finds no octave flips. Details in
-   `docs/BRAIN.md`, "Start here".
+   `docs/BRAIN.md`, "Start here". **And one known issue** (Mikey,
+   2026-10-18; `docs/QUEUE.md`, "Known issues"): across the wander
+   slider's whole upper range, "Let the loop wander" wanders in an
+   experimental way that does not repeat from one play to the next (since
+   phase 1's seeded draws, every replay wanders identically); the core's
+   draws stay a function of what the host sends, the host salting the
+   wander's seed per play in that range, where the range starts tuned by
+   ear. Lower on the slider, a loop still wanders the same way every
+   time. *Measured:* the same code played twice with the slider in the
+   upper range wanders differently; below it, identically.
 3. **Off the page.** The whole core runs on the audio side; the page
    sends commands and draws events. The scheduler, the lookahead and the
    JavaScript synth and generator are retired at the end of this phase
@@ -341,9 +350,10 @@ one before it.
 5. **Instruments as recipes.** First the catalogue of block ideas for
    Mikey (promise 5). Then the building blocks and the recipe format;
    today's voices re-expressed as recipes where it fits (each proven to
-   null against its Rust original, or A/B'd if it changes); then the
-   ears-approved sounds (roundBass, glass, floorDrop, arc) as the first
-   new instruments built only from recipes.
+   null against its Rust original, or A/B'd if it changes), the
+   ears-approved sounds among them: since 2026-10-15 those are built
+   before phase 2 as Rust blocks (the sound batch, `docs/QUEUE.md` items
+   54-73), so here they become recipes like today's voices.
 6. **Codes, version 2.** Short codes, album seeds, recipe packs by hash,
    plain links. Old codes stop working; that's fine.
 7. **The host kit and the other two games.** The finished C header, the

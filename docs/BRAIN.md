@@ -552,9 +552,14 @@ Stated decisions, not inferences. Dated where the date matters.
     (wander across the slider's upper range should not repeat; `docs/QUEUE.md`,
     "Known issues").
   - **Session 23** (hands, Opus, high): item 46, the building-block
-    interface.
-  - **Session 24** (brain, Opus): phase 1 review; then write **the
-    sound batch** into the queue, three groups, from `docs/ears/`
+    interface. **Done** (#238, v100).
+  - **Session 24** (brain, Opus 5.5, 2026-10-19): **done.** Item 46
+    checked by the brain (passes; phase 1 is done); **item 46b** queued
+    (modulation input, stereo signal shape, channel events and a
+    channel's own blocks; bit-identical); **the sound batch** written as
+    items 54-73, with item 74 (clippy) low priority; the wander note
+    carried into the charter's phase 2. See the log. As planned before
+    it: write **the sound batch** into the queue, three groups, from `docs/ears/`
     (batch-4 and batch-5 and Mikey's verdicts):
     (a) **instruments**: dubStab, longChords, wash, the chapel organ,
     roundBass, glass, floorDrop, arc; built in the core on 46's
@@ -579,12 +584,25 @@ Stated decisions, not inferences. Dated where the date matters.
     nothing collides with 46. One builder session for both halves.
     Then phase 2's items (ordering 48-53 among them). The balance lock
     is re-baselined on purpose, once per group, and says what moved.
+  - **Session 25-0** (hands, Opus 5.5, high): item 46b.
   - **Session 25a / 25b / 25c** (hands, Opus 5.5, high): the three
-    groups in that order, one PR per item; a new session per group (or
-    when usage runs out), same brief.
+    groups in that order (a: items 54-63; b: 64-66; c: 67-73), one PR per
+    item; a new session per group (or when usage runs out), same brief.
+    Item 74 whenever a session has usage to spare (Sonnet is enough).
   - **Session 26** (brain, Opus): check all three groups; a labeled
     album (keep / tune / drop) of the new sounds and mixing, and a blind
     stereo-vs-mono A/B; new vibes with Mikey, last before the port.
+    **Then write phase 2's items** (not written yet): the generator's
+    port, ordering 48-53 among them, with the chords' octave fix and the
+    wander's upper range that must not repeat (both in the charter's
+    phase 2 and in "Known issues"), and item 54's per-loop choices and
+    the batch's generator choices as part of what the port must match.
+  - **Open for Mikey (Session 24's taste calls, in the queue "for his
+    ears"):** the new parts (glass, dubStab, the organ, the wash, the
+    arc) count toward "most loops get one or two changes" (item 54: none
+    15%, one 45%, two 30%, three 10%), so each is in fewer loops than in
+    the ears' clips; the arc starts each loop bright, not closed (item
+    63). His answer moves a weight, not the design.
   - **Ears cadence (brain's advice, 2026-10-18):** after Ears 9, pause
     new piles until the batch is built and heard in the app. The
     approved backlog is large, and sketches can sound different in the
@@ -599,14 +617,14 @@ Stated decisions, not inferences. Dated where the date matters.
   (`design/next-picks.md`, from Painter 5, PR #205); see "Next picks,
   the design" under "The core". Painter 6 (app track) is building the
   screens now. Real wiring queued as items 48-52 (phase 2) and 53
-  (phase 3), for the phase review (Session 24) to order among phase 2's
-  own items. **Waiting on Mikey:** the two open questions (the way in
+  (phase 3), for the brain to order among phase 2's own items when it
+  writes them (Session 26, after the sound batch; moved from Session 24). **Waiting on Mikey:** the two open questions (the way in
   during an album; setting only length or only tempo to "any"). **Next
   Painter work:** the tempo, key and scale, style and voices pickers,
   and the "can't do that" line; long-piece display (`docs/PAINTER.md`,
   section 2) before item 53.
-- **Where it is:** `main` at v99 (2026-10-18; phase 1's items 42-45 and
-  47 merged, Painter 6's next-picks screens). The Rust core plays by default (the
+- **Where it is:** `main` at v100 (2026-10-19; phase 1's items 42-47
+  merged and checked, Painter 6's next-picks screens). The Rust core plays by default (the
   JavaScript synth is the fallback, `?engine=js`); Vibes are in the app
   (items 38a-b, v86-87; recipes in `js/vibes.js`, tuned once, v91); the
   dials, the word fit and the word-album builder are tools (items 34-35);
@@ -686,6 +704,38 @@ Stated decisions, not inferences. Dated where the date matters.
   (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Session 24 (brain, Opus 5.5, 2026-10-19), phase 1 review and the sound
+batch.** Item 46 (#238) checked against its yardsticks, run here, not
+taken from the report: `build-core.sh --check`; `cargo test --release`
+(101 library tests with the kit and its cost check, and the golden, draw
+and math tests); goldens `--strict` on x86-64 and wasm32, `--strict
+--flush`, `--blocks all` on both, `--rates` on both: all equal, and #238
+touched no hash file; `node tools/baseline.mjs`: "Nothing moved";
+cachegrind against #237: busy-cinder -0.37%, 09-shrine -0.05%,
+15-wayfare -0.11%, 07-dust +0.34% (the report's figures); the release
+library's assembly: no panic, trap or allocation; `js/core.js`: comments
+only; pedantic clippy 405 left, as reported. "One file plus one line"
+checked independently: a throwaway processor added in a scratch copy
+(one file, one registry line) was found by the kit, asked for its stored
+render, passed once stored, and a 2% gain change was flagged as a sound
+change. **Phase 1 is done.** Then, at Mikey's request: **item 46b**
+(Session 25-0, Opus 5.5, high): a modulation input, the stereo signal
+shape and channel events (with a channel's own blocks), a refactor like
+46, so the batch builds on one way of doing each; **the sound batch** as
+items 54-73 under three groups: (a) the per-loop choices (54), the frame
+drum's solo peak with a -1 dBFS voice ceiling in the kit (55), roundBass,
+longChords, floorDrop, glass, dubStab, the chapel organ, the wash, the
+arc (56-63); (b) the stereo render, the approved baseline as space
+recipes, the Mono switch (64-66); (c) tunedKick, subDuck, lateFloor,
+floorDrop shapes, pedalBass, padSweep, echoTime (67-73); item 74, the
+clippy cleanup, low priority. The wander note carried into the charter's
+phase 2 and "Known issues". **Brain's calls, written in the queue:** the
+per-loop choices go in one framework first (54), so every later item
+only adds an option; the new parts count toward Mikey's "one or two
+changes a loop"; the core's stereo master links its compressors (one
+gain from the mono detector) so stereo folds like mono; the arc starts
+bright. Phase 2's items wait for Session 26. Docs only.
 
 **Session 22 (brain, Opus 5.5, 2026-10-18), phase 1 check.** Items
 42-45 (#204, #208, #211, #213) checked against their yardsticks; all
