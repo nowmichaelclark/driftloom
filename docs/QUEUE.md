@@ -2746,6 +2746,97 @@ Mikey decides this line:
 
   None of these is new; the kit only makes them visible.
 
+- **Item 46b, modulation and stereo seams: notes for the brain (Session
+  25-0, hands, Opus 5.5, 2026-10-19, #241).** Three seams on `Block`, each
+  optional with a default: a modulation input (`MODS`, `render_mod`,
+  `Mods`: a signal summed into a setting, Web Audio's `AudioParam` rule),
+  the stereo shape (`Stereo`, `render_stereo`, `STEREO`, `Pair`), and
+  channel events (`Core::event`, `Voice::event`: `DAMP`, `RELEASE`, `BEND`),
+  plus a channel's own blocks (the registry's `channel` list, today the
+  three bodies). The parts that take modulation: `osc::Oscillator` (`FREQ`,
+  `DETUNE`; any table, an automated frequency), `filter::Filter` (`FREQ`,
+  `Q`, `GAIN`) and the new `lfo::Lfo`. FM, every vibrato and every sweep sit
+  on them, bit for bit; nylon's damp is a `DAMP` event and the core names no
+  voice. **Which batch items should use which part:**
+  - **(a) instruments.**
+    - **dubStab:** the tone pattern. A triangle and a saw as
+      `Oscillator<0>`s summed into a `Filter` whose cutoff envelope (2.4-3.4
+      kHz closing to 700 Hz) drives `FREQ`; the lows trimmed by a second,
+      undriven `Filter`. The echo throw stays the mix's.
+    - **roundBass:** `bass.rs`'s pattern, an envelope into a lowpass `Filter`'s
+      `FREQ`.
+    - **glass:** if it is FM or bell-like, `fm.rs`'s pattern: an `Lfo` at audio
+      rate into an `Oscillator`'s `FREQ`.
+    - **The chapel organ:**
+      - the flute ranks are `Oscillator<0>`s, and the celeste a steady detune;
+      - the chiff is a `noise_source` grain through a bandpass `Filter`;
+      - the tremolo is an `Lfo` into an `amp.rs`-style gain;
+      - the 800 Hz dip is an undriven peaking `Filter`.
+
+      Its swaying delay needs a delay-line block, which isn't there yet
+      (catalogue). Its retuning at each chord is the awkward part (below).
+    - **wash:** `texture.rs`'s waves, two lowpass `Filter`s under one sweep into
+      `FREQ`, with the 17-26 s rise and fall an `Lfo<0>` or an envelope.
+      The two key-tuned resonances are undriven peaking `Filter`s. Its
+      level follower is a new block whose output drives a gain (`amp.rs`
+      is the template).
+    - **floorDrop:** a `RELEASE` event to the drums' and the bass's channels
+      would let held notes go at the drop, once those voices listen to it.
+    - **arc:** a slow filter arc on a channel is a channel's own block that
+      runs its own `Lfo` into its own `Filter` (one file, one line in
+      `channel`). Its per-loop timing is the awkward part (below).
+    - **longChords:** generator only; no core seam.
+  - **(b) stereo:**
+    - **Shape:** `Stereo` and `render_stereo`.
+    - **Mono switch:** sources play centered, so the mono switch over mono
+      blocks is exact (the kit's guard proves it on every block).
+    - **Dual mono:** `Pair` puts a processor on each side.
+    - **The room and the ensemble:** the first `STEREO` blocks (`pan.rs` is
+      the template).
+    - **Still to build:** the core's stereo render itself (`Core::start(rate,
+      2)` is still refused) and stereo versions of the mix and master, which
+      are still a fixed graph outside the blocks.
+  - **(c) mixing logic:**
+    - **padSweep:** a channel's own block on the chords: a `Filter` driven by
+      its own `Lfo<0>` (12-28 s).
+    - **tunedKick:** the drum's existing pitch `Param`; no seam needed.
+    - **echoTime:** a mix parameter.
+    - **subDuck:** a sidechain: the kick's signal driving the bass channel's
+      gain. There is no path yet for one channel's signal to drive another's
+      block (below).
+    - **floorDrop shapes:** as floorDrop, with `RELEASE`.
+    - **lateFloor and pedalBass:** generator only.
+
+  **Still awkward for phase 5:**
+  1. **A channel's own blocks are started once, with settings fixed in the
+     registry, and take no modulation and no events.** Per-loop settings (the
+     padSweep's period, the arc's length, the organ's registration) need a
+     host path into a channel block, such as `Core::param` reaching it. That
+     is not built.
+  2. **"Each note hears each kind once" fits a damp, not a retune.** It is
+     the rule that keeps today's damp exact. A held voice that must hear
+     many bends (the organ retuned at each chord, a pitch wheel) can't. The
+     recipe format should say each kind's reach (once, or every held note
+     every time). A waiting note keeps one event of each kind.
+  3. **Wiring is code.** Voices connect an `Lfo` to a part's `MODS` index in
+     Rust, and several signals into one setting are summed by the caller. A
+     recipe needs to describe connections (source block, target, setting) as
+     data. `MAX_MODS` is 4 a block.
+  4. **No cross-channel signals** (subDuck's sidechain, a follower listening
+     to other layers, as the wash's does).
+  5. **Voices are mono.** A stereo voice (a per-note ensemble spread) would
+     need stereo buses and a stereo dispatch in the registry. Only blocks
+     have the seam.
+  6. **The oscillator's Chromium start rules leak into modulation.**
+     Connecting a signal, even a zero one, makes the pitch "moving" and
+     changes how a note's first block starts. It is exact today and worth a
+     line in any recipe guide.
+  7. **The `Lfo` is a sine.** A triangle or a sample-and-hold is a `Shape`
+     setting away, since it is built on `Oscillator`.
+  8. **Memory:** the core is 140,904 bytes bigger. That is mostly the waiting
+     queue's event bookkeeping, plus the sung pool's `Lfo`s. The `.wasm` is
+     147,599 bytes (146,313 before), and the stereo seam adds no byte to it.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -3251,3 +3342,13 @@ Mikey decides this line:
   refactor: the goldens and the baseline are bit for bit unchanged, and the
   instruction counts are within 0.4% of before. Listen for: nothing; it
   should sound exactly the same.
+- #241, modulation and stereo seams (core item 46b, v101),
+  https://37664061-driftloom.nowmichaelclark.workers.dev: a signal can now drive
+  a block's setting (`Block::MODS`, `render_mod`; FM, every vibrato and every
+  filter sweep run on it), every block has a stereo shape the mono render never
+  pays for, a host can send a damp, release or bend to a channel's held notes
+  (nylon's damp is one), and the bodies are a channel's own blocks in the
+  registry. The kit probes every input and guards stereo; two test-only
+  demonstration blocks are one file plus one line each. A refactor: goldens,
+  baseline and stored block renders bit for bit unchanged, instruction counts
+  -3.6% to +0.5%. Listen for: nothing; it should sound exactly the same.
