@@ -51,7 +51,25 @@ export const CHOICES = [
   // high as a soft FM bell. For any loop with chords. No vibe leans: the
   // batch's table has none for the instruments (for Mikey's ears).
   { id: 'glass', options: [['today', 1], ['on', 1]], eligible: (ctx) => hasChords(ctx) },
+  // dubStab (queue item 60; Ears 4, round 4, approved 2026-10-16): a soft
+  // chord stab on the offbeat over a busy groove, thrown into the echo.
+  // Busy loops only: drums, and seven or more notes a second.
+  { id: 'dubStab', options: [['today', 1], ['on', 1]], eligible: (ctx) => hasChords(ctx) && busy(ctx) },
 ];
+
+// How many notes a second the loop plays, every layer, as heard.
+export function notesPerSecond(spec, tracks) {
+  const spb = spec.stepsPerBar || 16;
+  const seconds = spec.bars * spb * (60 / spec.bpm / 4);
+  let n = 0;
+  for (const layer of Object.keys(tracks)) n += tracks[layer].filter((e) => e.vel).length;
+  return n / seconds;
+}
+
+// A busy groove (dubStab's test): drums, and seven or more notes a second.
+function busy(ctx) {
+  return !!ctx.tracks && ctx.tracks.drums.some((e) => e.vel) && notesPerSecond(ctx.spec, ctx.tracks) >= 7;
+}
 
 // Whether the loop plays a chord with notes.
 function hasChords(ctx) {

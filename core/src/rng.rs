@@ -85,14 +85,16 @@ pub mod salt {
     pub const SUNG_SINGER: u32 = 1000;
 
     /// The page's: a drum's timing jitter, a layer's ensemble slip, a chord's
-    /// strum span, whether a held vowel drifts and where to, and whether a
-    /// chord rings out as glass and on which notes (queue item 59).
+    /// strum span, whether a held vowel drifts and where to, whether a chord
+    /// rings out as glass and on which notes (queue item 59), and whether an
+    /// offbeat takes a dubStab (queue item 60).
     pub const HOST_JITTER: u32 = 100;
     pub const HOST_ENSEMBLE: u32 = 101;
     pub const HOST_STRUM: u32 = 102;
     pub const HOST_DRIFT: u32 = 103;
     pub const HOST_DRIFT_TO: u32 = 104;
     pub const HOST_GLASS: u32 = 105;
+    pub const HOST_STAB: u32 = 106;
 }
 
 // Multiplying and shifting a word into the hash, in the order of the

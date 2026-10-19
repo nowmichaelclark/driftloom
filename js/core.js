@@ -67,6 +67,7 @@ export const CORE_VOICES = {
   stab: 15, ocarina: 16, flute: 17, panflute: 18, knock: 19, templebell: 20, hat: 21,
   bass: 22, texture: 23, drum: 24,
   vowel: 25, hum: 26, choir: 27,
+  dubstab: 28,
 };
 // A sung note's vowel and where it drifts to, as the core numbers them
 // (core/src/blocks/sung.rs); 4 is a hum opening.

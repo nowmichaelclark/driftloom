@@ -38,6 +38,12 @@ const RING_OUT_MS = 10000;
 // BUDGET figures below are a reasoned starting point, not a measurement of
 // any real device. If Diagnostics shows dropouts on a specific phone, this
 // is the number to revisit first.
+// dubStab's cost, the room it asks for beyond it (queue item 60), and the
+// JavaScript fallback's level against the core's voice.
+const DUBSTAB_COST = 8;
+const DUBSTAB_MARGIN = 20;
+const DUBSTAB_FALLBACK = 1.67;
+
 const VOICE_COST = {
   hat: 1, ohat: 1, shaker: 1, rim: 1, kick: 1, snare: 1.5, clap: 1.5,
   drop: 1.5, bell: 4, chime: 4, celeste: 4, musicbox: 4,
@@ -2000,7 +2006,25 @@ export class Synth {
     return true;
   }
 
-  // Where the note now being played sits in its loop, for the core.
+  // dubStab (queue item 60): a soft chord stab, `notes` (three at most), on
+  // the core's own voice, which throws itself into the echo and the room.
+  // It asks the budget whether there is room for it and twenty units more
+  // under the full ceiling, and holds nothing, so it never costs another
+  // part a note. The JavaScript synth (the fallback) has no such voice:
+  // today's stab plays the chord instead, at the same level by ear.
+  dubStab(notes, time, vel, o) {
+    if (!this._budget(time, false, DUBSTAB_COST + DUBSTAB_MARGIN)) return;
+    const out = this.channels.chords.gain;
+    const dur = 0.022 + o.decay * 1.8;
+    if (this.engine === 'rust' && this._coreNote(CORE_VOICES.dubstab, out, time, notes[0], dur, vel,
+      [notes[1] ?? NaN, notes[2] ?? NaN, o.decay, o.open, o.saw, o.throw, o.tone, o.verb, o.level])) return;
+    // K-weighted, today's stab on each note of a three-note chord at
+    // velocity 0.8 sits 4.5 dB under the core's stab at its level.
+    const v = vel * DUBSTAB_FALLBACK * (o.level / 0.19);
+    for (const m of notes) this.voice('stab', m, time, 0.22, v, out);
+  }
+
+  // Where the note now being played sits in its loop, for the core.  // Where the note now being played sits in its loop, for the core.
   _noteKey() {
     if (this.key) return this.key;
     this._unkeyed = (this._unkeyed + 1) >>> 0;
