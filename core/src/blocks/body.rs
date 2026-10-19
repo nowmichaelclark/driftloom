@@ -6,7 +6,7 @@
 //! body's bus; the body runs on the sum (`Voice::THROUGH`), as one of a channel's own blocks (`blocks::own`, the registry's `channel` list). The fiddle, the
 //! nylon guitar and the accordion play through one.
 
-use crate::block::{Block, Context, Probe, Signal};
+use crate::block::{Block, Channel, Context, Probe, Signal};
 
 use super::filter::{Biquad, Kind};
 
@@ -116,6 +116,9 @@ impl Block for Body {
         }
     }
 }
+
+// It runs on its bus: the notes of its kind in its channel.
+impl Channel for Body {}
 
 impl Default for Body {
     fn default() -> Self {

@@ -316,3 +316,60 @@ mod tests {
         assert!((x[1] - 800.0).abs() < f64::EPSILON);
     }
 }
+
+/// What one of a held instrument's voices does at a retune (`retune`).
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Turn {
+    /// Its note is in the new chord too: it sounds on, untouched.
+    Keep,
+    /// Its note is not: it lets go and speaks this note instead, or speaks
+    /// it from silence.
+    Speak(f64),
+    /// No note of the new chord is left for it: it lets go, or stays
+    /// silent.
+    Rest,
+}
+
+/// The retune rule (queue items 46c and 61): a held instrument with `N`
+/// voices holding `held` (NaN for a silent voice) moves to `chord`. A note
+/// two chords share keeps sounding, untouched, on the voice that holds it;
+/// each new note goes to the first voice left over, in order; a voice with
+/// none lets go. Notes past the voices are left out, and a note named twice
+/// sounds once. The same chords give the same turns on every device.
+// Notes are matched exactly: a chord's notes are the host's numbers, sent
+// again as they were.
+#[allow(clippy::float_cmp)]
+#[must_use]
+pub fn retune<const N: usize>(held: &[f64; N], chord: &[f64]) -> [Turn; N] {
+    let mut turns = [Turn::Rest; N];
+    let mut placed = [false; crate::block::event::NOTES];
+    let chord = chord.get(..crate::block::event::NOTES).unwrap_or(chord);
+    // A note named twice is placed once, and a NaN never.
+    for (i, &m) in chord.iter().enumerate() {
+        if (m.is_nan() || chord.get(..i).is_some_and(|before| before.contains(&m)))
+            && let Some(p) = placed.get_mut(i)
+        {
+            *p = true;
+        }
+    }
+    // The notes the chords share stay where they are.
+    for (turn, &h) in turns.iter_mut().zip(held.iter()) {
+        if let Some(i) = chord.iter().position(|&m| m == h)
+            && let Some(p) = placed.get_mut(i)
+            && !*p
+        {
+            *p = true;
+            *turn = Turn::Keep;
+        }
+    }
+    // The new notes go to the voices left, in order.
+    let mut free = turns.iter_mut().filter(|t| **t == Turn::Rest);
+    for (&m, p) in chord.iter().zip(placed.iter()) {
+        if !*p
+            && let Some(turn) = free.next()
+        {
+            *turn = Turn::Speak(m);
+        }
+    }
+    turns
+}

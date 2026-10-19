@@ -193,6 +193,24 @@ impl Kit<'_> {
                 r.faults.push(format!("its setting {} changes nothing on any probe: not wired", setting.name));
             }
         }
+        // Each kind of event it hears, and each setting a host sets, on
+        // every probe.
+        let ways = B::HEARS
+            .iter()
+            .map(|&kind| (format!("@{}", crate::block::event::name(kind)), Play::Heard(kind), format!("it hears {}s", crate::block::event::name(kind))))
+            .chain(B::SETTINGS.iter().enumerate().map(|(n, s)| (format!("={}", s.name), Play::Set(n), format!("its setting {}", s.name))));
+        for (suffix, play, what) in ways {
+            let mut heard = false;
+            let mut first = None;
+            for (probe, &was) in probes.iter().zip(plain.iter()) {
+                let row = self.row(block, probe.name, &suffix, &probe.settings, play, fresh);
+                heard |= self.rows.get(row).is_some_and(|r| r.hash != self.rows.get(was).map_or(0, |w| w.hash));
+                first.get_or_insert(row);
+            }
+            if !heard && let Some(r) = first.and_then(|i| self.rows.get_mut(i)) {
+                r.faults.push(format!("{what}, but that changes nothing on any probe: not wired"));
+            }
+        }
         if B::STEREO {
             // A stereo block: its stereo render, checked and stored.
             let mut apart = false;
@@ -510,17 +528,25 @@ fn named(name: &str) -> Vec<String> {
 /// A new block is one new file plus one line in the registry (the charter's
 /// measure, promise 5). Each demonstration block -- the tremolo (item 46),
 /// the amplifier whose gain a signal drives and the stereo panner (item
-/// 46b) -- is named in exactly those two places in the whole core, its own
+/// 46b), and a channel's own swell whose rate a host sets for the loop, held
+/// chorale retuned chord by chord and duck keyed by another channel (item
+/// 46c) -- is named in exactly those two places in the whole core, its own
 /// file and one line of `blocks/mod.rs`, and the kit plays it all the same:
-/// the amplifier's modulation probe and the panner's stereo render too.
+/// the amplifier's modulation probe, the panner's stereo render, the swell's
+/// settings, the chorale's retunes and the duck's key too. (The core's own
+/// tests reach the channel's ones by their numbers, `own::SWELL` and the
+/// rest, which the registry line declares.)
 #[test]
 fn each_demonstration_block_is_one_file_and_one_line() {
-    for (name, probes) in [
-        ("tremolo", &["tremolo/slow", "tremolo/deep"][..]),
-        ("amp", &["amp/half", "amp/half~gain"][..]),
-        ("pan", &["pan/left", "pan/right", "pan/left:stereo", "pan/right:stereo"][..]),
+    for (name, rest, probes) in [
+        ("tremolo", "", &["tremolo/slow", "tremolo/deep"][..]),
+        ("amp", "", &["amp/half", "amp/half~gain"][..]),
+        ("pan", "", &["pan/left", "pan/right", "pan/left:stereo", "pan/right:stereo"][..]),
+        ("swell", " = SWELL (swell::REST)", &["swell/slow", "swell/slow=rate", "swell/slow=depth"][..]),
+        ("chorale", " = CHORALE (chorale::REST)", &["chorale/triad", "chorale/triad@retune"][..]),
+        ("duck", " = DUCK (duck::REST)", &["duck/half", "duck/half~key"][..]),
     ] {
-        let line = format!("mod.rs: #[cfg(test)] {name}::{}{};", name[..1].to_uppercase(), &name[1..]);
+        let line = format!("mod.rs: #[cfg(test)] {name}::{}{}{rest};", name[..1].to_uppercase(), &name[1..]);
         assert_eq!(named(name), vec![line], "where the {name} is named");
         let rows = run(Some(name));
         for probe in probes {

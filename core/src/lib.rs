@@ -49,7 +49,8 @@ pub mod wave;
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 
-use block::{Context, Event, Note, Signal, event};
+use block::{Context, Event, Mods, Note, Signal, event};
+use block::event::Reach;
 use blocks::{Held, Own, Pools, own};
 use blocks::osc::frame_at;
 use master::{Master, OUT};
@@ -199,6 +200,89 @@ pub const VOICES_BUSY: usize = 1;
 pub const SUNG_BUSY: usize = 2;
 const CAUSES: usize = 3;
 
+/// Things sent to a channel that wait for their time (`Core::event`,
+/// `Core::set`, `Core::route`): a retune or a bend, a setting, a route. The
+/// host sends them as it sends notes, seconds ahead at most, and a loop
+/// sets a handful; one sent with every place taken is refused.
+pub const PENDING: usize = 256;
+
+/// The most signals routed from one channel into another's own blocks at
+/// once (`Core::route`).
+pub const ROUTES: usize = 8;
+
+/// Where a routed signal is taken from (`Core::route`): a channel, as it
+/// goes into the mix, or the output of one of its own blocks that runs on a
+/// bus (`blocks::own`; a body).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Tap {
+    /// The channel (`MELODY` and the rest).
+    pub channel: u32,
+    /// One of its own blocks, by number, or `None` for the whole channel.
+    pub block: Option<usize>,
+}
+
+/// What a pending thing is (`Due::what`).
+const DUE_EVENT: u8 = 0;
+const DUE_SET: u8 = 1;
+const DUE_ROUTE: u8 = 2;
+
+/// Something sent to a channel, waiting for its time (`PENDING`). Flat,
+/// with a number for what it is, so a core with none is all zeros.
+#[derive(Clone, Copy)]
+struct Due {
+    /// The frame it is due on, and the order it was sent in: things due on
+    /// the same frame are handed over in the order they came.
+    frame: u64,
+    seq: u64,
+    /// When, on the host's clock, after any clamping to the clock.
+    time: f64,
+    channel: u32,
+    what: u8,
+    /// An event's.
+    event: Event,
+    /// A setting's or a route's: which of the channel's own blocks, which
+    /// of its settings (or of its `MODS`), and the value; a route's tap (its
+    /// channel, and its block, `own::COUNT` for the whole channel), or none.
+    block: usize,
+    setting: usize,
+    value: f64,
+    tap: Option<(u32, usize)>,
+}
+
+const NOT_DUE: Due = Due {
+    frame: 0,
+    seq: 0,
+    time: 0.0,
+    channel: 0,
+    what: DUE_EVENT,
+    event: Event { kind: 0, time: 0.0, value: 0.0, notes: [0.0; event::NOTES] },
+    block: 0,
+    setting: 0,
+    value: 0.0,
+    tap: None,
+};
+
+/// A signal routed from one channel into a setting of another's own block
+/// (`Core::route`), and the block of it the setting hears next.
+#[derive(Clone, Copy)]
+struct Route {
+    on: bool,
+    /// The channel, the own block and the setting it drives.
+    to: u32,
+    block: usize,
+    setting: usize,
+    /// Where it is taken from: a channel, and one of its own blocks or
+    /// `own::COUNT` for the whole channel.
+    from: u32,
+    tap: usize,
+    /// The tap's last block: what the setting hears in the block after it
+    /// (one block's delay, so the order the channels render in does not
+    /// matter, and a route may run either way or both).
+    drive: Signal,
+}
+
+const NO_ROUTE: Route = Route { on: false, to: 0, block: 0, setting: 0, from: 0, tap: 0, drive: [0.0; QUANTUM] };
+
 /// How many extra values a note carries. Fixed, so a note is a plain value
 /// and nothing allocates: the widest voice, the temple bell, settles ten
 /// draws into them. What each voice reads from them is in its own file
@@ -244,12 +328,14 @@ struct Waiting {
     until: f64,
     /// When it arrived, counted across the core (see `Slot`).
     seq: u64,
-    /// The channel events it heard while it waited, one of each kind at
-    /// most: which kinds (a bit each), and each one's time and value. It
-    /// hears them as it starts. Zeros for none, so the queue stays all zeros
-    /// and costs nothing in the `.wasm`.
+    /// The channel events it heard while it waited, one of each kind that
+    /// reaches a note once (`event::ONCE`) at most: which kinds (a bit
+    /// each), and each one's time and value. It hears them as it starts.
+    /// Zeros for none, so the queue stays all zeros and costs nothing in the
+    /// `.wasm`. The kinds that reach every held note are handed over when
+    /// due, to the notes sounding then, so a waiting note keeps none.
     heard: u8,
-    events: [(f64, f64); event::KINDS],
+    events: [(f64, f64); event::ONCE],
 }
 
 const NOTHING: Waiting = Waiting {
@@ -268,7 +354,7 @@ const NOTHING: Waiting = Waiting {
     until: 0.0,
     seq: 0,
     heard: 0,
-    events: [(0.0, 0.0); event::KINDS],
+    events: [(0.0, 0.0); event::ONCE],
 };
 
 /// The core: the one thing a host holds. `const` and all
@@ -288,9 +374,18 @@ pub struct Core {
     buses: [[Signal; own::COUNT]; CHANNELS],
     own: [Own; CHANNELS],
     /// How many notes have arrived, and for each channel and kind of event
-    /// how many had when the last such event came (`Core::event`).
+    /// that reaches a note once how many had when the last such event came
+    /// (`Core::event`).
     arrived: u64,
-    last: [[u64; event::KINDS]; CHANNELS],
+    last: [[u64; event::ONCE]; CHANNELS],
+    /// What waits for its time: events for the channels' own blocks and for
+    /// the notes every event of its kind reaches, settings and routes; how
+    /// many; and how many have been sent.
+    pending: [Due; PENDING],
+    waiting_due: usize,
+    sent: u64,
+    /// The signals routed between channels (`Core::route`).
+    routes: [Route; ROUTES],
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -334,7 +429,11 @@ impl Core {
             buses: [[[0.0; QUANTUM]; own::COUNT]; CHANNELS],
             own: [const { Own::new() }; CHANNELS],
             arrived: 0,
-            last: [[0; event::KINDS]; CHANNELS],
+            last: [[0; event::ONCE]; CHANNELS],
+            pending: [NOT_DUE; PENDING],
+            waiting_due: 0,
+            sent: 0,
+            routes: [NO_ROUTE; ROUTES],
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -366,7 +465,8 @@ impl Core {
             own.start(&cx);
         }
         self.arrived = 0;
-        self.last = [[0; event::KINDS]; CHANNELS];
+        self.last = [[0; event::ONCE]; CHANNELS];
+        self.sent = 0;
         self.inputs = [[0.0; QUANTUM]; CHANNELS];
         self.unserved = 0;
         self.quality(true);
@@ -564,28 +664,56 @@ impl Core {
 
     /// Let every voice go at once, sounding or waiting: the host is going
     /// away.
+    ///
+    /// Every event, setting and route still waiting for its time goes too,
+    /// and every route is undone.
     pub fn clear(&mut self) {
         self.waiting = 0;
         for slot in &mut self.slots {
             slot.busy = false;
         }
         self.pools.clear();
+        self.waiting_due = 0;
+        self.routes = [NO_ROUTE; ROUTES];
     }
 
     /// Drop every note still waiting for its start time, and leave the ones
     /// sounding as they are: the host handed notes over ahead of their time
     /// and the music has jumped since (Pause, Next or Previous, queue item
-    /// 39).
+    /// 39). The events still waiting for their time go with them (they
+    /// belong to the music that jumped); settings and routes stay, as the
+    /// loop's.
     pub fn cancel(&mut self) {
         self.waiting = 0;
+        self.cancel_events(f64::NEG_INFINITY);
+    }
+
+    /// Drop the events waiting for their time whose time is `time` or later.
+    fn cancel_events(&mut self, time: f64) {
+        let mut i = 0;
+        while i < self.waiting_due {
+            let Some(&d) = self.pending.get(i) else { break };
+            if d.what != DUE_EVENT || d.time < time {
+                i += 1;
+                continue;
+            }
+            self.waiting_due -= 1;
+            if let Some(&last) = self.pending.get(self.waiting_due)
+                && let Some(gap) = self.pending.get_mut(i)
+            {
+                *gap = last;
+            }
+        }
     }
 
     /// Drop the notes still waiting whose time is `time` (seconds) or later,
     /// and keep the rest, waiting or sounding: a change that must be heard
     /// at once while notes are handed over seconds ahead (mute, re-roll,
     /// tempo; queue item 40). The host decides again from `time` on, so the
-    /// two halves meet exactly, by the time each note was asked for.
+    /// two halves meet exactly, by the time each note was asked for. The
+    /// events waiting from `time` on go the same way.
     pub fn cancel_from(&mut self, time: f64) {
+        self.cancel_events(time);
         let mut i = 0;
         while i < self.waiting {
             let Some(&w) = self.queue.get(i) else { break };
@@ -721,7 +849,7 @@ impl Core {
             until,
             seq: self.arrived,
             heard: 0,
-            events: [(0.0, 0.0); event::KINDS],
+            events: [(0.0, 0.0); event::ONCE],
         };
         self.waiting += 1;
         self.arrived = self.arrived.wrapping_add(1);
@@ -732,55 +860,197 @@ impl Core {
     /// `DAMP` event (`event`), which the strummed nylon strings of the strum
     /// before it hear. The web host's call, kept as it was.
     pub fn damp(&mut self, channel: u32, time: f64) {
-        self.event(channel, Event { kind: event::DAMP, time, value: 0.0 });
+        self.event(channel, Event::new(event::DAMP, time, 0.0));
     }
 
-    /// Send `event` to the notes of `channel` (queue item 46b): every note
-    /// in it still held at the event's time (its note ends after it) that
-    /// arrived since the channel's last event of the same kind -- so each
-    /// note hears each kind at most once, which is how a damp reaches the
-    /// strum before it and no further. What a note does with it is its
-    /// voice's (`Voice::event`): today only a strummed nylon string listens,
-    /// to a damp.
+    /// Send `event` to `channel` (queue items 46b and 46c). Its kind says
+    /// how far it reaches the channel's notes (`event::reach`):
     ///
-    /// Web Audio adds such an event to a timeline that may already be
-    /// rendering. Chromium renders an event added ahead of the clock exactly
-    /// as one scheduled with the note, so a note already sounding takes it
-    /// as it is, and a note still waiting takes it when it starts. One
-    /// whose time has already been rendered is not caught up: Chromium
-    /// moves an event added in the past to the start of the next block it
-    /// renders (`ClampNewEventsToCurrentTime`), and a sounding note hears
-    /// it there. A kind the core does not have is ignored.
-    pub fn event(&mut self, channel: u32, event: Event) {
-        let Some(last) = self
-            .last
-            .get_mut(channel as usize)
-            .and_then(|kinds| kinds.get_mut(event.kind as usize))
-        else {
-            return;
+    /// - **once** (a damp, a release): every note in the channel still held
+    ///   at the event's time (its note ends after it) that arrived since the
+    ///   channel's last event of the same kind -- so each note hears each
+    ///   such kind at most once, which is how a damp reaches the strum
+    ///   before it and no further. Handed over as it comes: Web Audio adds
+    ///   such an event to a timeline that may already be rendering, and
+    ///   Chromium renders an event added ahead of the clock exactly as one
+    ///   scheduled with the note, so a note already sounding takes it as it
+    ///   is, and a note still waiting takes it when it starts. One whose
+    ///   time has already been rendered is not caught up: Chromium moves an
+    ///   event added in the past to the start of the next block it renders
+    ///   (`ClampNewEventsToCurrentTime`), and a sounding note hears it there.
+    /// - **every time** (a bend, a retune): every note of the channel held
+    ///   when its time comes -- started by then, and its note not yet ended
+    ///   -- as often as such events are sent. Handed over when due, before
+    ///   the block holding its time renders.
+    ///
+    /// The channel's own blocks hear every event when its time comes. What
+    /// a note or a block does with one is its own (`Block::event`): today
+    /// only a strummed nylon string listens, to a damp. False for a kind or
+    /// channel the core does not have, a time that is not a number, or an
+    /// event with every pending place taken (`PENDING`), which the channel's
+    /// own blocks then miss.
+    pub fn event(&mut self, channel: u32, event: Event) -> bool {
+        let Some(reach) = event::reach(event.kind) else {
+            return false;
         };
-        let since = *last;
-        *last = self.arrived;
-        let time = event.time;
-        if !time.is_finite() {
-            return;
-        }
-        let kind = event.kind as usize;
-        for w in self.queue.iter_mut().take(self.waiting) {
-            if w.note.channel == channel
-                && w.seq >= since
-                && w.until > time
-                && let Some(heard) = w.events.get_mut(kind)
-            {
-                *heard = (time, event.value);
-                w.heard |= 1 << kind;
+        if reach == Reach::Once {
+            let Some(last) = self
+                .last
+                .get_mut(channel as usize)
+                .and_then(|kinds| kinds.get_mut(event.kind as usize))
+            else {
+                return false;
+            };
+            let since = *last;
+            *last = self.arrived;
+            let time = event.time;
+            if !time.is_finite() {
+                return false;
+            }
+            let kind = event.kind as usize;
+            for w in self.queue.iter_mut().take(self.waiting) {
+                if w.note.channel == channel
+                    && w.seq >= since
+                    && w.until > time
+                    && let Some(heard) = w.events.get_mut(kind)
+                {
+                    *heard = (time, event.value);
+                    w.heard |= 1 << kind;
+                }
+            }
+            let now = self.now();
+            let at = Event { time: if time < now { now } else { time }, ..event };
+            for slot in &mut self.slots {
+                if slot.busy && slot.channel == channel as usize && slot.seq >= since && slot.until > time {
+                    blocks::event(&mut slot.voice, &mut self.pools, &at);
+                }
             }
         }
+        if channel as usize >= CHANNELS || !event.time.is_finite() {
+            return false;
+        }
+        self.post(Due { channel, what: DUE_EVENT, event, time: event.time, ..NOT_DUE })
+    }
+
+    /// Set setting number `setting` (`Block::SETTINGS`) of `channel`'s own
+    /// block number `block` (`blocks::own`) to `value` at `time` seconds
+    /// (queue item 46c): a loop's sweep period, duck depth or registration,
+    /// as `param` sets the mix's. The block hears it when its time comes,
+    /// before the block holding that time renders; a time already rendered
+    /// is the next block's start. False for no such channel, block or
+    /// setting, a number that is not one, or every pending place taken.
+    pub fn set(&mut self, channel: u32, block: usize, setting: usize, value: f64, time: f64) -> bool {
+        if channel as usize >= CHANNELS || setting >= blocks::own_settings(block) || !(value.is_finite() && time.is_finite()) {
+            return false;
+        }
+        self.post(Due { channel, what: DUE_SET, time, block, setting, value, ..NOT_DUE })
+    }
+
+    /// Route a signal into setting number `setting` (`Block::MODS`) of
+    /// `channel`'s own block number `block`, from `time` seconds on (queue
+    /// item 46c): the kick's channel into the bass's duck, the other layers
+    /// into the wash's follower. `from` is where it is taken (`Tap`): a
+    /// channel as it goes into the mix, or one of its own blocks' bus; `None`
+    /// undoes the route. One signal a setting: a second route into it takes
+    /// the first's place.
+    ///
+    /// **The order:** a routed signal is the tap's previous block, so a
+    /// setting hears its source one block (`QUANTUM` frames) late. The
+    /// channels may then render in any order and a route may run either
+    /// way between two channels, or both; and since the core's blocks are
+    /// its own, never the host's, it is the same on every target, rate and
+    /// host block size. A route starts and stops at the start of the block
+    /// holding `time`; the first block it is on, its setting hears silence.
+    ///
+    /// False for no such channel, block, setting or tap, a time that is not
+    /// a number, or every pending place taken. More than `ROUTES` at once
+    /// are left out.
+    pub fn route(&mut self, channel: u32, block: usize, setting: usize, from: Option<Tap>, time: f64) -> bool {
+        if channel as usize >= CHANNELS || setting >= blocks::own_mods(block) || !time.is_finite() {
+            return false;
+        }
+        let tap = match from {
+            None => None,
+            Some(Tap { channel: c, block: b }) => {
+                let b = b.unwrap_or(own::COUNT);
+                if c as usize >= CHANNELS || b > own::COUNT {
+                    return false;
+                }
+                Some((c, b))
+            }
+        };
+        self.post(Due { channel, what: DUE_ROUTE, time, block, setting, tap, ..NOT_DUE })
+    }
+
+    /// Queue `due` for its time: at the frame its time falls on, or the next
+    /// block's start for a time already rendered.
+    fn post(&mut self, mut due: Due) -> bool {
         let now = self.now();
-        let at = Event { time: if time < now { now } else { time }, ..event };
-        for slot in &mut self.slots {
-            if slot.busy && slot.channel == channel as usize && slot.seq >= since && slot.until > time {
-                blocks::event(&mut slot.voice, &mut self.pools, &at);
+        if due.time < now {
+            due.time = now;
+            due.event.time = now;
+        }
+        due.frame = frame_at(due.time, self.rate).max(self.next);
+        due.seq = self.sent;
+        let Some(gap) = self.pending.get_mut(self.waiting_due) else {
+            return false;
+        };
+        *gap = due;
+        self.waiting_due += 1;
+        self.sent = self.sent.wrapping_add(1);
+        true
+    }
+
+    /// Hand over everything due before frame `end`, in order: by frame, then
+    /// as sent.
+    fn deliver(&mut self, end: u64) {
+        while self.waiting_due > 0 {
+            let mut first: Option<(usize, u64, u64)> = None;
+            for (i, d) in self.pending.iter().take(self.waiting_due).enumerate() {
+                if d.frame < end && first.is_none_or(|(_, f, q)| (d.frame, d.seq) < (f, q)) {
+                    first = Some((i, d.frame, d.seq));
+                }
+            }
+            let Some((i, _, _)) = first else { break };
+            let Some(&d) = self.pending.get(i) else { break };
+            self.waiting_due -= 1;
+            if let Some(&last) = self.pending.get(self.waiting_due)
+                && let Some(gap) = self.pending.get_mut(i)
+            {
+                *gap = last;
+            }
+            self.hand_over(&d);
+        }
+    }
+
+    /// One thing come due.
+    fn hand_over(&mut self, d: &Due) {
+        let channel = d.channel as usize;
+        let cx = Context { rate: self.rate, waves: &self.waves, noise: self.noise.samples() };
+        let Some(own) = self.own.get_mut(channel) else { return };
+        match d.what {
+            DUE_EVENT => {
+                own.event(&d.event);
+                if event::reach(d.event.kind) == Some(Reach::Every) {
+                    for slot in &mut self.slots {
+                        if hears_every(slot, channel, d.frame, d.time) {
+                            blocks::event(&mut slot.voice, &mut self.pools, &d.event);
+                        }
+                    }
+                }
+            }
+            DUE_SET => {
+                own.set(d.block, d.setting, d.value, d.time, &cx);
+            }
+            _ => {
+                let same = |r: &Route| r.on && r.to == d.channel && r.block == d.block && r.setting == d.setting;
+                let at = self.routes.iter().position(same).or_else(|| self.routes.iter().position(|r| !r.on));
+                if let Some(r) = at.and_then(|i| self.routes.get_mut(i)) {
+                    *r = match d.tap {
+                        Some((from, tap)) => Route { on: true, to: d.channel, block: d.block, setting: d.setting, from, tap, drive: [0.0; QUANTUM] },
+                        None => NO_ROUTE,
+                    };
+                }
             }
         }
     }
@@ -804,7 +1074,7 @@ impl Core {
         // The channel events it heard while it waited, as they came.
         for (kind, &(time, value)) in (0u32..).zip(w.events.iter()) {
             if w.heard & (1 << kind) != 0 {
-                blocks::event(&mut slot.voice, &mut self.pools, &Event { kind, time, value });
+                blocks::event(&mut slot.voice, &mut self.pools, &Event::new(kind, time, value));
             }
         }
         slot.channel = w.note.channel as usize;
@@ -851,6 +1121,10 @@ impl Core {
             }
             self.begin_note(w);
         }
+        // Then the events, settings and routes due in this block.
+        if self.waiting_due > 0 {
+            self.deliver(end);
+        }
         for bus in self.buses.iter_mut().flatten() {
             bus.fill(0.0);
         }
@@ -871,24 +1145,62 @@ impl Core {
                 blocks::free(&slot.voice, &mut self.pools);
             }
         }
-        // Every note that plays through one of its channel's own blocks (a
-        // body), through it.
-        for ((out, buses), own) in self.out.iter_mut().zip(self.buses.iter_mut()).zip(self.own.iter_mut()) {
-            own.render(block, &cx, buses, out);
-        }
-        // The host's own notes, then the mix. A channel's tail stops at the
-        // silence floor on its way in (`math`, "Subnormal numbers").
-        for (out, input) in self.out.iter_mut().zip(self.inputs.iter_mut()) {
-            for (y, x) in out.iter_mut().zip(input.iter()) {
-                *y = math::silence(*y + *x);
+        // Each channel: every note that plays through one of its own blocks
+        // (a body) through it, and the blocks that add their own sound; the
+        // host's own notes; then the blocks on the whole channel. Its tail
+        // stops at the silence floor on its way into the mix (`math`,
+        // "Subnormal numbers"). The signals routed in are the taps' last
+        // block (`Core::route`).
+        let routes = &self.routes;
+        for (n, (((out, buses), own), input)) in
+            self.out.iter_mut().zip(self.buses.iter_mut()).zip(self.own.iter_mut()).zip(self.inputs.iter_mut()).enumerate()
+        {
+            let mut mods = [Mods::NONE; own::COUNT];
+            for r in routes.iter().filter(|r| r.on && r.to as usize == n) {
+                if let Some(m) = mods.get_mut(r.block) {
+                    *m = m.with(r.setting, &r.drive);
+                }
+            }
+            own.buses(block, &cx, buses, out, &mods);
+            if own::ANY_WHOLE {
+                for (y, x) in out.iter_mut().zip(input.iter()) {
+                    *y += *x;
+                }
+                own.whole(block, &cx, out, &mods);
+                for y in out.iter_mut() {
+                    *y = math::silence(*y);
+                }
+            } else {
+                for (y, x) in out.iter_mut().zip(input.iter()) {
+                    *y = math::silence(*y + *x);
+                }
             }
             input.fill(0.0);
+        }
+        // What each route's setting hears in the next block.
+        for r in self.routes.iter_mut().filter(|r| r.on) {
+            let tap = match self.buses.get(r.from as usize).and_then(|b| b.get(r.tap)) {
+                Some(bus) => bus,
+                None => match self.out.get(r.from as usize) {
+                    Some(out) => out,
+                    None => continue,
+                },
+            };
+            r.drive = *tap;
         }
         // The graph is mono: the mix is every lane's.
         let mixed = [*self.mix.process(block, &self.out); OUT];
         self.master.process(block, &mixed, &self.waves);
         &self.out
     }
+}
+
+/// Whether the note in `slot` hears an event that reaches every held note
+/// (`event::Reach::Every`) sent to `channel`, due on `frame` at `time`: it
+/// is sounding in that channel, it has started by then, and its note has not
+/// ended.
+fn hears_every(slot: &Slot, channel: usize, frame: u64, time: f64) -> bool {
+    slot.busy && slot.channel == channel && slot.begin <= frame && slot.until > time
 }
 
 impl Default for Core {
@@ -1627,10 +1939,246 @@ mod tests {
         }
         for channel in [MELODY, CHORDS] {
             sent.damp(channel, 0.5);
-            sent.event(channel, Event { kind: event::RELEASE, time: 0.6, value: 0.0 });
-            sent.event(channel, Event { kind: event::BEND, time: 0.7, value: 100.0 });
-            sent.event(channel, Event { kind: 99, time: 0.8, value: 0.0 });
+            sent.event(channel, Event::new(event::RELEASE, 0.6, 0.0));
+            sent.event(channel, Event::new(event::BEND, 0.7, 100.0));
+            sent.event(channel, Event::new(99, 0.8, 0.0));
         }
         assert_eq!(all(&mut plain, 3.0), all(&mut sent, 3.0));
+    }
+
+    /// Every channel's output through `Core::render`, `sizes` frames a call
+    /// in turn, for `frames` frames, after `setup`.
+    fn rendered(setup: impl Fn(&mut Core), sizes: &[usize], frames: usize) -> Vec<u32> {
+        let mut core = boxed();
+        setup(&mut core);
+        let mut all = Vec::new();
+        let mut at = 0;
+        while all.len() < frames {
+            let want = sizes[at % sizes.len()].min(frames - all.len());
+            at += 1;
+            let mut buffer = vec![0.0f32; want];
+            core.render(&mut [&mut buffer]).expect("mono");
+            all.extend(buffer.iter().map(|x| x.to_bits()));
+        }
+        all
+    }
+
+    /// A channel's samples, block by block, for `seconds`.
+    fn channel(core: &mut Core, ch: usize, seconds: f64) -> Vec<f32> {
+        let mut out = Vec::new();
+        for b in 0..(seconds * RATE) as usize / QUANTUM {
+            out.extend(core.process((b * QUANTUM) as u64)[ch].iter());
+        }
+        out
+    }
+
+    /// The first sample at which two renders differ.
+    fn first_difference(a: &[f32], b: &[f32]) -> Option<usize> {
+        a.iter().zip(b).position(|(x, y)| x.to_bits() != y.to_bits())
+    }
+
+    // A setting reaches a channel's own block when its time comes, not
+    // before: the swell (a test-only demonstration, `own::SWELL`) on the melody,
+    // set to swing from 0.3 s, leaves every block before the one holding
+    // 0.3 s as it was. The same whatever size of call the host renders in.
+    #[test]
+    fn a_setting_reaches_a_channels_own_block_when_its_time_comes() {
+        // The swell's settings, by number: its rate, then its depth.
+        const SWING: usize = 0;
+        const DEPTH: usize = 1;
+        let play = |core: &mut Core| {
+            core.note(KALIMBA, MELODY, 0.05, 69.0, 1.5, 0.8, STRIKE | BODY, NO);
+        };
+        let (mut plain, mut set) = (boxed(), boxed());
+        play(&mut plain);
+        play(&mut set);
+        assert!(set.set(MELODY, own::SWELL, SWING, 3.0, 0.3));
+        assert!(set.set(MELODY, own::SWELL, DEPTH, 0.5, 0.3));
+        let (a, b) = (channel(&mut plain, 0, 1.0), channel(&mut set, 0, 1.0));
+        let at = frame_at(0.3, RATE) as usize;
+        let first = first_difference(&a, &b).expect("the swell is heard");
+        assert!(first >= at / QUANTUM * QUANTUM, "heard at {first}, before {at}");
+        // Not a block, setting or channel the core has.
+        assert!(!set.set(MELODY, own::SWELL, 2, 1.0, 0.3));
+        assert!(!set.set(MELODY, own::COUNT, 0, 1.0, 0.3));
+        assert!(!set.set(5, own::SWELL, DEPTH, 1.0, 0.3));
+        assert!(!set.set(MELODY, own::SWELL, DEPTH, f64::NAN, 0.3));
+        // A body takes no settings.
+        assert!(!set.set(MELODY, own::NYLON_BODY, 0, 1.0, 0.3));
+        let host = |core: &mut Core| {
+            play(core);
+            core.set(MELODY, own::SWELL, DEPTH, 0.5, 0.3);
+        };
+        let whole = rendered(host, &[40_000], 40_000);
+        for sizes in [&[1][..], &[441], &[127, 1024, 3]] {
+            assert!(rendered(host, sizes, 40_000) == whole, "calls of {sizes:?} frames");
+        }
+    }
+
+    // A retune reaches a held instrument every time it is sent: the
+    // chorale (a test-only demonstration, `own::CHORALE`) in the chords hears all
+    // five, and a note the chords share sounds on untouched -- a retune to
+    // the chord it holds changes no sample.
+    #[test]
+    fn a_held_instrument_hears_every_retune() {
+        let chords: [&[f64]; 5] = [&[60.0, 64.0, 67.0], &[60.0, 65.0, 69.0], &[62.0, 65.0, 69.0], &[59.0, 62.0, 67.0], &[60.0, 64.0, 67.0]];
+        let retuned = |n: usize, channel: u32| {
+            let mut core = boxed();
+            for (i, chord) in chords.iter().take(n).enumerate() {
+                assert!(core.event(channel, Event::retune(0.1 + 0.3 * i as f64, chord)));
+            }
+            channel_all(&mut core, 2.0)
+        };
+        let (four, five) = (retuned(4, CHORDS), retuned(5, CHORDS));
+        assert!(four.iter().any(|&x| x != 0.0), "the chorale sounds");
+        let first = first_difference(&four, &five).expect("the fifth retune is heard");
+        assert!(first >= frame_at(1.3, RATE) as usize / QUANTUM * QUANTUM * CHANNELS);
+        assert!(retuned(5, MELODY) != five, "a retune into the melody reached the chords");
+        // The same chord again: nothing changes.
+        let mut again = boxed();
+        let mut once = boxed();
+        for core in [&mut again, &mut once] {
+            core.event(CHORDS, Event::retune(0.1, &[60.0, 64.0, 67.0]));
+        }
+        again.event(CHORDS, Event::retune(0.5, &[67.0, 60.0, 64.0]));
+        assert_eq!(channel_all(&mut again, 1.5), channel_all(&mut once, 1.5));
+        let host = |core: &mut Core| {
+            for (i, chord) in chords.iter().enumerate() {
+                core.event(CHORDS, Event::retune(0.1 + 0.15 * i as f64, chord));
+            }
+        };
+        let whole = rendered(host, &[60_000], 60_000);
+        assert!(whole.iter().any(|&b| f32::from_bits(b) != 0.0));
+        for sizes in [&[1][..], &[441], &[127, 1024, 3]] {
+            assert!(rendered(host, sizes, 60_000) == whole, "calls of {sizes:?} frames");
+        }
+    }
+
+    /// Every channel's samples, block by block, for `seconds`.
+    fn channel_all(core: &mut Core, seconds: f64) -> Vec<f32> {
+        all(core, seconds)
+    }
+
+    // The retune rule: a note two chords share stays on its voice; the new
+    // notes go to the voices left, in order; a voice with none rests.
+    #[test]
+    fn the_retune_rule_keeps_shared_notes_where_they_are() {
+        use blocks::{Turn, retune};
+        let nan = f64::NAN;
+        assert_eq!(
+            retune(&[60.0, 64.0, 67.0, nan], &[60.0, 65.0, 69.0]),
+            [Turn::Keep, Turn::Speak(65.0), Turn::Speak(69.0), Turn::Rest]
+        );
+        assert_eq!(
+            retune(&[60.0, 64.0, 67.0, nan], &[67.0, 64.0, 60.0, 72.0]),
+            [Turn::Keep, Turn::Keep, Turn::Keep, Turn::Speak(72.0)]
+        );
+        // More notes than voices, a note twice, and a NaN.
+        assert_eq!(
+            retune(&[nan, nan], &[60.0, 60.0, nan, 64.0, 67.0]),
+            [Turn::Speak(60.0), Turn::Speak(64.0)]
+        );
+        assert_eq!(retune(&[60.0, 64.0], &[]), [Turn::Rest, Turn::Rest]);
+    }
+
+    // A route carries one channel's signal into another's own block one
+    // block late: the duck (a test-only demonstration, `own::DUCK`) on the
+    // melody, keyed by the drums, leaves the melody as it was up to the
+    // block after the drums first sound, presses it down after, and lets it
+    // be again from the block holding the time the route is undone.
+    #[test]
+    fn a_route_carries_one_channels_signal_into_anothers_block_a_block_late() {
+        // The duck's one setting a signal drives: its key.
+        const KEY: usize = 0;
+        let play = |core: &mut Core| {
+            core.note(SINE, MELODY, 0.0, 69.0, 2.0, 0.8, 0, NO);
+            for i in 0..4 {
+                core.note(DRUM, DRUMS_CHANNEL, 0.2 + 0.25 * f64::from(i), 0.0, 0.1, 0.9, drum::KICK, NO);
+            }
+        };
+        let (mut plain, mut ducked) = (boxed(), boxed());
+        play(&mut plain);
+        play(&mut ducked);
+        let drums = Some(Tap { channel: DRUMS_CHANNEL, block: None });
+        assert!(ducked.route(MELODY, own::DUCK, KEY, drums, 0.0));
+        assert!(ducked.route(MELODY, own::DUCK, KEY, None, 1.2));
+        let mut a = Vec::new();
+        let mut b = Vec::new();
+        let mut kick = None;
+        for blk in 0..(2.0 * RATE) as usize / QUANTUM {
+            let x = plain.process((blk * QUANTUM) as u64);
+            a.extend(x[0]);
+            kick = kick.or(x[DRUMS_CHANNEL as usize].iter().position(|&v| v != 0.0).map(|i| blk * QUANTUM + i));
+            b.extend(ducked.process((blk * QUANTUM) as u64)[0]);
+        }
+        let kick = kick.expect("the kick sounds");
+        let first = first_difference(&a, &b).expect("the duck is heard");
+        assert!(first >= (kick / QUANTUM + 1) * QUANTUM, "heard at {first}, the kick at {kick}");
+        let energy = |v: &[f32]| v.iter().map(|x| x * x).sum::<f32>();
+        let (from, to) = ((0.2 * RATE) as usize, (1.2 * RATE) as usize);
+        assert!(energy(&b[from..to]) < energy(&a[from..to]) * 0.9, "pressed down");
+        let undone = frame_at(1.2, RATE) as usize / QUANTUM * QUANTUM;
+        assert_eq!(first_difference(&a[undone..], &b[undone..]), None, "let be once undone");
+        // Not a setting, block or tap the core has.
+        assert!(!ducked.route(MELODY, own::DUCK, 1, drums, 0.0));
+        assert!(!ducked.route(MELODY, own::SWELL, 0, drums, 0.0));
+        assert!(!ducked.route(MELODY, own::DUCK, KEY, Some(Tap { channel: 9, block: None }), 0.0));
+        assert!(ducked.route(MELODY, own::DUCK, KEY, Some(Tap { channel: CHORDS, block: Some(own::NYLON_BODY) }), 3.0));
+        let host = |core: &mut Core| {
+            play(core);
+            core.route(MELODY, own::DUCK, KEY, drums, 0.0);
+        };
+        let whole = rendered(host, &[60_000], 60_000);
+        for sizes in [&[1][..], &[441], &[127, 1024, 3]] {
+            assert!(rendered(host, sizes, 60_000) == whole, "calls of {sizes:?} frames");
+        }
+    }
+
+    // How far each kind reaches: a damp and a release once, a bend and a
+    // retune every time; a note hears an every-time event when it is held
+    // then -- started, and not yet ended.
+    #[test]
+    fn each_kind_says_how_far_it_reaches() {
+        use event::{BEND, DAMP, KINDS, ONCE, RELEASE, RETUNE, reach};
+        assert_eq!(reach(DAMP), Some(Reach::Once));
+        assert_eq!(reach(RELEASE), Some(Reach::Once));
+        assert_eq!(reach(BEND), Some(Reach::Every));
+        assert_eq!(reach(RETUNE), Some(Reach::Every));
+        assert_eq!(reach(KINDS as u32), None);
+        for kind in 0..KINDS as u32 {
+            assert_eq!(reach(kind) == Some(Reach::Once), (kind as usize) < ONCE, "the once-kinds come first");
+            assert!(event::name(kind).is_ascii());
+        }
+        let mut slot = Slot::new();
+        (slot.busy, slot.channel, slot.begin, slot.until) = (true, 1, 1000, 2.0);
+        assert!(hears_every(&slot, 1, 1000, 1.0));
+        assert!(!hears_every(&slot, 1, 999, 0.02), "not started yet");
+        assert!(!hears_every(&slot, 1, 100_000, 2.0), "ended");
+        assert!(!hears_every(&slot, 2, 1000, 1.0), "another channel");
+        slot.busy = false;
+        assert!(!hears_every(&slot, 1, 1000, 1.0), "not sounding");
+    }
+
+    // Cancelling drops the events still waiting for their time, from its
+    // time on, and keeps the settings: they are the loop's.
+    #[test]
+    fn cancel_drops_waiting_events_and_keeps_settings() {
+        // The swell's depth.
+        const DEPTH: usize = 1;
+        let mut core = boxed();
+        core.event(CHORDS, Event::retune(0.5, &[60.0]));
+        core.event(CHORDS, Event::retune(1.5, &[64.0]));
+        core.set(MELODY, own::SWELL, DEPTH, 0.5, 1.5);
+        core.cancel_from(1.0);
+        assert_eq!(core.waiting_due, 2);
+        core.cancel();
+        assert_eq!(core.waiting_due, 1);
+        core.clear();
+        assert_eq!(core.waiting_due, 0);
+        // A place for every pending thing, and no more.
+        for i in 0..PENDING {
+            assert!(core.event(CHORDS, Event::new(event::BEND, 1.0 + i as f64 * 0.001, 0.0)));
+        }
+        assert!(!core.event(CHORDS, Event::new(event::BEND, 9.0, 0.0)));
     }
 }

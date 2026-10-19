@@ -96,3 +96,13 @@ pan/left 2b52ba0cc00e226c -20.27 -8.81 34.1
 pan/right 2b52ba0cc00e226c -20.27 -8.81 34.1
 pan/left:stereo a7a058386fb7d854 -22.63 -8.81 34.1
 pan/right:stereo 4f97348e68934cd8 -21.54 -8.81 34.1
+nylon/strum a2b14766ea5ea90a -30.09 -17.82 0.2
+nylon/pluck@damp 739771c4f51573c4 -30.45 -18.00 0.5
+nylon/strum@damp 53aa493a50358eb1 -31.21 -17.82 0.3
+swell/slow 08082a522cf0e341 -19.86 -6.49 34.1
+swell/slow=rate b7590a1e35ce7828 -19.36 -6.35 34.3
+swell/slow=depth dbc9c0d976710efa -18.96 -4.39 34.0
+chorale/triad 9f88c5e57536d8c8 -20.18 -12.40 0.0
+chorale/triad@retune c21184f7cd85d6d4 -20.18 -10.68 0.0
+duck/half 2b52ba0cc00e226c -20.27 -8.81 34.1
+duck/half~key 1d445a06366ecb08 -22.35 -10.79 34.1

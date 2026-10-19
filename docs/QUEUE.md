@@ -3481,6 +3481,59 @@ Mikey decides this line:
      queue's event bookkeeping, plus the sung pool's `Lfo`s. The `.wasm` is
      147,599 bytes (146,313 before), and the stereo seam adds no byte to it.
 
+- **Item 46c, the channel seams: notes for the brain (Session 25a, hands,
+  Opus 5.5, 2026-10-19).** Three host paths into a channel's own blocks,
+  each through one queue of things waiting for their time (`PENDING`, 256),
+  handed over before the block holding their time renders:
+  - **Settings for the loop:** `Block::SETTINGS` (named, each with the
+    value the kit probes it at) and `Block::set`; the host calls
+    `Core::set(channel, own::NAME, setting, value, time)` (`dl_set`). A
+    block applies a setting from its time; the swell restarts its `Lfo`
+    there.
+  - **Reach:** `event::reach` says once (`DAMP`, `RELEASE`: 46b's path,
+    untouched) or every time (`BEND`, and the new `RETUNE`, which carries a
+    chord of up to six notes: `Event::retune`, `dl_retune`). An every-time
+    event reaches every note of its channel held when its time comes
+    (started by then, not yet ended), and the channel's own blocks hear
+    every event then too. A waiting note now keeps only the once-kinds,
+    which shrank the waiting queue by 64 KB.
+  - **The retune rule** is `blocks::retune` (shared): notes the chords share
+    stay on their voice, new notes take the voices left in order, a voice
+    with none rests. Item 61's organ calls it from its `event`, as the
+    chorale demonstration does.
+  - **Cross-channel signals:** `Core::route(channel, own::NAME, setting,
+    Some(Tap { channel, block }), time)` (`dl_route`); `None` undoes it. A
+    tap is a channel as it goes into the mix, or one of its own blocks'
+    buses. **The order: one block's delay** (a setting hears its source's
+    previous block, 2.7 ms at 48 kHz), so channels render in any order and
+    routes may run both ways; the same on every target and block size. At
+    most 8 routes; one signal a setting.
+  - **`Channel::WHOLE`:** a channel's own block may work on the whole
+    channel (after its buses and the host's notes) rather than on a bus.
+    padSweep, subDuck and the arc's filter are this.
+
+  **For the batch:** item 61's organ is a channel source like
+  `chorale.rs`, hearing `RETUNE` and taking its registration through
+  `SETTINGS`; 62's wash is a source on the sixth channel with five routes
+  in (one a channel) summed by itself, or the follower reading one route
+  from each; 63's arc and 72's padSweep are `WHOLE` blocks like
+  `swell.rs` with a `Filter`; 68's subDuck is `duck.rs` with depth and
+  recovery as settings (a setting the kit can only hear with a key routed
+  in is better as a start setting or probed with one: the kit sets
+  settings with nothing routed, so the demo duck lists none).
+
+  **Still awkward for phase 5:**
+  1. A retune applies from the start of the block it falls in, in the
+     chorale; an organ that wants it on the frame has to keep the frame
+     itself (the time is in the event).
+  2. A `WHOLE` block runs on its channel only. A processor across several
+     channels (a bus) would be a channel of its own, or the mix's.
+  3. A route is one signal a setting, and the tap is a whole channel or a
+     bus: a kick alone (subDuck keyed by the kick, not the hats) needs the
+     kick on a bus of its own, a `THROUGH` pass-through block.
+  4. Every channel holds one of each channel block (5 a name; 6 after the
+     wash). An idle one must cost nothing; each says so in its `render`.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -3996,3 +4049,14 @@ Mikey decides this line:
   demonstration blocks are one file plus one line each. A refactor: goldens,
   baseline and stored block renders bit for bit unchanged, instruction counts
   -3.6% to +0.5%. Listen for: nothing; it should sound exactly the same.
+- #244, the channel seams (core item 46c, v102),
+  https://60366274-driftloom.nowmichaelclark.workers.dev: a channel's own
+  blocks take per-loop settings (`Core::set`), hear every event sent to their
+  channel when its time comes, and take signals routed from other channels
+  (`Core::route`, one block late); each event kind says how far it reaches
+  (damp and release once, bend and the new retune every time), and the retune
+  rule keeps the notes two chords share. Three test-only demonstrations (a
+  swell, a chorale, a duck) are one file plus one line each. A refactor:
+  goldens, baseline and stored block renders bit for bit unchanged,
+  instruction counts +0.02% to +0.10%. Listen for: nothing; it should sound
+  exactly the same.
