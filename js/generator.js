@@ -1031,13 +1031,18 @@ function genBass(spec, harmony) {
   if (chugs(spec)) style = 'chug';
   const voice = r.weighted(c.bassVoices || [['sub', 1]]);
   const glideChance = c.glide || 0;
-  const octaveShift = r.chance(0.25) ? -12 : 0;
+  // roundBass (queue item 56, approved by Mikey 2026-10-10): the bass sits
+  // in 36-57, its bottom an octave higher than the old 28-52, and never
+  // takes the extra octave down, so it reads on a phone (the core adds soft
+  // harmonics too). The draw that once chose that octave is still made, so
+  // no later draw moves.
+  r.chance(0.25);
   const events = [];
 
   const place = (step, dur, midi, vel, glide = false) => {
-    let m = midi + octaveShift;
-    while (m > 52) m -= 12;
-    while (m < 28) m += 12;
+    let m = midi;
+    while (m > 57) m -= 12;
+    while (m < 36) m += 12;
     events.push({ step: step % total, dur, midi: m, vel, glide, voice });
   };
 

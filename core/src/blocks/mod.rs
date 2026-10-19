@@ -471,6 +471,7 @@ registry! {
         noise_source::NoiseSource;
         compressor::Compressor<1>;
         lfo::Lfo;
+        harmonics::Harmonics;
         #[cfg(test)] tremolo::Tremolo;
         #[cfg(test)] amp::Amp;
         #[cfg(test)] pan::Pan;
