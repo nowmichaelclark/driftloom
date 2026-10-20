@@ -55,6 +55,14 @@ impl NoiseSource {
         }
     }
 
+    /// One never started, all zeros, for a block the core holds in its
+    /// static memory (a channel's own block): it plays nothing until a
+    /// `grain` or a loop starts it.
+    #[must_use]
+    pub const fn unstarted() -> Self {
+        NoiseSource { done: false, ..NoiseSource::new() }
+    }
+
     /// `src.playbackRate.value = playback; src.start(when, offset, duration)`.
     #[allow(clippy::too_many_arguments)]
     pub fn grain(

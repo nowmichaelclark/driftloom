@@ -4,7 +4,8 @@
 //! A note list is plain ASCII text, one fact per line, because it is
 //! committed beside the hashes it produces and a diff of it should be
 //! readable. The page's host (`js/core.js`) makes the same few calls to the
-//! core whatever it plays -- `param`, `damp`, `key` and `note` -- so a note
+//! core whatever it plays -- `param`, `damp`, `key`, `set`, `event` and
+//! `note` -- so a note
 //! list is those calls, in the order the synth made them, and nothing else. `tools/golden-export.mjs` writes
 //! them; this file reads them. Every number is written the way JavaScript
 //! prints a double (the shortest text that reads back exactly) and read
@@ -20,6 +21,13 @@
 //! param ID OP VALUE TIME TAU   Core::param
 //! damp CHANNEL TIME            Core::damp
 //! key SEED PASS STEP ORD       Core::key: where the notes that follow sit
+//! set CHANNEL BLOCK SETTING VALUE TIME
+//!                              Core::set: a setting of a channel's own block
+//! event CHANNEL KIND TIME VALUE
+//!                              Core::event (`Event::new`)
+//! retune CHANNEL TIME N1 ... N6
+//!                              Core::event (`Event::retune`); "nan" past the
+//!                              chord's last note
 //! note VOICE CHANNEL TIME MIDI DUR VEL PARTS X0 ... X11
 //!                              Core::note; "nan" for a value left out
 //! ```
@@ -47,6 +55,12 @@ pub enum Event {
     Damp { channel: u32, time: f64 },
     /// `Core::key(key)`: where the notes after it sit in their loop.
     Key(Key),
+    /// `Core::set(channel, block, setting, value, time)`.
+    Set { channel: u32, block: u32, setting: u32, value: f64, time: f64 },
+    /// `Core::event(channel, Event::new(kind, time, value))`.
+    Channel { channel: u32, kind: u32, time: f64, value: f64 },
+    /// `Core::event(channel, Event::retune(time, notes))`.
+    Retune { channel: u32, time: f64, notes: [f64; 6] },
     /// `Core::note(...)`.
     Note {
         voice: u32,
@@ -165,6 +179,37 @@ pub fn parse(text: &str) -> Result<List, String> {
                     step: whole(args[2], "the step", line)?,
                     ord: whole(args[3], "the note's place", line)?,
                 }));
+            }
+            "set" => {
+                want(5)?;
+                list.events.push(Event::Set {
+                    channel: whole(args[0], "the channel", line)?,
+                    block: whole(args[1], "the block", line)?,
+                    setting: whole(args[2], "the setting", line)?,
+                    value: number(args[3], "the value", line)?,
+                    time: number(args[4], "the time", line)?,
+                });
+            }
+            "event" => {
+                want(4)?;
+                list.events.push(Event::Channel {
+                    channel: whole(args[0], "the channel", line)?,
+                    kind: whole(args[1], "the kind", line)?,
+                    time: number(args[2], "the time", line)?,
+                    value: number(args[3], "the value", line)?,
+                });
+            }
+            "retune" => {
+                want(8)?;
+                let mut notes = [0.0; 6];
+                for (slot, word) in notes.iter_mut().zip(&args[2..]) {
+                    *slot = number(word, "a note", line)?;
+                }
+                list.events.push(Event::Retune {
+                    channel: whole(args[0], "the channel", line)?,
+                    time: number(args[1], "the time", line)?,
+                    notes,
+                });
             }
             "note" => {
                 want(7 + EXTRA)?;
@@ -323,6 +368,21 @@ fn load(core: &mut Core, list: &List) -> Result<(), String> {
             }
             Event::Damp { channel, time } => core.damp(*channel, *time),
             Event::Key(key) => core.key(*key),
+            Event::Set { channel, block, setting, value, time } => {
+                if !core.set(*channel, *block as usize, *setting as usize, *value, *time) {
+                    return Err(format!("event {}: the core refused setting {setting} of block {block}", n + 1));
+                }
+            }
+            Event::Channel { channel, kind, time, value } => {
+                if !core.event(*channel, dlcore::block::Event::new(*kind, *time, *value)) {
+                    return Err(format!("event {}: the core refused an event of kind {kind}", n + 1));
+                }
+            }
+            Event::Retune { channel, time, notes } => {
+                if !core.event(*channel, dlcore::block::Event::retune(*time, notes)) {
+                    return Err(format!("event {}: the core refused a retune", n + 1));
+                }
+            }
             Event::Note { voice, channel, time, midi, dur, vel, parts, extra } => {
                 let taken = core.note(*voice, *channel, *time, *midi, *dur, *vel, *parts, *extra);
                 if taken != Taken::OnTime {

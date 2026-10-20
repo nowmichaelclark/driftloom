@@ -6,7 +6,7 @@ import { midiToFreq } from './theory.js';
 import {
   CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
-  MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES,
+  MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS,
 } from './core.js';
 import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
 
@@ -514,6 +514,8 @@ export class Synth {
     this._unkeyed = 0;
     // The kicks' ducks handed to the core, the last second's (`cancelFrom`).
     this._ducks = [];
+    // The loop's chapel organ settings (organSetup), or null.
+    this._organ = null;
     // Notes for a core voice that played in JS instead: the core had not
     // arrived, had failed, or does not serve the note's channel.
     this.fallbacks = 0;
@@ -540,6 +542,8 @@ export class Synth {
       if (this.onCoreError) this.onCoreError(this.coreError);
     };
     this._mixInCore(fresh);
+    // The loop's organ, if it has one, from now on.
+    if (this._organ) this._organSend(this._raw.currentTime);
   }
 
   // The core will not come (it did not load, or its node could not be
@@ -2041,6 +2045,40 @@ export class Synth {
     // velocity 0.8 sits 4.5 dB under the core's stab at its level.
     const v = vel * DUBSTAB_FALLBACK * (o.level / 0.19);
     for (const m of notes) this.voice('stab', m, time, 0.22, v, out, { yields: true });
+  }
+
+  // The chapel organ (queue item 61): an instrument the core's chords
+  // channel holds for the loop (core/src/blocks/organ.rs), outside the voice
+  // budget. `values` are its settings for the loop, in ORGAN_SETTINGS order
+  // (js/core.js), from `time`; null for a loop without it. A core that
+  // arrives later is handed the loop's settings as it attaches. The
+  // JavaScript synth (the fallback) has no organ: it leaves it out.
+  organSetup(values, time) {
+    this._organ = values ? values.slice() : null;
+    if (values) this._organSend(time);
+  }
+
+  _organSend(time) {
+    const core = this._coreMix();
+    const channel = core ? core.channelOf(this.channels.chords.gain) : -1;
+    if (channel < 0 || !this._organ) return;
+    this._organ.forEach((v, n) => core.set(channel, CORE_OWN.organ, n, v, time));
+  }
+
+  // The organ moves to `notes` at `time`: a note the two chords share sounds
+  // on, untouched, and only the changed notes are let go and spoken again
+  // (the core's retune rule).
+  organChord(notes, time) {
+    const core = this._coreMix();
+    const channel = core && this._organ ? core.channelOf(this.channels.chords.gain) : -1;
+    if (channel >= 0) core.retune(channel, time, notes);
+  }
+
+  // The organ lets go of every note at `time`, over `fall` seconds.
+  organOff(time, fall = 0.25) {
+    const core = this._coreMix();
+    const channel = core ? core.channelOf(this.channels.chords.gain) : -1;
+    if (channel >= 0) core.event(channel, EVENTS.release, time, fall);
   }
 
   // Where the note now being played sits in its loop, for the core.

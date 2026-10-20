@@ -52,9 +52,20 @@ pub type Signal = [f32; QUANTUM];
 /// keeps its shape and pays nothing for stereo (`docs/CORE.md`, promise 9).
 pub type Stereo = [Signal; 2];
 
-/// What a voice sends past its channel (`Voice::SENDS`): into the reverb,
-/// then into the echo, beside what its channel's own sends carry.
+/// What a voice or a channel's own block sends past its channel
+/// (`Voice::SENDS`, `Channel::SENDS`): into the reverb, then into the echo,
+/// beside what its channel's own sends carry.
 pub type Sends = [Signal; 2];
+
+/// Make `sends` ready for this block's first sender: zeros the first time a
+/// block asks (`sent` says whether one already has), so a block in which
+/// nothing sends leaves the mix exactly as it was.
+pub fn open_sends(sends: &mut Sends, sent: &mut bool) {
+    if !*sent {
+        *sends = [[0.0; QUANTUM]; 2];
+        *sent = true;
+    }
+}
 
 /// A setting of a block that a signal can drive (`Block::MODS`).
 #[derive(Clone, Copy)]
@@ -219,7 +230,9 @@ pub struct Setting {
     /// What the setting is, in plain ASCII (`"rate"`), for the kit's report.
     pub name: &'static str,
     /// What the test kit sets it to when it probes it: a value a listener
-    /// would hear differ from the probe's own, inside what the block takes.
+    /// would hear differ from the probe's own, inside what the block takes;
+    /// NaN for a setting a probe cannot hear (one that only reaches the
+    /// block's sends), which the kit leaves alone.
     pub probe: f64,
 }
 
@@ -522,6 +535,19 @@ pub trait Channel: Block {
     /// which only the voices that name it in `Voice::THROUGH` sum into. A
     /// whole-channel block runs after every bus, in the registry's order.
     const WHOLE: bool = false;
+
+    /// Whether it sends some of itself into the reverb and the echo directly
+    /// (`render_sends`), past its channel's own sends: the organ's room
+    /// (queue item 61).
+    const SENDS: bool = false;
+
+    /// Render as `Block::render_mod` does, and add what it sends into
+    /// `sends` (the reverb's input, then the echo's). Called instead when
+    /// `SENDS` is true; by default, nothing sent.
+    fn render_sends(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods, sends: &mut Sends) {
+        let _ = sends;
+        self.render_mod(block, cx, signal, mods);
+    }
 }
 
 /// How `solo` plays a block alone (the test kit, `dlrender --block`).

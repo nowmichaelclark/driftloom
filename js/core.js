@@ -69,6 +69,17 @@ export const CORE_VOICES = {
   vowel: 25, hum: 26, choir: 27,
   dubstab: 28,
 };
+// A channel's own blocks, by the number the core knows them by (`own` in
+// core/src/blocks/mod.rs, the registry's `channel` list), for Core::set;
+// and the chapel organ's settings, in its `set` order
+// (core/src/blocks/organ.rs, queue item 61).
+export const CORE_OWN = { organ: 3 };
+export const ORGAN_SETTINGS = [
+  'bar16', 'bar5', 'bar8', 'bar4', 'bar2_3', 'bar2', 'bar1_3_5', 'bar1_1_3', 'bar1',
+  'speak', 'chiff', 'celeste', 'celesteLevel', 'release', 'tone', 'low', 'carve', 'shimmer', 'level', 'verb', 'dry',
+];
+// The kinds of channel event (core/src/block.rs, `event`).
+export const EVENTS = { damp: 0, release: 1, bend: 2, retune: 3 };
 // A sung note's vowel and where it drifts to, as the core numbers them
 // (core/src/blocks/sung.rs); 4 is a hum opening.
 export const SUNG_VOWELS = { a: 0, e: 1, o: 2, u: 3 };
@@ -304,6 +315,25 @@ export class CoreHost {
   // still held let go (Synth.damp, Core::damp).
   damp(channel, time) {
     this.node.port.postMessage({ type: 'damp', channel, time });
+  }
+
+  // Setting number `setting` of `channel`'s own block number `block`
+  // (CORE_OWN) to `value` at `time`, for the loop (Core::set, queue item
+  // 46c).
+  set(channel, block, setting, value, time) {
+    this.node.port.postMessage({ type: 'set', channel, block, setting, value, time });
+  }
+
+  // A channel event of `kind` (EVENTS) at `time`, with `value`: a release's
+  // fall, in seconds (Core::event).
+  event(channel, kind, time, value = 0) {
+    this.node.port.postMessage({ type: 'event', channel, kind, time, value });
+  }
+
+  // A retune of `channel` to `notes` (six at most) at `time`: what the
+  // instrument it holds plays from then (Event::retune).
+  retune(channel, time, notes) {
+    this.node.port.postMessage({ type: 'retune', channel, time, notes: notes.slice(0, 6) });
   }
 
   // Every note handed over that has not started yet, dropped; the ones

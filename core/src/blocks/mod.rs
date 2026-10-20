@@ -175,7 +175,10 @@ macro_rules! registry {
 
             /// Run each that works on a bus (not `Channel::WHOLE`) on its
             /// bus, in order, with the signals in `mods` driving its
-            /// settings, and add it into the channel's signal `out`.
+            /// settings, and add it into the channel's signal `out`; one
+            /// that sends (`Channel::SENDS`) adds into `sends` too, and says
+            /// so in `sent`.
+            #[allow(clippy::too_many_arguments)]
             pub(crate) fn buses(
                 &mut self,
                 block: u64,
@@ -183,13 +186,20 @@ macro_rules! registry {
                 buses: &mut [Signal; own::COUNT],
                 out: &mut Signal,
                 mods: &[Mods; own::COUNT],
+                sends: &mut Sends,
+                sent: &mut bool,
             ) {
                 $($(
                     #[$ca]
                     if !<$cm::$ct as Channel>::WHOLE
                         && let (Some(bus), Some(m)) = (buses.get_mut(own::$cn), mods.get(own::$cn))
                     {
-                        self.$cn.render_mod(block, cx, bus, m);
+                        if <$cm::$ct as Channel>::SENDS {
+                            crate::block::open_sends(sends, sent);
+                            self.$cn.render_sends(block, cx, bus, m, sends);
+                        } else {
+                            self.$cn.render_mod(block, cx, bus, m);
+                        }
                         for (y, x) in out.iter_mut().zip(bus.iter()) {
                             *y += *x;
                         }
@@ -401,8 +411,8 @@ macro_rules! registry {
                 $( Held::$vt(v) => {
                     let to = into(<$vm::$vt as Voice>::THROUGH, out, buses);
                     if <$vm::$vt as Voice>::SENDS {
+                        crate::block::open_sends(sends, sent);
                         v.render_sends(block, cx, to, sends);
-                        *sent = true;
                     } else {
                         v.render(block, cx, to);
                     }
@@ -412,15 +422,6 @@ macro_rules! registry {
                         v.render(block, cx, into(<$pm::$pt as Voice>::THROUGH, out, buses));
                     }
                 } )*
-            }
-        }
-
-        /// Whether the voice in `held` sends some of itself past its channel
-        /// (`Voice::SENDS`).
-        pub(crate) fn sends(held: &Held) -> bool {
-            match held {
-                $( Held::$vt(_) => <$vm::$vt as Voice>::SENDS, )*
-                $( Held::$pt(_) => <$pm::$pt as Voice>::SENDS, )*
             }
         }
 
@@ -484,6 +485,7 @@ registry! {
     }
     channel {
         body::Body = FIDDLE_BODY (body::FIDDLE), NYLON_BODY (body::NYLON), ACCORDION_BODY (body::ACCORDION);
+        organ::Organ = ORGAN (organ::REST);
         #[cfg(test)] swell::Swell = SWELL (swell::REST);
         #[cfg(test)] chorale::Chorale = CHORALE (chorale::REST);
         #[cfg(test)] duck::Duck = DUCK (duck::REST);

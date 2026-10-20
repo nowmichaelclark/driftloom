@@ -7,7 +7,8 @@
 //
 // The real Synth and Engine, in headless Chromium, play each code into an
 // OfflineAudioContext on the core, exactly as tools/measure.mjs does. The
-// host's calls to the core (CoreHost.note, .param, .damp) are recorded in
+// host's calls to the core (CoreHost.note, .param, .damp, .set, .event,
+// .retune) are recorded in
 // the order they are made, and that is the note list: everything the core
 // needs to render the loop with no JavaScript, in the text format the native
 // host reads (core/examples/dlrender/notelist.rs).
@@ -74,7 +75,7 @@ async function play(spec, seconds, quality, { render }) {
   const core = await loadCore(ctx);
   const events = [];
   const was = {};
-  for (const name of ['note', 'damp', 'param', 'cancel']) was[name] = CoreHost.prototype[name];
+  for (const name of ['note', 'damp', 'param', 'cancel', 'set', 'event', 'retune']) was[name] = CoreHost.prototype[name];
   CoreHost.prototype.note = function (voice, channel, time, midi, dur, vel, parts, extra) {
     const { seed, pass, step, ord } = this.keyOf();
     events.push({ type: 'key', seed, pass, step, ord });
@@ -84,6 +85,18 @@ async function play(spec, seconds, quality, { render }) {
   CoreHost.prototype.damp = function (channel, time) {
     events.push({ type: 'damp', channel, time });
     return was.damp.apply(this, arguments);
+  };
+  CoreHost.prototype.set = function (channel, block, setting, value, time) {
+    events.push({ type: 'set', channel, block, setting, value, time });
+    return was.set.apply(this, arguments);
+  };
+  CoreHost.prototype.event = function (channel, kind, time, value = 0) {
+    events.push({ type: 'event', channel, kind, time, value });
+    return was.event.apply(this, arguments);
+  };
+  CoreHost.prototype.retune = function (channel, time, notes) {
+    events.push({ type: 'retune', channel, time, notes: Array.from({ length: 6 }, (_, i) => notes[i] ?? NaN) });
+    return was.retune.apply(this, arguments);
   };
   CoreHost.prototype.param = function (id, op, value, time, tau = 0) {
     events.push({ type: 'param', id, op, value, time, tau });
