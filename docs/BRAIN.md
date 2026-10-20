@@ -164,6 +164,12 @@ Stated decisions, not inferences. Dated where the date matters.
 
 **The music**
 
+- **Best sound wins, not how it used to be (Mikey, 2026-10-20):** "I just
+  want whatever is best / sounds the best for the core and app going
+  forward. I'm not married at all to how things used to be or operate or
+  function." Today's behavior is a reference to measure against, not a
+  thing to protect; his ears decide. (Level changes still go to his ears
+  level-matched or labeled, since louder wins a quick listen.)
 - **The current balance is right.** Preserve it as things are added.
   Meandering, ambient loops alongside tuneful ones; not every loop a
   triumphant melody. The balance lock (`stats.mjs --check`) guards it; a
@@ -598,7 +604,11 @@ Stated decisions, not inferences. Dated where the date matters.
     Item 74 whenever a session has usage to spare (Sonnet is enough).
   - **Session 26** (brain, Opus): check all three groups; a labeled
     album (keep / tune / drop) of the new sounds and mixing, and a blind
-    stereo-vs-mono A/B; new vibes with Mikey, last before the port.
+    stereo-vs-mono A/B; **the bass level** (item 56, #248, Mikey chose
+    today's level for now, 2026-10-20): the same few loops with the bass
+    at today's level, +3 dB and +5.5 dB (the prototype's), labeled, his
+    pick sets the per-voice trims; in the same album, item 56's wander
+    no longer folding the bass's passing tones down; new vibes with Mikey, last before the port.
     **Then write phase 2's items** (not written yet): the generator's
     port, ordering 48-53 among them, with the chords' octave fix and the
     wander's upper range that must not repeat (both in the charter's
