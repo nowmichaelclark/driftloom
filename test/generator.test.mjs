@@ -5,7 +5,7 @@
 // voicing or an out-of-range note does not throw, it just sounds wrong,
 // and often only on one seed in a thousand. So we check thousands.
 
-import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf } from '../js/generator.js';
+import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords } from '../js/generator.js';
 import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
@@ -238,9 +238,11 @@ const cadenceRange = ({ spec, p }) => {
   }
   return range;
 };
+// Read from today's chord lengths: a loop that holds its chords longer
+// (queue item 57) plays the same progression, more slowly.
 const cadenceOf = (x) => {
   const [from, to] = cadenceRange(x);
-  return x.p.harmony.slots.filter((s) => s.startStep >= from && s.startStep < to).slice(0, 4);
+  return withTodaysChords(x.spec).harmony.slots.filter((s) => s.startStep >= from && s.startStep < to).slice(0, 4);
 };
 const cadences = cinders.filter(({ p }) => p.harmony.slots.some((s) => s.steps));
 const whole = cadences.filter((x) => cadenceOf(x).length >= 4);
@@ -366,10 +368,10 @@ check('no loop wayfare does not lead chugs', [...tides, ...cinders].every(({ p }
 // Its progressions, filtered per mode: I-bVII-IV-I and I-IV-V-IV, each
 // played only where every chord of it is a plain triad.
 const ways = wayfares.filter(({ spec, p }) => ['mixolydian', 'ionian', 'dorian'].includes(spec.scale) && p.harmony.slots.length >= 4);
-check('wayfare plays I-bVII-IV-I and I-IV-V-IV where the mode has them', ways.length > 50 && ways.every(({ spec, p }) => {
-  const roots = p.harmony.slots.slice(0, 4).map((s) => pcOf(s.rootMidi - spec.root)).join();
+check('wayfare plays I-bVII-IV-I and I-IV-V-IV where the mode has them', ways.length > 50 && ways.every(({ spec }) => {
+  const roots = withTodaysChords(spec).harmony.slots.slice(0, 4).map((s) => pcOf(s.rootMidi - spec.root)).join();
   return roots === '0,10,5,0' || roots === '0,5,7,5';
-}) && ways.filter(({ spec }) => spec.scale === 'ionian').every(({ spec, p }) => p.harmony.slots.slice(0, 4)
+}) && ways.filter(({ spec }) => spec.scale === 'ionian').every(({ spec }) => withTodaysChords(spec).harmony.slots.slice(0, 4)
   .map((s) => pcOf(s.rootMidi - spec.root)).join() === '0,5,7,5'), `${ways.length} loops`);
 
 // ---------------------------------------------------------------------
@@ -381,7 +383,7 @@ console.log('\nChords stay in their slot, and 5/4 has its own');
 check('every chord event ends inside the chord it starts under', (() => {
   let arps = 0;
   for (let i = 0; i < 3000; i++) {
-    const p = render(newSpec(i * 7919 + 13));
+    const p = withTodaysChords(newSpec(i * 7919 + 13));
     const { slots } = p.harmony;
     for (const e of p.tracks.chords) {
       if (!e.vel) continue;
@@ -392,6 +394,27 @@ check('every chord event ends inside the chord it starts under', (() => {
     }
   }
   return arps > 0;
+})());
+
+// Held chords (queue item 57): a tied pad runs on through the slots that
+// hold the same chord, and ends where that chord does.
+check('a held chord ends where its chord does', (() => {
+  let tied = 0;
+  for (let i = 0; i < 3000; i++) {
+    const p = render(newSpec(i * 7919 + 13));
+    const { slots } = p.harmony;
+    for (const e of p.tracks.chords) {
+      if (!e.vel) continue;
+      let k = 0;
+      for (let j = 0; j < slots.length; j++) if (slots[j].startStep <= e.step) k = j;
+      const same = slots[k].notes.join();
+      let end = slots[k].startStep + slots[k].lengthSteps;
+      for (let j = k + 1; j < slots.length && slots[j].notes.join() === same; j++) end = slots[j].startStep + slots[j].lengthSteps;
+      if (e.step + e.dur > end) return false;
+      if (e.step + e.dur > slots[k].startStep + slots[k].lengthSteps) tied++;
+    }
+  }
+  return tied > 0;
 })());
 
 // 5/4 used the 4/4 table cut at the bar line, so nothing ever sounded on
@@ -405,7 +428,8 @@ check('every chord event ends inside the chord it starts under', (() => {
     const spec = newSpec(s);
     if ((spec.stepsPerBar || 16) !== 20) continue;
     loops++;
-    const p = render(spec);
+    // Today's lengths: a held chord rings on through the bar on purpose.
+    const p = withTodaysChords(spec);
     const total = spec.bars * 20;
     const covered = new Set();
     for (const e of p.tracks.chords) {
@@ -504,7 +528,9 @@ console.log('\nComposition depth');
     }
     if (spec.bars !== 16) continue;
     sixteen++;
-    const chordsIn = (sec) => p.harmony.slots.filter((sl) => sl.startStep >= sec.at * spb && sl.startStep < (sec.at + sec.bars) * spb)
+    // The progression as written: today's chord lengths (queue item 57).
+    const today = withTodaysChords(spec);
+    const chordsIn = (sec) => today.harmony.slots.filter((sl) => sl.startStep >= sec.at * spb && sl.startStep < (sec.at + sec.bars) * spb)
       .map((sl) => sl.notes.join('.')).join();
     const [ca, cv, cr] = ['A', 'V', 'R'].map((k) => chordsIn(role(k)));
     if (!characterOf(spec).progressions) {
@@ -966,6 +992,43 @@ console.log('\nThe per-loop choices (queue item 54)');
   const away = share({ vibes: { bouncy: 1 }, strength: 0.9 });
   check('a vibe the choice leans toward draws it more, and one it leans away from less, never to none',
     toward > plain && away < plain && away > 0, `${away.toFixed(3)} ${plain.toFixed(3)} ${toward.toFixed(3)}`);
+}
+
+// ---------------------------------------------------------------------
+console.log('\nlongChords (queue item 57)');
+{
+  // The Ears 4 corpus's first 200 loops (seed 20261009): every loop whose
+  // chords hold longer than today's keeps the octave today's chords take
+  // (round 4: 11 of 87 held loops had jumped an octave before the fix).
+  const master = new Rng(20261009);
+  const centre = (list) => {
+    const ns = list.filter((e) => e.vel && e.notes && e.notes.length).flatMap((e) => e.notes);
+    return ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : null;
+  };
+  let held = 0, flips = 0;
+  const kinds = {};
+  for (let i = 0; i < 200; i++) {
+    const spec = newSpec(master.seed32());
+    const p = render(spec);
+    const kind = p.harmony.longChords ?? 'developing';
+    kinds[kind] = (kinds[kind] || 0) + 1;
+    const a = centre(withTodaysChords(spec).tracks.chords);
+    const b = centre(p.tracks.chords);
+    if (a == null || b == null) continue;
+    if (kind !== 'asIs') held++;
+    if (Math.round((a - b) / 12) !== 0) flips++;
+  }
+  check('held chords keep today\'s octave (200 loops, 0 flips)', flips === 0, `${flips} of ${held} held loops flipped`);
+  check('every length is drawn', ['asIs', 'double', 'eight', 'long', 'whole'].every((k) => kinds[k] > 0), JSON.stringify(kinds));
+  // Over 2000 loops the spread is the approved one: today's lengths most.
+  const m = new Rng(7);
+  const n = {};
+  for (let i = 0; i < 2000; i++) {
+    const k = render(newSpec(m.seed32())).harmony.longChords;
+    if (k) n[k] = (n[k] || 0) + 1;
+  }
+  const total = Object.values(n).reduce((x, y) => x + y, 0);
+  check('today\'s lengths stay the most common', n.asIs / total > 0.45 && n.asIs / total < 0.62, JSON.stringify(n));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

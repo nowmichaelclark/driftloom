@@ -4183,3 +4183,14 @@ Mikey decides this line:
   0.40 s instead of 0.32 to keep its loudness; the kit fails any voice over -1
   dBFS alone. Listen for the frame drum losing that click and ringing a little
   longer. For the album: cinder #12 at 0:03.4 and tide #52 at 0:00.
+- #248, roundBass (item 56, v105),
+  https://bbdb00f6-driftloom.nowmichaelclark.workers.dev: the bass sits an
+  octave higher at the bottom (36-57, never the extra octave down), and every
+  bass voice but rhodesbass adds soft 2nd, 3rd and 4th harmonics under a
+  900 Hz lowpass, so it reads on a phone; the layer keeps today's level by ear
+  (Mikey's choice; `LIFT_DB` in `core/src/blocks/bass.rs` lifts it). A note's
+  level no longer depends on where it lands in its block. Listen for a bass
+  you can follow on a phone speaker without it getting louder or brighter
+  than a bass should, and for the album, the same loops at today's level,
+  +3 dB and +5.5 dB. For the album: dust #7 at 0:00 and dust #42 at 0:00 (the
+  biggest move: 40-60 Hz 58% to 0.1% of the mix).

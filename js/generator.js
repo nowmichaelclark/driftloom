@@ -839,8 +839,17 @@ function genHarmony(spec, vary = null, besides = null) {
   const events = [];
   let prevVoicing = null;
 
+  // longChords (queue item 57; Ears 4, rounds 3 and 4, approved by Mikey
+  // 2026-10-16): each loop draws how long its chords last, from a stream of
+  // its own so every draw above and below is unchanged. Today's lengths
+  // stay the most common (56%); twice today, about 8 s, about 16 s, or one
+  // chord the whole loop for the rest; calm loops lean long and driving
+  // ones away. Not one of item 54's choices: its own approved spread.
+  const lc = longChordsOf(spec, shape, chordsPerBar, slotCount);
+  const chordAt = lc ? (slot) => lc.seq[slot] : (slot) => shape[slot % shape.length];
+
   for (let s = 0; s < slotCount; s++) {
-    const chord = shape[s % shape.length];
+    const chord = chordAt(s);
     const degree = stepDegree(chord);
     // A spelled chord is built, sevenths and ninths too, in its own scale.
     const steps = typeof chord === 'number' ? scale : spelledSteps(scale, chord);
@@ -947,7 +956,71 @@ function genHarmony(spec, vary = null, besides = null) {
     }
   }
 
-  return { slots, events, shape, cycleSteps: spec.bars * spb };
+  if (lc) {
+    // A held chord rings on while the rest moves, so it reads louder than
+    // its level says: trimmed by up to 2 dB the longer it holds.
+    if (lc.trim !== 1) for (const e of events) e.vel *= lc.trim;
+    // A held pad is tied, not struck again over its own tail: the same
+    // chord repeated on a sustained voice overlapped its ringing copy, and
+    // the two beat against each other (round 4: the roughness Mikey heard).
+    const tied = [];
+    for (const e of events.slice().sort((a, b) => a.step - b.step)) {
+      const prev = tied[tied.length - 1];
+      if (prev && SUSTAINED_CHORDS.has(e.voice) && prev.voice === e.voice && prev.notes.length > 1
+        && prev.notes.join() === e.notes.join() && e.step - prev.last <= slotLen) {
+        prev.dur = Math.max(prev.dur, e.step + e.dur - prev.step);
+        prev.last = e.step;
+        continue;
+      }
+      tied.push(Object.assign(e, { last: e.step }));
+    }
+    for (const e of tied) delete e.last;
+    events.length = 0;
+    events.push(...tied);
+  }
+  return { slots, events, shape, cycleSteps: spec.bars * spb, longChords: lc ? lc.kind : 'asIs' };
+}
+
+const LONG_SALT = 0x10c4;
+// The vibes that make a loop calm enough to lean long (the sketch's list,
+// as Mikey heard it), when one carries more than a quarter of the loop.
+const CALM_VIBES = ['floating', 'meditative', 'hushed', 'misty', 'foggy', 'hypnotic', 'still'];
+const SUSTAINED_CHORDS = new Set(['pad', 'softpad', 'moogpad', 'analogpad', 'choir']);
+// Set while render() works out the octave today's chords would take.
+let longChordsOff = false;
+
+// The loop as today's chord lengths would play it: what render() reads the
+// chords' octave from (queue item 57), and what the tests and tools set a
+// loop's long chords against.
+export function withTodaysChords(spec) {
+  longChordsOff = true;
+  try { return render(spec); } finally { longChordsOff = false; }
+}
+
+// How long a loop's chords last (queue item 57): null while render() asks
+// what today's chords would be, else the kind drawn, the progression's chord
+// for each slot, and the held chords' trim.
+function longChordsOf(spec, shape, chordsPerBar, slotCount) {
+  if (longChordsOff) return null;
+  const spb = spec.stepsPerBar || STEPS_PER_BAR;
+  const lr = new Rng(((spec.layerSeeds.chords ^ LONG_SALT) >>> 0) || 1);
+  const slotSec = (spb * 60 / spec.bpm / 4) / chordsPerBar;
+  const calm = (spec.feel && spec.feel.energy < 0.35) || CALM_VIBES.some((v) => spec.vibes && spec.vibes[v] > 0.25);
+  const w = calm ? 1.8 : spec.feel && spec.feel.energy > 0.65 ? 0.5 : 1;
+  const kind = lr.weighted([['asIs', 56], ['double', 16], ['eight', 10 * w], ['long', 9 * w], ['whole', 9 * w]]);
+  const target = { asIs: slotSec, double: 2 * slotSec, eight: 8, long: 16, whole: Infinity }[kind];
+  let hold = kind === 'whole' ? slotCount : Math.max(1, Math.round(target / slotSec));
+  if (kind !== 'long' && kind !== 'whole') hold = Math.min(hold, Math.max(1, Math.floor(slotCount / 2)));
+  const turnaround = kind !== 'whole' && hold >= 2 && lr.chance(0.3);
+  // Which of the progression's chords plays in each slot.
+  const seq = [];
+  for (let k = 0; seq.length < slotCount; k++) {
+    const last = k % shape.length === shape.length - 1;
+    const len = turnaround && last ? Math.max(1, Math.floor(hold / 2)) : hold;
+    for (let j = 0; j < len && seq.length < slotCount; j++) seq.push(shape[k % shape.length]);
+  }
+  const trim = { asIs: 1, double: 0.92, eight: 0.86, long: 0.8, whole: 0.8 }[kind];
+  return { kind, seq, trim };
 }
 
 function slotAt(slots, step, cycleSteps) {
@@ -2572,6 +2645,35 @@ export function render(spec) {
     // cleared the keys by a hair back under five semitones. Checked again
     // on what is now played; a loop that still clears is left alone.
     separateRegisters(harmony, tracks, choir);
+  }
+
+  // longChords keep the octave today's chords take (queue item 57; Ears 4,
+  // round 4). separateRegisters moves the keys an octave when their centre
+  // sits within five semitones of the tune's, and holding chords nudged
+  // that centre across the line in about one held loop in eight (grove #47:
+  // up an octave, into the range the ear is most sensitive to: the held
+  // chords Mikey heard as too loud). So the octave is read from what today's
+  // lengths would play, in every loop, as the sketch did: a loop on today's
+  // lengths still has its repeated pads tied, which can move the centre.
+  if (!longChordsOff && harmony.longChords) {
+    const today = withTodaysChords(spec);
+    const centre = (list) => {
+      const ns = list.filter((e) => e.vel && e.notes && e.notes.length).flatMap((e) => e.notes);
+      return ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : null;
+    };
+    const a = centre(today.tracks.chords);
+    const b = centre(tracks.chords);
+    const sh = a != null && b != null ? Math.round((a - b) / 12) * 12 : 0;
+    if (sh) {
+      const moved = new Set();
+      for (const list of [harmony.events, tracks.chords]) {
+        for (const e of list) {
+          if (!e.notes || moved.has(e)) continue;
+          moved.add(e);
+          e.notes = e.notes.map((n) => n + sh);
+        }
+      }
+    }
   }
 
   // After the register work, so the pitch written down is the pitch played.
