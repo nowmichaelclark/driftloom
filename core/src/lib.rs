@@ -49,7 +49,7 @@ pub mod wave;
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 
-use block::{Context, Event, Mods, Note, Signal, event};
+use block::{Context, Event, Mods, Note, Sends, Signal, event};
 use block::event::Reach;
 use blocks::{Held, Own, Pools, own};
 use blocks::osc::frame_at;
@@ -386,6 +386,9 @@ pub struct Core {
     sent: u64,
     /// The signals routed between channels (`Core::route`).
     routes: [Route; ROUTES],
+    /// What the voices that send (`Voice::SENDS`) sent into the reverb and
+    /// the echo this block, past their channels' sends.
+    sends: Sends,
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -434,6 +437,7 @@ impl Core {
             waiting_due: 0,
             sent: 0,
             routes: [NO_ROUTE; ROUTES],
+            sends: [[0.0; QUANTUM]; 2],
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -1129,6 +1133,7 @@ impl Core {
             bus.fill(0.0);
         }
         let cx = Context { rate: self.rate, waves: &self.waves, noise: self.noise.samples() };
+        let mut sent = false;
         for slot in self.slots.iter_mut().filter(|s| s.busy) {
             if slot.begin >= end {
                 continue;
@@ -1139,7 +1144,10 @@ impl Core {
             ) else {
                 continue;
             };
-            blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses);
+            if !sent && blocks::sends(&slot.voice) {
+                self.sends = [[0.0; QUANTUM]; 2];
+            }
+            blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses, &mut self.sends, &mut sent);
             if slot.end <= end {
                 slot.busy = false;
                 blocks::free(&slot.voice, &mut self.pools);
@@ -1189,7 +1197,7 @@ impl Core {
             r.drive = *tap;
         }
         // The graph is mono: the mix is every lane's.
-        let mixed = [*self.mix.process(block, &self.out); OUT];
+        let mixed = [*self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }); OUT];
         self.master.process(block, &mixed, &self.waves);
         &self.out
     }

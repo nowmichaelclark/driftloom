@@ -64,7 +64,7 @@ three things to know.
    - `span()`: the frames the block sounds in.
    - `PROBES`: how the test kit plays it.
 
-   A **`Voice`** is a block whose settings are a `Note`. It is the kind a host plays by number. It may also settle the note's chances (`settle`), say that it plays the noise (`uses_noise`), play through one of its channel's own blocks (`THROUGH`), and hear channel events (`event`).
+   A **`Voice`** is a block whose settings are a `Note`. It is the kind a host plays by number. It may also settle the note's chances (`settle`), say that it plays the noise (`uses_noise`), play through one of its channel's own blocks (`THROUGH`), send some of itself past its channel straight into the reverb and the echo (`SENDS`, `render_sends`: dubStab's throw), and hear channel events (`event`).
 
    Three seams are optional parts of `Block`, each with a default, so a block that doesn't use one writes nothing for it:
    - **Modulation:** `MODS` names the settings a signal can drive, and `render_mod(block, cx, signal, mods)` renders with them driven. At every frame a driven setting is its own value plus the signal, as Web Audio sums an `AudioParam` and the node connected into it. A vibrato is an `Lfo` into an `Oscillator`'s `DETUNE`; FM is an `Lfo` at audio rate into its `FREQ`; a filter sweep is an envelope into a `Filter`'s `FREQ`.

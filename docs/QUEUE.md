@@ -4253,3 +4253,13 @@ Mikey decides this line:
   floor that drops and comes back without the loop ever going silent. For the
   album (wander on): wayfare #23 at 0:33.8 (two bars) and undertow #45 at
   0:03.8 (one bar).
+- #252, glass (item 59, v108),
+  https://2af52b47-driftloom.nowmichaelclark.workers.dev: in about two loops of
+  three (the only choice in item 54's list so far), on a chord's first beat
+  now and then, two or three of its notes ring out high (E5-G6) as a soft FM
+  bell, a dotted eighth apart, at the chord's own velocity and quieter in a
+  loop under one chord a bar; never from a one-note chord, and it never costs
+  another part a note. Listen for bells that sparkle over the chords without
+  standing in front of them, and for shatter's quiet prepared-piano loops
+  (tei-har), where they play at full level. For the album: thaw #82 from 0:00
+  and vapor #30 from 0:08.9.

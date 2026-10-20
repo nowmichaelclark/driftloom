@@ -52,6 +52,10 @@ pub type Signal = [f32; QUANTUM];
 /// keeps its shape and pays nothing for stereo (`docs/CORE.md`, promise 9).
 pub type Stereo = [Signal; 2];
 
+/// What a voice sends past its channel (`Voice::SENDS`): into the reverb,
+/// then into the echo, beside what its channel's own sends carry.
+pub type Sends = [Signal; 2];
+
 /// A setting of a block that a signal can drive (`Block::MODS`).
 #[derive(Clone, Copy)]
 pub struct Mod {
@@ -463,15 +467,29 @@ pub const NO_EXTRA: [f64; EXTRA] = [f64::NAN; EXTRA];
 
 /// A block played by a note: a voice the host plays by number.
 ///
-/// Its three hooks are optional; a voice that draws nothing, plays no noise
-/// and plays through nothing writes `impl Voice for MyVoice {}`. It hears
-/// channel events through `Block::event`, as every block may.
+/// Its hooks are optional; a voice that draws nothing, plays no noise,
+/// plays through nothing and sends nothing of its own writes
+/// `impl Voice for MyVoice {}`. It hears channel events through
+/// `Block::event`, as every block may.
 pub trait Voice: Block<Settings = Note> {
     /// The channel's own block it plays through (`blocks::own`, the
     /// registry's `channel` list: today the bodies): its notes sum into that
     /// block's bus in their channel, and the core runs the block once on the
     /// sum (as `_body()` in synth.js), not once a note.
     const THROUGH: Option<usize> = None;
+
+    /// Whether it sends some of itself into the reverb and the echo directly
+    /// (`render_sends`), past its channel's own sends: a stab thrown into
+    /// the echo (queue item 60).
+    const SENDS: bool = false;
+
+    /// Render as `Block::render` does, and add what it sends into `sends`
+    /// (`Sends`: the reverb's input, then the echo's). Called instead of
+    /// `render` when `SENDS` is true; by default, `render` and nothing sent.
+    fn render_sends(&mut self, block: u64, cx: &Context, out: &mut Signal, sends: &mut Sends) {
+        let _ = sends;
+        self.render(block, cx, out);
+    }
 
     /// Settle what the note leaves to chance, as it arrives: overwrite the
     /// places in `note.extra` the voice reads its draws from, from
