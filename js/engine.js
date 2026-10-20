@@ -143,6 +143,72 @@ function stabOf(spec, base) {
   return { kind, rates: STAB_RATES[kind], opts: { decay, open, saw, throw: thrown, tone, verb: 0.12, level } };
 }
 
+// The chapel organ (queue item 61; Ears 4, round 7, approved by Mikey
+// 2026-10-16 as `organVariant: 'chapelOrgan'`): one organ a loop, mixed 55%
+// chapel, 25% round 5's pipe, 10% the distant cathedral and 10% celeste.
+// The drawbars (16' 5 1/3' 8' 4' 2 2/3' 2' 1 3/5' 1 1/3' 1', 0-8) of the
+// nine registrations a loop draws from, and the soft one each loud one
+// falls back to (round 4); the four variations (round 6).
+const ORGAN_SALT = 0x0e9a;
+const ORGAN_SALT_5 = 0x0e9b;
+const ORGAN_REG = [
+  ['flute', [0, 0, 8, 0, 0, 0, 0, 0, 0], 14], ['stopped', [8, 0, 8, 0, 0, 0, 0, 0, 0], 14],
+  ['mellow', [8, 3, 8, 0, 0, 0, 0, 0, 0], 14], ['choral', [6, 8, 8, 6, 0, 0, 0, 0, 0], 12],
+  ['full', [8, 8, 8, 0, 0, 0, 0, 0, 0], 12], ['hollow', [0, 0, 8, 0, 6, 0, 4, 0, 0], 9],
+  ['airy', [0, 0, 8, 4, 0, 0, 0, 0, 3], 9], ['round', [6, 0, 8, 5, 0, 3, 0, 0, 0], 10],
+  ['bright', [8, 6, 8, 6, 4, 4, 0, 0, 2], 6],
+];
+const ORGAN_SOFT = { choral: 'mellow', full: 'stopped', bright: 'round' };
+const ORGAN_VARIANTS = {
+  chapel: { bars: [0, 0, 8, 6, 0, 0, 0, 0, 0], speak: 0.12, chiff: 0.6, verb: 0.45, release: 0.4, tone: 2400, celeste: 3, celesteLevel: 0.25, levelMul: 1.19 },
+  distant: { bars: [6, 0, 8, 6, 0, 5, 0, 3, 3], speak: 0.25, chiff: 0, verb: 1.3, dry: 0.4, release: 0.8, tone: 3200, celeste: 2, celesteLevel: 0.2, low: 50, levelMul: 1.6 },
+  celeste: { bars: [0, 0, 8, 6, 4, 4, 3, 2, 2], speak: 0.3, chiff: 0, verb: 0.6, release: 0.8, tone: 2200, celeste: 7, celesteLevel: 0.9, levelMul: 0.9 },
+};
+const ORGAN_MIX = { chapel: 0.55, pipe5: 0.25, distant: 0.1, celeste: 0.1 };
+// Its settings, in the core's order (ORGAN_SETTINGS in js/core.js).
+const ORGAN_KEYS = ['speak', 'chiff', 'celeste', 'celesteLevel', 'release', 'tone', 'low', 'carve', 'shimmer', 'level', 'verb', 'dry'];
+
+// A loop's organ, drawn at load from its seed as the sketch drew it (its
+// rounds' draws in their order, so a loop gets the organ Mikey heard): the
+// registration and tone of round 5's pipe from the loop's own draws, mixed
+// with the variations by ORGAN_MIX, stops as pipe loudness and the rest as
+// weighted means; its level down by up to 11 dB in a loop of under three
+// notes a second. The settings, in the core's order.
+function organOf(spec, base) {
+  const r = new Rng(((spec.seed ^ ORGAN_SALT) >>> 0) || 1);
+  const reg = ORGAN_REG[r.weighted(ORGAN_REG.map((x, i) => [i, x[2]]))];
+  const rate = r.range(0.55, 1.15);
+  r.range(0.6, 1); r.range(0.08, 0.5);
+  const tone = 1400 + (r.range(2400, 4200) - 2400) * 0.6;
+  const soft = ORGAN_REG.find((x) => x[0] === (ORGAN_SOFT[reg[0]] || reg[0]));
+  const r5 = new Rng(((spec.seed ^ ORGAN_SALT_5) >>> 0) || 1);
+  r5.chance(0.5); r5.chance(0.6); r5.range(0.08, 0.16);
+  const speak = r5.range(0.06, 0.12);
+  const chiff = r5.range(0.8, 1.4);
+  const celeste = r5.range(3, 6);
+  const src = {
+    pipe5: { bars: soft[1], speak, chiff, verb: 0.35, dry: 1, release: 0.35, tone, celeste, celesteLevel: 0.45, low: 75, carve: 0, levelMul: 1 },
+    ...Object.fromEntries(Object.entries(ORGAN_VARIANTS).map(([k, v]) => [k, { dry: 1, low: 75, carve: -5, ...v }])),
+  };
+  const mix = Object.entries(ORGAN_MIX);
+  const total = mix.reduce((a, [, w]) => a + w, 0);
+  const mean = (key) => mix.reduce((a, [k, w]) => a + w * (src[k][key] ?? 0), 0) / total;
+  const amp = (b) => (b ? Math.pow(10, (b - 8) * 3 / 20) : 0);
+  const bars = Array.from({ length: 9 }, (_, i) => {
+    const a = mix.reduce((x, [k, w]) => x + w * amp(src[k].bars[i]), 0) / total;
+    return a > 0.01 ? 8 + 20 * Math.log10(a) / 3 : 0;
+  });
+  const nps = notesPerSecond(spec, base.tracks);
+  const o = {
+    speak: mean('speak'), chiff: mean('chiff'), celeste: mean('celeste'), celesteLevel: mean('celesteLevel'),
+    release: mean('release'), tone: mean('tone'), low: mean('low'), carve: mean('carve'),
+    shimmer: 0.3 + rate * 0.25,
+    level: 0.085 * mean('levelMul') * Math.min(1, Math.max(0.28, (nps + 0.5) / 3.5)),
+    verb: mean('verb'), dry: mean('dry'),
+  };
+  return [...bars, ...ORGAN_KEYS.map((k) => o[k])];
+}
+
 // glass (queue item 59): how often a chord's first beat rings out, the
 // register (E5-G6), the bell (the prototype's FM options and cost; it
 // yields, so it never costs another part a note: js/synth.js), and its
@@ -164,6 +230,11 @@ const GLASS_ORD = 256;
 const STAB_ORD = 256;
 
 const STRUM = { min: 0.01, max: 0.02, up: 0.75 };
+
+// The organ's hold at rest: nothing held (Engine._organ).
+// `held` is the chord the passing-chord rule compares with (none once the
+// organ has let go), `on` whether it may still be sounding.
+const NO_HOLD = { key: null, until: 0, held: null, last: -Infinity, on: false };
 
 export class Engine {
   constructor(ctx, synth) {
@@ -196,6 +267,11 @@ export class Engine {
     this.lateTicksEver = 0;
     this.gapSince = 0;
     this.tailsDucked = false;
+    // The loop's chapel organ settings (queue item 61) or null, whether a
+    // load is still to set it up, and what it holds now.
+    this.organ = null;
+    this.organChange = false;
+    this.organHold = NO_HOLD;
     // Notes decided but not yet built, in the order they were decided (see
     // BUILD_TICKS), and the measured gap between ticks.
     this.pending = [];
@@ -293,6 +369,13 @@ export class Engine {
       this.glassScale = Math.min(1, this.base.tracks.chords.filter((e) => e.vel).length / bars);
     }
     this.stab = this.base.choices && this.base.choices.dubStab === 'on' ? stabOf(spec, this.base) : null;
+    // The chapel organ (queue item 61): set up where the new loop's first
+    // step is decided, the last loop's let go there.
+    // A re-roll that leaves the organ as it was (most do) changes nothing.
+    const organ = this.base.choices && this.base.choices.organ === 'on' ? organOf(spec, this.base) : null;
+    const same = keepPosition && (organ ? !!this.organ && organ.every((v, i) => v === this.organ[i]) : !this.organ);
+    this.organChange = !same && !!(organ || this.organ);
+    this.organ = organ;
     this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
@@ -307,6 +390,7 @@ export class Engine {
       this.absStep = 0;
       this.loopCount = 0;
       this.decided = [];
+      this.organHold = NO_HOLD;
     } else {
       this.step = this.step % this.base.totalSteps;
     }
@@ -485,6 +569,7 @@ export class Engine {
     this.loopCount = back.loopCount;
     this.live = live || back.live;
     this.tailsDucked = back.tailsDucked;
+    this.organHold = back.organHold || NO_HOLD;
     this.nextStepTime = back.time;
     this.decided.length = back.index;
     this.visualQueue = this.visualQueue.filter((v) => v.time < back.time);
@@ -512,6 +597,10 @@ export class Engine {
     // Handed to the core ahead and not started: a Play soon after must not
     // hear them on top of its own.
     this.synth.cancelAhead();
+    // The organ holds its chord until told otherwise: let it go, and it
+    // speaks again at the next chord after Play.
+    if (this.organHold.on) this.synth.organOff(this.ctx.currentTime);
+    this.organHold = NO_HOLD;
     this.lastTick = null;
     this.visualQueue = [];
     this.synth.silence();
@@ -698,7 +787,7 @@ export class Engine {
       if (keep) {
         this.decided.push({
           time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount,
-          live: this.live, tailsDucked: this.tailsDucked,
+          live: this.live, tailsDucked: this.tailsDucked, organHold: this.organHold,
         });
         // A loop's first step, or a pass's, says so in the log.
         const top = this.absStep === 0 ? 'new loop' : this.step === 0 ? 'new pass' : null;
@@ -737,6 +826,54 @@ export class Engine {
         this.handover = true;
         this.onTrackEnd();
       }
+    }
+  }
+
+  // The chapel organ (queue item 61), at each chord the loop strikes, as the
+  // sketch held it (`_earsStep`): it holds each chord until the next chord
+  // with other notes; it moves at most once a bar, and holds through a
+  // passing chord (one that keeps its lowest note and two of its notes); and
+  // after a bar or so where the chords rest for more than two bars, it lets
+  // go. Its hold (`organHold`) goes with each step decided, so a step decided
+  // again holds the same; each call reaches the core only from the time a
+  // change is heard (`floor`), as the notes do.
+  _organ(p, s, t, sd, abs, cyc) {
+    const spb = p.stepsPerBar || 16;
+    const chords = p.tracks.chords;
+    const len = cyc.chords || p.totalSteps;
+    for (const e of chords) {
+      if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
+      const h = this.organHold;
+      const key = e.notes.join();
+      if (key === h.key && abs < h.until) continue;
+      let next = len;
+      let nextAny = len;
+      for (const o of chords) {
+        if (o.step <= s || !o.vel || !o.notes || !o.notes.length) continue;
+        nextAny = Math.min(nextAny, o.step);
+        if (o.notes.join() !== key) next = Math.min(next, o.step);
+      }
+      if (h.held) {
+        const pcs = (ns) => ns.map((n) => ((n % 12) + 12) % 12);
+        const a = pcs(h.held);
+        const b = pcs(e.notes);
+        const shared = b.filter((x) => a.includes(x)).length;
+        if (abs - h.last < spb || (a[0] === b[0] && shared >= 2)) continue;
+      }
+      const hold = { key, until: abs + (next - s), held: e.notes.slice().sort((x, y) => x - y), last: abs, on: true };
+      if (t >= this.floor) this.synth.organChord(e.notes, t);
+      if (nextAny - s > 2 * spb) {
+        const off = Math.max(e.dur || 0, spb);
+        const at = t + off * sd;
+        if (at >= this.floor) this.synth.organOff(at, 0.6);
+        hold.until = abs + off;
+        // Let go, it holds nothing a passing chord could keep: the next chord
+        // speaks, even the same one. (The sketch kept comparing with the
+        // chord it let go of, so a loop whose chords came back the same after
+        // a rest kept its organ silent from then on; for Mikey's ears.)
+        hold.held = null;
+      }
+      this.organHold = hold;
     }
   }
 
@@ -832,6 +969,17 @@ export class Engine {
     const cyc = p.cycles || {};
     const abs = this.absStep;
 
+    // A new loop's organ, from its first step decided (and the last loop's
+    // let go there, over the 0.15 s the sketch's organStop takes).
+    // A re-roll decides again from a step already handed over: its organ
+    // from when the change is heard.
+    if (this.organChange) {
+      const at = Math.max(time, this.floor);
+      this.synth.organOff(at, 0.15);
+      this.synth.organSetup(this.organ, at);
+      this.organChange = false;
+      this.organHold = NO_HOLD;
+    }
     // At each bar line, decide whether the tails should still be ringing.
     const spbNow = p.stepsPerBar || 16;
     if (abs % spbNow === 0) {
@@ -839,6 +987,11 @@ export class Engine {
       // Deciding again after a change, a bar line before it is heard was
       // handed over already, as it was.
       const kept = time < this.floor;
+      // The organ lets go in a bar the loop leaves silent.
+      if (quiet && this.organHold.on) {
+        if (!kept) this.synth.organOff(time);
+        this.organHold = NO_HOLD;
+      }
       if (quiet && !this.tailsDucked) {
         if (!kept) this.synth.fadeTails(time);
         this.tailsDucked = true;
@@ -928,8 +1081,15 @@ export class Engine {
           });
         }
       }
+      if (this.organ) this._organ(p, s, t, sd, abs, cyc);
       if (p.choices && p.choices.glass === 'on') this._glass(p, s, t, sd, { seed, pass, step });
       if (this.stab) this._dubStab(p, s, t, abs, at, mutes, { seed, pass, step, ord: 0 });
+    }
+    // Muted, the chords' organ lets go (the sketch left it holding): from
+    // when the mute is heard, if this step was handed over before it.
+    if (mutes.chords && this.organHold.on) {
+      this.synth.organOff(Math.max(t, this.floor));
+      this.organHold = NO_HOLD;
     }
     if (!mutes.melody) {
       const s = at('melody');

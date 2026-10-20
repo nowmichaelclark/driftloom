@@ -3562,7 +3562,10 @@ Mikey decides this line:
   Mikey likes?) before a later item removes it; tunedKick (item 67) rebuilds
   the kick's pitch anyway.
 
-- **Item 61, the organ: where it stands (Session 25a, 2026-10-19).** Not
+- **Item 61, the organ: where it stands (Session 25a, 2026-10-19).** Built
+  in Session 25a-3 from the organ's files on the branch below, with the four
+  fixes kept and the host side added (the item 61 PR); the branch
+  `claude/item-61-organ-wip` is superseded and can be deleted. Not
   merged; the session stopped after item 55. The work is on the branch
   `claude/item-61-organ-wip`, stacked on unfinished wip commits for items
   56-60 (its item 55 commit is an early version that #246 replaced; take
@@ -4263,3 +4266,14 @@ Mikey decides this line:
   standing in front of them, and for shatter's quiet prepared-piano loops
   (tei-har), where they play at full level. For the album: thaw #82 from 0:00
   and vapor #30 from 0:08.9.
+- #253, dubStab (item 60, v109),
+  https://9d274c1b-driftloom.nowmichaelclark.workers.dev: in busy loops
+  (drums and seven or more notes a second; about one loop in four), on the
+  offbeat after beat one or three, by a density drawn per loop, a soft stab of
+  the chord sounding now (G3-C5) on a core voice of its own: a triangle under
+  two saws 6 cents apart, a 22 ms attack, a lowpass closing toward 700 Hz, a
+  short tail, and a darker, lighter throw into the echo. Only over a groove,
+  never in a silent bar, and it never costs another part a note. Listen for a
+  warm dub chord that answers the beat and dissolves into the echo without
+  taking over the loop. For the album: wayfare #23 from 0:10.6 (busy) and
+  cinder #12 from 0:07.2 (sparse).

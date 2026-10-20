@@ -19,8 +19,11 @@ export function num(x) {
 
 // A note list, from the header and the calls the host made, in order. Each
 // event is { type: 'param', id, op, value, time, tau }, { type: 'damp',
-// channel, time }, { type: 'key', seed, pass, step, ord } or { type: 'note',
-// voice, channel, time, midi, dur, vel, parts, extra }.
+// channel, time }, { type: 'key', seed, pass, step, ord }, { type: 'set',
+// channel, block, setting, value, time }, { type: 'event', channel, kind,
+// time, value }, { type: 'retune', channel, time, notes } (six, NaN past the
+// last) or { type: 'note', voice, channel, time, midi, dur, vel, parts,
+// extra }.
 export function writeList({ name, comment = [], rate, quality, frames, events }) {
   const out = ['dlnotes 2', ...comment.map((c) => `# ${c}`)];
   out.push(`name ${name}`, `rate ${rate}`, `quality ${quality}`, `frames ${frames}`);
@@ -31,6 +34,12 @@ export function writeList({ name, comment = [], rate, quality, frames, events })
       out.push(`damp ${e.channel} ${num(e.time)}`);
     } else if (e.type === 'key') {
       out.push(`key ${e.seed} ${e.pass} ${e.step} ${e.ord}`);
+    } else if (e.type === 'set') {
+      out.push(`set ${e.channel} ${e.block} ${e.setting} ${num(e.value)} ${num(e.time)}`);
+    } else if (e.type === 'event') {
+      out.push(`event ${e.channel} ${e.kind} ${num(e.time)} ${num(e.value)}`);
+    } else if (e.type === 'retune') {
+      out.push(`retune ${e.channel} ${num(e.time)} ${e.notes.map(num).join(' ')}`);
     } else {
       const extra = Array.from({ length: 12 }, (_, i) => num(e.extra?.[i] ?? NaN));
       out.push(`note ${e.voice} ${e.channel} ${num(e.time)} ${num(e.midi)} ${num(e.dur)} ${num(e.vel)} ${e.parts} ${extra.join(' ')}`);
@@ -70,6 +79,15 @@ export function readList(text) {
       case 'damp': list.events.push({ type: 'damp', channel: value(a[0], line), time: value(a[1], line) }); break;
       case 'key':
         list.events.push({ type: 'key', seed: value(a[0], line), pass: value(a[1], line), step: value(a[2], line), ord: value(a[3], line) });
+        break;
+      case 'set':
+        list.events.push({ type: 'set', channel: value(a[0], line), block: value(a[1], line), setting: value(a[2], line), value: value(a[3], line), time: value(a[4], line) });
+        break;
+      case 'event':
+        list.events.push({ type: 'event', channel: value(a[0], line), kind: value(a[1], line), time: value(a[2], line), value: value(a[3], line) });
+        break;
+      case 'retune':
+        list.events.push({ type: 'retune', channel: value(a[0], line), time: value(a[1], line), notes: a.slice(2, 8).map((w) => value(w, line)) });
         break;
       case 'note':
         list.events.push({
@@ -142,6 +160,13 @@ function load(x, list) {
       x.dl_damp(e.channel, e.time);
     } else if (e.type === 'key') {
       x.dl_key(e.seed, e.pass, e.step, e.ord);
+    } else if (e.type === 'set') {
+      if (!x.dl_set(e.channel, e.block, e.setting, e.value, e.time)) throw new Error(`event ${n + 1}: the core refused setting ${e.setting} of block ${e.block}`);
+    } else if (e.type === 'event') {
+      if (!x.dl_event(e.channel, e.kind, e.time, e.value)) throw new Error(`event ${n + 1}: the core refused an event of kind ${e.kind}`);
+    } else if (e.type === 'retune') {
+      const m = e.notes;
+      if (!x.dl_retune(e.channel, e.time, m[0], m[1], m[2], m[3], m[4], m[5])) throw new Error(`event ${n + 1}: the core refused a retune`);
     } else {
       const v = e.extra;
       const taken = x.dl_note(e.voice, e.channel, e.time, e.midi, e.dur, e.vel, e.parts, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11]);

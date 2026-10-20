@@ -56,6 +56,10 @@ export const CHOICES = [
   // chord stab on the offbeat over a busy groove, thrown into the echo.
   // Busy loops only: drums, and seven or more notes a second.
   { id: 'dubStab', options: [['today', 1], ['on', 1]], eligible: (ctx) => playsChords(ctx) && busy(ctx) },
+  // The chapel organ (queue item 61; Ears 4, round 7, approved 2026-10-16):
+  // a pipe organ the loop holds its chords on, outside the voice budget.
+  // For any loop that plays a chord. No vibe leans (for Mikey's ears).
+  { id: 'organ', options: [['today', 1], ['on', 1]], eligible: (ctx) => playsChords(ctx) },
 ];
 
 // How many notes a second the loop plays, every layer, as heard.

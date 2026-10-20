@@ -29,10 +29,11 @@ fn the_hash_is_fnv_1a_64() {
 fn a_list_reads_back_what_it_says() {
     let text = "dlnotes 2\n# c\nname t\nrate 48000\nquality lite\nframes 256\n\
                 param 17 0 0.5 0 0\ndamp 1 0.25\nkey 7 1 2 3\n\
+                set 1 3 18 0.098 0.05\nevent 1 1 0.5 0.6\nretune 1 0.05 60 64 67 nan nan nan\n\
                 note 25 0 0.1 60 0.4 0.8 0 nan nan nan nan nan nan nan nan nan nan nan nan\n";
     let list = parse(text).expect("a valid list");
     assert_eq!((list.name.as_str(), list.frames, list.full), ("t", 256, false));
-    assert_eq!(list.events.len(), 4);
+    assert_eq!(list.events.len(), 7);
     for bad in ["", "dlnotes 1\n", "dlnotes 2\nrate 48000\nframes 128\nbogus 1\n", "dlnotes 2\nrate 48000\n"] {
         let err = parse(bad).err().expect("an invalid list");
         assert!(err.is_ascii(), "{err}");

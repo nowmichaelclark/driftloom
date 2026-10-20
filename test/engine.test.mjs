@@ -423,5 +423,68 @@ console.log('\ndubStab (queue item 60)');
   check('each with a place of its own', stabs.every((c) => c.key.ord === 256));
 }
 
+console.log('\nThe chapel organ (queue item 61)');
+{
+  // A loop that draws the organ, played 30 s: set up once at its first step,
+  // retuned at its chords no more than once a bar, and each call handed over
+  // once when a change decides the loop again.
+  let seed = 0;
+  for (let s = 1; s < 3000 && !seed; s++) if (rig(true, s * 104729).engine.organ) seed = s * 104729;
+  const r = rig(true, seed);
+  r.run(30);
+  const of = (calls, name) => calls.filter((c) => c.name === name);
+  const setups = of(r.calls, 'organSetup');
+  const lets = of(r.calls, 'organOff');
+  check('set up once, with its 21 settings, at the first step, the last loop let go there', setups.length === 1 && setups[0].args[0].length === 21
+    && setups[0].args[0].every(Number.isFinite) && lets.length > 0 && lets[0].args[0] === setups[0].args[1] && lets[0].args[1] === 0.15
+    && setups[0].args[1] < 0.1, JSON.stringify(setups.map((c) => c.args[1])));
+  const chords = of(r.calls, 'organChord');
+  const bar = (r.engine.base.stepsPerBar || 16) * r.engine.stepDur;
+  const gaps = chords.slice(1).map((c, i) => c.args[1] - chords[i].args[1]);
+  check('retuned at its chords, at most once a bar', chords.length > 2 && gaps.every((g) => g > bar - 0.03),
+    `${chords.length} chords, closest ${Math.min(...gaps).toFixed(3)} s, a bar ${bar.toFixed(3)} s`);
+  check('the voice budget never hears of it', !r.calls.some((c) => c.name === '_budget'));
+
+  // A change at 1 s: what is handed over again starts from the cancel, and
+  // matches what the loop decided without the change.
+  const plain = rig(true, seed);
+  plain.run(3);
+  const x = rig(true, seed);
+  const { from, after, kept } = change(x, 1.0, () => {
+    x.spec.mutes.melody = true;
+    x.engine.redecide();
+  });
+  x.run(3);
+  const shown = (c) => `${c.args[1].toFixed(6)} ${c.args[0].join(',')}`;
+  const again = of(after, 'organChord');
+  check('after a change, retuned only from then on', again.every((c) => c.args[1] >= from));
+  // Kept up to the change, decided again from there (the core drops the
+  // rest): the same chords at the same times as without it, none twice.
+  const handed = [...of(kept, 'organChord').filter((c) => c.args[1] < from), ...of(x.calls.slice(kept.length), 'organChord')];
+  const was = of(plain.calls, 'organChord');
+  check('and the same chords at the same times as without it, none twice',
+    handed.filter((c) => c.args[1] < 3).map(shown).join('|') === was.filter((c) => c.args[1] < 3).map(shown).join('|') && handed.length > 0,
+    `${handed.map(shown).join(' / ')} against ${was.map(shown).join(' / ')}`);
+
+  // Muting the chords lets it go; so does Pause.
+  const m = change(x, 4.0, () => {
+    x.spec.mutes.chords = true;
+    x.engine.redecide();
+  });
+  check('muting the chords lets it go', of(m.after, 'organOff').some((c) => c.args[0] >= m.from) && !of(m.after, 'organChord').length);
+  const n = r.calls.length;
+  r.engine.stop();
+  check('and Pause', r.engine.organHold.on === false && of(r.calls.slice(n), 'organOff').length === 1);
+
+  // A loop without it never reaches the organ.
+  let none = null;
+  for (let s = 1; s < 50 && !none; s++) {
+    const y = rig(true, s * 7);
+    if (!y.engine.organ) none = y;
+  }
+  none.run(10);
+  check('a loop without it makes no organ call', !none.calls.some((c) => c.name.startsWith('organ')));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

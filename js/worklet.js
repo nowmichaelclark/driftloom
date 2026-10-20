@@ -114,6 +114,21 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'damp':
         if (core) core.dl_damp(m.channel, m.time);
         return;
+      // A setting of one of a channel's own blocks for the loop, a channel
+      // event and a retune (queue items 46c and 61): Core::set, Core::event
+      // and Event::retune, waiting in the core for their time.
+      case 'set':
+        if (core) core.dl_set(m.channel, m.block, m.setting, m.value, m.time);
+        return;
+      case 'event':
+        if (core) core.dl_event(m.channel, m.kind, m.time, m.value);
+        return;
+      case 'retune': {
+        if (!core) return;
+        const n = m.notes;
+        core.dl_retune(m.channel, m.time, n[0] ?? NaN, n[1] ?? NaN, n[2] ?? NaN, n[3] ?? NaN, n[4] ?? NaN, n[5] ?? NaN);
+        return;
+      }
       case 'cancel':
         if (core) {
           if (m.from == null) core.dl_cancel();
