@@ -9,6 +9,10 @@
 //! just two sines. The only draws are the click's two, which the voice
 //! settles from the note's key (`Voice::settle`).
 //!
+//! Every one adds its soft harmonics (`harmonics`, queue item 56's
+//! roundBass): the 2nd, 3rd and 4th partials under a 900 Hz lowpass, so the
+//! note reads on a phone.
+//!
 //! The note's `parts` are the voice (`SUB` and the rest) with the flags
 //! `GLIDE` and `CHUG`; its first two extra values, the pluck's click's
 //! rate and offset draws.
@@ -23,16 +27,18 @@
 #![allow(clippy::too_many_lines)]
 
 use crate::QUANTUM;
+use crate::math;
 use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
 use crate::param::Param;
 use crate::rng::salt;
 use crate::wave::Waves;
 
 use super::filter::{self, Biquad, Filter, Kind};
+use super::harmonics::{self, Harmonics};
 use super::noise_source::NoiseSource;
 use super::osc::{Part, TableOsc, frame_at};
 use super::shared::{
-    A440, CUTOFF_DEFAULT, FILTER_TAIL, Q_DEFAULT, UNITY, midi_to_freq, noise_grain, pitch_of,
+    CUTOFF_DEFAULT, FILTER_TAIL, Q_DEFAULT, UNITY, midi_to_freq, noise_grain, pitch_of,
     starts_in,
 };
 
@@ -63,6 +69,36 @@ fn trim(kind: u32) -> f64 {
         _ => 1.0,
     }
 }
+
+/// roundBass's trims (queue item 56), in dB, each voice's: the harmonics
+/// add 3 to 7 dB by ear (K-weighted, across the register), so the whole
+/// note, harmonics and all, comes down by that much and the bass layer
+/// keeps today's level; `REGISTER_DB` takes back what the higher register
+/// adds on top, and `LIFT_DB` lifts them all. The harmonics keep the
+/// prototype's balance against the note, so the timbre is what Mikey heard;
+/// the prototype played the bass about 6 dB louder by ear than today, and
+/// Mikey chose today's level (2026-10-20) until he hears the two side by
+/// side (Session 26's album).
+fn round_trim(kind: u32) -> f64 {
+    let db = match kind {
+        SUB => -5.5,
+        ROUND => -4.8,
+        FIFTHS => -3.6,
+        PLUCKBASS => -3.2,
+        _ => -6.7,
+    } + REGISTER_DB
+        + LIFT_DB;
+    math::pow(10.0, db / 20.0)
+}
+
+/// What the higher register (36-57, from 28-52) adds by ear on the layer,
+/// taken back, in dB.
+const REGISTER_DB: f64 = -1.0;
+
+/// The bass layer's level by ear against today's, in dB, every voice alike:
+/// 0 keeps today's level (Mikey's choice for now). Session 26's album hears
+/// it at 0, +3 and +5.5 (about the prototype's).
+const LIFT_DB: f64 = 0.0;
 
 /// A sine, its frequency set once, under its own gain.
 struct Sine {
@@ -130,6 +166,8 @@ pub struct Bass {
     src: NoiseSource,
     click_filter: Biquad,
     click_gain: Param,
+    /// The soft harmonics every bass note adds (roundBass).
+    harmonics: Harmonics,
     start: u64,
     end: u64,
 }
@@ -155,6 +193,7 @@ impl Bass {
             src: NoiseSource::new(),
             click_filter: Biquad::new(),
             click_gain: Param::new(0.0),
+            harmonics: Harmonics::new(),
             start: 0,
             end: 0,
         }
@@ -179,7 +218,7 @@ impl Bass {
         let chug = parts & CHUG != 0;
         self.kind = kind;
         let f = midi_to_freq(midi);
-        let vel = vel * trim(kind);
+        let vel = vel * trim(kind) * round_trim(kind);
         let stop = time + dur + 0.4;
         // A chug note lets go in under half the time.
         let let_go = |release: f64| if chug { release * 0.45 } else { release };
@@ -192,9 +231,17 @@ impl Bass {
 
         if self.main {
             self.triangle = kind == ROUND || kind == PLUCKBASS;
-            // The pitch, gliding in from two thirds if asked.
+            // The pitch, gliding in from two thirds if asked. It rests at
+            // its first frequency, not Web Audio's 440 Hz (queue item 56):
+            // in the block a note starts in its moving pitch is read from
+            // the block's start (Chromium's rule, see `osc`), so the note
+            // began with a blip of 440 Hz as long as it happened to fall
+            // into its block, under an envelope still near silence. That
+            // left the note's phase to chance, and with it how its
+            // overtones meet the harmonics', which moved a note's level by
+            // a dB or two with where it landed (and so with the rate).
             let p = &mut self.pitch;
-            p.reset(A440);
+            p.reset(if glide { (f * 0.66) as f32 } else { f as f32 });
             if glide {
                 p.set_value_at_time((f * 0.66) as f32, time);
                 p.exponential_ramp_to_value_at_time(f as f32, time + 0.08, time);
@@ -270,7 +317,7 @@ impl Bass {
             // The sine under it: the weight of the note.
             if kind == SUB {
                 let s = &mut self.sines[0];
-                s.pitch.reset(A440);
+                s.pitch.reset(f as f32);
                 s.pitch.set_value_at_time(f as f32, time);
                 let g = &mut s.gain;
                 g.reset_at(UNITY, rate);
@@ -284,7 +331,7 @@ impl Bass {
         } else {
             // Root and fifth, sines only.
             for (s, (mult, level)) in self.sines.iter_mut().zip([(1.0, 0.3), (1.5, 0.14)]) {
-                s.pitch.reset(A440);
+                s.pitch.reset((f * mult) as f32);
                 s.pitch.set_value_at_time((f * mult) as f32, time);
                 let g = &mut s.gain;
                 g.reset_at(UNITY, rate);
@@ -313,6 +360,13 @@ impl Bass {
             starts = starts.min(self.src.start_frame());
             ends = ends.max(self.src.end_frame() + frame_at(FILTER_TAIL, rate));
         }
+        // The harmonics, softly, under every voice (queue item 56).
+        self.harmonics.set(
+            &harmonics::Settings { midi, time, dur, vel, release: let_go(0.09), stop },
+            rate,
+        );
+        starts = starts.min(self.harmonics.span().0);
+        ends = ends.max(self.harmonics.span().1);
         self.start = starts;
         self.end = ends;
     }
@@ -383,6 +437,7 @@ impl Block for Bass {
         for s in self.sines.iter_mut().take(self.sine_count) {
             s.render(block, rate, waves, out);
         }
+        self.harmonics.render(block, cx, out);
         if self.click {
             let mut x = [0.0f32; QUANTUM];
             self.src.fill(block, noise, &mut x);
