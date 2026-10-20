@@ -8,7 +8,7 @@
 import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf } from './generator.js';
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
-import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM } from './draw.js';
+import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS } from './draw.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -118,6 +118,24 @@ const HARMONY_VEL = 0.6;
 // downstroke (on the beat) and high to low on the upstroke (off it), and
 // the upstroke is the lighter of the two. Every other chord voice keeps the
 // fixed 11 ms spread. It was 15-30 ms, heard as smeared.
+// glass (queue item 59): how often a chord's first beat rings out, the
+// register (E5-G6), the bell (the prototype's FM options and cost; it
+// yields, so it never costs another part a note: js/synth.js), and its
+// level: the prototype's 0.62 at a chord of the corpus's median velocity
+// (0.50), following each chord's own velocity, and scaled by chords a bar
+// as the sketch did, so in a sparse loop the bells don't outweigh the
+// chords they come from (Mikey, 2026-10-20). Only a chord of two notes or
+// more rings out: the sketch rings two or three of a chord's notes, which a
+// one-note "chord" can't give (Mikey, 2026-10-20).
+const GLASS = {
+  chance: 0.55, low: 76, high: 91, vel: 0.62, chordVel: 0.5,
+  bell: { ratio: 3.5, index: 150, decay: 1.8, attack: 0.003, detune: 3, cost: 6, yields: true },
+};
+
+// Where glass's notes sit among the texture's at a step: past any place
+// the texture's own notes take (a step holds a few).
+const GLASS_ORD = 256;
+
 const STRUM = { min: 0.01, max: 0.02, up: 0.75 };
 
 export class Engine {
@@ -241,6 +259,12 @@ export class Engine {
     this.handover = false;
     this.spec = spec;
     this.base = render(spec);
+    // glass's level in a sparse loop: under one chord a bar, scaled down by
+    // as much (the sketch's), so the bells don't outweigh their chords.
+    {
+      const bars = Math.max(1, this.base.totalSteps / (this.base.stepsPerBar || 16));
+      this.glassScale = Math.min(1, this.base.tracks.chords.filter((e) => e.vel).length / bars);
+    }
     this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
@@ -688,6 +712,37 @@ export class Engine {
     }
   }
 
+  // glass (queue item 59): on a chord's first beat, 55% of the time, two or
+  // three of its notes ring out in E5-G6 as a soft FM bell (ratio 3.5), a
+  // dotted eighth apart, into the texture channel. Every decision is a draw
+  // from where the chord sits (js/draw.js), so a step decided again sounds
+  // the same and each pass rings its own way, as the prototype's did. Its
+  // level follows the chord it comes from, scaled by the loop's chords a bar
+  // (GLASS, `glassScale`); a chord of one note never rings out.
+  _glass(p, s, t, sd, key) {
+    let ord = 0;
+    for (const e of p.tracks.chords) {
+      if (e.step !== s || !e.vel || !e.notes || !e.notes.length) continue;
+      const at = { ...key, ord: ord++ };
+      const pcs = [...new Set(e.notes)].sort((a, b) => a - b);
+      if (pcs.length < 2) continue;
+      if (draw(at, 'texture', HOST_GLASS, 0) >= GLASS.chance) continue;
+      const count = draw(at, 'texture', HOST_GLASS, 1) < 0.5 ? 3 : 2;
+      const first = Math.floor(draw(at, 'texture', HOST_GLASS, 2) * pcs.length);
+      for (let i = 0; i < count; i++) {
+        let m = pcs[(first + i) % pcs.length];
+        while (m < GLASS.low) m += 12;
+        while (m > GLASS.high) m -= 12;
+        const when = t + i * 3 * sd;
+        const vel = GLASS.vel * (e.vel / GLASS.chordVel) * this.glassScale * (1 - i * 0.18);
+        // A place of its own past the texture's notes (GLASS_ORD), so the
+        // texture's own notes keep theirs; the bell draws nothing from it.
+        const place = { ...key, ord: GLASS_ORD + at.ord * 4 + i };
+        this._play(when, () => this.synth.fm(m, when, Math.max(0.6, 2.5 * sd), vel, { ...GLASS.bell, out: this.synth.channels.texture.gain }), place);
+      }
+    }
+  }
+
   // True when every layer is scheduled out for the bar containing this step
   // by the loop's entry schedule. (Drift's full stop, the other way a bar
   // fell silent, became a floor drop in queue item 58: the loop plays on.)
@@ -809,6 +864,7 @@ export class Engine {
           });
         }
       }
+      if (p.choices && p.choices.glass === 'on') this._glass(p, s, t, sd, { seed, pass, step });
     }
     if (!mutes.melody) {
       const s = at('melody');

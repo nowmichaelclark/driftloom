@@ -81,6 +81,9 @@ impl Fm {
 const KEYS: [f64; crate::EXTRA] = options(2.0, 260.0, 0.006, 0.4, 0.0);
 /// A bell's: a far ratio, a deep index, a little detune.
 const BELL: [f64; crate::EXTRA] = options(3.51, 420.0, 0.006, 0.5, 7.0);
+/// Glass's (queue item 59; `GLASS.bell` in `js/engine.js`): a soft bell at
+/// ratio 3.5, a light index that settles over 1.8 s, high in the texture.
+const GLASS: [f64; crate::EXTRA] = options(3.5, 150.0, 0.003, 1.8, 3.0);
 
 const fn options(ratio: f64, index: f64, attack: f64, decay: f64, detune: f64) -> [f64; crate::EXTRA] {
     let mut x = NO_EXTRA;
@@ -98,6 +101,7 @@ impl Block for Fm {
     const PROBES: &'static [Probe<Note>] = &[
         Probe { name: "keys", settings: Note::probe(crate::FM, crate::MELODY, 67.0, 0, KEYS) },
         Probe { name: "bell", settings: Note::probe(crate::FM, crate::MELODY, 67.0, 0, BELL) },
+        Probe { name: "glass", settings: Note::probe(crate::FM, crate::TEXTURE, 84.0, 0, GLASS) },
     ];
 
     fn start(&mut self, note: &Note, cx: &Context) {

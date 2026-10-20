@@ -22,6 +22,9 @@ export const HOST_ENSEMBLE = 101;
 export const HOST_STRUM = 102;
 export const HOST_DRIFT = 103;
 export const HOST_DRIFT_TO = 104;
+// Whether a chord rings out as glass, how many notes and from which
+// (queue item 59).
+export const HOST_GLASS = 105;
 
 // The core's channels, by the layer that plays into them.
 export const CHANNEL = { melody: 0, chords: 1, bass: 2, texture: 3, drums: 4 };

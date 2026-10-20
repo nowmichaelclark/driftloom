@@ -85,12 +85,14 @@ pub mod salt {
     pub const SUNG_SINGER: u32 = 1000;
 
     /// The page's: a drum's timing jitter, a layer's ensemble slip, a chord's
-    /// strum span, whether a held vowel drifts and where to.
+    /// strum span, whether a held vowel drifts and where to, and whether a
+    /// chord rings out as glass and on which notes (queue item 59).
     pub const HOST_JITTER: u32 = 100;
     pub const HOST_ENSEMBLE: u32 = 101;
     pub const HOST_STRUM: u32 = 102;
     pub const HOST_DRIFT: u32 = 103;
     pub const HOST_DRIFT_TO: u32 = 104;
+    pub const HOST_GLASS: u32 = 105;
 }
 
 // Multiplying and shifting a word into the hash, in the order of the
@@ -317,7 +319,7 @@ mod tests {
             salt::TEMPLE_DETUNE, salt::GRAIN, salt::ZIL, salt::TEXTURE_RATE, salt::SUNG_SPREAD,
             salt::SUNG_SCOOP, salt::SUNG_JITTER, salt::SUNG_VIBRATO, salt::SUNG_BREATH,
             salt::HOST_JITTER, salt::HOST_ENSEMBLE, salt::HOST_STRUM, salt::HOST_DRIFT,
-            salt::HOST_DRIFT_TO,
+            salt::HOST_DRIFT_TO, salt::HOST_GLASS,
         ];
         let mut sorted = all.to_vec();
         sorted.sort_unstable();

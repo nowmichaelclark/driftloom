@@ -375,5 +375,34 @@ console.log('\nHidden, a deep buffer assumed at once (queue item 47)');
   delete globalThis.document;
 }
 
+console.log('\nglass (queue item 59)');
+{
+  // A loop that draws glass, played 30 s: its bells are FM notes into the
+  // texture channel, in E5-G6, yielding to every other part, at the chord's
+  // velocity scaled by the loop's chords a bar.
+  let r = null;
+  for (let s = 1; s < 400 && !r; s++) {
+    const x = rig(true, s * 7919);
+    if (x.engine.base.choices.glass === 'on' && x.engine.glassScale > 0.5) r = x;
+  }
+  r.run(30);
+  const bells = r.calls.filter((c) => c.name === 'fm' && c.args[4] && c.args[4].out === 'texture');
+  const top = Math.max(...r.engine.base.tracks.chords.filter((e) => e.vel).map((e) => e.vel));
+  check('a loop with glass rings bells', bells.length > 0, `${bells.length} bells`);
+  check('in E5-G6, yielding', bells.every((c) => c.args[0] >= 76 && c.args[0] <= 91 && c.args[4].yields && c.args[4].ratio === 3.5));
+  check('at most the chord\'s velocity, scaled', bells.every((c) => c.args[3] <= 0.62 * (top / 0.5) * r.engine.glassScale + 1e-9),
+    `${Math.max(...bells.map((c) => c.args[3]))} against ${0.62 * (top / 0.5) * r.engine.glassScale}`);
+  check('each bell carries a place of its own', bells.every((c) => c.key && c.key.ord >= 256));
+  // The same loop with every chord one note: no bell rings.
+  const one = rig(true, r.spec.seed);
+  for (const e of one.engine.base.tracks.chords) if (e.notes && e.notes.length) e.notes = [e.notes[0]];
+  one.engine.live = one.engine.base;
+  // What start() handed over already was decided from the chords as they were.
+  const from = one.calls.length;
+  one.run(30);
+  const later = one.calls.slice(from).filter((c) => c.name === 'fm' && c.args[4] && c.args[4].yields);
+  check('a one-note chord never rings out', later.length === 0, `${later.length} bells`);
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);
