@@ -3643,6 +3643,40 @@ Mikey decides this line:
     gets only the register, and raising it would add refusals the item
     rules out. Worth a look when the budget is next revisited.
 
+- **Item 59, glass: stopped at its level, for a decision (Session 25a-2,
+  hands, Opus 5.5, 2026-10-20).** Built on a local branch, not pushed: the
+  bell (the FM voice at ratio 3.5 on 46b's modulation input, a kit probe
+  `fm/glass`: 0.0% at 2-5 kHz, the flute 0.3%), the choice in item 54's list,
+  and two fixes the wip lacked: glass yields (it asks whether there is room,
+  its cost and 20 units more, and holds nothing, as item 60's stab does,
+  through a check that reads the budget without pruning it), so with it on
+  the twelve loops below refuse exactly the notes they refused without it
+  (before the fix, keys and FM chords lost up to 4 notes a loop); and its
+  notes carry keys of their own. **The level is the open question.** The item
+  asks it "set against the chord voice it comes from" instead of the
+  prototype's chords-a-bar scaling, and asks that on vapor (under one chord a
+  bar) it add no more than about 1.3 LU. Measured on the core, 60 s, glass
+  forced on against off, on the first six thaw and six vapor corpus loops:
+
+  | level rule | thaw 1-2 kHz (mean) | vapor #4, #30, #70, #205 (under a chord a bar): the mix | all 12 loops: mix change, mean |
+  |---|---|---|---|
+  | the chord's velocity (0.62 at the median, 0.50) | 1.4% → 5.5% | +0.9, **+5.3**, +0.6, +0.7 dB | thaw +0.8, vapor +2.8 |
+  | the sketch's (0.62 x chords a bar, at most 1) | 1.4% → 4.7% | +0.2, +0.8, +0.4, +0.0 dB | thaw +0.7, vapor +2.0 |
+  | both (velocity x chords a bar) | 1.4% → 4.7% | about the sketch's | thaw +0.7, vapor +1.8 |
+
+  The bells sit 3.6 to 15 dB over the chord layer's loudest 3 s by ear in
+  every loop, thaw included, so a rule from the chord itself (its velocity,
+  notes or length) can't tell vapor #30 from a thaw loop: what differs is
+  that vapor #30's whole loop is sparse (-38.5 LUFS; 0.38 chords a bar).
+  vapor #91 and #118 (keys playing one-note "chords" up to 9 a bar) gain
+  +6.9 and +2.5 dB under any of the three, since a one-note chord rings out
+  as the same note two or three times. So: (a) "both", the conservative one,
+  closest to what Mikey heard (it keeps the sketch's scaling the item calls a
+  rough edge); (b) the chord's velocity alone, as the item reads, and accept
+  vapor #30's +5 dB; or (c) a rule on the loop's density, as dubStab's
+  level is (notes a second). And whether one-note chords should ring glass
+  at all. Items 59 and 60 wait on it (60's stab shares the yield).
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4194,3 +4228,12 @@ Mikey decides this line:
   than a bass should, and for the album, the same loops at today's level,
   +3 dB and +5.5 dB. For the album: dust #7 at 0:00 and dust #42 at 0:00 (the
   biggest move: 40-60 Hz 58% to 0.1% of the mix).
+- #250, longChords (item 57, v106),
+  https://8a9bf291-driftloom.nowmichaelclark.workers.dev: each loop draws how
+  long its chords last (today's 56%, twice today 16%, about 8 s 10%, about 16 s
+  9%, the whole loop 9%; calm loops lean long, driving ones away), held chords
+  trimmed up to 2 dB, repeated pads tied into one note, and every held chord in
+  the octave today's progression gives it. Listen for long chords that float
+  rather than drone or get loud, and for no octave jumps. For the album: grove
+  #47 at 0:00 (pads held twice as long) and dust #51 at 0:00 (one chord the
+  whole loop).
