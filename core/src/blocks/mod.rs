@@ -498,6 +498,7 @@ registry! {
         compressor::Compressor<1>;
         lfo::Lfo;
         harmonics::Harmonics;
+        arc::Arc;
         #[cfg(test)] tremolo::Tremolo;
         #[cfg(test)] amp::Amp;
         #[cfg(test)] pan::Pan;

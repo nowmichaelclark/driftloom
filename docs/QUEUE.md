@@ -4311,3 +4311,13 @@ Mikey decides this line:
   for an organ that surrounds the tune without covering it, and for chords
   that change without a gap. For the album: haven #38 from 0:00 and glade #21
   from 0:00.6.
+- #255, the wash (item 62, v111),
+  https://a12a0cdb-driftloom.nowmichaelclark.workers.dev: in loops that draw it
+  (about two in five), a slow swell of air every 17-26 s on a channel of its
+  own: two soft noises through lowpasses that open from 450 Hz to about 2.5 kHz
+  and close again, tinted by two resonances on the loop's key (its root or
+  fifth), like wind across a bottle. Its level follows the other five layers,
+  so it is heard under a beat, stays behind a sparse loop and fades with the
+  loop into a rest. Listen for air that breathes behind the music and never
+  hisses or sits in front. For the album: shrine #0 at 0:20.3 and grove #47 at
+  0:23.4 (each at its first swell's peak).

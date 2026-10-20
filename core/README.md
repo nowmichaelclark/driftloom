@@ -112,6 +112,8 @@ The chapel organ (`src/blocks/organ.rs`, queue item 61) is the chorale grown up,
 
 The wash (`src/blocks/wash.rs`, queue item 62) is the duck grown up: a source on the core's sixth channel (`WASH_CHANNEL`, which no host note plays into, set like the textures' in the mix), whose level follows the other five layers through five routes into its `MODS`, one a channel, each weighted by a setting (the channel's gain in the mix, 0 for a muted one, since a route taps a channel before its gain). A block may follow every channel at once: `MAX_MODS` is 6. Note lists carry the routes (`route`), and hash the sixth channel (`wash=`).
 
+The arc (`src/blocks/arc.rs`, queue item 63) is a processor in the master chain rather than a channel's: a lowpass between the tone and the highpass, one in each of the master's lanes (`Pair`'s way, ready for stereo), breathing over minutes and lifting the echo's feedback as it opens (the mix takes the lift, frame by frame). A host starts it through `Core::param` (`ARC_FROM`, then `ARC_PERIOD` at the loop's start). With no arc it is no filter at all.
+
 **A caution on modulation:** an oscillator's start follows Chromium's rule. Connecting any signal into its frequency, even a zero one, makes the pitch "moving", which changes how the note's first block starts. That is exact, and the goldens depend on it, but a recipe that connects a modulator "just in case" changes the sound.
 
 A **voice** is the same, with three differences:
