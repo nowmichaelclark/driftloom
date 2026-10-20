@@ -486,5 +486,35 @@ console.log('\nThe chapel organ (queue item 61)');
   check('a loop without it makes no organ call', !none.calls.some((c) => c.name.startsWith('organ')));
 }
 
+console.log('\nThe wash (queue item 62)');
+{
+  // A loop that draws the wash: set up once, at its first step, as the
+  // sketch drew it; Pause lets it go, and Play starts its swells again.
+  let seed = 0;
+  for (let s = 1; s < 3000 && !seed; s++) if (rig(true, s * 7907).engine.wash) seed = s * 7907;
+  const r = rig(true, seed);
+  r.run(20);
+  const setups = r.calls.filter((c) => c.name === 'washSetup');
+  const o = setups[0] && setups[0].args[0];
+  check('set up once, at the first step', setups.length === 1 && setups[0].args[1] < 0.1, JSON.stringify(setups.map((c) => c.args[1])));
+  check('a swell every 17-26 s, tuned in 600-1200 Hz', o && o.period >= 17 && o.period <= 26 && o.tint >= 600 && o.tint <= 1200
+    && o.tintGain >= 4 && o.tintGain <= 7 && o.tintHigh >= 2 && o.tintHigh <= 4 && o.tintQ >= 3 && o.tintQ <= 5 && o.level > 0, JSON.stringify(o));
+  const n = r.calls.length;
+  r.engine.stop();
+  check('Pause lets it go', r.calls.slice(n).some((c) => c.name === 'washSetup' && c.args[0] === null));
+  r.engine.start();
+  r.engine.clock.stop();
+  r.run(r.ctx.currentTime + 1);
+  const again = r.calls.slice(n).filter((c) => c.name === 'washSetup' && c.args[0]);
+  check('and Play starts it again', again.length === 1 && JSON.stringify(again[0].args[0]) === JSON.stringify(o));
+  let none = null;
+  for (let s = 1; s < 50 && !none; s++) {
+    const y = rig(true, s * 13);
+    if (!y.engine.wash) none = y;
+  }
+  none.run(10);
+  check('a loop without it makes no wash call', !none.calls.some((c) => c.name === 'washSetup'));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

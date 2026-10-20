@@ -1874,6 +1874,10 @@ above):
   (keep / tune / drop) without searching.
 - **Stop and leave a note** where a recipe can't be met in the core as
   heard, rather than build something Mikey didn't hear.
+- **The album loops, re-checked** (brain, 2026-10-20): at the end of group
+  (c), re-check every Done line's album loops against `main` (adding choices
+  reshuffles which loops draw what) and update the lines whose loop no
+  longer plays its sound, before Session 26.
 
 **Group (a): instruments (Session 25a).**
 
@@ -2277,6 +2281,24 @@ refactor: goldens on every mode, baseline and `blocks.txt` unchanged
 byte for byte; costs within 1%; `cargo clippy --all-targets -- -W
 clippy::pedantic` reports zero, and CI gains that check so it stays
 zero.
+
+## 75. The reverb, rate-true for steady tones (low priority, after the batch)
+
+**Hands:** Opus 5.5, high. From item 62 (brain, 2026-10-20).
+
+**Why:** the reverb's combs (feedback 0.8) catch a held tone differently at
+each sample rate: a held sine into the chords channel spreads 1.1 dB across
+rates, while the channel itself is the same at every rate. Matching the comb
+loops' lengths in time alone didn't fix it (the loop's lowpass and the delay's
+interpolation matter too). The chapel organ, a held instrument with a room
+send, is the first sound it shows in: golden 16-grove (5 s, the organ) reads
++0.29 dB at 44.1 kHz and +0.34 at 96 kHz against 48 kHz, so
+`core/golden/rates.txt` marks it `steady` and `tools/rates.mjs` holds it to
+0.4 dB, every other list to 0.2.
+
+**Aim:** 48 kHz bit-identical (goldens and baseline unchanged), and every rate
+list back inside 0.2 dB, so the 0.4 dB tolerance (and the `steady` line) can be
+removed. If 48 kHz must move, stop and leave a note for a decision.
 
 ## Next picks, wired for real (items 48-53)
 
@@ -4277,3 +4299,15 @@ Mikey decides this line:
   warm dub chord that answers the beat and dissolves into the echo without
   taking over the loop. For the album: wayfare #23 from 0:10.6 (busy) and
   cinder #12 from 0:07.2 (sparse).
+- #254, the chapel organ (item 61, v110),
+  https://7a353b2b-driftloom.nowmichaelclark.workers.dev: in loops that draw it
+  (about three in five), the chords are held on a soft pipe organ for the
+  whole loop, outside the voice budget: the round 7 mix (55% chapel, 25%
+  round 5's pipe, 10% distant cathedral, 10% celeste), flutes leading, a
+  breath of chiff on each new note, a celeste a few cents sharp, a dip at 800
+  Hz, a slow level shimmer and some of it in the room. A note two chords share
+  sounds on; it moves at most once a bar, holds through passing chords, and
+  lets go at a long rest, a silent bar, Pause or a muted chords layer. Listen
+  for an organ that surrounds the tune without covering it, and for chords
+  that change without a gap. For the album: haven #38 from 0:00 and glade #21
+  from 0:00.6.

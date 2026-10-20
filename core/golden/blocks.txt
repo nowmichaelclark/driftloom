@@ -132,3 +132,15 @@ organ/chapel=carve 653186d0520b393c -42.49 -21.59 15.8
 organ/chapel=shimmer 4acab6624fcb00f4 -40.06 -19.19 10.5
 organ/chapel=level 567301355bfdc7c3 -30.02 -9.45 10.8
 organ/chapel=dry ada2d73854936ac2 -47.16 -26.59 10.8
+wash/swell 4f13188824622939 -37.49 -21.22 15.8
+wash/swell~melody 5f4ec0b80f0cefd8 -35.24 -18.92 15.8
+wash/swell~chords 3ad97be975e78aa1 -36.69 -20.37 15.8
+wash/swell~bass 55a6b6d0fa329cb6 -34.82 -18.51 15.8
+wash/swell~texture af9b0ddca1a3c6d8 -36.08 -19.76 15.8
+wash/swell~drums ca7d4d33881ede82 -32.89 -16.59 15.8
+wash/swell=period 302b8b96b002f593 -37.44 -21.17 15.4
+wash/swell=level 2d3b4d0f7503a108 -47.03 -30.76 15.8
+wash/swell=tint 0bfe60351dcc479f -37.40 -21.00 15.5
+wash/swell=tint-gain b8b9c3e1ba5ad594 -36.34 -19.87 9.5
+wash/swell=tint-high 0fca822bb8afcb1b -36.93 -20.45 37.9
+wash/swell=tint-q b1011e3d386afbda -36.24 -18.70 14.0

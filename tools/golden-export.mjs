@@ -58,7 +58,7 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>golden</title>
 <script type="module">
 import { Engine } from '/js/engine.js';
 import { Synth } from '/js/synth.js';
-import { loadCore, CoreHost, CORE_VOICES } from '/js/core.js';
+import { loadCore, CoreHost, CORE_VOICES, CORE_CHANNEL_COUNT } from '/js/core.js';
 import { decodeSong } from '/js/share.js';
 import { newSpec } from '/js/generator.js';
 import { Rng, mulberry32 } from '/js/rng.js';
@@ -71,11 +71,11 @@ const NAMES = Object.fromEntries(Object.entries(CORE_VOICES).map(([k, v]) => [v,
 // record what the host sent. Returns what it needs to export or to pick.
 async function play(spec, seconds, quality, { render }) {
   const frames = Math.ceil((seconds * ${RATE}) / QUANTUM) * QUANTUM;
-  const ctx = new OfflineAudioContext(render ? 7 : 1, frames, ${RATE});
+  const ctx = new OfflineAudioContext(render ? CORE_CHANNEL_COUNT + 2 : 1, frames, ${RATE});
   const core = await loadCore(ctx);
   const events = [];
   const was = {};
-  for (const name of ['note', 'damp', 'param', 'cancel', 'set', 'event', 'retune']) was[name] = CoreHost.prototype[name];
+  for (const name of ['note', 'damp', 'param', 'cancel', 'set', 'event', 'retune', 'route']) was[name] = CoreHost.prototype[name];
   CoreHost.prototype.note = function (voice, channel, time, midi, dur, vel, parts, extra) {
     const { seed, pass, step, ord } = this.keyOf();
     events.push({ type: 'key', seed, pass, step, ord });
@@ -89,6 +89,10 @@ async function play(spec, seconds, quality, { render }) {
   CoreHost.prototype.set = function (channel, block, setting, value, time) {
     events.push({ type: 'set', channel, block, setting, value, time });
     return was.set.apply(this, arguments);
+  };
+  CoreHost.prototype.route = function (channel, block, setting, from, time) {
+    events.push({ type: 'route', channel, block, setting, from: from == null ? 4294967295 : from, bus: 4294967295, time });
+    return was.route.apply(this, arguments);
   };
   CoreHost.prototype.event = function (channel, kind, time, value = 0) {
     events.push({ type: 'event', channel, kind, time, value });
@@ -118,11 +122,11 @@ async function play(spec, seconds, quality, { render }) {
     if (render) {
       const node = synth.core.node;
       node.disconnect(0);
-      const merger = ctx.createChannelMerger(7);
+      const merger = ctx.createChannelMerger(CORE_CHANNEL_COUNT + 2);
       merger.connect(ctx.destination);
       node.connect(merger, 0, 0);
-      for (let c = 0; c < 5; c++) node.connect(merger, synth.core.tapOf(c), 1 + c);
-      node.connect(merger, synth.core.beforeComp(), 6);
+      for (let c = 0; c < CORE_CHANNEL_COUNT; c++) node.connect(merger, synth.core.tapOf(c), 1 + c);
+      node.connect(merger, synth.core.beforeComp(), CORE_CHANNEL_COUNT + 1);
     }
     engine.load(spec);
     engine.playing = true;
@@ -136,7 +140,7 @@ async function play(spec, seconds, quality, { render }) {
     await synth.core.flush();
     if (render) {
       const buf = await ctx.startRendering();
-      hashes = Array.from({ length: 7 }, (_, c) => {
+      hashes = Array.from({ length: CORE_CHANNEL_COUNT + 2 }, (_, c) => {
         const h = new Fnv();
         h.samples(buf.getChannelData(c));
         return h.hex();

@@ -25,6 +25,10 @@
 //!                              Core::set: a setting of a channel's own block
 //! event CHANNEL KIND TIME VALUE
 //!                              Core::event (`Event::new`)
+//! route CHANNEL BLOCK SETTING FROM BUS TIME
+//!                              Core::route: FROM's signal (BUS one of its
+//!                              own blocks' buses, 4294967295 the whole
+//!                              channel; FROM 4294967295 undoes the route)
 //! retune CHANNEL TIME N1 ... N6
 //!                              Core::event (`Event::retune`); "nan" past the
 //!                              chord's last note
@@ -57,6 +61,9 @@ pub enum Event {
     Key(Key),
     /// `Core::set(channel, block, setting, value, time)`.
     Set { channel: u32, block: u32, setting: u32, value: f64, time: f64 },
+    /// `Core::route(channel, block, setting, from, time)`, with `from` as
+    /// `dl_route` takes it (`u32::MAX` for none, and for the whole channel).
+    Route { channel: u32, block: u32, setting: u32, from: u32, bus: u32, time: f64 },
     /// `Core::event(channel, Event::new(kind, time, value))`.
     Channel { channel: u32, kind: u32, time: f64, value: f64 },
     /// `Core::event(channel, Event::retune(time, notes))`.
@@ -86,7 +93,7 @@ pub struct List {
 /// The signals a render hashes, in the order the hash line gives them: what
 /// the speakers get, then each channel as it went into the mix, then what
 /// reached the bus compressor. The channels' order is the core's.
-pub const SIGNALS: [&str; 7] = ["out", "melody", "chords", "bass", "texture", "drums", "bus"];
+pub const SIGNALS: [&str; 8] = ["out", "melody", "chords", "bass", "texture", "drums", "wash", "bus"];
 
 fn number(word: &str, what: &str, line: usize) -> Result<f64, String> {
     word.parse::<f64>()
@@ -188,6 +195,17 @@ pub fn parse(text: &str) -> Result<List, String> {
                     setting: whole(args[2], "the setting", line)?,
                     value: number(args[3], "the value", line)?,
                     time: number(args[4], "the time", line)?,
+                });
+            }
+            "route" => {
+                want(6)?;
+                list.events.push(Event::Route {
+                    channel: whole(args[0], "the channel", line)?,
+                    block: whole(args[1], "the block", line)?,
+                    setting: whole(args[2], "the setting", line)?,
+                    from: whole(args[3], "the channel routed", line)?,
+                    bus: whole(args[4], "the bus routed", line)?,
+                    time: number(args[5], "the time", line)?,
                 });
             }
             "event" => {
@@ -373,6 +391,12 @@ fn load(core: &mut Core, list: &List) -> Result<(), String> {
                     return Err(format!("event {}: the core refused setting {setting} of block {block}", n + 1));
                 }
             }
+            Event::Route { channel, block, setting, from, bus, time } => {
+                let tap = (*from != u32::MAX).then_some(dlcore::Tap { channel: *from, block: (*bus != u32::MAX).then_some(*bus as usize) });
+                if !core.route(*channel, *block as usize, *setting as usize, tap, *time) {
+                    return Err(format!("event {}: the core refused a route into setting {setting} of block {block}", n + 1));
+                }
+            }
             Event::Channel { channel, kind, time, value } => {
                 if !core.event(*channel, dlcore::block::Event::new(*kind, *time, *value)) {
                     return Err(format!("event {}: the core refused an event of kind {kind}", n + 1));
@@ -401,7 +425,7 @@ fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, S
     let mut frame = 0u64;
     while frame < list.frames {
         let taps = *core.process(frame);
-        let mut blocks: [&[f32]; 7] = [&[]; 7];
+        let mut blocks: [&[f32]; CHANNELS + 2] = [&[]; CHANNELS + 2];
         blocks[0] = &core.output()[0];
         for (slot, tap) in blocks[1..=CHANNELS].iter_mut().zip(taps.iter()) {
             *slot = &tap[..];

@@ -78,8 +78,9 @@ pub struct Mod {
     pub swing: f32,
 }
 
-/// The most settings one block lets a signal drive.
-pub const MAX_MODS: usize = 4;
+/// The most settings one block lets a signal drive: one for each channel,
+/// so a block can follow every other (the wash's follower, queue item 62).
+pub const MAX_MODS: usize = 6;
 
 /// What drives a block's settings for one render: for each setting in its
 /// `MODS`, by number, a signal or nothing. At every frame a driven setting

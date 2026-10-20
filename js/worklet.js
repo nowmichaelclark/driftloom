@@ -20,12 +20,14 @@
 // the master chain -- the wobble, saturator, tone and highpass (item 30),
 // the bus compressor, the master and kill gains and the ceiling -- for the
 // speakers.
-// With `taps`, six more outputs carry each channel as it went into the mix,
-// and the signal as it reached the bus compressor (the measure harness
-// reads them).
+// With `taps`, seven more outputs carry each of the core's six channels as
+// it went into the mix (the five layers' and, since queue item 62, the
+// wash's), and the signal as it reached the bus compressor (the measure
+// harness reads them). The node's inputs are the five layers': nothing the
+// page plays goes into the wash's.
 
 const QUANTUM = 128;
-const CHANNELS = 5;
+const CHANNELS = 6;
 
 // `n` runs of a block each, from `at` in the core's memory.
 function runs(buffer, at, n) {
@@ -119,6 +121,9 @@ class DriftloomCore extends AudioWorkletProcessor {
       // and Event::retune, waiting in the core for their time.
       case 'set':
         if (core) core.dl_set(m.channel, m.block, m.setting, m.value, m.time);
+        return;
+      case 'route':
+        if (core) core.dl_route(m.channel, m.block, m.setting, m.from, m.bus, m.time);
         return;
       case 'event':
         if (core) core.dl_event(m.channel, m.kind, m.time, m.value);

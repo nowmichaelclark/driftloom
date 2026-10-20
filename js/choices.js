@@ -60,6 +60,9 @@ export const CHOICES = [
   // a pipe organ the loop holds its chords on, outside the voice budget.
   // For any loop that plays a chord. No vibe leans (for Mikey's ears).
   { id: 'organ', options: [['today', 1], ['on', 1]], eligible: (ctx) => playsChords(ctx) },
+  // The wash (queue item 62; Ears 4, round 5, approved 2026-10-16): a slow
+  // swell of air every 17-26 s, under whatever the loop plays. Any loop.
+  { id: 'wash', options: [['today', 1], ['on', 1]], eligible: () => true },
 ];
 
 // How many notes a second the loop plays, every layer, as heard.

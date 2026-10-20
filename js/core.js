@@ -73,11 +73,22 @@ export const CORE_VOICES = {
 // core/src/blocks/mod.rs, the registry's `channel` list), for Core::set;
 // and the chapel organ's settings, in its `set` order
 // (core/src/blocks/organ.rs, queue item 61).
-export const CORE_OWN = { organ: 3 };
+export const CORE_OWN = { organ: 3, wash: 4 };
 export const ORGAN_SETTINGS = [
   'bar16', 'bar5', 'bar8', 'bar4', 'bar2_3', 'bar2', 'bar1_3_5', 'bar1_1_3', 'bar1',
   'speak', 'chiff', 'celeste', 'celesteLevel', 'release', 'tone', 'low', 'carve', 'shimmer', 'level', 'verb', 'dry',
 ];
+// How many channels the core mixes (CHANNELS in core/src/lib.rs): the five
+// layers', which the synth's channels feed (the node's inputs), and the
+// wash's (WASH_CHANNEL, queue item 62), which only the core plays into.
+export const CORE_CHANNEL_COUNT = 6;
+export const WASH_CHANNEL = 5;
+// The wash's settings (core/src/blocks/wash.rs, `set`, queue item 62): its
+// period, level, tint (Hz, two gains in dB, a Q), then the follower's weight
+// for each layer's channel, in the core's channel order (CORE_LAYERS), each
+// routed into the wash's input of the same number.
+export const WASH_SETTINGS = ['period', 'level', 'tint', 'tintGain', 'tintHigh', 'tintQ'];
+export const WASH_WEIGHT = 6;
 // The kinds of channel event (core/src/block.rs, `event`).
 export const EVENTS = { damp: 0, release: 1, bend: 2, retune: 3 };
 // A sung note's vowel and where it drifts to, as the core numbers them
@@ -261,7 +272,7 @@ export class CoreHost {
     this.failed = null;
     this._pings = new Map();
     this._ping = 0;
-    const outputs = taps ? 2 + dests.length : 1;
+    const outputs = taps ? 2 + CORE_CHANNEL_COUNT : 1;
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
       numberOfInputs: dests.length,
       numberOfOutputs: outputs,
@@ -286,7 +297,7 @@ export class CoreHost {
   // The output carrying the signal as it reached the bus compressor
   // (`taps`).
   beforeComp() {
-    return this.taps ? 1 + this.dests.length : -1;
+    return this.taps ? 1 + CORE_CHANNEL_COUNT : -1;
   }
 
   // Move one of the mix's parameters (MIX) by an AudioParam call (SET,
@@ -322,6 +333,14 @@ export class CoreHost {
   // 46c).
   set(channel, block, setting, value, time) {
     this.node.port.postMessage({ type: 'set', channel, block, setting, value, time });
+  }
+
+  // Route `from`'s signal (a channel, as it goes into the mix) into setting
+  // `setting` (its MODS) of `channel`'s own block number `block` from `time`
+  // (Core::route); `from` null undoes the route.
+  route(channel, block, setting, from, time) {
+    const none = 4294967295;
+    this.node.port.postMessage({ type: 'route', channel, block, setting, from: from == null ? none : from, bus: none, time });
   }
 
   // A channel event of `kind` (EVENTS) at `time`, with `value`: a release's

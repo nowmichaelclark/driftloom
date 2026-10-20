@@ -20,7 +20,8 @@ export function num(x) {
 // A note list, from the header and the calls the host made, in order. Each
 // event is { type: 'param', id, op, value, time, tau }, { type: 'damp',
 // channel, time }, { type: 'key', seed, pass, step, ord }, { type: 'set',
-// channel, block, setting, value, time }, { type: 'event', channel, kind,
+// channel, block, setting, value, time }, { type: 'route', channel, block,
+// setting, from, bus, time } (as dl_route takes them), { type: 'event', channel, kind,
 // time, value }, { type: 'retune', channel, time, notes } (six, NaN past the
 // last) or { type: 'note', voice, channel, time, midi, dur, vel, parts,
 // extra }.
@@ -36,6 +37,8 @@ export function writeList({ name, comment = [], rate, quality, frames, events })
       out.push(`key ${e.seed} ${e.pass} ${e.step} ${e.ord}`);
     } else if (e.type === 'set') {
       out.push(`set ${e.channel} ${e.block} ${e.setting} ${num(e.value)} ${num(e.time)}`);
+    } else if (e.type === 'route') {
+      out.push(`route ${e.channel} ${e.block} ${e.setting} ${e.from} ${e.bus} ${num(e.time)}`);
     } else if (e.type === 'event') {
       out.push(`event ${e.channel} ${e.kind} ${num(e.time)} ${num(e.value)}`);
     } else if (e.type === 'retune') {
@@ -82,6 +85,9 @@ export function readList(text) {
         break;
       case 'set':
         list.events.push({ type: 'set', channel: value(a[0], line), block: value(a[1], line), setting: value(a[2], line), value: value(a[3], line), time: value(a[4], line) });
+        break;
+      case 'route':
+        list.events.push({ type: 'route', channel: value(a[0], line), block: value(a[1], line), setting: value(a[2], line), from: value(a[3], line), bus: value(a[4], line), time: value(a[5], line) });
         break;
       case 'event':
         list.events.push({ type: 'event', channel: value(a[0], line), kind: value(a[1], line), time: value(a[2], line), value: value(a[3], line) });
@@ -139,9 +145,9 @@ export class Fnv {
 
 // The signals a render hashes, in the hash line's order (the native host's
 // SIGNALS).
-export const SIGNALS = ['out', 'melody', 'chords', 'bass', 'texture', 'drums', 'bus'];
+export const SIGNALS = ['out', 'melody', 'chords', 'bass', 'texture', 'drums', 'wash', 'bus'];
 const QUANTUM = 128;
-const CHANNELS = 5;
+const CHANNELS = 6;
 
 // The same list at another sample rate, as the native host's `at_rate`: a
 // list is in seconds and Hz, so only the length in frames changes.
@@ -162,6 +168,8 @@ function load(x, list) {
       x.dl_key(e.seed, e.pass, e.step, e.ord);
     } else if (e.type === 'set') {
       if (!x.dl_set(e.channel, e.block, e.setting, e.value, e.time)) throw new Error(`event ${n + 1}: the core refused setting ${e.setting} of block ${e.block}`);
+    } else if (e.type === 'route') {
+      if (!x.dl_route(e.channel, e.block, e.setting, e.from, e.bus, e.time)) throw new Error(`event ${n + 1}: the core refused a route into setting ${e.setting} of block ${e.block}`);
     } else if (e.type === 'event') {
       if (!x.dl_event(e.channel, e.kind, e.time, e.value)) throw new Error(`event ${n + 1}: the core refused an event of kind ${e.kind}`);
     } else if (e.type === 'retune') {

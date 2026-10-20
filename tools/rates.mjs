@@ -11,7 +11,12 @@
 //
 //   level     integrated loudness of three golden lists (K-weighted, BS.1770,
 //             ungated) at 22,050, 44,100, 96,000 and 192,000 Hz, within 0.2 dB
-//             of the 48 kHz render's
+//             of the 48 kHz render's; within 0.4 dB for a list rates.txt marks
+//             `steady`, one that holds a steady tone through the reverb (brain,
+//             2026-10-20): the reverb's combs catch a held tone differently at
+//             each rate (a held sine spreads 1.1 dB) while its channel is the
+//             same at every rate, until queue item 75 makes the reverb
+//             rate-true for steady tones
 //   tone      the coffee-shop test of tools/measure.mjs, voice by voice: the
 //             share of a dry note's A-weighted energy in 2-5 kHz, for every
 //             melody voice at three pitches, within 0.5 points of 48 kHz's at
@@ -46,12 +51,15 @@ const json = jsonAt >= 0 ? argv[jsonAt + 1] : null;
 const RATES = [22050, 44100, 96000, 192000];
 const REFERENCE = 48000;
 const LEVEL_TOLERANCE = 0.2;
+const STEADY_TOLERANCE = 0.4;
 const TONE_TOLERANCE = (rate) => (rate <= 44100 ? 1.5 : 0.5);
 const ALIAS_TOLERANCE = 1;
 const ALIAS_AUDIBLE = -60;
 
-const lists = fs.readFileSync(path.join(GOLDEN, 'rates.txt'), 'utf8').split('\n')
-  .filter((l) => l.startsWith('lists ')).flatMap((l) => l.slice(6).trim().split(/\s+/));
+const ratesTxt = fs.readFileSync(path.join(GOLDEN, 'rates.txt'), 'utf8').split('\n');
+const named = (key) => ratesTxt.filter((l) => l.startsWith(`${key} `)).flatMap((l) => l.slice(key.length + 1).trim().split(/\s+/));
+const lists = named('lists');
+const steady = new Set(named('steady'));
 
 const WIDE = path.join(ROOT, 'core', 'target', 'dlcore-wide.wasm');
 if (!fs.existsSync(WIDE)) {
@@ -228,7 +236,7 @@ for (const name of lists) {
     rows.push({ list: name, rate, level, tone });
     const dLevel = level - base[name].level;
     const dTone = tone - base[name].tone;
-    const ok = Math.abs(dLevel) <= LEVEL_TOLERANCE;
+    const ok = Math.abs(dLevel) <= (steady.has(name) ? STEADY_TOLERANCE : LEVEL_TOLERANCE);
     console.log(`  ${name.padEnd(12)} ${String(rate).padStart(6)} Hz  ${level.toFixed(2)} LUFS (${dLevel >= 0 ? '+' : ''}${dLevel.toFixed(2)})  tone ${tone.toFixed(2)} % (${dTone >= 0 ? '+' : ''}${dTone.toFixed(2)})${ok ? '' : '   <-- outside'}`);
     if (!ok) fail(`${name} at ${rate} Hz: level ${dLevel.toFixed(2)} dB`);
   }

@@ -209,6 +209,32 @@ function organOf(spec, base) {
   return [...bars, ...ORGAN_KEYS.map((k) => o[k])];
 }
 
+// The wash (queue item 62; Ears 4, round 5, approved 2026-10-16): a swell
+// of air every 17-26 s, tuned to the loop's key, its level following the
+// loop. Drawn at load from the loop's seed as the sketch drew it: its level
+// against the loop (`rel`, dB, turned into the follower's gain by the
+// sketch's calibration, 25), then its period; and on a stream of its own its
+// color: resonances on the root (60%) or its fifth, folded into
+// 600-1200 Hz, and an octave and a fifth above.
+const WASH_SALT = 0x3a54;
+const WASH_SALT_5 = 0x3a55;
+const WASH_K = 25;
+
+function washOf(spec) {
+  const r = new Rng(((spec.seed ^ WASH_SALT) >>> 0) || 1);
+  const rel = r.range(-31, -27);
+  const period = r.range(17, 26);
+  const r5 = new Rng(((spec.seed ^ WASH_SALT_5) >>> 0) || 1);
+  const pc = ((spec.root ?? 0) + (r5.chance(0.6) ? 0 : 7)) % 12;
+  let hz = 440 * Math.pow(2, (pc - 9) / 12);
+  while (hz < 600) hz *= 2;
+  while (hz > 1200) hz /= 2;
+  const tintGain = r5.range(4, 7);
+  const tintHigh = r5.range(2, 4);
+  const tintQ = r5.range(3, 5);
+  return { period, level: WASH_K * Math.pow(10, rel / 20), tint: hz, tintGain, tintHigh, tintQ };
+}
+
 // glass (queue item 59): how often a chord's first beat rings out, the
 // register (E5-G6), the bell (the prototype's FM options and cost; it
 // yields, so it never costs another part a note: js/synth.js), and its
@@ -272,6 +298,10 @@ export class Engine {
     this.organ = null;
     this.organChange = false;
     this.organHold = NO_HOLD;
+    // The loop's wash (queue item 62) or null, and whether it is still to
+    // be set up.
+    this.wash = null;
+    this.washChange = false;
     // Notes decided but not yet built, in the order they were decided (see
     // BUILD_TICKS), and the measured gap between ticks.
     this.pending = [];
@@ -376,6 +406,11 @@ export class Engine {
     const same = keepPosition && (organ ? !!this.organ && organ.every((v, i) => v === this.organ[i]) : !this.organ);
     this.organChange = !same && !!(organ || this.organ);
     this.organ = organ;
+    // And the wash (queue item 62), the same way.
+    const wash = this.base.choices && this.base.choices.wash === 'on' ? washOf(spec) : null;
+    const kept = keepPosition && JSON.stringify(wash) === JSON.stringify(this.wash);
+    this.washChange = !kept && !!(wash || this.wash);
+    this.wash = wash;
     this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
@@ -601,6 +636,12 @@ export class Engine {
     // speaks again at the next chord after Play.
     if (this.organHold.on) this.synth.organOff(this.ctx.currentTime);
     this.organHold = NO_HOLD;
+    // The wash would swell on, unheard: let it go, and start its swells
+    // again with the loop on Play.
+    if (this.wash) {
+      this.synth.washSetup(null, this.ctx.currentTime);
+      this.washChange = true;
+    }
     this.lastTick = null;
     this.visualQueue = [];
     this.synth.silence();
@@ -979,6 +1020,10 @@ export class Engine {
       this.synth.organSetup(this.organ, at);
       this.organChange = false;
       this.organHold = NO_HOLD;
+    }
+    if (this.washChange) {
+      this.synth.washSetup(this.wash, Math.max(time, this.floor));
+      this.washChange = false;
     }
     // At each bar line, decide whether the tails should still be ringing.
     const spbNow = p.stepsPerBar || 16;
