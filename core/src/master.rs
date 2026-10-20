@@ -14,8 +14,10 @@
 //!   either side blended, in 32-bit floats), with 2x oversampling on full
 //!   quality (`resample`) and none on lite. `setTone` replaces the curve
 //!   outright; the new one is read from the next block on.
-//! - **Tone**: a lowpass at 7200 Hz, Q 0.6, that `setTone` moves; then a
-//!   highpass at 38 Hz. The same `Biquad` the voices use.
+//! - **Tone**: a lowpass at 7200 Hz, Q 0.6, that `setTone` moves; then, in
+//!   loops that draw it, the arc (`blocks::arc`, queue item 63), a second
+//!   lowpass breathing over minutes; then a highpass at 38 Hz. The same
+//!   `Biquad` the voices use.
 //! - **comp**: Chromium's `DynamicsCompressorNode` (`compressor`) at
 //!   -10 dB, a 10 dB knee, 3:1, attack 6 ms, release 0.25 s.
 //! - **master**: a gain at 0.85 that `setVolume` and `setCharacterLevel`
@@ -35,6 +37,7 @@
 
 use crate::block::Signal;
 use crate::math;
+use crate::blocks::arc::Arc;
 use crate::blocks::compressor::{Compressor, Settings};
 use crate::delay::{Delay, buffer_len};
 use crate::blocks::filter::{Biquad, Kind};
@@ -96,6 +99,7 @@ struct Lane {
     up: Up,
     down: Down,
     tone: Biquad,
+    arc: Arc,
     highpass: Biquad,
 }
 
@@ -107,6 +111,7 @@ impl Lane {
             up: Up::new(),
             down: Down::new(),
             tone: Biquad::new(),
+            arc: Arc::new(),
             highpass: Biquad::new(),
         }
     }
@@ -193,6 +198,7 @@ impl Master {
             lane.up.init();
             lane.down.init();
             lane.tone.reset();
+            lane.arc.ready(rate);
             lane.highpass.reset();
             lane.highpass.set(Kind::Highpass, f(HIGHPASS_HZ), Q, 0.0, r);
         }
@@ -243,6 +249,20 @@ impl Master {
 
     pub fn flutter_depth(&mut self) -> &mut Timeline<EVENTS> {
         &mut self.flutter_depth
+    }
+
+    /// The arc (queue item 63): a swing of `period` seconds from `time`, at
+    /// point `from` of it; 0 lets the last one go.
+    pub fn arc(&mut self, period: f64, from: f64, time: f64) {
+        for lane in &mut self.lanes {
+            lane.arc.begin(period, from, time);
+        }
+    }
+
+    /// What the arc lifts the echo's feedback by over the block from
+    /// `block`, frame by frame; `None` with no arc.
+    pub fn arc_lift(&mut self, block: u64) -> Option<Signal> {
+        self.lanes.first_mut().and_then(|lane| lane.arc.lift(block))
     }
 
     pub fn tone_freq(&mut self) -> &mut Timeline<EVENTS> {
@@ -368,11 +388,15 @@ impl Master {
             }
             for ((lane, x), y) in self.lanes.iter_mut().zip(shaped.iter()).zip(self.before_comp.iter_mut()) {
                 if let (Some(&x), Some(y)) = (x.get(i), y.get_mut(i)) {
-                    *y = lane.highpass.step(lane.tone.step(x));
+                    *y = lane.tone.step(x);
                 }
             }
         }
-        for lane in self.lanes.iter_mut() {
+        for (lane, y) in self.lanes.iter_mut().zip(self.before_comp.iter_mut()) {
+            lane.arc.process(block, y);
+            for x in y.iter_mut() {
+                *x = lane.highpass.step(*x);
+            }
             lane.tone.flush();
             lane.highpass.flush();
         }

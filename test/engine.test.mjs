@@ -516,5 +516,27 @@ console.log('\nThe wash (queue item 62)');
   check('a loop without it makes no wash call', !none.calls.some((c) => c.name === 'washSetup'));
 }
 
+console.log('\nThe arc (queue item 63)');
+{
+  // A loop that draws the arc: started once, at its first step, over 2-5
+  // minutes, at a bright point of its swing; a loop without it never starts
+  // one.
+  let seed = 0;
+  for (let s = 1; s < 3000 && !seed; s++) if (rig(true, s * 6151).engine.arc) seed = s * 6151;
+  const r = rig(true, seed);
+  r.run(10);
+  const arcs = r.calls.filter((c) => c.name === 'arcSetup');
+  const o = arcs[0] && arcs[0].args[0];
+  check('started once, at the first step', arcs.length === 1 && arcs[0].args[1] < 0.1, JSON.stringify(arcs.map((c) => c.args[1])));
+  check('over 2-5 minutes, from a bright point', o && o.period >= 120 && o.period <= 300 && o.from >= 0.4 && o.from <= 0.6, JSON.stringify(o));
+  let none = null;
+  for (let s = 1; s < 50 && !none; s++) {
+    const y = rig(true, s * 17);
+    if (!y.engine.arc) none = y;
+  }
+  none.run(10);
+  check('a loop without it starts none', !none.calls.some((c) => c.name === 'arcSetup'));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

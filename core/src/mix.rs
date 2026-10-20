@@ -269,7 +269,10 @@ impl Mix {
     /// (`block::Sends`: into the reverb, then the echo), added into
     /// reverbIn and echoIn beside the channels' sends, as the sketch's stab
     /// connects its throw straight into echoIn (queue item 60).
-    pub fn process(&mut self, block: u64, channels: &[Signal; CHANNELS], sends: Option<&Sends>) -> &Signal {
+    ///
+    /// `lift`, if any, is what the arc adds to the echo's feedback, frame by
+    /// frame (queue item 63).
+    pub fn process(&mut self, block: u64, channels: &[Signal; CHANNELS], sends: Option<&Sends>, lift: Option<&Signal>) -> &Signal {
         if !self.ready {
             self.bus.fill(0.0);
             return &self.bus;
@@ -381,8 +384,14 @@ impl Mix {
         // echoIn; the delay renders, and the lowpass after it.
         let feedback = f(ECHO_FEEDBACK);
         let mut into_echo = [0.0f32; QUANTUM];
-        for ((y, &x), &last) in into_echo.iter_mut().zip(echo_in.iter()).zip(self.echo_last.iter()) {
-            *y = x + last * feedback;
+        if let Some(lift) = lift {
+            for (((y, &x), &last), &up) in into_echo.iter_mut().zip(echo_in.iter()).zip(self.echo_last.iter()).zip(lift.iter()) {
+                *y = x + last * (feedback + up);
+            }
+        } else {
+            for ((y, &x), &last) in into_echo.iter_mut().zip(echo_in.iter()).zip(self.echo_last.iter()) {
+                *y = x + last * feedback;
+            }
         }
         self.echo_time.fill(block, rate, &mut g);
         let mut echoed = [0.0f32; QUANTUM];
@@ -469,7 +478,7 @@ mod tests {
         let mut m = boxed(true);
         let mut ch = [[0.0f32; QUANTUM]; CHANNELS];
         ch[DRUMS_CHANNEL as usize][10] = 1.0;
-        let first = *m.process(0, &ch, None);
+        let first = *m.process(0, &ch, None, None);
         assert_eq!(first[10], f(0.82));
         assert!(first[..10].iter().all(|&x| x == 0.0));
         let silent = [[0.0f32; QUANTUM]; CHANNELS];
@@ -477,7 +486,7 @@ mod tests {
         // 0.05 s; the echo after 0.36 s and a block.
         let mut energy = 0.0f32;
         for b in 1..200 {
-            energy += m.process(b * QUANTUM as u64, &silent, None).iter().map(|x| x * x).sum::<f32>();
+            energy += m.process(b * QUANTUM as u64, &silent, None, None).iter().map(|x| x * x).sum::<f32>();
         }
         assert!(energy > 1e-4, "{energy}");
     }
@@ -491,7 +500,7 @@ mod tests {
         melody_only[MELODY as usize] = ch[0];
         let mut last = 1.0;
         for b in 0..200 {
-            last = m.process(b * QUANTUM as u64, &melody_only, None)[QUANTUM - 1];
+            last = m.process(b * QUANTUM as u64, &melody_only, None, None)[QUANTUM - 1];
         }
         // Only the tails of what came before are left, and fading.
         assert!(last.abs() < 0.05, "{last}");
@@ -510,6 +519,6 @@ mod tests {
         m.init(2.0 * MAX_RATE, true);
         assert!(!m.ready());
         let ch = [[1.0f32; QUANTUM]; CHANNELS];
-        assert!(m.process(0, &ch, None).iter().all(|&x| x == 0.0));
+        assert!(m.process(0, &ch, None, None).iter().all(|&x| x == 0.0));
     }
 }

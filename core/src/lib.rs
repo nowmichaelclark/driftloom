@@ -141,6 +141,11 @@ pub const KILL: u32 = TONE_FREQ + 6;
 pub const BYPASS: u32 = TONE_FREQ + 7;
 /// Whether both compressors start cold, as Chromium's do.
 pub const COLD: u32 = TONE_FREQ + 8;
+/// The arc (queue item 63): where on its swing the next one starts, 0 to 1
+/// (0 the dark end, 0.5 the bright), for `ARC_PERIOD` to take.
+pub const ARC_FROM: u32 = TONE_FREQ + 9;
+/// The arc's swing, in seconds, from `time` (0 lets it go).
+pub const ARC_PERIOD: u32 = TONE_FREQ + 10;
 
 /// Why `Core::start` or `Core::render` would not.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -394,6 +399,8 @@ pub struct Core {
     /// What the voices that send (`Voice::SENDS`) sent into the reverb and
     /// the echo this block, past their channels' sends.
     sends: Sends,
+    /// Where the next arc starts on its swing (`ARC_FROM`).
+    arc_from: f64,
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -443,6 +450,7 @@ impl Core {
             sent: 0,
             routes: [NO_ROUTE; ROUTES],
             sends: [[0.0; QUANTUM]; 2],
+            arc_from: 0.0,
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -465,6 +473,7 @@ impl Core {
         self.late = 0;
         self.missed = 0;
         self.dropped = [0; CAUSES];
+        self.arc_from = 0.0;
         self.clear();
         self.noise.make(rate);
         #[allow(clippy::cast_possible_truncation)] // the tables are 32-bit
@@ -631,6 +640,14 @@ impl Core {
             }
             COLD => {
                 self.master.set_cold(value != 0.0);
+                true
+            }
+            ARC_FROM => {
+                self.arc_from = value;
+                true
+            }
+            ARC_PERIOD => {
+                self.master.arc(value, self.arc_from, time);
                 true
             }
             _ => self.mix.param(id, op, v, time, tau, now),
@@ -1199,7 +1216,8 @@ impl Core {
             r.drive = *tap;
         }
         // The graph is mono: the mix is every lane's.
-        let mixed = [*self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }); OUT];
+        let lift = self.master.arc_lift(block);
+        let mixed = [*self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref()); OUT];
         self.master.process(block, &mixed, &self.waves);
         &self.out
     }

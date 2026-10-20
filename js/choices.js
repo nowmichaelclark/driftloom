@@ -63,6 +63,9 @@ export const CHOICES = [
   // The wash (queue item 62; Ears 4, round 5, approved 2026-10-16): a slow
   // swell of air every 17-26 s, under whatever the loop plays. Any loop.
   { id: 'wash', options: [['today', 1], ['on', 1]], eligible: () => true },
+  // The arc (queue item 63; the prototypes, approved 2026-10-10): the whole
+  // mix breathing from dark to bright and back over minutes. Any loop.
+  { id: 'arc', options: [['today', 1], ['on', 1]], eligible: () => true },
 ];
 
 // How many notes a second the loop plays, every layer, as heard.

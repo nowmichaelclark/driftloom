@@ -235,6 +235,21 @@ function washOf(spec) {
   return { period, level: WASH_K * Math.pow(10, rel / 20), tint: hz, tintGain, tintHigh, tintQ };
 }
 
+// The arc (queue item 63; the prototypes, approved 2026-10-10): its period
+// drawn 2-5 minutes (the prototype's 120 s was for the demo), and where on
+// its swing a loop starts: a bright point, 0.4 to 0.6 of it (the cutoff 4.9
+// to 9 kHz), so a loop starts open and nothing goes missing at its start.
+// The prototype started every loop closed, at 300 Hz; this is a taste call,
+// for Mikey's ears.
+const ARC_SALT = 0x0a4c;
+
+function arcOf(spec) {
+  const r = new Rng(((spec.seed ^ ARC_SALT) >>> 0) || 1);
+  const period = r.range(120, 300);
+  const from = r.range(0.4, 0.6);
+  return { period, from };
+}
+
 // glass (queue item 59): how often a chord's first beat rings out, the
 // register (E5-G6), the bell (the prototype's FM options and cost; it
 // yields, so it never costs another part a note: js/synth.js), and its
@@ -302,6 +317,10 @@ export class Engine {
     // be set up.
     this.wash = null;
     this.washChange = false;
+    // The loop's arc (queue item 63) or null, and whether it is still to be
+    // started.
+    this.arc = null;
+    this.arcChange = false;
     // Notes decided but not yet built, in the order they were decided (see
     // BUILD_TICKS), and the measured gap between ticks.
     this.pending = [];
@@ -411,6 +430,11 @@ export class Engine {
     const kept = keepPosition && JSON.stringify(wash) === JSON.stringify(this.wash);
     this.washChange = !kept && !!(wash || this.wash);
     this.wash = wash;
+    // And the arc (queue item 63).
+    const arc = this.base.choices && this.base.choices.arc === 'on' ? arcOf(spec) : null;
+    const held = keepPosition && JSON.stringify(arc) === JSON.stringify(this.arc);
+    this.arcChange = !held && !!(arc || this.arc);
+    this.arc = arc;
     this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
@@ -1024,6 +1048,10 @@ export class Engine {
     if (this.washChange) {
       this.synth.washSetup(this.wash, Math.max(time, this.floor));
       this.washChange = false;
+    }
+    if (this.arcChange) {
+      this.synth.arcSetup(this.arc, Math.max(time, this.floor));
+      this.arcChange = false;
     }
     // At each bar line, decide whether the tails should still be ringing.
     const spbNow = p.stepsPerBar || 16;
