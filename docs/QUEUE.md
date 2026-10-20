@@ -3662,15 +3662,15 @@ Mikey decides this line:
   |---|---|---|---|
   | the chord's velocity (0.62 at the median, 0.50) | 1.4% → 5.5% | +0.9, **+5.3**, +0.6, +0.7 dB | thaw +0.8, vapor +2.8 |
   | the sketch's (0.62 x chords a bar, at most 1) | 1.4% → 4.7% | +0.2, +0.8, +0.4, +0.0 dB | thaw +0.7, vapor +2.0 |
-  | both (velocity x chords a bar) | 1.4% → 4.7% | about the sketch's | thaw +0.7, vapor +1.8 |
+  | both (velocity x chords a bar) | 1.4% → 4.7% | +0.2, +0.9, +0.3, +0.0 dB | thaw +0.7, vapor +1.8 |
 
   The bells sit 3.6 to 15 dB over the chord layer's loudest 3 s by ear in
   every loop, thaw included, so a rule from the chord itself (its velocity,
   notes or length) can't tell vapor #30 from a thaw loop: what differs is
   that vapor #30's whole loop is sparse (-38.5 LUFS; 0.38 chords a bar).
-  vapor #91 and #118 (keys playing one-note "chords" up to 9 a bar) gain
-  +6.9 and +2.5 dB under any of the three, since a one-note chord rings out
-  as the same note two or three times. So: (a) "both", the conservative one,
+  vapor #91 and #118 (keys playing one-note "chords", up to 9 a bar) gain
+  +6.9 to +7.4 and +2.5 to +3.0 dB under each rule, since a one-note chord
+  rings out as the same note two or three times. So: (a) "both", the conservative one,
   closest to what Mikey heard (it keeps the sketch's scaling the item calls a
   rough edge); (b) the chord's velocity alone, as the item reads, and accept
   vapor #30's +5 dB; or (c) a rule on the loop's density, as dubStab's
