@@ -404,5 +404,24 @@ console.log('\nglass (queue item 59)');
   check('a one-note chord never rings out', later.length === 0, `${later.length} bells`);
 }
 
+console.log('\ndubStab (queue item 60)');
+{
+  // A busy loop that draws dubStab, played 30 s: its stabs fall on the
+  // offbeat after beat one or three, voice at most three of the chord's
+  // notes folded into G3-C5, and each carries a place of its own.
+  let r = null;
+  for (let s = 1; s < 3000 && !r; s++) {
+    const x = rig(true, s * 7919);
+    if (x.engine.stab) r = x;
+  }
+  r.run(30);
+  const stabs = r.calls.filter((c) => c.name === 'dubStab');
+  const spb = r.engine.base.stepsPerBar || 16;
+  check('a busy loop with dubStab stabs', stabs.length > 0, `${stabs.length} stabs, ${r.engine.stab.kind}`);
+  check('on the offbeat after beat one or three', stabs.every((c) => [2, Math.floor(spb / 2) + 2].includes(c.key.step % spb)));
+  check('at most three notes, in G3-C5', stabs.every((c) => c.args[0].length >= 1 && c.args[0].length <= 3 && c.args[0].every((m) => m >= 55 && m <= 72)));
+  check('each with a place of its own', stabs.every((c) => c.key.ord === 256));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

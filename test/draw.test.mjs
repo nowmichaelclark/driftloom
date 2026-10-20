@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bits, unit, draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_DRIFT, HOST_DRIFT_TO, HOST_GLASS } from '../js/draw.js';
+import { bits, unit, draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_DRIFT, HOST_DRIFT_TO, HOST_GLASS, HOST_STAB } from '../js/draw.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
@@ -44,7 +44,7 @@ console.log('\nThe draws');
   check('mean a half, spread a twelfth', Math.abs(mean - 0.5) < 0.005 && Math.abs(sd - Math.sqrt(1 / 12)) < 0.003, `${mean} ${sd}`);
   check('the same inputs make the same draw', unit(1, 2, 3, 4, 5, HOST_STRUM, 0) === unit(1, 2, 3, 4, 5, HOST_STRUM, 0));
   check('the kinds differ',
-    new Set([HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_DRIFT, HOST_DRIFT_TO, HOST_GLASS].map((s) => bits(1, 2, 3, 4, 5, s, 0))).size === 6);
+    new Set([HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_DRIFT, HOST_DRIFT_TO, HOST_GLASS, HOST_STAB].map((s) => bits(1, 2, 3, 4, 5, s, 0))).size === 7);
   const key = { seed: 77, pass: 1, step: 9, ord: 3 };
   check('a layer\'s draws come from its channel', draw(key, 'drums', HOST_JITTER) === unit(77, 1, 9, 4, 3, HOST_JITTER, 0)
     && draw(key, 'melody', HOST_JITTER) !== draw(key, 'drums', HOST_JITTER));

@@ -38,6 +38,11 @@ const RING_OUT_MS = 10000;
 // BUDGET figures below are a reasoned starting point, not a measurement of
 // any real device. If Diagnostics shows dropouts on a specific phone, this
 // is the number to revisit first.
+// dubStab's cost (queue item 60; it yields, as glass does: YIELD_MARGIN),
+// and the JavaScript fallback's level against the core's voice.
+const DUBSTAB_COST = 8;
+const DUBSTAB_FALLBACK = 1.67;
+
 const VOICE_COST = {
   hat: 1, ohat: 1, shaker: 1, rim: 1, kick: 1, snare: 1.5, clap: 1.5,
   drop: 1.5, bell: 4, chime: 4, celeste: 4, musicbox: 4,
@@ -96,8 +101,9 @@ const VOICE_COST = {
 };
 const DEFAULT_COST = 12; // any voice not listed above
 
-// A part that yields (glass, queue item 59) asks the budget whether there is
-// room for it and this many units more under the full ceiling, and holds
+// A part that yields (glass and dubStab, queue items 59 and 60) asks the
+// budget whether there is room for it and this many units more under the
+// full ceiling, and holds
 // nothing, so it never costs another part a note: when the budget is near
 // full, it is the one left out.
 const YIELD_MARGIN = 20;
@@ -2019,6 +2025,24 @@ export class Synth {
     return true;
   }
 
+  // dubStab (queue item 60): a soft chord stab, `notes` (three at most), on
+  // the core's own voice, which throws itself into the echo and the room.
+  // It yields (YIELD_MARGIN): it asks whether there is room for it and twenty
+  // units more under the full ceiling, and holds nothing, so it never costs
+  // another part a note. The JavaScript synth (the fallback) has no such
+  // voice: today's stab plays the chord instead, at the same level by ear.
+  dubStab(notes, time, vel, o) {
+    if (!this._room(time, DUBSTAB_COST + YIELD_MARGIN)) return;
+    const out = this.channels.chords.gain;
+    const dur = 0.022 + o.decay * 1.8;
+    if (this.engine === 'rust' && this._coreNote(CORE_VOICES.dubstab, out, time, notes[0], dur, vel,
+      [notes[1] ?? NaN, notes[2] ?? NaN, o.decay, o.open, o.saw, o.throw, o.tone, o.verb, o.level])) return;
+    // K-weighted, today's stab on each note of a three-note chord at
+    // velocity 0.8 sits 4.5 dB under the core's stab at its level.
+    const v = vel * DUBSTAB_FALLBACK * (o.level / 0.19);
+    for (const m of notes) this.voice('stab', m, time, 0.22, v, out, { yields: true });
+  }
+
   // Where the note now being played sits in its loop, for the core.
   _noteKey() {
     if (this.key) return this.key;
@@ -2471,10 +2495,12 @@ export class Synth {
       // house is built from: too brief to be a chord, too pitched to be a
       // drum, and it survives being heard a thousand times.
       case 'stab': {
-        if (!this._budget(time, soft)) return;
+        // dubStab's fallback (`yields`) has asked for room already and holds none.
+        const holds = !opts.yields;
+        if (holds && !this._budget(time, soft)) return;
         const len = Math.min(dur, 0.22);
         if (this.engine === 'rust' && this._coreNote(CORE_VOICES.stab, dest, time, midi, dur, vel, [])) {
-          this._release(time, len + 0.2);
+          if (holds) this._release(time, len + 0.2);
           return;
         }
         const bp = ctx.createBiquadFilter();
@@ -2495,7 +2521,7 @@ export class Synth {
           o.stop(time + len + 0.1);
         }
         bp.connect(g).connect(dest);
-        this._release(time, len + 0.2);
+        if (holds) this._release(time, len + 0.2);
         return;
       }
 

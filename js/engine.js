@@ -8,7 +8,8 @@
 import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf } from './generator.js';
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
-import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS } from './draw.js';
+import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
+import { notesPerSecond } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -118,6 +119,30 @@ const HARMONY_VEL = 0.6;
 // downstroke (on the beat) and high to low on the upstroke (off it), and
 // the upstroke is the lighter of the two. Every other chord voice keeps the
 // fixed 11 ms spread. It was 15-30 ms, heard as smeared.
+// dubStab (queue item 60; Ears 4, round 4): how often each density stabs,
+// the chance on the offbeat after beat one and after beat three of a bar.
+const STAB_RATES = { rare: [0.22, 0], sparse: [0.45, 0.05], some: [0.6, 0.2], busy: [0.65, 0.5] };
+const STAB_SALT = 0x57ac;
+
+// A loop's dubStab, drawn at load from its seed as the sketch drew it: its
+// density, then the options, in the sketch's order (round 2's, then round
+// 3's over them, then round 4's), so a loop draws what Mikey heard; and its
+// level, down by up to 8 dB in a loop of under four notes a second.
+function stabOf(spec, base) {
+  const r = new Rng(((spec.seed ^ STAB_SALT) >>> 0) || 1);
+  const kind = r.weighted([['rare', 34], ['sparse', 36], ['some', 20], ['busy', 14]]);
+  r.range(0.18, 0.3); r.range(2400, 3400);
+  const saw = r.range(0.6, 0.9);
+  r.range(0.45, 0.7); r.range(1200, 1800);
+  r.range(0.32, 0.45);
+  const thrown = r.range(0.3, 0.42);
+  const tone = r.range(1000, 1300);
+  const open = r.range(2000, 2800);
+  const decay = r.range(0.24, 0.34);
+  const level = 0.19 * Math.min(1, Math.max(0.4, (notesPerSecond(spec, base.tracks) + 1) / 5));
+  return { kind, rates: STAB_RATES[kind], opts: { decay, open, saw, throw: thrown, tone, verb: 0.12, level } };
+}
+
 // glass (queue item 59): how often a chord's first beat rings out, the
 // register (E5-G6), the bell (the prototype's FM options and cost; it
 // yields, so it never costs another part a note: js/synth.js), and its
@@ -135,6 +160,8 @@ const GLASS = {
 // Where glass's notes sit among the texture's at a step: past any place
 // the texture's own notes take (a step holds a few).
 const GLASS_ORD = 256;
+// And dubStab's, among the chords'.
+const STAB_ORD = 256;
 
 const STRUM = { min: 0.01, max: 0.02, up: 0.75 };
 
@@ -265,6 +292,7 @@ export class Engine {
       const bars = Math.max(1, this.base.totalSteps / (this.base.stepsPerBar || 16));
       this.glassScale = Math.min(1, this.base.tracks.chords.filter((e) => e.vel).length / bars);
     }
+    this.stab = this.base.choices && this.base.choices.dubStab === 'on' ? stabOf(spec, this.base) : null;
     this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
@@ -743,6 +771,42 @@ export class Engine {
     }
   }
 
+  // dubStab (queue item 60): on the offbeat after beat one and after beat
+  // three, by the loop's density, a soft stab of the chord sounding now,
+  // folded into G3-C5. Never in a bar the loop leaves silent, and only over a
+  // groove: a bar where the drums or the bass play and the other layers have
+  // four notes or more between them (the sketch's rules). Whether it stabs
+  // is a draw from where the offbeat sits (js/draw.js), so a step decided
+  // again stabs the same, and each pass its own way, as the sketch's did.
+  _dubStab(p, s, t, abs, at, mutes, key) {
+    const spb = p.stepsPerBar || 16;
+    const pos = s % spb;
+    const which = pos === 2 ? 0 : pos === Math.floor(spb / 2) + 2 ? 1 : -1;
+    if (which < 0 || !(this.stab.rates[which] > 0) || this._isSilentBar(abs)) return;
+    let n = 0;
+    let floor = 0;
+    for (const l of ['drums', 'bass', 'melody', 'texture']) {
+      if (mutes[l]) continue;
+      const from = at(l) - (at(l) % spb);
+      const k = p.tracks[l].filter((e) => e.vel && e.step >= from && e.step < from + spb).length;
+      n += k;
+      if ((l === 'drums' || l === 'bass') && k) floor++;
+    }
+    if (!floor || n < 4) return;
+    // The chord sounding now: the last one struck, within the last bar.
+    let cur = null;
+    for (const e of p.tracks.chords) if (e.vel && e.notes && e.notes.length && e.step <= s && (!cur || e.step >= cur.step)) cur = e;
+    if (!cur || s - cur.step >= spb) return;
+    if (draw(key, 'chords', HOST_STAB) >= this.stab.rates[which]) return;
+    const notes = cur.notes.slice(0, 3).map((m) => {
+      while (m > 72) m -= 12;
+      while (m < 55) m += 12;
+      return m;
+    });
+    // A place of its own past the chords' notes (STAB_ORD); it draws nothing.
+    this._play(t, () => this.synth.dubStab(notes, t, 0.8, this.stab.opts), { ...key, ord: STAB_ORD });
+  }
+
   // True when every layer is scheduled out for the bar containing this step
   // by the loop's entry schedule. (Drift's full stop, the other way a bar
   // fell silent, became a floor drop in queue item 58: the loop plays on.)
@@ -865,6 +929,7 @@ export class Engine {
         }
       }
       if (p.choices && p.choices.glass === 'on') this._glass(p, s, t, sd, { seed, pass, step });
+      if (this.stab) this._dubStab(p, s, t, abs, at, mutes, { seed, pass, step, ord: 0 });
     }
     if (!mutes.melody) {
       const s = at('melody');

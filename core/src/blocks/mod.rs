@@ -12,7 +12,7 @@
 //! for starting, rendering and letting go of each (static dispatch: the
 //! same code a hand-written `match` makes, and no `dyn` anywhere).
 
-use crate::block::{Block, Channel, Context, Event, Mods, Note, Signal, Voice};
+use crate::block::{Block, Channel, Context, Event, Mods, Note, Sends, Signal, Voice};
 
 mod shared;
 
@@ -383,7 +383,10 @@ macro_rules! registry {
         }
 
         /// Render the block from frame `block` of the voice in `held` into
-        /// its channel's signal `out`, or into the bus there of the channel's own block it plays through.
+        /// its channel's signal `out`, or into the bus there of the channel's
+        /// own block it plays through; a voice that sends (`Voice::SENDS`)
+        /// adds into `sends` too, and says so in `sent`.
+        #[allow(clippy::too_many_arguments)]
         pub(crate) fn render(
             held: &mut Held,
             pools: &mut Pools,
@@ -391,14 +394,33 @@ macro_rules! registry {
             cx: &Context,
             out: &mut Signal,
             buses: &mut [Signal; own::COUNT],
+            sends: &mut Sends,
+            sent: &mut bool,
         ) {
             match held {
-                $( Held::$vt(v) => v.render(block, cx, into(<$vm::$vt as Voice>::THROUGH, out, buses)), )*
+                $( Held::$vt(v) => {
+                    let to = into(<$vm::$vt as Voice>::THROUGH, out, buses);
+                    if <$vm::$vt as Voice>::SENDS {
+                        v.render_sends(block, cx, to, sends);
+                        *sent = true;
+                    } else {
+                        v.render(block, cx, to);
+                    }
+                } )*
                 $( Held::$pt(i) => {
                     if let Some(v) = pools.$pm.voices.get_mut(*i) {
                         v.render(block, cx, into(<$pm::$pt as Voice>::THROUGH, out, buses));
                     }
                 } )*
+            }
+        }
+
+        /// Whether the voice in `held` sends some of itself past its channel
+        /// (`Voice::SENDS`).
+        pub(crate) fn sends(held: &Held) -> bool {
+            match held {
+                $( Held::$vt(_) => <$vm::$vt as Voice>::SENDS, )*
+                $( Held::$pt(_) => <$pm::$pt as Voice>::SENDS, )*
             }
         }
 
@@ -455,6 +477,7 @@ registry! {
         bass::Bass = BASS 22;
         texture::Texture = TEXTURE 23;
         drum::Drum = DRUM 24;
+        dub_stab::DubStab = DUBSTAB 28;
     }
     pooled {
         sung::Sung [sung::POOL] = VOWEL 25, HUM 26, CHOIR 27;
