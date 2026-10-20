@@ -96,6 +96,12 @@ const VOICE_COST = {
 };
 const DEFAULT_COST = 12; // any voice not listed above
 
+// A part that yields (glass, queue item 59) asks the budget whether there is
+// room for it and this many units more under the full ceiling, and holds
+// nothing, so it never costs another part a note: when the budget is near
+// full, it is the one left out.
+const YIELD_MARGIN = 20;
+
 // Levels for the folk voices, calibrated with measure.mjs --voice all at
 // 0.4s notes to the median of each layer that draws them (contribution rule
 // 5). The accordion is drawn for both melody and chords, and a chord note
@@ -1342,6 +1348,17 @@ export class Synth {
     return true;
   }
 
+  // Whether `cost` would fit under the full ceiling at `time`, for a part
+  // that yields (YIELD_MARGIN). It only reads: `_budget` lets go of every
+  // hold that ends by the time it is asked about, and a yielding part asks
+  // about notes a beat or two ahead, which would leave the notes before them
+  // a laxer budget than they have.
+  _room(time, cost) {
+    let spent = 0;
+    for (const r of this._releases) if (r.at > time) spent += r.cost;
+    return spent + cost <= (this.quality === 'lite' ? LITE_BUDGET : MAX_BUDGET);
+  }
+
   // `param.setValueAtTime(value, time)`, holding `value` from now on too
   // (see `_noiseSource`). Not the `value` setter, which is
   // `setValueAtTime(value, currentTime)`: for a note built after its own
@@ -1770,7 +1787,9 @@ export class Synth {
     // and will release its own budget for the whole note; checking again
     // here would charge the same sound twice.
     const cost = opts.cost ?? DEFAULT_COST;
-    if (!opts.skipBudget && !this._budget(time, !!opts.soft, cost)) return;
+    // A yielding note (`yields`) asks for room and holds none (YIELD_MARGIN).
+    const holds = !opts.skipBudget && !opts.yields;
+    if (opts.yields ? !this._room(time, cost + YIELD_MARGIN) : holds && !this._budget(time, !!opts.soft, cost)) return;
     const ctx = this.ctx;
     const out = opts.out || this.channels.chords.gain;
     const f = midiToFreq(midi);
@@ -1785,7 +1804,7 @@ export class Synth {
     // kalimba's JavaScript fallback says `noCore` so it is counted once.
     if (this.engine === 'rust' && !opts.noCore
       && this._coreNote(CORE_VOICES.fm, out, time, midi, dur, vel, [ratio, index, attack, decay, detune])) {
-      if (!opts.skipBudget) this._release(time, dur + 1.2, cost);
+      if (holds) this._release(time, dur + 1.2, cost);
       return;
     }
 
@@ -1815,7 +1834,7 @@ export class Synth {
     car.start(time);
     mod.start(time);
     this._stopClean(g, [car, mod], stop);
-    if (!opts.skipBudget) this._release(time, dur + 1.2, cost);
+    if (holds) this._release(time, dur + 1.2, cost);
   }
 
   pad(notes, time, dur, vel, dest) {

@@ -1983,12 +1983,17 @@ say which and by how much); a sound change: in Session 26's album.
   of the time), two or three of its notes ring out in E5-G6, a dotted
   eighth apart, into the texture channel.
 - **Core:** a soft FM bell, ratio 3.5 (on 46b's modulation input), its
-  level set against the chord voice it comes from (the prototype's rough
-  edge: it scaled itself by chords a bar instead); a probe in the kit.
+  level from its chord's velocity, scaled by chords a bar as the sketch did
+  (Mikey, 2026-10-20); only chord events of two or more distinct notes ring
+  out, since the sketch rings two or three of a chord's notes and a one-note
+  event can't give what Mikey approved (Mikey, 2026-10-20); a probe in the
+  kit.
 - **Fallback:** the FM bell voice the JavaScript synth already has.
-- **Measured:** thaw: 1-2 kHz 2.8% → about 6%; on vapor (under one chord a
-  bar) it adds no more than about 1.3 LU; the tone probe's 2-5 kHz share
-  at or below the flute's (it plays high).
+- **Measured:** thaw: 1-2 kHz 2.8% → about 6% (the prototype's rise of
+  about 3.4 points: today's thaw starts lower, so the rise is the
+  yardstick); on vapor (under one chord a bar) it adds no more than about
+  1.3 LU; the tone probe's 2-5 kHz share at or below the flute's (it plays
+  high).
 
 ## 60. dubStab
 
@@ -3644,7 +3649,10 @@ Mikey decides this line:
     rules out. Worth a look when the budget is next revisited.
 
 - **Item 59, glass: stopped at its level, for a decision (Session 25a-2,
-  hands, Opus 5.5, 2026-10-20).** Built on a local branch, not pushed: the
+  hands, Opus 5.5, 2026-10-20).** Decided by Mikey (2026-10-20): "both" (the
+  chord's velocity, scaled by chords a bar as the sketch did), and glass only
+  on chords of two or more distinct notes; item 59 amended to say so. Built
+  on a local branch, not pushed: the
   bell (the FM voice at ratio 3.5 on 46b's modulation input, a kit probe
   `fm/glass`: 0.0% at 2-5 kHz, the flute 0.3%), the choice in item 54's list,
   and two fixes the wip lacked: glass yields (it asks whether there is room,
@@ -4237,3 +4245,11 @@ Mikey decides this line:
   rather than drone or get loud, and for no octave jumps. For the album: grove
   #47 at 0:00 (pads held twice as long) and dust #51 at 0:00 (one chord the
   whole loop).
+- #251, floorDrop (item 58, v107),
+  https://a355cd22-driftloom.nowmichaelclark.workers.dev: with "Let the loop
+  wander" on, the loop no longer stops now and then; instead the kick and the
+  bass step out for a bar or two while everything else plays on, about 3.5
+  times as often as the old stops, and nothing fades the tails. Listen for a
+  floor that drops and comes back without the loop ever going silent. For the
+  album (wander on): wayfare #23 at 0:33.8 (two bars) and undertow #45 at
+  0:03.8 (one bar).

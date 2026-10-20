@@ -46,6 +46,12 @@ key 828129958 0 8 1
 note 6 1 2.061 60 6 0.16392711325746653 0 nan nan nan nan nan nan nan nan nan nan nan nan
 key 828129958 0 8 2
 note 6 1 2.0719999999999996 63 6 0.16392711325746653 0 nan nan nan nan nan nan nan nan nan nan nan nan
+key 828129958 0 8 256
+note 3 3 2.05 87 0.625 0.44009163779504606 0 3.5 150 0.003 1.8 3 nan nan nan nan nan nan nan
+key 828129958 0 8 257
+note 3 3 2.8 79 0.625 0.3608751429919378 0 3.5 150 0.003 1.8 3 nan nan nan nan nan nan nan
+key 828129958 0 8 258
+note 3 3 3.55 84 0.625 0.28165864818882946 0 3.5 150 0.003 1.8 3 nan nan nan nan nan nan nan
 key 828129958 0 8 0
 note 14 0 2.05 67 1 0.6895520888931296 0 65 nan nan nan nan nan nan nan nan nan nan nan
 key 828129958 0 12 0
