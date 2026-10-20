@@ -2968,6 +2968,11 @@ function limitSilence(tracks, raw, form, bars, spb, maxRest, cycles) {
 // Called once per loop repeat when Drift is on. It never edits the stored
 // pattern; it returns a shallow variation, so the piece always remembers
 // what it actually is and keeps returning home.
+// floorDrop's chance a pass at full wander, and the drums that are the
+// floor (queue item 58).
+const FLOOR_DROP_RATE = 0.35;
+const FLOOR_DRUMS = ['kick', 'softkick', 'frame'];
+
 export function drift(pattern, rng, amount) {
   const p = {
     ...pattern,
@@ -3036,25 +3041,30 @@ export function drift(pattern, rng, amount) {
     if (rng.chance(0.06 * a) && e.notes.length) e.notes.push(e.notes[0] + 14);
     if (rng.chance(0.05 * a)) e.vel *= 0.4;
   }
-  // And now and then the whole thing stops. Unpredictable, over a loop you
-  // already know, which is the part a fixed rest can never give you.
-  if (rng.chance(0.1 * a)) {
+  // And now and then the floor drops out: the kick and the bass step out
+  // for a bar or two while everything else plays on (floorDrop, queue item
+  // 58; Ears 1, approved by Mikey 2026-10-10). Unpredictable, over a loop
+  // you already know, which is the part a fixed rest can never give you.
+  // It replaces the old full stop (the whole loop silent, at 0.1 a pass),
+  // three and a half times as often, and since the rest of the loop plays
+  // on, the tails are no longer faded (no driftSilentBars).
+  if (rng.chance(FLOOR_DROP_RATE * a)) {
     const spb = pattern.stepsPerBar || 16;
     const bars = Math.max(1, Math.floor(p.totalSteps / spb));
     if (bars >= 4) {
       const span = rng.chance(0.35) ? 2 : 1;
-      // Land the rest on an even bar, for the same reason.
+      // Land the drop on an even bar, for the same reason.
       const latest = Math.max(1, bars - span);
       const start = Math.min(latest, Math.max(2, rng.int(1, latest) & ~1));
       const from = start * spb;
       const to = (start + span) * spb;
-      for (const layer of Object.keys(p.tracks)) {
+      for (const layer of ['drums', 'bass']) {
         for (const e of p.tracks[layer]) {
+          if (layer === 'drums' && !FLOOR_DRUMS.includes(e.inst)) continue;
           if (e.step >= from && e.step < to) e.vel = 0;
         }
       }
-      p.driftSilentBars = [];
-      for (let k = 0; k < span; k++) p.driftSilentBars.push(start + k);
+      p.floorDrop = { bar: start, bars: span };
     }
   }
 

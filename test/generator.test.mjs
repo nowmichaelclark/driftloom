@@ -1031,5 +1031,37 @@ console.log('\nlongChords (queue item 57)');
   check('today\'s lengths stay the most common', n.asIs / total > 0.45 && n.asIs / total < 0.62, JSON.stringify(n));
 }
 
+// ---------------------------------------------------------------------
+console.log('\nfloorDrop (queue item 58)');
+{
+  // Drift's full stop became a floor drop: the kick and the bass out for a
+  // bar or two while the rest plays on, at 0.35 a pass at full wander, in
+  // loops of 4 bars or more; no bars marked silent.
+  const FLOOR = ['kick', 'softkick', 'frame'];
+  let passes = 0, drops = 0, wrong = 0, stops = 0;
+  for (let i = 0; i < 400; i++) {
+    const p = render(newSpec(i * 104729 + 7));
+    if (p.totalSteps / (p.stepsPerBar || 16) < 4) continue;
+    for (let pass = 0; pass < 5; pass++) {
+      const d = drift(p, new Rng(i * 31 + pass + 1), 1);
+      passes++;
+      if (d.driftSilentBars) stops++;
+      if (!d.floorDrop) continue;
+      drops++;
+      const spb = p.stepsPerBar || 16;
+      const from = d.floorDrop.bar * spb, to = (d.floorDrop.bar + d.floorDrop.bars) * spb;
+      for (const layer of LAYERS) {
+        for (const e of d.tracks[layer]) {
+          const floor = layer === 'bass' || (layer === 'drums' && FLOOR.includes(e.inst));
+          if (floor && e.vel && e.step >= from && e.step < to) wrong++;
+        }
+      }
+    }
+  }
+  check('a floor drop takes out the kick and the bass', drops > 0 && wrong === 0, `${wrong} wrong in ${drops} drops`);
+  check('never a full stop', stops === 0, `${stops} passes`);
+  check('about 0.35 a pass at full wander', drops / passes > 0.28 && drops / passes < 0.42, `${(drops / passes).toFixed(3)} of ${passes}`);
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);
