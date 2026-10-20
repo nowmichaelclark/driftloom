@@ -74,10 +74,11 @@ fn trim(kind: u32) -> f64 {
 /// add 3 to 7 dB by ear (K-weighted, across the register), so the whole
 /// note, harmonics and all, comes down by that much and the bass layer
 /// keeps today's level; `REGISTER_DB` takes back what the higher register
-/// adds on top. The harmonics keep the prototype's balance against the
-/// note, so the timbre is what Mikey heard (for his ears: the prototype
-/// played the bass about 6 dB louder by ear than today; the item asks the
-/// level to stay).
+/// adds on top, and `LIFT_DB` lifts them all. The harmonics keep the
+/// prototype's balance against the note, so the timbre is what Mikey heard;
+/// the prototype played the bass about 6 dB louder by ear than today, and
+/// Mikey chose today's level (2026-10-20) until he hears the two side by
+/// side (Session 26's album).
 fn round_trim(kind: u32) -> f64 {
     let db = match kind {
         SUB => -5.5,
@@ -85,13 +86,19 @@ fn round_trim(kind: u32) -> f64 {
         FIFTHS => -3.6,
         PLUCKBASS => -3.2,
         _ => -6.7,
-    } + REGISTER_DB;
+    } + REGISTER_DB
+        + LIFT_DB;
     math::pow(10.0, db / 20.0)
 }
 
 /// What the higher register (36-57, from 28-52) adds by ear on the layer,
 /// taken back, in dB.
 const REGISTER_DB: f64 = -1.0;
+
+/// The bass layer's level by ear against today's, in dB, every voice alike:
+/// 0 keeps today's level (Mikey's choice for now). Session 26's album hears
+/// it at 0, +3 and +5.5 (about the prototype's).
+const LIFT_DB: f64 = 0.0;
 
 /// A sine, its frequency set once, under its own gain.
 struct Sine {

@@ -3587,7 +3587,11 @@ Mikey decides this line:
      as without it, so check the chiff before storing the kit.
 
 - **Item 56, roundBass: stopped at its yardsticks, which disagree (Session
-  25a-2, hands, Opus 5.5, 2026-10-19).** Built and checked, but not merged:
+  25a-2, hands, Opus 5.5, 2026-10-19).** Decided by Mikey (2026-10-20): (a),
+  today's level, as built; #248 merged. The level goes to his ears in
+  Session 26's album: the same loops with the bass at today's level, +3 dB
+  and +5.5 dB, labeled (`LIFT_DB` in `core/src/blocks/bass.rs`, one number
+  for every bass voice). Built and checked, but not merged:
   the item's two figures can't both be met with the sound Mikey heard, so it
   needs a decision. The work is the open item 56 PR (branch
   `claude/affectionate-knuth-x5pe4b`), finished apart from that: the kit
