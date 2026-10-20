@@ -2,3 +2,8 @@
 # Short, and between them every kind of sound: the sung and noise voices, a busy kit, the pads.
 rates 22050 44100 96000 192000
 lists 13-dust 16-grove 18-shatter
+# The lists that hold a steady tone through the reverb (16-grove draws the chapel organ, queue item
+# 61): tools/rates.mjs holds their level to 0.4 dB rather than 0.2. The reverb's combs (feedback 0.8)
+# catch a held tone differently at each rate -- a held sine into the chords channel spreads 1.1 dB --
+# while the channel itself is the same at every rate (brain, 2026-10-20; queue item 75 is to fix it).
+steady 16-grove

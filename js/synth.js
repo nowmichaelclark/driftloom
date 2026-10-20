@@ -6,7 +6,7 @@ import { midiToFreq } from './theory.js';
 import {
   CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
-  MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS,
+  MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS, WASH_CHANNEL, WASH_SETTINGS, WASH_WEIGHT,
 } from './core.js';
 import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
 
@@ -516,6 +516,10 @@ export class Synth {
     this._ducks = [];
     // The loop's chapel organ settings (organSetup), or null.
     this._organ = null;
+    // The loop's wash (washSetup), or null, and whether the core's wash
+    // listens to the layers (its routes).
+    this._wash = null;
+    this._washRouted = false;
     // Notes for a core voice that played in JS instead: the core had not
     // arrived, had failed, or does not serve the note's channel.
     this.fallbacks = 0;
@@ -542,8 +546,9 @@ export class Synth {
       if (this.onCoreError) this.onCoreError(this.coreError);
     };
     this._mixInCore(fresh);
-    // The loop's organ, if it has one, from now on.
+    // The loop's organ and wash, if it has them, from now on.
     if (this._organ) this._organSend(this._raw.currentTime);
+    if (this._wash) this._washSend(this._raw.currentTime);
   }
 
   // The core will not come (it did not load, or its node could not be
@@ -1210,6 +1215,11 @@ export class Synth {
     const core = this._coreMix();
     if (core) {
       core.param(MIX.gains + CORE_CHANNELS.indexOf(layer), instant ? SET : TARGET, muted ? 0 : ch.base.gain, this.ctx.currentTime, 0.03);
+      // The wash listens to the layers as the mix plays them.
+      if (this._wash) {
+        const c = CORE_CHANNELS.indexOf(layer);
+        core.set(WASH_CHANNEL, CORE_OWN.wash, WASH_WEIGHT + c, muted ? 0 : ch.base.gain, this.ctx.currentTime);
+      }
       return;
     }
     ch.gain.gain.setTargetAtTime(muted ? 0 : ch.base.gain, this.ctx.currentTime, 0.03);
@@ -2079,6 +2089,35 @@ export class Synth {
     const core = this._coreMix();
     const channel = core ? core.channelOf(this.channels.chords.gain) : -1;
     if (channel >= 0) core.event(channel, EVENTS.release, time, fall);
+  }
+
+  // The wash (queue item 62): a swell of air on the core's channel of its
+  // own (core/src/blocks/wash.rs), its level following the five layers,
+  // each routed into it and weighted by its channel's gain (0 muted). `o`
+  // is its settings for the loop ({ period, level, tint, tintGain,
+  // tintHigh, tintQ }), from `time`; null lets the last loop's go. The
+  // JavaScript synth (the fallback) has no wash: it leaves it out.
+  washSetup(o, time) {
+    const had = this._wash;
+    this._wash = o ? { ...o } : null;
+    const core = this._coreMix();
+    if (!core) return;
+    if (o) this._washSend(time);
+    else if (had) core.set(WASH_CHANNEL, CORE_OWN.wash, 0, 0, time);
+  }
+
+  _washSend(time) {
+    const core = this._coreMix();
+    const o = this._wash;
+    if (!core || !o) return;
+    const mutes = this._mixState().mutes;
+    // The weights and routes first: the period starts the swells.
+    CORE_CHANNELS.forEach((name, c) => {
+      core.set(WASH_CHANNEL, CORE_OWN.wash, WASH_WEIGHT + c, mutes[name] ? 0 : this.channels[name].base.gain, time);
+      if (!this._washRouted) core.route(WASH_CHANNEL, CORE_OWN.wash, c, c, time);
+    });
+    this._washRouted = true;
+    for (let n = WASH_SETTINGS.length - 1; n >= 0; n--) core.set(WASH_CHANNEL, CORE_OWN.wash, n, o[WASH_SETTINGS[n]], time);
   }
 
   // Where the note now being played sits in its loop, for the core.

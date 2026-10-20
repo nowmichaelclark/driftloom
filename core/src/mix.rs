@@ -39,7 +39,7 @@ use crate::block::{Sends, Signal};
 use crate::delay::{Delay, buffer_len};
 use crate::blocks::filter::{Biquad, Kind};
 use crate::timeline::Timeline;
-use crate::{BASS_CHANNEL, CHANNELS, CHORDS, DRUMS_CHANNEL, MELODY, QUANTUM, TEXTURE_CHANNEL};
+use crate::{BASS_CHANNEL, CHANNELS, CHORDS, DRUMS_CHANNEL, MELODY, QUANTUM, TEXTURE_CHANNEL, WASH_CHANNEL};
 
 
 /// The highest sample rate the mix holds its delays for (`crate::MAX_RATE`).
@@ -63,14 +63,17 @@ const PRE_DELAY_FRAMES: usize = crate::MAX_FRAMES_A_SECOND / 5;
 const ECHO_FRAMES: usize = crate::MAX_FRAMES_A_SECOND * 2;
 
 /// The channels' gains, sends and order, in the core's channel numbers
-/// (`MELODY` and the rest), as `_build()` sets them.
-const GAIN: [f64; CHANNELS] = [0.58, 0.44, 0.62, 0.5, 0.82];
-const VERB: [f64; CHANNELS] = [0.28, 0.35, 0.05, 0.6, 0.1];
-const ECHO: [f64; CHANNELS] = [0.12, 0.15, 0.0, 0.25, 0.05];
-/// The order `_build()` makes the channels in; sums run in it.
-const ORDER: [u32; CHANNELS] = [DRUMS_CHANNEL, BASS_CHANNEL, CHORDS, MELODY, TEXTURE_CHANNEL];
+/// (`MELODY` and the rest), as `_build()` sets them; the wash's channel as
+/// the sketch made it, a copy of the textures' (queue item 62).
+const GAIN: [f64; CHANNELS] = [0.58, 0.44, 0.62, 0.5, 0.82, 0.5];
+const VERB: [f64; CHANNELS] = [0.28, 0.35, 0.05, 0.6, 0.1, 0.6];
+const ECHO: [f64; CHANNELS] = [0.12, 0.15, 0.0, 0.25, 0.05, 0.25];
+/// The order `_build()` makes the channels in; sums run in it. The wash's
+/// comes last, so a mix without it adds a silent channel at the end, which
+/// changes no sum by a bit.
+const ORDER: [u32; CHANNELS] = [DRUMS_CHANNEL, BASS_CHANNEL, CHORDS, MELODY, TEXTURE_CHANNEL, WASH_CHANNEL];
 /// The channels the duck presses: all but the drums.
-const PUMPED: [u32; 4] = [BASS_CHANNEL, CHORDS, MELODY, TEXTURE_CHANNEL];
+const PUMPED: [u32; 5] = [BASS_CHANNEL, CHORDS, MELODY, TEXTURE_CHANNEL, WASH_CHANNEL];
 
 const COMB_TIMES_FULL: [f64; 6] = [0.0297, 0.0371, 0.0411, 0.0437, 0.0503, 0.0577];
 const COMB_TIMES_LITE: [f64; 3] = [0.0297, 0.0411, 0.0503];
@@ -87,7 +90,7 @@ const Q: f32 = 1.0;
 /// The parameters a host can move, by number (`Core::param`). Each is one
 /// AudioParam of synth.js, or, for the combs, the same one of each comb,
 /// which `setTone` always moves together.
-pub const GAINS: u32 = 0; // to 4: each channel's gain, by channel number
+pub const GAINS: u32 = 0; // to 4: each layer's channel's gain, by channel number (the wash's has none)
 pub const PUMP: u32 = 5;
 pub const TAILS: u32 = 6;
 pub const ECHO_DELAY: u32 = 7;

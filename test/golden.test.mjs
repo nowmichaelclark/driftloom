@@ -44,6 +44,7 @@ check('nan, negative zero and shortest text', num(NaN) === 'nan' && num(-0) === 
       { type: 'key', seed: 4288468419, pass: 1, step: 2, ord: 3 },
       { type: 'set', channel: 1, block: 3, setting: 18, value: 0.098, time: 0.05 },
       { type: 'event', channel: 1, kind: 1, time: 0.5, value: 0.6 },
+      { type: 'route', channel: 5, block: 4, setting: 2, from: 2, bus: 4294967295, time: 0.05 },
       { type: 'retune', channel: 1, time: 0.05, notes: [60, 64, 67, NaN, NaN, NaN] },
       { type: 'note', voice: 25, channel: 0, time: 0.1, midi: 60.5, dur: 0.4, vel: 0.8, parts: 3, extra: [1, NaN, -0, 1 / 3] },
     ],
@@ -58,6 +59,7 @@ check('nan, negative zero and shortest text', num(NaN) === 'nan' && num(-0) === 
       { type: 'key', seed: 4288468419, pass: 1, step: 2, ord: 3 },
       { type: 'set', channel: 1, block: 3, setting: 18, value: 0.098, time: 0.05 },
       { type: 'event', channel: 1, kind: 1, time: 0.5, value: 0.6 },
+      { type: 'route', channel: 5, block: 4, setting: 2, from: 2, bus: 4294967295, time: 0.05 },
       { type: 'retune', channel: 1, time: 0.05, notes: [60, 64, 67, 'nan', 'nan', 'nan'] },
       { type: 'note', voice: 25, channel: 0, time: 0.1, midi: 60.5, dur: 0.4, vel: 0.8, parts: 3, extra: [1, 'nan', '-0', 1 / 3, ...Array(8).fill('nan')] },
     ]));

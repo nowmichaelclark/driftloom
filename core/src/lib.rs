@@ -79,14 +79,15 @@ const MAX_FRAMES_A_SECOND: usize = if cfg!(feature = "wide") { 192_000 } else { 
 pub const MIN_RATE: f64 = 22_050.0;
 
 /// The channels the core plays into. Each is one of the synth's per-layer
-/// channels: all five of them (queue item 27). Since queue item 29 the core
+/// channels: all five of them (queue item 27), and since queue item 62 a
+/// sixth of the core's own, the wash's, which no host note plays into. Since queue item 29 the core
 /// mixes them too (`mix`), with the host's own notes for each (`inputs`),
 /// through the channel gains, the sends, the duck, the echo and the reverb;
 /// and since items 30 and 31 runs the mix through the whole master chain
 /// (`master`): the wobble, the saturator, the tone and the highpass, the bus
 /// compressor, the master and kill gains and the ceiling, out to the
 /// speakers (`output`).
-pub const CHANNELS: usize = 5;
+pub const CHANNELS: usize = 6;
 /// The melody's channel.
 pub const MELODY: u32 = 0;
 /// The chords' channel.
@@ -97,6 +98,10 @@ pub const BASS_CHANNEL: u32 = 2;
 pub const TEXTURE_CHANNEL: u32 = 3;
 /// The drums' channel.
 pub const DRUMS_CHANNEL: u32 = 4;
+/// The wash's channel (queue item 62): its own, set like the textures'
+/// (level and sends), so its level follower can listen to the five layers
+/// without hearing the wash.
+pub const WASH_CHANNEL: u32 = 5;
 
 /// Voices sounding at once. The JavaScript voice budget decides what plays,
 /// and it cannot fill this: its whole ceiling is 260 units and the cheapest
@@ -1442,7 +1447,7 @@ mod tests {
             Taken::Unknown
         );
         assert_eq!(
-            core.note(KALIMBA, 5, 0.1, 60.0, 0.5, 0.5, STRIKE, NO),
+            core.note(KALIMBA, CHANNELS as u32, 0.1, 60.0, 0.5, 0.5, STRIKE, NO),
             Taken::Unknown
         );
         assert_eq!(
@@ -2006,7 +2011,7 @@ mod tests {
         // Not a block, setting or channel the core has.
         assert!(!set.set(MELODY, own::SWELL, 2, 1.0, 0.3));
         assert!(!set.set(MELODY, own::COUNT, 0, 1.0, 0.3));
-        assert!(!set.set(5, own::SWELL, DEPTH, 1.0, 0.3));
+        assert!(!set.set(CHANNELS as u32, own::SWELL, DEPTH, 1.0, 0.3));
         assert!(!set.set(MELODY, own::SWELL, DEPTH, f64::NAN, 0.3));
         // A body takes no settings.
         assert!(!set.set(MELODY, own::NYLON_BODY, 0, 1.0, 0.3));
