@@ -590,6 +590,36 @@ Stated decisions, not inferences. Dated where the date matters.
     nothing collides with 46. One builder session for both halves.
     Then phase 2's items (ordering 48-53 among them). The balance lock
     is re-baselined on purpose, once per group, and says what moved.
+  - **Since Session 24 (2026-10-19 to 22), for the next brain:** 46b
+    split into 46b and 46c; items 54-63 merged (#245-#256, v103-v112),
+    so group (a) is done and the balance lock is re-baselined. Decided
+    on the way: glass follows its chord's velocity times chords a bar,
+    and rings only on chords of two or more notes (Mikey); a 0.4 dB rate
+    tolerance for golden lists holding a steady tone through the reverb,
+    with **item 75** (the reverb rate-true for steady tones, low
+    priority) and a rule to re-check every Done line's album loops at
+    the end of group (c) (brain). **The arc (Mikey, 2026-10-21):** a
+    loop of his sank under 700 Hz for most of a 3-minute swing and he
+    thought the instruments were gone; once he knew it returns he liked
+    it. So **item 63b**: two shapes drawn per loop, "deep" (today's,
+    about 1 in 3) and "dip" (mostly open, one gentle dip to 800 Hz-1.5
+    kHz, about 2 in 3), with vibe weights (calm and vast vibes lean deep
+    and long; bright and lively lean dip, short and rarer). **And Mikey
+    (2026-10-22):** the arc's variables (shape, period, floor, start,
+    how often) should become controls for listeners and game developers
+    eventually; for now the generator weights them. So 63b keeps them as
+    named, ranged settings (promise 9: every variable a named setting),
+    and phase 2's requests (promise 11) can pin them; sliders in the app
+    are his call later (a Painter design), game hosts reach them through
+    the host API (phases 4 and 7). **For Session 26:** a "glacial" vibe
+    (Mikey's idea: very slow and vast; the deep arc, the longest swings),
+    designed with him there. **Two accounts (Mikey, 2026-10-22):** this
+    Claude account ran low for the week, so the hands sessions (63b,
+    group b, group c) and Ears 9 may run on his other account. The repo
+    carries the state: only one brain edits these files at a time, and a
+    hands session that hits a taste call takes the conservative option,
+    writes it down "for Mikey's ears", and goes on (decisions batch up
+    for Session 26), unless the item says to stop.
   - **Session 25-0** (hands, Opus 5.5, high): item 46b. **Done (#241,
     v101, 2026-10-19)**: every yardstick met; the stereo shape is a second
     signal beside the mono one, and the web `.wasm` rebuilt without the
