@@ -2086,6 +2086,41 @@ pipe, 10% distant cathedral, 10% celeste).
 - **Measured:** haven: -15 dB above 500 Hz at the closed points, unchanged
   when open; refusals unchanged (it is a filter); the group's balance
   lock re-baselined here, saying what moved.
+- **Amended by item 63b (brain, from Mikey's report, 2026-10-21/22; built
+  in v113):** the swing above is now one of **two shapes**, drawn per loop
+  on the arc's own stream:
+  - **deep:** the swing above, exactly (about 1 loop in 3). Its cutoff sits
+    under 700 Hz for about half of every swing, which kept Mikey's loop
+    muffled long enough that he thought the instruments were gone; once he
+    knew it returns he liked it, so it stays, as the rarer shape.
+  - **dip:** mostly open (about 2 in 3): at 9 kHz for 65% of each swing,
+    with one smooth dip over the other 35% (a raised cosine in log
+    frequency) to a floor drawn per loop from 800 Hz to 1.5 kHz; a loop
+    starts in the open part; the echo's lift follows how open it is (the
+    same cutoff lifts it as the deep swing's does).
+  - **Vibe weights** (item 54's rule): the arc itself leans toward hazy,
+    foggy, misty, frosty, still, meditative, spacious, floating, hypnotic,
+    mysterious, reflective and wondrous, and away from bouncy, lively,
+    energetic, skipping and zany; deep leans toward the same calm list, dip
+    toward sunny, bright, happy, joyful, merry, bouncy, lively, energetic,
+    skipping and zany (toward x2, away x0.4); the period is 3-5 minutes for
+    the calm list, 1.5-2.5 for the bright list, 2-5 for the rest.
+  - **Named settings:** shape, period, floor, start, the dip's share and
+    how often a loop draws the arc are `ARC` in `js/choices.js`, each with
+    its range, so phase 2's requests can pin them (`arcOf` takes pins
+    already) and a later slider or a game host can set them (Mikey,
+    2026-10-22); the core takes them through `ARC_SHAPE`, `ARC_FLOOR` and
+    `ARC_DIP` beside `ARC_FROM` and `ARC_PERIOD`.
+  - **Yardsticks:** dip below 2 kHz for no more than about 15% of a swing,
+    within twice the floor for about 15-40 s, never under the floor; deep
+    identical to today's for the same period and start; loops without the
+    arc bit for bit as before (6-minute renders). Mikey kept the dip at 35%
+    of every swing (2026-10-24), so its time within twice the floor runs
+    11-45 s at the ranges' corners (Notes from Claude Code, item 63b).
+
+**For Session 26 (Mikey's idea, 2026-10-22):** a **"glacial"** vibe, very
+slow and vast, to be designed with him there: it leans the deep arc and the
+longest periods.
 
 **Group (b): stereo in the core (Session 25b).**
 
@@ -4321,3 +4356,13 @@ Mikey decides this line:
   loop into a rest. Listen for air that breathes behind the music and never
   hisses or sits in front. For the album: shrine #0 at 0:20.3 and grove #47 at
   0:23.4 (each at its first swell's peak).
+- #256, the arc (item 63, v112),
+  https://1ae42640-driftloom.nowmichaelclark.workers.dev: in loops that draw it
+  (about one in three), a second lowpass after the master's tone breathes from
+  300 Hz up to 9 kHz and back over a period drawn 2-5 minutes, lingering on the
+  dark side, and the echo's feedback rises a little as it opens; a loop starts
+  at a bright point of its swing (the prototype started closed: for Mikey's
+  ears). The group's balance lock re-baselined. Listen for the whole mix
+  breathing dark and bright over minutes, and for the instruments always
+  coming back. For the album: haven #38, bright from 0:00, darkest at 1:05.5,
+  and undertow #6, darkest at 1:31.9.

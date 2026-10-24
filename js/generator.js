@@ -340,7 +340,7 @@ function drawVibes(seed, selection) {
 
 // What a spec says it was steered by, or null. Unknown names (a recipe
 // renamed since) are left out rather than guessed at.
-function vibesOf(spec) {
+export function vibesOf(spec) {
   if (!spec || !spec.vibes) return null;
   const vibes = {};
   for (const [id, w] of Object.entries(spec.vibes)) if (VIBES[id] && w > 0) vibes[id] = w;

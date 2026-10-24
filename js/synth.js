@@ -2120,15 +2120,22 @@ export class Synth {
     for (let n = WASH_SETTINGS.length - 1; n >= 0; n--) core.set(WASH_CHANNEL, CORE_OWN.wash, n, o[WASH_SETTINGS[n]], time);
   }
 
-  // The arc (queue item 63): a second lowpass after the master's tone that
-  // breathes from 300 Hz to 9 kHz and back over `o.period` seconds, starting
-  // at point `o.from` of its swing (core/src/blocks/arc.rs), with the echo's
-  // feedback rising a little as it opens; null lets the last loop's go. The
-  // JavaScript synth (the fallback) has no arc: it leaves it out.
+  // The arc (queue items 63 and 63b): a second lowpass after the master's
+  // tone that breathes over `o.period` seconds, starting at point `o.from`
+  // of its swing (core/src/blocks/arc.rs), in shape `o.shape`: 'deep', from
+  // 300 Hz to 9 kHz and back, or 'dip', open at 9 kHz but for one dip, over
+  // `o.dip` of the swing, to `o.floor` Hz; the echo's feedback rises a
+  // little as it opens. null lets the last loop's go. The JavaScript synth
+  // (the fallback) has no arc: it leaves it out.
   arcSetup(o, time) {
     const core = this._coreMix();
     if (!core) return;
-    if (o) core.param(MIX.arcFrom, SET, o.from, time);
+    if (o) {
+      core.param(MIX.arcFrom, SET, o.from, time);
+      core.param(MIX.arcShape, SET, o.shape === 'dip' ? 1 : 0, time);
+      core.param(MIX.arcFloor, SET, o.floor, time);
+      core.param(MIX.arcDip, SET, o.dip, time);
+    }
     core.param(MIX.arcPeriod, SET, o ? o.period : 0, time);
   }
 

@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -992,6 +992,64 @@ console.log('\nThe per-loop choices (queue item 54)');
   const away = share({ vibes: { bouncy: 1 }, strength: 0.9 });
   check('a vibe the choice leans toward draws it more, and one it leans away from less, never to none',
     toward > plain && away < plain && away > 0, `${away.toFixed(3)} ${plain.toFixed(3)} ${toward.toFixed(3)}`);
+}
+
+// ---------------------------------------------------------------------
+console.log('\nThe arc\'s two shapes (queue item 63b)');
+{
+  // Item 63's draw, for a loop with no vibes: the period, then a bright start.
+  const was = (seed) => {
+    const r = new Rng(((seed ^ 0x0a4c) >>> 0) || 1);
+    return { period: r.range(120, 300), from: r.range(0.4, 0.6) };
+  };
+  const N = 6000;
+  let deep = 0, same = true, inRange = true;
+  for (let i = 0; i < N; i++) {
+    const seed = i * 7919 + 5;
+    const a = arcOf(seed);
+    const w = was(seed);
+    if (a.shape === 'deep') {
+      deep++;
+      if (a.period !== w.period || a.from !== w.from) same = false;
+    } else if (!(a.from >= a.dip / 2 && a.from <= 1 - a.dip / 2 && a.floor >= 800 && a.floor <= 1500)) inRange = false;
+    if (!(a.period >= 120 && a.period <= 300)) inRange = false;
+  }
+  check('about one loop in three draws the deep swing', Math.abs(deep / N - 1 / 3) < 0.02, (deep / N).toFixed(3));
+  check('a deep loop with no vibes keeps item 63\'s period and start, to the bit', same);
+  check('a dip starts in the open part, its floor 800 Hz to 1.5 kHz, periods 2-5 minutes', inRange);
+  // The vibes: calm lean deep and long; bright lean dip and short.
+  const shareOf = (vibes) => {
+    let d = 0, lo = Infinity, hi = 0;
+    for (let i = 0; i < 3000; i++) {
+      const a = arcOf(i * 104729 + 1, vibes);
+      if (a.shape === 'deep') d++;
+      lo = Math.min(lo, a.period);
+      hi = Math.max(hi, a.period);
+    }
+    return { deep: d / 3000, lo, hi };
+  };
+  const calm = shareOf({ vibes: { foggy: 1 }, strength: 0.7 });
+  const bright = shareOf({ vibes: { sunny: 0.6, peaceful: 0.4 }, strength: 0.7 });
+  const neither = shareOf({ vibes: { peaceful: 1 }, strength: 0.7 });
+  check('calm vibes lean deep, over 3-5 minutes', calm.deep > 0.4 && calm.lo >= 180 && calm.hi <= 300, JSON.stringify(calm));
+  check('bright vibes lean dip, over 1.5-2.5 minutes', bright.deep < 0.3 && bright.deep > 0 && bright.lo >= 90 && bright.hi <= 150, JSON.stringify(bright));
+  check('other vibes keep the shares and 2-5 minutes', Math.abs(neither.deep - 1 / 3) < 0.03 && neither.lo >= 120 && neither.hi <= 300, JSON.stringify(neither));
+  // The arc itself, on against today: calm vibes draw it more, lively less.
+  const arcShare = (vibes) => {
+    let n = 0;
+    for (let i = 0; i < 4000; i++) if (drawChoices(i, {}, vibes).arc === 'on') n++;
+    return n / 4000;
+  };
+  const plain = arcShare(null);
+  const still = arcShare({ vibes: { still: 1 }, strength: 0.9 });
+  const zany = arcShare({ vibes: { zany: 1 }, strength: 0.9 });
+  check('calm vibes draw the arc more, lively ones less, never to none', still > plain && zany < plain && zany > 0,
+    `${zany.toFixed(3)} ${plain.toFixed(3)} ${still.toFixed(3)}`);
+  // A pin fixes its own setting and moves nothing else.
+  const free = arcOf(4242);
+  const pinned = arcOf(4242, null, { shape: free.shape === 'deep' ? 'dip' : 'deep', period: 200 });
+  check('a pin moves nothing else', pinned.period === 200 && pinned.floor === free.floor && pinned.shape !== free.shape);
+  check('every setting is named, with its range', ['weight', 'shapes', 'period', 'from', 'floor', 'dip'].every((k) => k in ARC));
 }
 
 // ---------------------------------------------------------------------
