@@ -48,7 +48,7 @@
 
 use std::fmt::Write as _;
 
-use dlcore::{Core, EXTRA, Key, QUANTUM, Taken};
+use dlcore::{CHANNELS, Core, EXTRA, Key, QUANTUM, Taken};
 
 /// One call the host made to the core.
 #[derive(Clone)]
@@ -443,18 +443,20 @@ fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, S
         let taps = *core.process(frame);
         let [out, out_right] = core.output();
         let [bus, bus_right] = core.bus();
-        let mut blocks: Vec<&[f32]> = vec![&out[..]];
-        if stereo {
-            blocks.push(&out_right[..]);
+        // In the order of `signals(list.layout)`; no allocation a block.
+        let mut blocks: [&[f32]; STEREO_SIGNALS.len()] = [&[]; STEREO_SIGNALS.len()];
+        let sides = if stereo { 2 } else { 1 };
+        blocks[0] = &out[..];
+        blocks[1] = &out_right[..];
+        for (slot, tap) in blocks[sides..].iter_mut().zip(taps.iter()) {
+            *slot = &tap[..];
         }
-        blocks.extend(taps.iter().map(|tap| &tap[..]));
-        blocks.push(&bus[..]);
-        if stereo {
-            blocks.push(&bus_right[..]);
-        }
+        blocks[sides + CHANNELS] = &bus[..];
+        blocks[sides + CHANNELS + 1] = &bus_right[..];
+        let n = 2 * sides + CHANNELS;
         // The last block may run past the end; the end is the list's.
         let used = (list.frames - frame).min(QUANTUM as u64) as usize;
-        for (i, block) in blocks.iter().enumerate() {
+        for (i, block) in blocks.iter().take(n).enumerate() {
             let block = block.get(..used).unwrap_or(&[]);
             hashes[i].samples(block);
             // A stereo render's speakers are kept as both sides, interleaved.

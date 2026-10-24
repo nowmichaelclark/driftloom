@@ -417,6 +417,9 @@ pub struct Core {
     /// The next arc, as the `ARC_` parameters set it up, for `ARC_PERIOD`
     /// to start.
     arc_next: blocks::arc::Settings,
+    /// The mix going into the master, a block a lane (the second only in
+    /// stereo).
+    mixed: [Signal; OUT],
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -467,6 +470,7 @@ impl Core {
             routes: [NO_ROUTE; ROUTES],
             sends: [[0.0; QUANTUM]; 2],
             arc_next: blocks::arc::ZERO,
+            mixed: [[0.0; QUANTUM]; OUT],
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -1280,8 +1284,12 @@ impl Core {
         // The mix is mono: in stereo it is both lanes', the mid with no side
         // (the space recipes, queue item 65, add one).
         let lift = self.master.arc_lift(block);
-        let mixed = [*self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref()); OUT];
-        self.master.process(block, &mixed, &self.waves);
+        let [mid, right] = &mut self.mixed;
+        *mid = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref());
+        if self.master.layout() == 2 {
+            *right = *mid;
+        }
+        self.master.process(block, &self.mixed, &self.waves);
         &self.out
     }
 }
