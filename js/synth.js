@@ -471,7 +471,7 @@ export class Synth {
   // `taps` gives the core's node an output per channel, as it goes into the
   // mix (the measure harness reads them). `onCoreError(message)` hears it
   // if the core turns out not to run, at any time.
-  constructor(ctx, quality = 'full', { engine = 'js', core = null, taps = false, coreError = null, onCoreError = null } = {}) {
+  constructor(ctx, quality = 'full', { engine = 'js', core = null, taps = false, coreError = null, onCoreError = null, layout = 1 } = {}) {
     this.onCoreError = onCoreError;
     this._building = null;
     this._voiceEnd = null;
@@ -496,6 +496,9 @@ export class Synth {
     // The Rust core (queue item 21). Built on the real context: an
     // AudioWorkletNode will not take the recording proxy.
     this.engine = engine;
+    // The core's render: 1 mono, 2 stereo (queue item 64). The JavaScript
+    // synth (the fallback) is mono either way.
+    this.layout = layout === 2 ? 2 : 1;
     this._raw = ctx;
     this.core = null;
     // Why the core is not coming, if it is not: Diagnostics shows it.
@@ -532,7 +535,7 @@ export class Synth {
     try {
       this.core = new CoreHost(this._raw, core,
         CORE_CHANNELS.map((name) => this.channels[name].gain),
-        { quality: this.quality, taps: this._taps, key: () => this._noteKey() });
+        { quality: this.quality, taps: this._taps, key: () => this._noteKey(), layout: this.layout });
     } catch (err) {
       // No worklet node here: everything stays in JS, counted as fallbacks.
       this.coreFailed(err);

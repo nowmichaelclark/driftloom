@@ -22,6 +22,9 @@
 #                                       core/golden/rates.hashes, one file for every target:
 #                                       the same code makes the same samples at any rate,
 #                                       everywhere (queue item 45)
+#   tools/golden.sh --stereo ...        any of the above on the stereo render (queue item 64):
+#                                       both sides hashed, kept in core/golden/TARGET.stereo.hashes
+#                                       (and rates.stereo.hashes) beside the mono files
 #   tools/golden.sh --diff DIR_A DIR_B  how the WAVs written by two --wav runs differ,
 #                                       list by list: how many samples, where the first
 #                                       and the largest difference are, and how far
@@ -66,9 +69,12 @@ wav=''
 target=''
 blocks=''
 rates=no
+stereo=''
+kind=''
 while [ $# -gt 0 ]; do
   case "$1" in
     --update) update=yes ;;
+    --stereo) stereo=--stereo; kind=.stereo ;;
     --strict) strict=yes ;;
     --flush) flush=--flush ;;
     --report) report=yes ;;
@@ -103,12 +109,14 @@ differing() {
 }
 
 if [ "$report" = yes ]; then
-  base="$golden/$wasm.hashes"
+  base="$golden/$wasm$kind.hashes"
   [ -f "$base" ] || { echo "golden: $base is missing; run tools/golden.sh --update $wasm" >&2; exit 1; }
   grep -v '^#' "$base" > "$tmp.base"
   total=$(wc -l < "$tmp.base" | tr -d ' ')
-  for file in "$golden"/*.hashes; do
+  for file in "$golden"/*-*.hashes; do
     name=$(basename "$file" .hashes)
+    # One layout at a time: mono's files, or (with --stereo) stereo's.
+    case "$name" in *.stereo) [ -n "$kind" ] || continue; name=${name%.stereo} ;; *) [ -z "$kind" ] || continue ;; esac
     [ "$name" = "$wasm" ] && continue
     grep -v '^#' "$file" > "$tmp.other"
     bad=$(differing "$tmp.base" "$tmp.other")
@@ -148,19 +156,19 @@ if [ "$rates" = yes ]; then
       else
         module="$root/js/dlcore.wasm"
       fi
-      (cd "$root" && node tools/golden-wasm.mjs --twice --wasm "$module" --rate "$rate" $files) >> "$tmp"
+      (cd "$root" && node tools/golden-wasm.mjs --twice $stereo --wasm "$module" --rate "$rate" $files) >> "$tmp"
     else
-      (cd "$root/core" && cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush --rate "$rate" $files) >> "$tmp"
+      (cd "$root/core" && cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush $stereo --rate "$rate" $files) >> "$tmp"
     fi
   done
-  file="$golden/rates.hashes"
+  file="$golden/rates$kind.hashes"
   if [ "$update" = yes ]; then
     {
-      echo "# The golden lists named in rates.txt at the sample rates it names (tools/golden.sh --rates --update)."
+      echo "# The golden lists named in rates.txt at the sample rates it names (tools/golden.sh $stereo --rates --update)."
       echo "# One line a list and rate, in the golden hashes' form. The same on every target."
       cat "$tmp"
     } > "$file"
-    echo "golden: wrote core/golden/rates.hashes ($(wc -l < "$tmp" | tr -d ' ') renders)" >&2
+    echo "golden: wrote core/golden/rates$kind.hashes ($(wc -l < "$tmp" | tr -d ' ') renders)" >&2
     exit 0
   fi
   grep -v '^#' "$file" > "$tmp.kept"
@@ -185,9 +193,9 @@ if [ -n "$blocks" ]; then
   for name in $names; do files="$files $prefix/$name.dlnotes"; done
   echo "golden: $target: rendering $(echo $names | wc -w | tr -d ' ') lists in calls of $sizes frames" >&2
   if [ "$target" = "$wasm" ]; then
-    (cd "$root" && node tools/golden-wasm.mjs --blocks "$sizes" $files) > /dev/null
+    (cd "$root" && node tools/golden-wasm.mjs $stereo --blocks "$sizes" $files) > /dev/null
   else
-    (cd "$root/core" && cargo run -q --release --locked --example dlrender --target "$target" -- --blocks "$sizes" $files) > /dev/null
+    (cd "$root/core" && cargo run -q --release --locked --example dlrender --target "$target" -- $stereo --blocks "$sizes" $files) > /dev/null
   fi
   echo "golden: $target: the speaker output is the same at every block size"
   exit 0
@@ -195,7 +203,7 @@ fi
 echo "golden: rendering on $target" >&2
 if [ "$target" = "$wasm" ]; then
   [ -z "$flush" ] || { echo "golden: --flush is for native targets" >&2; exit 2; }
-  if [ -n "$wav" ]; then node "$root/tools/golden-wasm.mjs" --twice --wav "$wav" > "$tmp"; else node "$root/tools/golden-wasm.mjs" --twice > "$tmp"; fi
+  if [ -n "$wav" ]; then node "$root/tools/golden-wasm.mjs" --twice $stereo --wav "$wav" > "$tmp"; else node "$root/tools/golden-wasm.mjs" --twice $stereo > "$tmp"; fi
 else
   cd "$root/core"
   # One list at a time with --wav, since the host writes one file.
@@ -203,27 +211,28 @@ else
     mkdir -p "$wav"
     for list in golden/*.dlnotes; do
       name=$(basename "$list" .dlnotes)
-      cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush --wav "$wav/$name.wav" "$list" >> "$tmp"
+      cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush $stereo --wav "$wav/$name.wav" "$list" >> "$tmp"
     done
   else
-    cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush golden/*.dlnotes > "$tmp"
+    cargo run -q --release --locked --example dlrender --target "$target" -- --twice $flush $stereo golden/*.dlnotes > "$tmp"
   fi
 fi
 
-file="$golden/$target.hashes"
+file="$golden/$target$kind.hashes"
 if [ "$update" = yes ]; then
   [ -z "$flush" ] || { echo "golden: --update keeps plain renders; drop --flush" >&2; exit 2; }
   {
-    echo "# The golden hashes on $target (tools/golden.sh --update $target)."
+    echo "# The golden hashes on $target (tools/golden.sh $stereo --update $target)."
     echo "# One line a note list: its frames, then FNV-1a 64 of the output, of each channel"
     echo "# as it went into the mix, and of the signal at the bus compressor."
+    [ -z "$stereo" ] || echo "# The stereo render: each side of the output and of the bus apart."
     cat "$tmp"
   } > "$file"
-  echo "golden: wrote core/golden/$target.hashes ($(wc -l < "$tmp" | tr -d ' ') lists)" >&2
+  echo "golden: wrote core/golden/$target$kind.hashes ($(wc -l < "$tmp" | tr -d ' ') lists)" >&2
   exit 0
 fi
 
-[ -f "$file" ] || { echo "golden: core/golden/$target.hashes does not exist; run tools/golden.sh --update $target" >&2; exit 1; }
+[ -f "$file" ] || { echo "golden: core/golden/$target$kind.hashes does not exist; run tools/golden.sh $stereo --update $target" >&2; exit 1; }
 grep -v '^#' "$file" > "$tmp.kept"
 status=0
 if cmp -s "$tmp" "$tmp.kept"; then
@@ -231,14 +240,14 @@ if cmp -s "$tmp" "$tmp.kept"; then
 else
   echo "golden: $target: the renders moved"
   differing "$tmp.kept" "$tmp" | sed 's/^/  /'
-  echo "  If the sound moved on purpose, run  tools/golden.sh --update $target  and say so in the PR." >&2
+  echo "  If the sound moved on purpose, run  tools/golden.sh $stereo --update $target  and say so in the PR." >&2
   status=1
 fi
 
 # And against the app's own engine, for the record (and, with --strict, as
 # a failure).
-if [ "$target" != "$wasm" ] && [ -f "$golden/$wasm.hashes" ]; then
-  grep -v '^#' "$golden/$wasm.hashes" > "$tmp.wasm"
+if [ "$target" != "$wasm" ] && [ -f "$golden/$wasm$kind.hashes" ]; then
+  grep -v '^#' "$golden/$wasm$kind.hashes" > "$tmp.wasm"
   bad=$(differing "$tmp.wasm" "$tmp")
   count=$(printf '%s' "$bad" | grep -c . || true)
   total=$(wc -l < "$tmp" | tr -d ' ')

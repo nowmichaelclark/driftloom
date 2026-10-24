@@ -25,6 +25,10 @@
 // wash's), and the signal as it reached the bus compressor (the measure
 // harness reads them). The node's inputs are the five layers': nothing the
 // page plays goes into the wash's.
+//
+// Stereo (queue item 64): with `layout: 2` in processorOptions the core
+// renders its stereo render, and the first output carries two channels,
+// left then right; otherwise it renders mono, as it always has.
 
 const QUANTUM = 128;
 const CHANNELS = 6;
@@ -68,6 +72,9 @@ class DriftloomCore extends AudioWorkletProcessor {
       // The mix as the synth builds it: three combs on lite, six on full.
       if (!this.core.dl_quality(options.processorOptions.quality === 'lite' ? 0 : 1)) {
         throw new Error(`no mix at ${sampleRate} Hz`);
+      }
+      if (options.processorOptions.layout === 2 && !this.core.dl_layout(2)) {
+        throw new Error('no stereo render');
       }
     } catch (err) {
       // Too old a browser for the module, most likely (it needs Safari 15
@@ -246,7 +253,7 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.next = block + QUANTUM;
     this.arrivalReport(block);
     const at = core.dl_process(block);
-    // A run for each of the output's channels (one: the graph is mono).
+    // A run for each of the output's channels: one, or two in stereo.
     const out = outputs[0];
     if (out) {
       for (let c = 0; c < out.length && c < views.out.length; c++) {

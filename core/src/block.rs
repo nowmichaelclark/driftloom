@@ -563,6 +563,11 @@ pub enum Play {
     /// on both sides; each block handed over is the two sides interleaved,
     /// left first.
     Stereo,
+    /// Its stereo render, a processor fed two different sides (the noise,
+    /// and the noise half its length on), so a block that works on how the
+    /// sides differ (the width ceiling, queue item 64) has something to
+    /// work on; handed over as `Stereo`'s.
+    Wide,
     /// Its mono render, hearing the events of kind `n` in `probe_events`,
     /// each before the block holding its time renders (`Block::event`).
     Heard(u32),
@@ -659,8 +664,11 @@ pub fn solo<B: Block>(
                 block.render_mod(frame, cx, &mut signal, &Mods::NONE.with(setting, &m));
                 take(&signal);
             }
-            Play::Stereo => {
+            Play::Stereo | Play::Wide => {
                 let mut both = [signal, signal];
+                if play == Play::Wide && B::INPUT {
+                    feed(frame + cx.noise.len() as u64 / 2, cx, &mut both[1]);
+                }
                 block.render_stereo(frame, cx, &mut both);
                 let [l, r] = both;
                 let mut out = [0.0; 2 * QUANTUM];

@@ -34,11 +34,23 @@
 //! (`OUT`); a stereo mix is a second lane and a wider mix, not a new chain.
 //! Chromium runs its compressors' mono input as two identical channels,
 //! which is the same thing.
+//!
+//! **Stereo** (queue item 64; `docs/CORE.md`, promise 9). A stereo render is
+//! the same chain on two lanes (`OUT`; `set_layout`), and the mono render
+//! still runs on the first alone, so it pays nothing for the second. In
+//! stereo the compressors are linked the other way from Chromium's: one gain
+//! for both sides, worked out from the mid, `(left + right) / 2`, so they
+//! press as they do in mono (`Compressor::process_keyed`); the saturator and
+//! the filters run on each side apart. After the ceiling, the width ceiling
+//! (`blocks::width`) turns the side down where it gets wider than its
+//! target. Fed the same on both sides (no space recipe), each side is the
+//! mono render, bit for bit.
 
 use crate::block::Signal;
 use crate::math;
 use crate::blocks::arc::{self, Arc};
 use crate::blocks::compressor::{Compressor, Settings};
+use crate::blocks::width::{self, Width};
 use crate::delay::{Delay, buffer_len};
 use crate::blocks::filter::{Biquad, Kind};
 use crate::blocks::osc::TableOsc;
@@ -88,8 +100,9 @@ const CEILING: Settings = Settings {
     release: 0.08,
 };
 
-/// The output's channels: one, as the graph is mono.
-pub const OUT: usize = 1;
+/// The most output channels: two, a stereo render's lanes. A mono render
+/// uses the first (`Master::layout`).
+pub const OUT: usize = 2;
 
 /// One output channel's share of the chain: everything with memory of the
 /// signal.
@@ -121,6 +134,18 @@ const fn f(x: f64) -> f32 {
     x as f32
 }
 
+/// The mid of two lanes, `(left + right) / 2`, frame by frame: what the
+/// stereo compressors hear. With the same on both sides it is that signal,
+/// bit for bit.
+fn mid(lanes: &[Signal; OUT]) -> Signal {
+    let [left, right] = lanes;
+    let mut out = [0.0f32; QUANTUM];
+    for ((m, &l), &r) in out.iter_mut().zip(left.iter()).zip(right.iter()) {
+        *m = f32::midpoint(l, r);
+    }
+    out
+}
+
 pub struct Master {
     rate: f64,
     full: bool,
@@ -140,10 +165,18 @@ pub struct Master {
     curve: [f32; CURVE],
     tone_freq: Timeline<EVENTS>,
     lanes: [Lane; OUT],
-    comp: Compressor<OUT>,
+    /// How many lanes it renders: 1 (mono) or 2 (stereo).
+    layout: usize,
+    /// The mono render's compressors, and the stereo render's, keyed by the
+    /// mid.
+    comp: Compressor<1>,
+    comp2: Compressor<2>,
     volume: Timeline<VOLUME_EVENTS>,
     kill: Timeline<EVENTS>,
-    ceiling: Compressor<OUT>,
+    ceiling: Compressor<1>,
+    ceiling2: Compressor<2>,
+    /// The width ceiling, stereo only.
+    width: Width,
     /// Both compressors routed around (the measure harness's `bypass`).
     bypass: bool,
     /// What reaches the bus compressor, and what leaves the ceiling.
@@ -168,10 +201,14 @@ impl Master {
             curve: [0.0; CURVE],
             tone_freq: Timeline::new(0.0, 0.0, 0.0),
             lanes: [const { Lane::new() }; OUT],
+            layout: 0,
             comp: Compressor::new(),
+            comp2: Compressor::new(),
             volume: Timeline::new(0.0, 0.0, 0.0),
             kill: Timeline::new(0.0, 0.0, 0.0),
             ceiling: Compressor::new(),
+            ceiling2: Compressor::new(),
+            width: Width::new(),
             bypass: false,
             before_comp: [[0.0; QUANTUM]; OUT],
             out: [[0.0; QUANTUM]; OUT],
@@ -209,14 +246,39 @@ impl Master {
         // notes after a Play, a rebuild or the core's arrival are not dipped.
         self.comp.init(rate, COMP);
         self.comp.settle();
+        self.comp2.init(rate, COMP);
+        self.comp2.settle();
         self.volume.configure(f(MASTER), any.0, any.1);
         self.kill.configure(1.0, any.0, any.1);
         self.ceiling.init(rate, CEILING);
         self.ceiling.settle();
+        self.ceiling2.init(rate, CEILING);
+        self.ceiling2.settle();
+        self.width.ready(&width::REST, rate);
+        // The layout is the host's (`set_layout`), kept across a rebuild.
+        self.layout = self.layout.clamp(1, OUT);
         self.bypass = false;
         self.before_comp = [[0.0; QUANTUM]; OUT];
         self.out = [[0.0; QUANTUM]; OUT];
         fits
+    }
+
+    /// Render `lanes` lanes from the next block: 1 for mono, 2 for stereo
+    /// (anything else is mono). A rebuild (`init`) keeps it.
+    pub fn set_layout(&mut self, lanes: usize) {
+        self.layout = if lanes == 2 { 2 } else { 1 };
+    }
+
+    /// How many lanes it renders.
+    #[must_use]
+    pub fn layout(&self) -> usize {
+        self.layout
+    }
+
+    /// Setting number `setting` of the width ceiling (`width::SETTINGS`)
+    /// becomes `value`, from the next block.
+    pub fn set_width(&mut self, setting: usize, value: f64) {
+        self.width.set(setting, value);
     }
 
     /// The LFOs' start, in seconds on the host's clock: when the synth
@@ -299,16 +361,27 @@ impl Master {
     /// The compressors' `reduction`: the bus compressor's (0) or the
     /// ceiling's (1), in dB.
     pub fn reduction(&self, which: usize) -> f32 {
-        if which == 0 { self.comp.reduction() } else { self.ceiling.reduction() }
+        match (which, self.layout) {
+            (0, 2) => self.comp2.reduction(),
+            (0, _) => self.comp.reduction(),
+            (_, 2) => self.ceiling2.reduction(),
+            _ => self.ceiling.reduction(),
+        }
     }
 
     /// How hard the signal has pressed the bus compressor (0) or the
     /// ceiling (1) since this was last asked, in dB (`Compressor::deepest`).
     pub fn deepest(&mut self, which: usize) -> f32 {
-        if which == 0 { self.comp.deepest() } else { self.ceiling.deepest() }
+        match (which, self.layout) {
+            (0, 2) => self.comp2.deepest(),
+            (0, _) => self.comp.deepest(),
+            (_, 2) => self.ceiling2.deepest(),
+            _ => self.ceiling.deepest(),
+        }
     }
 
-    /// What the last block sent to the speakers, a block a lane.
+    /// What the last block sent to the speakers, a block a lane (the second
+    /// only in stereo).
     pub fn output(&self) -> &[Signal; OUT] {
         &self.out
     }
@@ -318,8 +391,10 @@ impl Master {
         &self.before_comp
     }
 
-    /// One block of `preBus` in, a block a lane; the speakers' out.
+    /// One block of `preBus` in, a block a lane; the speakers' out. A mono
+    /// render reads and writes the first lane only.
     pub fn process(&mut self, block: u64, input: &[Signal; OUT], waves: &Waves) -> &[Signal; OUT] {
+        let n = self.layout.clamp(1, OUT);
         let rate = self.rate;
         let r32 = f(rate);
         let wave = &waves.sine;
@@ -358,7 +433,7 @@ impl Master {
             *t = if x.is_nan() { max } else { x.max(0.0).min(max) };
         }
         let mut shaped = [[0.0f32; QUANTUM]; OUT];
-        for (lane, (input, shaped)) in self.lanes.iter_mut().zip(input.iter().zip(shaped.iter_mut())) {
+        for (lane, (input, shaped)) in self.lanes.iter_mut().zip(input.iter().zip(shaped.iter_mut())).take(n) {
             let mut wobbled = [0.0f32; QUANTUM];
             lane.wobble.process(&mut lane.memory, input, &times, r32, &mut wobbled);
 
@@ -383,16 +458,16 @@ impl Master {
             let (first, rest) = self.lanes.split_at_mut(1);
             let Some(lead) = first.first_mut() else { break };
             lead.tone.set(Kind::Lowpass, fr, q, 0.0, r32);
-            for lane in rest.iter_mut() {
+            for lane in rest.iter_mut().take(n - 1) {
                 lane.tone.follow(&lead.tone);
             }
-            for ((lane, x), y) in self.lanes.iter_mut().zip(shaped.iter()).zip(self.before_comp.iter_mut()) {
+            for ((lane, x), y) in self.lanes.iter_mut().zip(shaped.iter()).zip(self.before_comp.iter_mut()).take(n) {
                 if let (Some(&x), Some(y)) = (x.get(i), y.get_mut(i)) {
                     *y = lane.tone.step(x);
                 }
             }
         }
-        for (lane, y) in self.lanes.iter_mut().zip(self.before_comp.iter_mut()) {
+        for (lane, y) in self.lanes.iter_mut().zip(self.before_comp.iter_mut()).take(n) {
             lane.arc.process(block, y);
             for x in y.iter_mut() {
                 *x = lane.highpass.step(*x);
@@ -403,28 +478,40 @@ impl Master {
 
         // The bus compressor, the master and kill gains, the ceiling.
         let mut pressed = [[0.0f32; QUANTUM]; OUT];
+        let stereo = n == 2;
         if self.bypass {
             pressed = self.before_comp;
+        } else if stereo {
+            self.comp2.process_keyed(&self.before_comp, &mid(&self.before_comp), &mut pressed);
         } else {
-            self.comp.process(&self.before_comp, &mut pressed);
+            let [input, _] = &self.before_comp;
+            let [out, _] = &mut pressed;
+            self.comp.process(core::array::from_ref(input), core::array::from_mut(out));
         }
         let mut g = [0.0f32; QUANTUM];
         self.volume.fill(block, rate, &mut g);
-        for lane in pressed.iter_mut() {
+        for lane in pressed.iter_mut().take(n) {
             for (y, &k) in lane.iter_mut().zip(g.iter()) {
                 *y *= k;
             }
         }
         self.kill.fill(block, rate, &mut g);
-        for lane in pressed.iter_mut() {
+        for lane in pressed.iter_mut().take(n) {
             for (y, &k) in lane.iter_mut().zip(g.iter()) {
                 *y *= k;
             }
         }
         if self.bypass {
             self.out = pressed;
+        } else if stereo {
+            self.ceiling2.process_keyed(&pressed, &mid(&pressed), &mut self.out);
         } else {
-            self.ceiling.process(&pressed, &mut self.out);
+            let [input, _] = &pressed;
+            let [out, _] = &mut self.out;
+            self.ceiling.process(core::array::from_ref(input), core::array::from_mut(out));
+        }
+        if stereo {
+            self.width.process(&mut self.out);
         }
         &self.out
     }
@@ -595,8 +682,8 @@ mod tests {
             for k in 0..count {
                 let at = (from + k) * QUANTUM as u64;
                 stepped(&mut reference, at, &waves);
-                let a = *direct.process(at, &[signal], &waves);
-                let b = *reference.process(at, &[signal], &waves);
+                let a = *direct.process(at, &[signal, signal], &waves);
+                let b = *reference.process(at, &[signal, signal], &waves);
                 assert_eq!(direct.wow_index.to_bits(), reference.wow_index.to_bits(), "block {}", from + k);
                 assert!(apart(direct.flutter.index(), reference.flutter.index(), waves.sine.size()) < 1e-9);
                 for (x, y) in a[0].iter().zip(b[0].iter()) {
@@ -624,7 +711,7 @@ mod tests {
                     let n = (b as usize * QUANTUM + i) as f64;
                     (0.5 * (2.0 * core::f64::consts::PI * 440.0 * n / RATE).sin()) as f32
                 });
-                let out = m.process(b * QUANTUM as u64, &[input], &waves)[0];
+                let out = m.process(b * QUANTUM as u64, &[input, input], &waves)[0];
                 let peak = out.iter().fold(0.0f32, |a, &x| a.max(x.abs()));
                 if b == 12 {
                     first = peak;
@@ -661,7 +748,7 @@ mod tests {
                     let n = (b as usize * QUANTUM + i) as f64;
                     (0.1 * (2.0 * core::f64::consts::PI * hz * n / RATE).sin()) as f32
                 });
-                m.process(b * QUANTUM as u64, &[input], &waves);
+                m.process(b * QUANTUM as u64, &[input, input], &waves);
                 if b > 100 {
                     peak = m.before_comp()[0].iter().fold(peak, |a, &x| a.max(x.abs()));
                 }

@@ -5,8 +5,9 @@
 //! allocator. Samples move through linear memory: before each block the
 //! host writes its own notes for each channel at the address `dl_inputs`
 //! returns, `CHANNELS` runs of `QUANTUM` floats; after it, what goes to the
-//! speakers is at `dl_out`, a run an output channel (`master::OUT`), what
-//! reached the bus compressor at `dl_bus`, as many, and the channels as
+//! speakers is at `dl_out`, a run an output channel (`dl_outputs`: one, or
+//! two in stereo), what reached the bus compressor at `dl_bus`, as many
+//! (`master::OUT` runs apart, the first the mono one), and the channels as
 //! they went into the mix at the address `dl_process` returns, `CHANNELS`
 //! runs.
 
@@ -47,10 +48,18 @@ unsafe impl Sync for Scratch {}
 
 static SCRATCH: Scratch = Scratch(UnsafeCell::new([0.0; RENDER_MAX]));
 
-/// Set the sample rate and clear everything.
+/// Set the sample rate and clear everything. The core renders mono until
+/// `dl_layout` says otherwise.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_init(rate: f64) {
     core().init(rate);
+}
+
+/// Render `channels` output channels from the next block: 1 (mono) or 2
+/// (stereo, queue item 64). 1 if it did, 0 for any other number.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_layout(channels: u32) -> u32 {
+    u32::from(core().set_layout(channels))
 }
 
 /// A note; see `Core::note`. `a` to `l` are its `EXTRA` values. Returns a
@@ -155,16 +164,26 @@ pub extern "C" fn dl_param(id: u32, op: u32, value: f64, time: f64, tau: f64) ->
 /// does, `Core::render`, and return where they are: a run of that many
 /// floats. The worklet never calls this (it owns the block clock and calls
 /// `dl_process`); the tools that check the sound does not depend on the
-/// host's block size do. 0 if the core would not render.
+/// host's block size do. In stereo the right side follows the left: two
+/// runs of `frames`, at most half the scratch each. 0 if the core would not
+/// render.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_render(frames: u32) -> *const f32 {
     // SAFETY: single-threaded (above), and nothing else holds the scratch.
     let scratch = unsafe { &mut *SCRATCH.0.get() };
-    let frames = (frames as usize).min(RENDER_MAX);
-    let Some(out) = scratch.get_mut(..frames) else {
-        return core::ptr::null();
+    let core = core();
+    let stereo = core.layout() == 2;
+    let frames = (frames as usize).min(if stereo { RENDER_MAX / 2 } else { RENDER_MAX });
+    let (left, rest) = scratch.split_at_mut(frames);
+    let result = if stereo {
+        let Some(right) = rest.get_mut(..frames) else {
+            return core::ptr::null();
+        };
+        core.render(&mut [left, right])
+    } else {
+        core.render(&mut [left])
     };
-    match core().render(&mut [out]) {
+    match result {
         Ok(()) => scratch.as_ptr(),
         Err(_) => core::ptr::null(),
     }
@@ -182,10 +201,10 @@ pub extern "C" fn dl_out() -> *const f32 {
     core().output().as_ptr().cast()
 }
 
-/// The number of output channels.
+/// The number of output channels: the layout, 1 or 2.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_outputs() -> u32 {
-    crate::master::OUT as u32
+    core().layout()
 }
 
 /// Where the last block was as it reached the bus compressor.

@@ -33,7 +33,8 @@
 //!   bit for bit, so stereo costs mono nothing in sound; a block with a
 //!   stereo render of its own (`STEREO`) is checked as above on both sides,
 //!   nulled as `block/probe:stereo`, and must put different sides out on
-//!   at least one probe, or it is not stereo.
+//!   at least one probe, or it is not stereo; a stereo processor is also
+//!   fed two different sides (`Play::Wide`, nulled as `block/probe:wide`).
 //!
 //! A block added to the registry has no line yet, and the kit says so; a
 //! block whose sound changes on purpose, likewise. Either way, store the new
@@ -235,6 +236,11 @@ impl Kit<'_> {
                 let row = self.row(block, probe.name, ":stereo", &probe.settings, Play::Stereo, fresh);
                 apart |= self.rows.get(row).is_some_and(|r| r.apart);
                 first.get_or_insert(row);
+                // A stereo processor also hears two different sides.
+                if B::INPUT {
+                    let row = self.row(block, probe.name, ":wide", &probe.settings, Play::Wide, fresh);
+                    apart |= self.rows.get(row).is_some_and(|r| r.apart);
+                }
             }
             if !apart && let Some(r) = first.and_then(|i| self.rows.get_mut(i)) {
                 r.faults.push("both sides are the same on every probe: not stereo".to_owned());
@@ -279,7 +285,7 @@ impl Kit<'_> {
         // are rendered twice, for determinism.
         let times = if play == Play::Mono { 3 } else { 2 };
         let Render { samples, took } = render(fresh, settings, &self.cx, play, times, &mut faults);
-        let (mid, apart) = if play == Play::Stereo {
+        let (mid, apart) = if matches!(play, Play::Stereo | Play::Wide) {
             let (l, r) = sides(&samples);
             let mid = l.iter().zip(r.iter()).map(|(a, b)| (a + b) * 0.5).collect();
             (mid, bits(&l) != bits(&r))

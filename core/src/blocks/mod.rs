@@ -499,6 +499,7 @@ registry! {
         lfo::Lfo;
         harmonics::Harmonics;
         arc::Arc;
+        width::Width;
         #[cfg(test)] tremolo::Tremolo;
         #[cfg(test)] amp::Amp;
         #[cfg(test)] pan::Pan;

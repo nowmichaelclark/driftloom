@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Fnv, num, readList, writeList, SIGNALS } from '../tools/golden-lib.mjs';
+import { Fnv, num, readList, writeList, SIGNALS, STEREO_SIGNALS } from '../tools/golden-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
@@ -88,12 +88,14 @@ console.log('\nThe committed goldens');
     }
   }
   check('each reads, writes back the same and is plain ASCII', all);
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && f !== 'rates.hashes')) {
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && !f.startsWith('rates.'))) {
+    // A stereo file (queue item 64) has both sides of the output and the bus.
+    const names = file.endsWith('.stereo.hashes') ? STEREO_SIGNALS : SIGNALS;
     const rows = fs.readFileSync(path.join(dir, file), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
     const ok = rows.length === lists.length && rows.every((r) => {
       const [name, frames, ...hashes] = r.split(' ');
-      return lists.includes(`${name}.dlnotes`) && /^frames=\d+$/.test(frames) && hashes.length === SIGNALS.length
-        && hashes.every((h, i) => new RegExp(`^${SIGNALS[i]}=[0-9a-f]{16}$`).test(h));
+      return lists.includes(`${name}.dlnotes`) && /^frames=\d+$/.test(frames) && hashes.length === names.length
+        && hashes.every((h, i) => new RegExp(`^${names[i]}=[0-9a-f]{16}$`).test(h));
     });
     check(`${file} has a well-formed line for every list`, ok);
   }
@@ -105,11 +107,13 @@ console.log('\nThe committed goldens');
   const rates = fs.readFileSync(path.join(dir0(), 'rates.txt'), 'utf8').split('\n');
   const names = rates.find((l) => l.startsWith('lists ')).slice(6).trim().split(/\s+/);
   const hz = rates.find((l) => l.startsWith('rates ')).slice(6).trim().split(/\s+/);
-  const rows = fs.readFileSync(path.join(dir0(), 'rates.hashes'), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
   const want = hz.flatMap((r) => names.map((n) => `${n}@${r}`));
-  const ok = JSON.stringify(rows.map((r) => r.split(' ')[0])) === JSON.stringify(want)
-    && rows.every((r) => { const [, frames, ...hashes] = r.split(' '); return /^frames=\d+$/.test(frames) && hashes.length === SIGNALS.length && hashes.every((h, i) => new RegExp(`^${SIGNALS[i]}=[0-9a-f]{16}$`).test(h)); });
-  check('rates.hashes has a well-formed line for every list at every rate rates.txt names', ok);
+  for (const [file, signals] of [['rates.hashes', SIGNALS], ['rates.stereo.hashes', STEREO_SIGNALS]]) {
+    const rows = fs.readFileSync(path.join(dir0(), file), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
+    const ok = JSON.stringify(rows.map((r) => r.split(' ')[0])) === JSON.stringify(want)
+      && rows.every((r) => { const [, frames, ...hashes] = r.split(' '); return /^frames=\d+$/.test(frames) && hashes.length === signals.length && hashes.every((h, i) => new RegExp(`^${signals[i]}=[0-9a-f]{16}$`).test(h)); });
+    check(`${file} has a well-formed line for every list at every rate rates.txt names`, ok);
+  }
 }
 function dir0() { return path.join(ROOT, 'core', 'golden'); }
 

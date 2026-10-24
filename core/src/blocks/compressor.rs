@@ -297,8 +297,58 @@ impl<const C: usize> Compressor<C> {
     }
 
     /// One block (`Process`): `input`, one block a channel, compressed
-    /// into `out`.
+    /// into `out`. Its channels are linked as Chromium links them: the
+    /// level it hears is the loudest channel's.
     pub fn process(&mut self, input: &[Signal; C], out: &mut [Signal; C]) {
+        self.run::<false>(input, out, &[0.0; QUANTUM]);
+    }
+
+    /// One block, as `process`, but hearing `key` instead of its channels:
+    /// one gain for every channel, worked out from `key` alone. The stereo
+    /// master keys its compressors with the mid, `(left + right) / 2`, so
+    /// they press as the mono render's do (queue item 64): fed the same
+    /// on both sides, each side is the mono render's, bit for bit.
+    pub fn process_keyed(&mut self, input: &[Signal; C], key: &Signal, out: &mut [Signal; C]) {
+        self.run::<true>(input, out, key);
+    }
+
+    /// The same state on another number of channels, every channel's
+    /// lookahead the first channel of `other`'s: a mono compressor carried
+    /// into a stereo render, or back, without a jump in its gain.
+    pub fn take_from<const D: usize>(&mut self, other: &Compressor<D>) {
+        self.rate = other.rate;
+        self.settings = other.settings;
+        self.detector_average = other.detector_average;
+        self.compressor_gain = other.compressor_gain;
+        self.metering_release_k = other.metering_release_k;
+        self.metering_gain = other.metering_gain;
+        self.deepest = other.deepest;
+        self.last_pre_delay_frames = other.last_pre_delay_frames;
+        if let Some(first) = other.ring.first() {
+            for ring in &mut self.ring {
+                *ring = *first;
+            }
+        }
+        self.read = other.read;
+        self.write = other.write;
+        self.max_attack_diff = other.max_attack_diff;
+        self.ratio = other.ratio;
+        self.slope = other.slope;
+        self.linear_threshold = other.linear_threshold;
+        self.db_threshold = other.db_threshold;
+        self.db_knee = other.db_knee;
+        self.knee_threshold = other.knee_threshold;
+        self.db_knee_threshold = other.db_knee_threshold;
+        self.db_yknee_threshold = other.db_yknee_threshold;
+        self.k = other.k;
+        self.warp_for = other.warp_for;
+        self.warped = other.warped;
+        self.warped_db = other.warped_db;
+    }
+
+    // `Process`, the level heard from the channels (Chromium's) or, with
+    // `KEYED`, from `key`.
+    fn run<const KEYED: bool>(&mut self, input: &[Signal; C], out: &mut [Signal; C], key: &Signal) {
         let Settings {
             threshold,
             knee,
@@ -369,6 +419,15 @@ impl<const C: usize> Compressor<C> {
                     if let Some(slot) = ring.get_mut(self.write) {
                         *slot = s;
                     }
+                    if !KEYED {
+                        let abs = if s > 0.0 { s } else { -s };
+                        if level < abs {
+                            level = abs;
+                        }
+                    }
+                }
+                if KEYED {
+                    let s = key.get(frame).copied().unwrap_or(0.0);
                     let abs = if s > 0.0 { s } else { -s };
                     if level < abs {
                         level = abs;
