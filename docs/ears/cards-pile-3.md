@@ -18,6 +18,7 @@ Ears 9 (Sonnet 5.5, medium), started 2026-10-24. Seven Aphex Twin records: Richa
 | 51/13 Aphex Singles Collection (2 non-twin tracks new; On, 73-Yips, Donkey Rhubarb repeat) | 12 (4) | 1,100 s | done |
 | Windowlicker EP (1999) | 5 (5) | 1,241 s | done |
 | 2 Remixes by AFX (2001) | 3 (3) | 772 s | done |
+| Drukqs (2001) | 30 (4) | 959 s | done |
 
 ---
 
@@ -486,3 +487,76 @@ Numbers: Flow Coma 161 BPM grid, 11 settled chords a minute, width -32 dB; Box E
 
 ### Reliability notes for this card
 - Bonus: no beat, every kick, duck and swing number is void. Box Energy: thin bass stem, so bass notes, pumping and the duck are guesses. Keys are all guesses (margins 0.006 to 0.016). Flow Coma's tempo comes from the grid (the tool is in a 3:2 relation). Pumping depths read about 70% of true depth.
+
+---
+
+## Aphex Twin, Drukqs (2001)
+
+Ears 9, 2026-10-25, Sonnet 5.5. 30 tracks at mix level (the picker's row for every track), four given the deep pass: 01 Jynweythek (typical, 2:24), 27 Afx237 v.7 (4:23), 12 Orban Eq Trx 4 (1:35) and 16 54 Cymru Beats (6:07) (the three least like the rest). Ears 1 measured only 14 of the piano pieces at mix level (the "Drukqs (piano)" rows of `data.csv`: 01, 03, 05, 06, 09, 14, 17, 19, 22, 23, 25, 26, 30 and the piano half); these are the same record, not twins, so this is its first full card. Jynweythek was in Ears 1's rows at mix level; the deep pass is new. Stems by Demucs htdemucs. Machine time: 959 s (16 min) for 14.5 min of deep-pass audio on 2 cores: pick 201 s (30 tracks), Demucs 440 s (80, 126, 47, 187 s; 0.51 times audio), measuring 318 s. The download of the 30 tracks through Drive is not counted. Ears 7's formula (1.1 x 869 s + 12 x 4) says 1,004 s, so this ran 4% under it.
+
+### Stem check (read first)
+- **01 Jynweythek**: drums 0.2%, bass 0.0%, other 99.8%, vocals 0.0%. Drums and bass are empty: it is a solo piano, no beat. The meter tool's 120 BPM and "straight eighths" are void; so are on-beat counts, kick and duck numbers and floor drops.
+- **27 Afx237 v.7**: drums 53%, bass 10%, other 36%, vocals 1% (bleed). Meter tool 112 BPM is two thirds of the drum grid's 166.7 BPM (beat 0.360 s); use the grid.
+- **12 Orban Eq Trx 4**: drums 38%, bass 61%, other 1.6%, vocals 0.0%. The other stem is under 2% of the power: top line, chords, other-stem pumping and echoes are void or guesses. The meter tool's 90 BPM agrees with the grid's 90.6 BPM (0.662 s).
+- **16 54 Cymru Beats**: drums 51%, bass 17%, other 28%, vocals 4% (bleed). Meter tool 112 BPM against the grid's 166.7 BPM: the same two-thirds relation.
+
+### The hook
+- A solo piano that jumps 40 chord changes a minute with a very wide stereo image (Jynweythek), against three dry, near-mono drum tracks (grids at 91 and 167 BPM) with a held bass note.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a wide, quick piano and then crisp, dry, mono beats.
+
+### Sounds
+
+**S1. Prepared-piano-like notes (Jynweythek): other-1, 227 notes, 64%**
+- E2, mixed or noisy partials, soft attack, falls 12 dB/s, centered by the pan number but wide by correlation (the mix is -5 dB over time, correlation 0.03 at 2 kHz and up). Hear it at 1:29.0 (G#2, 1.09 s, +55 dB alone), 1:17.1 (B1, 1.05 s), 1:34.1 (F#2, 0.51 s). Weak group (silhouette 0.20, 2 groups): one blended piano texture. **[JUDGMENT]** **Guess:** a plucked or struck string voice with a long decay; roundBass or pluck is nearest.
+
+**S2. Bell-bass drone (Orban Eq Trx 4): bass-1, 169 notes, 50%**
+- C#2, bell- or metal-like (off whole multiples), quick attack, falls only 14 dB/s, centered (width -51 dB: a mono bass). Hear it at 1:01.4 (C2, 0.17 s, +23 dB alone), 0:18.8, 1:14.5 (A#1). Pitch under 60 Hz good to a semitone only. Bass plays C# 85% of the time (a pedal, 0.82 notes a second). **[JUDGMENT]** **Guess:** a bell-like pedal bass; exists.
+
+**S3. Upper piano (Jynweythek): other-2, 106 notes, 36%**
+- F#3, mixed or noisy partials, soft attack, falls 14 dB/s. Hear it at 0:12.0 (C#4, 0.82 s, +58 dB alone), 2:08.0 (D#3, 5.59 s, a long held note), 1:16.1 (B3). Weak group (0.20). **[JUDGMENT]** **Guess:** the same piano voice, an octave up.
+
+**S4. Noisy mid layer (54 Cymru Beats): other-1, 480 notes, 32%**
+- G#1, mixed or noisy partials, soft attack, falls 54 dB/s. Hear it at 5:02.4 (no pitch, 0.21 s, +40 dB alone), 4:57.4 (A#1), 4:57.1. **[JUDGMENT]** **Guess:** noise-layer; waits.
+
+**S5. Wide noisy lead (Afx237 v.7): other-1, 280 notes, 30%**
+- A#3, mixed or noisy partials, soft attack, falls 43 dB/s. Hear it at 0:59.5 (no pitch, 0.1 s, +32 dB alone), 0:51.5 (A2), 3:47.4 (D#1, 0.89 s). Weak group (silhouette 0.23, 4 groups): one blended texture; the top line has a 31-semitone range (42% leaps), the widest in the pile. **[JUDGMENT]** **Guess:** wait.
+
+**S6. Mid snare (Afx237 v.7): drums-1, 327 notes, 26%**
+- Mid snap, quick attack, falls 55 dB/s. Hear it at 2:05.5 (C1, 0.18 s, +32 dB alone), 2:33.6, 2:34.7. **Kick line:** kick median 60 Hz, wide (30 to 127; B0 22% is the 30 Hz floor, so under 40 Hz is a guess), falls 150 dB/s, every 0.620 s. The bass is 4.1 dB under its peak at the kick and 0 dB by 105 ms; it drifts to -8 dB at 420 ms: a mild dip, bass plays between kicks. **[JUDGMENT]** **Guess:** snare exists.
+
+**S7. Click kick (54 Cymru Beats): drums-1, 328 notes, 22%**
+- Low thump, soft attack, falls 81 dB/s, brighter over the note. Hear it at 0:22.5 (G#2, 0.1 s, +34 dB alone), 1:03.1, 0:18.8. **Kick line:** median 91 Hz, wide (34 to 129; C3 14%, F2 9%: not a tuned note), falls 76 dB/s, every 0.540 s. The bass is -4.3 dB at the kick, -5.8 dB at 150 ms, back to its top by 450 ms: a small 4 to 6 dB dip, then it plays through; the pump tool finds under 1.5 dB. No ducking to speak of. **[JUDGMENT]** **Guess:** kick exists.
+
+**S8. High tick (Orban Eq Trx 4): drums-1, 159 notes, 21%**
+- High tick, quick attack, falls 92 dB/s. Hear it at 0:32.6 (E1, 0.32 s, +43 dB alone), 0:21.9, 1:04.6. **Kick line:** kick C2 44% (median 64 Hz, 36 to 66: the tightest tuned kick in the pile), falls 120 dB/s, every 0.680 s. The curve shows the bass 14 dB under its peak at the kick, at its top 50 ms later and falling smoothly to -34 dB by 500 ms: the bass is hit together with the kick and decays across the gap (a drop-per-kick bass). The pump tool reads the opposite (bass 21.1 dB lower at the kick, peak 499 ms after, kick every 0.62 s): the two tools disagree, so the answer is unclear, and the first needs a listen. **[JUDGMENT]** **Guess:** a tuned kick on C2 with a decaying sub; both exist.
+
+### Techniques
+- **T1. Floor drops.** Afx237 v.7 2.03 a minute (1:21.8 for 5.5 s, 3:46.5 for 6.8 s, and a run of drops at 3:55.8, 3:59.0, 4:04.5 and 4:06.8 of 2.2 to 2.8 s each: a stuttering ending); 54 Cymru Beats 0.18 a minute (5:07.2 for 2.2 s); Orban none; Jynweythek void. **[JUDGMENT]** **Guess:** floorDrop exists; the stutter run at the end is the idea.
+- **T2. Huge filter arcs.** Orban Eq Trx 4: the other stem climbs 6.0 octaves from 0:08.5 to 0:22.0, the mix falls 4.4 octaves at 1:01.5 to 1:06.5 and 3.5 octaves at 1:24.5 to 1:30.5. Jynweythek's bass stem (the low piano) falls 5.0 octaves at 1:18.0 to 1:25.5 and rises 4.2 at 1:25.5 to 1:33.5 (that is a piano register jump, not a filter: a bass-stem reading on a piano). 54 Cymru Beats has 55 more sweeps (mix down 2.6 octaves at 1:43.5, up 2.5 at 1:53.0) and Afx237 v.7 39 more. **[JUDGMENT]** **Guess:** padSweep covers the slow ones; 6 octaves in 14 s is new.
+- **T3. Echoes and wobble.** Afx237 v.7 drum echo 339 ms (+7.7 dB, 3 repeats; the grid beat is 0.36 s, 6% off: about the beat). Orban other-stem echo 693 ms (+4.8 dB, 2 repeats; void: the other stem is 1.6% of the power). Jynweythek other wobbles 7 cents at 1.2 Hz (piano tuning, not tape). Afx237 other 5 cents at 0.8 Hz. Nothing claimed. **[JUDGMENT]** **Guess:** waits.
+- **T4. Sections.** Jynweythek median 15 s; Afx237 v.7 20 s; 54 Cymru Beats 20 s (17 boundaries); Orban 13 s (a 58 s opening). **[JUDGMENT]** **Guess:** waits.
+
+### Theory
+- **Th1. Meter and swing against the grid.** Afx237 v.7 and 54 Cymru Beats: the tool reports a triplet off-beat (0.67 of its 112 BPM beat) but the grid pulse (0.360 s) is 0.67 of the tool's beat (0.536 s), so that is the grid pulse itself, a 3:2 relation, not a swing on the grid's eighth or sixteenth. Orban: straight eighths, tool and grid agree. Jynweythek: void (no beat). So this record adds no swing case for the triplet-shuffle lead.
+  **A pattern across the pile:** a grid pulse of exactly 0.360 s (166.7 BPM) turns up as the drum grid on Yellow Calx, Girl_Boy Song, Bucephalus Bouncing Ball, Equation, Afx237 v.7 and 54 Cymru Beats, and a 0.372 s (161.3) on Pappy and Contour Regard; each time the meter tool reads two thirds of it (111 BPM). Six or more tracks landing on one pulse is a possible artifact of the grid reading, not necessarily music; the synthesis should not take 166.7 BPM as a real habit of the artist without hearing it.
+- **Th2. Keys.** Jynweythek D# aeolian (margin 0.036, reliable); Orban C# lydian (0.014, guess; the other stem is void, so this is the bass pedal on C#); Afx237 v.7 A# lydian (0.003) and 54 Cymru Beats D locrian (0.003) are guesses.
+- **Th3. Chord rates.** Jynweythek 40 changes a minute (14 settled; 27 distinct; G#min7 23%; 78% on a beat against a chance well below that: the most beat-locked chords on the record); Afx237 v.7 43 (54 distinct); 54 Cymru Beats 31 (40 distinct); Orban 10 (C#maj7 83%; the other stem is void, so these are bass-stem chords). Chord names are a guess on dense music.
+- **Th4. Bass.** Orban holds C# 85%; Afx237 v.7 A# 43% (0.32 notes a second); 54 Cymru Beats moves D, F, D# (0.18 a second, steps 47%).
+- **Th5. Top lines.** Jynweythek 257 notes, 14 semitones, fourths and fifths 37% (a jumpy line, arch phrases of 12 notes, 67% arches); Afx237 v.7 562 notes, 31 semitones, 42% leaps; 54 Cymru Beats 898 notes (the most), 25 semitones. Reliable only where the line sits clearly above its accompaniment, which for a solo piano it does.
+
+### Space
+- Jynweythek is the widest here: sub -18 dB but 0 dB at 2 kHz and above (correlation 0.01 to 0.21), over time -7/-5/-2 dB, mono loss 1.2 dB: a piano with unrelated left and right channels. Afx237 v.7 ranges from -28 to -6 dB over time (its other stem -12 dB, drums -29 dB). Orban is near-mono with a mono bass (-51 dB). 54 Cymru Beats is near-mono (-18 to -26 dB). **[JUDGMENT]** **Guess:** a wide piano, mono beats.
+
+### Vibes
+Numbers: Jynweythek 14 settled chords a minute, width -5 dB; Afx237 v.7 11 settled, -19 dB; Orban 1 settled, -20 dB; 54 Cymru Beats 15 settled, -24 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): tender, reflective, wistful, intricate (Jynweythek), crisp, nimble, strange (the beats). Lean away (x0.2 to x0.5): booming, comforting. Never 0. **Guess:** the piano is a candidate for tender / wistful; the beats for crisp / strange.
+
+### Wholesome take
+- Take the piano pieces: a tender, quick solo piano (Jynweythek) and the dry, mono beats with a held bass. Leave the stuttering floor drops of Afx237 v.7's ending and the 6-octave filter climb of Orban if they sound harsh. **[JUDGMENT]** **Guess:** take Jynweythek's piano; leave the stutter.
+
+### For later
+- Not given a deep pass: Gwely Mernans (5:08, repetition 0.80, high: a piano piece Ears 1 saw), Gwarek2 (6:46.9, brightness sweep 5.2 octaves, high), Father (57 s, a very short tail), Lornaderek (31 s), Aussois (13 s), Bit 4 (25 s): under 45 s are too short. **[JUDGMENT]** **Guess:** Gwarek2 is the one to hear.
+- Groups left over: Orban drums-2 and bass-2; 54 Cymru Beats drums-2, bass-1 (F1, 439 notes) and a vocals-labelled group (405 notes at C3, bell-like: bleed from percussion, not a voice); Afx237 v.7 drums-2, other-2, bass-1: **[JUDGMENT]** **Guess:** wait.
+
+### Reliability notes for this card
+- Jynweythek: no beat, so meter, kick and drop numbers are void; the bass stem is the low end of the piano. Orban: the other stem is void (1.6%) and the two kick tools disagree. Keys: two guesses at 0.003. Kick pitches that read B0 are the 30 Hz floor. The 166.7 BPM grid is flagged as a possible artifact above. Pumping depths read about 70% of true depth.
