@@ -207,36 +207,31 @@ variables, and each should be easy for developers and users to tweak.
   offline clips (stereo against today's mono) before anything is built;
   Mikey's verdicts decide which space recipes exist.
 
-### 10. Three real games prove it
+### 10. One real game proves it: Broken Friends
 
-Mikey, 2026-10-13: if he, a solo developer, can put the core into three
-existing games seamlessly with Claude's help, it will be a breeze for
-anyone. So the measure of "embeddable anywhere" is three games, chosen
-to cover different languages, engines and ways in, all light enough for
-a modest laptop and running on several kinds of device:
+Mikey, 2026-10-24: Broken Friends, his own game, is the one and only
+game that proves the core. "I don't want to make music mods for those
+other games anymore anyways. Maybe another time." It replaces the three
+games picked on 2026-10-13 (Luanti, OpenRCT2, Stardew Valley).
 
-- **Open source: Luanti** (the voxel game engine formerly Minetest).
-  C++ engine, Lua mods; Windows, macOS, Linux and official Android builds
-  (F-Droid and Google Play too). Calm building and wandering, with
-  biomes, day and night, and weather to steer the music. Free, so
-  testers need nothing to try it. The way in: a small engine change that
-  hosts the core, plus a Lua API so any Luanti mod can steer the music.
-- **Source port: OpenRCT2** (RollerCoaster Tycoon 2, reimplemented).
-  C++; Windows, macOS, Linux and Android, on old hardware; GPLv3. A
-  chill management game: music by park area, time and weather, and the
-  rides' own music as a second test. Needs the original RCT2 data (cheap
-  on GOG or Steam). Alternative if Mikey prefers his favorite: Ship of
-  Harkinian (the Ocarina of Time port), which needs a copy of the game
-  dumped from his own cartridge.
-- **Traditional and easy to mod: Stardew Valley**, through SMAPI, its
-  standard mod loader. C#, so it proves the C header from a managed
-  language. Seasons, weather, time of day and places: exactly the music
-  roadmap 18 imagines, and a huge modding community.
+Broken Friends (`github.com/nowmichaelclark/brokenfriends`) is a 2D,
+mobile-first creature-care game in Godot 4: stitched creatures you
+repair, feed and play with, then send on quests. Android first, the
+browser too, maybe desktop later. Each creature gets its own generated
+theme; the music follows time of day and what is happening at camp.
+It suits the core: calm, state-driven music, no combat.
 
-- *Measure:* in each game, the music follows the game (place, time,
-  weather) with no glitches and no measurable frame-time cost, the
-  integration fits in a small, readable change, and Mikey judges it
-  "seamless" from doing it himself with Claude's help. What was hard
+- **The way in:** a GDExtension written in Rust (godot-rust), linking
+  the core directly: `rust/driftloom-godot/` in the game's repo. The C
+  header (promise 4) stays the way in for every other host.
+- **The hard case is the browser.** Godot's standard web build cannot
+  load extensions; its `web_dlink` build can, compiled with Emscripten
+  to match the engine. The game's first spike tests this (2026-10-24).
+- *Measure:* in Broken Friends, on an Android phone and in a phone's
+  browser, the music follows the game (creature, time, events) with no
+  glitches and no measurable frame-time cost; the golden lists render
+  inside the game with exactly the golden hashes; the integration stays
+  small and readable; and Mikey judges it "seamless". What was hard
   goes back into the core and the guide, so the next developer never
   meets it.
 
@@ -338,14 +333,15 @@ one before it.
    is ready; `main` keeps the fallback until then. *Done when:* promise
    1's stall test is clean and the testers' phones report zero late
    notes.
-4. **The first game: Luanti.** Pulled forward so a real game tests the
-   host API while it is still cheap to change: the minimal C header, a
-   native audio output, and steering (the game tells the core where,
-   when and what weather; the core leans its vibes), with requests on
-   events (promise 11). Earlier, from phase
-   1 on, the native command-line renderer and a tiny test host stand in
-   for a game in CI. *Done when:* Luanti plays Driftloom following
-   biome, time and weather on a laptop and an Android phone, with promise
+4. **The game: Broken Friends** (Mikey, 2026-10-24; was Luanti).
+   Pulled forward so a real game tests the host API while it is still
+   cheap to change: the Godot extension, a native audio output, and
+   steering (the game tells the core which creature, what time and what
+   is happening; the core leans its vibes), with requests on events
+   (promise 11). Earlier, from phase 1 on, the native command-line
+   renderer and a tiny test host stand in for a game in CI. *Done
+   when:* Broken Friends plays Driftloom following its creatures, time
+   and events on an Android phone and in a phone's browser, with promise
    1's no-glitch measure.
 5. **Instruments as recipes.** First the catalogue of block ideas for
    Mikey (promise 5). Then the building blocks and the recipe format;
@@ -356,11 +352,10 @@ one before it.
    54-73), so here they become recipes like today's voices.
 6. **Codes, version 2.** Short codes, album seeds, recipe packs by hash,
    plain links. Old codes stop working; that's fine.
-7. **The host kit and the other two games.** The finished C header, the
-   audio export in the app (roadmap 17; below), the guide, then OpenRCT2 and
-   Stardew Valley, each done by Mikey with Claude's help and each lesson
+7. **The host kit.** The finished C header, the audio export in the app
+   (roadmap 17; below) and the guide, with what Broken Friends taught
    fed back. *Done when:* promise 4's C program, promise 6's
-   fresh-session test and promise 10's three games pass.
+   fresh-session test and promise 10 (Broken Friends) pass.
    **Exports, safe first** (Mikey, 2026-10-13): an export must never
    crash or break anything on the listener's device, old Android phones
    and weak chips included; speed is welcome only where it is safe. So
@@ -408,7 +403,8 @@ measurement that says so.
 - **The building blocks are open to change** (promise 5).
 - **Stereo across the board, with a mono switch** (promise 9; changed
   2026-10-15).
-- **Three games prove the core** (promise 10); the first pulled forward
-  as phase 4. The picks are the brain's; Mikey may swap any.
+- **One game proves the core: Broken Friends** (promise 10; Mikey,
+  2026-10-24). It replaces the three games of 2026-10-13 (Luanti,
+  OpenRCT2, Stardew Valley), and is phase 4.
 - **Requests: listeners and developers ask for bars, tempo, rhythm,
   scale and more, alongside vibes** (promise 11; added after approval).

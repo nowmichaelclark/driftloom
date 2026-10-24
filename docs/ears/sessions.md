@@ -98,7 +98,7 @@ words in voices; no quotes, public domain included (all Mikey,
 2026-10-15).
 
 **Now (2026-10-15):** Mikey wants new instruments (and later profiles)
-before the Luanti step. Ears sessions find candidates now; the sounds he
+before the Broken Friends step. Ears sessions find candidates now; the sounds he
 approves are built in the core after queue item 46 (`docs/BRAIN.md`,
 "The plan to phase 2"). For each candidate: a reference track, a
 measurement, an offline clip, what it would add, and a yardstick. Write
