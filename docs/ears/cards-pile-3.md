@@ -14,6 +14,7 @@ Ears 9 (Sonnet 5.5, medium), started 2026-10-24. Seven Aphex Twin records: Richa
 |---|---|---|---|
 | Richard D. James Album (1996) | 10 (4) | 882 s | done |
 | Girl/Boy EP (1996) | 9 (2, plus the twin on the previous card) | 192 s | done |
+| Come to Daddy (EP, 1997) | 8 (8) | 1,856 s | done |
 
 ---
 
@@ -184,3 +185,93 @@ Numbers: Inkey$ 85 BPM (grid 172), 14 settled chords a minute, 21% of energy abo
 
 ### Reliability notes for this card
 - Beetles: all beat numbers void (no drums, no bass). Inkey$: 5 kick events only, so kick and duck are not usable. Keys: margins 0.012 and 0.022. The NLS mix is covered by the previous card's Girl_Boy Song, not re-measured.
+
+---
+
+## Aphex Twin, Come to Daddy (EP, 1997)
+
+Ears 9, 2026-10-25, Sonnet 5.5. 8 tracks, every one given the deep pass (EP rule): 01 Pappy Mix (4:23), 02 Flim (2:57), 03 Little Lord Faulteroy Mix (3:50), 04 Bucephalus Bouncing Ball (5:45), 05 Contour Regard (5:11), 06 Funny Little Man (3:59), 07 Mummy Mix (4:25), 08 IZ-US (2:57). No title repeats another record in the pile. Stems by Demucs htdemucs. Machine time: 1,856 s (31 min) for 33.4 min of audio on 2 cores: pick 67 s, Demucs 959 s (0.48 times audio length), measuring 830 s. Ears 7's formula (1.1 x 2,006 s + 12 x 8) says 2,302 s, so this ran 19% under it.
+
+**Voices.** Pappy Mix, Little Lord Faulteroy, Funny Little Man and IZ-US carry a sung or shouted part (vocals stem 5.8%, 15%, 7%, 4%). I do not write down what is said anywhere on this card. Where I mention it, it is a "voice-like part", described only by pitch range and level.
+
+### Stem check (read first)
+- **01 Pappy Mix**: drums 56%, bass 15%, other 23%, vocals 6%. The meter tool's 108 BPM is two thirds of the drum grid's 161.3 BPM (beat 0.372 s); use the grid.
+- **02 Flim**: drums 54%, bass 21%, other 25%, vocals 0%. Meter tool 74 BPM is half of the grid's 147.8 BPM (beat 0.406 s); use the grid.
+- **03 Little Lord Faulteroy**: drums 25%, bass 50%, other 10%, vocals 15% (a real voice-like part). The meter tool and the grid agree at 120 BPM. The bass stem is the biggest part and carries the low line and some lead.
+- **04 Bucephalus Bouncing Ball**: drums 72%, bass 13%, other 15%, vocals 0.3% (bleed). The meter tool's 112 BPM is two thirds of the grid's 166.7 BPM (0.360 s); use the grid.
+- **05 Contour Regard**: drums 38%, bass 29%, other 31%, vocals 2%. Meter tool 81 BPM is half the grid's 161.3 BPM.
+- **06 Funny Little Man**: drums 72%, bass 14%, other 8%, vocals 7%. Meter 133 BPM agrees with the grid's 132.5 BPM (beat 0.453 s).
+- **07 Mummy Mix**: drums 25%, bass 68%, other 7%, vocals 0.3%. Meter tool 79 BPM is half the grid's 156.7 BPM. The bass stem holds most of the music.
+- **08 IZ-US**: drums 28%, bass 46%, other 22%, vocals 4%. The meter tool's 60 BPM is a quarter of the grid's 235.3 BPM (four pulses of 0.255 s to a tool beat); I use the grid, but listen.
+- None of the eight has an empty bass or drums stem, so every bass number is usable. Pitches under 60 Hz are good to a semitone only.
+
+### The hook
+- Eight tracks of very busy drums (grids 120 to 235 BPM, drums 25% to 72% of the power) with a bass that is the real lead in three of them (03, 07, 08: 46% to 68%), and fast chord changes (23 to 58 a minute, the most of any record so far) over modes that mostly sit on a flat second or a sharp fourth (phrygian, lydian, locrian).
+- **[JUDGMENT]** One line a listener would say. **Guess:** frantic little drum patterns under a warm, oddly tuned bass, with a gentle bell-like layer underneath.
+
+### Sounds
+
+**S1. Noisy sub drone (IZ-US): other-1, 412 notes, 41%**
+- In synth terms: D#2, mixed or noisy partials, soft attack, falls 9 dB/s, centered. Hear it at 2:52.1 (D#2, 2.43 s, +54 dB alone), 2:51.9 (G#2, 0.52 s), 2:31.0 (C#2, 0.77 s). Check: a group in the other stem on a track whose bass stem is 46%: part of the low end is parked here. **[JUDGMENT]** **Guess:** roundBass or sub with a noise layer; the noisy partials are the new part.
+
+**S2. Snappy mid snare (Bucephalus Bouncing Ball): drums-1, 297 notes, 32%**
+- In synth terms: mid snap, quick attack, falls 74 dB/s, centered. Hear it at 3:33.3 (G1, 0.18 s, +47 dB alone), 4:25.1, 3:33.1. **Kick line:** kick is E1 17% (median 58.5 Hz, 41 to 128), falls 68 dB/s, spaced 0.795 s. The bass stays within 4.5 dB all the way round (-3.0 dB at the kick, peak 190 ms): at most a mild dip, so it plays on and between the kicks (the techniques tool reads a 3.5 dB dip, peak 314 ms). **[JUDGMENT]** **Guess:** snare exists; the fast pattern is the point.
+
+**S3. Bell-bass (Mummy Mix): bass-1, 272 notes, 32%**
+- In synth terms: E1, bell- or metal-like (partials off whole multiples), quick attack, falls 76 dB/s. Hear it at 1:02.1 (C#1, 0.67 s, +26 dB alone), 0:53.8 (B0, 4.57 s), 2:36.7 (F1). Pitch under 60 Hz good to a semitone only. **Kick line:** kick median 78 Hz (47 to 115, G#1 14%: not a tuned note), falls 74 dB/s, every 0.470 s. The bass stays within 4.6 dB and climbs to its peak at 400 ms, just before the next kick: it plays between kicks, no duck. **[JUDGMENT]** **Guess:** an FM-style bell bass; missing block is a low note with off-integer partials.
+
+**S4. Slow-swell noisy pad (Contour Regard): other-1, 287 notes, 29%**
+- In synth terms: F#2, mixed or noisy partials, slow swell, falls 7 dB/s, centered. Hear it at 1:42.2 (F#2, 0.35 s, +48 dB alone), 1:42.6 (F#3), 1:43.3. Check: weak group (silhouette 0.21, 4 groups): one blended texture. **Kick line:** kick G1 30% / F#1 21% (median 49 Hz, 46 to 89), falls 114 dB/s, every 0.290 s (one grid pulse every 1.6). Bass is 4.6 dB under its peak at the kick and peaks 215 ms later: a small dip with recovery (the techniques tool finds under 1.5 dB, none). **[JUDGMENT]** **Guess:** padSweep-like; the slow swell on a noisy tone is new.
+
+**S5. Deep sub thump (Funny Little Man): drums-1, 252 notes, 27%**
+- In synth terms: low thump, quick attack, falls 114 dB/s, gets brighter over the note. Hear it at 3:22.5 (F1, 0.41 s, +33 dB alone), 3:17.1, 3:18.9. **Kick line:** kick F1 31% (median 45 Hz, 41 to 125), falls 122 dB/s, every 0.450 s (the grid beat 0.453 s). Bass is -4.3 dB at the kick and falls to -10 dB by 220 ms: the bass sounds with the kick and decays after, not a duck. The pump tool reads the other way (bass 5.3 dB lower at the kick, peak 215 ms); the two disagree, so call it unclear. **[JUDGMENT]** **Guess:** a tuned sub-kick on F1.
+
+**S6. Short punchy kick (Flim): drums-1, 335 notes, 27%**
+- In synth terms: low thump, quick attack, falls 284 dB/s (short, about 0.18 s to fall 50 dB). Hear it at 1:54.8 (D2, 0.13 s, +21 dB alone), 1:18.2, 1:17.9. **Kick line:** kick median 69 Hz, wide (33 to 105), notes D#2 12%, D2 10%, C2 10%; falls 250 dB/s; every 0.405 s (the grid beat). The bass is -4.9 dB at the kick and back within 1 dB by 50 ms: a short duck, quick recovery, bass plays between the kicks. **[JUDGMENT]** **Guess:** a click kick; short.
+
+**S7. Pad-like bass (Mummy Mix): bass-2, 95 notes, 27%**
+- In synth terms: F#2, harmonic (string/reed/pad-like), quick attack, falls 20 dB/s. Hear it at 1:02.7 (F2, 2.86 s, +15 dB alone), 0:58.2 (G#2, 4.46 s), 0:50.2 (B1). Long held notes under the faster bell bass. **[JUDGMENT]** **Guess:** held bass style with a long note; exists.
+
+**S8. Bright mid snare with a tail (Pappy Mix): drums-1, 293 notes, 26%**
+- In synth terms: mid snap, quick attack, falls 40 dB/s, gets brighter over the note. Hear it at 3:59.6 (B0, 0.25 s, +42 dB alone), 3:59.4, 3:56.7. **Kick line:** kick G#1 45% (median 53 Hz, 50 to 79), falls 65 dB/s, every 0.748 s. The bass is -6.8 dB at the kick, lowest -8.5 dB at 50 ms, back to its peak at 150 ms: it ducks about 7 dB at the kick and recovers in 150 ms, then plays between kicks (the pump tool: 3.6 dB, peak 60 ms). **[JUDGMENT]** **Guess:** a tuned kick plus ducking; both exist.
+
+**Kick lines for the two tracks without a sound above.** 03 Little Lord Faulteroy: kick median 87 Hz (61 to 107; F2 22%), falls 143 dB/s, every 0.375 s; the bass is -0.3 dB at the kick and 4.9 dB lower at 175 ms, so it plays on the kick and falls away between kicks: no duck. 08 IZ-US: kick median 81 Hz (38 to 102; E2 28%), falls 353 dB/s (the shortest here), every 0.502 s; the bass starts on the kick (-6.6 dB, back to 0 by 50 ms), then falls 9 dB by 485 ms: a bass note per kick, no duck.
+
+### Techniques
+- **T1. Fast filter arcs on whole mixes.** Counts of sweeps of 0.7 octave or more, past the eight shown per track: Bucephalus 55 more (it is the busiest, e.g. up 3.0 octaves 0:12.0 to 0:17.0, down 2.7 at 1:30.0), Contour Regard 48, Mummy Mix 47 (down 5.3 octaves at 0:44.0 to 0:54.0, the deepest; up 3.7 at 1:16.5), Pappy 33, Funny Little Man 24, IZ-US 26, LLF 20, Flim 12. **[JUDGMENT]** **Guess:** padSweep covers the slow ones; a 5-octave drop in 10 s is new.
+- **T2. Floor drops.** Contour Regard 2.15 a minute (0:15.2 for 3.5 s, 1:39.2 for 4.5 s, 3:55.8 for 3.8 s); Flim 1.51 (2:15.2 for 3.5 s, 2:38.2 for 4.2 s); Pappy 0.76 (2:26.5 for 4.0 s); Funny Little Man 0.56 (3:33.8 for 10.0 s, the longest); LLF 0.58; Bucephalus 0.39; IZ-US 0.38 (2:28.5 for 4.5 s); Mummy 0.25. **[JUDGMENT]** **Guess:** floorDrop exists; frequent drops (every 30 s) are the Contour Regard habit.
+- **T3. Tape wobble.** Mummy Mix bass wobbles about 23 cents at 2.3 Hz (the tool reads about 70% of the true depth, so nearer 30); Flim's other stem wobbles 11 cents at 1.4 Hz with a 16-cent speed move in 4 s; Contour Regard's other 9 cents at 2.6 Hz; Bucephalus 4 cents at 2.3 Hz. **[JUDGMENT]** **Guess:** a slow bass vibrato (Mummy) is the one worth keeping.
+- **T4. Echoes.** Pappy drums 364 ms (+3.4 dB; the grid pulse is 0.372 s, so it is the beat, not an echo); Contour Regard drums 574 ms (+8.2 dB, 1 repeat; 574 is 2 x 0.29 = 0.58 s, again the pulse); Mummy Mix drums 190 ms (+3.8 dB, 3 repeats; half the grid pulse of 0.383 s, so maybe a real eighth-of-a-beat echo, unverified). None claimed.
+- **T5. Builds and entrances.** Pappy builds 0:00 to 0:29; vocals-like part plays 60% of Pappy, 61% of LLF, 75% of Funny Little Man, 54% of IZ-US; Bucephalus bass plays only 36%. **[JUDGMENT]** **Guess:** waits.
+- **T6. Stereo movement.** Pappy: drums pan range 0.36, bass 0.17 cycling every 37 s; voice-like parts pan 0.27 to 0.40 on Pappy, LLF, Bucephalus and Contour Regard. **[JUDGMENT]** **Guess:** waits.
+
+### Theory
+- **Th1. Meter and swing, placed against the drum grid.**
+  - Straight: Flim (74 BPM tool = two grid pulses), LLF (120, grid agrees), Funny Little Man (133, grid agrees).
+  - Pappy Mix (tool 108, grid 161.3) and Bucephalus (tool 112, grid 166.7): the tool reports a triplet off-beat at 0.67 / 0.66 of its beat. The grid pulse is 0.67 of the tool's beat (0.372 / 0.556 s; 0.360 / 0.536 s), so that "swing" is the grid pulse itself, not a swing of the grid's eighth or sixteenth. There is a 3-against-2 relation between the tool's beat and the drum grid here, nothing more.
+  - Contour Regard (tool 81, grid 161.3) and Mummy Mix (tool 79, grid 156.7): off-beat at 0.75 of the tool beat, i.e. halfway between the second grid pulse and the next: a lean at the grid's **sixteenth**, not its eighth.
+  - IZ-US (tool 60, grid 235): 0.75 of the tool beat is the grid's third pulse of four, so it sits on the grid: no swing.
+  - So of the eight, two are a sixteenth-level lean (05, 07), two are a 3:2 relation (01, 04), none is a swing at the grid's eighth. For the triplet-shuffle lead in batch-5, this EP gives no clean case at the eighth.
+- **Th2. Keys and modes.** Contour Regard C# ionian (margin 0.027, reliable above the 0.02 line); Flim D# lydian (0.020, borderline); Mummy Mix F phrygian (0.021, borderline); the rest are guesses: Pappy G locrian (0.003), LLF G mixolydian (0.005), Bucephalus A aeolian (0.002), Funny Little Man G phrygian (0.000), IZ-US D# dorian (0.009).
+- **Th3. Chord rates.** Funny Little Man 58 changes a minute (only 10 settled, median chord 0.9 s, 41 distinct chords: the fastest on any record so far; 68% on a beat); Flim 40; LLF 41 (38 distinct); IZ-US 42; Mummy 34; Pappy 29 (54% on a beat, chance 54%: chords not tied to beats); Contour Regard 28; Bucephalus 23. Flim lands only 22% of changes on a beat and IZ-US 15%, so their chords are not on the grid. Chord names (mostly maj7, sus2, 5) are a guess on dense music.
+- **Th4. Bass lines.** LLF holds G 67% of the time (0.93 notes a second, 64% repeats); IZ-US holds D# 68%, plus A# 27% (a tonic-and-fifth pedal); Bucephalus holds A 66% at 0.24 notes a second; Contour Regard C# 56% and F# 22%; Mummy Mix and Pappy wander. **[JUDGMENT]** **Guess:** held tonic with an occasional fifth (IZ-US, Bucephalus) as a spread.
+- **Th5. Repetition and top lines.** See techniques.json for lines; bar length is unclear on most tracks (best guesses 2 to 12 beats, scores 0.00 to 0.20), so lags are weak evidence.
+
+### Space
+- Widest: Little Lord Faulteroy's air band is +9 dB (correlation -0.80, anti-phase) with a mid width of -13 dB and sub -25 dB; Mummy Mix's 2 to 5 kHz band is +7 dB (-0.65); the over-time width for Mummy ranges -10 to -1 dB. Pappy is moderately wide in every band (-13 to -4 dB, correlation 0.98 down to 0.47) with its bass panned +0.39. Contour Regard opens upward (sub -19 dB, air -2). Near-mono: Funny Little Man (-22 to -28 dB, air -18), Bucephalus (-18 to -24 dB), Flim except its mids (-8 dB).
+- Pattern: the low end is nearly mono on every track (sub -13 to -25 dB), the top opens up; LLF and Mummy go anti-phase above 2 kHz. **[JUDGMENT]** **Guess:** mono low end, a wide and slightly anti-phase top on two tracks.
+
+### Vibes
+Numbers: Funny Little Man 133 BPM, 10 settled chords a minute; Pappy 161 BPM grid, 19 settled; Flim 148 grid, 17; Contour Regard 161 grid, 15; Bucephalus 167 grid, 14; Mummy 157 grid, 13; IZ-US 14; LLF 16; mix width -24 to -9 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): zany, quirky, nimble, mischievous, strange, experimental, skipping. Lean away (x0.2 to x0.5): still, restful, hushed, serene, meditative. Never 0. **Guess:** frantic and funny, with a few warm bass moments (IZ-US, Mummy: intimate, velvety).
+
+### Wholesome take
+- Take the funny, quick drum patterns and the warm held basses (IZ-US, Bucephalus, Mummy Mix). Leave the anti-phase top (Faulteroy, Mummy), the 5-octave filter falls, and the shouted voice-like parts, which are the harsh edge of the record. **[JUDGMENT]** **Guess:** take the bouncing pulse and the warm bass; leave the shouting and the harsh top.
+
+### For later
+- Bucephalus bass and other groups, Flim other-2, Funny Little Man drums-2, IZ-US drums-2, and the voice-like parts on Pappy, LLF, Funny Little Man and IZ-US: **[JUDGMENT]** **Guess:** wait; voice-like parts are for a later vowel or choir block, not words.
+- Mummy Mix drum echo at 190 ms (+3.8 dB, 3 repeats) is worth a listen. **[JUDGMENT]** **Guess:** check by ear.
+
+### Reliability notes for this card
+- Every key except Contour Regard (0.027) is a guess or borderline. Chord names and top lines on dense tracks are guesses. The meter tool's tempo is wrong or ambiguous on seven of eight tracks (use the grid); IZ-US's 60 against 235 BPM is a factor of four, so check by ear.
+- Kick and duck readings come from two tools that disagree on Funny Little Man and Contour Regard; I give both. Pumping reads about 70% of true depth, so those are floors. Pitches under 60 Hz good to a semitone only. Fingerprint percentiles are in `raw/` (per-track JSON).
