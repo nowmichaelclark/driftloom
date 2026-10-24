@@ -21,8 +21,9 @@
 //!
 //! In a mono render it does nothing: there is no side.
 
-// Coefficients are worked out in 64-bit and run in 32, as the filters' are.
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// Coefficients are worked out in 64-bit and run in 32, as the filters' are;
+// the window's count of blocks is a clamped, positive number.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
 
 use crate::block::{Block, Context, Probe, Setting, Signal, Stereo};
 use crate::math;
@@ -96,6 +97,8 @@ pub struct Width {
 impl Width {
     /// All zeros; `ready` builds it.
     #[must_use]
+    // Built in place in the core's static, never on a stack.
+    #[allow(clippy::large_stack_arrays)]
     pub const fn new() -> Self {
         Width {
             settings: ZERO,
@@ -137,7 +140,7 @@ impl Width {
             _ => return,
         }
         if setting == 1 || setting == 2 {
-            self.energy = [[0.0; 2]; SLOTS];
+            self.energy.fill([0.0; 2]);
             self.sum = [0.0; 2];
             self.at = 0;
         }
@@ -252,6 +255,7 @@ impl Block for Width {
 }
 
 #[cfg(test)]
+#[allow(clippy::needless_range_loop)]
 mod tests {
     use super::*;
 

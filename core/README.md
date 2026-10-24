@@ -18,17 +18,17 @@ A host owns one `Core` and makes a handful of calls:
 use dlcore::{Core, Key, MELODY, KALIMBA, EXTRA};
 
 let mut core = Box::new(Core::new());          // megabytes of zeros: keep it off the stack
-core.start(48_000.0, 1)?;                      // any rate from 22,050 to 192,000 Hz; mono
+core.start(48_000.0, 1)?;                      // any rate from 22,050 to 192,000 Hz; mono (2: stereo)
 core.key(Key { seed: 7, pass: 0, step: 0, ord: 0 });      // where the next notes sit in their loop
 core.note(KALIMBA, MELODY, 0.5, 69.0, 0.4, 0.8, 3, [f64::NAN; EXTRA]);
 let mut out = vec![0.0f32; 441];               // any number of frames a call
 core.render(&mut [&mut out])?;
 ```
 
-- **`start(rate, channels)`** sets the rate and the output layout. Mono is the only layout so far; anything else returns a plain error.
+- **`start(rate, channels)`** sets the rate and the output layout: mono (1) or stereo (2); anything else returns a plain error. The two are renders of their own (queue item 64; `docs/CORE.md`, promise 9). The mono render is the one the core has always made and pays nothing for stereo; in the stereo render the mix's mid is the mono mix, the master chain runs on each side (its compressors keyed by the mid, so they press as in mono), and the width ceiling (`blocks::width`) turns the side down where it gets wider than its target. With nothing placed or widened, each side is the mono render, bit for bit. `set_layout` switches between them.
 - **`note(voice, channel, time, midi, dur, vel, parts, extra)`** queues a note. It answers whether the note is on time, late, missed or refused (`Taken`).
 - **`key(key)`** says where the notes that follow sit in their loop. Every chance a note leaves open is drawn from this key, so the same loop sounds the same everywhere.
-- **`render(out)`** fills the host's buffers with the next frames.
+- **`render(out)`** fills the host's buffers with the next frames: one buffer a channel of the layout.
 - **`event(channel, event)`** sends a damp, a release, a bend or a retune (`Event::new`, `Event::retune`) to a channel. Each kind says how far it reaches the channel's notes (`event::reach`):
   - **once** (a damp, a release): each note hears it at most once, the notes that arrived since the channel's last event of that kind;
   - **every time** (a bend, a retune): every note held when its time comes hears every one.
@@ -111,6 +111,8 @@ Three more show a channel's own blocks are one file and one line too (queue item
 The chapel organ (`src/blocks/organ.rs`, queue item 61) is the chorale grown up, and the first of these the app plays: one line in the `channel` list (`organ::Organ = ORGAN (organ::REST)`), silent at rest, with its registration and the rest in `SETTINGS` (the host sets all 21 at a loop's first step), `RETUNE` at each chord and `RELEASE` to let go. It sends some of itself into the room past the channel's own sends (`Channel::SENDS`, `render_sends`, as a voice's `SENDS` does). Two things it shows: a channel's own block lives in the core's static memory in every channel, so its `new()` must be all zeros (a NaN or a 110 Hz default there puts the whole core into the `.wasm`, 14 MB) and it sets its real starting values in `start`; and an idle one returns at once from `render`, so a channel that never plays it costs nothing and renders bit for bit as before.
 
 The wash (`src/blocks/wash.rs`, queue item 62) is the duck grown up: a source on the core's sixth channel (`WASH_CHANNEL`, which no host note plays into, set like the textures' in the mix), whose level follows the other five layers through five routes into its `MODS`, one a channel, each weighted by a setting (the channel's gain in the mix, 0 for a muted one, since a route taps a channel before its gain). A block may follow every channel at once: `MAX_MODS` is 6. Note lists carry the routes (`route`), and hash the sixth channel (`wash=`).
+
+The width ceiling (`src/blocks/width.rs`, queue item 64) is a stereo processor in the master chain, after the ceiling: it measures the mid and the side above 200 Hz over the last 2 s and turns the side down where it rises above its target against the mid (down in about half a second, back over about three), leaving the mid, and so the fold to mono, untouched. Its settings are named (`width::SETTINGS`; `Core::param`, `WIDTH_TARGET` to `WIDTH_UP`). The kit feeds a stereo processor two different sides too (`width/ceiling:wide`), since a side-only block has nothing to do with the same signal on both.
 
 The arc (`src/blocks/arc.rs`, queue item 63) is a processor in the master chain rather than a channel's: a lowpass between the tone and the highpass, one in each of the master's lanes (`Pair`'s way, ready for stereo), breathing over minutes and lifting the echo's feedback as it opens (the mix takes the lift, frame by frame). A host starts it through `Core::param` (`ARC_FROM`, then `ARC_PERIOD` at the loop's start). With no arc it is no filter at all.
 

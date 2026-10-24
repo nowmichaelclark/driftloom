@@ -4412,3 +4412,20 @@ Mikey decides this line:
   breathing dark and bright over minutes, and for the instruments always
   coming back. For the album: haven #38, bright from 0:00, darkest at 1:05.5,
   and undertow #6, darkest at 1:31.9.
+- #260, the arc's two shapes (item 63b, v113),
+  https://7702bdc6-driftloom.nowmichaelclark.workers.dev: a loop that draws the
+  arc now draws one of two shapes: deep (about one in three), item 63's swing
+  exactly, 300 Hz to 9 kHz and back, lingering dark; or dip (about two in
+  three), open at 9 kHz for 65% of each swing with one smooth dip over the
+  other 35% to a floor of 800 Hz to 1.5 kHz, starting anywhere in the open
+  part. Calm, vast vibes lean deep and 3-5 minute swings; bright, lively ones
+  lean dip and 1.5-2.5 minutes. Every variable is a named setting (`ARC` in
+  `js/choices.js`). Listen for the dip as a gentle dimming that comes and goes,
+  never long enough to lose the instruments, and for the deep swing as before.
+  For the album: vapor #4 (deep), bright from 0:00, darkest at 1:16.4; wayfare
+  #25 (dip), open until 0:06, darkest at 0:44.2 (1.24 kHz), open from 1:22.
+  Mikey's loop (seed 102356715) draws the dip, darkest at 2:05.5.
+- #261, CI on Ubuntu 24.04 (no version),
+  https://776de890-driftloom.nowmichaelclark.workers.dev: the core job's runner
+  pinned, since Playwright 1.56.1 can't install Chromium on ubuntu-latest's
+  26.04 (the baseline check failed on #260 for it). Nothing to listen for.

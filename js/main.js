@@ -1,6 +1,6 @@
 import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
+import { ENGINE, LAYOUT, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import { Engine } from './engine.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v113';
+const BUILD = 'v114';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -159,6 +159,7 @@ function buildAudio() {
   // session: the new synth is not handed it, and says why.
   state.synth = new Synth(state.ctx, state.lite ? 'lite' : 'full', {
     engine: ENGINE,
+    layout: LAYOUT,
     core: state.coreError ? null : state.core,
     coreError: state.coreError,
     onCoreError: (message) => { state.coreError = message; },
@@ -1522,6 +1523,7 @@ function wire() {
     // arrived late and the ones that fell back to JS), or JS and why.
     lines.push(`engine: ${state.synth ? state.synth.engineReport() : ENGINE === 'js' ? 'js (asked)' : state.coreError ? `js (fallback: ${state.coreError})` : 'rust (loading)'}`);
     if (ENGINE === 'rust') lines.push(`core: ${state.core ? `loaded ${state.coreAt} ms after the page began` : state.coreError ? 'not loaded' : 'loading'}`);
+    lines.push(`layout: ${state.synth && state.synth.core && !state.synth.core.failed ? (state.synth.core.layout === 2 ? 'stereo' : 'mono') : 'mono (the JavaScript synth)'}`);
     // One loop in thirty is a deliberate doubling (roadmap item 12), and
     // "is this one of them?" is otherwise only answerable by ear, which is
     // no use at all when the question is whether it fired.

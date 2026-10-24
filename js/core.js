@@ -24,6 +24,16 @@ export const ENGINE = (() => {
   }
 })();
 
+// The core's render (queue item 64): stereo with `?stereo` in the address,
+// else mono. A stand-in until item 66's Mono switch.
+export const LAYOUT = (() => {
+  try {
+    return new URLSearchParams(globalThis.location?.search || '').has('stereo') ? 2 : 1;
+  } catch {
+    return 1;
+  }
+})();
+
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
 export function coreUnsupported() {

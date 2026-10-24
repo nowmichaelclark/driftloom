@@ -76,6 +76,10 @@ driftloom offline audio measurement
   --chrome <path>   an explicit Chromium executable
   --jobs <count>    renders in flight at once             (default 4)
   --no-chain        skip the second, chain-bypassed render of each loop
+  --stereo          the core's stereo render (queue item 64), each loop held
+                    against its mono render: whether each side is mono's bit
+                    for bit, the fold's loudness and residual against mono,
+                    and the side against the mid
   --random-salt <n> seed the platform's Math.random differently (the core's
                     render must not change: queue item 44)
   --json <file>     also write every figure, per loop or per note, as JSON
@@ -217,7 +221,7 @@ function parseArgs(argv) {
   const opts = {
     n: 20, seed: 1, passes: 3, rate: 44100, quality: 'full', port: 8731, chrome: null,
     jobs: 4, chain: true, json: null, voices: null, note: 1.6, refusals: null, selftest: false,
-    profile: null, endings: false, retire: false, engine: 'rust', null: false, reps: 3, stride: 1,
+    profile: null, endings: false, retire: false, engine: 'rust', null: false, reps: 3, stride: 1, layout: 1,
   };
   for (let i = 0; i < argv.length; i++) {
     let arg = argv[i];
@@ -248,6 +252,7 @@ function parseArgs(argv) {
       case '--chrome': opts.chrome = value(); break;
       case '--jobs': opts.jobs = Math.max(1, Math.round(number())); break;
       case '--no-chain': opts.chain = false; break;
+      case '--stereo': opts.layout = 2; break;
       case '--random-salt': opts.salt = number() >>> 0; break;
       case '--json': opts.json = value(); break;
       case '--selftest': opts.selftest = true; break;
@@ -506,8 +511,8 @@ const ENGINE_HELPERS = `
 async function coreFor(ctx, engine) {
   return engine === 'rust' ? loadCore(ctx) : null;
 }
-function synthFor(ctx, quality, engine, core) {
-  return engine === 'rust' ? new Synth(ctx, quality, { engine, core, taps: true }) : new Synth(ctx, quality);
+function synthFor(ctx, quality, engine, core, layout = 1) {
+  return engine === 'rust' ? new Synth(ctx, quality, { engine, core, taps: true, layout }) : new Synth(ctx, quality);
 }
 // The channels in the core's order: its taps are numbered so.
 const CORE_ORDER = ['melody', 'chords', 'bass', 'texture', 'drums'];
@@ -673,7 +678,7 @@ async function renderLoop(spec, seconds, opts, bypass) {
   // opts.salt (--random-salt) moves the platform's random numbers and
   // nothing else: since queue item 44 the core's render must not change.
   Math.random = mulberry32((spec.seed >>> 0 || 1) ^ (opts.salt >>> 0));
-  const synth = synthFor(ctx, opts.quality, opts.engine, core);
+  const synth = synthFor(ctx, opts.quality, opts.engine, core, opts.layout);
   const engine = new Engine(ctx, synth);
   // The engine's clock is never started here, but it has already opened a
   // Worker; a corpus would otherwise leave one behind per render.
@@ -757,6 +762,8 @@ window.measure = async (opts) => {
     const loopDur = spec.bars * (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
     const seconds = Math.min(70, Math.max(opts.passes * loopDur, 20));
     const pending = opts.chain ? renderLoop(spec, seconds, opts, true) : null;
+    // With --stereo, the mono render too, to hold the stereo one against.
+    const monoPending = opts.layout === 2 ? renderLoop(spec, seconds, { ...opts, layout: 1 }, false) : null;
     const buf = await renderLoop(spec, seconds, opts, false);
 
     const left = scan(buf.getChannelData(0));
@@ -789,6 +796,35 @@ window.measure = async (opts) => {
     const l = buf.getChannelData(0), r = buf.getChannelData(1);
     for (let s = 0; s < l.length; s++) stereo = Math.max(stereo, Math.abs(l[s] - r[s]));
     const loud = loudnessOf(l, opts.rate);
+    // The stereo render against the mono one (queue item 64): whether each
+    // side is mono's bit for bit, and the fold, (L + R) / 2, against mono:
+    // its loudness and what is left when mono is taken from it; and the
+    // side against the mid.
+    let space = null;
+    if (monoPending) {
+      const m = (await monoPending).getChannelData(0);
+      const fold = new Float32Array(l.length);
+      let diff = 0, ref = 0, side = 0, mid = 0, exact = true;
+      const lw = new Uint32Array(l.buffer, l.byteOffset, l.length);
+      const rw = new Uint32Array(r.buffer, r.byteOffset, r.length);
+      const mw = new Uint32Array(m.buffer, m.byteOffset, m.length);
+      for (let i = 0; i < l.length; i++) {
+        if (lw[i] !== mw[i] || rw[i] !== mw[i]) exact = false;
+        fold[i] = (l[i] + r[i]) / 2;
+        const sd = (l[i] - r[i]) / 2;
+        diff += (fold[i] - m[i]) ** 2;
+        ref += m[i] ** 2;
+        side += sd * sd;
+        mid += fold[i] ** 2;
+      }
+      const db = (a, b) => (a > 0 && b > 0 ? 10 * Math.log10(a / b) : null);
+      space = {
+        exact,
+        foldResid: db(diff, ref),
+        foldLU: loudnessOf(fold, opts.rate).integrated - loudnessOf(m, opts.rate).integrated,
+        sideMid: db(side, mid),
+      };
+    }
 
     let bypass = null;
     if (pending) {
@@ -804,6 +840,7 @@ window.measure = async (opts) => {
     // sounds the same: the output as it reaches the speakers and each
     // layer's tap (tools/baseline.mjs keeps them).
     const hashes = { out: hashOf(l), layers: Object.fromEntries(LAYERS.map((name, n) => [name, hashOf(buf.getChannelData(n + 2))])) };
+    if (space) Object.assign(hashes, { left: hashOf(l), right: hashOf(r) });
     return {
       hashes,
       seed: spec.seed,
@@ -824,6 +861,7 @@ window.measure = async (opts) => {
       mP95: loud.momentaryP95,
       sMax: loud.shortTermMax,
       stereo,
+      space,
       layers,
       musicLufs,
       bypass,

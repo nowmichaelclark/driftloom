@@ -325,9 +325,7 @@ impl<const C: usize> Compressor<C> {
         self.deepest = other.deepest;
         self.last_pre_delay_frames = other.last_pre_delay_frames;
         if let Some(first) = other.ring.first() {
-            for ring in &mut self.ring {
-                *ring = *first;
-            }
+            self.ring.fill(*first);
         }
         self.read = other.read;
         self.write = other.write;

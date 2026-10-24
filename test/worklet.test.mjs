@@ -220,5 +220,28 @@ const same = (a, b) => a.length === b.length && a.every((x, i) => Object.is(x, b
   check('the key goes to the core first, as whole numbers', JSON.stringify(calls[0]) === '["key",5,6,7,8]' && calls[1][0] === 'note', JSON.stringify(calls));
 }
 
+console.log('\nThe stereo render (queue item 64)');
+{
+  // A worklet asked for the stereo layout fills two channels of its output,
+  // and with nothing placed each is the mono worklet's, bit for bit.
+  const play = (layout) => {
+    const processor = new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout } });
+    processor.receive({ type: 'note', voice: 21, channel: 4, time: 0.05, midi: 0, dur: 0, vel: 0.8, parts: 0, extra: [], key: { seed: 7, pass: 0, step: 0, ord: 0 } });
+    processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.1, midi: 72, dur: 0.3, vel: 0.7, parts: 3, extra: [], key: { seed: 7, pass: 0, step: 1, ord: 0 } });
+    const sides = Array.from({ length: layout }, () => []);
+    for (let b = 0; b * QUANTUM < 0.5 * RATE; b++) {
+      globalThis.currentFrame = b * QUANTUM;
+      const outputs = [Array.from({ length: layout }, () => new Float32Array(QUANTUM))];
+      processor.process(Array.from({ length: 5 }, () => []), outputs);
+      outputs[0].forEach((o, c) => sides[c].push(...o));
+    }
+    return sides;
+  };
+  const [mono] = play(1);
+  const [left, right] = play(2);
+  check('the mono render sounds', mono.some((x) => Math.abs(x) > 1e-4));
+  check('stereo: two channels, each the mono render bit for bit', same(left, mono) && same(right, mono));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);
