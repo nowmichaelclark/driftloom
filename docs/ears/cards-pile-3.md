@@ -8,13 +8,14 @@ Ears 9 (Sonnet 5.5, medium), started 2026-10-24. Seven Aphex Twin records: Richa
 - Girl/Boy 01 (NLS mix) with Richard D. James Album 09 (Girl_Boy Song): 292.2 s against 289.4 s, both -8.6 LUFS. A 30 s cross-correlation peaks at 0.37 (far above chance), so it is the same piece in a slightly different edit. It got its deep pass once, on the Richard D. James Album card (it runs first); the Girl/Boy card refers back to it.
 - 51/13 tracks 02, 04, 06, 08, 09, 10, 11 repeat pile 2 (Donkey Rhubarb, Ventolin and their pick lists); the 51/13 card covers only 01 On, 03 Crowsmangegus edit, 05 Donkey Rhubarb, 07 73-Yips (and 12 Respect List at mix level).
 - Drukqs: 14 tracks match the "Drukqs (piano)" rows of `data.csv` (Ears 1). That is the same record, not twins; Ears 1 measured only those, so this is the first full card.
-- 51/13 On (413.0 s) and 73-Yips (256.1 s) against pile 1's *On* (7:13 and 4:19): not twins by length (20 and 3 s off) so they are measured here as different versions.
+- **Correction after the 51/13 run.** I first wrote that 51/13 On (413.0 s) and 73-Yips (256.1 s) are not twins of pile 1's *On* (7:13 and 4:19) because the lengths differ by 20 s and 3 s. The measurements say they are the same pieces in shorter edits: On has the same pedal bass on A# (82% against 96%), 0.69 notes a second (0.62), a 334 ms drum echo with one repeat (+16.9 dB against +15.1 dB), a 7.3 dB bass dip peaking 239 ms after a kick every 0.26 s (7.7 dB, 239 ms); 73-Yips has the same 86 BPM triplet-swung meter and a bass dip at the kick (8.4 dB against 12.1, peak 20 ms against 25). `twins.py` could not see them because `docs/ears/raw/` holds no pile 1 pick folder (pile 1 is on its cards only). The deep passes were already done by then (about 5.4 minutes of Demucs). Lesson for the plan: compare against the pile 1 card numbers by hand, and match within 20 s when a title repeats. Donkey Rhubarb (51/13 05, 359.9 s) is probably pile 2's Donkey Rhubarb 01 (368 s): same 139.5 against 139.7 BPM and a mono file.
 
 | Album | Tracks (deep pass) | Machine time | Status |
 |---|---|---|---|
 | Richard D. James Album (1996) | 10 (4) | 882 s | done |
 | Girl/Boy EP (1996) | 9 (2, plus the twin on the previous card) | 192 s | done |
 | Come to Daddy (EP, 1997) | 8 (8) | 1,856 s | done |
+| 51/13 Aphex Singles Collection (2 non-twin tracks new; On, 73-Yips, Donkey Rhubarb repeat) | 12 (4) | 1,100 s | done |
 
 ---
 
@@ -275,3 +276,72 @@ Numbers: Funny Little Man 133 BPM, 10 settled chords a minute; Pappy 161 BPM gri
 ### Reliability notes for this card
 - Every key except Contour Regard (0.027) is a guess or borderline. Chord names and top lines on dense tracks are guesses. The meter tool's tempo is wrong or ambiguous on seven of eight tracks (use the grid); IZ-US's 60 against 235 BPM is a factor of four, so check by ear.
 - Kick and duck readings come from two tools that disagree on Funny Little Man and Contour Regard; I give both. Pumping reads about 70% of true depth, so those are floors. Pitches under 60 Hz good to a semitone only. Fingerprint percentiles are in `raw/` (per-track JSON).
+
+---
+
+## Aphex Twin, 51/13 Aphex Singles Collection (only tracks not elsewhere in the pile)
+
+Ears 9, 2026-10-25, Sonnet 5.5. 12 tracks at mix level; seven repeat pile 2 (02 Pancake Lizard, 04 Cylob, 06 Deep Gong, 08 Icct Hedral, 09 Marazavose, 10 Asthma Beats, 11 Carharrack: not measured again). Deep pass on 01 On, 03 Ventolin (Crowsmangegus mix edit), 05 Donkey Rhubarb and 07 73-Yips; 12 Respect List (38.9 s) is too short and stays at mix level. **Only 03 Crowsmangegus is new music.** On and 73-Yips repeat pile 1's *On* (see the correction at the top) and Donkey Rhubarb probably repeats pile 2; I keep short lines for them so the pile has a second reading, nothing more. Stems by Demucs htdemucs. Machine time: 1,100 s (18 min) for 18.9 min of audio on 2 cores: pick 107 s, Demucs 536 s (210, 50, 159, 117 s; 0.47 times audio), measuring 457 s. Ears 7's formula says 1,293 s (1.1 x 1,132 s + 12 x 4), so this ran 15% under it.
+
+### Stem check (read first)
+- **01 On**: drums 28%, bass 60%, other 10%, vocals 2% (bleed). Meter tool 135 BPM agrees with the drum grid's 136.1 BPM (beat 0.441 s).
+- **03 Crowsmangegus mix edit**: drums 73%, bass 3% (thin: bass notes, pumping and wobble are guesses), other 16%, vocals 7% (bleed). Meter tool 84 BPM agrees with the grid's 83.3 BPM (beat 0.360 s).
+- **05 Donkey Rhubarb**: drums 61%, bass 31%, other 8%, vocals 0%. Meter tool 140 BPM agrees with the grid's 139.5 BPM (beat 0.430 s).
+- **07 73-Yips**: drums 35%, bass 52%, other 12%, vocals 1% (bleed). The meter tool says 86 BPM; the drum grid's "shortest strong repeat" came out at 1.59 s, which is not a beat (the kicks are 1.59 s apart), so I give no grid tempo for this track.
+
+### The hook
+- Three of the four are bass-led, nearly mono tracks (On bass 60%, 73-Yips 52%, Donkey Rhubarb mono at -30 dB) with a single pedal note (A# 82%, G# 87%, A#/B) and sparse chords (6 to 11 changes a minute on 73-Yips and Donkey Rhubarb); the new one, Crowsmangegus, is mostly drums (73%) with bell-like notes on a dominant seventh chord (A#7 57%).
+- **[JUDGMENT]** One line a listener would say. **Guess:** a long held low note, a dry steady kick, and a few slow chords.
+
+### Sounds
+
+**S1. Swelling pedal bass (On; same as pile 1's On): bass-1, 372 notes, 53%**
+- A#1, harmonic (string/reed-like), slow swell, falls 65 dB/s, centered. Hear it at 4:59.4 (A#1, 0.46 s, +14 dB alone), 5:02.9, 5:27.8. **Kick line:** the kick is a short, wide-pitched thump (median 96 Hz, 57 to 116; G#2 17%, A2 14%, A#1 11%), falls 273 dB/s, every 1.000 s in the kick finder (the grid beat is 0.441 s). The bass is 23 dB under its peak at the kick and swings 23 dB across the second, loudest at 410 ms: it plays in pulses and is off at the kick, so it ducks hard (the pump tool's 7.3 dB, peak 239 ms, is the same dip read at 70% depth). **[JUDGMENT]** **Guess:** heldBass with a 260 ms swell and a hard duck.
+
+**S2. Held G# bass (73-Yips; same as pile 1): bass-1, 423 notes, 45%**
+- G#1, harmonic, slow swell, falls 252 dB/s. Hear it at 3:49.1 (G#1, 0.5 s, +6 dB alone), 3:42.4, 3:47.6. **Kick line:** kick median 63 Hz (53 to 109; A1 16%), falls 158 dB/s, every 1.59 s; the bass is 15 dB under its peak at the kick, recovers to -6 dB by 100 ms and to its top at 250 ms: a duck of about 9 to 15 dB with a quick recovery, then it drops 29 dB at 555 ms (the bass has gaps). **[JUDGMENT]** **Guess:** held bass with a duck; exists.
+
+**S3. Bell texture (Crowsmangegus): other-1, 195 notes, 39%**
+- G#2, bell- or metal-like (partials off whole multiples), soft attack, falls 16 dB/s, centered. Hear it at 1:13.9 (D#2, 0.27 s, +45 dB alone), 1:14.3 (D3), 1:14.2 (D3). Check: weak group (silhouette 0.17, one group): one blended texture. Other wobbles about 22 cents at 3.8 Hz (the tool reads 70% of true depth), a clear slow vibrato. **[JUDGMENT]** **Guess:** softBell with a 3.8 Hz wobble; the wobble is the point.
+
+**S4. Gliding bass (Donkey Rhubarb; probably the pile 2 track): bass-1, 398 notes, 36%**
+- A#1, harmonic, soft attack, falls 60 dB/s. Hear it at 5:41.4 (A#1, 0.49 s, +8 dB alone), 5:15.7, 4:48.3 (C#2). It slides between B and A# (0.94 notes a second, 62% repeats). **Kick line:** kick median 72 Hz, wide (30 to 123; B0 16%, E2 14%), falls 136 dB/s, every 0.325 s in the finder (grid beat 0.430 s). The bass is 8 to 10 dB under its peak for the first 60 ms, then climbs to its top by 300 ms: a duck of about 8 dB recovering in about 150 ms, then it plays between kicks (the pump tool: 6.8 dB, peak 195 ms). **[JUDGMENT]** **Guess:** glide bass and ducking exist.
+
+**S5. Soft sub thump (Crowsmangegus): drums-1, 107 notes, 24%**
+- Low thump, soft attack, falls 18 dB/s. Hear it at 1:15.2 (A1, 0.23 s, +18 dB alone), 0:55.9, 0:56.1. **Kick line:** only 35 kicks, 2.84 s apart (median 79 Hz, 57 to 112; E2 31%, A#1 20%), falls 70 dB/s. The bass stem is thin (3%), so the "bass" curve (-8 dB at the kick, flat within 5 dB after) is a guess: no duck found. **[JUDGMENT]** **Guess:** a gentle kick, wait.
+
+**S6. High tick (73-Yips): drums-1, 426 notes, 23%** B5, falls 36 dB/s. Hear it at 1:23.3 (0.2 s, +38 dB alone), 1:34.4, 1:26.5. 31% of this track's energy above 2 kHz in pile 1 is the brittle part. **[JUDGMENT]** **Guess:** hat exists; keep it gentle.
+
+**S7. Short click kick (On): drums-1, 335 notes, 19%** Low thump, falls 454 dB/s, brighter over the note (about 0.1 s to fall 50 dB). Hear it at 4:18.2 (G1, 0.12 s, +35 dB alone), 4:57.3, 4:14.6. **[JUDGMENT]** **Guess:** a click kick; short.
+
+**S8. Snap (Donkey Rhubarb): drums-1, 179 notes, 17%** Mid snap, quick attack, falls 104 dB/s, brighter over the note. Hear it at 5:22.9, 5:33.2 (G1, 0.22 s, +40 dB alone), 5:36.6. **[JUDGMENT]** **Guess:** snare exists.
+
+### Techniques
+- **T1. Floor drops.** Crowsmangegus 2.65 a minute, short (0:08.8 for 2.5 s, 0:14.8 for 2.2 s, 1:12.0 for 2.8 s, 1:18.2 for 2.8 s); On 0.65 a minute but two very long ones (0:20.5 for 38 s, 5:41.8 for 32 s: an intro and an outro, not drops); 73-Yips and Donkey Rhubarb none. **[JUDGMENT]** **Guess:** floorDrop exists; a 30-s low-end-out intro (On) is the idea to keep.
+- **T2. Echoes.** On drums 334 ms (a dotted eighth, +16.9 dB, 1 repeat); Crowsmangegus other 220 ms (+3.0 dB, 1 repeat; 0.61 of the 0.36 s beat, no match) and drums 349 ms (+4.1 dB, 3 repeats; within 3% of the 0.36 s grid beat, so the beat); Donkey Rhubarb other 454 ms (+10.6 dB, 2 repeats; 5% over the 0.43 s beat, about a beat); 73-Yips drums 115 ms (+6.0 dB, 2 repeats; no matching pulse). **[JUDGMENT]** **Guess:** On's dotted-eighth echo is the one to keep (pile 1 already flagged it).
+- **T3. Tape wobble.** Crowsmangegus other 22 cents at 3.8 Hz; 73-Yips other 16 cents at 1.6 Hz. **[JUDGMENT]** **Guess:** waits.
+- **T4. Builds.** Crowsmangegus 0:26 to 0:51. **[JUDGMENT]** **Guess:** waits.
+
+### Theory
+- **Th1. Meter and swing against the grid.** On: tool and grid agree (135 against 136.1 BPM); the off-beat falls at 0.79 of the beat, later than a triplet (0.67) and past the sixteenth point (0.75): a lean at the grid's **sixteenth** level. Crowsmangegus: tool 84 = grid 83.3; off-beat at 0.74 of the beat, also at the grid's sixteenth lean. Donkey Rhubarb: straight eighths, no swing. 73-Yips: the tool says an 86 BPM triplet feel (0.72), but I have no grid to place it on, so the triplet-shuffle question for batch-5 is open here (pile 1 read it as 86 or 173 swung).
+- **Th2. Keys.** On A# aeolian (margin 0.043, reliable); Crowsmangegus A# mixolydian (0.048, reliable); Donkey Rhubarb A# dorian (0.003, guess); 73-Yips G# ionian (0.008, guess).
+- **Th3. Chords.** On 46 changes a minute (12 settled; D#min7 38%, C#maj7 33%: names are a guess); Crowsmangegus 22 (A#7 57%); Donkey Rhubarb 11 (C#maj7 70%, 84% of changes on a beat against 70% chance); 73-Yips 6 a minute (G#maj7 50%, C#maj7 30%; one chord lasts up to 26 s).
+- **Th4. Bass.** On a pedal on A# (82%, 95% repeats); 73-Yips a pedal on G# (87%); Crowsmangegus moves A#, G#, C# at 0.14 notes a second (guess: thin bass stem); Donkey Rhubarb slides B / A#. **[JUDGMENT]** **Guess:** pedal bass is already in; the slide is new.
+
+### Space
+- All four are near-mono at the sub (-25 to -50 dB). Donkey Rhubarb and Crowsmangegus are mono files in every band (-28 to -32 dB). On opens in the mids (-8 dB at 0.5 to 2 kHz, other stem -8 dB) and stays mono below 120 Hz (bass -32 dB); 73-Yips is mono at the top (-30 dB) with a mild low-mid width (-21 to -23 dB). **[JUDGMENT]** **Guess:** mono bass and kick, a little width in the mids only.
+
+### Vibes
+Numbers: On 136 BPM, 12 settled chords a minute, width -12 dB; Crowsmangegus 83 BPM, 17 settled, -29 dB; Donkey Rhubarb 140 BPM, 8 settled, -30 dB; 73-Yips 86 BPM, 5 settled, -27 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): hypnotic, steady, hushed, intimate, minimal, spacious. Lean away (x0.2 to x0.5): energetic, bouncy, zany. **Guess:** slow and dry, a held-note groove.
+
+### Wholesome take
+- Take the held bass, the dry kick and the long intro with the low end held out. Leave the brittle ticks of 73-Yips (a harsh top in pile 1) and the 3.8 Hz bell wobble of Crowsmangegus if it sounds seasick. **[JUDGMENT]** **Guess:** take the pedal groove, leave the tick.
+
+### For later
+- 73-Yips other-1 (390 notes, G2 harmonic), Donkey Rhubarb other-1 (398 notes, F3 noisy), bass-2 (58 notes, F#1 bell) and drums-2, On other-1 (371 notes, F#2 noisy) and drums-2, Crowsmangegus drums-2: **[JUDGMENT]** **Guess:** wait.
+- Not measured again: 08 Icct Hedral (Philip Glass Orchestration), 02 Pancake Lizard (high chord rate), 09 Marazavose (brightness sweep 2.5 octaves): all in pile 2. 12 Respect List (38.9 s, pulse strength 0.07) is under 45 s. **[JUDGMENT]** **Guess:** Respect List is a short listen.
+
+### Reliability notes for this card
+- Crowsmangegus: bass stem thin (3%), so bass notes, pumping and wobble are guesses; only 35 kicks. 73-Yips: no usable drum grid. Two keys are guesses (margins 0.003 and 0.008). Pitch under 60 Hz good to a semitone only; pumping reads 70% of true depth.
+- Three of the four tracks repeat earlier records (see the correction at the top), so this card adds one new reading (Crowsmangegus) and three cross-checks that match pile 1 and pile 2 to within the tool's error.
