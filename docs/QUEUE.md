@@ -3745,6 +3745,50 @@ Mikey decides this line:
   level is (notes a second). And whether one-note chords should ring glass
   at all. Items 59 and 60 wait on it (60's stab shares the yield).
 
+- **Item 63b, the arc's two shapes: what was built and decided (Session
+  25a-4, hands, Opus 5.5, 2026-10-24).** Built as the item reads; three
+  calls asked of Mikey on the way and answered the same day (2026-10-24),
+  each the option recommended:
+  1. **The dip's time within twice its floor** can't sit in 15-40 s at every
+     corner of the ranges with the dip at 35% of each swing: on loops with
+     no vibes it runs 15.5-44.6 s (mean 29.1), on calm vibes (3-5 minute
+     swings) 22.9-44.7 s, on bright ones (1.5-2.5 minutes) 11.4-22.3 s. The
+     40+ s cases all have a floor of 1.3-1.5 kHz (twice the floor 2.6-3 kHz,
+     hardly muffled); the 11 s ones are bright loops' quick dips. **Kept at
+     35%** (the other options: shrink the dip's share on long swings, or
+     narrow the periods). Below 2 kHz stays at or under 14.8% of every
+     swing (the 800 Hz floor's figure; 9.2% at 1.5 kHz), and it never goes
+     under the floor.
+  2. **Where a dip loop starts:** anywhere in the open part (uniform over
+     its 65%), so the first dip comes from a moment after the start to
+     about two minutes in, rather than only the first half of it.
+  3. **The vibe leans:** toward x2, away x0.4 (mid-range). With them, 0.7
+     strength: foggy loops draw deep 46% of the time (plain 33%), sunny ones
+     24%; the arc itself is on in 32.5% of plain loops.
+  - **How it is built.** `ARC` in `js/choices.js` holds every variable
+    (weight, vibes, shapes and their leans, period ranges by vibe list,
+    starts, floor, the dip's share); `arcOf(seed, vibes, pins)` draws on the
+    arc's own stream (item 63's salt): the period, the start, then the shape
+    and the floor, so a plain loop that draws deep keeps item 63's period
+    and start to the bit; a pin fixes one value and moves no other draw. The
+    core takes `ARC_SHAPE`, `ARC_FLOOR` and `ARC_DIP` beside `ARC_FROM`,
+    `ARC_PERIOD` starting it. The dip is a raised cosine in log frequency
+    centered on the swing's darkest point (`u = 0`, where deep is darkest);
+    the echo's lift follows the cutoff as the deep swing's does (the same
+    cutoff, the same lift: 0.14 at 9 kHz, 0.075 at 800 Hz).
+  - **Checked.** 6-minute renders of 37 loops (corpus 20261009's first 36,
+    six with wander on, and Mikey's), main against this build, speakers'
+    output hashed: the 21 without the arc and the 2 that draw deep are bit
+    for bit the same; the 14 dips differ. Goldens: 08-bloom and 17-bloom
+    draw deep (hashes unchanged), 09-shrine draws the dip (its hash moved);
+    `blocks.txt` gains `arc/dip`, `arc/breath` unchanged. One thing caught
+    on the way: a nonzero default in the core's static state put the whole
+    core (14 MB) into the `.wasm`'s data; the static values are zeros now
+    (`arc::ZERO`) and the file grew 1,128 bytes.
+  - **Mikey's loop (seed 102356715)** draws the **dip**: a 3:02 swing, open
+    for its first 1:33, darkest at 2:05.5 (1.15 kHz), open again from 2:37.
+    Under item 63 it was deep, darkest at 1:41.7.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
