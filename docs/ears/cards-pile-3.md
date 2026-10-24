@@ -13,6 +13,7 @@ Ears 9 (Sonnet 5.5, medium), started 2026-10-24. Seven Aphex Twin records: Richa
 | Album | Tracks (deep pass) | Machine time | Status |
 |---|---|---|---|
 | Richard D. James Album (1996) | 10 (4) | 882 s | done |
+| Girl/Boy EP (1996) | 9 (2, plus the twin on the previous card) | 192 s | done |
 
 ---
 
@@ -119,3 +120,67 @@ Numbers to start from: Logon Rock Witch 132 BPM, 13 settled chords a minute, 10%
 - Girl_Boy Song is also Girl/Boy EP 01 (NLS mix, 2.8 s longer): see that card.
 - Chord names, key (margins 0.003 on two tracks), top lines and the swing numbers on dense tracks are guesses. Pitch under 60 Hz is good to a semitone only.
 - Pumping reads about 70% of true depth; all depths here are floors.
+
+---
+
+## Aphex Twin, Girl/Boy EP (1996)
+
+Ears 9, 2026-10-24, Sonnet 5.5. 9 tracks at mix level; deep pass on 03 Inkey$ (typical) and 05 Beetles (least like the rest). The third pick, 01 Girl/Boy (NLS mix), is the twin of Richard D. James Album 09 (Girl_Boy Song; 292.2 s against 289.4 s, -8.6 LUFS both, cross-correlation 0.37), which got its deep pass on the previous card, so I did not run it again: read that card's Girl_Boy Song lines (drums 8%, bass 71% of the power; grid 167 BPM, tempo uncertain; fast melodic bass; G lydian, margin 0.003). The NLS mix is 2.8 s longer, so it is a slightly different edit, not byte-for-byte the same audio. Stems by Demucs htdemucs. Machine time: 192 s for 175.5 s of deep-pass audio on 2 cores: pick 41 s, Demucs 104 s (56 and 49 s; 0.59 times audio, short tracks), measuring about 47 s. Ears 7's formula says 217 s (1.1 x 175.5 + 12 x 2), so this ran 12% under it.
+
+### Stem check (read first)
+- **03 Inkey$**: power drums 32%, bass 17%, other 49%, vocals 2% (bleed). Meter tool 85 BPM is half the drum grid's 172.4 BPM (beat 0.348 s); I use the grid. The grid, the 354 ms echo and the 172.4 BPM are the same numbers as Peek on the previous card.
+- **05 Beetles**: drums 0.01%, bass 0.1%, other 99.6%, vocals 0.3%. Drums and bass are empty: there is no beat, so meter, swing, on-beat counts and any kick or duck number are void. It is a pad-and-melody piece.
+
+### The hook
+- Two tracks: Inkey$ has a fast hat/tick grid at 172 BPM over a held bass note and bell chords that change about 21 times a minute; Beetles has no drums, only soft harmonic notes in a wide high band and slow chords in G major.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a held low note under bright, bell-like chords, then a drumless music-box piece.
+
+### Sounds
+
+**S1. Soft pad-melody (Beetles): other-1, 310 notes, 99%**
+- In synth terms: B2 (harmonic, string/reed-like), soft attack, falls 24 dB/s, centered (mix is wide only in the top: width -5 dB at 2 to 5 kHz, +5 dB above 5 kHz with correlation -0.56).
+- Hear it at 0:46.9 (A2, 0.27 s, +55 dB alone), 0:05.2, 0:47.1 (G2).
+- Check: weak group (silhouette 0.18, one group): one blended texture; the chords are real music, the separate parts are not.
+- Building blocks: **[JUDGMENT]** **Guess:** padSweep or a soft chord pad; the anti-phase air band is the unusual part.
+
+**S2. Bell-like bass-and-chords (Inkey$): other-1, 151 notes, 45%**
+- In synth terms: C2 (bell- or metal-like), soft attack, falls 26 dB/s, centered.
+- Hear it at 0:33.1 (D2, 0.29 s, +18 dB alone), 0:16.2 (C1, 0.24 s, +21 dB alone), 1:16.6 (no pitch, 2.31 s).
+- Check: weak group (silhouette 0.22); notes under 60 Hz good to a semitone only.
+- Building blocks: **[JUDGMENT]** **Guess:** softBell or roundBass in the low register.
+
+**S3. High tick (Inkey$): drums-1, 294 notes, 22%**
+- In synth terms: high tick, quick attack, falls 78 dB/s, centered.
+- Hear it at 1:05.7 (B6, 0.38 s, +32 dB alone), 1:06.1, 1:05.4.
+- **Kick line:** no tuned kick. The tool found only 5 kick events, 10 s apart (median pitch 118 Hz, C3/C#2), so the drums stem is the ticks and the low end sits in the bass stem. The bass stem is a pedal on C# (75% of the time), so the "duck" result is not meaningful: the kick events are too few (the curve is noise, -19 dB at the kick). The techniques tool's 1.7 dB dip at 279 ms is a floor from the beat spacing.
+- Building blocks: **[JUDGMENT]** **Guess:** hat/tick exists.
+
+### Techniques
+- **T1. Filter arc on every phrase.** Inkey$ is the busiest sweeper of the pile so far: the mix goes up and down 1.7 to 4.9 octaves roughly every 8 to 12 s (down 4.3 octaves at 0:12.0 to 0:19.5, up 3.5 at 0:19.5 to 0:28.5, down 4.9 at 0:45.0 to 0:53.0; 14 more in techniques.json). **[JUDGMENT]** **Guess:** padSweep covers the idea; the 12 s period is the new part.
+- **T2. Floor drop.** Inkey$ 0.80 a minute (1:14.5 for 4.2 s). Beetles too sparse to say. **[JUDGMENT]** **Guess:** floorDrop exists.
+- **T3. Echo.** Inkey$ drums 354 ms (+10.8 dB, 3 repeats) equals the 0.348 s grid beat: that is the pulse, not an echo. Beetles drums 494 ms is noise from an empty stem.
+- **T4. Entrances.** Inkey$ bass plays 52% of the time (in at 0:16, 0:50, 1:11.5); Beetles bass 23% of the time. Sections median 16 s and 20 s. **[JUDGMENT]** **Guess:** waits.
+
+### Theory
+- **Th1. Meter and swing.** Inkey$: tool beat 85 BPM = two grid pulses (172.4); straight eighths, no swing, so there is nothing to place at the grid's eighth or sixteenth. Beetles: no beat; the meter tool's 92 BPM is a guess.
+- **Th2. Keys.** Inkey$ C# ionian (margin 0.012, a guess); Beetles G ionian (margin 0.022, a guess just above the 0.02 line).
+- **Th3. Chords.** Inkey$ 21 changes a minute (14 settled, median 1.8 s; Cmaj7, C#maj7, F#5), 70% on a beat (chance 43%); Beetles 18 a minute (13 settled, median 3.9 s; Bmaj7, D#maj7, B5, C5), 67% on a beat (chance 46%). Chord names on dense music are a guess.
+- **Th4. Bass.** Inkey$ is a pedal: one note held or repeated, C# 75% of the time, 81% repeats, 0.39 notes a second. **[JUDGMENT]** **Guess:** held pedal bass exists.
+- **Th5. Repetition.** Beetles is the repeating one: 38% of bars near-duplicate an earlier one, repeat at 8 bars (0.82); Inkey$ 12% (bar length uncertain).
+
+### Space
+- Inkey$ is near-mono by part (bass -27 dB, drums -19, other -19) but its mix over time ranges -31 to -7 dB, so some sections open wide. Beetles is mono below 500 Hz (-27 and -24 dB) and opens above: -16 dB in the mids, -5 dB at 2 to 5 kHz, +5 dB above 5 kHz with correlation -0.56 (anti-phase air). **[JUDGMENT]** **Guess:** mono low end with a wide, slightly anti-phase top.
+
+### Vibes
+Numbers: Inkey$ 85 BPM (grid 172), 14 settled chords a minute, 21% of energy above 2 kHz, width -20 dB; Beetles 13 settled chords a minute, 1% above 2 kHz, width -20 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): twinkling, starry, tender, floating, serene (Beetles); nimble, skipping (Inkey$). Lean away (x0.2 to x0.5): booming, energetic. **Guess:** gentle and twinkly.
+
+### Wholesome take
+- Take the music-box chords of Beetles and the tiny hat grid of Inkey$. No brightness or polarity flag from the numbers apart from the anti-phase air band on Beetles, which is a mix choice to leave out; listening decides. **[JUDGMENT]** **Guess:** take the pad, leave the anti-phase top.
+
+### For later
+- Inkey$ bass-1 (132 notes, bell-like C2, 34 dB/s; hear 1:12.1, 0:37.3), other-2 (37 notes), drums-2 (42 notes, low thump): **[JUDGMENT]** **Guess:** wait.
+- Not given a deep pass (mix level only): 09 growth inst. (2:37.8, repetition 0.79, high), 04 £18 Snarerush mix (width -0.9 dB against an album median of -20.1), 06 Redruth mix (a short tail). **[JUDGMENT]** **Guess:** growth inst. is the one to hear.
+
+### Reliability notes for this card
+- Beetles: all beat numbers void (no drums, no bass). Inkey$: 5 kick events only, so kick and duck are not usable. Keys: margins 0.012 and 0.022. The NLS mix is covered by the previous card's Girl_Boy Song, not re-measured.
