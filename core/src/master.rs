@@ -37,7 +37,7 @@
 
 use crate::block::Signal;
 use crate::math;
-use crate::blocks::arc::Arc;
+use crate::blocks::arc::{self, Arc};
 use crate::blocks::compressor::{Compressor, Settings};
 use crate::delay::{Delay, buffer_len};
 use crate::blocks::filter::{Biquad, Kind};
@@ -251,11 +251,11 @@ impl Master {
         &mut self.flutter_depth
     }
 
-    /// The arc (queue item 63): a swing of `period` seconds from `time`, at
-    /// point `from` of it; 0 lets the last one go.
-    pub fn arc(&mut self, period: f64, from: f64, time: f64) {
+    /// The arc (queue items 63 and 63b): the swing `s` describes, from
+    /// `time`; a period of 0 lets the last one go.
+    pub fn arc(&mut self, s: &arc::Settings, time: f64) {
         for lane in &mut self.lanes {
-            lane.arc.begin(period, from, time);
+            lane.arc.begin(s, time);
         }
     }
 

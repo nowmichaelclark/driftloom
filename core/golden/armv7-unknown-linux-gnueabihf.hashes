@@ -9,7 +9,7 @@
 06-undertow frames=768000 out=609f03013cfed015 melody=c8e4a32ad34f53f6 chords=4c782865da19cb26 bass=4696c5d8f3df0aba texture=f79c08c8345b8b8f drums=74de9701593f5794 wash=dff2e40b0a1ba325 bus=92f627a63afbcf6b
 07-dust frames=816000 out=c4048c74a17e8159 melody=c8435bddb2add60e chords=01cee608218efd77 bass=480b775eb4cf5407 texture=4c85447ce0335c3f drums=24a4b684c5db1de9 wash=5169a02e231b3b25 bus=ca3252f7e45eb1ae
 08-bloom frames=384000 out=dcfb2895db8290e1 melody=b7752c80ec9e6093 chords=a4493aa612bc0f53 bass=cde25294698982c9 texture=0866ad311f983694 drums=a403153976297a19 wash=41984fa61f1ee325 bus=20ed970c8bddd428
-09-shrine frames=1200000 out=1fda45628401a29e melody=57c2b92baab64b74 chords=60c1fa45834914c4 bass=9984a5d6010c88dd texture=220acbc2c817fb25 drums=220acbc2c817fb25 wash=971c2a67040d6c6a bus=96f799f5c409d8de
+09-shrine frames=1200000 out=90bbb6312366e41f melody=57c2b92baab64b74 chords=60c1fa45834914c4 bass=9984a5d6010c88dd texture=220acbc2c817fb25 drums=220acbc2c817fb25 wash=971c2a67040d6c6a bus=5cfe6867b32f1d78
 10-shrine frames=768000 out=f655fa0fcbe7b33a melody=de0b995dba4acd30 chords=7dd4a08ba31c8f91 bass=c8809019277cee49 texture=b2707880d15d7802 drums=dff2e40b0a1ba325 wash=dff2e40b0a1ba325 bus=7f438ff8842e8254
 11-haven frames=1200000 out=0d6595d49fab8200 melody=91e4c1100cef901f chords=92531609866f54a2 bass=2220248132250afa texture=0fde6c784f747765 drums=220acbc2c817fb25 wash=220acbc2c817fb25 bus=493daaf1d176764f
 12-vapor frames=1200000 out=0618a0ceecd72918 melody=09ad23ef56d0d12f chords=356755a8ab3267c6 bass=b8bd4b8c7991fcf3 texture=40bb1b032f9a140e drums=220acbc2c817fb25 wash=185f54e87013ac83 bus=ee900b6bf6cefda2

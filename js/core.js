@@ -131,13 +131,15 @@ export const KALIMBA_BODY = 2;
 // is not 0 (the measure harness's 'bypass'); and `cold`, which starts both
 // compressors as Chromium's start, not warm, when its value is not 0, before
 // the first block (the harness's, to null them against Chromium's own).
-// Two more are not AudioParams either: `arcFrom` and `arcPeriod` start the arc (queue item 63, ARC_FROM and
-// ARC_PERIOD in core/src/lib.rs): where on its swing it starts, 0 to 1, and
-// its period from the call's time, 0 for none.
+// The arc's are not AudioParams either (queue items 63 and 63b; ARC_FROM and
+// the rest in core/src/lib.rs): `arcFrom`, where on its swing it starts, 0 to
+// 1; `arcShape`, 0 the deep swing and 1 the dip; `arcFloor`, the dip's floor
+// in Hz; `arcDip`, the dip's share of the swing; and last `arcPeriod`, its
+// period from the call's time, 0 for none, which starts it.
 export const MIX = {
   gains: 0, pump: 5, tails: 6, echo: 7, combFb: 8, combFreq: 9, combSum: 10, reverbOut: 11,
   tone: 12, wow: 13, flutter: 14, drive: 15, lfoStart: 16, master: 17, kill: 18, bypass: 19, cold: 20,
-  arcFrom: 21, arcPeriod: 22,
+  arcFrom: 21, arcPeriod: 22, arcShape: 23, arcFloor: 24, arcDip: 25,
 };
 // The AudioParam calls a parameter takes. HOLD is two: cancelScheduledValues
 // at the time, then setValueAtTime there with the parameter's `value`

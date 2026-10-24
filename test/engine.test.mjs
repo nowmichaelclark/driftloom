@@ -528,7 +528,8 @@ console.log('\nThe arc (queue item 63)');
   const arcs = r.calls.filter((c) => c.name === 'arcSetup');
   const o = arcs[0] && arcs[0].args[0];
   check('started once, at the first step', arcs.length === 1 && arcs[0].args[1] < 0.1, JSON.stringify(arcs.map((c) => c.args[1])));
-  check('over 2-5 minutes, from a bright point', o && o.period >= 120 && o.period <= 300 && o.from >= 0.4 && o.from <= 0.6, JSON.stringify(o));
+  const bright = o && (o.shape === 'deep' ? o.from >= 0.4 && o.from <= 0.6 : o.shape === 'dip' && o.from >= o.dip / 2 && o.from <= 1 - o.dip / 2);
+  check('over 2-5 minutes, from a bright point of its shape', o && o.period >= 120 && o.period <= 300 && bright, JSON.stringify(o));
   let none = null;
   for (let s = 1; s < 50 && !none; s++) {
     const y = rig(true, s * 17);
