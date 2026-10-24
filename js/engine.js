@@ -5,11 +5,11 @@
 // The actual note times are absolute Web Audio clock times, which are
 // sample-accurate. Standard two-clock pattern.
 
-import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf } from './generator.js';
+import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from './generator.js';
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond } from './choices.js';
+import { notesPerSecond, arcOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -235,21 +235,6 @@ function washOf(spec) {
   return { period, level: WASH_K * Math.pow(10, rel / 20), tint: hz, tintGain, tintHigh, tintQ };
 }
 
-// The arc (queue item 63; the prototypes, approved 2026-10-10): its period
-// drawn 2-5 minutes (the prototype's 120 s was for the demo), and where on
-// its swing a loop starts: a bright point, 0.4 to 0.6 of it (the cutoff 4.9
-// to 9 kHz), so a loop starts open and nothing goes missing at its start.
-// The prototype started every loop closed, at 300 Hz; this is a taste call,
-// for Mikey's ears.
-const ARC_SALT = 0x0a4c;
-
-function arcOf(spec) {
-  const r = new Rng(((spec.seed ^ ARC_SALT) >>> 0) || 1);
-  const period = r.range(120, 300);
-  const from = r.range(0.4, 0.6);
-  return { period, from };
-}
-
 // glass (queue item 59): how often a chord's first beat rings out, the
 // register (E5-G6), the bell (the prototype's FM options and cost; it
 // yields, so it never costs another part a note: js/synth.js), and its
@@ -430,8 +415,9 @@ export class Engine {
     const kept = keepPosition && JSON.stringify(wash) === JSON.stringify(this.wash);
     this.washChange = !kept && !!(wash || this.wash);
     this.wash = wash;
-    // And the arc (queue item 63).
-    const arc = this.base.choices && this.base.choices.arc === 'on' ? arcOf(spec) : null;
+    // And the arc (queue items 63 and 63b): its shape, period, start and
+    // floor, drawn from the loop's seed and vibes (js/choices.js, ARC).
+    const arc = this.base.choices && this.base.choices.arc === 'on' ? arcOf(spec.seed, vibesOf(spec)) : null;
     const held = keepPosition && JSON.stringify(arc) === JSON.stringify(this.arc);
     this.arcChange = !held && !!(arc || this.arc);
     this.arc = arc;

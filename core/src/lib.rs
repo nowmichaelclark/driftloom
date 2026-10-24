@@ -142,10 +142,18 @@ pub const BYPASS: u32 = TONE_FREQ + 7;
 /// Whether both compressors start cold, as Chromium's do.
 pub const COLD: u32 = TONE_FREQ + 8;
 /// The arc (queue item 63): where on its swing the next one starts, 0 to 1
-/// (0 the dark end, 0.5 the bright), for `ARC_PERIOD` to take.
+/// (0 the darkest, 0.5 the brightest), for `ARC_PERIOD` to take.
 pub const ARC_FROM: u32 = TONE_FREQ + 9;
-/// The arc's swing, in seconds, from `time` (0 lets it go).
+/// The arc's swing, in seconds, from `time` (0 lets it go). It starts the
+/// swing the other `ARC_` parameters set up, so it comes last.
 pub const ARC_PERIOD: u32 = TONE_FREQ + 10;
+/// The arc's shape (queue item 63b), for `ARC_PERIOD` to take: 0 the deep
+/// swing, 1 the dip (`blocks::arc::Shape`).
+pub const ARC_SHAPE: u32 = TONE_FREQ + 11;
+/// The dip's floor, in Hz, for `ARC_PERIOD` to take.
+pub const ARC_FLOOR: u32 = TONE_FREQ + 12;
+/// The share of the swing the dip takes, 0 to 1, for `ARC_PERIOD` to take.
+pub const ARC_DIP: u32 = TONE_FREQ + 13;
 
 /// Why `Core::start` or `Core::render` would not.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -399,8 +407,9 @@ pub struct Core {
     /// What the voices that send (`Voice::SENDS`) sent into the reverb and
     /// the echo this block, past their channels' sends.
     sends: Sends,
-    /// Where the next arc starts on its swing (`ARC_FROM`).
-    arc_from: f64,
+    /// The next arc, as the `ARC_` parameters set it up, for `ARC_PERIOD`
+    /// to start.
+    arc_next: blocks::arc::Settings,
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -450,7 +459,7 @@ impl Core {
             sent: 0,
             routes: [NO_ROUTE; ROUTES],
             sends: [[0.0; QUANTUM]; 2],
-            arc_from: 0.0,
+            arc_next: blocks::arc::ZERO,
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -473,7 +482,7 @@ impl Core {
         self.late = 0;
         self.missed = 0;
         self.dropped = [0; CAUSES];
-        self.arc_from = 0.0;
+        self.arc_next = blocks::arc::REST;
         self.clear();
         self.noise.make(rate);
         #[allow(clippy::cast_possible_truncation)] // the tables are 32-bit
@@ -611,7 +620,9 @@ impl Core {
     /// not 0, at once (the measure harness's `bypass`); `COLD` starts both
     /// compressors as Chromium's start, not warm, if `value` is not 0 (the
     /// harness's, to null them against Chromium's own; before the first
-    /// block). All take any `op`.
+    /// block). All take any `op`. The `ARC_` ones aren't either: they set
+    /// up the next arc (`blocks::arc`), and `ARC_PERIOD` starts it at
+    /// `time`.
     pub fn param(&mut self, id: u32, op: u32, value: f64, time: f64, tau: f64) -> bool {
         if !(value.is_finite() && time.is_finite() && tau.is_finite()) || self.rate <= 0.0 {
             return false;
@@ -643,11 +654,23 @@ impl Core {
                 true
             }
             ARC_FROM => {
-                self.arc_from = value;
+                self.arc_next.from = value;
+                true
+            }
+            ARC_SHAPE => {
+                self.arc_next.shape = blocks::arc::Shape::from_number(value);
+                true
+            }
+            ARC_FLOOR => {
+                self.arc_next.floor = value;
+                true
+            }
+            ARC_DIP => {
+                self.arc_next.dip = value;
                 true
             }
             ARC_PERIOD => {
-                self.master.arc(value, self.arc_from, time);
+                self.master.arc(&blocks::arc::Settings { period: value, ..self.arc_next }, time);
                 true
             }
             _ => self.mix.param(id, op, v, time, tau, now),

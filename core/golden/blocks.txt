@@ -145,3 +145,4 @@ wash/swell=tint-gain b8b9c3e1ba5ad594 -36.34 -19.87 9.5
 wash/swell=tint-high 0fca822bb8afcb1b -36.93 -20.45 37.9
 wash/swell=tint-q b1011e3d386afbda -36.24 -18.70 14.0
 arc/breath 1f111815e3370015 -21.42 -9.93 26.9
+arc/dip 609eb16a67d06ce8 -20.60 -9.23 32.9

@@ -23,7 +23,7 @@ import { Rng } from '../js/rng.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
 import { encodeSong } from '../js/share.js';
 import { VIBE_IDS } from '../js/vibes.js';
-import { CHOICES, CHANGE_COUNTS, changesIn } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, changesIn, arcOf } from '../js/choices.js';
 
 // ------------------------------------------------------------ arguments
 
@@ -110,7 +110,8 @@ driftloom generation statistics
   --choices reports queue item 54's draw (js/choices.js) over the corpus:
   the share of loops with none, one, two or three of the sound batch's
   changes beside the weights they were drawn with (a loop eligible for
-  fewer gets fewer), and how often each choice plays each option.
+  fewer gets fewer), how often each choice plays each option, and how
+  often a loop with the arc draws each of its shapes (item 63b).
 
   --write-baseline and --check are the balance lock. The baseline records
   the melodic character of a corpus -- how often a loop has a melody,
@@ -1246,13 +1247,20 @@ function choicesReport(opts) {
   const master = new Rng(opts.seed || 1);
   const byCount = new Map();
   const byOption = new Map();
+  // The arc's shapes (queue item 63b), among the loops that draw it.
+  const shapes = new Map();
   for (let i = 0; i < n; i++) {
-    const { choices } = render(newSpec(master.seed32()));
+    const spec = newSpec(master.seed32());
+    const { choices } = render(spec);
     const k = changesIn(choices);
     byCount.set(k, (byCount.get(k) || 0) + 1);
     for (const c of CHOICES) {
       const key = `${c.id}: ${choices[c.id]}`;
       byOption.set(key, (byOption.get(key) || 0) + 1);
+    }
+    if (choices.arc === 'on') {
+      const { shape } = arcOf(spec.seed, null);
+      shapes.set(shape, (shapes.get(shape) || 0) + 1);
     }
   }
   const total = CHANGE_COUNTS.reduce((a, [, w]) => a + w, 0);
@@ -1272,6 +1280,13 @@ function choicesReport(opts) {
     out.push(rule(1));
     for (const c of CHOICES) {
       for (const [option] of c.options) out.push(line(`${c.id}: ${option}`, [pct(byOption.get(`${c.id}: ${option}`) || 0, n)]));
+    }
+    const arcs = [...shapes.values()].reduce((a, b) => a + b, 0);
+    if (arcs) {
+      out.push('');
+      out.push(line('arc shape', ['of arcs']));
+      out.push(rule(1));
+      for (const [shape] of [['deep'], ['dip']]) out.push(line(shape, [pct(shapes.get(shape) || 0, arcs)]));
     }
   }
   out.push('');
