@@ -16,6 +16,7 @@ Ears 9 (Sonnet 5.5, medium), started 2026-10-24. Seven Aphex Twin records: Richa
 | Girl/Boy EP (1996) | 9 (2, plus the twin on the previous card) | 192 s | done |
 | Come to Daddy (EP, 1997) | 8 (8) | 1,856 s | done |
 | 51/13 Aphex Singles Collection (2 non-twin tracks new; On, 73-Yips, Donkey Rhubarb repeat) | 12 (4) | 1,100 s | done |
+| Windowlicker EP (1999) | 5 (5) | 1,241 s | done |
 
 ---
 
@@ -345,3 +346,79 @@ Numbers: On 136 BPM, 12 settled chords a minute, width -12 dB; Crowsmangegus 83 
 ### Reliability notes for this card
 - Crowsmangegus: bass stem thin (3%), so bass notes, pumping and wobble are guesses; only 35 kicks. 73-Yips: no usable drum grid. Two keys are guesses (margins 0.003 and 0.008). Pitch under 60 Hz good to a semitone only; pumping reads 70% of true depth.
 - Three of the four tracks repeat earlier records (see the correction at the top), so this card adds one new reading (Crowsmangegus) and three cross-checks that match pile 1 and pile 2 to within the tool's error.
+
+---
+
+## Aphex Twin, Windowlicker EP (1999)
+
+Ears 9, 2026-10-25, Sonnet 5.5. 5 tracks, every one given the deep pass (EP rule): 01 Windowlicker (6:07), 02 Equation (5:47), 03 Nannou (4:16), 04 Windowlicker [Original Demo] (2:37), 05 Equation [Early Version, Edit] (1:46). No title repeats another record in the pile (04 and 05 are earlier versions of 01 and 02, measured as their own tracks). Stems by Demucs htdemucs. Machine time: 1,241 s (20.7 min) for 20.6 min of audio on 2 cores: pick 43 s, Demucs 623 s (182, 163, 139, 77, 61 s; 0.51 times audio), measuring 575 s. Ears 7's formula (1.1 x 1,233 s + 12 x 5) says 1,416 s, so this ran 12% under it.
+
+**Voices.** The Windowlicker versions carry a sung or spoken part (vocals stem 19% on 01, 28% on 04, 8% on 02). I leave out what it says; it appears below only as a "voice-like part" with levels.
+
+### Stem check (read first)
+- **01 Windowlicker**: drums 15%, bass 48%, other 18%, vocals 19%. Meter tool 123 BPM agrees with the drum grid's 123.0 BPM (beat 0.488 s). The bass stem is the biggest part and holds the melodic bass.
+- **02 Equation**: drums 53%, bass 4% (thin: bass notes, pumping and wobble are guesses), other 35%, vocals 8%. Meter tool 83 BPM is half of the grid's 166.7 BPM (0.360 s); use the grid.
+- **03 Nannou**: drums 20%, bass 0.0% (empty: bass numbers void), other 80%, vocals 0%. Meter tool 101 BPM is two thirds of the grid's 151.9 BPM (0.395 s); use the grid.
+- **04 Windowlicker [Original Demo]**: drums 40%, bass 19%, other 13%, vocals 28%. Meter 123 BPM agrees with the grid's 123.0 BPM.
+- **05 Equation [Early Version, Edit]**: drums 64%, bass 26%, other 11%, vocals 0.1% (bleed). Meter tool 105 BPM is two thirds of the grid's 156.7 BPM (0.383 s); use the grid.
+
+### The hook
+- A bass-led, medium-tempo groove (123 BPM on both Windowlicker versions) with a voice-like part on top, a dry kick and a very busy chord layer (31 to 50 changes a minute on four of five), against a drumless-bass bell pad (Nannou).
+- **[JUDGMENT]** One line a listener would say. **Guess:** a bouncing, wobbly bass under a wordless voice and shimmering bells.
+
+### Sounds
+
+**S1. Noisy bell-pad (Nannou): other-1, 312 notes, 43%**
+- A3, mixed or noisy partials, quick attack, falls 26 dB/s, centered. Hear it at 2:11.6 (E4, 0.56 s, +59 dB alone), 2:07.8 (A3, 0.43 s), 2:16.9 (A3, 0.37 s). Check: weak group (silhouette 0.23); one blended texture. The pad sits in the other stem on the whole track (80% of the power). **[JUDGMENT]** **Guess:** softBell or pad; the wide, noisy tone.
+
+**S2. Snappy snare with a right lean (Equation Early Version): drums-1, 381 notes, 38%**
+- Mid snap, quick attack, falls 134 dB/s, leans right (pan +0.41). Hear it at 1:21.6 (F1, 0.24 s, +41 dB alone), 0:55.8, 0:07.0 (B1). The mix of this track is the widest here (width -4 dB over time, 3 dB at 2 to 5 kHz with correlation -0.46). **[JUDGMENT]** **Guess:** snare exists; the panned placement is the new part.
+
+**S3. Metal bell (Equation): other-1, 338 notes, 36%**
+- G1, bell- or metal-like (off whole multiples), soft attack, falls 84 dB/s, centered. Hear it at 0:47.3 (F#2, 0.19 s, +50 dB alone), 3:18.5 (G2, 0.58 s), 3:19.1. **[JUDGMENT]** **Guess:** bell in a low register.
+
+**S4. High bell (Nannou): other-2, 188 notes, 31%**
+- E5, bell- or metal-like, soft attack, falls 20 dB/s. Hear it at 2:21.1 (F5, 0.35 s, +58 dB alone), 2:08.4, 2:10.9. Weak group (0.23). **[JUDGMENT]** **Guess:** bell exists.
+
+**S5. Dry kick (Equation): drums-1, 322 notes, 26%**
+- Low thump, quick attack, falls 61 dB/s. Hear it at 1:50.8 (A1, 0.25 s, +43 dB alone), 1:17.1, 1:17.3. **Kick line:** median 75 Hz, wide (42 to 123; D#2 8%, A2 7%), falls 141 dB/s, every 0.545 s. The bass stem is thin (4%), so the curve (-3.3 dB at the kick, flat within 6.6 dB) is a guess: no duck. **[JUDGMENT]** **Guess:** kick exists.
+
+**S6. Click-kick (Equation Early Version): drums-2, 119 notes, 25%**
+- Low thump, quick attack, falls 85 dB/s, brighter over the note. Hear it at 0:55.7 (E2, 0.11 s, +44 dB alone), 0:31.4, 0:56.3. **Kick line:** median 71 Hz (57 to 105; B1 16%, E2 14%), falls 85 dB/s, every 0.565 s. The bass is 8 dB under its peak at the kick, 18 dB under at 90 ms, and climbs back to its top by 500 ms: a deep, slow duck of about 18 dB over half a second, then it plays through the rest of the gap. This is the clearest sidechain-style pump on the record (the pump tool reads only 4.7 dB, peak 85 ms, at 70% depth: the two disagree on size, agree it ducks). **[JUDGMENT]** **Guess:** ducking exists; the 500 ms recovery is the long version.
+
+**S7. Wobbly bell-bass (Windowlicker): bass-1, 346 notes, 24%**
+- G1, bell- or metal-like, slow swell, falls 72 dB/s. Hear it at 3:01.7 (F#1, 0.19 s, +21 dB alone), 5:52.7 (B0, 0.41 s), 5:53.4 (D#2). Weak group (0.20). Other stem wobbles about 16 cents at 4.5 Hz (a clear fast vibrato). **Kick line:** kick median 54.5 Hz (30 to 129; B0 28%, which sits on the tool's 30 Hz floor, so under 40 Hz is a guess), falls 162 dB/s, every 0.490 s (the grid beat). The bass (48% of the power) stays within 5 dB all round: -4.3 dB at the kick, back to its top by 275 ms: no real duck, it plays on and between the kicks. **[JUDGMENT]** **Guess:** an FM-style bell bass with a 4.5 Hz vibrato; missing block is a swelling bell-bass.
+
+**S8. Low thump (Windowlicker Original Demo): drums-1, 199 notes, 23%**
+- Low thump, falls 102 dB/s, brighter over the note. Hear it at 0:45.9, 1:24.9, 1:48.3 (pitch not read, +12 dB alone). **Kick line:** kicks every 0.490 s (the same as the final version); 65% read B0 (the 30 Hz floor, not a trusted pitch), falls 231 dB/s. The bass is 8 dB under its peak at the kick, back to the top by 50 ms and stays up to 250 ms, then falls to -16 dB by 465 ms: a short duck, then the bass swells off the kick and fades before the next. **[JUDGMENT]** **Guess:** same bass as the final; the shorter duck.
+
+**Nannou kick line.** The bass stem is empty, so the duck is void (the curve's -19 dB is the other stem). Kicks median 68 Hz (30 to 118), falls 261 dB/s, every 0.395 s (the grid beat).
+
+### Techniques
+- **T1. Floor drops.** Equation 2.12 a minute (0:45.0 for 3.8 s, 3:13.5 for 6.0 s, 4:32.0 for 7.2 s, 4:40.0 for 23.2 s: the last is an outro); Windowlicker 0.91 a minute (2:34.0 for 3.8 s, 4:50.0 for 3.0 s); the Demo and the Early Version none; Nannou too sparse to say. **[JUDGMENT]** **Guess:** floorDrop exists; Equation's habit of dropping the floor for a few seconds then a long outro is the idea.
+- **T2. Echo that equals the beat.** Windowlicker and the Demo have a 489 ms drum echo (+18.3 and +24.0 dB, 2 repeats): that is the 0.488 s grid beat, so it is the beat, not a separate delay. Equation 359 ms (+11.8 dB, 3 repeats) is the 0.36 s grid beat. Nannou 394 ms (+16.9 dB, 2 repeats) is the 0.395 s grid beat. None claimed as a delay.
+- **T3. Tape wobble.** Windowlicker other 16 cents at 4.5 Hz; Equation bass 15 cents at 0.5 Hz and other 6 cents at 0.3 Hz (slow); Nannou other 6 cents at 4.3 Hz. The tool reads 70% of true depth. **[JUDGMENT]** **Guess:** the slow bass drift (0.5 Hz) is a pitch-drift idea; waits.
+- **T4. Builds.** Equation 1:02 to 1:22 and 1:45 to 2:09; Windowlicker 2:35 to 2:55. **[JUDGMENT]** **Guess:** waits.
+
+### Theory
+- **Th1. Meter and swing against the grid.** Windowlicker and the Demo: tool and grid agree at 123 BPM; the final version's off-beat lands at 0.55 of the beat, a 10% lean (near straight) at the grid's **eighth**; the Demo has no clear off-beat. Equation: straight eighths. Nannou (tool 101, grid 151.9) and the Early Version (tool 105, grid 156.7): the tool reports a triplet (0.66 / 0.67) but the grid pulse is exactly 2/3 of the tool's beat (0.395 / 0.594 s, 0.383 / 0.571 s), so that "swing" is the grid pulse itself, not a lean on the eighth or the sixteenth. So this EP has no clear triplet shuffle: the batch-5 lead gets nothing here.
+- **Th2. Keys.** Nannou F lydian (margin 0.037, reliable); the rest are guesses: Windowlicker C aeolian (0.011), Demo D# ionian (0.009), Early Version G locrian (0.008), Equation G locrian (0.002).
+- **Th3. Chord rates.** Demo 50 changes a minute (only 10 distinct chords, 83% on a beat against 61% chance: clean and rhythmic); Nannou 40; Windowlicker 39 (33 distinct; 64% on a beat); Equation 31 (43 distinct, 45% on a beat: not tied to beats); Early Version 20 (C#maj7 52%). Chord names (maj7, min7, sus2) are a guess on dense music.
+- **Th4. Bass.** Windowlicker wanders C, D#, G#, B at 0.69 notes a second; Demo thirds and fifths on G#, D#, F; Early Version slides F# / G at 0.08 notes a second (the slowest pile 3 bass); Equation bass is a guess (thin stem). **[JUDGMENT]** **Guess:** a slide bass with a deep duck (Early Version) is worth a note.
+
+### Space
+- Equation Early Version is the widest: width -4 dB over time (-2 to -5), the 2 to 5 kHz band +3 dB (correlation -0.46), drums panned +0.26, sub -15 dB. Nannou's sub is wide (-1 dB, correlation 0.13) while 120 Hz and up is near-mono (-17 to -16 dB): a wide low end is unusual and the stem split is empty there, so treat as the separator's work. Equation is near-mono (-19 to -33 dB). Windowlicker is moderately wide in every band (-18 to -10 dB); the Demo mono in the bass (-45 dB) and opens above 5 kHz (-7 dB). **[JUDGMENT]** **Guess:** mono bass, wide top, one track (Early Version) wide throughout.
+
+### Vibes
+Numbers: Windowlicker 123 BPM, 14 settled chords a minute, width -18 dB; Equation 166 grid, 16 settled, -29 dB; Nannou 152 grid, 13 settled, -11 dB; Demo 123 BPM, 15 settled; Early Version 157 grid, 13 settled, -4 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): bouncy, quirky, twinkling, chiming, strange, mischievous. Lean away (x0.2 to x0.5): still, hushed, meditative, solemn-like vibes such as reverent. Never 0. **Guess:** playful and shimmery.
+
+### Wholesome take
+- Take the wobbling bell-bass, the clean fast chords of the Demo and the chiming pad of Nannou. Leave the deep 18 dB duck of the Early Version unless it sounds good (it can feel seasick) and the voice-like part (not wordless enough to use). **[JUDGMENT]** **Guess:** take the bounce and the bells; leave the voice-like part.
+
+### For later
+- Windowlicker bass-2 and the Demo's other groups; Equation drums-2; Nannou drums: **[JUDGMENT]** **Guess:** wait.
+- The voice-like parts on Windowlicker (19%) and the Demo (28%): a later vowel block, never words. **[JUDGMENT]** **Guess:** wait.
+
+### Reliability notes for this card
+- Nannou: bass void. Equation: bass thin, bass numbers guesses. Kick pitches read B0 (the 30 Hz floor) on Windowlicker and the Demo, so those low notes are not trusted. Keys: only Nannou's is above 0.02. Two tracks' meter tools disagree with the grid by 3:2; I used the grid. Pumping depths read 70% of true; the kick_check duck curve and the pump tool differ on depth for the Early Version and the Demo, so call both.
