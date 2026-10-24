@@ -901,6 +901,11 @@ compiled core (item 16) to run outside a browser, and an API: set the
 parameters, get bar and phrase callbacks, trigger stingers. Not planned;
 recorded so item 16 is designed with it in mind.
 
+**Now a real game (Mikey, 2026-10-24):** Broken Friends, his Godot
+creature-care game, is where this happens: a theme per creature, music
+by time of day and by what is happening at camp. `docs/CORE.md`,
+promise 10.
+
 ## 19. Words that steer the music — **L, a design project, worth doing well**
 
 From Mikey's mood vocabulary (`docs/MOODS.md`, 178 words). Agreed

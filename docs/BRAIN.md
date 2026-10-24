@@ -382,13 +382,13 @@ Stated decisions, not inferences. Dated where the date matters.
 - **Bit-identical everywhere** (Mikey, 2026-10-13): the same code makes
   exactly the same samples on every device; the core carries its own
   math.
-- **Three existing games prove the core** (Mikey, 2026-10-13): if he, a
-  solo dev, can put it into three games seamlessly with Claude's help,
-  it's a breeze for others. Light enough for his modest laptop, running
-  on various devices: one open source, one source port (like an Ocarina
-  of Time port or RollerCoaster Tycoon), one traditional, easy to mod.
-  Possibly one early, to test as we go. Brain's picks in `docs/CORE.md`
-  (promise 10): Luanti (first, phase 4), OpenRCT2, Stardew Valley.
+- **Broken Friends is the one game that proves the core** (Mikey,
+  2026-10-24): his own Godot game is "the one and the only test game
+  we're going to use. I don't want to make music mods for those other
+  games anymore anyways. Maybe another time." It replaces the three
+  games of 2026-10-13 (Luanti, OpenRCT2, Stardew Valley) and takes
+  phase 4. In the game's own plans it is "Driftloom's most important
+  proof game" (its decision 0016). `docs/CORE.md`, promise 10.
 - **Requests (Mikey, 2026-10-13):** in the app, listeners choose more
   for the next loop -- bars, tempo, rhythm, scale, etc. -- alongside the
   vibes; developers ask the same way ("a peaceful, zany loop at 77 bpm,
@@ -546,7 +546,7 @@ Stated decisions, not inferences. Dated where the date matters.
 ### Start here (for the next brain)
 
 - **The plan to phase 2 (Mikey, 2026-10-15).** He wants more
-  instruments, profiles and vibes before the Luanti step, with ears
+  instruments, profiles and vibes before the Broken Friends step, with ears
   sessions to find them. Timed so nothing is built twice:
   - **Now, alongside everything:** ears sessions (records he loves ->
     candidate sounds as offline clips; his verdicts, including on
@@ -659,7 +659,7 @@ Stated decisions, not inferences. Dated where the date matters.
     album has been heard.
   - **Session 27** (hands): the first item of phase 2.
   - **New profiles wait until phase 2 lands**, then go in as data
-    (before phase 3 and Luanti). Phase order in the charter unchanged.
+    (before phase 3 and Broken Friends). Phase order in the charter unchanged.
 - **Next picks (2026-10-13):** Mikey chose the design
   (`design/next-picks.md`, from Painter 5, PR #205); see "Next picks,
   the design" under "The core". Painter 6 (app track) is building the
@@ -751,6 +751,14 @@ Stated decisions, not inferences. Dated where the date matters.
   (`js/vibes.js`, the brain's to edit).
 
 ### The log
+
+**Broken Friends session (Opus 5.5, 2026-10-24), not a brain session.**
+Mikey made Broken Friends the one game that proves the core (promise 10
+rewritten; phases 4 and 7; "Answered"; Painter section 9). That
+session is building the Godot extension in the game's repo
+(`rust/driftloom-godot/`), checked against the golden hashes, and
+testing Godot's web build with extensions; its results will come back
+here as notes, not as queue items.
 
 **Brain, 2026-10-19 (Session 22, continued), after item 46b.** #241
 read (its report and notes; the figures not rerun): the stereo shape is a

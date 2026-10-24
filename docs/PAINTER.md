@@ -153,11 +153,10 @@ Instruments are becoming small recipes anyone can make, including mods.
 
 ## 9. Games and developers
 
-Driftloom's engine is going into three games (Luanti, OpenRCT2, Stardew
-Valley), where the music follows time of day, weather and place.
+Driftloom's engine is going into Broken Friends, Mikey's own game
+(Mikey, 2026-10-24; it replaced the three mod games), where the music
+follows each creature, the time of day and what is happening at camp.
 
-- **Mod icons and screenshots** for each game's mod sites (Luanti's
-  ContentDB, OpenRCT2's and Stardew's mod pages).
 - **An in-game "now playing" toast.** Optional, small, out of the way.
 - **A name and logo for the engine itself**, separate from the app, and
   simple diagrams for the developer guide.
