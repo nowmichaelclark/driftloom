@@ -17,6 +17,7 @@ Ears 9 (Sonnet 5.5, medium), started 2026-10-24. Seven Aphex Twin records: Richa
 | Come to Daddy (EP, 1997) | 8 (8) | 1,856 s | done |
 | 51/13 Aphex Singles Collection (2 non-twin tracks new; On, 73-Yips, Donkey Rhubarb repeat) | 12 (4) | 1,100 s | done |
 | Windowlicker EP (1999) | 5 (5) | 1,241 s | done |
+| 2 Remixes by AFX (2001) | 3 (3) | 772 s | done |
 
 ---
 
@@ -422,3 +423,66 @@ Numbers: Windowlicker 123 BPM, 14 settled chords a minute, width -18 dB; Equatio
 
 ### Reliability notes for this card
 - Nannou: bass void. Equation: bass thin, bass numbers guesses. Kick pitches read B0 (the 30 Hz floor) on Windowlicker and the Demo, so those low notes are not trusted. Keys: only Nannou's is above 0.02. Two tracks' meter tools disagree with the grid by 3:2; I used the grid. Pumping depths read 70% of true; the kick_check duck curve and the pump tool differ on depth for the Early Version and the Demo, so call both.
+
+---
+
+## AFX, 2 Remixes by AFX (2001)
+
+Ears 9, 2026-10-25, Sonnet 5.5. 3 tracks, every one given the deep pass (EP rule): 01 Flow Coma (AFX Remix) (4:59), 02 Box Energy (AFX Remix) (6:30), 03 Bonus High Frequency Sounds (1:58). No title repeats another record in the pile. Stems by Demucs htdemucs. Machine time: 772 s (12.9 min) for 13.5 min of audio on 2 cores: pick 30 s, Demucs 424 s (172, 196, 56 s; 0.53 times audio), measuring 318 s. Ears 7's formula (1.1 x 808 s + 12 x 3) says 925 s, so this ran 17% under it.
+
+### Stem check (read first)
+- **01 Flow Coma**: drums 71%, bass 14%, other 10%, vocals 4% (bleed). Meter tool 120 BPM against the drum grid's 161.3 BPM (beat 0.372 s): the grid's pulse is 0.744 of the tool's beat, so the two are in a 3:2 relation (use the grid; check by ear).
+- **02 Box Energy**: drums 53%, bass 2% (thin: bass notes, pumping and wobble are guesses), other 38%, vocals 7% (bleed). Meter tool 85 BPM agrees with the grid's 84.7 BPM (beat 0.708 s).
+- **03 Bonus High Frequency Sounds**: drums 0.0%, bass 0.0%, other 93%, vocals 7%. Drums and bass are empty: no beat, so meter, swing, on-beat counts, kick and duck numbers are void. It is a drone.
+
+### The hook
+- Two heavy, nearly mono drum tracks (drums 71% and 53%, width -32 and -29 dB) and one drone of high bell tones; the chord layer is slow (22 and 26 changes a minute, long stretches on one chord: Flow Coma G#maj7 48%, Bonus Dmaj7 92%).
+- **[JUDGMENT]** One line a listener would say. **Guess:** busy mono drums over a slow chord, then a long, shimmering high drone.
+
+### Sounds
+
+**S1. High held tone (Bonus High Frequency Sounds): other-1, 177 notes, 59%**
+- D6 (harmonic, string/reed-like), slow swell, falls 0 dB/s (it does not decay; it is held), centered, mono (width -38 dB). Hear it at 0:47.4 (D6, 0.51 s, +47 dB alone), 0:09.7 (D6, 0.83 s), 0:46.4. Pitch is D major pentatonic (D 0.37, C# 0.26); the track is Dmaj7 92% of the time. **[JUDGMENT]** **Guess:** a high sine-like held tone, a pad voice an octave and a half up; exists as pad.
+
+**S2. Bell texture (Box Energy): other-1, 484 notes, 42%**
+- D2, bell- or metal-like (off whole multiples), soft attack, falls 42 dB/s, centered; the other stem wobbles about 17 cents at 8.0 Hz (the tool reads 70% of true depth: a fast, clear vibrato). Hear it at 4:27.8 (no pitch, 0.45 s, +34 dB alone), 4:32.8, 4:27.2. **[JUDGMENT]** **Guess:** softBell with a fast 8 Hz wobble; the wobble is the new part.
+
+**S3. Kick-and-tom layer (Flow Coma): drums-1, 374 notes, 37%**
+- Low thump, soft attack, falls 69 dB/s. Hear it at 0:30.1 (B1, 0.12 s, +48 dB alone), 0:29.3 (F#1), 2:47.9 (A1, 0.56 s). **Kick line:** kick A1 24% (median 60 Hz, 50 to 98), falls 97 dB/s, every 0.582 s. The bass is 4.5 dB under its peak at the kick, 10.6 dB under at 95 ms, and back near its top by 265 ms: a duck of about 6 to 10 dB with a 250 ms recovery, then it plays between the kicks (the pump tool: 4.1 dB, peak 95 ms; both agree). **[JUDGMENT]** **Guess:** tuned kick on A1 with ducking; both exist.
+
+**S4. Shimmer (Bonus): other-2, 86 notes, 24%**
+- B6, mixed or noisy partials, slow swell, held (0 dB/s). Hear it at 1:10.7 (A#6, 0.48 s, +47 dB alone), 0:12.9, 0:12.3. **[JUDGMENT]** **Guess:** a high airy layer; waits.
+
+**S5. Bell-bass (Flow Coma): bass-1, 476 notes, 22%**
+- G#1, bell- or metal-like, quick attack, falls 79 dB/s. Hear it at 2:51.7 (G#1, 0.28 s, +18 dB alone), 2:52.0, 2:52.4. Bass numbers: bass plays E 45% and D# 29% (0.17 notes a second, 60% repeats). Pitch under 60 Hz good to a semitone only. **[JUDGMENT]** **Guess:** same bell-bass as the Windowlicker card; waits.
+
+**S6. Wide-tail snare (Box Energy): drums-1, 186 notes, 20%**
+- Mid snap, soft attack, falls 26 dB/s. Hear it at 5:14.1 (0.38 s, +34 dB alone), 5:11.3, 5:12.0. **Kick line:** the bass stem is thin (2%) so the duck is a guess. Kick median 87 Hz, wide (30 to 130; B0 20% is the tool's 30 Hz floor), falls 89 dB/s, every 0.535 s; the bass sits within 5.5 dB all round (-5.1 dB at the kick): no duck found. **[JUDGMENT]** **Guess:** snare exists.
+
+### Techniques
+- **T1. Floor drops.** Box Energy 0.68 a minute (3:27.0 for 10.8 s, 4:30.2 for 4.0 s, 4:35.8 for 4.5 s); Flow Coma and Bonus none. **[JUDGMENT]** **Guess:** floorDrop exists.
+- **T2. Echo.** Flow Coma drums 718 ms (+11.9 dB, 1 repeat; about 1.9 grid pulses of 0.372 s, so about two pulses: the beat); Bonus drums 444 ms (void: the drum stem is empty). **[JUDGMENT]** **Guess:** none to claim.
+- **T3. Wobble and speed.** Box Energy other 17 cents at 8.0 Hz; Bonus bass 13 cents at 0.4 Hz with a 7-cent speed move in 4 s (bass stem empty here, so the number is read off the drone's low partials, a guess). **[JUDGMENT]** **Guess:** the 8 Hz wobble is a vibrato rate; waits.
+- **T4. Builds.** Box Energy 2:29 to 2:53. Sections: Flow Coma median 22 s, Box Energy 20 s (16 boundaries). **[JUDGMENT]** **Guess:** waits.
+
+### Theory
+- **Th1. Meter and swing against the grid.** Flow Coma: tool says swung, off-beat at 0.78 of its beat; the grid pulse is 0.744 of the tool's beat (0.372 / 0.500 s), so that is the grid pulse again, not a lean on the eighth or sixteenth. Box Energy: straight eighths, tool and grid agree. Bonus: no beat. So no swing at the grid's eighth or sixteenth on this record.
+- **Th2. Keys.** All guesses: Flow Coma D# ionian (margin 0.016), Box Energy D phrygian (0.006), Bonus D ionian (0.014, fits D major pentatonic; the drone is the clean reading).
+- **Th3. Chords.** Flow Coma 22 changes a minute (27 distinct, G#maj7 48%, 56% on a beat against 60% chance: not tied to beats); Box Energy 26 (40 distinct, 43% on a beat against 42%); Bonus 2 a minute (Dmaj7 92%; one chord lasts 66 s at the 90th percentile). Chord names are a guess.
+- **Th4. Bass.** Flow Coma and Box Energy move slowly (0.17 and 0.13 notes a second; Box Energy repeats 81%, D 39%, G 23%). Bonus has none.
+
+### Space
+- Flow Coma is a mono file in every band (-31 to -34 dB; drums -34, bass -38). Bonus is mono (-38 dB mids and presence, -20 dB above 5 kHz). Box Energy is near-mono (-16 to -23 dB) but its width over time goes from -32 to -3 dB (10th to 90th percentile), so some sections open wide. **[JUDGMENT]** **Guess:** mono groove, wide moments only in Box Energy.
+
+### Vibes
+Numbers: Flow Coma 161 BPM grid, 11 settled chords a minute, width -32 dB; Box Energy 85 BPM, 14 settled, -29 dB; Bonus 2 settled a minute, width -38 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): hypnotic, floating, starry, twinkling, still (Bonus), quirky (Box Energy). Lean away (x0.2 to x0.5): bouncy, energetic. **Guess:** hypnotic and a little odd.
+
+### Wholesome take
+- Take the held high drone of Bonus (very gentle, mono, one chord) and the steady dry groove of Flow Coma. Leave the fast 8 Hz wobble of Box Energy if it sounds nervous. **[JUDGMENT]** **Guess:** take the drone and the groove; leave the nervous wobble.
+
+### For later
+- Flow Coma other-1 (418 notes, A2 noisy), drums-2; Box Energy bass-1 (425 notes, D2, 222 dB/s), drums-2, and the vocals-labelled groups (228 and 166 notes at C3 and A#4, bell-like): these are bleed, not voices. Bonus's vocals group (218 notes at F#5, 415 dB/s) is a bleed from high clicks. **[JUDGMENT]** **Guess:** all wait.
+
+### Reliability notes for this card
+- Bonus: no beat, every kick, duck and swing number is void. Box Energy: thin bass stem, so bass notes, pumping and the duck are guesses. Keys are all guesses (margins 0.006 to 0.016). Flow Coma's tempo comes from the grid (the tool is in a 3:2 relation). Pumping depths read about 70% of true depth.
