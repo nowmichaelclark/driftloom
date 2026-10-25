@@ -3911,6 +3911,44 @@ Mikey decides this line:
     1.18 to 1.38 times mono (lite 1.18 and 1.24), under 1.5; mono +0.13% to
     +0.27% against item 64. `.wasm` 238,357 bytes (225,186 before).
 
+- **Item 66, the Mono switch (Session 25b, hands, Opus 5.5, 2026-10-25).**
+  The app plays the stereo render by default; **Mono** (Advanced, under a
+  new "Sound" heading, a plain switch like Lighter on processor's, for a
+  Painter session to restyle) plays the mono render, exactly today's. Kept
+  in the prefs (`mono`), never in a share code or a backup. The `?stereo`
+  stand-in is gone.
+  - **Switching while a loop plays:** nothing is rebuilt. The app's core
+    node always has two output channels (the mono render in both; the
+    measure harness's keeps one a lane, as before), and the switch is a
+    message (`CoreHost.setLayout`, `dl_layout`). The core fades
+    (`Core::set_layout`, `LAYOUT_FADE` 0.25 s): into stereo the master takes
+    two lanes at once (the second takes the first's state, the stereo
+    compressors the mono ones', `Master::switch_layout`) and the side starts
+    from silence and fades in; into mono the side fades out, the master keeps
+    two lanes until they agree (its wobble line and the compressors'
+    lookahead still hold side for about 30 ms; within -100 dB, or at the
+    latest 0.5 s), then one. The core's test flips a held chord to stereo and
+    back: the side's second difference over each switch is 0.7 and 0.85
+    times the stereo render's own over the same frames (switched at once,
+    without the fade, 2.3 and 2.7 times; the test's bound is 1.5).
+  - **Exact:** a render that starts mono and stays mono is the mono render
+    bit for bit, and one that starts stereo the stereo one: every golden,
+    mono and stereo, at every block size and rate, and the baseline's mono
+    and stereo parts unchanged. Until a switch, the mono render bit for bit
+    (the core's test and the worklet's).
+  - **Diagnostics:** `layout: stereo  mono switch: off`, and a `render:`
+    line, what the core's render costs this device in each layout, as a
+    share of real time and over how long it played in each (the worklet's
+    clock around `dl_process`). Headless Chromium on the sandbox: mono 4.6%,
+    stereo 4.8-5.9%. **For Mikey's phone:** play a minute each way and read
+    the line (promise 9: stereo must not double it).
+  - **Costs** (instruction counts, cachegrind, the native host): mono against
+    item 65 within 0.01% on the five loops; the whole group's mono against
+    main before item 64 +0.34% (09-shrine), +0.46% (busy-cinder), +0.75%
+    (15-wayfare), +0.80% (07-dust, lite), +0.99% (14-bloom, lite): inside the
+    1% asked, with nothing to spare on lite. Stereo 1.18 to 1.38 times mono.
+  - **The balance lock,** re-baselined for the group: BALANCE_LOCK_RESULT
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4556,3 +4594,14 @@ Mikey decides this line:
   is placed yet, so each side is the mono render bit for bit; mono itself is
   unchanged. Listen for nothing: `?stereo` should sound exactly like the plain
   page.
+- #263, the space recipes (item 65, v115),
+  https://51edc910-driftloom.nowmichaelclark.workers.dev: the stereo render
+  gets its space (`?stereo` on v115; the default from v116): a room around
+  the mix, the chords, texture and melody spread wide by a swaying copy, the
+  light kit and glass placed a little to either side, the wash's noises wide
+  above 200 Hz; the bass, kick and everything low stay in the middle, and
+  the mix folded to mono is the mono render. Each loop draws its widths from
+  its seed, narrower when busy, wider when wet. Listen for space without
+  anything sitting on one side, and for nothing lost on a phone speaker. For
+  the album: glade #57, from 0:00 (the room and the spreads), and vapor #30,
+  from 0:00 (the wash's width).
