@@ -243,5 +243,48 @@ console.log('\nThe stereo render (queue item 64)');
   check('stereo: two channels, each the mono render bit for bit', same(left, mono) && same(right, mono));
 }
 
+console.log('\nThe Mono switch (queue item 66)');
+{
+  // The app's node has two output channels whatever the layout (js/core.js,
+  // CoreHost): in mono each is the mono render. A `layout` message switches
+  // it as it plays; the core fades, and the output follows its lanes.
+  const { MIX, SET } = await import('../js/core.js');
+  const play = (layout, switches = []) => {
+    const processor = new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout } });
+    for (const [id, value] of [[MIX.spaceSeed, 7], [MIX.spaceBusy, 4], [MIX.spaceWet, 0.6], [MIX.spaceLight, 0], [MIX.spaceStart, 1]]) {
+      processor.receive({ type: 'param', id, op: SET, value, time: 0, tau: 0 });
+    }
+    for (let i = 0; i < 30; i++) {
+      processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.05 + i * 0.06, midi: 60 + (i % 12), dur: 0.3, vel: 0.7, parts: 3, extra: [], key: { seed: 7, pass: 0, step: i, ord: 0 } });
+    }
+    const sides = [[], []];
+    const lanes = [];
+    for (let b = 0; b * QUANTUM < 2.1 * RATE; b++) {
+      const t = (b * QUANTUM) / RATE;
+      while (switches.length && switches[0][0] <= t) processor.receive({ type: 'layout', channels: switches.shift()[1] });
+      globalThis.currentFrame = b * QUANTUM;
+      const outputs = [[new Float32Array(QUANTUM), new Float32Array(QUANTUM)]];
+      processor.process(Array.from({ length: 5 }, () => []), outputs);
+      outputs[0].forEach((o, c) => sides[c].push(...o));
+      lanes.push(processor.core.dl_lanes());
+    }
+    return { sides, lanes, sent: processor.sent };
+  };
+  const mono = play(1);
+  const [left, right] = mono.sides;
+  check('mono into two channels: the mono render in each', left.some((x) => Math.abs(x) > 1e-4) && same(left, right));
+  const into = Math.round(0.3 * RATE / QUANTUM) * QUANTUM;
+  const switched = play(1, [[0.3, 2], [1.2, 1]]);
+  const [sl, sr] = switched.sides;
+  check('until the switch, the mono render bit for bit', same(sl.slice(0, into), left.slice(0, into)) && same(sr.slice(0, into), left.slice(0, into)));
+  const apart = (from, to) => Math.max(...sl.slice(from, to).map((x, i) => Math.abs(x - sr[from + i])));
+  check('switched to stereo, the sides part', apart(Math.round(0.6 * RATE), Math.round(1.2 * RATE)) > 1e-4);
+  const back = switched.lanes.lastIndexOf(2) + 1;
+  check('back to mono, one lane again within half a second', back > 0 && back * QUANTUM < 1.7 * RATE && switched.lanes.slice(back).every((n) => n === 1), `${back}`);
+  check('and the same in both channels after it', apart(back * QUANTUM, sl.length) === 0);
+  const cost = switched.sent.filter((m) => m.type === 'cost').pop();
+  check('the worklet reports what each layout cost', cost && cost.seconds[0] > 0.5 && cost.seconds[1] > 0.5 && cost.ms.every((x) => x >= 0), JSON.stringify(cost));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

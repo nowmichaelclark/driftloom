@@ -496,8 +496,8 @@ export class Synth {
     // The Rust core (queue item 21). Built on the real context: an
     // AudioWorkletNode will not take the recording proxy.
     this.engine = engine;
-    // The core's render: 1 mono, 2 stereo (queue item 64). The JavaScript
-    // synth (the fallback) is mono either way.
+    // The core's render: 1 mono, 2 stereo (queue item 64; `setLayout`).
+    // The JavaScript synth (the fallback) is mono either way.
     this.layout = layout === 2 ? 2 : 1;
     this._raw = ctx;
     this.core = null;
@@ -552,6 +552,14 @@ export class Synth {
     // The loop's organ and wash, if it has them, from now on.
     if (this._organ) this._organSend(this._raw.currentTime);
     if (this._wash) this._washSend(this._raw.currentTime);
+  }
+
+  // The listener's Mono switch (queue item 66): the core's render from
+  // now, mono (1) or stereo (2), faded so a loop playing goes on; a core
+  // still on its way starts in it. The JavaScript synth is mono either way.
+  setLayout(layout) {
+    this.layout = layout === 2 ? 2 : 1;
+    if (this.core && !this.core.failed) this.core.setLayout(this.layout);
   }
 
   // The core will not come (it did not load, or its node could not be

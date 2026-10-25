@@ -125,6 +125,13 @@ impl Width {
         self.gain = 1.0;
     }
 
+    /// Nothing heard yet, the side at full width, the settings kept: a
+    /// stereo render that starts in the middle of a mono one.
+    pub fn restart(&mut self) {
+        let (settings, rate) = (self.settings, self.rate);
+        self.ready(&settings, rate);
+    }
+
     /// Setting number `setting` (`SETTINGS`) becomes `value`, from the next
     /// block. A new window or cutoff starts listening afresh.
     pub fn set(&mut self, setting: usize, value: f64) {

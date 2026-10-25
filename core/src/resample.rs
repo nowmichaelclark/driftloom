@@ -40,6 +40,7 @@ fn blackman(x: f64) -> f64 {
     a0 - a1 * math::cos(two_pi * x) + a2 * math::cos(two_pi * 2.0 * x)
 }
 
+#[derive(Clone)]
 pub struct Up {
     kernel: [f32; UP_TAPS],
     /// The last block in, then this one: the convolution reaches back.
@@ -106,6 +107,7 @@ const FFT_BITS: u32 = FFT.trailing_zeros();
 
 /// A 256-point complex FFT in 32-bit floats: radix 2, in place, its twiddles
 /// worked out once in 64 bits.
+#[derive(Clone)]
 struct Fft {
     cos: [f32; FFT / 2],
     sin: [f32; FFT / 2],
@@ -171,6 +173,7 @@ impl Fft {
     }
 }
 
+#[derive(Clone)]
 pub struct Down {
     /// The kernel's transform: its odd taps (`MakeReducedKernel`), padded
     /// with zeros to the transform's length (`DoPaddedFFT`).

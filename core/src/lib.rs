@@ -174,6 +174,16 @@ pub const SPACE_LIGHT: u32 = TONE_FREQ + 22;
 /// glides there over about 50 ms). Any value; 0 for no space (centered).
 pub const SPACE_START: u32 = TONE_FREQ + 23;
 
+/// How long a layout changed while the core plays takes (queue item 66;
+/// `Core::set_layout`), in seconds: the side fades in over it, or out
+/// before the render goes mono, so the switch neither clicks nor jumps.
+pub const LAYOUT_FADE: f64 = 0.25;
+/// Going mono, the master's two lanes agree a few blocks after the side
+/// has faded (its delay and the compressors' lookahead still hold some):
+/// within this, the most `|left - right| / 2` of a block (-100 dB), or at
+/// the latest twice `LAYOUT_FADE` after the switch.
+const LAYOUT_SETTLED: f32 = 1e-5;
+
 /// Why `Core::start` or `Core::render` would not.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Error {
@@ -478,6 +488,14 @@ pub struct Core {
     /// placed apart from it (`Slot::place`), and its own blocks' width.
     placed: [Signal; CHANNELS],
     own_side: [Signal; CHANNELS],
+    /// The layout the host asked for (`set_layout`), and how much of the
+    /// side the render keeps (0 to 1): changed while playing, the master
+    /// goes stereo at once and the side fades in, or the side fades out and
+    /// then the master goes mono.
+    layout: u32,
+    fade: f32,
+    /// The frame the host asked for mono while the master was stereo.
+    layout_at: u64,
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -539,6 +557,9 @@ impl Core {
             space_on: false,
             placed: [[0.0; QUANTUM]; CHANNELS],
             own_side: [[0.0; QUANTUM]; CHANNELS],
+            layout: 0,
+            fade: 0.0,
+            layout_at: 0,
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -576,6 +597,8 @@ impl Core {
         self.inputs = [[0.0; QUANTUM]; CHANNELS];
         self.unserved = 0;
         self.master.set_layout(1);
+        self.layout = 1;
+        self.fade = 1.0;
         self.space = space::Space::new();
         self.space_loop = space::NO_LOOP;
         self.drawn = space::CENTERED;
@@ -614,17 +637,43 @@ impl Core {
     /// Render `channels` channels from the next block: 1 (mono) or 2
     /// (stereo). False, and nothing changes, for any other. `init` starts
     /// the core mono.
+    ///
+    /// Before the first block it is the render from the start. After it
+    /// (the listener's Mono switch, queue item 66) the sound goes on: into
+    /// stereo the master takes two lanes at once (`Master::switch_layout`)
+    /// and the side fades in from silence over `LAYOUT_FADE`; into mono the
+    /// side fades out over it, and then the master takes one lane. Until
+    /// then a mono host is given the left lane (`render`), which is the
+    /// mono render by the fade's end.
     pub fn set_layout(&mut self, channels: u32) -> bool {
         if channels != 1 && channels != 2 {
             return false;
         }
-        self.master.set_layout(channels as usize);
+        if channels == 1 && self.layout == 2 {
+            self.layout_at = self.next;
+        }
+        self.layout = channels;
+        if self.next == 0 {
+            self.master.set_layout(channels as usize);
+            self.fade = 1.0;
+        } else if channels == 2 && self.master.layout() == 1 {
+            self.master.switch_layout(2);
+            self.mix.restart_side(&self.drawn);
+            self.fade = 0.0;
+        }
         true
     }
 
-    /// How many channels it renders: 1 or 2.
+    /// How many channels it renders, as the host last asked: 1 or 2.
     #[must_use]
     pub fn layout(&self) -> u32 {
+        self.layout
+    }
+
+    /// How many lanes the master rendered the last block in: the layout,
+    /// except while a switch into mono fades the side out (2 until then).
+    #[must_use]
+    pub fn lanes(&self) -> u32 {
         // 1 or 2.
         #[allow(clippy::cast_possible_truncation)]
         let n = self.master.layout() as u32;
@@ -653,7 +702,7 @@ impl Core {
     /// `Error::Layout` if `out` does not hold one slice for each channel of
     /// the layout, all the same length; nothing is rendered.
     pub fn render(&mut self, out: &mut [&mut [f32]]) -> Result<(), Error> {
-        let n = self.master.layout();
+        let n = self.layout as usize;
         let frames = out.first().map_or(0, |o| o.len());
         if out.len() != n || out.iter().any(|o| o.len() != frames) {
             return Err(Error::Layout(u32::try_from(out.len()).unwrap_or(u32::MAX)));
@@ -1353,6 +1402,15 @@ impl Core {
                 self.master.set_width(0, drawn.ceiling);
             }
         }
+        // Into mono once the side has faded out (`set_layout`), or at once
+        // with no side to fade, and the two lanes agree.
+        if self.layout == 1 && self.master.layout() == 2 && (self.fade <= 0.0 || !self.spaced) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let late = self.layout_at + (2.0 * LAYOUT_FADE * self.rate) as u64;
+            if self.master.side_peak() < LAYOUT_SETTLED || block >= late {
+                self.master.switch_layout(1);
+            }
+        }
         let spaced = self.master.layout() == 2 && self.spaced;
         if spaced {
             self.placed = [[0.0; QUANTUM]; CHANNELS];
@@ -1440,12 +1498,26 @@ impl Core {
         let side_in = SideIn { placed: &self.placed, own: &self.own_side, space: &self.drawn };
         let [first, second] = &mut self.mixed;
         *first = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref(), spaced.then_some(&side_in));
-        if spaced {
+        let want = if self.layout == 2 { 1.0 } else { 0.0 };
+        if spaced && self.layout == 2 && self.fade >= 1.0 {
             for ((l, r), &s) in first.iter_mut().zip(second.iter_mut()).zip(self.mix.side().iter()) {
                 let m = *l;
                 *l = m + s;
                 *r = m - s;
             }
+        } else if spaced {
+            // A layout changing (`set_layout`): the side faded in or out,
+            // frame by frame.
+            #[allow(clippy::cast_possible_truncation)]
+            let step = (1.0 / (LAYOUT_FADE * self.rate)) as f32;
+            let mut fade = self.fade;
+            for ((l, r), &s) in first.iter_mut().zip(second.iter_mut()).zip(self.mix.side().iter()) {
+                fade = if want > fade { (fade + step).min(want) } else { (fade - step).max(want) };
+                let m = *l;
+                *l = m + s * fade;
+                *r = m - s * fade;
+            }
+            self.fade = fade;
         } else if self.master.layout() == 2 {
             *second = *first;
         }
@@ -1997,6 +2069,88 @@ mod tests {
             assert!(mono[0].iter().any(|&b| f32::from_bits(b) != 0.0));
             assert!(stereo[0] == mono[0], "left, {rate} Hz, full {full}");
             assert!(stereo[1] == mono[0], "right, {rate} Hz, full {full}");
+        }
+    }
+
+    /// The listener's Mono switch (queue item 66), flipped while a chord
+    /// plays: until then the render is the mono one bit for bit; into stereo
+    /// the side starts from silence and fades in; back into mono it fades
+    /// out, then the master goes to one lane. Neither way clicks: a step
+    /// would show in the side's second difference, which stays near what
+    /// the stereo render's own does over the same frames.
+    #[test]
+    fn the_layout_switches_while_playing_without_a_click() {
+        let rate = 48_000.0;
+        let play = |switch: &[(f64, u32)]| -> (Vec<f32>, Vec<f32>, Vec<u32>) {
+            let mut core = boxed();
+            core.start(rate, 1).expect("mono");
+            for (id, value) in [(SPACE_SEED, 7.0), (SPACE_BUSY, 4.0), (SPACE_WET, 0.6), (SPACE_LIGHT, 0.0), (SPACE_START, 1.0)] {
+                core.param(id, mix::SET, value, 0.0, 0.0);
+            }
+            for (i, midi) in [60.0, 64.0, 67.0, 72.0].into_iter().enumerate() {
+                core.key(key(5, 0, 0, i as u32));
+                core.note(SOFTPAD, CHORDS, 0.05, midi, 3.9, 0.8, 0, NO);
+            }
+            let (mut left, mut right, mut lanes) = (Vec::new(), Vec::new(), Vec::new());
+            let mut switches = switch.iter().peekable();
+            for b in 0..(4.0 * rate) as usize / QUANTUM {
+                let t = (b * QUANTUM) as f64 / rate;
+                while let Some(&&(at, n)) = switches.peek()
+                    && at <= t
+                {
+                    assert!(core.set_layout(n));
+                    switches.next();
+                }
+                // As the worklet plays it: both lanes while there are two.
+                core.process((b * QUANTUM) as u64);
+                let [l, r] = core.output();
+                left.extend_from_slice(l);
+                right.extend_from_slice(if core.lanes() == 2 { r } else { l });
+                lanes.push(core.lanes());
+            }
+            (left, right, lanes)
+        };
+        let (mono, _, _) = play(&[]);
+        let (stereo, stereo_right, _) = play(&[(0.0, 2)]);
+        let (left, right, lanes) = play(&[(1.0, 2), (2.5, 1)]);
+        let into = (1.0 * rate) as usize;
+        let out = (2.5 * rate) as usize;
+        let fade = (LAYOUT_FADE * rate) as usize;
+        // The fade out starts with the first block after the switch.
+        let fading = out.div_ceil(QUANTUM) * QUANTUM;
+        let bits = |x: &[f32]| x.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
+        assert!(bits(&left[..into]) == bits(&mono[..into]), "mono until the switch");
+        // The stereo render from the start has a side; the switched one's
+        // starts at nothing and comes in over the fade.
+        let side = |l: &[f32], r: &[f32]| l.iter().zip(r).map(|(a, b)| (a - b).abs() * 0.5).fold(0.0f32, f32::max);
+        let full = side(&stereo[into..out], &stereo_right[into..out]);
+        assert!(full > 1e-3, "a side to fade: {full}");
+        assert!(side(&left[into..into + QUANTUM], &right[into..into + QUANTUM]) < 0.02 * full);
+        assert!(side(&left[into + fade..out], &right[into + fade..out]) > 0.3 * full);
+        // Two lanes from the switch in until the side has faded out and the
+        // lanes agree, then one: within twice the fade.
+        let block = |frame: usize| frame / QUANTUM;
+        assert_eq!(lanes[block(into) - 1], 1);
+        assert_eq!(lanes[block(into)], 2);
+        let mono_at = lanes.iter().enumerate().skip(block(out)).find(|&(_, &n)| n == 1).map(|(b, _)| b * QUANTUM).expect("mono again");
+        assert!(mono_at >= fading + fade && mono_at <= fading + 2 * fade, "mono at frame {mono_at}");
+        assert!(lanes[block(mono_at)..].iter().all(|&n| n == 1));
+        assert!(side(&left[mono_at - QUANTUM..mono_at], &right[mono_at - QUANTUM..mono_at]) < 1e-3 * full);
+        // No click: the side's second difference, over each switch, within
+        // one and a half times the stereo render's over the same frames
+        // (0.7 and 0.85 times; switched at once, without the fade, 2.3 and
+        // 2.7 times).
+        let bend = |l: &[f32], r: &[f32], from: usize, to: usize| {
+            (from..to)
+                .map(|n| {
+                    let s = |k: usize| (l[k] - r[k]) * 0.5;
+                    (s(n + 1) - 2.0 * s(n) + s(n - 1)).abs()
+                })
+                .fold(0.0f32, f32::max)
+        };
+        for (from, to) in [(into - QUANTUM, into + fade), (fading - QUANTUM, mono_at + QUANTUM)] {
+            let (switched, own) = (bend(&left, &right, from, to), bend(&stereo, &stereo_right, from, to));
+            assert!(switched <= 1.5 * own, "a click in frames {from} to {to}: {switched} against {own}");
         }
     }
 

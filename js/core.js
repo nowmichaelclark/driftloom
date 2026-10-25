@@ -24,16 +24,6 @@ export const ENGINE = (() => {
   }
 })();
 
-// The core's render (queue item 64): stereo with `?stereo` in the address,
-// else mono. A stand-in until item 66's Mono switch.
-export const LAYOUT = (() => {
-  try {
-    return new URLSearchParams(globalThis.location?.search || '').has('stereo') ? 2 : 1;
-  } catch {
-    return 1;
-  }
-})();
-
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
 export function coreUnsupported() {
@@ -250,8 +240,11 @@ const NO_KEY = { seed: 0, pass: 0, step: 0, ord: 0 };
 // 'lite'. `key` is a function giving where the note about to be sent sits
 // in its loop, `{ seed, pass, step, ord }` (core/src/rng.rs): the core
 // draws everything a note leaves to chance from it. `layout` is 1 for the
-// mono render or 2 for the stereo one (queue item 64): the node's first
-// output carries that many channels.
+// mono render or 2 for the stereo one (queue item 64), and `setLayout`
+// switches it while it plays (item 66, the Mono switch): the node's first
+// output carries two channels either way, the mono render in both, so the
+// switch never rebuilds it. With `taps` (the measure harness) it carries
+// as many as the layout, as it always has.
 export class CoreHost {
   constructor(ctx, core, dests, { quality = 'full', taps = false, key = null, layout = 1 } = {}) {
     this.ctx = ctx;
@@ -294,13 +287,16 @@ export class CoreHost {
     this.reduction = [0, 0];
     this.deepest = [0, 0];
     this.failed = null;
+    // What rendering has cost (queue item 66), mono then stereo, as the
+    // worklet last said: milliseconds spent, seconds of audio made.
+    this.cost = { ms: [0, 0], seconds: [0, 0] };
     this._pings = new Map();
     this._ping = 0;
     const outputs = taps ? 2 + CORE_CHANNEL_COUNT : 1;
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
       numberOfInputs: dests.length,
       numberOfOutputs: outputs,
-      outputChannelCount: new Array(outputs).fill(1).map((n, i) => (i === 0 ? this.layout : n)),
+      outputChannelCount: new Array(outputs).fill(1).map((n, i) => (i === 0 ? (taps ? this.layout : 2) : n)),
       // The inputs (the synth's own notes) are mono.
       channelCount: 1,
       channelCountMode: 'explicit',
@@ -322,6 +318,22 @@ export class CoreHost {
   // (`taps`).
   beforeComp() {
     return this.taps ? 1 + CORE_CHANNEL_COUNT : -1;
+  }
+
+  // Render mono (1) or stereo (2) from now (queue item 66): the core fades
+  // between them, so a loop playing goes on without a click.
+  setLayout(layout) {
+    this.layout = layout === 2 ? 2 : 1;
+    this.node.port.postMessage({ type: 'layout', channels: this.layout });
+  }
+
+  // What rendering has cost, for Diagnostics: the share of real time the
+  // worklet spent rendering each layout, and how long it played in each.
+  costReport() {
+    const { ms, seconds } = this.cost;
+    const time = (x) => (x < 10 ? x.toFixed(1) : Math.round(x));
+    const one = (i) => (seconds[i] > 0 ? `${((ms[i] / 1000 / seconds[i]) * 100).toFixed(1)}% of real time over ${time(seconds[i])} s` : 'not played');
+    return `mono ${one(0)}, stereo ${one(1)}`;
   }
 
   // Narrow or pin one of the space recipe's settings (queue item 65;
@@ -424,6 +436,7 @@ export class CoreHost {
     }
     if (m.note) this._late(m.note);
     if (m.type === 'arrivals') this._arrivals(m);
+    if (m.type === 'cost') this.cost = { ms: m.ms, seconds: m.seconds };
     if (m.type === 'pong') {
       if (m.reduction) this.reduction = m.reduction;
       if (m.deepest) this.deepest = this.deepest.map((d, i) => Math.min(d, m.deepest[i]));
