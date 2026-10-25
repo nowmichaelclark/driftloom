@@ -38,6 +38,8 @@
 use crate::block::{Sends, Signal};
 use crate::delay::{Delay, buffer_len};
 use crate::blocks::filter::{Biquad, Kind};
+use crate::math;
+use crate::space::{CENTERED, Drawn};
 use crate::timeline::Timeline;
 use crate::{BASS_CHANNEL, CHANNELS, CHORDS, DRUMS_CHANNEL, MELODY, QUANTUM, TEXTURE_CHANNEL, WASH_CHANNEL};
 
@@ -148,6 +150,246 @@ pub struct Mix {
     echo_last: Signal,
     memory: [f32; MEMORY],
     bus: Signal,
+    /// The side, in a stereo render (queue item 65).
+    side: Side,
+}
+
+/// What a stereo render's side needs besides the channels (queue item 65;
+/// `space`): the notes each channel places apart from itself (the light kit
+/// and glass), weighted by their places, before the channel's gain; each
+/// channel's own blocks' width (the wash's), before its gain; and the loop's
+/// space.
+pub struct SideIn<'a> {
+    pub placed: &'a [Signal; CHANNELS],
+    pub own: &'a [Signal; CHANNELS],
+    pub space: &'a Drawn,
+}
+
+/// The room's allpasses: delay (seconds) and gain, the sketch's
+/// (`verbSmooth`, round 3).
+const ALLPASSES: [(f64, f32); 4] = [(0.0051, 0.6), (0.0117, 0.55), (0.0173, 0.5), (0.0229, 0.45)];
+/// The longest allpass at the highest rate, in frames.
+const ALLPASS_FRAMES: usize = crate::MAX_FRAMES_A_SECOND * 23 / 1000 + 2;
+/// The spread's sway line: its longest delay.
+const SWAY_MAX: f64 = 0.05;
+const SWAY_FRAMES: usize = crate::MAX_FRAMES_A_SECOND / 20;
+const SIDE_MEMORY: usize = 3 * (QUANTUM + SWAY_FRAMES) + (QUANTUM + PRE_DELAY_FRAMES);
+/// The spread channels, in `Drawn::spread`'s order.
+const SPREAD: [u32; 3] = [MELODY, CHORDS, TEXTURE_CHANNEL];
+/// How fast a new loop's widths are glided to, a time constant (seconds).
+const GLIDE: f64 = 0.05;
+
+/// The amounts that glide: the room, the three spreads, the kit (hats and
+/// the softer ones), the texture's place, glass's and the wash's width.
+const AMOUNTS: usize = 9;
+
+fn amounts(d: &Drawn) -> [f64; AMOUNTS] {
+    let [m, c, t] = d.spread;
+    [d.room, m, c, t, d.kit, d.kit * d.kit_soft, d.texture, d.glass, d.wash]
+}
+
+/// The side of the mix in a stereo render: everything here is side only
+/// (+ left, - right), so the mid is the mono mix untouched. See `space` for
+/// what each part is; the gains it rides are the mid's, captured as the mid
+/// is mixed (`gains` and the rest).
+struct Side {
+    rate: f64,
+    /// Each channel's gain, the duck's, the comb sum's, the reverb's output
+    /// and the tails', this block: the mid's own.
+    gains: [Signal; CHANNELS],
+    pump: Signal,
+    comb_gain: Signal,
+    reverb_out: Signal,
+    tails: Signal,
+    /// The combs' outputs summed, before any gain.
+    combs: Signal,
+    /// The amounts now, and the loop's.
+    now: [f64; AMOUNTS],
+    want: [f64; AMOUNTS],
+    rates: [f64; 3],
+    delay: f64,
+    sway: f64,
+    sway_lines: [Delay; 3],
+    sway_hp: [Biquad; 3],
+    /// The highpasses on the kit's, the texture's and glass's places.
+    place_hp: [Biquad; 3],
+    room_hp: Biquad,
+    allpass: [[f32; ALLPASS_FRAMES]; 4],
+    allpass_len: [usize; 4],
+    allpass_at: usize,
+    pre: Delay,
+    memory: [f32; SIDE_MEMORY],
+    bus: Signal,
+}
+
+impl Side {
+    const fn new() -> Self {
+        Side {
+            rate: 0.0,
+            gains: [[0.0; QUANTUM]; CHANNELS],
+            pump: [0.0; QUANTUM],
+            comb_gain: [0.0; QUANTUM],
+            reverb_out: [0.0; QUANTUM],
+            tails: [0.0; QUANTUM],
+            combs: [0.0; QUANTUM],
+            now: [0.0; AMOUNTS],
+            want: [0.0; AMOUNTS],
+            rates: [0.0; 3],
+            delay: 0.0,
+            sway: 0.0,
+            sway_lines: [const { Delay::new() }; 3],
+            sway_hp: [const { Biquad::new() }; 3],
+            place_hp: [const { Biquad::new() }; 3],
+            room_hp: Biquad::new(),
+            allpass: [[0.0; ALLPASS_FRAMES]; 4],
+            allpass_len: [0; 4],
+            allpass_at: 0,
+            pre: Delay::new(),
+            memory: [0.0; SIDE_MEMORY],
+            bus: [0.0; QUANTUM],
+        }
+    }
+
+    fn init(&mut self, rate: f64) {
+        self.rate = rate;
+        let mut at = 0;
+        for line in &mut self.sway_lines {
+            at = line.place(SWAY_MAX, rate, at);
+        }
+        self.pre.place(PRE_DELAY_MAX, rate, at);
+        self.memory.fill(0.0);
+        for ring in &mut self.allpass {
+            ring.fill(0.0);
+        }
+        for ((len, &(d, _)), _) in self.allpass_len.iter_mut().zip(ALLPASSES.iter()).zip(0..) {
+            // A whole number of frames, at least one, within the ring.
+            *len = (math::round(d * rate) as usize).clamp(1, ALLPASS_FRAMES - 1);
+        }
+        self.allpass_at = 0;
+        self.now = [0.0; AMOUNTS];
+        self.set(&CENTERED);
+        self.bus = [0.0; QUANTUM];
+    }
+
+    /// The loop's space, glided to from the next block.
+    fn set(&mut self, d: &Drawn) {
+        self.want = amounts(d);
+        self.rates = d.spread_rate;
+        self.delay = d.spread_delay;
+        self.sway = d.spread_sway;
+        let r = f(self.rate);
+        let nyquist = 0.45 * self.rate;
+        for hp in &mut self.sway_hp {
+            hp.set(Kind::Highpass, f(d.spread_cutoff.min(nyquist)), Q, 0.0, r);
+        }
+        for hp in &mut self.place_hp {
+            hp.set(Kind::Highpass, f(d.place_cutoff.min(nyquist)), Q, 0.0, r);
+        }
+        self.room_hp.set(Kind::Highpass, f(d.room_cutoff.min(nyquist)), Q, 0.0, r);
+    }
+
+    /// The side of the block from `block`, from the channels after their
+    /// gains (`outs`) and the rest (`side`, and what `capture` kept), into
+    /// `bus`.
+    // A frame count as a float, exact for millennia.
+    #[allow(clippy::cast_precision_loss)]
+    fn mix(&mut self, block: u64, outs: &[Signal; CHANNELS], side: &SideIn<'_>) {
+        let rate = self.rate;
+        let r32 = f(rate);
+        let step = 1.0 - math::exp(-(QUANTUM as f64 / rate) / GLIDE);
+        for (now, &want) in self.now.iter_mut().zip(self.want.iter()) {
+            *now = math::flush(*now + (want - *now) * step);
+        }
+        let [room, m, c, t, kit, _, texture, glass, wash] = self.now.map(f);
+        let at = |x: &[Signal; CHANNELS], ch: u32| x.get(ch as usize).copied().unwrap_or([0.0; QUANTUM]);
+        let mut pumped = [0.0f32; QUANTUM];
+        // The spreads: each channel through its swaying line, above the
+        // cutoff.
+        let (t0, t1) = (block as f64 / rate, (block + QUANTUM as u64) as f64 / rate);
+        for (((&ch, line), hp), (&rate_hz, &amount)) in SPREAD
+            .iter()
+            .zip(self.sway_lines.iter_mut())
+            .zip(self.sway_hp.iter_mut())
+            .zip(self.rates.iter().zip([m, c, t].iter()))
+        {
+            if amount == 0.0 {
+                continue;
+            }
+            let wave = |time: f64| self.delay + self.sway * math::sin(core::f64::consts::TAU * rate_hz * time);
+            let (a, b) = (wave(t0), wave(t1));
+            let mut times = [0.0f32; QUANTUM];
+            for (i, x) in times.iter_mut().enumerate() {
+                *x = f(a + (b - a) * (i as f64 / QUANTUM as f64)).clamp(0.0, f(SWAY_MAX));
+            }
+            let mut copy = [0.0f32; QUANTUM];
+            line.process(&mut self.memory, &at(outs, ch), &times, r32, &mut copy);
+            for (y, &x) in pumped.iter_mut().zip(copy.iter()) {
+                *y += hp.step(x) * amount;
+            }
+            hp.flush();
+        }
+        // The light texture's whole channel, glass alone, the wash's own.
+        let [kit_hp, texture_hp, glass_hp] = &mut self.place_hp;
+        if texture != 0.0 {
+            for (y, &x) in pumped.iter_mut().zip(at(outs, TEXTURE_CHANNEL).iter()) {
+                *y += texture_hp.step(x) * texture;
+            }
+            texture_hp.flush();
+        }
+        let gain = |ch: u32| at(&self.gains, ch);
+        let (tex_gain, wash_gain) = (gain(TEXTURE_CHANNEL), gain(WASH_CHANNEL));
+        if glass != 0.0 {
+            for ((y, &x), &g) in pumped.iter_mut().zip(at(side.placed, TEXTURE_CHANNEL).iter()).zip(tex_gain.iter()) {
+                *y += glass_hp.step(x) * g * glass;
+            }
+            glass_hp.flush();
+        }
+        if wash != 0.0 {
+            for ((y, &x), &g) in pumped.iter_mut().zip(at(side.own, WASH_CHANNEL).iter()).zip(wash_gain.iter()) {
+                *y += x * g * wash;
+            }
+        }
+        for (y, &k) in pumped.iter_mut().zip(self.pump.iter()) {
+            *y *= k;
+        }
+        // The light kit, placed in the drums before their gain.
+        let mut drums = [0.0f32; QUANTUM];
+        if kit != 0.0 {
+            let drum_gain = gain(DRUMS_CHANNEL);
+            for ((y, &x), &g) in drums.iter_mut().zip(at(side.placed, DRUMS_CHANNEL).iter()).zip(drum_gain.iter()) {
+                *y = kit_hp.step(x) * g;
+            }
+            kit_hp.flush();
+        }
+        // The room: the combs through the allpasses, above the cutoff, then
+        // the reverb's output gain and the pre-delay, as the mid.
+        let mut verb = [0.0f32; QUANTUM];
+        if room != 0.0 {
+            let n = self.allpass_at;
+            for (i, y) in verb.iter_mut().enumerate() {
+                let mut x = self.combs[i] * self.comb_gain[i] * room;
+                let at = (n + i) % ALLPASS_FRAMES;
+                for ((ring, &len), &(_, g)) in self.allpass.iter_mut().zip(self.allpass_len.iter()).zip(ALLPASSES.iter()) {
+                    let back = (at + ALLPASS_FRAMES - len) % ALLPASS_FRAMES;
+                    let delayed = ring.get(back).copied().unwrap_or(0.0);
+                    let w = math::silence(x + g * delayed);
+                    if let Some(slot) = ring.get_mut(at) {
+                        *slot = w;
+                    }
+                    x = -g * w + delayed;
+                }
+                *y = self.room_hp.step(x) * self.reverb_out[i];
+            }
+            self.room_hp.flush();
+        }
+        self.allpass_at = (self.allpass_at + QUANTUM) % ALLPASS_FRAMES;
+        let mut pre = [0.0f32; QUANTUM];
+        let pre_times = [f(PRE_DELAY); QUANTUM];
+        self.pre.process(&mut self.memory, &verb, &pre_times, r32, &mut pre);
+        for (i, y) in self.bus.iter_mut().enumerate() {
+            *y = math::silence(pre[i] * self.tails[i] + pumped[i] + drums[i]);
+        }
+    }
 }
 
 impl Mix {
@@ -176,6 +418,7 @@ impl Mix {
             echo_last: [0.0; QUANTUM],
             memory: [0.0; MEMORY],
             bus: [0.0; QUANTUM],
+            side: Side::new(),
         }
     }
 
@@ -228,6 +471,19 @@ impl Mix {
         self.echo_last = [0.0; QUANTUM];
         self.memory.fill(0.0);
         self.bus = [0.0; QUANTUM];
+        self.side.init(rate);
+    }
+
+    /// A stereo render's side of the last block (queue item 65): zeros
+    /// until a block is mixed with a side.
+    pub fn side(&self) -> &Signal {
+        &self.side.bus
+    }
+
+    /// The loop's space (`space::Space::draw`), glided to from the next
+    /// block mixed with a side.
+    pub fn set_space(&mut self, drawn: &Drawn) {
+        self.side.set(drawn);
     }
 
     /// The last block's bus.
@@ -272,7 +528,17 @@ impl Mix {
     ///
     /// `lift`, if any, is what the arc adds to the echo's feedback, frame by
     /// frame (queue item 63).
-    pub fn process(&mut self, block: u64, channels: &[Signal; CHANNELS], sends: Option<&Sends>, lift: Option<&Signal>) -> &Signal {
+    ///
+    /// `side`, in a stereo render, makes the side as well (`Mix::side`,
+    /// queue item 65); the bus, the mid, is the same either way.
+    pub fn process(
+        &mut self,
+        block: u64,
+        channels: &[Signal; CHANNELS],
+        sends: Option<&Sends>,
+        lift: Option<&Signal>,
+        side: Option<&SideIn<'_>>,
+    ) -> &Signal {
         if !self.ready {
             self.bus.fill(0.0);
             return &self.bus;
@@ -283,10 +549,14 @@ impl Mix {
 
         // Each channel through its gain.
         let mut outs = [[0.0f32; QUANTUM]; CHANNELS];
-        for ((out, input), gain) in outs.iter_mut().zip(channels.iter()).zip(self.gains.iter_mut()) {
+        let stereo = side.is_some();
+        for (((out, input), gain), kept) in outs.iter_mut().zip(channels.iter()).zip(self.gains.iter_mut()).zip(self.side.gains.iter_mut()) {
             gain.fill(block, rate, &mut g);
             for ((y, &x), &k) in out.iter_mut().zip(input.iter()).zip(g.iter()) {
                 *y = x * k;
+            }
+            if stereo {
+                *kept = g;
             }
         }
         let at = |c: u32| outs.get(c as usize).copied().unwrap_or([0.0; QUANTUM]);
@@ -322,6 +592,9 @@ impl Mix {
         self.pump.fill(block, rate, &mut g);
         for (y, &k) in pumped.iter_mut().zip(g.iter()) {
             *y *= k;
+        }
+        if stereo {
+            self.side.pump = g;
         }
 
         // The combs. The lowpass filters the delay's last block, its gain
@@ -367,13 +640,22 @@ impl Mix {
                 *y += x;
             }
         }
+        if stereo {
+            self.side.combs = comb_sum;
+        }
         self.comb_sum.fill(block, rate, &mut g);
         for (y, &k) in comb_sum.iter_mut().zip(g.iter()) {
             *y *= k;
         }
+        if stereo {
+            self.side.comb_gain = g;
+        }
         self.reverb_out.fill(block, rate, &mut g);
         for (y, &k) in comb_sum.iter_mut().zip(g.iter()) {
             *y *= k;
+        }
+        if stereo {
+            self.side.reverb_out = g;
         }
         let mut pre = [0.0f32; QUANTUM];
         let pre_times = [f(PRE_DELAY); QUANTUM];
@@ -408,6 +690,10 @@ impl Mix {
         for i in 0..QUANTUM {
             let tails = (pre[i] + self.echo_last[i]) * g[i];
             self.bus[i] = tails + pumped[i] + drums[i];
+        }
+        if let Some(side) = side {
+            self.side.tails = g;
+            self.side.mix(block, &outs, side);
         }
         &self.bus
     }
@@ -478,7 +764,7 @@ mod tests {
         let mut m = boxed(true);
         let mut ch = [[0.0f32; QUANTUM]; CHANNELS];
         ch[DRUMS_CHANNEL as usize][10] = 1.0;
-        let first = *m.process(0, &ch, None, None);
+        let first = *m.process(0, &ch, None, None, None);
         assert_eq!(first[10], f(0.82));
         assert!(first[..10].iter().all(|&x| x == 0.0));
         let silent = [[0.0f32; QUANTUM]; CHANNELS];
@@ -486,7 +772,7 @@ mod tests {
         // 0.05 s; the echo after 0.36 s and a block.
         let mut energy = 0.0f32;
         for b in 1..200 {
-            energy += m.process(b * QUANTUM as u64, &silent, None, None).iter().map(|x| x * x).sum::<f32>();
+            energy += m.process(b * QUANTUM as u64, &silent, None, None, None).iter().map(|x| x * x).sum::<f32>();
         }
         assert!(energy > 1e-4, "{energy}");
     }
@@ -500,7 +786,7 @@ mod tests {
         melody_only[MELODY as usize] = ch[0];
         let mut last = 1.0;
         for b in 0..200 {
-            last = m.process(b * QUANTUM as u64, &melody_only, None, None)[QUANTUM - 1];
+            last = m.process(b * QUANTUM as u64, &melody_only, None, None, None)[QUANTUM - 1];
         }
         // Only the tails of what came before are left, and fading.
         assert!(last.abs() < 0.05, "{last}");
@@ -519,6 +805,6 @@ mod tests {
         m.init(2.0 * MAX_RATE, true);
         assert!(!m.ready());
         let ch = [[1.0f32; QUANTUM]; CHANNELS];
-        assert!(m.process(0, &ch, None, None).iter().all(|&x| x == 0.0));
+        assert!(m.process(0, &ch, None, None, None).iter().all(|&x| x == 0.0));
     }
 }

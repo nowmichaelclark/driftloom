@@ -235,6 +235,23 @@ function washOf(spec) {
   return { period, level: WASH_K * Math.pow(10, rel / 20), tint: hz, tintGain, tintHigh, tintQ };
 }
 
+// The loop's space (queue item 65; core/src/space.rs): what the core needs to
+// know to place the loop in a stereo render. Its seed (the core draws every
+// width from it), how busy it is (notes a second, every layer, as heard), how
+// wet (its reverb's space), and whether its texture is a light one (bells,
+// chimes, drops), whose whole layer is placed. Sent whatever the render; a
+// mono one has no use for it.
+const LIGHT_TEXTURES = ['bells', 'chime', 'drops'];
+
+function spaceOf(spec, rendered) {
+  return {
+    seed: spec.seed >>> 0,
+    busy: notesPerSecond(spec, rendered.tracks),
+    wet: (spec.tone && spec.tone.space) || 0,
+    light: LIGHT_TEXTURES.includes(rendered.meta && rendered.meta.textureKind),
+  };
+}
+
 // glass (queue item 59): how often a chord's first beat rings out, the
 // register (E5-G6), the bell (the prototype's FM options and cost; it
 // yields, so it never costs another part a note: js/synth.js), and its
@@ -306,6 +323,9 @@ export class Engine {
     // started.
     this.arc = null;
     this.arcChange = false;
+    // The loop's space (queue item 65), and whether it is still to be sent.
+    this.space = null;
+    this.spaceChange = false;
     // Notes decided but not yet built, in the order they were decided (see
     // BUILD_TICKS), and the measured gap between ticks.
     this.pending = [];
@@ -421,6 +441,10 @@ export class Engine {
     const held = keepPosition && JSON.stringify(arc) === JSON.stringify(this.arc);
     this.arcChange = !held && !!(arc || this.arc);
     this.arc = arc;
+    // And its space (queue item 65).
+    const space = spaceOf(spec, this.base);
+    this.spaceChange = !(keepPosition && JSON.stringify(space) === JSON.stringify(this.space));
+    this.space = space;
     this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
@@ -1038,6 +1062,10 @@ export class Engine {
     if (this.arcChange) {
       this.synth.arcSetup(this.arc, Math.max(time, this.floor));
       this.arcChange = false;
+    }
+    if (this.spaceChange) {
+      this.synth.spaceSetup(this.space, Math.max(time, this.floor));
+      this.spaceChange = false;
     }
     // At each bar line, decide whether the tails should still be ringing.
     const spbNow = p.stepsPerBar || 16;

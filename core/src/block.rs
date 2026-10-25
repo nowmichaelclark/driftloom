@@ -549,6 +549,16 @@ pub trait Channel: Block {
         let _ = sends;
         self.render_mod(block, cx, signal, mods);
     }
+
+    /// In a stereo render (queue item 65): render as `Block::render_mod`
+    /// does into `signal`, the mid, bit for bit the mono render's, and add
+    /// what it puts out as its own width into `side` (+ left, - right). The
+    /// core calls it instead of `render_mod` for a block that doesn't send;
+    /// by default it has no width: the mono render, nothing in `side`.
+    fn render_side(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods, side: &mut Signal) {
+        let _ = side;
+        self.render_mod(block, cx, signal, mods);
+    }
 }
 
 /// How `solo` plays a block alone (the test kit, `dlrender --block`).

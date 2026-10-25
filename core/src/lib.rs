@@ -43,6 +43,7 @@ pub mod noise;
 pub mod param;
 pub mod resample;
 pub mod rng;
+pub mod space;
 pub mod timeline;
 pub mod wave;
 
@@ -54,7 +55,7 @@ use block::event::Reach;
 use blocks::{Held, Own, Pools, own};
 use blocks::osc::frame_at;
 use master::{Master, OUT};
-use mix::Mix;
+use mix::{Mix, SideIn};
 use noise::Noise;
 pub use blocks::voices::*;
 pub use rng::Key;
@@ -161,6 +162,17 @@ pub const ARC_DIP: u32 = TONE_FREQ + 13;
 pub const WIDTH_TARGET: u32 = TONE_FREQ + 14;
 /// The last of the width ceiling's settings (`WIDTH_TARGET` and on).
 pub const WIDTH_UP: u32 = TONE_FREQ + 18;
+/// The loop's space (queue item 65; `space::Loop`), for `SPACE_START` to
+/// draw: its seed (a whole number), how busy it is (notes a second, every
+/// layer), how wet (its reverb's space, 0 to 1), and whether its texture is
+/// a light one (not 0).
+pub const SPACE_SEED: u32 = TONE_FREQ + 19;
+pub const SPACE_BUSY: u32 = TONE_FREQ + 20;
+pub const SPACE_WET: u32 = TONE_FREQ + 21;
+pub const SPACE_LIGHT: u32 = TONE_FREQ + 22;
+/// Draw the loop's space and take it from `time` (a stereo render's; it
+/// glides there over about 50 ms). Any value; 0 for no space (centered).
+pub const SPACE_START: u32 = TONE_FREQ + 23;
 
 /// Why `Core::start` or `Core::render` would not.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -326,6 +338,30 @@ struct Slot {
     seq: u64,
     until: f64,
     voice: Held,
+    /// Where a stereo render places it apart from its channel (queue item
+    /// 65; `space`): `UNPLACED`, or the light kit's (`KIT`, `KIT_SOFT`) or
+    /// glass's (`GLASS`).
+    place: u8,
+}
+
+/// A slot's place in a stereo render (`Slot::place`).
+const UNPLACED: u8 = 0;
+const KIT: u8 = 1;
+const KIT_SOFT: u8 = 2;
+const GLASS: u8 = 3;
+
+/// Where a note is placed apart from its channel: the hat voice's hats
+/// (the kit) and shakers (softer), the drums' jingles (softer), and an FM
+/// note on the texture's channel, which only glass plays there but for the
+/// light textures (bells and chimes), whose whole channel is placed anyway.
+fn place_of(note: &Note) -> u8 {
+    match (note.voice, note.channel) {
+        (HAT, DRUMS_CHANNEL) if note.parts == blocks::struck::SHAKER => KIT_SOFT,
+        (HAT, DRUMS_CHANNEL) => KIT,
+        (DRUM, DRUMS_CHANNEL) if note.parts == blocks::drum::JINGLE || note.parts == blocks::drum::OPEN_JINGLE => KIT_SOFT,
+        (FM, TEXTURE_CHANNEL) => GLASS,
+        _ => UNPLACED,
+    }
 }
 
 impl Slot {
@@ -338,6 +374,7 @@ impl Slot {
             seq: 0,
             until: 0.0,
             voice: Held::FREE,
+            place: UNPLACED,
         }
     }
 }
@@ -420,6 +457,24 @@ pub struct Core {
     /// The mix going into the master, a block a lane (the second only in
     /// stereo).
     mixed: [Signal; OUT],
+    /// The space recipe (queue item 65) and the loop it last drew for, the
+    /// draw, and whether one has been set: with none, a stereo render is
+    /// mono on each side.
+    space: space::Space,
+    space_loop: space::Loop,
+    drawn: space::Drawn,
+    spaced: bool,
+    /// A space waiting for its frame (`SPACE_START`): whether one is, from
+    /// which frame, the draw, and whether it is a space (false: centered).
+    /// Plain fields, all zeros at rest (an `Option` of them would not be).
+    space_waits: bool,
+    space_at: u64,
+    space_drawn: space::Drawn,
+    space_on: bool,
+    /// In a stereo render with a space, this block: each channel's notes
+    /// placed apart from it (`Slot::place`), and its own blocks' width.
+    placed: [Signal; CHANNELS],
+    own_side: [Signal; CHANNELS],
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -471,6 +526,16 @@ impl Core {
             sends: [[0.0; QUANTUM]; 2],
             arc_next: blocks::arc::ZERO,
             mixed: [[0.0; QUANTUM]; OUT],
+            space: space::Space::ZERO,
+            space_loop: space::NO_LOOP,
+            drawn: space::ZERO,
+            spaced: false,
+            space_waits: false,
+            space_at: 0,
+            space_drawn: space::ZERO,
+            space_on: false,
+            placed: [[0.0; QUANTUM]; CHANNELS],
+            own_side: [[0.0; QUANTUM]; CHANNELS],
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -508,6 +573,11 @@ impl Core {
         self.inputs = [[0.0; QUANTUM]; CHANNELS];
         self.unserved = 0;
         self.master.set_layout(1);
+        self.space = space::Space::new();
+        self.space_loop = space::NO_LOOP;
+        self.drawn = space::CENTERED;
+        self.spaced = false;
+        self.space_waits = false;
         self.quality(true);
     }
 
@@ -635,6 +705,20 @@ impl Core {
     pub fn quality(&mut self, full: bool) {
         self.mix.init(self.rate, full);
         self.master_ready = self.master.init(self.rate, full);
+        // The loop's space survives a rebuild.
+        self.mix.set_space(&self.drawn);
+        if self.spaced {
+            self.master.set_width(0, self.drawn.ceiling);
+        }
+    }
+
+    /// Set the space recipe's setting `which` (`space::n`, `space::SETTINGS`)
+    /// to draw from `lo` to `hi` (the same number pins it), from the next
+    /// loop's `SPACE_START`: a request, a slider or a game narrowing the
+    /// approved baseline (queue item 65; `docs/CORE.md`, promise 9). False,
+    /// and nothing changes, for no such setting or a range that isn't one.
+    pub fn space_range(&mut self, which: usize, lo: f64, hi: f64) -> bool {
+        self.space.range(which, lo, hi)
     }
 
     /// Whether the core mixes at this sample rate (`mix::MAX_RATE`). A
@@ -714,6 +798,33 @@ impl Core {
             }
             WIDTH_TARGET..=WIDTH_UP => {
                 self.master.set_width((id - WIDTH_TARGET) as usize, value);
+                true
+            }
+            SPACE_SEED => {
+                // A seed, carried in a float: a whole number under 2^32.
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let seed = value.clamp(0.0, f64::from(u32::MAX)) as u32;
+                self.space_loop.seed = seed;
+                true
+            }
+            SPACE_BUSY => {
+                self.space_loop.busy = value;
+                true
+            }
+            SPACE_WET => {
+                self.space_loop.wet = value;
+                true
+            }
+            SPACE_LIGHT => {
+                self.space_loop.light = value != 0.0;
+                true
+            }
+            SPACE_START => {
+                let drawn = if value == 0.0 { space::CENTERED } else { self.space.draw(&self.space_loop) };
+                self.space_waits = true;
+                self.space_at = frame_at(time, self.rate);
+                self.space_drawn = drawn;
+                self.space_on = value != 0.0;
                 true
             }
             _ => self.mix.param(id, op, v, time, tau, now),
@@ -1170,6 +1281,7 @@ impl Core {
             }
         }
         slot.channel = w.note.channel as usize;
+        slot.place = place_of(&w.note);
         slot.seq = w.seq;
         slot.until = w.until;
         slot.begin = begin;
@@ -1222,6 +1334,25 @@ impl Core {
         }
         let cx = Context { rate: self.rate, waves: &self.waves, noise: self.noise.samples() };
         let mut sent = false;
+        // A stereo render with a space: the notes placed apart from their
+        // channel (`Slot::place`) and the channel blocks' own width, each
+        // block afresh.
+        if self.space_waits && self.space_at < end {
+            let (drawn, on) = (self.space_drawn, self.space_on);
+            self.drawn = drawn;
+            self.spaced = on;
+            self.space_waits = false;
+            self.mix.set_space(&drawn);
+            if on {
+                self.master.set_width(0, drawn.ceiling);
+            }
+        }
+        let spaced = self.master.layout() == 2 && self.spaced;
+        if spaced {
+            self.placed = [[0.0; QUANTUM]; CHANNELS];
+            self.own_side = [[0.0; QUANTUM]; CHANNELS];
+        }
+        let places = [0.0, self.drawn.kit, self.drawn.kit * self.drawn.kit_soft, self.drawn.glass].map(|x| x as f32);
         for slot in self.slots.iter_mut().filter(|s| s.busy) {
             if slot.begin >= end {
                 continue;
@@ -1232,7 +1363,19 @@ impl Core {
             ) else {
                 continue;
             };
+            let place = if spaced { places.get(usize::from(slot.place)).copied().unwrap_or(0.0) } else { 0.0 };
+            // What a placed note added to its channel, taken as the
+            // difference, so the channel (the mid) is the mono render's.
+            let before = if place == 0.0 { None } else { Some(*out) };
             blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses, &mut self.sends, &mut sent);
+            if let (Some(before), Some(placed)) = (before, self.placed.get_mut(slot.channel)) {
+                // A note's place is the sign and size of the kit's or glass's;
+                // the weight is relative to the hats' (`space`), so it is
+                // carried here and the mix applies none.
+                for ((p, &now), &was) in placed.iter_mut().zip(out.iter()).zip(before.iter()) {
+                    *p += (now - was) * place;
+                }
+            }
             if slot.end <= end {
                 slot.busy = false;
                 blocks::free(&slot.voice, &mut self.pools);
@@ -1254,7 +1397,8 @@ impl Core {
                     *m = m.with(r.setting, &r.drive);
                 }
             }
-            own.buses(block, &cx, buses, out, &mods, &mut self.sends, &mut sent);
+            let side = if spaced { self.own_side.get_mut(n) } else { None };
+            own.buses(block, &cx, buses, out, &mods, &mut self.sends, &mut sent, side);
             if own::ANY_WHOLE {
                 for (y, x) in out.iter_mut().zip(input.iter()) {
                     *y += *x;
@@ -1281,13 +1425,22 @@ impl Core {
             };
             r.drive = *tap;
         }
-        // The mix is mono: in stereo it is both lanes', the mid with no side
-        // (the space recipes, queue item 65, add one).
+        // The mix: the mono mix, and in a stereo render with a space its
+        // side (queue item 65), left = mid + side and right = mid - side.
+        // With no space both lanes are the mid.
         let lift = self.master.arc_lift(block);
-        let [mid, right] = &mut self.mixed;
-        *mid = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref());
-        if self.master.layout() == 2 {
-            *right = *mid;
+        let side_in = SideIn { placed: &self.placed, own: &self.own_side, space: &self.drawn };
+        let [left, right] = &mut self.mixed;
+        *left = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref(), spaced.then_some(&side_in));
+        if spaced {
+            let side = self.mix.side();
+            for ((l, r), &s) in left.iter_mut().zip(right.iter_mut()).zip(side.iter()) {
+                let m = *l;
+                *l = m + s;
+                *r = m - s;
+            }
+        } else if self.master.layout() == 2 {
+            *right = *left;
         }
         self.master.process(block, &self.mixed, &self.waves);
         &self.out
