@@ -22,6 +22,11 @@ param 2 2 0.62 0 0.03
 param 1 2 0.44 0 0.03
 param 0 2 0.58 0 0.03
 param 3 2 0.5 0 0.03
+param 31 0 3718462709 0.05 0
+param 32 0 8.196875 0.05 0
+param 33 0 0.5764705882352941 0.05 0
+param 34 0 1 0.05 0
+param 35 0 1 0.05 0
 key 3718462709 0 0 0
 note 24 4 0.05043441534042359 0 0 0.84 0 nan nan nan nan nan nan nan nan nan nan nan nan
 param 5 3 0 0.05 0

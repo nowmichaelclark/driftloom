@@ -421,6 +421,9 @@ const NOTHING: Waiting = Waiting {
 
 /// The core: the one thing a host holds. `const` and all
 /// zeros when new, so a host can keep one in a static.
+// Its flags are separate states a host sets apart (the layout, a space, one
+// waiting), not one state spelled in bools.
+#[allow(clippy::struct_excessive_bools)]
 pub struct Core {
     rate: f64,
     /// The first frame of the next block to render.
@@ -1298,6 +1301,9 @@ impl Core {
     /// channel, with what the host wrote into `inputs`, and the channels
     /// through the mix into the bus (`bus`). Returns the channels, one
     /// buffer each, as they went into the mix.
+    // One block, in the order it happens: split, it would scatter the
+    // order a block renders in across helpers.
+    #[allow(clippy::too_many_lines)]
     pub fn process(&mut self, block: u64) -> &[[f32; QUANTUM]; CHANNELS] {
         // Time only goes forward. A block before the one due is rendered as
         // the one due: rendering a block again would start the voices that
@@ -1352,6 +1358,8 @@ impl Core {
             self.placed = [[0.0; QUANTUM]; CHANNELS];
             self.own_side = [[0.0; QUANTUM]; CHANNELS];
         }
+        // A place is a gain, a 32-bit float as every gain the mix holds.
+        #[allow(clippy::cast_possible_truncation)]
         let places = [0.0, self.drawn.kit, self.drawn.kit * self.drawn.kit_soft, self.drawn.glass].map(|x| x as f32);
         for slot in self.slots.iter_mut().filter(|s| s.busy) {
             if slot.begin >= end {
@@ -1430,17 +1438,16 @@ impl Core {
         // With no space both lanes are the mid.
         let lift = self.master.arc_lift(block);
         let side_in = SideIn { placed: &self.placed, own: &self.own_side, space: &self.drawn };
-        let [left, right] = &mut self.mixed;
-        *left = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref(), spaced.then_some(&side_in));
+        let [first, second] = &mut self.mixed;
+        *first = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref(), spaced.then_some(&side_in));
         if spaced {
-            let side = self.mix.side();
-            for ((l, r), &s) in left.iter_mut().zip(right.iter_mut()).zip(side.iter()) {
+            for ((l, r), &s) in first.iter_mut().zip(second.iter_mut()).zip(self.mix.side().iter()) {
                 let m = *l;
                 *l = m + s;
                 *r = m - s;
             }
         } else if self.master.layout() == 2 {
-            *right = *left;
+            *second = *first;
         }
         self.master.process(block, &self.mixed, &self.waves);
         &self.out

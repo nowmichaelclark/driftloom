@@ -184,8 +184,8 @@ const GLIDE: f64 = 0.05;
 const AMOUNTS: usize = 9;
 
 fn amounts(d: &Drawn) -> [f64; AMOUNTS] {
-    let [m, c, t] = d.spread;
-    [d.room, m, c, t, d.kit, d.kit * d.kit_soft, d.texture, d.glass, d.wash]
+    let [melody, chords, texture] = d.spread;
+    [d.room, melody, chords, texture, d.kit, d.kit * d.kit_soft, d.texture, d.glass, d.wash]
 }
 
 /// The side of the mix in a stereo render: everything here is side only
@@ -226,6 +226,8 @@ struct Side {
 }
 
 impl Side {
+    // Built in place in the core's static, never on a stack.
+    #[allow(clippy::large_stack_arrays)]
     const fn new() -> Self {
         Side {
             rate: 0.0,
@@ -268,7 +270,9 @@ impl Side {
         }
         for ((len, &(d, _)), _) in self.allpass_len.iter_mut().zip(ALLPASSES.iter()).zip(0..) {
             // A whole number of frames, at least one, within the ring.
-            *len = (math::round(d * rate) as usize).clamp(1, ALLPASS_FRAMES - 1);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let frames = math::round(d * rate).max(1.0) as usize;
+            *len = frames.clamp(1, ALLPASS_FRAMES - 1);
         }
         self.allpass_at = 0;
         self.now = [0.0; AMOUNTS];
@@ -309,7 +313,7 @@ impl Side {
         for (now, &want) in self.now.iter_mut().zip(self.want.iter()) {
             *now = math::flush(*now + (want - *now) * step);
         }
-        let [room, m, c, t, kit, _, texture, glass, wash] = self.now.map(f);
+        let [room, melody, chords, tex_spread, kit, _, texture, glass, wash] = self.now.map(f);
         let at = |x: &[Signal; CHANNELS], ch: u32| x.get(ch as usize).copied().unwrap_or([0.0; QUANTUM]);
         let mut pumped = [0.0f32; QUANTUM];
         // The spreads: each channel through its swaying line, above the
@@ -319,7 +323,7 @@ impl Side {
             .iter()
             .zip(self.sway_lines.iter_mut())
             .zip(self.sway_hp.iter_mut())
-            .zip(self.rates.iter().zip([m, c, t].iter()))
+            .zip(self.rates.iter().zip([melody, chords, tex_spread].iter()))
         {
             if amount == 0.0 {
                 continue;
@@ -488,6 +492,7 @@ impl Mix {
 
     /// A stereo render's side of the last block (queue item 65): zeros
     /// until a block is mixed with a side.
+    #[must_use]
     pub fn side(&self) -> &Signal {
         &self.side.bus
     }
@@ -769,6 +774,7 @@ mod tests {
     /// for bit whatever the side does, a centered space makes no side, and
     /// the side keeps out of the low end (every part of it is highpassed).
     #[test]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
     fn the_side_leaves_the_mid_alone_and_the_low_end_centered() {
         let space = crate::space::Space::new();
         let drawn = space.draw(&crate::space::Loop { seed: 11, busy: 9.0, wet: 0.2, light: true });

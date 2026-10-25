@@ -317,14 +317,14 @@ impl Wash {
             let [l1, l2] = &mut self.lows;
             let [t1, t2] = &mut self.tints;
             let v = t2.step(t1.step(l2.step(l1.step(x))));
-            let k = (g * level * s2) as f32;
-            *y += v * k;
+            let swell = (g * level * s2) as f32;
+            *y += v * swell;
             if let Some(side) = side.as_deref_mut() {
-                let [l1, l2] = &mut self.side_lows;
-                let [t1, t2] = &mut self.side_tints;
-                let d = apart.get(i).copied().unwrap_or(0.0);
-                if let Some(s) = side.get_mut(i) {
-                    *s += t2.step(t1.step(l2.step(l1.step(d)))) * k;
+                let [sl1, sl2] = &mut self.side_lows;
+                let [st1, st2] = &mut self.side_tints;
+                let diff = apart.get(i).copied().unwrap_or(0.0);
+                if let Some(out) = side.get_mut(i) {
+                    *out += st2.step(st1.step(sl2.step(sl1.step(diff)))) * swell;
                 }
             }
         }
