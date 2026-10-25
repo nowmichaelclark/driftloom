@@ -154,6 +154,41 @@ export const LATEFLOOR = {
   lag: 2,
 };
 
+// floorDrop's shapes (queue item 70; Ears 8, approved by Mikey 2026-10-18):
+// a loop that draws them gives each of its floor drops (item 58: the kick
+// and the bass out for a bar or two, with "Let the loop wander" on) a shape
+// of its own. Every variable, named, with its range; the generator plays
+// them, at the end of drift's draws (js/generator.js, `drift`).
+export const FLOORDROP = {
+  // How often a loop draws the shapes (the drops themselves, their rate and
+  // where they fall, stay item 58's).
+  weight: 1,
+  // Each drop's shape, by weight: single (item 58's), stagger (the kick back
+  // on time, the bass `stagger` bars later), stutter (`stutter` short drops,
+  // one every two of their lengths), long (`long` seconds, or the whole pass
+  // in a loop of `wholeUnder` bars or fewer). Stagger and stutter need a bass
+  // line (Mikey's rule); without one a drop is single or long.
+  shapes: [['single', 40], ['stagger', 25], ['stutter', 20], ['long', 15]],
+  needBass: ['stagger', 'stutter'],
+  // batch 5's vibe table, each shape's own; single and stagger have none.
+  shapeVibes: {
+    stutter: { energetic: 1.5, hypnotic: 1.5, lively: 1.5, mischievous: 1.5, serene: 0.4, soothing: 0.4, restful: 0.4 },
+    long: { hypnotic: 2, spacious: 2, meditative: 1.5, reflective: 1.5, bouncy: 0.5, skipping: 0.5 },
+  },
+  // The shapes follow the bar's length (Mikey's rule, the sketch's way): a
+  // stagger's bass waits two bars when a bar is shorter than `staggerShort`
+  // seconds, one otherwise; a stutter's drops last two bars when a bar is
+  // shorter than `stutterShort` seconds, one otherwise, and there are three
+  // or four of them, half and half (fewer where the loop has no room: under
+  // two, the drop is single); a long drop is about `longSeconds`, 4-8 bars.
+  staggerShort: 2.5,
+  stutterShort: 2.2,
+  stutter: [3, 4],
+  longSeconds: 12,
+  longBars: [4, 8],
+  wholeUnder: 8,
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
@@ -200,6 +235,11 @@ export const CHOICES = [
   // loop with drums or a bass and something else that plays from its first
   // second, so it never starts with nothing.
   { id: 'lateFloor', options: [['today', 1], ['on', 1]], weight: LATEFLOOR.weight, vibes: LATEFLOOR.vibes, eligible: (ctx) => floorAndMore(ctx) },
+  // floorDrop's shapes (queue item 70; Ears 8, approved 2026-10-18): each of
+  // the loop's floor drops draws a shape (FLOORDROP, above). Only where a
+  // floor can drop: a loop of 4 bars or more, with drums or a bass.
+  { id: 'floorDrop', options: [['today', 1], ['shapes', 1]], weight: FLOORDROP.weight,
+    eligible: (ctx) => !!ctx.tracks && ctx.spec.bars >= 4 && (ctx.tracks.drums.some((e) => e.vel) || ctx.tracks.bass.some((e) => e.vel)) },
 ];
 
 // Whether the loop has a floor to hold back (drums or a bass) and something
@@ -454,4 +494,14 @@ export function lateFloorOf(seed, spb, stepDur, pins = {}) {
     drums: (order === 'bassFirst' ? bars + LATEFLOOR.lag : bars) * spb,
     bass: (order === 'kitFirst' ? bars + LATEFLOOR.lag : bars) * spb,
   };
+}
+
+// The shape of one floor drop (FLOORDROP.shapes), drawn with `rng` (drift's,
+// at the end of its draws) for a loop with or without a bass line, leaned by
+// its vibes ({ vibes, strength }, or null).
+export function dropShapeOf(rng, hasBass, vibes = null) {
+  const shapes = FLOORDROP.shapes
+    .filter(([id]) => hasBass || !FLOORDROP.needBass.includes(id))
+    .map(([id, w]) => [id, w * leanOf(FLOORDROP.shapeVibes[id], vibes)]);
+  return rng.weighted(shapes);
 }
