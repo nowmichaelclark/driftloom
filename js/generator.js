@@ -11,7 +11,7 @@ import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWei
 import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
-import { drawChoices } from './choices.js';
+import { drawChoices, dropShapeOf, FLOORDROP } from './choices.js';
 
 export const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 export const LAYER_LABELS = {
@@ -3048,6 +3048,10 @@ export function drift(pattern, rng, amount) {
   // It replaces the old full stop (the whole loop silent, at 0.1 a pass),
   // three and a half times as often, and since the rest of the loop plays
   // on, the tails are no longer faded (no driftSilentBars).
+  // A loop that draws floorDrop's shapes (queue item 70) shapes its drop at
+  // the very end of these draws, so nothing drawn here moves.
+  const shapes = pattern.choices && pattern.choices.floorDrop === 'shapes';
+  let dropAt = null;
   if (rng.chance(FLOOR_DROP_RATE * a)) {
     const spb = pattern.stepsPerBar || 16;
     const bars = Math.max(1, Math.floor(p.totalSteps / spb));
@@ -3056,15 +3060,11 @@ export function drift(pattern, rng, amount) {
       // Land the drop on an even bar, for the same reason.
       const latest = Math.max(1, bars - span);
       const start = Math.min(latest, Math.max(2, rng.int(1, latest) & ~1));
-      const from = start * spb;
-      const to = (start + span) * spb;
-      for (const layer of ['drums', 'bass']) {
-        for (const e of p.tracks[layer]) {
-          if (layer === 'drums' && !FLOOR_DRUMS.includes(e.inst)) continue;
-          if (e.step >= from && e.step < to) e.vel = 0;
-        }
+      if (shapes) dropAt = { start, span, bars, spb };
+      else {
+        floorOut(p, start * spb, (start + span) * spb);
+        p.floorDrop = { bar: start, bars: span };
       }
-      p.floorDrop = { bar: start, bars: span };
     }
   }
 
@@ -3076,5 +3076,59 @@ export function drift(pattern, rng, amount) {
       if (e.step >= half && e.step < half + p.totalSteps / 2) e.vel = 0;
     }
   }
+
+  // The drop's shape (queue item 70; the sketch's): drawn here, after every
+  // other draw, and laid out on the bars item 58's drop drew.
+  if (dropAt) p.floorDrop = shapeDrop(p, dropAt, rng, spec);
   return p;
+}
+
+// The kick, the soft kick, the frame and (unless `drumsOnly`) the bass, out
+// from step `from` to step `to`.
+function floorOut(p, from, to, which = ['drums', 'bass']) {
+  for (const layer of which) {
+    for (const e of p.tracks[layer]) {
+      if (layer === 'drums' && !FLOOR_DRUMS.includes(e.inst)) continue;
+      if (e.step >= from && e.step < to) e.vel = 0;
+    }
+  }
+}
+
+// A floor drop in one of FLOORDROP's shapes, on the bars item 58 drew
+// (`start` and `span`, in a loop of `bars` bars of `spb` steps), its shape
+// drawn with `rng`: what it did ({ bar, bars, kind }, the bars it covers
+// from its first to its last, and for a stutter its drops' `count` and
+// `len`). A shape follows the bar's length, as the sketch's did.
+function shapeDrop(p, { start, span, bars, spb }, rng, spec) {
+  const D = FLOORDROP;
+  const hasBass = p.tracks.bass.some((e) => e.vel);
+  let kind = dropShapeOf(rng, hasBass, vibesOf(spec));
+  const barSec = spb * 60 / spec.bpm / 4;
+  const out = (b0, b1, which) => floorOut(p, Math.max(0, b0) * spb, Math.min(bars, b1) * spb, which);
+  if (kind === 'stagger') {
+    const late = barSec < D.staggerShort ? 2 : 1;
+    out(start, start + span);
+    out(start + span, start + span + late, ['bass']);
+    return { bar: start, bars: span + late, kind, late };
+  }
+  if (kind === 'stutter') {
+    const k = barSec < D.stutterShort ? 2 : 1;
+    const n = rng.chance(0.5) ? D.stutter[0] : D.stutter[1];
+    const fit = Math.min(n, Math.floor((bars + k) / (2 * k)));
+    if (fit >= 2) {
+      const at = Math.max(0, Math.min(start, bars - (2 * k * (fit - 1) + k)));
+      for (let i = 0; i < fit; i++) out(at + 2 * k * i, at + 2 * k * i + k);
+      return { bar: at, bars: 2 * k * (fit - 1) + k, kind, count: fit, len: k };
+    }
+    kind = 'single';
+  }
+  if (kind === 'long') {
+    const len = Math.max(D.longBars[0], Math.min(D.longBars[1], Math.round(D.longSeconds / barSec)));
+    const at = bars <= D.wholeUnder ? 0 : start;
+    const n = bars <= D.wholeUnder ? bars : Math.min(len, bars - at);
+    out(at, at + n);
+    return { bar: at, bars: n, kind };
+  }
+  out(start, start + span);
+  return { bar: start, bars: span, kind: 'single' };
 }

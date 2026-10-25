@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1240,6 +1240,17 @@ console.log('\nlongChords (queue item 57)');
 }
 
 // ---------------------------------------------------------------------
+// Whether a floor drop (`drift`'s floorDrop) takes `layer` out in bar `bar`:
+// every bar of a single or a long drop; a stagger's last bars for the bass
+// alone; a stutter's drops, one every two of their lengths (queue item 70).
+function dropOut(drop, layer, bar) {
+  const i = bar - drop.bar;
+  if (i < 0 || i >= drop.bars) return false;
+  if (drop.kind === 'stagger') return layer === 'bass' || i < drop.bars - drop.late;
+  if (drop.kind === 'stutter') return i % (2 * drop.len) < drop.len;
+  return true;
+}
+
 console.log('\nfloorDrop (queue item 58)');
 {
   // Drift's full stop became a floor drop: the kick and the bass out for a
@@ -1257,11 +1268,10 @@ console.log('\nfloorDrop (queue item 58)');
       if (!d.floorDrop) continue;
       drops++;
       const spb = p.stepsPerBar || 16;
-      const from = d.floorDrop.bar * spb, to = (d.floorDrop.bar + d.floorDrop.bars) * spb;
       for (const layer of LAYERS) {
         for (const e of d.tracks[layer]) {
           const floor = layer === 'bass' || (layer === 'drums' && FLOOR.includes(e.inst));
-          if (floor && e.vel && e.step >= from && e.step < to) wrong++;
+          if (floor && e.vel && dropOut(d.floorDrop, layer, Math.floor(e.step / spb))) wrong++;
         }
       }
     }
@@ -1269,6 +1279,67 @@ console.log('\nfloorDrop (queue item 58)');
   check('a floor drop takes out the kick and the bass', drops > 0 && wrong === 0, `${wrong} wrong in ${drops} drops`);
   check('never a full stop', stops === 0, `${stops} passes`);
   check('about 0.35 a pass at full wander', drops / passes > 0.28 && drops / passes < 0.42, `${(drops / passes).toFixed(3)} of ${passes}`);
+}
+
+console.log('\nfloorDrop shapes (queue item 70)');
+{
+  // The same loops with the shapes and without: the drops fall on the same
+  // passes and start on the same bars; nothing else the wander draws moves;
+  // each shape is what it says (the bar's length deciding its bars), and
+  // stagger and stutter only with a bass line.
+  const FLOOR = ['kick', 'softkick', 'frame'];
+  let passes = 0, same = true, rest = true, wrong = 0, noBass = 0, stops = 0;
+  const kinds = { single: 0, stagger: 0, stutter: 0, long: 0 };
+  let staggerOk = true, stutterOk = true, longOk = true;
+  for (let i = 0; i < 400; i++) {
+    const p = render(newSpec(i * 104729 + 7));
+    if (p.totalSteps / (p.stepsPerBar || 16) < 4) continue;
+    const shaped = { ...p, choices: { ...p.choices, floorDrop: 'shapes' } };
+    const plain = { ...p, choices: { ...p.choices, floorDrop: 'today' } };
+    const spb = p.stepsPerBar || 16;
+    const barSec = spb * 60 / p.spec.bpm / 4;
+    const hasBass = p.tracks.bass.some((e) => e.vel);
+    for (let pass = 0; pass < 5; pass++) {
+      const a = drift(plain, new Rng(i * 31 + pass + 1), 1);
+      const b = drift(shaped, new Rng(i * 31 + pass + 1), 1);
+      passes++;
+      if (b.driftSilentBars) stops++;
+      if (!!a.floorDrop !== !!b.floorDrop) { same = false; continue; }
+      for (const layer of LAYERS) {
+        b.tracks[layer].forEach((e, k) => {
+          const f = a.tracks[layer][k];
+          const floor = layer === 'bass' || (layer === 'drums' && FLOOR.includes(e.inst));
+          if (!floor || !b.floorDrop) {
+            if (JSON.stringify(e) !== JSON.stringify(f)) rest = false;
+            return;
+          }
+          const out = dropOut(b.floorDrop, layer, Math.floor(e.step / spb));
+          if (out && e.vel) wrong++;
+          if (!out && e.vel !== a.tracks[layer][k].vel && !dropOut(a.floorDrop, layer, Math.floor(e.step / spb))) rest = false;
+        });
+      }
+      if (!b.floorDrop) continue;
+      const d = b.floorDrop;
+      kinds[d.kind]++;
+      if (!hasBass && (d.kind === 'stagger' || d.kind === 'stutter')) noBass++;
+      if (d.kind === 'stagger' && !(d.late === (barSec < 2.5 ? 2 : 1) && d.bar === a.floorDrop.bar)) staggerOk = false;
+      if (d.kind === 'stutter' && !(d.count >= 2 && d.count <= 4 && d.len === (barSec < 2.2 ? 2 : 1))) stutterOk = false;
+      const bars = p.totalSteps / spb;
+      if (d.kind === 'long' && !(bars <= 8 ? d.bars === bars && d.bar === 0 : (d.bars >= 4 || d.bar + d.bars === bars) && d.bars <= 8)) longOk = false;
+    }
+  }
+  const n = Object.values(kinds).reduce((x, y) => x + y, 0);
+  check('the drops fall on the same passes as without the shapes', same);
+  check('nothing else the wander draws moves', rest);
+  check('each shape takes out the kick and the bass where it says', wrong === 0, `${wrong} wrong`);
+  check('never a full stop', stops === 0);
+  check('stagger and stutter only with a bass line', noBass === 0);
+  check('a stagger brings the bass back one bar later, two in a short bar', staggerOk);
+  check('a stutter is two to four drops of one bar, two in a short bar', stutterOk);
+  check('a long drop is 4-8 bars (cut at the loop\'s end), or the whole pass of a loop of 8 bars or fewer', longOk);
+  check('every shape is drawn, single the most', Object.values(kinds).every((k) => k > 0) && kinds.single > kinds.stagger && kinds.stagger > kinds.long,
+    JSON.stringify(kinds) + ` of ${n}`);
+  check('every setting is named, with its range', ['weight', 'shapes', 'needBass', 'shapeVibes', 'staggerShort', 'stutterShort', 'stutter', 'longSeconds', 'longBars', 'wholeUnder'].every((k) => k in FLOORDROP));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

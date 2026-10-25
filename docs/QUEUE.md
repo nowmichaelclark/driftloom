@@ -4158,6 +4158,39 @@ Mikey decides this line:
   - **Goldens:** nine lists move with the reshuffle a new choice brings, and
     those that draw lateFloor wait.
 
+- **Item 70, floorDrop shapes: what was built, what Mikey decided (Session
+  25c, hands, Opus 5.5, 2026-10-25).** The generator only. A loop that draws
+  the choice `floorDrop` (`shapes`; loops of 4 bars or more with drums or a
+  bass) gives each of its floor drops (item 58's, with "Let the loop wander"
+  on) a shape: single (item 58's), stagger, stutter or long, 40/25/20/15,
+  stagger and stutter only with a bass line (Mikey's rule), stutter and long
+  leaned by batch 5's table. The shape is drawn at the very end of drift's
+  draws (`shapeDrop` in `js/generator.js`, after "a single layer takes a
+  breath"), laid out on the bars item 58's drop drew, so the drops fall on the
+  same passes and start on the same bars, and nothing else the wander draws
+  moves (tested on 400 loops, 5 passes each). `FLOORDROP` in `js/choices.js`
+  holds every variable.
+  - **The style follows the bar's length** (Mikey's rule), as the sketch's
+    code did: a stagger's bass comes back two bars after the kick in a bar
+    shorter than 2.5 s, one otherwise; a stutter's drops last two bars in a
+    bar shorter than 2.2 s, one otherwise, one every two of their lengths,
+    three or four of them (fewer where the loop has no room; under two, the
+    drop is single); a long drop is about 12 s, 4-8 bars, or the whole pass
+    in a loop of 8 bars or fewer, cut at the loop's end.
+  - **Decided by Mikey (2026-10-25): in bars, as the sketch.** The seconds in
+    the yardstick are a guide. Over the corpus (80 loops, 20 passes each,
+    full wander, shapes forced on): 491 drops on 1,600 passes, the same 491
+    as without the shapes; single 42.2%, stagger 25.5%, stutter 16.1%, long
+    16.3% (the report: 48/24/14/14).
+
+    | shape | the yardstick asks | the corpus, as built |
+    |---|---|---|
+    | stagger | the bass back 1-2 bars after the kick | 1-2 bars: 2.1-5.3 s (median 3.7) |
+    | stutter | 3-4 drops of 2.5-4.5 s, one every 5-7 s | 2-4 drops (median 2), each 2.2-5.3 s (median 3.4; 64 of 79 in 2.5-4.5), one every 4.4-10.7 s (median 6.9; 33 of 79 in 5-7) |
+    | long | 10-20 s | 4.3-42.7 s (median 11.6; 40 of 80 in 10-20): the whole pass of a slow short loop is the long end, a long drop cut at a loop's end the short |
+
+    Never a full stop (the rest plays on, no bars marked silent).
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4843,3 +4876,15 @@ Mikey decides this line:
   Listen on speakers or headphones with some low end for a bass that breathes
   with the kick without pumping, and for nothing else moving. For the album:
   halcyon #18 from 0:00 (7.6 dB) and halcyon #68 from 0:00 (6.6 dB).
+- #268, lateFloor (item 69, v119),
+  https://8e44cc27-driftloom.nowmichaelclark.workers.dev: in loops that draw it
+  (about one in five), after a load the kit and the bass sit out 8-30 s while
+  the pads, tune or texture play alone, then arrive together, the kit first
+  with the bass two bars later, or the bass first. Never on a reroll, a
+  resumed loop, or a loop with nothing else playing in its first second. A few
+  notes the budget used to turn away now play in the intro. Listen for an
+  opening that sets the scene and a beat that arrives rather than starts, and
+  for no silence at the start. For the album: undertow #45 with lateFloor
+  forced on (the report's loop, Mikey's ask: the kit at 0:29.8, the bass at
+  0:33.5; its texture is 0.8 dB lighter from the budget's ripple), and
+  clockwork #33 from 0:00 (the kit at 0:07.8, the bass at 0:15.5).
