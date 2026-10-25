@@ -2245,646 +2245,646 @@
  "stereo": {
   "full": {
    "reisk-waith": {
-    "left": "028859af",
-    "right": "028859af",
-    "monoOnEachSide": true,
+    "left": "fa23ffb2",
+    "right": "f2eccd49",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -76.4,
+    "sideMidDb": -22.25
    },
    "yui-deng": {
-    "left": "32a89499",
-    "right": "32a89499",
-    "monoOnEachSide": true,
+    "left": "a819ab03",
+    "right": "7893bf30",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -77.77,
+    "sideMidDb": -22.5
    },
    "toask-ha": {
-    "left": "9d1bb4e2",
-    "right": "9d1bb4e2",
-    "monoOnEachSide": true,
+    "left": "71347ba0",
+    "right": "70ec3bea",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.07,
+    "sideMidDb": -22.84
    },
    "theith-yaing": {
-    "left": "17994373",
-    "right": "17994373",
-    "monoOnEachSide": true,
+    "left": "5d29738f",
+    "right": "4f09a3c9",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -76.55,
+    "sideMidDb": -20.53
    },
    "hai-waim": {
-    "left": "6d863f06",
-    "right": "6d863f06",
-    "monoOnEachSide": true,
+    "left": "4222d92e",
+    "right": "06be415c",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -80.58,
+    "sideMidDb": -21.87
    },
    "kor-thu": {
-    "left": "bf0f3d99",
-    "right": "bf0f3d99",
-    "monoOnEachSide": true,
+    "left": "83ce7a2a",
+    "right": "96b19a81",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.56,
+    "sideMidDb": -20.57
    },
    "reisk-foa": {
-    "left": "d37bc2bc",
-    "right": "d37bc2bc",
-    "monoOnEachSide": true,
+    "left": "bff4b286",
+    "right": "9237b980",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -77.62,
+    "sideMidDb": -21.84
    },
    "dith-shuisk": {
-    "left": "4544791a",
-    "right": "4544791a",
-    "monoOnEachSide": true,
+    "left": "f48897ba",
+    "right": "563f8a97",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.78,
+    "sideMidDb": -27
    },
    "neir-luin": {
-    "left": "f47c2be9",
-    "right": "f47c2be9",
-    "monoOnEachSide": true,
+    "left": "94ebec41",
+    "right": "a7be7478",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.36,
+    "sideMidDb": -21.9
    },
    "noan-nou": {
-    "left": "ac5186a3",
-    "right": "ac5186a3",
-    "monoOnEachSide": true,
+    "left": "f791a77d",
+    "right": "19eb9072",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -74.55,
+    "sideMidDb": -21.96
    },
    "mul-voa": {
-    "left": "2afe2c4a",
-    "right": "2afe2c4a",
-    "monoOnEachSide": true,
+    "left": "3cf7ca72",
+    "right": "543ffa03",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -76.35,
+    "sideMidDb": -18.29
    },
    "shil-doask": {
-    "left": "a17b67be",
-    "right": "a17b67be",
-    "monoOnEachSide": true,
+    "left": "574d7ae6",
+    "right": "3d2d144e",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.49,
+    "sideMidDb": -28.12
    },
    "broa-naisk": {
-    "left": "34087efc",
-    "right": "34087efc",
-    "monoOnEachSide": true,
+    "left": "be999f13",
+    "right": "ded66dba",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -69.77,
+    "sideMidDb": -18.36
    },
    "shoar-brol": {
-    "left": "3f80c117",
-    "right": "3f80c117",
-    "monoOnEachSide": true,
+    "left": "2552bcd9",
+    "right": "9a94d949",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -74.83,
+    "sideMidDb": -21.04
    },
    "foang-shou": {
-    "left": "299c9382",
-    "right": "299c9382",
-    "monoOnEachSide": true,
+    "left": "8b6133c1",
+    "right": "677e5f05",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.87,
+    "sideMidDb": -25.67
    },
    "rei-saisk": {
-    "left": "4b14432f",
-    "right": "4b14432f",
-    "monoOnEachSide": true,
+    "left": "f3b73934",
+    "right": "8eb6a8a1",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -76.18,
+    "sideMidDb": -18.74
    },
    "sang-hoth": {
-    "left": "97d7d81a",
-    "right": "97d7d81a",
-    "monoOnEachSide": true,
+    "left": "23b5274e",
+    "right": "2a2b0176",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.77,
+    "sideMidDb": -20.55
    },
    "ri-houng": {
-    "left": "867f988b",
-    "right": "867f988b",
-    "monoOnEachSide": true,
+    "left": "2028af21",
+    "right": "21a50be2",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -74.8,
+    "sideMidDb": -20.18
    },
    "koun-nuing": {
-    "left": "53dc8ace",
-    "right": "53dc8ace",
-    "monoOnEachSide": true,
+    "left": "553b005c",
+    "right": "23d3f62c",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.11,
+    "sideMidDb": -28.5
    },
    "loung-rang": {
-    "left": "9042fd46",
-    "right": "9042fd46",
-    "monoOnEachSide": true,
+    "left": "7fddbc44",
+    "right": "6dedbb6b",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.43,
+    "sideMidDb": -29.07
    },
    "duin-sar": {
-    "left": "b60eaf99",
-    "right": "b60eaf99",
-    "monoOnEachSide": true,
+    "left": "6de84db4",
+    "right": "9cdd729d",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.73,
+    "sideMidDb": -27.46
    },
    "loum-seng": {
-    "left": "a403048a",
-    "right": "a403048a",
-    "monoOnEachSide": true,
+    "left": "400e7d07",
+    "right": "3f80b0ca",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.77,
+    "sideMidDb": -24.35
    },
    "han-vaing": {
-    "left": "896a48b1",
-    "right": "896a48b1",
-    "monoOnEachSide": true,
+    "left": "35306880",
+    "right": "6d08ef4f",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.05,
+    "sideMidDb": -22.77
    },
    "their-roask": {
-    "left": "28f4c66f",
-    "right": "28f4c66f",
-    "monoOnEachSide": true,
+    "left": "f37cf506",
+    "right": "75529da9",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.84,
+    "sideMidDb": -38.39
    },
    "brou-fun": {
-    "left": "9e461ae6",
-    "right": "9e461ae6",
-    "monoOnEachSide": true,
+    "left": "8b169bc8",
+    "right": "1b808f33",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -81.89,
+    "sideMidDb": -23.94
    },
    "va-gloung": {
-    "left": "270a803b",
-    "right": "270a803b",
-    "monoOnEachSide": true,
+    "left": "318585e1",
+    "right": "fce887d9",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -68.86,
+    "sideMidDb": -10.71
    },
    "tei-har": {
-    "left": "703c60b6",
-    "right": "703c60b6",
-    "monoOnEachSide": true,
+    "left": "58858896",
+    "right": "3e477431",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -70.73,
+    "sideMidDb": -13.51
    },
    "war-bri": {
-    "left": "2bd8ca5d",
-    "right": "2bd8ca5d",
-    "monoOnEachSide": true,
+    "left": "165664c6",
+    "right": "02271763",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -63.13,
+    "sideMidDb": -15.29
    },
    "woung-shain": {
-    "left": "f9e5893b",
-    "right": "f9e5893b",
-    "monoOnEachSide": true,
+    "left": "7b29a8b3",
+    "right": "ac3af6be",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -75.33,
+    "sideMidDb": -15.4
    },
    "sheing-glar": {
-    "left": "a4859d65",
-    "right": "a4859d65",
-    "monoOnEachSide": true,
+    "left": "85a7f259",
+    "right": "bf7e7014",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.62,
+    "sideMidDb": -27.54
    },
    "dum-futh": {
-    "left": "8526036a",
-    "right": "8526036a",
-    "monoOnEachSide": true,
+    "left": "6c106825",
+    "right": "6241f7c5",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.24,
+    "sideMidDb": -32.04
    },
    "voth-rur": {
-    "left": "20d6a677",
-    "right": "20d6a677",
-    "monoOnEachSide": true,
+    "left": "a939c725",
+    "right": "655d964c",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -79.62,
+    "sideMidDb": -19.28
    },
    "broul-fuisk": {
-    "left": "be00193b",
-    "right": "be00193b",
-    "monoOnEachSide": true,
+    "left": "4f39b726",
+    "right": "23425ff6",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -70.31,
+    "sideMidDb": -18.71
    },
    "taing-doan": {
-    "left": "cc539431",
-    "right": "cc539431",
-    "monoOnEachSide": true,
+    "left": "cbb880ec",
+    "right": "1c4c3f23",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.53,
+    "sideMidDb": -26.61
    },
    "brum-nosk": {
-    "left": "b8214344",
-    "right": "b8214344",
-    "monoOnEachSide": true,
+    "left": "65b8089f",
+    "right": "86d609c5",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.84,
+    "sideMidDb": -21.25
    },
    "koth-loar": {
-    "left": "2a091d03",
-    "right": "2a091d03",
-    "monoOnEachSide": true,
+    "left": "5e2349ac",
+    "right": "2cbdb9e5",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -83.95,
+    "sideMidDb": -22.7
    },
    "shaisk-sha": {
-    "left": "b9b413cb",
-    "right": "b9b413cb",
-    "monoOnEachSide": true,
+    "left": "8d7bf7a0",
+    "right": "d5236072",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -73.69,
+    "sideMidDb": -15.31
    },
    "vei-koan": {
-    "left": "cb9be760",
-    "right": "cb9be760",
-    "monoOnEachSide": true,
+    "left": "66407c47",
+    "right": "36ec672a",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.53,
+    "sideMidDb": -29.21
    },
    "vin-ten": {
-    "left": "7ce25b45",
-    "right": "7ce25b45",
-    "monoOnEachSide": true,
+    "left": "a07e4dbd",
+    "right": "09acdeb3",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -81.63,
+    "sideMidDb": -21.76
    },
    "leisk-tom": {
-    "left": "25827ca0",
-    "right": "25827ca0",
-    "monoOnEachSide": true,
+    "left": "55937e1e",
+    "right": "4847bca2",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.1,
+    "sideMidDb": -31.66
    }
   },
   "lite": {
    "reisk-waith": {
-    "left": "17ed68da",
-    "right": "17ed68da",
-    "monoOnEachSide": true,
+    "left": "06d17f30",
+    "right": "ecf56e42",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.56,
+    "sideMidDb": -23.74
    },
    "yui-deng": {
-    "left": "e5b6d4f4",
-    "right": "e5b6d4f4",
-    "monoOnEachSide": true,
+    "left": "06489265",
+    "right": "95adbdbb",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.88,
+    "sideMidDb": -25.17
    },
    "toask-ha": {
-    "left": "b9f60a27",
-    "right": "b9f60a27",
-    "monoOnEachSide": true,
+    "left": "6f600702",
+    "right": "e363ac2c",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -83.3,
+    "sideMidDb": -24.73
    },
    "theith-yaing": {
-    "left": "ab45c199",
-    "right": "ab45c199",
-    "monoOnEachSide": true,
+    "left": "694ce3d9",
+    "right": "3a946557",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.03,
+    "sideMidDb": -21.48
    },
    "hai-waim": {
-    "left": "d1ed5271",
-    "right": "d1ed5271",
-    "monoOnEachSide": true,
+    "left": "b02e50e2",
+    "right": "d6a206f3",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.22,
+    "sideMidDb": -23.49
    },
    "kor-thu": {
-    "left": "a31faf60",
-    "right": "a31faf60",
-    "monoOnEachSide": true,
+    "left": "54e04f90",
+    "right": "05751d5e",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -80.69,
+    "sideMidDb": -21.35
    },
    "reisk-foa": {
-    "left": "2d172e36",
-    "right": "2d172e36",
-    "monoOnEachSide": true,
+    "left": "b8cc0883",
+    "right": "320facdf",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.43,
+    "sideMidDb": -22.34
    },
    "dith-shuisk": {
-    "left": "98b00639",
-    "right": "98b00639",
-    "monoOnEachSide": true,
+    "left": "2c5f5b58",
+    "right": "f1fb3637",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.59,
+    "sideMidDb": -29.6
    },
    "neir-luin": {
-    "left": "bde31a84",
-    "right": "bde31a84",
-    "monoOnEachSide": true,
+    "left": "ab656e93",
+    "right": "163ac037",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.49,
+    "sideMidDb": -22.35
    },
    "noan-nou": {
-    "left": "ac998944",
-    "right": "ac998944",
-    "monoOnEachSide": true,
+    "left": "399e6b15",
+    "right": "2f76f679",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -75.27,
+    "sideMidDb": -23.04
    },
    "mul-voa": {
-    "left": "e2b7532f",
-    "right": "e2b7532f",
-    "monoOnEachSide": true,
+    "left": "0182df0d",
+    "right": "5d330cee",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -80.34,
+    "sideMidDb": -20.23
    },
    "shil-doask": {
-    "left": "74fe0ce4",
-    "right": "74fe0ce4",
-    "monoOnEachSide": true,
+    "left": "c52dc1a5",
+    "right": "f39bc8cc",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -83.83,
+    "sideMidDb": -28.95
    },
    "broa-naisk": {
-    "left": "29879799",
-    "right": "29879799",
-    "monoOnEachSide": true,
+    "left": "37537c04",
+    "right": "af1f3a48",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -76.64,
+    "sideMidDb": -22.1
    },
    "shoar-brol": {
-    "left": "f37cd672",
-    "right": "f37cd672",
-    "monoOnEachSide": true,
+    "left": "c15bfbe2",
+    "right": "17adbba3",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.21,
+    "sideMidDb": -23.24
    },
    "foang-shou": {
-    "left": "79a7f614",
-    "right": "79a7f614",
-    "monoOnEachSide": true,
+    "left": "ae59b97f",
+    "right": "a65ca00b",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -85.1,
+    "sideMidDb": -30.25
    },
    "rei-saisk": {
-    "left": "6ec8ab0c",
-    "right": "6ec8ab0c",
-    "monoOnEachSide": true,
+    "left": "9f07c079",
+    "right": "b5998bb5",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.29,
+    "sideMidDb": -19.72
    },
    "sang-hoth": {
-    "left": "51e3598f",
-    "right": "51e3598f",
-    "monoOnEachSide": true,
+    "left": "afa963b3",
+    "right": "2337a492",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.32,
+    "sideMidDb": -22.82
    },
    "ri-houng": {
-    "left": "afe709c0",
-    "right": "afe709c0",
-    "monoOnEachSide": true,
+    "left": "0b2cd401",
+    "right": "076da56b",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -75.03,
+    "sideMidDb": -20.38
    },
    "koun-nuing": {
-    "left": "3675d286",
-    "right": "3675d286",
-    "monoOnEachSide": true,
+    "left": "43f4f217",
+    "right": "07b2c8eb",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.25,
+    "sideMidDb": -28.36
    },
    "loung-rang": {
-    "left": "38d3f64b",
-    "right": "38d3f64b",
-    "monoOnEachSide": true,
+    "left": "4b1d4b97",
+    "right": "da4de1cd",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.69,
+    "sideMidDb": -30.37
    },
    "duin-sar": {
-    "left": "dd711615",
-    "right": "dd711615",
-    "monoOnEachSide": true,
+    "left": "e8c4e592",
+    "right": "6dfc7301",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.78,
+    "sideMidDb": -27.61
    },
    "loum-seng": {
-    "left": "035da00b",
-    "right": "035da00b",
-    "monoOnEachSide": true,
+    "left": "9fad05bc",
+    "right": "c90043ca",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.49,
+    "sideMidDb": -29.08
    },
    "han-vaing": {
-    "left": "c00aa65c",
-    "right": "c00aa65c",
-    "monoOnEachSide": true,
+    "left": "0ff57c74",
+    "right": "3ff3c75c",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -78.61,
+    "sideMidDb": -23.23
    },
    "their-roask": {
-    "left": "7802cfa1",
-    "right": "7802cfa1",
-    "monoOnEachSide": true,
+    "left": "a8ec3a4e",
+    "right": "be5a5f93",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.28,
+    "sideMidDb": -39.51
    },
    "brou-fun": {
-    "left": "da5ceb65",
-    "right": "da5ceb65",
-    "monoOnEachSide": true,
+    "left": "00b4feec",
+    "right": "c45b520d",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -82.46,
+    "sideMidDb": -25.5
    },
    "va-gloung": {
-    "left": "7b5dda94",
-    "right": "7b5dda94",
-    "monoOnEachSide": true,
+    "left": "f4cabdf3",
+    "right": "ed0a7ca6",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -73.04,
+    "sideMidDb": -12.34
    },
    "tei-har": {
-    "left": "5e641511",
-    "right": "5e641511",
-    "monoOnEachSide": true,
+    "left": "477b8eb7",
+    "right": "44ab3896",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -71.04,
+    "sideMidDb": -13.52
    },
    "war-bri": {
-    "left": "af91f916",
-    "right": "af91f916",
-    "monoOnEachSide": true,
+    "left": "4a33c092",
+    "right": "cf5200a2",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -63.09,
+    "sideMidDb": -15.31
    },
    "woung-shain": {
-    "left": "c6ed904d",
-    "right": "c6ed904d",
-    "monoOnEachSide": true,
+    "left": "741a207b",
+    "right": "0b0fa846",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -79.04,
+    "sideMidDb": -17.38
    },
    "sheing-glar": {
-    "left": "4bddac81",
-    "right": "4bddac81",
-    "monoOnEachSide": true,
+    "left": "820a29a1",
+    "right": "031bac18",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -83.14,
+    "sideMidDb": -27.67
    },
    "dum-futh": {
-    "left": "988bb921",
-    "right": "988bb921",
-    "monoOnEachSide": true,
+    "left": "7061bd45",
+    "right": "84fc9189",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -85.19,
+    "sideMidDb": -35.36
    },
    "voth-rur": {
-    "left": "27fc1cf3",
-    "right": "27fc1cf3",
-    "monoOnEachSide": true,
+    "left": "8f369c39",
+    "right": "6797120e",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -81.4,
+    "sideMidDb": -21.65
    },
    "broul-fuisk": {
-    "left": "5343683c",
-    "right": "5343683c",
-    "monoOnEachSide": true,
+    "left": "0105364e",
+    "right": "aebc8433",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -74.17,
+    "sideMidDb": -21.18
    },
    "taing-doan": {
-    "left": "480ee0ec",
-    "right": "480ee0ec",
-    "monoOnEachSide": true,
+    "left": "6bb02cd3",
+    "right": "dd9645d5",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.49,
+    "sideMidDb": -28.6
    },
    "brum-nosk": {
-    "left": "920b7e45",
-    "right": "920b7e45",
-    "monoOnEachSide": true,
+    "left": "8a4e1126",
+    "right": "4bb75a98",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -83.61,
+    "sideMidDb": -23.57
    },
    "koth-loar": {
-    "left": "1b089a41",
-    "right": "1b089a41",
-    "monoOnEachSide": true,
+    "left": "a98167aa",
+    "right": "3496cd4a",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.43,
+    "sideMidDb": -27.24
    },
    "shaisk-sha": {
-    "left": "a3e8eca1",
-    "right": "a3e8eca1",
-    "monoOnEachSide": true,
+    "left": "0184afd3",
+    "right": "0e0ed8c0",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -75.81,
+    "sideMidDb": -15.97
    },
    "vei-koan": {
-    "left": "9ffe13c5",
-    "right": "9ffe13c5",
-    "monoOnEachSide": true,
+    "left": "a1b34bee",
+    "right": "9324187e",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.29,
+    "sideMidDb": -29.77
    },
    "vin-ten": {
-    "left": "def83dd4",
-    "right": "def83dd4",
-    "monoOnEachSide": true,
+    "left": "d6d6a44b",
+    "right": "a894c784",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -83.17,
+    "sideMidDb": -24.12
    },
    "leisk-tom": {
-    "left": "e827e193",
-    "right": "e827e193",
-    "monoOnEachSide": true,
+    "left": "af4f415b",
+    "right": "9f05e6bd",
+    "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": null,
-    "sideMidDb": null
+    "foldResidDb": -84.31,
+    "sideMidDb": -34.8
    }
   }
  }
