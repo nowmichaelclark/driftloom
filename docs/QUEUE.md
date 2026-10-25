@@ -4876,3 +4876,15 @@ Mikey decides this line:
   Listen on speakers or headphones with some low end for a bass that breathes
   with the kick without pumping, and for nothing else moving. For the album:
   halcyon #18 from 0:00 (7.6 dB) and halcyon #68 from 0:00 (6.6 dB).
+- #268, lateFloor (item 69, v119),
+  https://8e44cc27-driftloom.nowmichaelclark.workers.dev: in loops that draw it
+  (about one in five), after a load the kit and the bass sit out 8-30 s while
+  the pads, tune or texture play alone, then arrive together, the kit first
+  with the bass two bars later, or the bass first. Never on a reroll, a
+  resumed loop, or a loop with nothing else playing in its first second. A few
+  notes the budget used to turn away now play in the intro. Listen for an
+  opening that sets the scene and a beat that arrives rather than starts, and
+  for no silence at the start. For the album: undertow #45 with lateFloor
+  forced on (the report's loop, Mikey's ask: the kit at 0:29.8, the bass at
+  0:33.5; its texture is 0.8 dB lighter from the budget's ripple), and
+  clockwork #33 from 0:00 (the kit at 0:07.8, the bass at 0:15.5).
