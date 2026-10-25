@@ -158,3 +158,5 @@ kick/soft-long 6f442cfd35afc32b -20.36 -1.64 0.0
 kick/short@choke c64c9aa7e239e205 -17.54 -1.55 0.0
 kick/long@choke ae2c5d6b10fe04c9 -21.34 -1.53 0.0
 kick/soft-long@choke a2ba9f9a1a2b8d8c -20.47 -1.64 0.0
+sub_duck/kick 2b52ba0cc00e226c -20.27 -8.81 34.1
+sub_duck/kick~key 615cb9998266b7bc -21.06 -9.24 34.0

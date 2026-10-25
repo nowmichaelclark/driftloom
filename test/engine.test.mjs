@@ -549,6 +549,35 @@ console.log('\nThe wash (queue item 62)');
   check('a loop without it makes no wash call', !none.calls.some((c) => c.name === 'washSetup'));
 }
 
+console.log('\nsubDuck (queue item 68)');
+{
+  // A loop that draws subDuck: its depth and recovery handed to the synth
+  // once, at its first step; sent again with the loop on Play; a loop
+  // without it makes no call.
+  let seed = 0;
+  for (let s = 1; s < 3000 && !seed; s++) if (rig(true, s * 7907).engine.subDuck) seed = s * 7907;
+  const r = rig(true, seed);
+  r.run(20);
+  const setups = r.calls.filter((c) => c.name === 'subDuckSetup');
+  const o = setups[0] && setups[0].args[0];
+  check('set up once, at the first step', setups.length === 1 && setups[0].args[1] < 0.1, JSON.stringify(setups.map((c) => c.args[1])));
+  check('5-9 dB, back in 0.15-0.25 s', o && o.depth >= 5 && o.depth <= 9 && o.recover >= 0.15 && o.recover <= 0.25, JSON.stringify(o));
+  const n = r.calls.length;
+  r.engine.stop();
+  r.engine.start();
+  r.engine.clock.stop();
+  r.run(r.ctx.currentTime + 1);
+  const again = r.calls.slice(n).filter((c) => c.name === 'subDuckSetup' && c.args[0]);
+  check('and sent again on Play', again.length === 1 && JSON.stringify(again[0].args[0]) === JSON.stringify(o));
+  let none = null;
+  for (let s = 1; s < 50 && !none; s++) {
+    const y = rig(true, s * 13);
+    if (!y.engine.subDuck) none = y;
+  }
+  none.run(10);
+  check('a loop without it makes no subDuck call', !none.calls.some((c) => c.name === 'subDuckSetup'));
+}
+
 console.log('\nThe arc (queue item 63)');
 {
   // A loop that draws the arc: started once, at its first step, over 2-5
