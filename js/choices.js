@@ -133,6 +133,27 @@ export const SUBDUCK = {
   beat: 0.8,
 };
 
+// lateFloor's settings (queue item 69; Ears 8's lateFloor, approved by Mikey
+// 2026-10-18): after a load the kit and the bass sit out a while, then
+// arrive, as the records open with the pads and let the beat come to them.
+// Every variable, named, with its range; `lateFloorOf` draws a loop's; the
+// engine plays it (js/engine.js).
+export const LATEFLOOR = {
+  // How often a loop draws it, and batch 5's vibe table for it.
+  weight: 1,
+  vibes: { hypnotic: 2, meditative: 1.5, spacious: 1.5, wondrous: 1.5, adventurous: 1.5, energetic: 0.4, enthusiastic: 0.4, skipping: 0.4, bouncy: 0.5 },
+  // How long they wait, in seconds, rounded to this many bars (and at least
+  // that many).
+  seconds: [8, 30],
+  round: 2,
+  // Only where something else plays within this many seconds of the start.
+  first: 1,
+  // In what order they arrive: together, the kit first and the bass `lag`
+  // bars later, or the bass first.
+  orders: [['together', 40], ['kitFirst', 35], ['bassFirst', 25]],
+  lag: 2,
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
@@ -174,7 +195,26 @@ export const CHOICES = [
   // at each kick (SUBDUCK, above; `subDuckOf`). Only on a loop with a kick
   // and a bass line (Mikey's rule; the sketch's test).
   { id: 'subDuck', options: [['today', 1], ['on', 1]], weight: SUBDUCK.weight, vibes: SUBDUCK.vibes, eligible: (ctx) => hasKick(ctx) && hasBass(ctx) },
+  // lateFloor (queue item 69; Ears 8, approved 2026-10-18): after a load the
+  // kit and the bass wait 8-30 s (LATEFLOOR, above; `lateFloorOf`). Only on a
+  // loop with drums or a bass and something else that plays from its first
+  // second, so it never starts with nothing.
+  { id: 'lateFloor', options: [['today', 1], ['on', 1]], weight: LATEFLOOR.weight, vibes: LATEFLOOR.vibes, eligible: (ctx) => floorAndMore(ctx) },
 ];
+
+// Whether the loop has a floor to hold back (drums or a bass) and something
+// else that plays from its first second (chords, a tune or a texture), as
+// the tracks hold them after their entry schedules. The sketch's test was
+// anything else at all, which let 3.6% of the loops that draw it open in
+// silence for a second or more, until their pads or tune came in (Mikey,
+// 2026-10-25: the first second, as the queue reads).
+function floorAndMore(ctx) {
+  if (!ctx.tracks) return false;
+  const step = 60 / ctx.spec.bpm / 4;
+  const plays = (layer) => ctx.tracks[layer].some((e) => e.vel);
+  const first = (layer) => ctx.tracks[layer].some((e) => e.vel && e.step * step < LATEFLOOR.first);
+  return (plays('drums') || plays('bass')) && (first('chords') || first('melody') || first('texture'));
+}
 
 // Whether the loop plays a bass line.
 function hasBass(ctx) {
@@ -390,4 +430,28 @@ export function subDuckOf(seed, bpm, pins = {}) {
   const depth = r.range(SUBDUCK.depth[0], SUBDUCK.depth[1]);
   const recover = Math.min(r.range(SUBDUCK.recover[0], SUBDUCK.recover[1]), SUBDUCK.beat * 60 / bpm);
   return { depth: pins.depth ?? depth, recover: pins.recover ?? recover };
+}
+
+// lateFloor's own stream (the sketch's salt).
+const LATEFLOOR_SALT = 0x1a7e;
+
+// A loop's lateFloor, drawn from LATEFLOOR on a stream of its own: { order,
+// bars, drums, bass }, the last two the steps from the load each sits out.
+// The sketch drew whether a loop waits first, on the same stream; that draw
+// is spent here too, so a loop waits as long as the sketch drew it. `spb` is
+// the loop's steps a bar, `stepDur` a step's seconds. `pins` may fix the
+// order or the seconds.
+export function lateFloorOf(seed, spb, stepDur, pins = {}) {
+  const r = new Rng(((seed ^ LATEFLOOR_SALT) >>> 0) || 1);
+  r.f();
+  const secs = pins.seconds ?? r.range(LATEFLOOR.seconds[0], LATEFLOOR.seconds[1]);
+  const drawn = r.weighted(LATEFLOOR.orders);
+  const order = pins.order ?? drawn;
+  const k = LATEFLOOR.round;
+  const bars = Math.max(k, Math.round(secs / (spb * stepDur) / k) * k);
+  return {
+    order, bars,
+    drums: (order === 'bassFirst' ? bars + LATEFLOOR.lag : bars) * spb,
+    bass: (order === 'kitFirst' ? bars + LATEFLOOR.lag : bars) * spb,
+  };
 }

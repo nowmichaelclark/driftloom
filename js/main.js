@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v118';
+const BUILD = 'v119';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -192,7 +192,9 @@ function buildAudio() {
   state.engine.driftAmount = wander > 0 ? wander : 1;
   state.synth.setVolume(parseFloat(ui.el('volume').value));
   if (state.spec) {
-    state.pattern = state.engine.load(state.spec);
+    // The same loop, resumed under the new engine (queue item 69: its
+    // late floor doesn't wait again).
+    state.pattern = state.engine.load(state.spec, { resume: true });
     if (wasPlaying) {
       // The new bridge has to take over the media session too, otherwise
       // the lock-screen controls stay attached to the graph we just binned.
