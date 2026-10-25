@@ -145,11 +145,16 @@ export const KALIMBA_BODY = 2;
 // the rest in core/src/lib.rs): `arcFrom`, where on its swing it starts, 0 to
 // 1; `arcShape`, 0 the deep swing and 1 the dip; `arcFloor`, the dip's floor
 // in Hz; `arcDip`, the dip's share of the swing; and last `arcPeriod`, its
-// period from the call's time, 0 for none, which starts it.
+// period from the call's time, 0 for none, which starts it. The width
+// ceiling's settings start at `widthTarget` (queue item 64; WIDTH_TARGET to
+// WIDTH_UP), and the loop's space (queue item 65; SPACE_SEED and on): its
+// seed, how busy and wet it is, whether its texture is light, then
+// `spaceStart`, which draws it and takes it from the call's time.
 export const MIX = {
   gains: 0, pump: 5, tails: 6, echo: 7, combFb: 8, combFreq: 9, combSum: 10, reverbOut: 11,
   tone: 12, wow: 13, flutter: 14, drive: 15, lfoStart: 16, master: 17, kill: 18, bypass: 19, cold: 20,
   arcFrom: 21, arcPeriod: 22, arcShape: 23, arcFloor: 24, arcDip: 25,
+  widthTarget: 26, spaceSeed: 31, spaceBusy: 32, spaceWet: 33, spaceLight: 34, spaceStart: 35,
 };
 // The AudioParam calls a parameter takes. HOLD is two: cancelScheduledValues
 // at the time, then setValueAtTime there with the parameter's `value`
@@ -317,6 +322,13 @@ export class CoreHost {
   // (`taps`).
   beforeComp() {
     return this.taps ? 1 + CORE_CHANNEL_COUNT : -1;
+  }
+
+  // Narrow or pin one of the space recipe's settings (queue item 65;
+  // core/src/space.rs, SETTINGS, by number) to draw from `lo` to `hi`, from
+  // the next loop's space: what a request, a slider or a game sets.
+  spaceRange(which, lo, hi) {
+    this.node.port.postMessage({ type: 'spaceRange', which, lo, hi });
   }
 
   // Move one of the mix's parameters (MIX) by an AudioParam call (SET,

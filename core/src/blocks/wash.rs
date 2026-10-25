@@ -25,7 +25,7 @@
 
 use core::f64::consts::PI;
 
-use crate::block::{Block, Channel, Context, Mod, Mods, Probe, Setting, Signal};
+use crate::block::{Block, Channel, Context, Mod, Mods, Probe, Setting, Signal, Stereo};
 use crate::math;
 use crate::QUANTUM;
 
@@ -141,6 +141,11 @@ pub struct Wash {
     noise: [NoiseSource; 2],
     lows: [Biquad; 2],
     tints: [Biquad; 2],
+    /// The same filters for the side, half the two noises' difference, in
+    /// a stereo render (queue item 65): the sketch's two noises went out
+    /// left and right, so the mono render hears them folded.
+    side_lows: [Biquad; 2],
+    side_tints: [Biquad; 2],
     follow: [f64; 2],
     a: f64,
     rate: f64,
@@ -165,6 +170,8 @@ impl Wash {
             noise: [NoiseSource::unstarted(), NoiseSource::unstarted()],
             lows: [Biquad::new(), Biquad::new()],
             tints: [Biquad::new(), Biquad::new()],
+            side_lows: [Biquad::new(), Biquad::new()],
+            side_tints: [Biquad::new(), Biquad::new()],
             follow: [0.0; 2],
             a: 0.0,
             rate: 0.0,
@@ -241,8 +248,9 @@ impl Wash {
         high.set(Kind::Peaking, (hz * 3.0) as f32, q, high_gain, rate);
     }
 
-    /// One block into `out`, following `mods` (the five layers).
-    fn play(&mut self, block: u64, cx: &Context, out: &mut Signal, mods: &Mods) {
+    /// One block into `out`, following `mods` (the five layers); in a
+    /// stereo render its side into `side` too.
+    fn play(&mut self, block: u64, cx: &Context, out: &mut Signal, mods: &Mods, mut side: Option<&mut Signal>) {
         let start = block as f64 / cx.rate;
         if !self.on {
             return;
@@ -268,10 +276,25 @@ impl Wash {
         }
         let mut sum = [0.0f32; QUANTUM];
         let mut grain = [0.0f32; QUANTUM];
-        for n in &mut self.noise {
+        let mut apart = [0.0f32; QUANTUM];
+        for (k, n) in self.noise.iter_mut().enumerate() {
             n.fill(block, cx.noise, &mut grain);
             for (y, &x) in sum.iter_mut().zip(grain.iter()) {
                 *y += 0.5 * x;
+            }
+            if side.is_some() {
+                let sign = if k == 0 { 0.5 } else { -0.5 };
+                for (y, &x) in apart.iter_mut().zip(grain.iter()) {
+                    *y += sign * x;
+                }
+            }
+        }
+        if side.is_some() {
+            for (s, m) in self.side_lows.iter_mut().zip(self.lows.iter()) {
+                s.follow(m);
+            }
+            for (s, m) in self.side_tints.iter_mut().zip(self.tints.iter()) {
+                s.follow(m);
             }
         }
         let weights: [f64; LAYERS] = core::array::from_fn(|i| self.value(set::WEIGHT + i));
@@ -294,10 +317,24 @@ impl Wash {
             let [l1, l2] = &mut self.lows;
             let [t1, t2] = &mut self.tints;
             let v = t2.step(t1.step(l2.step(l1.step(x))));
-            *y += v * (g * level * s2) as f32;
+            let swell = (g * level * s2) as f32;
+            *y += v * swell;
+            if let Some(side) = side.as_deref_mut() {
+                let [sl1, sl2] = &mut self.side_lows;
+                let [st1, st2] = &mut self.side_tints;
+                let diff = apart.get(i).copied().unwrap_or(0.0);
+                if let Some(out) = side.get_mut(i) {
+                    *out += st2.step(st1.step(sl2.step(sl1.step(diff)))) * swell;
+                }
+            }
         }
         for f in self.lows.iter_mut().chain(self.tints.iter_mut()) {
             f.flush();
+        }
+        if side.is_some() {
+            for f in self.side_lows.iter_mut().chain(self.side_tints.iter_mut()) {
+                f.flush();
+            }
         }
         for s in &mut self.follow {
             *s = math::flush(*s);
@@ -374,13 +411,31 @@ impl Block for Wash {
     }
 
     fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal) {
-        self.play(block, cx, signal, &Mods::NONE);
+        self.play(block, cx, signal, &Mods::NONE, None);
     }
 
     fn render_mod(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods) {
-        self.play(block, cx, signal, mods);
+        self.play(block, cx, signal, mods, None);
+    }
+
+    // Its two noises apart: the mid on both sides, the side + left, - right.
+    const STEREO: bool = true;
+
+    fn render_stereo(&mut self, block: u64, cx: &Context, signal: &mut Stereo) {
+        let (mut mid, mut side) = ([0.0f32; QUANTUM], [0.0f32; QUANTUM]);
+        self.play(block, cx, &mut mid, &Mods::NONE, Some(&mut side));
+        let [left, right] = signal;
+        for ((l, r), (&m, &s)) in left.iter_mut().zip(right.iter_mut()).zip(mid.iter().zip(side.iter())) {
+            *l += m + s;
+            *r += m - s;
+        }
     }
 }
 
-// A source on its own bus in the wash's channel.
-impl Channel for Wash {}
+// A source on its own bus in the wash's channel; in a stereo render its own
+// width as side (queue item 65).
+impl Channel for Wash {
+    fn render_side(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods, side: &mut Signal) {
+        self.play(block, cx, signal, mods, Some(side));
+    }
+}

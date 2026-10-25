@@ -123,6 +123,10 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'damp':
         if (core) core.dl_damp(m.channel, m.time);
         return;
+      // A space setting's range (queue item 65): Core::space_range.
+      case 'spaceRange':
+        if (core) core.dl_space_range(m.which, m.lo, m.hi);
+        return;
       // A setting of one of a channel's own blocks for the loop, a channel
       // event and a retune (queue items 46c and 61): Core::set, Core::event
       // and Event::retune, waiting in the core for their time.

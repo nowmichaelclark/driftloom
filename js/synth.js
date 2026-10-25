@@ -2142,6 +2142,20 @@ export class Synth {
     core.param(MIX.arcPeriod, SET, o ? o.period : 0, time);
   }
 
+  // The loop's space (queue item 65; core/src/space.rs): its seed, how busy
+  // and wet it is and whether its texture is light; the core draws the
+  // widths and placements from it and takes them from `time` in a stereo
+  // render. The JavaScript synth (the fallback) is mono: it has no space.
+  spaceSetup(o, time) {
+    const core = this._coreMix();
+    if (!core || !o) return;
+    core.param(MIX.spaceSeed, SET, o.seed, time);
+    core.param(MIX.spaceBusy, SET, o.busy, time);
+    core.param(MIX.spaceWet, SET, o.wet, time);
+    core.param(MIX.spaceLight, SET, o.light ? 1 : 0, time);
+    core.param(MIX.spaceStart, SET, 1, time);
+  }
+
   // Where the note now being played sits in its loop, for the core.
   _noteKey() {
     if (this.key) return this.key;

@@ -177,7 +177,8 @@ macro_rules! registry {
             /// bus, in order, with the signals in `mods` driving its
             /// settings, and add it into the channel's signal `out`; one
             /// that sends (`Channel::SENDS`) adds into `sends` too, and says
-            /// so in `sent`.
+            /// so in `sent`. In a stereo render (`side`), one that doesn't
+            /// send adds its own width into `side` (`Channel::render_side`).
             #[allow(clippy::too_many_arguments)]
             pub(crate) fn buses(
                 &mut self,
@@ -188,6 +189,7 @@ macro_rules! registry {
                 mods: &[Mods; own::COUNT],
                 sends: &mut Sends,
                 sent: &mut bool,
+                mut side: Option<&mut Signal>,
             ) {
                 $($(
                     #[$ca]
@@ -197,6 +199,8 @@ macro_rules! registry {
                         if <$cm::$ct as Channel>::SENDS {
                             crate::block::open_sends(sends, sent);
                             self.$cn.render_sends(block, cx, bus, m, sends);
+                        } else if let Some(side) = side.as_deref_mut() {
+                            self.$cn.render_side(block, cx, bus, m, side);
                         } else {
                             self.$cn.render_mod(block, cx, bus, m);
                         }

@@ -539,5 +539,25 @@ console.log('\nThe arc (queue item 63)');
   check('a loop without it starts none', !none.calls.some((c) => c.name === 'arcSetup'));
 }
 
+console.log('\nThe space (queue item 65)');
+{
+  // Every loop tells the core what its space needs, once, at its first
+  // step: its seed, how busy and how wet it is, and whether its texture is
+  // light.
+  const r = rig(true, 4242);
+  r.run(10);
+  const sent = r.calls.filter((c) => c.name === 'spaceSetup');
+  const o = sent[0] && sent[0].args[0];
+  check('sent once, at the first step', sent.length === 1 && sent[0].args[1] < 0.1, JSON.stringify(sent.map((c) => c.args[1])));
+  check('the loop\'s seed, how busy and wet it is, whether its texture is light',
+    o && o.seed === (r.spec.seed >>> 0) && o.busy > 0 && o.wet === (r.spec.tone.space || 0) && typeof o.light === 'boolean', JSON.stringify(o));
+  let light = null;
+  for (let s = 1; s < 400 && !light; s++) {
+    const y = rig(true, s * 31);
+    if (['bells', 'chime', 'drops'].includes(y.engine.base.meta.textureKind)) light = y;
+  }
+  check('a light texture (bells, chimes, drops) says so', light && light.engine.space.light === true);
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);
