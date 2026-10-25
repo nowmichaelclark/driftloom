@@ -11,7 +11,7 @@ import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWei
 import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
-import { drawChoices, dropShapeOf, FLOORDROP } from './choices.js';
+import { drawChoices, dropShapeOf, FLOORDROP, PEDAL, pedalOf } from './choices.js';
 
 export const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 export const LAYER_LABELS = {
@@ -1200,6 +1200,63 @@ function genBass(spec, harmony) {
   }
 
   return { events, style, voice };
+}
+
+// The pedal grids (queue item 71, the sketch's): [step, length] in a 4/4 bar
+// of 16 steps or a 6/8 or 3/4 bar of 12, by rhythm.
+const PEDAL_GRID = {
+  '4/4': { held: [[0, 15]], half: [[0, 7], [8, 7]], quarter: [[0, 3], [4, 3], [8, 3], [12, 3]], offbeat: [[2, 2], [6, 2], [10, 2], [14, 2]] },
+  '6/8': { held: [[0, 11]], half: [[0, 5], [6, 5]], quarter: [[0, 2], [3, 2], [6, 2], [9, 2]], offbeat: [[3, 2], [9, 2]] },
+  '3/4': { held: [[0, 11]], half: [[0, 7], [8, 3]], quarter: [[0, 3], [4, 3], [8, 3]], offbeat: [[2, 2], [6, 2], [10, 2]] },
+};
+
+// pedalBass (queue item 71; Ears 8, approved 2026-10-18): the key's tonic in a
+// rhythm drawn per loop under whatever the chords do (as the drone holds it),
+// stepping in some of its notes to one neighbor and back. In the loop's bass
+// voice, in the octave of the bass's register nearest the loop's own bass's
+// middle note, and no note longer than its usual one, so the low end and the
+// budget stay near what the loop had. `bass` is what genBass drew; its notes
+// are what the pedal replaces. Returns the pedal's notes and its draws.
+function pedalBass(spec, bass, vibes) {
+  const spb = spec.stepsPerBar || STEPS_PER_BAR;
+  const metre = metreOf(spec);
+  const scale = SCALES[spec.scale].steps;
+  const { rhythm, nb, share, rng } = pedalOf(spec.layerSeeds.bass, scale, vibes);
+  const mid = (a) => {
+    const x = a.slice().sort((p, q) => p - q);
+    return x.length ? x[Math.floor(x.length / 2)] : null;
+  };
+  const sounding = bass.events.filter((e) => e.vel);
+  const origMidi = mid(sounding.map((e) => e.midi));
+  const origDur = mid(sounding.map((e) => e.dur));
+  // A metre without a grid of its own (5/4) borrows 4/4's, as the chord
+  // rhythms do. (The sketch stretched 4/4's grid by the bar's steps over 12
+  // there, past the bar's end.)
+  const grid = (PEDAL_GRID[metre] || PEDAL_GRID['4/4'])[rhythm];
+  // The tonic in the register, nearest the loop's own bass, and an octave up
+  // when the neighbor below would fall out of it.
+  const { low, high } = PEDAL;
+  let t = scalePitch(spec.root, scale, 0, 0) - 24;
+  while (t > high) t -= 12;
+  while (t < low) t += 12;
+  if (origMidi != null) {
+    while (t - 12 >= low && Math.abs(t - 12 - origMidi) < Math.abs(t - origMidi)) t -= 12;
+    while (t + 12 <= high && Math.abs(t + 12 - origMidi) < Math.abs(t - origMidi)) t += 12;
+  }
+  if (t + Math.min(0, nb) < low && t + 12 <= high) t += 12;
+  const events = [];
+  let prevNb = false;
+  for (let bar = 0; bar < spec.bars; bar++) {
+    grid.forEach(([st, d], i) => {
+      const first = i === 0 && rhythm !== 'offbeat';
+      const step = !first && !prevNb && nb !== 0 && rng.chance(share);
+      prevNb = step;
+      const m = step && t + nb >= low && t + nb <= high ? t + nb : t;
+      const vel = first ? 0.66 : rhythm === 'offbeat' ? 0.58 : 0.48 + rng.f() * 0.1;
+      events.push({ step: bar * spb + st, dur: origDur ? Math.min(d, Math.max(1, origDur)) : d, midi: m, vel, glide: false, voice: bass.voice });
+    });
+  }
+  return { events, rhythm, nb, share };
 }
 
 // ------------------------------------------------------------- melody
@@ -2627,6 +2684,19 @@ export function render(spec) {
   // untouched, and with no choices listed nothing here changes a note.
   const choices = drawChoices(spec.seed, { spec, tracks, harmony, bass, melody, drums, texture, choir }, vibesOf(spec));
 
+  // pedalBass (queue item 71): the bass, drawn as it always was, gives way to
+  // the pedal, which plays in the bars the loop's own bass plays in, after
+  // its entry schedule, its repairs and the gaps. Drift spends the loop's own
+  // bass's draws for it (`drift`), so no other variation moves.
+  let pedal = null;
+  if (choices.pedalBass === 'on') {
+    pedal = pedalBass(layerSpec(spec, 'bass'), bass, vibesOf(spec));
+    const on = new Set(tracks.bass.filter((e) => e.vel).map((e) => Math.floor(e.step / spb)));
+    const inGap = (st) => gaps.some((g) => st >= g.start && st < g.start + g.len);
+    pedal.n0 = tracks.bass.length;
+    tracks.bass = pedal.events.map((e) => (on.has(Math.floor(e.step / spb)) && !inGap(e.step) ? e : { ...e, vel: 0 }));
+  }
+
   // Kept until here, after the entry schedules and the gaps, because the
   // question it answers is about what you hear. Deciding it on every event
   // the generator produced gives the wrong answer once the bars of a
@@ -2734,7 +2804,12 @@ export function render(spec) {
     // Every choice's option for this loop ('today' for those it did not
     // draw); see js/choices.js.
     choices,
-    meta: { bassVoice: bass.voice, bassStyle: bass.style, kit: drums.kit, melodyVoice: melody.voice, melodyCell: melody.cell, textureKind: texture.kind,
+    meta: { bassVoice: bass.voice, bassStyle: pedal ? 'pedal' : bass.style,
+      // Only present for a pedal bass (queue item 71): its draws, the style it
+      // took over, and how many notes the loop's own bass had (drift spends
+      // that many draws for it).
+      ...(pedal ? { pedal: { rhythm: pedal.rhythm, nb: pedal.nb, share: +pedal.share.toFixed(3), was: bass.style, n0: pedal.n0 } } : {}),
+      kit: drums.kit, melodyVoice: melody.voice, melodyCell: melody.cell, textureKind: texture.kind,
       // Only present when there is one, so a loop that is not a choir
       // carries a meta object identical to the one it carried before this
       // existed.
@@ -3027,8 +3102,12 @@ export function drift(pattern, rng, amount) {
     if (rng.chance(0.07 * a)) e.vel = 0;
   }
   // Bass finds a passing tone, in the bass's own register (36-57 since
-  // roundBass, queue item 56).
-  for (const e of p.tracks.bass) {
+  // roundBass, queue item 56). A pedal bass (queue item 71) spends the draws
+  // its loop's own bass would have made here, so nothing drawn after moves,
+  // and finds its own passing tones further on.
+  const pedalN = pattern.meta && pattern.meta.pedal ? pattern.meta.pedal.n0 : null;
+  if (pedalN != null) for (let k = 0; k < pedalN; k++) if (rng.chance(0.07 * a)) rng.pick([-2, 3, 5, 7, 12]);
+  for (const e of pedalN != null ? [] : p.tracks.bass) {
     if (rng.chance(0.07 * a)) {
       let m = e.midi + rng.pick([-2, 3, 5, 7, 12]);
       while (m > 57) m -= 12;
@@ -3080,6 +3159,20 @@ export function drift(pattern, rng, amount) {
   // The drop's shape (queue item 70; the sketch's): drawn here, after every
   // other draw, and laid out on the bars item 58's drop drew.
   if (dropAt) p.floorDrop = shapeDrop(p, dropAt, rng, spec);
+
+  // A pedal bass's passing tones (queue item 71), as the bass's above, drawn
+  // last of all, so even a drop's shape is the one its loop's own bass gets.
+  // (The sketch drew them before the shape.)
+  if (pedalN != null) {
+    for (const e of p.tracks.bass) {
+      if (rng.chance(0.07 * a)) {
+        let m = e.midi + rng.pick([-2, 3, 5, 7, 12]);
+        while (m > 57) m -= 12;
+        while (m < 36) m += 12;
+        e.midi = m;
+      }
+    }
+  }
   return p;
 }
 
