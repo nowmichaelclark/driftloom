@@ -4111,6 +4111,53 @@ Mikey decides this line:
     tuned kick to the reshuffle); 01-glade, 02-wayfare, 16-grove, 19-glade,
     20-tide and busy-cinder move with the reshuffle.
 
+- **Item 69, lateFloor: what was built, what Mikey decided (Session 25c,
+  hands, Opus 5.5, 2026-10-25).** The engine and the generator only. After a
+  load the kit and the bass sit out for a wait counted from the loop's first
+  step, then arrive together, the kit first and the bass two bars later, or
+  the bass first (`js/engine.js`; the skipped notes still take their place
+  among their layer's notes, so no draw moves). `LATEFLOOR` in
+  `js/choices.js` holds every variable with its range; `lateFloorOf` draws on
+  the sketch's stream and spends its "whether" draw, so a loop waits as long
+  and in the order the sketch drew it (8-30 s rounded to two bars, at least
+  two; 40/35/25). A reroll keeps the wait it is in; a loop resumed under a
+  rebuilt engine (the quality switch, `load(spec, { resume: true })` in
+  `js/main.js`) doesn't wait again; Pause and Play go on where they were. On
+  21.7% of 10,000 loops.
+  - **Decided by Mikey (2026-10-25):**
+    1. **Eligibility, as the queue reads:** something else (chords, a tune
+       or a texture) plays within the loop's first second, entry schedules
+       included (`LATEFLOOR.first`). The sketch's test was anything else at
+       all; with it, 81 of the 2,252 loops in 10,000 that drew lateFloor
+       (3.6%) had nothing else sounding in their first second, 35 nothing in
+       their first 4 s. Now none.
+    2. **The budget, as the sketch:** the waiting kit and bass hold no
+       budget, so chord and tune notes today's budget turns away get to play
+       in the intro, and a texture note or two may be refused later in their
+       place. The layers yardstick is read as refused notes equal or fewer in
+       total, and the other layers within 0.5 dB but for that ripple,
+       reported per loop.
+  - **Measured** (the report's four loops, corpus 20261009, 90 s, wander on,
+    core, lateFloor forced on against off):
+
+    | loop | order, wait | kit, bass first sound | other layers | loop | refused |
+    |---|---|---|---|---|---|
+    | glade #21 | kit first, 12 bars | 25.09 s, 24.31 s (waits 18.83, 21.96: the loop plays neither until then, today too) | chords +0.16 dB; melody, texture 0.00 | -0.87 LU | 28 → 26 |
+    | undertow #45 | kit first, 16 bars | 29.82 s, 33.54 s (waits 29.82, 33.54) | chords +0.07; melody 0.00; **texture -0.78** (ripple: 0:00-0:10 -0.9 dB, 0:30-0:40 -3.3) | -1.31 | 198 → 184 |
+    | halcyon #48 | together, 6 bars | 12.46 s, 14.53 s (waits 12.46: the bass's note across the line is skipped, its next starts at 14.53) | chords +0.01; texture -0.20 | -0.53 | 104 → 104 |
+    | dust #69 | bass first, 6 bars | 25.32 s, 19.00 s (waits 25.31, 19.00) | chords +0.02; melody, texture 0.00 | -1.02 | 60 → 57 |
+
+    After its wait, each one's kit and bass are today's to the bit. The
+    report read entries after 12.4-26 s as drawn, the loop 0.6-1.0 LU
+    quieter over 90 s, refused notes 28 → 26, 272 → 260, 144 → 144, 60 → 57
+    (halcyon's texture changed the same way there).
+  - **Stereo** (`stereo_guard.py`, the same four, 60 s): fold 0.00 LU; side
+    under mid below 120 Hz -36.9 to -51.7 dB; correlation median 0.98-0.99,
+    5th percentile 0.77 or more (the intro is a little wider without the
+    centered kit and bass); balance within 0.22 dB.
+  - **Goldens:** nine lists move with the reshuffle a new choice brings, and
+    those that draw lateFloor wait.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4788,3 +4835,11 @@ Mikey decides this line:
   under it, a boom that thumps without getting louder, and for swaps that
   don't click. For the album: undertow #6 from 0:00 (a long boom on C2) and
   glade #63 from 0:00 (short, on C#2).
+- #267, subDuck (item 68, v118),
+  https://c54ff1f8-driftloom.nowmichaelclark.workers.dev: in loops with a kick
+  and a bass that draw it (about one in eight), the bass alone dips 5-9 dB at
+  each kick, less for a soft one, and comes back over 0.15-0.25 s, so the kick
+  and the sub take turns while the pads and the tune stay where they were.
+  Listen on speakers or headphones with some low end for a bass that breathes
+  with the kick without pumping, and for nothing else moving. For the album:
+  halcyon #18 from 0:00 (7.6 dB) and halcyon #68 from 0:00 (6.6 dB).

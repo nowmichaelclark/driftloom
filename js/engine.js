@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf } from './choices.js';
+import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf, lateFloorOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -325,6 +325,9 @@ export class Engine {
     this.arcChange = false;
     // The loop's tuned kick (queue item 67) and its kind, or null.
     this.kick = null;
+    // The loop's lateFloor (queue item 69) or null: the steps from the load
+    // the kit and the bass sit out ({ drums, bass, order, bars }).
+    this.late = null;
     // The loop's subDuck (queue item 68) or null, and whether it is still to
     // be sent.
     this.subDuck = null;
@@ -412,7 +415,9 @@ export class Engine {
     return found;
   }
 
-  load(spec, { keepPosition = false } = {}) {
+  // `resume`: the same loop again, where it was, under a rebuilt engine (the
+  // quality switch): lateFloor doesn't wait a second time.
+  load(spec, { keepPosition = false, resume = false } = {}) {
     // Next, Previous or a loop picked while playing: what the old loop has
     // decided ahead does not play out first.
     if (this.playing && !keepPosition && !this.handover) this._cut();
@@ -457,6 +462,14 @@ export class Engine {
     const stays = keepPosition && JSON.stringify(duck) === JSON.stringify(this.subDuck);
     this.subDuckChange = !stays && !!(duck || this.subDuck);
     this.subDuck = duck;
+    // And lateFloor (queue item 69): after a load the kit and the bass sit
+    // out a while, counted from its first step. Never on a reroll, which
+    // keeps its place (and whatever wait it was in), nor on a loop resumed
+    // (the engine rebuilt under a loop already playing: `resume`).
+    if (!keepPosition) {
+      const late = !resume && this.base.choices && this.base.choices.lateFloor === 'on';
+      this.late = late ? lateFloorOf(spec.seed, this.base.stepsPerBar || 16, 60 / spec.bpm / 4) : null;
+    }
     // And its space (queue item 65).
     const space = spaceOf(spec, this.base);
     this.spaceChange = !(keepPosition && JSON.stringify(space) === JSON.stringify(this.space));
@@ -1146,6 +1159,9 @@ export class Engine {
         // skip the humanising jitter that would smear them.
         const micro = e.micro ? e.micro * sd : 0;
         const key = keyOf('drums');
+        // lateFloor (queue item 69): the kit sits out from the load (its
+        // place among the notes still counted, so no draw moves).
+        if (this.late && abs < this.late.drums) continue;
         const jitter = e.roll ? 0 : (draw(key, 'drums', HOST_JITTER) - 0.5) * 0.008;
         const at = t + micro + jitter;
         const kick = this.kick && (e.inst === 'kick' || e.inst === 'softkick') ? this._kickOn(p, pass) : null;
@@ -1157,7 +1173,9 @@ export class Engine {
       const s = at('bass');
       for (const e of p.tracks.bass) {
         if (e.step !== s || !e.vel) continue;
-        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug), keyOf('bass'));
+        const key = keyOf('bass');
+        if (this.late && abs < this.late.bass) continue;
+        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug), key);
       }
     }
     // An ensemble does not attack together. The composer's detune keeps

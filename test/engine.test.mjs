@@ -462,7 +462,13 @@ console.log('\nThe chapel organ (queue item 61)');
   // retuned at its chords no more than once a bar, and each call handed over
   // once when a change decides the loop again.
   let seed = 0;
-  for (let s = 1; s < 3000 && !seed; s++) if (rig(true, s * 104729).engine.organ) seed = s * 104729;
+  // One whose chords move the organ three times or more in 30 s.
+  for (let s = 1; s < 3000 && !seed; s++) {
+    const x = rig(true, s * 104729);
+    if (!x.engine.organ) continue;
+    x.run(30);
+    if (x.calls.filter((c) => c.name === 'organChord').length > 2) seed = s * 104729;
+  }
   const r = rig(true, seed);
   r.run(30);
   const of = (calls, name) => calls.filter((c) => c.name === name);
@@ -576,6 +582,36 @@ console.log('\nsubDuck (queue item 68)');
   }
   none.run(10);
   check('a loop without it makes no subDuck call', !none.calls.some((c) => c.name === 'subDuckSetup'));
+}
+
+console.log('\nlateFloor (queue item 69)');
+{
+  // A loop that draws lateFloor: no kit and no bass until its wait is over,
+  // then both; the other layers from the first step. A reroll keeps the wait
+  // it is in; a resumed loop (the engine rebuilt) doesn't wait again.
+  let seed = 0;
+  for (let s = 1; s < 3000 && !seed; s++) {
+    const x = rig(true, s * 7907);
+    if (x.engine.late && x.engine.base.tracks.drums.some((e) => e.vel) && x.engine.base.tracks.bass.some((e) => e.vel)) seed = s * 7907;
+  }
+  const r = rig(true, seed);
+  const L = r.engine.late;
+  const sd = r.engine.stepDur;
+  r.run(L.bars * 16 * sd + 20);
+  const first = (name) => Math.min(...r.calls.filter((c) => c.name === name).map((c) => c.args[1]));
+  const at = (steps) => 0.05 + steps * sd;
+  check('the kit arrives after its wait, within a step', Math.abs(first('drum') - at(L.drums)) < sd + 0.01, `${first('drum').toFixed(2)} against ${at(L.drums).toFixed(2)}, ${L.order}`);
+  check('and the bass after its own', Math.abs(first('bass') - at(L.bass)) < sd + 0.01, `${first('bass').toFixed(2)} against ${at(L.bass).toFixed(2)}`);
+  const others = notes(r.calls).filter((c) => c.name !== 'drum' && c.name !== 'bass').map((c) => c.time);
+  check('something else plays from the start', others.length && Math.min(...others) < at(16), `${Math.min(...others)}`);
+  // Rerolled during the wait: the wait goes on where it was.
+  const w = rig(true, seed);
+  w.run(2);
+  w.engine.load(w.spec, { keepPosition: true });
+  check('a reroll keeps the wait it is in', w.engine.late && w.engine.late.drums === L.drums);
+  const re = rig(true, seed);
+  re.engine.load(re.spec, { resume: true });
+  check('a resumed loop doesn\'t wait again', re.engine.late === null);
 }
 
 console.log('\nThe arc (queue item 63)');

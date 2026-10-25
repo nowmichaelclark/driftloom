@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1148,6 +1148,58 @@ console.log('\nsubDuck (queue item 68)');
   const serene = share({ vibes: { serene: 1 }, strength: 0.9 });
   check('bouncy leans toward it, serene away, never to none', bouncy > plain && serene < plain && serene > 0, `${serene.toFixed(3)} ${plain.toFixed(3)} ${bouncy.toFixed(3)}`);
   check('every setting is named, with its range', ['weight', 'vibes', 'depth', 'recover', 'beat'].every((k) => k in SUBDUCK));
+}
+
+// ---------------------------------------------------------------------
+console.log('\nlateFloor (queue item 69)');
+{
+  // The sketch's draws: whether, how long, then the order, on its stream;
+  // the wait rounded to two bars and at least two; the second part two bars
+  // after the first.
+  let same = true, shape = true;
+  const seen = { together: 0, kitFirst: 0, bassFirst: 0 };
+  for (let i = 0; i < 3000; i++) {
+    const seed = i * 7919 + 3;
+    const spb = i % 3 ? 16 : 12;
+    const stepDur = 60 / (70 + (i % 100)) / 4;
+    const r = new Rng(((seed ^ 0x1a7e) >>> 0) || 1);
+    r.chance(0.3);
+    const secs = r.range(8, 30);
+    const bars = Math.max(2, Math.round(secs / (spb * stepDur) / 2) * 2);
+    const order = r.weighted([['together', 40], ['kitFirst', 35], ['bassFirst', 25]]);
+    const l = lateFloorOf(seed, spb, stepDur);
+    seen[l.order]++;
+    if (l.bars !== bars || l.order !== order) same = false;
+    const first = Math.min(l.drums, l.bass);
+    const second = Math.max(l.drums, l.bass);
+    if (first !== bars * spb || second - first !== (l.order === 'together' ? 0 : 2 * spb) || l.bars % 2) shape = false;
+    if ((l.order === 'kitFirst' && l.drums > l.bass) || (l.order === 'bassFirst' && l.bass > l.drums)) shape = false;
+  }
+  check('the wait and the order the sketch drew', same);
+  check('two bars at the least, in twos; the second part two bars after the first', shape);
+  check('together 40, the kit first 35, the bass first 25', Math.abs(seen.together / 3000 - 0.4) < 0.03 && Math.abs(seen.kitFirst / 3000 - 0.35) < 0.03, JSON.stringify(seen));
+  check('a pin moves nothing else', lateFloorOf(9, 16, 0.125, { order: 'together' }).bars === lateFloorOf(9, 16, 0.125).bars);
+  const list = CHOICES.filter((c) => c.id === 'lateFloor');
+  const loop = (drums, bass, other, at = 0) => ({ spec: { bpm: 120 }, tracks: {
+    drums: drums ? [{ inst: 'kick', vel: 0.8, step: 0 }] : [], bass: bass ? [{ midi: 40, vel: 0.6, step: 0 }] : [],
+    chords: other ? [{ notes: [60, 64], vel: 0.5, step: at }] : [], melody: [], texture: [] } });
+  check('only with drums or a bass, and something else that plays', list[0].eligible(loop(true, false, true)) && list[0].eligible(loop(false, true, true))
+    && !list[0].eligible(loop(true, true, false)) && !list[0].eligible(loop(false, false, true)));
+  // At 120 bpm a step is 0.125 s: a chord on step 7 is inside the first
+  // second, on step 8 it is not.
+  check('and only if that plays within its first second', list[0].eligible(loop(true, true, true, 7)) && !list[0].eligible(loop(true, true, true, 8)));
+  const share = (vibes) => {
+    const two = [...list, { id: 'other', options: [['today', 1], ['on', 1]], eligible: () => true }];
+    let n = 0;
+    for (let i = 0; i < 4000; i++) if (drawChoices(i, loop(true, true, true), vibes, two).lateFloor === 'on') n++;
+    return n / 4000;
+  };
+  const plain = share(null);
+  const hypnotic = share({ vibes: { hypnotic: 1 }, strength: 0.9 });
+  const energetic = share({ vibes: { energetic: 1 }, strength: 0.9 });
+  check('hypnotic leans toward it, energetic away, never to none', hypnotic > plain && energetic < plain && energetic > 0,
+    `${energetic.toFixed(3)} ${plain.toFixed(3)} ${hypnotic.toFixed(3)}`);
+  check('every setting is named, with its range', ['weight', 'vibes', 'seconds', 'round', 'first', 'orders', 'lag'].every((k) => k in LATEFLOOR));
 }
 
 // ---------------------------------------------------------------------
