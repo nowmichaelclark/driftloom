@@ -128,6 +128,17 @@ impl Lane {
             highpass: Biquad::new(),
         }
     }
+
+    /// Take `other`'s state, as if this lane had played what it played.
+    fn copy_from(&mut self, other: &Lane) {
+        self.wobble = other.wobble;
+        self.memory.copy_from_slice(&other.memory);
+        self.up.clone_from(&other.up);
+        self.down.clone_from(&other.down);
+        self.tone = other.tone;
+        self.arc.clone_from(&other.arc);
+        self.highpass = other.highpass;
+    }
 }
 
 const fn f(x: f64) -> f32 {
@@ -267,6 +278,42 @@ impl Master {
     /// (anything else is mono). A rebuild (`init`) keeps it.
     pub fn set_layout(&mut self, lanes: usize) {
         self.layout = if lanes == 2 { 2 } else { 1 };
+    }
+
+    /// Render `lanes` lanes from the next block, as `set_layout`, in the
+    /// middle of a render (queue item 66): what the old layout held is
+    /// carried into the new, so the sound goes on without a jump. Into
+    /// stereo the second lane takes the first's state, and each compressor
+    /// the mono one's; back into mono the mono compressors take the stereo
+    /// ones', and the first lane goes on. The width ceiling starts afresh.
+    /// What the switch does to the side is the core's (`Core::set_layout`).
+    pub fn switch_layout(&mut self, lanes: usize) {
+        let to = if lanes == 2 { 2 } else { 1 };
+        if to == self.layout {
+            return;
+        }
+        if to == 2 {
+            let [first, second] = &mut self.lanes;
+            second.copy_from(first);
+            self.comp2.take_from(&self.comp);
+            self.ceiling2.take_from(&self.ceiling);
+            self.width.restart();
+        } else {
+            self.comp.take_from(&self.comp2);
+            self.ceiling.take_from(&self.ceiling2);
+        }
+        self.layout = to;
+    }
+
+    /// How far apart the last block's two lanes were, the most of
+    /// `|left - right| / 2`: 0 in mono.
+    #[must_use]
+    pub fn side_peak(&self) -> f32 {
+        if self.layout != 2 {
+            return 0.0;
+        }
+        let [left, right] = &self.out;
+        left.iter().zip(right.iter()).map(|(l, r)| (l - r).abs() * 0.5).fold(0.0, f32::max)
     }
 
     /// How many lanes it renders.

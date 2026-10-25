@@ -503,6 +503,14 @@ impl Mix {
         self.side.set(drawn);
     }
 
+    /// The side from silence, gliding to `drawn` (queue item 66): a stereo
+    /// render that starts in the middle of a mono one, with nothing left in
+    /// its lines from the last time it played.
+    pub fn restart_side(&mut self, drawn: &Drawn) {
+        self.side.init(self.rate);
+        self.side.set(drawn);
+    }
+
     /// The last block's bus.
     pub fn bus(&self) -> &Signal {
         &self.bus

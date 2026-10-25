@@ -1,6 +1,6 @@
 import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, LAYOUT, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
+import { ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import { Engine } from './engine.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v115';
+const BUILD = 'v116';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -91,6 +91,9 @@ const state = {
   passCount: 0,
   frameHandle: null,
   lite: false,
+  // The Mono switch (queue item 66): the listener's, kept in the prefs and
+  // never in a share code or a backup. Off plays the stereo render.
+  mono: false,
   media: null,
   // The Rust core for this context, once loaded (js/core.js), and when
   // (ms since the page began).
@@ -159,7 +162,7 @@ function buildAudio() {
   // session: the new synth is not handed it, and says why.
   state.synth = new Synth(state.ctx, state.lite ? 'lite' : 'full', {
     engine: ENGINE,
-    layout: LAYOUT,
+    layout: state.mono ? 1 : 2,
     core: state.coreError ? null : state.core,
     coreError: state.coreError,
     onCoreError: (message) => { state.coreError = message; },
@@ -1287,9 +1290,9 @@ async function pasteCode() {
 
 // --------------------------------------------------------------- themes
 
-// The nine themes of design v17. The theme is one of the two settings
-// (the other is Lighter on processor); it is kept in prefs and applied
-// before first paint by the script at the top of index.html.
+// The nine themes of design v17. The theme is one of the three settings
+// (the others are Lighter on processor and Mono); it is kept in prefs and
+// applied before first paint by the script at the top of index.html.
 const THEMES = [
   ['t-dawn', 'dawn', 'Dawn', '#f0dccc'], ['t-ember', 'ember', 'Ember', '#c86a80'],
   ['t-tidal', 'tidal', 'Tidal', '#78b8c4'], ['t-dark', 'dark', 'Dark', '#121218'],
@@ -1349,7 +1352,11 @@ function initThemes() {
 }
 
 function setLiteSwitch(on) {
-  const b = ui.el('liteMode');
+  setSwitch('liteMode', on);
+}
+
+function setSwitch(id, on) {
+  const b = ui.el(id);
   b.setAttribute('aria-checked', String(on));
   b.firstElementChild.textContent = on ? 'on' : 'off';
 }
@@ -1502,6 +1509,15 @@ function wire() {
     if (state.synth) buildAudio();
   });
 
+  // Mono or stereo, while a loop plays: the core fades from one to the
+  // other, nothing is rebuilt.
+  ui.el('monoMode').addEventListener('click', () => {
+    state.mono = !state.mono;
+    setSwitch('monoMode', state.mono);
+    store.setPrefs({ mono: state.mono });
+    if (state.synth) state.synth.setLayout(state.mono ? 1 : 2);
+  });
+
   ui.el('exportJson').addEventListener('click', () => {
     ui.download(store.exportAll(), 'driftloom-loops.json');
   });
@@ -1523,7 +1539,11 @@ function wire() {
     // arrived late and the ones that fell back to JS), or JS and why.
     lines.push(`engine: ${state.synth ? state.synth.engineReport() : ENGINE === 'js' ? 'js (asked)' : state.coreError ? `js (fallback: ${state.coreError})` : 'rust (loading)'}`);
     if (ENGINE === 'rust') lines.push(`core: ${state.core ? `loaded ${state.coreAt} ms after the page began` : state.coreError ? 'not loaded' : 'loading'}`);
-    lines.push(`layout: ${state.synth && state.synth.core && !state.synth.core.failed ? (state.synth.core.layout === 2 ? 'stereo' : 'mono') : 'mono (the JavaScript synth)'}`);
+    const host = state.synth && state.synth.core && !state.synth.core.failed ? state.synth.core : null;
+    lines.push(`layout: ${host ? (host.layout === 2 ? 'stereo' : 'mono') : 'mono (the JavaScript synth)'}  mono switch: ${state.mono ? 'on' : 'off'}`);
+    // What the core's render costs this device, each layout apart (queue
+    // item 66; docs/CORE.md, promise 9: stereo must not double it).
+    if (host) lines.push(`render: ${host.costReport()}`);
     // One loop in thirty is a deliberate doubling (roadmap item 12), and
     // "is this one of them?" is otherwise only answerable by ear, which is
     // no use at all when the question is whether it fired.
@@ -1665,6 +1685,8 @@ function wire() {
   updateVibesKey();
   state.lite = prefs.lite ?? cores <= 4;
   setLiteSwitch(state.lite);
+  state.mono = prefs.mono === true;
+  setSwitch('monoMode', state.mono);
   // Drift was a switch plus an amount; the amount was never kept, so an old
   // "on" comes back at the default distance.
   const wander = prefs.drift === false ? 0 : (prefs.driftAmount ?? 1);

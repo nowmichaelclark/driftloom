@@ -56,7 +56,8 @@ pub extern "C" fn dl_init(rate: f64) {
 }
 
 /// Render `channels` output channels from the next block: 1 (mono) or 2
-/// (stereo, queue item 64). 1 if it did, 0 for any other number.
+/// (stereo, queue item 64). 1 if it did, 0 for any other number. While the
+/// core plays, the switch fades (`Core::set_layout`, queue item 66).
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_layout(channels: u32) -> u32 {
     u32::from(core().set_layout(channels))
@@ -212,6 +213,14 @@ pub extern "C" fn dl_space_range(which: u32, lo: f64, hi: f64) -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_outputs() -> u32 {
     core().layout()
+}
+
+/// How many of `dl_out`'s runs the last block filled: the layout, except
+/// while a switch into mono fades the side out (`Core::lanes`, queue item
+/// 66), when it is still 2.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_lanes() -> u32 {
+    core().lanes()
 }
 
 /// Where the last block was as it reached the bus compressor.

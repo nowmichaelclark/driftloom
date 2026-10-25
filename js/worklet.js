@@ -28,7 +28,10 @@
 //
 // Stereo (queue item 64): with `layout: 2` in processorOptions the core
 // renders its stereo render, and the first output carries two channels,
-// left then right; otherwise it renders mono, as it always has.
+// left then right; otherwise it renders mono, as it always has, into every
+// channel the output has. A `layout` message switches it while it plays
+// (queue item 66, the listener's Mono switch): the core fades the side in
+// or out, and the output follows the lanes it renders (`dl_lanes`).
 
 const QUANTUM = 128;
 const CHANNELS = 6;
@@ -46,6 +49,17 @@ const CAUSES = 3;
 // How often the worklet says how early its notes arrive (queue item 41), in
 // seconds of audio.
 const REPORT_EVERY = 0.25;
+// The core's output lanes (core/src/master.rs, OUT): its out buffer holds
+// this many runs whatever it renders.
+const LANES = 2;
+// How often it says what rendering costs (queue item 66), in seconds of
+// audio: the time spent in process() against the audio it made, mono and
+// stereo apart. The worklet's clock is the platform's: performance.now()
+// where the scope has it, else Date.now(), whose whole milliseconds still
+// add up to the time spent over many blocks (each call's start falls
+// anywhere within its millisecond).
+const COST_EVERY = 2;
+const clock = typeof globalThis.performance?.now === 'function' ? () => globalThis.performance.now() : () => Date.now();
 
 class DriftloomCore extends AudioWorkletProcessor {
   constructor(options) {
@@ -65,6 +79,10 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.lateStall = 0;
     this.lateBuffer = 0;
     this.reportAt = 0;
+    // What rendering has cost since the node was built, mono then stereo:
+    // milliseconds spent, and seconds of audio made.
+    this.cost = { ms: [0, 0], seconds: [0, 0] };
+    this.costAt = 0;
     try {
       const module = new WebAssembly.Module(options.processorOptions.bytes);
       this.core = new WebAssembly.Instance(module, {}).exports;
@@ -122,6 +140,11 @@ class DriftloomCore extends AudioWorkletProcessor {
       }
       case 'damp':
         if (core) core.dl_damp(m.channel, m.time);
+        return;
+      // The listener's Mono switch (queue item 66): Core::set_layout, which
+      // fades while the core plays.
+      case 'layout':
+        if (core) core.dl_layout(m.channels);
         return;
       // A space setting's range (queue item 65): Core::space_range.
       case 'spaceRange':
@@ -217,6 +240,17 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.arrivals = { n: 0, reach: -Infinity, early: Infinity, lead: 0 };
   }
 
+  // What the block just rendered cost, counted with the lanes it had; and
+  // every COST_EVERY seconds of audio, the totals so far.
+  costReport(lanes, ms, block) {
+    const i = lanes === 2 ? 1 : 0;
+    this.cost.ms[i] += ms;
+    this.cost.seconds[i] += QUANTUM / sampleRate;
+    if (block < this.costAt) return;
+    this.costAt = block + Math.round(COST_EVERY * sampleRate);
+    this.port.postMessage({ type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice() });
+  }
+
   process(inputs, outputs) {
     if (!this.alive) return false;
     const core = this.core;
@@ -229,8 +263,8 @@ class DriftloomCore extends AudioWorkletProcessor {
       this.views = {
         buffer,
         inputs: runs(buffer, core.dl_inputs(), CHANNELS),
-        out: runs(buffer, core.dl_out(), core.dl_outputs()),
-        bus: runs(buffer, core.dl_bus(), core.dl_outputs()),
+        out: runs(buffer, core.dl_out(), LANES),
+        bus: runs(buffer, core.dl_bus(), LANES),
         channels: null,
       };
     }
@@ -256,14 +290,18 @@ class DriftloomCore extends AudioWorkletProcessor {
     const block = this.next !== undefined && this.next > currentFrame ? this.next : currentFrame;
     this.next = block + QUANTUM;
     this.arrivalReport(block);
+    const began = clock();
     const at = core.dl_process(block);
-    // A run for each of the output's channels: one, or two in stereo.
+    // Each of the output's channels from a lane the core rendered: the
+    // mono render in every one, or left and right.
+    const lanes = core.dl_lanes();
     const out = outputs[0];
     if (out) {
-      for (let c = 0; c < out.length && c < views.out.length; c++) {
-        if (out[c].length === QUANTUM) out[c].set(views.out[c]);
+      for (let c = 0; c < out.length; c++) {
+        if (out[c].length === QUANTUM) out[c].set(views.out[Math.min(c, lanes - 1)]);
       }
     }
+    this.costReport(lanes, clock() - began, block);
     if (this.taps) {
       if (!views.channels) views.channels = runs(views.buffer, at, CHANNELS);
       for (let c = 0; c < CHANNELS; c++) {

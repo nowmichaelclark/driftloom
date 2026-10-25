@@ -194,7 +194,7 @@
           <div class="page more">
             <div class="more-head"><h2 class="sec" id="themeLbl">Theme</h2><span id="themeName" class="theme-name"></span></div>
             <div id="themes" class="themes" role="radiogroup" aria-labelledby="themeLbl"></div>
-            <button id="goAdvanced" type="button" class="vkey go" aria-describedby="goHint"><span class="go-text"><span class="go-name">Advanced</span><span class="go-hint" id="goHint">Files, processor, diagnostics</span></span><span class="go-chev" data-ico="right"></span></button>
+            <button id="goAdvanced" type="button" class="vkey go" aria-describedby="goHint"><span class="go-text"><span class="go-name">Advanced</span><span class="go-hint" id="goHint">Sound, processor, files, diagnostics</span></span><span class="go-chev" data-ico="right"></span></button>
           </div>
         </div>
 
@@ -202,6 +202,12 @@
           <div class="page">
             <div class="page-head"><button id="advBack" type="button" class="vkey back" aria-label="Back to More"><span data-ico="left"></span>More</button><h2 class="page-title" tabindex="-1">Advanced</h2></div>
             <div class="scroll">
+              <section class="adv-sec">
+                <h3 class="sec">Sound</h3>
+                <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="monoName">Mono</span>
+                  <p class="hint" id="monoHint">Plays one channel instead of stereo, for a single speaker or one earbud. The music is the same, only narrower.</p></div>
+                  <button id="monoMode" type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="monoName" aria-describedby="monoHint"><span aria-hidden="true">off</span></button></div>
+              </section>
               <section class="adv-sec">
                 <h3 class="sec">Processor</h3>
                 <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="liteName">Lighter on processor</span>

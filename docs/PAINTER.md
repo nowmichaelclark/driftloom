@@ -15,10 +15,13 @@ used soon. The rest waits for its phase of the core work.
   Library's lists and the Advanced page. Nothing else scrolls.
 - **Bottom buttons have no lights or LEDs;** they only change icon (for
   now only the bottom-right Sound / Layers switch does).
-- **Only two settings exist:** the theme and "lighter on processor".
-  Everything new below is a pick, a sheet or a message, not a setting.
-- **The music is stereo** (coming soon), with a **Mono** switch in the
-  settings for anyone who prefers it (Mikey, 2026-10-15).
+- **Only three settings exist:** the theme, "lighter on processor" and
+  Mono. Everything new below is a pick, a sheet or a message, not a
+  setting.
+- **The music is stereo** (since v116), with a **Mono** switch in the
+  settings for anyone who prefers it (Mikey, 2026-10-15). It sits in
+  Advanced, under Sound, as a plain switch like Lighter on processor's:
+  yours to restyle (queue item 66).
 - **Calm and wholesome:** the music is cozy (a nice coffee shop, Animal
   Crossing, Ocarina of Time's whimsy); the look should feel the same.
 - **Plain characters only** in anything the app shows as a code or name

@@ -156,6 +156,7 @@ impl Swing {
 
 /// The arc: the swing now, the one before it (gliding from), and the next a
 /// host has asked for (from its time).
+#[derive(Clone)]
 pub struct Arc {
     now: Swing,
     was: Swing,
