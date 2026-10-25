@@ -4243,6 +4243,13 @@ Mikey decides this line:
        loop 0.2-1.4 LU (the report: 0.6-2.1 dB); the other layers within
        0.04 dB; refused notes 60 → 66 (dust), 69 → 69, 0 → 0, 34 → 34 (the
        report: 60 → 55, 231 → 231, 0 → 0, 34 → 34).
+  - **Stereo** (`stereo_guard.py`, the same four, 60 s): fold 0.00 LU; side
+    under mid below 120 Hz -29.2 to -43.9 dB; correlation median 0.99-1.00,
+    5th percentile 0.92 or more; balance within 0.15 dB. The bass is never
+    placed.
+  - **The dials' scale** (`test/dial-scale.json`) rebuilt on purpose, as item
+    57 did: the pedal moves the corpus's ground dial most (its largest
+    quantile 3.1% of its range, the median 0.508 → 0.503), the others 0.1-2.1%.
 
 ## Done
 
