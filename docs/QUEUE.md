@@ -4191,6 +4191,59 @@ Mikey decides this line:
 
     Never a full stop (the rest plays on, no bars marked silent).
 
+- **Item 71, pedalBass: what was built, what Mikey decided (Session 25c,
+  hands, Opus 5.5, 2026-10-25/26).** The generator only. A loop that draws the
+  choice `pedalBass` (over a held, pulse, dub or walking bass) plays the key's
+  tonic in a rhythm (held, half bars, beats, or off the beat between the
+  kicks: 25/30/25/20) under whatever the chords do, stepping now and then to
+  one neighbor its mode has (a whole tone up, the tone below, the flat second,
+  the fifth), in the loop's bass voice, in the octave of the bass's register
+  (36-57) nearest the loop's own bass's middle note, no note longer than its
+  usual one (`pedalBass` in `js/generator.js`). `PEDAL` in `js/choices.js`
+  holds every variable; `pedalOf` draws on the sketch's stream (the bass's
+  seed and its salt) and spends its "whether" draw, so a loop gets the rhythm,
+  neighbor and share the sketch drew it. The bass is drawn as it always was,
+  then gives way to the pedal after the choices are drawn (they read the
+  tracks), and the pedal plays in the bars the loop's own bass plays in,
+  after its entry schedule, its repairs and the gaps. On 12.2% of 10,000
+  loops. The fallback plays it too (it is notes).
+  - **Drift spends the loop's own bass's draws** (`meta.pedal.n0`, the
+    loop's own bass's notes): no other layer's variation moves, tested on
+    600 passes. Its own passing tones are drawn last of all, after item 70's
+    drop shape (the sketch drew them before the shape, which moved the shape
+    in a loop with both; Mikey: "good catch").
+  - **Where it differs from the sketch's code:** a metre with no grid of its
+    own (5/4) borrows 4/4's, as the chord rhythms do (the sketch stretched
+    4/4's grid by 20/12, past the bar's end); the register is roundBass's
+    36-57 (the sketch's was 28-52).
+  - **Decided by Mikey (2026-10-25/26), each as the sketch:**
+    1. **The tonic's share:** the downbeat always on the tonic, the neighbor
+       only between, never twice in a row. Over 400 pedal loops the tonic
+       takes held 100%, half bars 91.8%, beats 88.7%, offbeat 86.5% of the
+       notes (147 loops in the asked 75-90%, 245 over 90%; the records the
+       report drew on sit at 87-98%). The 75-90% yardstick is reported, not
+       met.
+    2. **The budget:** the pedal keeps its notes as drawn. Over the 64 corpus
+       loops it can take over (60 s, full, forced on) refused notes fall in
+       total, 2658 → 2602 (held pedals -46, half bars -31, beats +8,
+       offbeat +13), but 18 loops refuse more, 1 to 9 notes each, chord and
+       bell notes (FM keys and bells, a pad, a texture), never the tune:
+       loops 5 (+3), 7 (+3), 9 (+5), 14 (+9), 17 (+5), 19 (+6), 24 (+3), 29
+       (+6), 42 (+1), 48 (+2), 52 (+1), 53 (+9), 62 (+1), 69 (+5), 73 (+6), 75
+       (+3), 78 (+2), 79 (+2).
+    3. **The low-end guard, one-sided from here on:** it protects against
+       weight, so a lighter low end passes. On the report's four loops (90 s,
+       wander on, core): dust #69 (dub → offbeat, whole tone up) 20-60 Hz
+       7.1 → 7.6%, 60-120 Hz 53.1 → 54.8%; undertow #8 (held → half bars)
+       6.8 → 7.7%, **61.0 → 64.5%** (+3.5: the steady tonic sits in the band;
+       kept, as the sketch); haven #38 (pulse → held, the fifth) 0.3 → 0.5%,
+       35.2 → 36.1%; clockwork #65 (held → held) 0.1 → 0.0%, 14.0 → 7.1% (in
+       B the register holds only B2, 123 Hz, where its own bass sat half on
+       G#2, 104 Hz: lighter, passes). The bass layer 0.6-4.2 dB quieter, the
+       loop 0.2-1.4 LU (the report: 0.6-2.1 dB); the other layers within
+       0.04 dB; refused notes 60 → 66 (dust), 69 → 69, 0 → 0, 34 → 34 (the
+       report: 60 → 55, 231 → 231, 0 → 0, 34 → 34).
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4888,3 +4941,13 @@ Mikey decides this line:
   forced on (the report's loop, Mikey's ask: the kit at 0:29.8, the bass at
   0:33.5; its texture is 0.8 dB lighter from the budget's ripple), and
   clockwork #33 from 0:00 (the kit at 0:07.8, the bass at 0:15.5).
+- #269, floorDrop shapes (item 70, v120),
+  https://29f8bbc6-driftloom.nowmichaelclark.workers.dev: with "Let the loop
+  wander" on, in loops that draw them (about one in six), each floor drop takes
+  a shape: single as before, stagger (the kick back on time, the bass a bar or
+  two later), stutter (two to four short drops a couple of bars apart) or long
+  (a dozen seconds, or the whole pass of a short loop); the drops come as often
+  and where they did. Listen for a floor that leaves and comes back in more
+  than one way, never a full stop. For the album, both ends: vapor #4, the
+  whole pass dropped for 34.3 s from 1:08.6 (a slow 8-bar loop), and halcyon
+  #18, four 2.7 s stutter drops from 1:30.7 (131 bpm).

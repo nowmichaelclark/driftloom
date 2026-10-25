@@ -1,9 +1,9 @@
 # The golden hashes on armv7-unknown-linux-gnueabihf (tools/golden.sh --update armv7-unknown-linux-gnueabihf).
 # One line a note list: its frames, then FNV-1a 64 of the output, of each channel
 # as it went into the mix, and of the signal at the bus compressor.
-01-glade frames=480000 out=6dbfc30a1357e3bf melody=b34c9164080a0755 chords=ca696db9a732e640 bass=7d2fb791932038ec texture=32c937c2b7e2a494 drums=86fa6317a33e59d8 wash=2bf050200a5e1325 bus=02fceb5a086e1ed5
-02-wayfare frames=768000 out=f50a7873515f52fc melody=f320c5fca5716831 chords=5a3fb276cbb976e4 bass=3fe2c015e08e2b5c texture=644913c7acd78e2c drums=c705dfc874beb791 wash=dff2e40b0a1ba325 bus=305e49915755038a
-03-tide frames=768000 out=ebe21f318e435a88 melody=1c888e860e30f8d8 chords=93cd286640d01f1c bass=02fb9e2e1059e3ad texture=3a1c2bbfef09713d drums=ba2a0d9c3cd28c38 wash=db1d4254a5a34a1b bus=ad5c767b417b6224
+01-glade frames=480000 out=c34e89da744479c1 melody=10db8817591ccebf chords=b969ba376d41ae06 bass=2bf050200a5e1325 texture=c25159f3f9e8d9c5 drums=2bf050200a5e1325 wash=2bf050200a5e1325 bus=38cfe75f2e238fc8
+02-wayfare frames=768000 out=7c1caf3e792821f4 melody=fdac99d284ed6de0 chords=5a3fb276cbb976e4 bass=f702802d1b9e1b1a texture=644913c7acd78e2c drums=23aa68153af48884 wash=dff2e40b0a1ba325 bus=63264d4d4830cb9b
+03-tide frames=768000 out=69a18beb1f62572b melody=1c888e860e30f8d8 chords=93cd286640d01f1c bass=02fb9e2e1059e3ad texture=3a1c2bbfef09713d drums=ba2a0d9c3cd28c38 wash=dff2e40b0a1ba325 bus=591e94908072f41b
 04-vapor frames=432000 out=2cb8773358694cb0 melody=afc71f8238ef6a2b chords=ac3c0f6c77a399f6 bass=8c3b768cbe6b8c78 texture=d34e135f31fdead2 drums=097113bcce1e7b25 wash=0c824e36421c1528 bus=648938c3f82cae3d
 05-clockwork frames=528000 out=c1af6e95d33ab032 melody=cdee69d0642529bc chords=fb1c753f71ca0a0b bass=0e0ef8696863f51c texture=496c9d95d3ddab25 drums=496c9d95d3ddab25 wash=496c9d95d3ddab25 bus=0e9c7f9f360fa363
 06-undertow frames=768000 out=609f03013cfed015 melody=c8e4a32ad34f53f6 chords=4c782865da19cb26 bass=4696c5d8f3df0aba texture=f79c08c8345b8b8f drums=74de9701593f5794 wash=dff2e40b0a1ba325 bus=92f627a63afbcf6b
@@ -14,11 +14,11 @@
 11-haven frames=1200000 out=77cba83cd071da41 melody=91e4c1100cef901f chords=29b4dcb02cc3f1d7 bass=2220248132250afa texture=0fde6c784f747765 drums=220acbc2c817fb25 wash=94ddbf7a6ff20dac bus=143120f0553c2c8d
 12-vapor frames=1200000 out=2ee9f73e8a6b56c4 melody=09ad23ef56d0d12f chords=a49177292264587b bass=b8bd4b8c7991fcf3 texture=635e938e85acfadc drums=220acbc2c817fb25 wash=6bf5e78331eab7d3 bus=d8a6c727c6ff898d
 13-dust frames=336000 out=e5e147c871f529d7 melody=af09a3ea7b31fd5f chords=e6639c20bf86cec9 bass=9de90401ee45ff0e texture=4d12cdc2d3d6f524 drums=f12470e18efa8c26 wash=2373bb15fd5f4b25 bus=d6f454789605c120
-14-bloom frames=336000 out=263af2a2eaf6a921 melody=2ef21d33bd29c066 chords=15241a89ae3bfaee bass=eda931948342428e texture=2373bb15fd5f4b25 drums=2373bb15fd5f4b25 wash=0e6387dcd71901bd bus=6f395257a9618e81
+14-bloom frames=336000 out=1fe456e9605ce59f melody=2ef21d33bd29c066 chords=372b2b02dced44b0 bass=eda931948342428e texture=2373bb15fd5f4b25 drums=2373bb15fd5f4b25 wash=25f01d1f7a701901 bus=d59510cf05a87327
 15-wayfare frames=384000 out=63b5910a39889bd5 melody=e734e7d2a35235a3 chords=70643fc597623318 bass=e3f6139016d2cb4d texture=099acfc4c2862640 drums=1a6baa7ffc8c1bcd wash=41984fa61f1ee325 bus=86a02d35a7794b09
 16-grove frames=240000 out=8018955c6098c904 melody=683f703c7ee56b04 chords=149f4368c4b65d9f bass=6e514b6db20237a9 texture=850d39efb46487a6 drums=0a6e72c8d4b64781 wash=54738d7161a01b25 bus=cfd4a073da67f57f
 17-bloom frames=432000 out=c58dea35b1b89eb5 melody=4fd4603c874796aa chords=e2b3b70356a60ee2 bass=a671180a952c18d2 texture=097113bcce1e7b25 drums=fce2b38a493b5d20 wash=097113bcce1e7b25 bus=d594d1464e6761ca
 18-shatter frames=384000 out=578e315f082d0de3 melody=2ce34238d829a090 chords=60ee164e892bf444 bass=070c291693830160 texture=9f55e740930b610b drums=4a4ac0c42609115e wash=41984fa61f1ee325 bus=49ab6ca56c0a51cd
 19-glade frames=240000 out=0a0e2883d13c2942 melody=34587b6eaa7d5038 chords=1cd367c2cd2da892 bass=c1ee65a006290e8f texture=76f4d781f9dc9aaf drums=3270a12a131e9008 wash=54738d7161a01b25 bus=270e24d2b51e7e70
 20-tide frames=432000 out=a031b8e370585f90 melody=df2e5dbe7cf6aad2 chords=adc76f209ef9af82 bass=9ff0c0fdebdf1300 texture=b7d9396304ea037d drums=5d2419a201eabb27 wash=2e2681624605f843 bus=d8f127541383a959
-busy-cinder frames=2880000 out=65b8780327749857 melody=ec5b5ed5f6115bbe chords=ce32406906439791 bass=0b23c5a0b22fedf9 texture=3c8d75bd4c89c325 drums=0748d96562ea34ed wash=3c8d75bd4c89c325 bus=7970ce90f9517c84
+busy-cinder frames=2880000 out=5f027acae12b9dac melody=ec5b5ed5f6115bbe chords=e6ecc3f2960d5deb bass=d061d51e4c8ae2e7 texture=3c8d75bd4c89c325 drums=44f8b3b38c38204a wash=3c8d75bd4c89c325 bus=3b2cd88d090b79b7
