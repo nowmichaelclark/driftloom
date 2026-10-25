@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1340,6 +1340,85 @@ console.log('\nfloorDrop shapes (queue item 70)');
   check('every shape is drawn, single the most', Object.values(kinds).every((k) => k > 0) && kinds.single > kinds.stagger && kinds.stagger > kinds.long,
     JSON.stringify(kinds) + ` of ${n}`);
   check('every setting is named, with its range', ['weight', 'shapes', 'needBass', 'shapeVibes', 'staggerShort', 'stutterShort', 'stutter', 'longSeconds', 'longBars', 'wholeUnder'].every((k) => k in FLOORDROP));
+}
+
+console.log('\npedalBass (queue item 71)');
+{
+  // The sketch's draws on its stream; then, over loops that draw the pedal:
+  // the tonic most of the time and one neighbor the rest, in the bass's
+  // register, at 0.4-2 notes a second; the flat second only where the mode
+  // has it; and drift spends the loop's own bass's draws, so no other layer's
+  // variation moves.
+  let same = true;
+  for (let i = 0; i < 2000; i++) {
+    const seed = i * 7919 + 9;
+    const steps = [[0, 2, 4, 5, 7, 9, 11], [0, 1, 3, 5, 7, 8, 10], [0, 3, 5, 7, 10]][i % 3];
+    const r = new Rng(((seed ^ 0x9eda1) >>> 0) || 1);
+    r.chance(0.35);
+    const rhythm = r.weighted([['held', 25], ['half', 30], ['quarter', 25], ['offbeat', 20]]);
+    const has = (st) => steps.includes(((st % 12) + 12) % 12);
+    const nbs = [];
+    if (has(2)) nbs.push([2, 3]);
+    if (has(10)) nbs.push([-2, 2]);
+    if (has(1)) nbs.push([1, 3]);
+    if (has(7)) nbs.push([7, 2]);
+    const nb = nbs.length ? r.weighted(nbs) : 0;
+    const share = r.range(0.1, 0.25);
+    const o = pedalOf(seed, steps);
+    if (o.rhythm !== rhythm || o.nb !== nb || o.share !== share) same = false;
+  }
+  check('the rhythm, neighbor and share the sketch drew', same);
+  let loops = 0, tonic = 0, neighbor = 0, other = 0, downbeat = true, register = true, rate = [], flat = true, styles = true, replay = true, passes = 0;
+  for (let i = 0; i < 3000 && loops < 150; i++) {
+    const spec = newSpec(i * 104729 + 13);
+    const p = render(spec);
+    if (!p.meta.pedal) continue;
+    loops++;
+    if (!PEDAL.styles.includes(p.meta.pedal.was) || p.meta.bassStyle !== 'pedal') styles = false;
+    const scale = SCALES[spec.scale].steps;
+    const notes = p.tracks.bass.filter((e) => e.vel);
+    const pcs = notes.map((e) => (((e.midi - spec.root) % 12) + 12) % 12);
+    // The downbeat on the tonic, the neighbor only between, never twice in a
+    // row (the sketch's, kept by Mikey, 2026-10-25), before drift's passing
+    // tones.
+    const spb = p.stepsPerBar || 16;
+    const all = p.tracks.bass;
+    all.forEach((e, k) => {
+      const pc = (((e.midi - spec.root) % 12) + 12) % 12;
+      if (pc !== 0 && (e.step % spb === 0 && p.meta.pedal.rhythm !== 'offbeat')) downbeat = false;
+      if (pc !== 0 && k > 0 && (((all[k - 1].midi - spec.root) % 12) + 12) % 12 !== 0) downbeat = false;
+    });
+    for (const pc of pcs) {
+      if (pc === 0) tonic++;
+      else if (pc === ((p.meta.pedal.nb % 12) + 12) % 12) neighbor++;
+      else other++;
+    }
+    if (notes.some((e) => e.midi < 36 || e.midi > 57)) register = false;
+    if (p.meta.pedal.nb === 1 && !scale.includes(1)) flat = false;
+    const secs = p.totalSteps * 60 / spec.bpm / 4;
+    rate.push(notes.length / secs);
+    // The same loop with a bass of the loop's own length in its place: drift
+    // makes the same draws, so every other layer wanders the same way.
+    const own = { ...p, meta: { ...p.meta, pedal: undefined }, tracks: { ...p.tracks, bass: Array.from({ length: p.meta.pedal.n0 }, (_, k) => ({ step: k % p.totalSteps, dur: 1, midi: 40, vel: 0.5 })) } };
+    for (let pass = 0; pass < 4; pass++) {
+      passes++;
+      const a = drift(p, new Rng(i * 17 + pass + 1), 1);
+      const b = drift(own, new Rng(i * 17 + pass + 1), 1);
+      for (const layer of ['drums', 'chords', 'melody', 'texture']) if (JSON.stringify(a.tracks[layer]) !== JSON.stringify(b.tracks[layer])) replay = false;
+      if (JSON.stringify(a.floorDrop) !== JSON.stringify(b.floorDrop)) replay = false;
+    }
+  }
+  const n = tonic + neighbor + other;
+  rate.sort((x, y) => x - y);
+  check('only over a held, pulse, dub or walking bass', loops > 50 && styles, `${loops} loops`);
+  check('the downbeat on the tonic, the neighbor only between and never twice in a row', downbeat);
+  check('the tonic and one neighbor, nothing else; the tonic most (the sketch\'s: about 90%)', other === 0 && tonic / n > 0.85 && neighbor / n > 0.05,
+    `tonic ${(tonic / n).toFixed(3)}, neighbor ${(neighbor / n).toFixed(3)}, other ${other}`);
+  check('in the bass\'s register, 36-57', register);
+  check('0.4-2 notes a second (median)', rate[rate.length >> 1] >= 0.4 && rate[rate.length >> 1] <= 2, `${rate[0].toFixed(2)}-${rate[rate.length - 1].toFixed(2)}, median ${rate[rate.length >> 1].toFixed(2)}`);
+  check('the flat second only in a mode that has it', flat);
+  check('drift spends the loop\'s own bass\'s draws: no other layer\'s variation moves', replay, `${passes} passes`);
+  check('every setting is named, with its range', ['weight', 'vibes', 'styles', 'rhythms', 'neighbors', 'neighborVibes', 'share', 'low', 'high'].every((k) => k in PEDAL));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

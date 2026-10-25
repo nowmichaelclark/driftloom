@@ -189,6 +189,34 @@ export const FLOORDROP = {
   wholeUnder: 8,
 };
 
+// pedalBass's settings (queue item 71; Ears 8's pedalBass, approved by Mikey
+// 2026-10-18): the bass holds the key's tonic in a rhythm while the chords
+// move, now and then stepping to one neighbor and back. Every variable,
+// named, with its range; the generator plays it (js/generator.js,
+// `pedalBass`).
+export const PEDAL = {
+  // How often a loop draws it, and batch 5's vibe table for it.
+  weight: 1,
+  vibes: { hypnotic: 2, steady: 1.5, meditative: 1.5, cool: 1.5, mysterious: 1.5, joyful: 0.5, triumphant: 0.5, merry: 0.5 },
+  // The bass styles it can take over (the drone, the chug and the sparse bass
+  // stay as they are).
+  styles: ['held', 'pulse', 'dub', 'walk'],
+  // Its rhythm, by weight: one note a bar, two, one a beat, or off the beat
+  // between the kicks.
+  rhythms: [['held', 25], ['half', 30], ['quarter', 25], ['offbeat', 20]],
+  // Its neighbor, in semitones from the tonic, by weight, each only where the
+  // loop's mode has it: a whole tone up, the tone below, the flat second, the
+  // fifth. The flat second leans toward mysterious and strange and away from
+  // the happy vibes (batch 5's table).
+  neighbors: [[2, 3], [-2, 2], [1, 3], [7, 2]],
+  neighborVibes: { 1: { mysterious: 2, strange: 2, happy: 0.3, sunny: 0.3, sweet: 0.3, peaceful: 0.3 } },
+  // How often a note steps to the neighbor.
+  share: [0.1, 0.25],
+  // The bass's register (roundBass, queue item 56).
+  low: 36,
+  high: 57,
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
@@ -240,6 +268,11 @@ export const CHOICES = [
   // floor can drop: a loop of 4 bars or more, with drums or a bass.
   { id: 'floorDrop', options: [['today', 1], ['shapes', 1]], weight: FLOORDROP.weight,
     eligible: (ctx) => !!ctx.tracks && ctx.spec.bars >= 4 && (ctx.tracks.drums.some((e) => e.vel) || ctx.tracks.bass.some((e) => e.vel)) },
+  // pedalBass (queue item 71; Ears 8, approved 2026-10-18): the bass holds
+  // the tonic in a rhythm under moving chords (PEDAL, above). Only over a
+  // held, pulse, dub or walking bass.
+  { id: 'pedalBass', options: [['today', 1], ['on', 1]], weight: PEDAL.weight, vibes: PEDAL.vibes,
+    eligible: (ctx) => !!ctx.bass && PEDAL.styles.includes(ctx.bass.style) && !!ctx.tracks && ctx.tracks.bass.some((e) => e.vel) },
 ];
 
 // Whether the loop has a floor to hold back (drums or a bass) and something
@@ -504,4 +537,24 @@ export function dropShapeOf(rng, hasBass, vibes = null) {
     .filter(([id]) => hasBass || !FLOORDROP.needBass.includes(id))
     .map(([id, w]) => [id, w * leanOf(FLOORDROP.shapeVibes[id], vibes)]);
   return rng.weighted(shapes);
+}
+
+// pedalBass's own stream (the sketch's salt, on the bass's seed).
+const PEDAL_SALT = 0x9eda1;
+
+// A loop's pedal, drawn from PEDAL on a stream of its own: { rhythm, nb,
+// share, rng }, `nb` the neighbor in semitones (0 for none in the mode), `rng`
+// the stream, left where the per-note draws go on. The sketch drew whether a
+// bass takes the pedal first, on the same stream; that draw is spent here too,
+// so a loop gets the rhythm, neighbor and share the sketch drew it. `steps`
+// is the loop's mode (semitones from its root); `vibes` its vibes.
+export function pedalOf(bassSeed, steps, vibes = null) {
+  const r = new Rng(((bassSeed ^ PEDAL_SALT) >>> 0) || 1);
+  r.f();
+  const rhythm = r.weighted(PEDAL.rhythms);
+  const has = (st) => steps.includes(((st % 12) + 12) % 12);
+  const nbs = PEDAL.neighbors.filter(([nb]) => has(nb)).map(([nb, w]) => [nb, w * leanOf(PEDAL.neighborVibes[nb], vibes)]);
+  const nb = nbs.length ? r.weighted(nbs) : 0;
+  const share = r.range(PEDAL.share[0], PEDAL.share[1]);
+  return { rhythm, nb, share, rng: r };
 }
