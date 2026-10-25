@@ -3947,7 +3947,11 @@ Mikey decides this line:
     main before item 64 +0.34% (09-shrine), +0.46% (busy-cinder), +0.75%
     (15-wayfare), +0.80% (07-dust, lite), +0.99% (14-bloom, lite): inside the
     1% asked, with nothing to spare on lite. Stereo 1.18 to 1.38 times mono.
-  - **The balance lock,** re-baselined for the group: BALANCE_LOCK_RESULT
+  - **The balance lock,** re-baselined for the group (`stats.mjs --check`,
+    all 22 figures within tolerance; then `--n 10000 --write-baseline`):
+    nothing moved, the file rewritten byte for byte. The generator wasn't
+    touched in items 64-66. The core baseline: nothing moved (mono and
+    stereo parts).
 
 ## Done
 
