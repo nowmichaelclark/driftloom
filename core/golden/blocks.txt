@@ -146,3 +146,8 @@ wash/swell=tint-high 0fca822bb8afcb1b -36.93 -20.45 37.9
 wash/swell=tint-q b1011e3d386afbda -36.24 -18.70 14.0
 arc/breath 1f111815e3370015 -21.42 -9.93 26.9
 arc/dip 609eb16a67d06ce8 -20.60 -9.23 32.9
+width/ceiling 2b52ba0cc00e226c -20.27 -8.81 34.1
+width/ceiling:stereo e6e268cea10db1c5 -20.27 -8.81 34.1
+width/ceiling:wide dad0f80a7cb9346e -21.64 -9.01 35.0
+pan/left:wide 061a654fce591eea -25.57 -11.67 35.0
+pan/right:wide c9103c6562832f87 -24.48 -11.67 35.0

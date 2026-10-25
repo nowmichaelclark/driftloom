@@ -24,6 +24,16 @@ export const ENGINE = (() => {
   }
 })();
 
+// The core's render (queue item 64): stereo with `?stereo` in the address,
+// else mono. A stand-in until item 66's Mono switch.
+export const LAYOUT = (() => {
+  try {
+    return new URLSearchParams(globalThis.location?.search || '').has('stereo') ? 2 : 1;
+  } catch {
+    return 1;
+  }
+})();
+
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
 export function coreUnsupported() {
@@ -234,12 +244,15 @@ const NO_KEY = { seed: 0, pass: 0, step: 0, ord: 0 };
 // `quality` is the synth's: the mix has six combs on 'full', three on
 // 'lite'. `key` is a function giving where the note about to be sent sits
 // in its loop, `{ seed, pass, step, ord }` (core/src/rng.rs): the core
-// draws everything a note leaves to chance from it.
+// draws everything a note leaves to chance from it. `layout` is 1 for the
+// mono render or 2 for the stereo one (queue item 64): the node's first
+// output carries that many channels.
 export class CoreHost {
-  constructor(ctx, core, dests, { quality = 'full', taps = false, key = null } = {}) {
+  constructor(ctx, core, dests, { quality = 'full', taps = false, key = null, layout = 1 } = {}) {
     this.ctx = ctx;
     this.dests = dests;
     this.taps = taps;
+    this.layout = layout === 2 ? 2 : 1;
     this.keyOf = key || (() => NO_KEY);
     // Called once if the core turns out not to run (too old a browser).
     this.onfail = null;
@@ -282,12 +295,12 @@ export class CoreHost {
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
       numberOfInputs: dests.length,
       numberOfOutputs: outputs,
-      outputChannelCount: new Array(outputs).fill(1),
-      // The graph is mono end to end.
+      outputChannelCount: new Array(outputs).fill(1).map((n, i) => (i === 0 ? this.layout : n)),
+      // The inputs (the synth's own notes) are mono.
       channelCount: 1,
       channelCountMode: 'explicit',
       // Copied, not moved: the page keeps its copy for the next synth.
-      processorOptions: { bytes: core.bytes, quality },
+      processorOptions: { bytes: core.bytes, quality, layout: this.layout },
     });
     this.node.port.onmessage = (e) => this._receive(e.data);
     // The processor threw while playing (a trap in the core, say): the node

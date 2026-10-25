@@ -2241,5 +2241,651 @@
  "repeat": {
   "loops": 40,
   "identical": 40
+ },
+ "stereo": {
+  "full": {
+   "reisk-waith": {
+    "left": "028859af",
+    "right": "028859af",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "yui-deng": {
+    "left": "32a89499",
+    "right": "32a89499",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "toask-ha": {
+    "left": "9d1bb4e2",
+    "right": "9d1bb4e2",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "theith-yaing": {
+    "left": "17994373",
+    "right": "17994373",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "hai-waim": {
+    "left": "6d863f06",
+    "right": "6d863f06",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "kor-thu": {
+    "left": "bf0f3d99",
+    "right": "bf0f3d99",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "reisk-foa": {
+    "left": "d37bc2bc",
+    "right": "d37bc2bc",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "dith-shuisk": {
+    "left": "4544791a",
+    "right": "4544791a",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "neir-luin": {
+    "left": "f47c2be9",
+    "right": "f47c2be9",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "noan-nou": {
+    "left": "ac5186a3",
+    "right": "ac5186a3",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "mul-voa": {
+    "left": "2afe2c4a",
+    "right": "2afe2c4a",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "shil-doask": {
+    "left": "a17b67be",
+    "right": "a17b67be",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "broa-naisk": {
+    "left": "34087efc",
+    "right": "34087efc",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "shoar-brol": {
+    "left": "3f80c117",
+    "right": "3f80c117",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "foang-shou": {
+    "left": "299c9382",
+    "right": "299c9382",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "rei-saisk": {
+    "left": "4b14432f",
+    "right": "4b14432f",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "sang-hoth": {
+    "left": "97d7d81a",
+    "right": "97d7d81a",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "ri-houng": {
+    "left": "867f988b",
+    "right": "867f988b",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "koun-nuing": {
+    "left": "53dc8ace",
+    "right": "53dc8ace",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "loung-rang": {
+    "left": "9042fd46",
+    "right": "9042fd46",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "duin-sar": {
+    "left": "b60eaf99",
+    "right": "b60eaf99",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "loum-seng": {
+    "left": "a403048a",
+    "right": "a403048a",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "han-vaing": {
+    "left": "896a48b1",
+    "right": "896a48b1",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "their-roask": {
+    "left": "28f4c66f",
+    "right": "28f4c66f",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "brou-fun": {
+    "left": "9e461ae6",
+    "right": "9e461ae6",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "va-gloung": {
+    "left": "270a803b",
+    "right": "270a803b",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "tei-har": {
+    "left": "703c60b6",
+    "right": "703c60b6",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "war-bri": {
+    "left": "2bd8ca5d",
+    "right": "2bd8ca5d",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "woung-shain": {
+    "left": "f9e5893b",
+    "right": "f9e5893b",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "sheing-glar": {
+    "left": "a4859d65",
+    "right": "a4859d65",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "dum-futh": {
+    "left": "8526036a",
+    "right": "8526036a",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "voth-rur": {
+    "left": "20d6a677",
+    "right": "20d6a677",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "broul-fuisk": {
+    "left": "be00193b",
+    "right": "be00193b",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "taing-doan": {
+    "left": "cc539431",
+    "right": "cc539431",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "brum-nosk": {
+    "left": "b8214344",
+    "right": "b8214344",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "koth-loar": {
+    "left": "2a091d03",
+    "right": "2a091d03",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "shaisk-sha": {
+    "left": "b9b413cb",
+    "right": "b9b413cb",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "vei-koan": {
+    "left": "cb9be760",
+    "right": "cb9be760",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "vin-ten": {
+    "left": "7ce25b45",
+    "right": "7ce25b45",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "leisk-tom": {
+    "left": "25827ca0",
+    "right": "25827ca0",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   }
+  },
+  "lite": {
+   "reisk-waith": {
+    "left": "17ed68da",
+    "right": "17ed68da",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "yui-deng": {
+    "left": "e5b6d4f4",
+    "right": "e5b6d4f4",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "toask-ha": {
+    "left": "b9f60a27",
+    "right": "b9f60a27",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "theith-yaing": {
+    "left": "ab45c199",
+    "right": "ab45c199",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "hai-waim": {
+    "left": "d1ed5271",
+    "right": "d1ed5271",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "kor-thu": {
+    "left": "a31faf60",
+    "right": "a31faf60",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "reisk-foa": {
+    "left": "2d172e36",
+    "right": "2d172e36",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "dith-shuisk": {
+    "left": "98b00639",
+    "right": "98b00639",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "neir-luin": {
+    "left": "bde31a84",
+    "right": "bde31a84",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "noan-nou": {
+    "left": "ac998944",
+    "right": "ac998944",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "mul-voa": {
+    "left": "e2b7532f",
+    "right": "e2b7532f",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "shil-doask": {
+    "left": "74fe0ce4",
+    "right": "74fe0ce4",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "broa-naisk": {
+    "left": "29879799",
+    "right": "29879799",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "shoar-brol": {
+    "left": "f37cd672",
+    "right": "f37cd672",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "foang-shou": {
+    "left": "79a7f614",
+    "right": "79a7f614",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "rei-saisk": {
+    "left": "6ec8ab0c",
+    "right": "6ec8ab0c",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "sang-hoth": {
+    "left": "51e3598f",
+    "right": "51e3598f",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "ri-houng": {
+    "left": "afe709c0",
+    "right": "afe709c0",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "koun-nuing": {
+    "left": "3675d286",
+    "right": "3675d286",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "loung-rang": {
+    "left": "38d3f64b",
+    "right": "38d3f64b",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "duin-sar": {
+    "left": "dd711615",
+    "right": "dd711615",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "loum-seng": {
+    "left": "035da00b",
+    "right": "035da00b",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "han-vaing": {
+    "left": "c00aa65c",
+    "right": "c00aa65c",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "their-roask": {
+    "left": "7802cfa1",
+    "right": "7802cfa1",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "brou-fun": {
+    "left": "da5ceb65",
+    "right": "da5ceb65",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "va-gloung": {
+    "left": "7b5dda94",
+    "right": "7b5dda94",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "tei-har": {
+    "left": "5e641511",
+    "right": "5e641511",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "war-bri": {
+    "left": "af91f916",
+    "right": "af91f916",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "woung-shain": {
+    "left": "c6ed904d",
+    "right": "c6ed904d",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "sheing-glar": {
+    "left": "4bddac81",
+    "right": "4bddac81",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "dum-futh": {
+    "left": "988bb921",
+    "right": "988bb921",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "voth-rur": {
+    "left": "27fc1cf3",
+    "right": "27fc1cf3",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "broul-fuisk": {
+    "left": "5343683c",
+    "right": "5343683c",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "taing-doan": {
+    "left": "480ee0ec",
+    "right": "480ee0ec",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "brum-nosk": {
+    "left": "920b7e45",
+    "right": "920b7e45",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "koth-loar": {
+    "left": "1b089a41",
+    "right": "1b089a41",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "shaisk-sha": {
+    "left": "a3e8eca1",
+    "right": "a3e8eca1",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "vei-koan": {
+    "left": "9ffe13c5",
+    "right": "9ffe13c5",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "vin-ten": {
+    "left": "def83dd4",
+    "right": "def83dd4",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   },
+   "leisk-tom": {
+    "left": "e827e193",
+    "right": "e827e193",
+    "monoOnEachSide": true,
+    "foldLU": 0,
+    "foldResidDb": null,
+    "sideMidDb": null
+   }
+  }
  }
 }

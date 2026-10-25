@@ -146,6 +146,12 @@ export class Fnv {
 // The signals a render hashes, in the hash line's order (the native host's
 // SIGNALS).
 export const SIGNALS = ['out', 'melody', 'chords', 'bass', 'texture', 'drums', 'wash', 'bus'];
+// A stereo render's (queue item 64; `list.layout` 2): both sides of the
+// speakers and of the bus, the channels between, as the native host has them.
+export const STEREO_SIGNALS = ['left', 'right', 'melody', 'chords', 'bass', 'texture', 'drums', 'wash', 'bus', 'busright'];
+export function signalsOf(list) {
+  return list.layout === 2 ? STEREO_SIGNALS : SIGNALS;
+}
 const QUANTUM = 128;
 const CHANNELS = 6;
 
@@ -159,6 +165,7 @@ export function atRate(list, rate) {
 function load(x, list) {
   x.dl_init(list.rate);
   if (!x.dl_quality(list.quality === 'lite' ? 0 : 1)) throw new Error(`the core does not mix at ${list.rate} Hz`);
+  if (list.layout === 2 && !x.dl_layout(2)) throw new Error('the core would not render stereo');
   list.events.forEach((e, n) => {
     if (e.type === 'param') {
       if (!x.dl_param(e.id, e.op, e.value, e.time, e.tau)) throw new Error(`event ${n + 1}: the core refused parameter ${e.id}`);
@@ -190,7 +197,8 @@ function load(x, list) {
 export function renderWasmBlocks(bytes, list, size) {
   const { exports: x } = new WebAssembly.Instance(new WebAssembly.Module(bytes), {});
   load(x, list);
-  const hash = new Fnv();
+  const sides = list.layout === 2 ? 2 : 1;
+  const hash = Array.from({ length: sides }, () => new Fnv());
   let state = 0x2545f491;
   for (let done = 0; done < list.frames;) {
     let want = size;
@@ -201,11 +209,12 @@ export function renderWasmBlocks(bytes, list, size) {
     const take = Math.min(want, 2000, list.frames - done);
     const at = x.dl_render(take);
     if (!at) throw new Error('the core would not render');
-    hash.samples(new Float32Array(x.memory.buffer, at, take));
+    // In stereo the right side's run follows the left's.
+    hash.forEach((h, side) => h.samples(new Float32Array(x.memory.buffer, at + side * take * 4, take)));
     done += take;
   }
   if (x.dl_dropped() || x.dl_late() || x.dl_missed()) throw new Error('the core dropped or missed notes');
-  return hash.hex();
+  return hash.map((h) => h.hex());
 }
 
 // Render a note list through the .wasm, the way the worklet drives it: the
@@ -214,14 +223,20 @@ export function renderWasmBlocks(bytes, list, size) {
 export function renderWasm(bytes, list, keep = null) {
   const { exports: x } = new WebAssembly.Instance(new WebAssembly.Module(bytes), {});
   load(x, list);
-  const hashes = SIGNALS.map(() => new Fnv());
-  const index = keep == null ? -1 : SIGNALS.indexOf(keep);
+  const names = signalsOf(list);
+  const hashes = names.map(() => new Fnv());
+  const index = keep == null ? -1 : names.indexOf(keep);
   const kept = index >= 0 ? new Float32Array(list.frames) : null;
+  // The speakers' and the bus's lanes lie a block apart (`master::OUT`).
+  const lane = QUANTUM * 4;
   for (let frame = 0; frame < list.frames; frame += QUANTUM) {
     const taps = x.dl_process(frame);
     const used = Math.min(QUANTUM, list.frames - frame);
     const buffer = x.memory.buffer;
-    const blocks = [x.dl_out(), ...Array.from({ length: CHANNELS }, (_, c) => taps + c * QUANTUM * 4), x.dl_bus()];
+    const channels = Array.from({ length: CHANNELS }, (_, c) => taps + c * QUANTUM * 4);
+    const blocks = list.layout === 2
+      ? [x.dl_out(), x.dl_out() + lane, ...channels, x.dl_bus(), x.dl_bus() + lane]
+      : [x.dl_out(), ...channels, x.dl_bus()];
     blocks.forEach((p, i) => {
       const block = new Float32Array(buffer, p, used);
       hashes[i].samples(block);
@@ -236,7 +251,7 @@ export function renderWasm(bytes, list, keep = null) {
 
 // The hash line, as the native host prints it.
 export function hashLine(list, hashes) {
-  return `${list.name} frames=${list.frames}${SIGNALS.map((s, i) => ` ${s}=${hashes[i]}`).join('')}`;
+  return `${list.name} frames=${list.frames}${signalsOf(list).map((s, i) => ` ${s}=${hashes[i]}`).join('')}`;
 }
 
 // A mono 32-bit float WAV, as the native host writes it.

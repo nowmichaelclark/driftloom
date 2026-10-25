@@ -14,7 +14,8 @@
 # the core carries its own math (item 43) every target must make exactly
 # wasm32's hashes (--strict), and x86-64 renders them once more with the
 # processor flushing subnormal numbers to zero, as Chromium's audio threads
-# do, which must change nothing (--flush).
+# do, which must change nothing (--flush). The stereo render (queue item 64)
+# has its own hash files and goes through the same steps (--stereo).
 #
 # The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
 # the runner, installs that exact version and its wasm32 target on first
@@ -127,3 +128,17 @@ jobs:
       - name: The same at 22,050 to 192,000 Hz
         if: matrix.target != 'powerpc-unknown-linux-gnu'
         run: tools/golden.sh --rates ${{ matrix.target }}
+      # The stereo render (queue item 64), held to its own hashes the same
+      # way: plain on every target, and the modes where the mono render
+      # runs them.
+      - name: Stereo, the golden note lists
+        run: tools/golden.sh --stereo --strict ${{ matrix.target }}
+      - name: Stereo, flushing subnormal numbers
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: tools/golden.sh --stereo --strict --flush ${{ matrix.target }}
+      - name: Stereo, at every block size
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --stereo --blocks ${{ (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown') && 'all' || '' }} ${{ matrix.target }}
+      - name: Stereo, at 22,050 to 192,000 Hz
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --stereo --rates ${{ matrix.target }}

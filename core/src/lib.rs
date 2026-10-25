@@ -154,14 +154,21 @@ pub const ARC_SHAPE: u32 = TONE_FREQ + 11;
 pub const ARC_FLOOR: u32 = TONE_FREQ + 12;
 /// The share of the swing the dip takes, 0 to 1, for `ARC_PERIOD` to take.
 pub const ARC_DIP: u32 = TONE_FREQ + 13;
+/// The width ceiling's settings (queue item 64; `blocks::width::SETTINGS`,
+/// in that order): its target in dB against the mid, its cutoff in Hz, its
+/// window, and its down and up time constants in seconds. A stereo render's
+/// only; from the next block.
+pub const WIDTH_TARGET: u32 = TONE_FREQ + 14;
+/// The last of the width ceiling's settings (`WIDTH_TARGET` and on).
+pub const WIDTH_UP: u32 = TONE_FREQ + 18;
 
 /// Why `Core::start` or `Core::render` would not.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Error {
     /// The sample rate is outside `MIN_RATE` to `MAX_RATE`.
     Rate,
-    /// The output layout is not one the core renders yet. Mono, one
-    /// channel, is the only one; the number is how many channels were asked
+    /// The output layout is not one the core renders: mono (one channel)
+    /// and stereo (two) are; the number is how many channels were asked
     /// for.
     Layout(u32),
 }
@@ -172,7 +179,7 @@ impl Error {
     pub const fn message(self) -> &'static str {
         match self {
             Error::Rate => "sample rate outside what this core runs at (22050 to 192000 Hz, or 96000 in the web build)",
-            Error::Layout(_) => "output layout not supported yet: the core renders mono (1 channel)",
+            Error::Layout(_) => "output layout not supported: the core renders mono (1 channel) or stereo (2)",
         }
     }
 }
@@ -410,6 +417,9 @@ pub struct Core {
     /// The next arc, as the `ARC_` parameters set it up, for `ARC_PERIOD`
     /// to start.
     arc_next: blocks::arc::Settings,
+    /// The mix going into the master, a block a lane (the second only in
+    /// stereo).
+    mixed: [Signal; OUT],
     noise: Noise,
     /// The voices too big for a slot (the sung voices), each kind in a
     /// pool of its own (`blocks`).
@@ -460,6 +470,7 @@ impl Core {
             routes: [NO_ROUTE; ROUTES],
             sends: [[0.0; QUANTUM]; 2],
             arc_next: blocks::arc::ZERO,
+            mixed: [[0.0; QUANTUM]; OUT],
             noise: Noise::new(),
             pools: Pools::new(),
             key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
@@ -496,36 +507,60 @@ impl Core {
         self.sent = 0;
         self.inputs = [[0.0; QUANTUM]; CHANNELS];
         self.unserved = 0;
+        self.master.set_layout(1);
         self.quality(true);
     }
 
     /// Start the core for a host: at `rate` Hz, rendering `channels`
     /// channels, with the full mix. The first call a native or game host
-    /// makes; the web host's worklet calls `init` and `quality` itself.
+    /// makes; the web host's worklet calls `init`, `quality` and
+    /// `set_layout` itself.
     ///
-    /// Mono (1 channel) is the only layout there is. Asking for another
-    /// returns `Error::Layout` and leaves the core as it was, so stereo
-    /// can arrive later as a render of its own (`docs/CORE.md`, promise 9)
-    /// without anything a host already does changing.
+    /// Two layouts (queue item 64; `docs/CORE.md`, promise 9): mono, one
+    /// channel, and stereo, two, each a render of its own. The mono render
+    /// is the one the core has always made and pays nothing for stereo; the
+    /// stereo render's mid is the mono mix. Asking for another returns
+    /// `Error::Layout` and leaves the core as it was.
     ///
     /// # Errors
     ///
-    /// `Error::Layout` for any layout but mono, `Error::Rate` for a rate
-    /// outside `MIN_RATE` to `MAX_RATE`.
+    /// `Error::Layout` for any layout but mono or stereo, `Error::Rate` for
+    /// a rate outside `MIN_RATE` to `MAX_RATE`.
     pub fn start(&mut self, rate: f64, channels: u32) -> Result<(), Error> {
-        if channels != 1 {
+        if channels != 1 && channels != 2 {
             return Err(Error::Layout(channels));
         }
         if !(MIN_RATE..=MAX_RATE).contains(&rate) {
             return Err(Error::Rate);
         }
         self.init(rate);
+        self.set_layout(channels);
         Ok(())
     }
 
+    /// Render `channels` channels from the next block: 1 (mono) or 2
+    /// (stereo). False, and nothing changes, for any other. `init` starts
+    /// the core mono.
+    pub fn set_layout(&mut self, channels: u32) -> bool {
+        if channels != 1 && channels != 2 {
+            return false;
+        }
+        self.master.set_layout(channels as usize);
+        true
+    }
+
+    /// How many channels it renders: 1 or 2.
+    #[must_use]
+    pub fn layout(&self) -> u32 {
+        // 1 or 2.
+        #[allow(clippy::cast_possible_truncation)]
+        let n = self.master.layout() as u32;
+        n
+    }
+
     /// Render the next `out[0].len()` frames, any number, into the host's
-    /// buffer: one slice a channel of the layout chosen at `start`, so one,
-    /// all the same length. The call after this one carries on where this
+    /// buffer: one slice a channel of the layout chosen at `start`, one or
+    /// two, all the same length. The call after this one carries on where this
     /// one stopped, whatever the block sizes.
     ///
     /// The core renders internally in blocks of `QUANTUM` frames on frame
@@ -542,23 +577,27 @@ impl Core {
     ///
     /// # Errors
     ///
-    /// `Error::Layout` if `out` does not hold exactly one channel; nothing
-    /// is rendered.
+    /// `Error::Layout` if `out` does not hold one slice for each channel of
+    /// the layout, all the same length; nothing is rendered.
     pub fn render(&mut self, out: &mut [&mut [f32]]) -> Result<(), Error> {
-        let [out] = out else {
+        let n = self.master.layout();
+        let frames = out.first().map_or(0, |o| o.len());
+        if out.len() != n || out.iter().any(|o| o.len() != frames) {
             return Err(Error::Layout(u32::try_from(out.len()).unwrap_or(u32::MAX)));
-        };
+        }
         let mut done = 0;
-        while done < out.len() {
+        while done < frames {
             if self.unserved == 0 {
                 let block = self.next;
                 self.process(block);
                 self.unserved = QUANTUM;
             }
-            let ready = self.master.output()[0].get(QUANTUM - self.unserved..).unwrap_or(&[]);
-            let take = ready.len().min(out.len() - done);
-            if let (Some(to), Some(from)) = (out.get_mut(done..done + take), ready.get(..take)) {
-                to.copy_from_slice(from);
+            let from = QUANTUM - self.unserved;
+            let take = self.unserved.min(frames - done);
+            for (to, lane) in out.iter_mut().zip(self.master.output().iter()) {
+                if let (Some(to), Some(from)) = (to.get_mut(done..done + take), lane.get(from..from + take)) {
+                    to.copy_from_slice(from);
+                }
             }
             self.unserved -= take;
             done += take;
@@ -671,6 +710,10 @@ impl Core {
             }
             ARC_PERIOD => {
                 self.master.arc(&blocks::arc::Settings { period: value, ..self.arc_next }, time);
+                true
+            }
+            WIDTH_TARGET..=WIDTH_UP => {
+                self.master.set_width((id - WIDTH_TARGET) as usize, value);
                 true
             }
             _ => self.mix.param(id, op, v, time, tau, now),
@@ -1238,10 +1281,15 @@ impl Core {
             };
             r.drive = *tap;
         }
-        // The graph is mono: the mix is every lane's.
+        // The mix is mono: in stereo it is both lanes', the mid with no side
+        // (the space recipes, queue item 65, add one).
         let lift = self.master.arc_lift(block);
-        let mixed = [*self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref()); OUT];
-        self.master.process(block, &mixed, &self.waves);
+        let [mid, right] = &mut self.mixed;
+        *mid = *self.mix.process(block, &self.out, if sent { Some(&self.sends) } else { None }, lift.as_ref());
+        if self.master.layout() == 2 {
+            *right = *mid;
+        }
+        self.master.process(block, &self.mixed, &self.waves);
         &self.out
     }
 }
@@ -1730,7 +1778,7 @@ mod tests {
         let mut core = boxed();
         assert_eq!(core.start(48_000.0, 1), Ok(()));
         for (rate, channels, want) in [
-            (48_000.0, 2, Error::Layout(2)),
+            (48_000.0, 3, Error::Layout(3)),
             (48_000.0, 0, Error::Layout(0)),
             (48_000.0, 6, Error::Layout(6)),
             (8_000.0, 1, Error::Rate),
@@ -1745,8 +1793,51 @@ mod tests {
         assert_eq!(core.start(22_050.0, 1), Ok(()));
         assert_eq!(core.start(MAX_RATE, 1), Ok(()));
         // A refused start leaves the core as it was.
-        assert_eq!(core.start(48_000.0, 2), Err(Error::Layout(2)));
+        assert_eq!(core.start(48_000.0, 3), Err(Error::Layout(3)));
         assert!(core.mixing());
+        assert_eq!(core.layout(), 1);
+        // Stereo (queue item 64).
+        assert_eq!(core.start(48_000.0, 2), Ok(()));
+        assert_eq!(core.layout(), 2);
+        assert!(!core.set_layout(3));
+        assert_eq!(core.layout(), 2);
+    }
+
+    /// With nothing placed or widened, each side of the stereo render is the
+    /// mono render, bit for bit (queue item 64): the mix's mid is the mono
+    /// mix, the saturator and filters run on each side alike, and the
+    /// compressors, keyed by the mid, press as mono's do. A loud loop, so
+    /// both compressors are pressing, with the arc on, at full and lite
+    /// quality and two rates.
+    #[test]
+    fn stereo_with_nothing_placed_is_mono_on_each_side_bit_for_bit() {
+        let play = |channels: u32, rate: f64, full: bool| -> Vec<Vec<u32>> {
+            let mut core = boxed();
+            core.start(rate, channels).expect("a layout");
+            core.quality(full);
+            core.param(ARC_FROM, mix::SET, 0.45, 0.0, 0.0);
+            core.param(ARC_PERIOD, mix::SET, 2.0, 0.0, 0.0);
+            for i in 0..40 {
+                let t = f64::from(i) * 0.05;
+                core.key(key(3, 0, i, 0));
+                core.note(KALIMBA, MELODY, t + 0.001, 60.0 + f64::from(i % 12), 0.4, 1.0, STRIKE | BODY, NO);
+                core.key(key(3, 0, i, 1));
+                core.note(DRUM, DRUMS_CHANNEL, t, 0.0, 0.3, 1.0, 0, NO);
+            }
+            let frames = (2.5 * rate) as usize;
+            let mut sides = vec![vec![0.0f32; frames]; channels as usize];
+            let mut refs: Vec<&mut [f32]> = sides.iter_mut().map(|s| &mut s[..]).collect();
+            core.render(&mut refs).expect("render");
+            assert!(core.reduction(0) < -0.5, "the bus compressor presses: {}", core.reduction(0));
+            sides.iter().map(|s| s.iter().map(|x| x.to_bits()).collect()).collect()
+        };
+        for (rate, full) in [(48_000.0, true), (48_000.0, false), (44_100.0, true)] {
+            let mono = play(1, rate, full);
+            let stereo = play(2, rate, full);
+            assert!(mono[0].iter().any(|&b| f32::from_bits(b) != 0.0));
+            assert!(stereo[0] == mono[0], "left, {rate} Hz, full {full}");
+            assert!(stereo[1] == mono[0], "right, {rate} Hz, full {full}");
+        }
     }
 
     #[test]

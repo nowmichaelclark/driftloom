@@ -13,6 +13,8 @@
 //                                               output is not the plain render's
 //   node tools/golden-wasm.mjs --wasm FILE      render through another build (the 192 kHz
 //                                               one, tools/build-core.sh --wide)
+//   node tools/golden-wasm.mjs --stereo         the stereo render (queue item 64): both sides
+//                                               hashed, as the native host's --stereo
 //
 // tools/golden.sh compares the lines with core/golden/wasm32-unknown-unknown.hashes.
 // No browser: Node runs WebAssembly itself.
@@ -34,6 +36,7 @@ let wavDir = null;
 let rate = null;
 let blocks = [];
 let wasm = path.join(ROOT, 'js', 'dlcore.wasm');
+let layout = 1;
 const lists = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--twice') twice = true;
@@ -41,6 +44,7 @@ for (let i = 0; i < argv.length; i++) {
   else if (argv[i] === '--rate') rate = Number(argv[++i]);
   else if (argv[i] === '--blocks') blocks = argv[++i].split(',').map((w) => (w === 'random' ? w : Number(w)));
   else if (argv[i] === '--wasm') wasm = path.resolve(argv[++i]);
+  else if (argv[i] === '--stereo') layout = 2;
   else if (argv[i].startsWith('--')) { console.error(`golden-wasm: no such option: ${argv[i]}`); process.exit(2); }
   else lists.push(argv[i]);
 }
@@ -50,14 +54,15 @@ if (wavDir) fs.mkdirSync(wavDir, { recursive: true });
 const bytes = fs.readFileSync(wasm);
 for (const file of files) {
   try {
-    let list = readList(fs.readFileSync(file, 'utf8'));
+    let list = { ...readList(fs.readFileSync(file, 'utf8')), layout };
     if (rate) list = atRate(list, rate);
-    const first = renderWasm(bytes, list, wavDir ? 'out' : null);
+    const first = renderWasm(bytes, list, wavDir ? (layout === 2 ? 'left' : 'out') : null);
     if (twice && renderWasm(bytes, list).hashes.join() !== first.hashes.join()) throw new Error('rendering twice gave different hashes');
     console.log(hashLine(list, first.hashes));
     for (const size of blocks) {
-      const out = renderWasmBlocks(bytes, list, size);
-      if (out !== first.hashes[0]) throw new Error(`${size} frames a call: the speaker output is ${out}, not ${first.hashes[0]}`);
+      const out = renderWasmBlocks(bytes, list, size).join(' ');
+      const want = first.hashes.slice(0, layout).join(' ');
+      if (out !== want) throw new Error(`${size} frames a call: the speaker output is ${out}, not ${want}`);
     }
     if (wavDir) fs.writeFileSync(path.join(wavDir, `${list.name}.wav`), wavBytes(first.kept, list.rate));
   } catch (err) {

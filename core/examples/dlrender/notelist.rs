@@ -88,12 +88,26 @@ pub struct List {
     pub full: bool,
     pub frames: u64,
     pub events: Vec<Event>,
+    /// The layout to render it in: 1 (mono, what a list is) or 2 (stereo,
+    /// `dlrender --stereo`, queue item 64).
+    pub layout: u32,
 }
 
 /// The signals a render hashes, in the order the hash line gives them: what
 /// the speakers get, then each channel as it went into the mix, then what
 /// reached the bus compressor. The channels' order is the core's.
 pub const SIGNALS: [&str; 8] = ["out", "melody", "chords", "bass", "texture", "drums", "wash", "bus"];
+
+/// The same for a stereo render: both sides of what the speakers get, the
+/// channels (mono: the mix makes the space), both sides at the bus
+/// compressor.
+pub const STEREO_SIGNALS: [&str; 10] = ["left", "right", "melody", "chords", "bass", "texture", "drums", "wash", "bus", "busright"];
+
+/// The signals a render in `layout` hashes.
+#[must_use]
+pub fn signals(layout: u32) -> &'static [&'static str] {
+    if layout == 2 { &STEREO_SIGNALS } else { &SIGNALS }
+}
 
 fn number(word: &str, what: &str, line: usize) -> Result<f64, String> {
     word.parse::<f64>()
@@ -116,6 +130,7 @@ pub fn parse(text: &str) -> Result<List, String> {
         full: true,
         frames: 0,
         events: Vec::new(),
+        layout: 1,
     };
     let mut seen_header = false;
     for (n, raw) in text.lines().enumerate() {
@@ -372,7 +387,7 @@ fn flush_subnormals() -> Result<(), String> {
 /// Start a core for a list and hand it every call, before the first block:
 /// the host's side of a render, whichever way the samples are then taken.
 fn load(core: &mut Core, list: &List) -> Result<(), String> {
-    core.start(list.rate, 1).map_err(|e| e.message().to_string())?;
+    core.start(list.rate, list.layout).map_err(|e| e.message().to_string())?;
     core.quality(list.full);
     if !core.mixing() {
         return Err(format!("the core does not mix at {} Hz", list.rate));
@@ -420,23 +435,36 @@ fn load(core: &mut Core, list: &List) -> Result<(), String> {
 
 fn play(core: &mut Core, list: &List, keep: Option<usize>) -> Result<Rendered, String> {
     load(core, list)?;
-    let mut hashes: Vec<Fnv> = SIGNALS.iter().map(|_| Fnv::new()).collect();
+    let stereo = list.layout == 2;
+    let mut hashes: Vec<Fnv> = signals(list.layout).iter().map(|_| Fnv::new()).collect();
     let mut kept = Vec::new();
     let mut frame = 0u64;
     while frame < list.frames {
         let taps = *core.process(frame);
-        let mut blocks: [&[f32]; CHANNELS + 2] = [&[]; CHANNELS + 2];
-        blocks[0] = &core.output()[0];
-        for (slot, tap) in blocks[1..=CHANNELS].iter_mut().zip(taps.iter()) {
+        let [out, out_right] = core.output();
+        let [bus, bus_right] = core.bus();
+        // In the order of `signals(list.layout)`; no allocation a block.
+        let mut blocks: [&[f32]; STEREO_SIGNALS.len()] = [&[]; STEREO_SIGNALS.len()];
+        let sides = if stereo { 2 } else { 1 };
+        blocks[0] = &out[..];
+        blocks[1] = &out_right[..];
+        for (slot, tap) in blocks[sides..].iter_mut().zip(taps.iter()) {
             *slot = &tap[..];
         }
-        blocks[CHANNELS + 1] = &core.bus()[0];
+        blocks[sides + CHANNELS] = &bus[..];
+        blocks[sides + CHANNELS + 1] = &bus_right[..];
+        let n = 2 * sides + CHANNELS;
         // The last block may run past the end; the end is the list's.
         let used = (list.frames - frame).min(QUANTUM as u64) as usize;
-        for (i, block) in blocks.iter().enumerate() {
+        for (i, block) in blocks.iter().take(n).enumerate() {
             let block = block.get(..used).unwrap_or(&[]);
             hashes[i].samples(block);
-            if keep == Some(i) {
+            // A stereo render's speakers are kept as both sides, interleaved.
+            if stereo && keep == Some(0) && i == 0 {
+                for (l, r) in block.iter().zip(&out_right[..used]) {
+                    kept.extend_from_slice(&[*l, *r]);
+                }
+            } else if keep == Some(i) {
                 kept.extend_from_slice(block);
             }
         }
@@ -468,6 +496,7 @@ impl List {
             full: self.full,
             frames: (self.frames as f64 * rate / self.rate).round() as u64,
             events: self.events.clone(),
+            layout: self.layout,
         }
     }
 }
@@ -496,9 +525,9 @@ impl Blocks {
 
 /// Render a list's speaker output the way a game's audio callback asks for
 /// it: through `Core::render`, `blocks` frames a call. Returns the hash of
-/// the samples, which must be the `out` hash of the same list rendered any
-/// other way.
-pub fn render_blocks(list: &List, blocks: Blocks) -> Result<String, String> {
+/// the samples, a side's in stereo, which must be the `out` hash (`left`
+/// and `right`) of the same list rendered any other way.
+pub fn render_blocks(list: &List, blocks: Blocks) -> Result<Vec<String>, String> {
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
     std::thread::scope(|scope| {
         std::thread::Builder::new()
@@ -506,8 +535,9 @@ pub fn render_blocks(list: &List, blocks: Blocks) -> Result<String, String> {
             .spawn_scoped(scope, || {
                 let mut core = Box::new(Core::new());
                 load(&mut core, list)?;
-                let mut hash = Fnv::new();
-                let mut buffer = vec![0.0f32; 2000];
+                let sides = list.layout as usize;
+                let mut hash: Vec<Fnv> = (0..sides).map(|_| Fnv::new()).collect();
+                let mut buffers = vec![vec![0.0f32; 2000]; sides];
                 let mut state = 0x2545_f491_u32;
                 let mut done = 0u64;
                 while done < list.frames {
@@ -518,16 +548,18 @@ pub fn render_blocks(list: &List, blocks: Blocks) -> Result<String, String> {
                             1 + (state >> 8) as usize % 2000
                         }
                     };
-                    let take = want.min(buffer.len()).min((list.frames - done) as usize);
-                    let out = &mut buffer[..take];
-                    core.render(&mut [out]).map_err(|e| e.message().to_string())?;
-                    hash.samples(&buffer[..take]);
+                    let take = want.min(2000).min((list.frames - done) as usize);
+                    let mut outs: Vec<&mut [f32]> = buffers.iter_mut().map(|b| &mut b[..take]).collect();
+                    core.render(&mut outs).map_err(|e| e.message().to_string())?;
+                    for (h, b) in hash.iter_mut().zip(&buffers) {
+                        h.samples(&b[..take]);
+                    }
                     done += take as u64;
                 }
                 if core.dropped() > 0 || core.late() > 0 || core.missed() > 0 {
                     return Err("the core dropped or missed notes".to_string());
                 }
-                Ok(hash.hex())
+                Ok(hash.iter().map(Fnv::hex).collect())
             })
             .map_err(|e| format!("could not start the render thread: {e}"))?
             .join()
@@ -539,7 +571,7 @@ pub fn render_blocks(list: &List, blocks: Blocks) -> Result<String, String> {
 /// signal's hash.
 pub fn line(list: &List, hashes: &[String]) -> String {
     let mut line = format!("{} frames={}", list.name, list.frames);
-    for (signal, hash) in SIGNALS.iter().zip(hashes) {
+    for (signal, hash) in signals(list.layout).iter().zip(hashes) {
         let _ = write!(line, " {signal}={hash}");
     }
     line

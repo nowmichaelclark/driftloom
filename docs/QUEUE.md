@@ -3791,6 +3791,54 @@ Mikey decides this line:
     for its first 1:33, darkest at 2:05.5 (1.15 kHz), open again from 2:37.
     Under item 63 it was deep, darkest at 1:41.7.
 
+- **Item 64, the stereo render: what was built (Session 25b, hands, Opus
+  5.5, 2026-10-24).** `Core::start(rate, 2)` (or `set_layout(2)`, the
+  worklet's `layout: 2`) renders stereo; mono is untouched and pays almost
+  nothing.
+  - **How:** the master holds two lanes (`master::OUT` is now 2) and a mono
+    render runs the first alone; stereo runs the wobble, saturator, tone,
+    arc and highpass on each side, then a second pair of compressors keyed
+    by the mid (`Compressor::process_keyed`: one gain for both sides from
+    `(L + R) / 2`, so they press as mono's; Chromium links by the louder
+    side), then the width ceiling (`blocks::width`) after the limiter. The mix
+    is still mono (the space recipes, item 65, add the side), so today both
+    lanes get the mono mix.
+  - **Exact:** with nothing placed or widened, each side is the mono render
+    bit for bit: the core's unit test (full, lite, 44.1 kHz, both
+    compressors pressing, the arc on), the worklet test, all 21 goldens at
+    every block size and the 12 at other rates (`left` = `right` = mono
+    `out`, bus too), and the baseline's 40 loops full and lite through the
+    real app (`stereo` part: `monoOnEachSide` true for all 80). Mono itself:
+    goldens, rates, the stored block renders and the baseline's mono parts
+    bit for bit unchanged.
+  - **The width ceiling, where it must differ from the sketch:** the sketch
+    measured over a 2 s window centered on each moment (`width_ceiling.py`
+    read a second ahead in the finished file); the block's window is the last
+    2 s. It moves its gain once a block (the sketch every 10 ms), gliding
+    across it. A frame with no side passes untouched (so a `-0` stays `-0`).
+    Its five settings are named (`width::SETTINGS`; `Core::param`,
+    `WIDTH_TARGET` to `WIDTH_UP`): target -7 dB, cutoff 200 Hz (fourth-order
+    Butterworth, as the sketch's), window 2 s, down 0.5 s, up 3 s.
+  - **The kit:** a stereo processor is also fed two different sides
+    (`Play::Wide`, rows `NAME/PROBE:wide`), since a side-only block can't
+    differ from itself with the same signal on both. `blocks.txt` gains
+    five rows (`width/ceiling`, `:stereo`, `:wide`, and the test-only pan's
+    `:wide` two); no existing row moved.
+  - **Goldens:** `TARGET.stereo.hashes` beside each target's mono file, and
+    `rates.stereo.hashes`; `tools/golden.sh --stereo` (every mode) and CI's
+    stereo steps on every target (PowerPC plain only, as for mono).
+  - **Costs** (instruction counts, cachegrind, the native host): mono
+    against main +0.31% (09-shrine), +0.40% (busy-cinder), +0.61%
+    (15-wayfare), +0.63% (07-dust, lite), +0.73% (14-bloom, lite): the second
+    lane's bookkeeping, inside the 1% asked. Stereo against mono 1.05 to
+    1.25 times (lite 1.05-1.07), under the 1.5 target. `.wasm` 225,169 bytes
+    (183,812 before): the second compressors' code, the keyed loop and the
+    width block. Core memory about 140 KB more (the second lane's wobble
+    line, the stereo compressors' lookahead, the ceiling's window).
+  - **In the app:** still mono by default (item 66 adds the switch);
+    `?stereo` in the address plays the stereo render, and Diagnostics shows
+    the layout.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4412,3 +4460,20 @@ Mikey decides this line:
   breathing dark and bright over minutes, and for the instruments always
   coming back. For the album: haven #38, bright from 0:00, darkest at 1:05.5,
   and undertow #6, darkest at 1:31.9.
+- #260, the arc's two shapes (item 63b, v113),
+  https://7702bdc6-driftloom.nowmichaelclark.workers.dev: a loop that draws the
+  arc now draws one of two shapes: deep (about one in three), item 63's swing
+  exactly, 300 Hz to 9 kHz and back, lingering dark; or dip (about two in
+  three), open at 9 kHz for 65% of each swing with one smooth dip over the
+  other 35% to a floor of 800 Hz to 1.5 kHz, starting anywhere in the open
+  part. Calm, vast vibes lean deep and 3-5 minute swings; bright, lively ones
+  lean dip and 1.5-2.5 minutes. Every variable is a named setting (`ARC` in
+  `js/choices.js`). Listen for the dip as a gentle dimming that comes and goes,
+  never long enough to lose the instruments, and for the deep swing as before.
+  For the album: vapor #4 (deep), bright from 0:00, darkest at 1:16.4; wayfare
+  #25 (dip), open until 0:06, darkest at 0:44.2 (1.24 kHz), open from 1:22.
+  Mikey's loop (seed 102356715) draws the dip, darkest at 2:05.5.
+- #261, CI on Ubuntu 24.04 (no version),
+  https://776de890-driftloom.nowmichaelclark.workers.dev: the core job's runner
+  pinned, since Playwright 1.56.1 can't install Chromium on ubuntu-latest's
+  26.04 (the baseline check failed on #260 for it). Nothing to listen for.

@@ -30,6 +30,11 @@
 //             full and lite
 //   costs     VOICE_COST as synth.js states it (the figures themselves came
 //             from render timing, which no baseline can keep)
+//   stereo    the same 40 loops, full and lite, in the core's stereo render
+//             (queue item 64), each against its mono render: a fingerprint of
+//             each side, whether each side is mono's bit for bit, the fold
+//             ((L + R) / 2) against mono (loudness, and the residual in dB
+//             under it), and the side against the mid
 //   repeat    the same 40 loops (full quality) rendered a second time with the
 //             platform's Math.random seeded differently: every fingerprint
 //             must be the same (queue item 44: the core's render is a
@@ -60,7 +65,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
 }
 const update = argv.includes('--update');
 const onlyAt = argv.indexOf('--only');
-const PARTS = ['loops', 'voices', 'refusals', 'costs', 'repeat'];
+const PARTS = ['loops', 'voices', 'refusals', 'costs', 'stereo', 'repeat'];
 const only = onlyAt >= 0 ? argv[onlyAt + 1].split(',') : PARTS;
 for (const part of only) if (!PARTS.includes(part)) { console.error(`baseline: no part called '${part}'`); process.exit(2); }
 const passThrough = [];
@@ -114,6 +119,24 @@ function loopsFor(quality, salt = null) {
       lufs: r2(r.lufs),
       peakDb: dbOf(r.peak),
       layerLufs: Object.fromEntries(Object.entries(r.layers).map(([k, v]) => [k, r2(v.lufs)])),
+    };
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- stereo
+
+function stereoFor(quality) {
+  const data = measure(['--n', String(LOOPS), '--seed', String(SEED), '--quality', quality, '--passes', '1', '--no-chain', '--stereo'], `stereo-${quality}`);
+  const out = {};
+  for (const r of data.rows) {
+    out[out[r.name] ? `${r.name}#${r.seed}` : r.name] = {
+      left: r.hashes.left,
+      right: r.hashes.right,
+      monoOnEachSide: r.space.exact,
+      foldLU: r2(r.space.foldLU),
+      foldResidDb: r2(r.space.foldResid),
+      sideMidDb: r2(r.space.sideMid),
     };
   }
   return out;
@@ -222,6 +245,13 @@ if (only.includes('loops')) {
 if (only.includes('voices')) { log('every voice'); now.voices = voices(); }
 if (only.includes('refusals')) { log(`refusals over ${REFUSAL_LOOPS} loops, full and lite`); now.refusals = refusals(); }
 if (only.includes('costs')) now.costs = costs();
+if (only.includes('stereo')) {
+  now.stereo = {};
+  for (const quality of ['full', 'lite']) {
+    log(`${LOOPS} loops in stereo, ${quality}`);
+    now.stereo[quality] = stereoFor(quality);
+  }
+}
 if (only.includes('repeat')) {
   log(`${LOOPS} loops again, with another Math.random`);
   now.repeat = repeat(now.loops?.full ?? loopsFor('full'));

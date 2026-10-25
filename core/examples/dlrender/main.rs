@@ -30,7 +30,9 @@
 //!                                           NAME/PROBE~SETTING with that
 //!                                           setting driven, NAME/PROBE:stereo
 //!                                           a stereo block's two sides
-//!                                           (queue item 46b)
+//!                                           (queue item 46b), NAME/PROBE:wide
+//!                                           a stereo processor's, fed two
+//!                                           different sides (queue item 64)
 //! ```
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any error.
@@ -42,9 +44,9 @@ use std::process::ExitCode;
 use dlcore::block::{Block, Context, Note, Play, Voice, solo};
 use dlcore::blocks::{Visit, each};
 use dlcore::Core;
-use notelist::{Blocks, Fnv, SIGNALS, line, parse, read_wav, render, render_blocks, render_flushing, wav, wav_channels};
+use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -58,12 +60,14 @@ fn main() -> ExitCode {
 
 fn run(args: Vec<String>) -> Result<(), String> {
     let (mut twice, mut flush, mut wav_to, mut signal) = (false, false, None, "out".to_string());
+    let mut layout = 1;
     let (mut compare, mut lists, mut block) = (false, Vec::new(), None);
     let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--twice" => twice = true,
+            "--stereo" => layout = 2,
             "--flush" => flush = true,
             "--compare" => compare = true,
             "--block" => block = Some(args.next().ok_or(USAGE)?),
@@ -93,18 +97,22 @@ fn run(args: Vec<String>) -> Result<(), String> {
     if lists.is_empty() || (wav_to.is_some() && lists.len() != 1) {
         return Err(USAGE.to_string());
     }
+    // In stereo `out` is both sides, written as a stereo file.
+    let names = signals(layout);
     let keep = match &wav_to {
+        Some(_) if layout == 2 && signal == "out" => Some(0),
         Some(_) => Some(
-            SIGNALS
+            names
                 .iter()
                 .position(|s| *s == signal)
-                .ok_or_else(|| format!("no such signal: {signal} (one of {})", SIGNALS.join(", ")))?,
+                .ok_or_else(|| format!("no such signal: {signal} (one of {})", names.join(", ")))?,
         ),
         None => None,
     };
     for path in &lists {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
         let mut list = parse(&text).map_err(|e| format!("{path}: {e}"))?;
+        list.layout = layout;
         if let Some(rate) = rate {
             list = list.at_rate(rate);
         }
@@ -118,12 +126,14 @@ fn run(args: Vec<String>) -> Result<(), String> {
         println!("{}", line(&list, &first.hashes));
         for &how in &blocks {
             let out = render_blocks(&list, how).map_err(|e| format!("{path}: {e}"))?;
-            if out != first.hashes[0] {
-                return Err(format!("{path}: rendered {how:?} frames a call, the speaker output is {out}, not {}", first.hashes[0]));
+            let want = first.hashes.get(..out.len()).unwrap_or(&[]);
+            if out != want {
+                return Err(format!("{path}: rendered {how:?} frames a call, the speaker output is {}, not {}", out.join(" "), want.join(" ")));
             }
         }
         if let Some(out) = &wav_to {
-            std::fs::write(out, wav(&first.kept, list.rate)).map_err(|e| format!("{out}: {e}"))?;
+            let bytes = if layout == 2 && keep == Some(0) { wav_channels(&first.kept, list.rate, 2) } else { wav(&first.kept, list.rate) };
+            std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
         }
     }
     Ok(())
@@ -199,13 +209,16 @@ fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String>
             ways.extend(B::SETTINGS.iter().enumerate().filter(|(_, s)| s.probe.is_finite()).map(|(n, s)| (format!("{row}={}", s.name), Play::Set(n))));
             if B::STEREO {
                 ways.push((format!("{row}:stereo"), Play::Stereo));
+                if B::INPUT {
+                    ways.push((format!("{row}:wide"), Play::Wide));
+                }
             }
             for (name, play) in ways {
                 if self.name == name {
                     let mut b = Box::new(B::default());
                     let mut out = Vec::new();
                     solo(&mut *b, settings, &self.cx, 12.0, play, |s| out.extend_from_slice(s));
-                    self.out = Some((out, if play == Play::Stereo { 2 } else { 1 }));
+                    self.out = Some((out, if matches!(play, Play::Stereo | Play::Wide) { 2 } else { 1 }));
                 }
             }
         }
