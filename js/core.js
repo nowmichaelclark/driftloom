@@ -67,7 +67,7 @@ export const CORE_VOICES = {
   stab: 15, ocarina: 16, flute: 17, panflute: 18, knock: 19, templebell: 20, hat: 21,
   bass: 22, texture: 23, drum: 24,
   vowel: 25, hum: 26, choir: 27,
-  dubstab: 28,
+  dubstab: 28, tunedkick: 29,
 };
 // A channel's own blocks, by the number the core knows them by (`own` in
 // core/src/blocks/mod.rs, the registry's `channel` list), for Core::set;
@@ -90,7 +90,7 @@ export const WASH_CHANNEL = 5;
 export const WASH_SETTINGS = ['period', 'level', 'tint', 'tintGain', 'tintHigh', 'tintQ'];
 export const WASH_WEIGHT = 6;
 // The kinds of channel event (core/src/block.rs, `event`).
-export const EVENTS = { damp: 0, release: 1, bend: 2, retune: 3 };
+export const EVENTS = { damp: 0, release: 1, bend: 2, retune: 3, choke: 4 };
 // A sung note's vowel and where it drifts to, as the core numbers them
 // (core/src/blocks/sung.rs); 4 is a hum opening.
 export const SUNG_VOWELS = { a: 0, e: 1, o: 2, u: 3 };

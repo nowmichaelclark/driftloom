@@ -2072,6 +2072,46 @@ mod tests {
         }
     }
 
+    /// A tuned kick's next hit chokes it (queue item 67): a `CHOKE` sent to
+    /// the drums' channel reaches a boom still ringing, which falls away in
+    /// a few ms, and never the hit it was sent with.
+    #[test]
+    fn a_tuned_kick_is_choked_by_the_next() {
+        let play = |first: bool, choke: bool, second: bool| -> Vec<f32> {
+            let mut core = boxed();
+            let boom = blocks::kick::extra(58.27, 50.0, 1.0, 0.3);
+            if first {
+                core.key(key(4, 0, 0, 0));
+                core.note(TUNEDKICK, DRUMS_CHANNEL, 0.1, 0.0, 2.5, 0.8, drum::KICK, boom);
+            }
+            if choke {
+                assert!(core.event(DRUMS_CHANNEL, Event::new(event::CHOKE, 0.6, 0.0)));
+            }
+            if second {
+                core.key(key(4, 0, 1, 0));
+                core.note(TUNEDKICK, DRUMS_CHANNEL, 0.6, 0.0, 2.5, 0.8, drum::KICK, boom);
+            }
+            (0..(2.0 * RATE) as usize / QUANTUM)
+                .flat_map(|b| core.process((b * QUANTUM) as u64)[DRUMS_CHANNEL as usize])
+                .collect()
+        };
+        let peak = |x: &[f32]| x.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        let at = |t: f64| (t * RATE) as usize;
+        let (rang, choked) = (play(true, false, false), play(true, true, false));
+        // Up to the choke the same curve, but for how the ramp kept up to it
+        // is stepped (`cancelAndHoldAtTime`'s).
+        let before = rang[..at(0.6)].iter().zip(choked[..at(0.6)].iter()).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(before < 1e-6, "the same up to the choke: {before}");
+        assert!(peak(&rang[at(0.7)..]) > 0.005, "a boom rings on: {}", peak(&rang[at(0.7)..]));
+        // Down to -80 dB within 30 ms (the sketch's target), and done after.
+        assert!(peak(&choked[at(0.63)..]) < 1.5e-4, "choked: {}", peak(&choked[at(0.63)..]));
+        assert!(peak(&choked[at(0.7)..]) == 0.0, "choked, it is gone: {}", peak(&choked[at(0.7)..]));
+        // The second hit, sent with its choke, plays whole.
+        let (both, alone) = (play(true, true, true), play(false, false, true));
+        let diff = both[at(0.7)..].iter().zip(alone[at(0.7)..].iter()).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(diff < 1e-6 && peak(&both[at(0.7)..]) > 0.005, "the new hit is untouched: {diff}");
+    }
+
     /// The listener's Mono switch (queue item 66), flipped while a chord
     /// plays: until then the render is the mono one bit for bit; into stereo
     /// the side starts from silence and fades in; back into mono it fades
@@ -2595,11 +2635,12 @@ mod tests {
     // then -- started, and not yet ended.
     #[test]
     fn each_kind_says_how_far_it_reaches() {
-        use event::{BEND, DAMP, KINDS, ONCE, RELEASE, RETUNE, reach};
+        use event::{BEND, CHOKE, DAMP, KINDS, ONCE, RELEASE, RETUNE, reach};
         assert_eq!(reach(DAMP), Some(Reach::Once));
         assert_eq!(reach(RELEASE), Some(Reach::Once));
         assert_eq!(reach(BEND), Some(Reach::Every));
         assert_eq!(reach(RETUNE), Some(Reach::Every));
+        assert_eq!(reach(CHOKE), Some(Reach::Every));
         assert_eq!(reach(KINDS as u32), None);
         for kind in 0..KINDS as u32 {
             assert_eq!(reach(kind) == Some(Reach::Once), (kind as usize) < ONCE, "the once-kinds come first");

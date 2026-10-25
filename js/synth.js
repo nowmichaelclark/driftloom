@@ -231,6 +231,14 @@ const DRUM_HOLD = {
   kick: 0.45, softkick: 0.36, snare: 0.16, clap: 0.2, hat: 0.045, ohat: 0.26, shaker: 0.07,
   rim: 0.1, frame: 0.32, tap: 0.12, jingle: 0.09, ojingle: 0.24,
 };
+// How long the tuned kick (queue item 67) is said to ring at most (the
+// core's `dur`), so the next kick's choke reaches it. In the budget it is
+// held as the kick it replaces (DRUM_HOLD: the kick 0.45 s, the soft kick
+// 0.36), short or a long boom, since the next kick chokes it (Mikey,
+// 2026-10-25: the sketch held every tuned kick 0.36 s, and the room that
+// freed let a texture part in that cost a chord note later, three loops in
+// 80 refusing more than today).
+const TUNED_KICK_RINGS = 2.5;
 
 // Waves (tide's air): noise under two lowpass stages, so the sea is a
 // swell and never a hiss, rising to a crest and falling away. The cutoff
@@ -1447,12 +1455,41 @@ export class Synth {
     return true;
   }
 
-  drum(inst, time, vel = 0.8) {
+  // The tuned kick on the Rust core (queue item 67), once the budget has
+  // said yes. `kick` is the loop's (`kickOf` in js/choices.js) and this
+  // pass's kind of it. Every kick of a loop that plays it first chokes the
+  // last one still ringing (one kick at a time: a boom never piles up under
+  // the next hit, and a wandering loop's swap is a crossfade of a few ms),
+  // then plays this pass's: today's, as `_coreDrum` plays it, or the tuned
+  // one. False when the core cannot take it; the JavaScript synth then plays
+  // today's kick, the nearest it has.
+  _coreKick(inst, time, v, cost, kick) {
+    const out = this.channels.drums.gain;
+    if (kick.kind === 'today') {
+      const channel = this.core ? this.core.channelOf(out) : -1;
+      if (channel >= 0) this.core.event(channel, EVENTS.choke, time);
+      return this._coreDrum(inst, time, v, cost);
+    }
+    const channel = this._coreChannel(out);
+    if (channel < 0) return false;
+    const k = kick.kick[kick.kind];
+    const soft = inst === 'softkick';
+    this.core.event(channel, EVENTS.choke, time);
+    this.core.note(CORE_VOICES.tunedkick, channel, time, 0, TUNED_KICK_RINGS, v, DRUM_KINDS[inst],
+      [kick.kick.hz, k.dbps, soft ? k.softLift : k.lift, soft ? k.softTail : k.tail]);
+    this._release(time, DRUM_HOLD[inst], cost);
+    return true;
+  }
+
+  // `kick`, for a kick or a soft kick of a loop that plays the tuned kick:
+  // { kick, kind } (`_coreKick`).
+  drum(inst, time, vel = 0.8, kick = null) {
     const cost = VOICE_COST[inst] ?? 1.5;
     if (!this._budget(time, false, cost)) return;
     const ctx = this.ctx;
     const out = this.channels.drums.gain;
     const v = Math.max(0, Math.min(1, vel));
+    if (kick && this.engine === 'rust' && this._coreKick(inst, time, v, cost, kick)) return;
     if (this.engine === 'rust' && this._coreDrum(inst, time, v, cost)) return;
 
     if (inst === 'kick') {

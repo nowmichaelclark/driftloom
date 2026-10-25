@@ -29,11 +29,11 @@ core.render(&mut [&mut out])?;
 - **`note(voice, channel, time, midi, dur, vel, parts, extra)`** queues a note. It answers whether the note is on time, late, missed or refused (`Taken`).
 - **`key(key)`** says where the notes that follow sit in their loop. Every chance a note leaves open is drawn from this key, so the same loop sounds the same everywhere.
 - **`render(out)`** fills the host's buffers with the next frames: one buffer a channel of the layout last asked for.
-- **`event(channel, event)`** sends a damp, a release, a bend or a retune (`Event::new`, `Event::retune`) to a channel. Each kind says how far it reaches the channel's notes (`event::reach`):
+- **`event(channel, event)`** sends a damp, a release, a bend, a retune or a choke (`Event::new`, `Event::retune`) to a channel. Each kind says how far it reaches the channel's notes (`event::reach`):
   - **once** (a damp, a release): each note hears it at most once, the notes that arrived since the channel's last event of that kind;
-  - **every time** (a bend, a retune): every note held when its time comes hears every one.
+  - **every time** (a bend, a retune, a choke): every note held when its time comes hears every one.
 
-  The channel's own blocks hear every event when its time comes. A voice or a block decides what it does with one; today a strummed nylon string listens to a damp, and the chords' organ (`blocks::organ`, the first channel block the app plays) to retunes and releases.
+  The channel's own blocks hear every event when its time comes. A voice or a block decides what it does with one; today a strummed nylon string listens to a damp, the chords' organ (`blocks::organ`, the first channel block the app plays) to retunes and releases, and the tuned kick (`blocks::kick`) to a choke: the host sends one with every kick of a loop that plays it, and a kick still ringing falls away in a few ms (one kick at a time), while the hit it was sent with passes it by.
 - **`set(channel, block, setting, value, time)`** sets a setting of one of a channel's own blocks for the loop: a sweep's period, a duck's depth, an organ's registration.
 - **`route(channel, block, setting, from, time)`** routes another channel's signal (`Tap`) into a setting a signal can drive on one of a channel's own blocks: the kick into the bass's duck. `None` undoes it.
 - Also:
