@@ -33,7 +33,8 @@
 //!   whose texture isn't light, alone.
 //! - **Never placed:** the melody, the chords and pads (widened only), the
 //!   bass, the kick and the other heavy drums. The organ rides the chords'
-//!   spread and the room; the wash's two noises go out as its own width.
+//!   spread and the room; the wash's two noises go out as its own width,
+//!   above 200 Hz and scaled by the loop's width (Mikey, 2026-10-25).
 //!
 //! In a mono render none of it runs.
 
@@ -110,10 +111,14 @@ pub mod n {
     pub const DENSE: usize = 27;
     pub const SPARSE: usize = 28;
     /// The wash's own width: how much of its two noises' difference goes out
-    /// as side.
+    /// as side; how much of that follows the loop's width (0: none, the
+    /// sketch's; 1: all, as every other width, the default); and what it is
+    /// kept above (Hz; 0 for no highpass, the sketch's; 200 the default).
     pub const WASH: usize = 29;
+    pub const WASH_FOLLOWS: usize = 30;
+    pub const WASH_CUTOFF: usize = 31;
     /// How many there are.
-    pub const COUNT: usize = 30;
+    pub const COUNT: usize = 32;
 }
 
 /// The approved stereo baseline (Ears 4, round 4), as the sketch's code has
@@ -149,6 +154,11 @@ pub const SETTINGS: [Setting; n::COUNT] = [
     s("dense", 0.5, 0.5),
     s("sparse", 0.15, 0.15),
     s("wash", 1.0, 1.0),
+    // Mikey, 2026-10-25: the wash's width above 200 Hz and scaled by the
+    // loop's, as every other width (the sketch's was full and unfiltered,
+    // which put a sparse loop's lows on the side).
+    s("wash-follows-width", 1.0, 1.0),
+    s("wash-cutoff", 200.0, 200.0),
 ];
 
 /// What the core needs to know about a loop to place it: its seed, how
@@ -185,8 +195,9 @@ pub struct Drawn {
     pub texture: f64,
     /// Glass's alone (a loop whose texture isn't light), signed, blended.
     pub glass: f64,
-    /// The wash's own width.
+    /// The wash's own width, and what it is kept above (Hz, 0 for all).
     pub wash: f64,
+    pub wash_cutoff: f64,
     /// The cutoffs, and the spread's delay, sway and rates.
     pub room_cutoff: f64,
     pub spread_cutoff: f64,
@@ -207,6 +218,7 @@ pub const ZERO: Drawn = Drawn {
     texture: 0.0,
     glass: 0.0,
     wash: 0.0,
+    wash_cutoff: 0.0,
     room_cutoff: 0.0,
     spread_cutoff: 0.0,
     place_cutoff: 0.0,
@@ -226,6 +238,7 @@ pub const CENTERED: Drawn = Drawn {
     texture: 0.0,
     glass: 0.0,
     wash: 0.0,
+    wash_cutoff: 0.0,
     room_cutoff: 180.0,
     spread_cutoff: 200.0,
     place_cutoff: 150.0,
@@ -329,7 +342,8 @@ impl Space {
             kit_soft: self.fixed(n::KIT_SOFT),
             texture: if l.light { place } else { 0.0 },
             glass: if l.light { 0.0 } else { place },
-            wash: self.fixed(n::WASH),
+            wash: self.fixed(n::WASH) * (1.0 - self.fixed(n::WASH_FOLLOWS) * (1.0 - width)),
+            wash_cutoff: self.fixed(n::WASH_CUTOFF),
             room_cutoff: self.fixed(n::ROOM_CUTOFF),
             spread_cutoff: self.fixed(n::SPREAD_CUTOFF),
             place_cutoff: self.fixed(n::PLACE_CUTOFF),

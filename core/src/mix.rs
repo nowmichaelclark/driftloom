@@ -211,8 +211,11 @@ struct Side {
     sway: f64,
     sway_lines: [Delay; 3],
     sway_hp: [Biquad; 3],
-    /// The highpasses on the kit's, the texture's and glass's places.
+    /// The highpasses on the kit's, the texture's and glass's places, and
+    /// the wash's own width's (none at a cutoff of 0).
     place_hp: [Biquad; 3],
+    wash_hp: Biquad,
+    wash_cut: bool,
     room_hp: Biquad,
     allpass: [[f32; ALLPASS_FRAMES]; 4],
     allpass_len: [usize; 4],
@@ -240,6 +243,8 @@ impl Side {
             sway_lines: [const { Delay::new() }; 3],
             sway_hp: [const { Biquad::new() }; 3],
             place_hp: [const { Biquad::new() }; 3],
+            wash_hp: Biquad::new(),
+            wash_cut: false,
             room_hp: Biquad::new(),
             allpass: [[0.0; ALLPASS_FRAMES]; 4],
             allpass_len: [0; 4],
@@ -286,6 +291,10 @@ impl Side {
             hp.set(Kind::Highpass, f(d.place_cutoff.min(nyquist)), Q, 0.0, r);
         }
         self.room_hp.set(Kind::Highpass, f(d.room_cutoff.min(nyquist)), Q, 0.0, r);
+        self.wash_cut = d.wash_cutoff > 0.0;
+        if self.wash_cut {
+            self.wash_hp.set(Kind::Highpass, f(d.wash_cutoff.min(nyquist)), Q, 0.0, r);
+        }
     }
 
     /// The side of the block from `block`, from the channels after their
@@ -345,9 +354,12 @@ impl Side {
             glass_hp.flush();
         }
         if wash != 0.0 {
+            let cut = self.wash_cut;
             for ((y, &x), &g) in pumped.iter_mut().zip(at(side.own, WASH_CHANNEL).iter()).zip(wash_gain.iter()) {
+                let x = if cut { self.wash_hp.step(x) } else { x };
                 *y += x * g * wash;
             }
+            self.wash_hp.flush();
         }
         for (y, &k) in pumped.iter_mut().zip(self.pump.iter()) {
             *y *= k;
@@ -751,6 +763,65 @@ mod tests {
             })
             .and_then(|t| t.join().map_err(|_| std::io::Error::other("panicked")))
             .expect("mix")
+    }
+
+    /// A stereo render's side (queue item 65): the mid is the mono mix bit
+    /// for bit whatever the side does, a centered space makes no side, and
+    /// the side keeps out of the low end (every part of it is highpassed).
+    #[test]
+    fn the_side_leaves_the_mid_alone_and_the_low_end_centered() {
+        let space = crate::space::Space::new();
+        let drawn = space.draw(&crate::space::Loop { seed: 11, busy: 9.0, wet: 0.2, light: true });
+        let noise = |b: u64, ch: usize| -> Signal {
+            core::array::from_fn(|i| {
+                let n = (b * QUANTUM as u64 + i as u64).wrapping_mul(2_654_435_761).wrapping_add(ch as u64 * 977);
+                (((n >> 7) % 2000) as f32 / 1000.0 - 1.0) * 0.2
+            })
+        };
+        let low = |b: u64| -> Signal {
+            core::array::from_fn(|i| (core::f64::consts::TAU * 60.0 * (b * QUANTUM as u64 + i as u64) as f64 / RATE).sin() as f32 * 0.3)
+        };
+        let (mut mono, mut stereo, mut centered) = (boxed(true), boxed(true), boxed(true));
+        stereo.set_space(&drawn);
+        let placed = [[0.0; QUANTUM]; CHANNELS];
+        let own = [[0.0; QUANTUM]; CHANNELS];
+        let (mut side_lo, mut side_hi) = (0.0f64, 0.0f64);
+        for b in 0..2000u64 {
+            let mut ch: [Signal; CHANNELS] = core::array::from_fn(|c| noise(b, c));
+            // A low tone in the chords: the spread must not carry it.
+            for (y, x) in ch[CHORDS as usize].iter_mut().zip(low(b).iter()) {
+                *y += *x;
+            }
+            let a = *mono.process(b * QUANTUM as u64, &ch, None, None, None);
+            let input = SideIn { placed: &placed, own: &own, space: &drawn };
+            let m = *stereo.process(b * QUANTUM as u64, &ch, None, None, Some(&input));
+            let flat = SideIn { placed: &placed, own: &own, space: &CENTERED };
+            let _ = centered.process(b * QUANTUM as u64, &ch, None, None, Some(&flat));
+            assert!(a.iter().zip(m.iter()).all(|(x, y)| x.to_bits() == y.to_bits()), "block {b}: the mid moved");
+            assert!(centered.side().iter().all(|&x| x == 0.0), "block {b}: a centered space made a side");
+            if b > 200 {
+                for &x in stereo.side() {
+                    side_hi += f64::from(x) * f64::from(x);
+                }
+            }
+        }
+        assert!(side_hi > 1e-3, "the space made a side: {side_hi}");
+        // The low tone alone through the side: a tenth of a percent at most.
+        let mut quiet = boxed(true);
+        quiet.set_space(&drawn);
+        for b in 0..2000u64 {
+            let mut ch = [[0.0; QUANTUM]; CHANNELS];
+            ch[CHORDS as usize] = low(b);
+            let input = SideIn { placed: &placed, own: &own, space: &drawn };
+            let _ = quiet.process(b * QUANTUM as u64, &ch, None, None, Some(&input));
+            if b > 200 {
+                for &x in quiet.side() {
+                    side_lo += f64::from(x) * f64::from(x);
+                }
+            }
+        }
+        let tone: f64 = (0.3f64 * 0.3 / 2.0) * 1800.0 * QUANTUM as f64;
+        assert!(side_lo / tone < 1e-3, "60 Hz in the side: {}", side_lo / tone);
     }
 
     #[test]
