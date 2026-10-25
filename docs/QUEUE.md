@@ -3839,6 +3839,78 @@ Mikey decides this line:
     `?stereo` in the address plays the stereo render, and Diagnostics shows
     the layout.
 
+- **Item 65, the space recipes: what was built, what differs, what Mikey
+  decided (Session 25b, hands, Opus 5.5, 2026-10-25).** The approved
+  stereo baseline (round 4's blend: room 0.64, ensemble 0.5, steady, under
+  the width ceiling) as data in the core (`core/src/space.rs`): 32 named
+  settings, each a range a loop draws from its seed (`space::SETTINGS`),
+  scaled by how busy and wet the loop is, which the host tells the core at
+  load (`SPACE_SEED` to `SPACE_START`; `js/engine.js`, `spaceOf`); any of
+  them narrowed or pinned by a host (`Core::space_range`, `dl_space_range`,
+  `CoreHost.spaceRange`). The mix makes the side (`mix::Side`), riding the
+  mid's own gains, duck and tails; the master gets mid + side and mid -
+  side. The mid is the mono mix bit for bit; mono renders are unchanged.
+  - **Where the queue's text and the sketch's code differ, the sketch's
+    code was built:** the melody is spread too (the sketch's `ens3`, 0-0.12
+    of width times 1.6; never placed); the light kit's shakers and jingles
+    sit at 0.7 of the hats' place; "matched to the target width" is the
+    blend's weights (0.64 and 0.5, exact by linearity); the spread's sway is
+    the sketch's (12 ms, +-3 ms, 0.35/0.42/0.49 Hz for chords, melody,
+    texture). Where the text is silent and the sketch has nothing: glass is
+    placed as a light texture is (0.1-0.25 of width, to the other side from
+    the light kit), alone when the loop's texture isn't light, the whole
+    texture layer when it is (the core knows glass as the FM voice on the
+    texture's channel, which only glass plays there outside the light
+    textures).
+  - **Where the core must differ from the sketch:** the sketch blended
+    finished renders (after the master); the core sums the side before it,
+    which differs only by the master's nonlinearity. Its allpasses run on
+    exact delays (Chromium's loops add a block inside each), the same
+    magnitude, a different phase scramble. The width ceiling's window is the
+    last 2 s, not centered (item 64). Before the master, (L + R) / 2 is the
+    mid but for rounding (`(m + s) + (m - s)`); after it the fold sits about
+    80 dB under the mono render.
+  - **Decided by Mikey (2026-10-25):** the wash's two noises go out as side
+    above 200 Hz and scaled by the loop's width, as every other width. The
+    sketch's full, unfiltered width failed two guards on vapor #30 (side
+    2.8 dB under mid below 120 Hz, limit 20; correlation 5th percentile
+    0.12, limit 0.3); above 200 Hz alone still failed (-19.0 dB, 0.23).
+    With his choice: -32.7 dB and 0.94.
+  - **Where each new part sits:** glass placed (above); dubStab on the
+    chords' channel, widened with the chords, its echo throw centered (no
+    echo width); the organ rides the chords' spread and reaches the room
+    through its own send; the wash its own width, as decided; the arc darkens
+    both sides alike and moves nothing in the image; roundBass and the frame
+    drum centered (the bass and the heavy drums are never placed); longChords
+    and floorDrop change nothing in the image.
+  - **The guards** (`stereo_guard.py`; the report's four loops, 60 s, and
+    the baseline's 40, 45 s; the organ in 18 of the 44, the wash in 17, the
+    arc 12, dubStab 9, glass 7, a light texture 24): every guard passes on
+    all 44. Fold within 0.00 LU, worst octave 0.01 dB; side 22.2 dB or more
+    under mid below 120 Hz; correlation median 0.82 or more, 5th percentile
+    0.62 or more (median 0.94); balance within 0.32 dB; refused notes as in
+    mono in every loop. Side against mid above 200 Hz: median -18.2 dB over
+    the 44 (the baseline's 40 -17.1, the report's 4 -21.1); bounce 1.31,
+    travel 0.41 dB (round 4: 1.2, 0.5).
+  - **The report's figures don't reproduce on today's loops, and the
+    sketch's own code shows why.** The report's blend read -18.0 dB on its
+    four loops; the core reads -21.1 there. The sketch's code pasted into
+    today's JavaScript synth (`space-sketch.patch` and round 3's allpass
+    room) and run with its own recipes (`space_jobs.py`, `draw2`) on the
+    same four loops reads -20.8 (no wash or organ in the fallback). With the
+    same recipe numbers pinned into the core: -22.8 without the wash. Loop
+    by loop the space is the same where the music is (glade -23.9 against
+    -23.6, vapor -23.2 against -24.8; undertow's room within 0.5 dB in every
+    octave from 500 Hz to 4 kHz); where it isn't, the mid is: the core's
+    mid above 200 Hz is 6.0 dB louder than the fallback's on undertow (9.4
+    dB at 200-400 Hz, roundBass's harmonics) and 2.0 dB on cinder, and the
+    same side reads that much narrower. The loops themselves have moved
+    since the report (2026-10-16): roundBass and the rest thicken the mid.
+    Built as the sketch's numbers; the baseline's 40 land on the target.
+  - **Costs** (instruction counts, the native host, with the space): stereo
+    1.18 to 1.38 times mono (lite 1.18 and 1.24), under 1.5; mono +0.13% to
+    +0.27% against item 64. `.wasm` 238,357 bytes (225,186 before).
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4477,3 +4549,10 @@ Mikey decides this line:
   https://776de890-driftloom.nowmichaelclark.workers.dev: the core job's runner
   pinned, since Playwright 1.56.1 can't install Chromium on ubuntu-latest's
   26.04 (the baseline check failed on #260 for it). Nothing to listen for.
+- #262, the stereo render (item 64, v114),
+  https://107b774b-driftloom.nowmichaelclark.workers.dev: the core renders
+  stereo as a render of its own (`?stereo` plays it): the master on two lanes,
+  compressors keyed by the mid, the width ceiling after the limiter. Nothing
+  is placed yet, so each side is the mono render bit for bit; mono itself is
+  unchanged. Listen for nothing: `?stereo` should sound exactly like the plain
+  page.
