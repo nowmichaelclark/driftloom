@@ -4050,6 +4050,67 @@ Mikey decides this line:
     the organ (it draws the wash); `tools/rates.mjs` still passes. 20-tide
     keeps its organ.
 
+- **Item 68, subDuck: what was built, where it differs from the sketch
+  (Session 25c, hands, Opus 5.5, 2026-10-25).** A channel's own block on the
+  whole bass channel, `blocks::sub_duck` (`SubDuck`, `own::SUB_DUCK`), keyed
+  by the drums' channel routed in (`Core::route`), as 46c's sidechain
+  demonstration is. Its settings, set for the loop (`Core::set`): the depth
+  in dB at a kick of velocity 0.8 or more (0 is off, and costs nothing) and
+  the recovery in seconds. The host: `SUBDUCK` in `js/choices.js` (every
+  variable named, with its range), `subDuckOf` (the sketch's stream and its
+  draws, the "whether" draw spent, so a loop gets the depth and recovery the
+  sketch drew it), the choice `subDuck` (only with a kick and a bass line;
+  batch 5's vibe leans), and `Synth.subDuckSetup` (the settings and the
+  route at the loop's first step, the wash's way; undone for a loop
+  without). The fallback leaves it out. On 11.9% of 10,000 loops.
+  - **Where it must differ from the sketch:** the sketch dipped the bass
+    channel's gain at each kick's scheduled time, by the kick's velocity
+    (`e8Duck`). Keyed through a route, the block hears the kick instead: the
+    key's low band (under 150 Hz, where the drums' channel is the kick)
+    rising 8 dB from where it rested and past -20 dBFS is a kick, and how
+    loud it rises in its first 12 ms is its velocity (a key peak of 0.68 is a
+    kick at 0.8, measured on today's kick and the tuned one; full depth from
+    there, as the sketch's `min(1, vel / 0.8)`). Then the sketch's two lines:
+    down in 8 ms, back over the recovery. It starts a block late (the
+    route's order: 2.7 ms at 48 kHz, 2.9 at 44.1); a new kick's line starts
+    from where the gain is (the sketch's jumped back to full first); a hit
+    under -20 dBFS (a ghost hit, a kick's click a few ms ahead) doesn't count:
+    at -30 dBFS one took two kicks' places in undertow #45, at its own small
+    depth. The loop's first kick, if it falls in the route's first block,
+    isn't heard (a route hears silence its first block, 46c's rule); nor is a
+    second kick inside 40 ms of the first (halcyon's flams).
+  - **Measured** (the report's loops, corpus 20261009, 90 s, wander on,
+    core; the bass tap's 30-150 Hz band in 5 ms windows against the same
+    loop without it, the deepest window 10-50 ms after each kick):
+
+    | loop | drawn | kicks at 0.8+: dip, median (10-90%) | all kicks | back by 0.25 s, worst | bass layer |
+    |---|---|---|---|---|---|
+    | grove #62 | 5.04 dB, 0.200 s | -4.85 (-5.00 to -4.71) | -4.76 | -0.12 dB | -0.44 dB |
+    | undertow #45 | 5.56, 0.230 | -5.38 (-5.86 to -5.27) | -4.94 | -0.22 | -1.04 |
+    | halcyon #48 | 7.92, 0.163 | -7.52 (-7.87 to -7.33) | -7.34 | -0.33 | -0.65 |
+
+    The gain itself reaches the drawn depth (the core test reads the deepest
+    5 ms at 6.4-6.9 dB for 7, today's kick and the tuned one alike); the
+    windows round the line's corner. Never deeper than 9 dB: the depth is
+    drawn 5-9 and only scaled down. The report read the sketch 4.6-5.4 dB
+    down 25 ms after, the bass layer 0.4-0.7 dB quieter. The other four
+    layers' taps are the same to the bit; loudness -0.03 to -0.09 LU;
+    refused notes the same (103, 198, 104). cinder #12 (no kick in the
+    report) now has kicks, but no bass under them: nothing happens.
+  - **Stereo** (`stereo_guard.py`, 60 s, grove #62, undertow #45, halcyon
+    #48, glade #21): fold 0.00 LU; side under mid below 120 Hz -39.4 to
+    -51.7 dB; correlation median 1.00, 5th percentile 0.89 or more; balance
+    within 0.03 dB. The bass is never placed.
+  - **Costs:** the kit's `sub_duck/kick~key` about 0.09% of real time while
+    it ducks; unused, renders without it cost +0.08% to +0.21% in
+    instructions (09-shrine, 15-wayfare, 07-dust against item 67): its early
+    return on five channels, and the second pass a whole-channel block
+    brings (`own::ANY_WHOLE`, now true outside the tests; bit for bit as
+    before).
+  - **Goldens:** 08-bloom and 17-bloom draw subDuck (and lose item 67's
+    tuned kick to the reshuffle); 01-glade, 02-wayfare, 16-grove, 19-glade,
+    20-tide and busy-cinder move with the reshuffle.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4715,3 +4776,15 @@ Mikey decides this line:
   device in each. Listen for: a switch that never clicks or restarts the loop,
   and (Session 26) the blind stereo-against-mono A/B; on Mikey's phone, the
   `render:` line in Diagnostics after a minute each way.
+- #266, tunedKick (item 67, v117),
+  https://16235f1f-driftloom.nowmichaelclark.workers.dev: in loops with a kick
+  that draw it (about one in seven), the kick and the soft kick keep today's
+  sweep but land on the key's note between G1 and D2 (a key of D# to F# on its
+  fifth): short, falling as fast as today's, or a long boom, today's punch
+  then a tail ringing on 7-17 dB down, both as loud by ear as today's kick.
+  One kick at a time: the next hit chokes a boom still ringing. Booming vibes
+  lean long. With "Let the loop wander" on, a pass now and then swaps the kick
+  (today's, short, long). Listen for a kick that sits with the bass instead of
+  under it, a boom that thumps without getting louder, and for swaps that
+  don't click. For the album: undertow #6 from 0:00 (a long boom on C2) and
+  glade #63 from 0:00 (short, on C#2).

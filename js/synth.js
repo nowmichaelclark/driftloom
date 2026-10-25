@@ -7,6 +7,7 @@ import {
   CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
   MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS, WASH_CHANNEL, WASH_SETTINGS, WASH_WEIGHT,
+  SUB_DUCK_SETTINGS,
 } from './core.js';
 import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
 
@@ -531,6 +532,8 @@ export class Synth {
     // listens to the layers (its routes).
     this._wash = null;
     this._washRouted = false;
+    // The loop's subDuck (subDuckSetup), or null.
+    this._subDuck = null;
     // Notes for a core voice that played in JS instead: the core had not
     // arrived, had failed, or does not serve the note's channel.
     this.fallbacks = 0;
@@ -560,6 +563,7 @@ export class Synth {
     // The loop's organ and wash, if it has them, from now on.
     if (this._organ) this._organSend(this._raw.currentTime);
     if (this._wash) this._washSend(this._raw.currentTime);
+    if (this._subDuck) this._subDuckSend(this._raw.currentTime);
   }
 
   // The listener's Mono switch (queue item 66): the core's render from
@@ -2166,6 +2170,34 @@ export class Synth {
     });
     this._washRouted = true;
     for (let n = WASH_SETTINGS.length - 1; n >= 0; n--) core.set(WASH_CHANNEL, CORE_OWN.wash, n, o[WASH_SETTINGS[n]], time);
+  }
+
+  // subDuck (queue item 68): the bass channel alone dips `o.depth` dB at
+  // each kick (scaled by its velocity) and is back in `o.recover` seconds,
+  // keyed by the drums' channel routed into it (core/src/blocks/sub_duck.rs),
+  // from `time`. null lets the last loop's go: no depth, and the route
+  // undone. The JavaScript synth (the fallback) has no subDuck: it leaves it
+  // out.
+  subDuckSetup(o, time) {
+    const had = this._subDuck;
+    this._subDuck = o ? { ...o } : null;
+    const core = this._coreMix();
+    if (!core) return;
+    if (o) this._subDuckSend(time);
+    else if (had) {
+      const bass = CORE_CHANNELS.indexOf('bass');
+      core.set(bass, CORE_OWN.subDuck, 0, 0, time);
+      core.route(bass, CORE_OWN.subDuck, 0, null, time);
+    }
+  }
+
+  _subDuckSend(time) {
+    const core = this._coreMix();
+    const o = this._subDuck;
+    if (!core || !o) return;
+    const bass = CORE_CHANNELS.indexOf('bass');
+    SUB_DUCK_SETTINGS.forEach((name, n) => core.set(bass, CORE_OWN.subDuck, n, o[name], time));
+    core.route(bass, CORE_OWN.subDuck, 0, CORE_CHANNELS.indexOf('drums'), time);
   }
 
   // The arc (queue items 63 and 63b): a second lowpass after the master's

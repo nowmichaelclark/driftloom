@@ -2072,6 +2072,77 @@ mod tests {
         }
     }
 
+    /// subDuck (queue item 68): the bass channel dips at each kick of the
+    /// drums' channel routed into it, by its depth (scaled by the kick's
+    /// velocity, full at 0.8), within 10-50 ms of the kick, and is back
+    /// within 1 dB by a quarter second; the drums are untouched, and with no
+    /// depth set nothing moves.
+    #[test]
+    fn sub_duck_dips_the_bass_at_each_kick() {
+        use blocks::{own, sub_duck};
+        let play = |depth: f64, tuned: bool, vel: f64| -> (Vec<f32>, Vec<f32>) {
+            let mut core = boxed();
+            core.key(key(5, 0, 0, 0));
+            core.note(SINE, BASS_CHANNEL, 0.0, 45.0, 4.0, 1.0, 0, NO);
+            if depth > 0.0 {
+                assert!(core.set(BASS_CHANNEL, own::SUB_DUCK, sub_duck::DEPTH, depth, 0.0));
+                assert!(core.set(BASS_CHANNEL, own::SUB_DUCK, sub_duck::RECOVER, 0.2, 0.0));
+                assert!(core.route(BASS_CHANNEL, own::SUB_DUCK, sub_duck::KEY, Some(Tap { channel: DRUMS_CHANNEL, block: None }), 0.0));
+            }
+            for (i, t) in [1.0, 1.5, 2.0, 2.5].into_iter().enumerate() {
+                core.key(key(5, 0, 1 + i as u32, 0));
+                if tuned {
+                    core.note(TUNEDKICK, DRUMS_CHANNEL, t, 0.0, 2.5, vel, drum::KICK, blocks::kick::extra(58.27, 62.0, 1.0, 0.25));
+                } else {
+                    core.note(DRUM, DRUMS_CHANNEL, t, 0.0, 0.3, vel, drum::KICK, NO);
+                }
+            }
+            let (mut bass, mut drums) = (Vec::new(), Vec::new());
+            for b in 0..(3.2 * RATE) as usize / QUANTUM {
+                let out = core.process((b * QUANTUM) as u64);
+                bass.extend(out[BASS_CHANNEL as usize]);
+                drums.extend(out[DRUMS_CHANNEL as usize]);
+            }
+            (bass, drums)
+        };
+        let rms = |x: &[f32], from: f64, to: f64| {
+            let s = &x[(from * RATE) as usize..(to * RATE) as usize];
+            (s.iter().map(|v| f64::from(*v).powi(2)).sum::<f64>() / s.len() as f64).sqrt()
+        };
+        let db = |a: f64, b: f64| 20.0 * (a / b).log10();
+        let (plain, plain_drums) = play(0.0, false, 0.8);
+        for tuned in [false, true] {
+            let (ducked, drums) = play(7.0, tuned, 0.8);
+            let (_, kept) = play(0.0, tuned, 0.8);
+            assert!(drums == kept, "the drums are untouched");
+            for t in [1.0, 1.5, 2.0, 2.5] {
+                // The deepest 5 ms between 10 and 50 ms after the kick.
+                let dip = (0..8)
+                    .map(|k| {
+                        let a = t + 0.01 + 0.005 * f64::from(k);
+                        db(rms(&ducked, a, a + 0.005), rms(&plain, a, a + 0.005))
+                    })
+                    .fold(0.0, f64::min);
+                let back = db(rms(&ducked, t + 0.25, t + 0.3), rms(&plain, t + 0.25, t + 0.3));
+                assert!((-9.0..=-5.0).contains(&dip), "tuned {tuned}: {dip:.2} dB 10-50 ms after the kick at {t}");
+                assert!(back > -1.0, "tuned {tuned}: back within 1 dB by 0.25 s: {back:.2}");
+            }
+            let before = db(rms(&ducked, 0.2, 0.95), rms(&plain, 0.2, 0.95));
+            assert!(before.abs() < 1e-6, "nothing moves before the first kick: {before}");
+        }
+        // A softer kick dips less; with no depth, nothing at all.
+        let (soft, _) = play(7.0, false, 0.4);
+        let dip = (0..8)
+            .map(|k| {
+                let a = 1.01 + 0.005 * f64::from(k);
+                db(rms(&soft, a, a + 0.005), rms(&plain, a, a + 0.005))
+            })
+            .fold(0.0, f64::min);
+        assert!(dip > -5.5 && dip < -2.0, "a kick at half velocity, about half the depth: {dip:.2}");
+        let (off, off_drums) = play(0.0, false, 0.8);
+        assert!(off == plain && off_drums == plain_drums);
+    }
+
     /// A tuned kick's next hit chokes it (queue item 67): a `CHOKE` sent to
     /// the drums' channel reaches a boom still ringing, which falls away in
     /// a few ms, and never the hit it was sent with.

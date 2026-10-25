@@ -116,6 +116,23 @@ export const KICK = {
   swap: 0.25,
 };
 
+// subDuck's settings (queue item 68; Ears 8's subDuck, approved by Mikey
+// 2026-10-18): the bass channel alone dips at each kick and comes back, so
+// the kick and the sub take turns. Every variable, named, with its range;
+// `subDuckOf` draws a loop's; the core plays it (core/src/blocks/sub_duck.rs).
+export const SUBDUCK = {
+  // How often a loop draws it, and batch 5's vibe table for it.
+  weight: 1,
+  vibes: { bouncy: 2, energetic: 2, lively: 1.5, skipping: 1.5, steady: 1.5, restful: 0.4, serene: 0.4, soothing: 0.4, hushed: 0.4 },
+  // The dip at a kick of velocity 0.8 or more, in dB (never deeper than 9:
+  // the records' 20 dB "gates" are a bass playing off the beat).
+  depth: [5, 9],
+  // How long it takes to come back, in seconds, and never longer than this
+  // share of a beat.
+  recover: [0.15, 0.25],
+  beat: 0.8,
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
@@ -153,7 +170,16 @@ export const CHOICES = [
   // key's note, short as today or a long boom (KICK, above; `kickOf`). Any
   // loop with a kick.
   { id: 'tunedKick', options: KICK.options, optionVibes: KICK.optionVibes, eligible: (ctx) => hasKick(ctx) },
+  // subDuck (queue item 68; Ears 8, approved 2026-10-18): the bass alone dips
+  // at each kick (SUBDUCK, above; `subDuckOf`). Only on a loop with a kick
+  // and a bass line (Mikey's rule; the sketch's test).
+  { id: 'subDuck', options: [['today', 1], ['on', 1]], weight: SUBDUCK.weight, vibes: SUBDUCK.vibes, eligible: (ctx) => hasKick(ctx) && hasBass(ctx) },
 ];
+
+// Whether the loop plays a bass line.
+function hasBass(ctx) {
+  return !!ctx.tracks && ctx.tracks.bass.some((e) => e.vel);
+}
 
 // Whether the loop plays a kick (or a soft kick).
 function hasKick(ctx) {
@@ -348,4 +374,20 @@ function kickFit(hz, kind, dbps, f0, today, sweep, att) {
     else thi = m;
   }
   return { lift, tail: tlo };
+}
+
+// subDuck's own stream (the sketch's salt).
+const SUBDUCK_SALT = 0x5dc4;
+
+// A loop's subDuck, drawn from SUBDUCK on a stream of its own: { depth,
+// recover }. The sketch drew whether a loop ducked first, on the same
+// stream; that draw is spent here too, so a loop gets the depth and recovery
+// the sketch drew it. `bpm` caps the recovery at SUBDUCK.beat of a beat.
+// `pins` may fix either.
+export function subDuckOf(seed, bpm, pins = {}) {
+  const r = new Rng(((seed ^ SUBDUCK_SALT) >>> 0) || 1);
+  r.f();
+  const depth = r.range(SUBDUCK.depth[0], SUBDUCK.depth[1]);
+  const recover = Math.min(r.range(SUBDUCK.recover[0], SUBDUCK.recover[1]), SUBDUCK.beat * 60 / bpm);
+  return { depth: pins.depth ?? depth, recover: pins.recover ?? recover };
 }

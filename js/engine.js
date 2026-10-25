@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf, kickOf, kickKindOf } from './choices.js';
+import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -325,6 +325,10 @@ export class Engine {
     this.arcChange = false;
     // The loop's tuned kick (queue item 67) and its kind, or null.
     this.kick = null;
+    // The loop's subDuck (queue item 68) or null, and whether it is still to
+    // be sent.
+    this.subDuck = null;
+    this.subDuckChange = false;
     // The loop's space (queue item 65), and whether it is still to be sent.
     this.space = null;
     this.spaceChange = false;
@@ -447,6 +451,12 @@ export class Engine {
     // out here, at load, as the sketch did.
     const tuned = this.base.choices && this.base.choices.tunedKick;
     this.kick = tuned && tuned !== 'today' ? { kick: kickOf(spec.seed, spec.root), kind: tuned } : null;
+    // And subDuck (queue item 68), the wash's way: its depth and recovery,
+    // from the new loop's first step decided.
+    const duck = this.base.choices && this.base.choices.subDuck === 'on' ? subDuckOf(spec.seed, spec.bpm) : null;
+    const stays = keepPosition && JSON.stringify(duck) === JSON.stringify(this.subDuck);
+    this.subDuckChange = !stays && !!(duck || this.subDuck);
+    this.subDuck = duck;
     // And its space (queue item 65).
     const space = spaceOf(spec, this.base);
     this.spaceChange = !(keepPosition && JSON.stringify(space) === JSON.stringify(this.space));
@@ -682,6 +692,9 @@ export class Engine {
       this.synth.washSetup(null, this.ctx.currentTime);
       this.washChange = true;
     }
+    // subDuck's settings may have been handed over ahead, and cancelled:
+    // sent again with the loop on Play.
+    if (this.subDuck) this.subDuckChange = true;
     this.lastTick = null;
     this.visualQueue = [];
     this.synth.silence();
@@ -1075,6 +1088,10 @@ export class Engine {
     if (this.arcChange) {
       this.synth.arcSetup(this.arc, Math.max(time, this.floor));
       this.arcChange = false;
+    }
+    if (this.subDuckChange) {
+      this.synth.subDuckSetup(this.subDuck, Math.max(time, this.floor));
+      this.subDuckChange = false;
     }
     if (this.spaceChange) {
       this.synth.spaceSetup(this.space, Math.max(time, this.floor));

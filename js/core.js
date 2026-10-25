@@ -73,7 +73,7 @@ export const CORE_VOICES = {
 // core/src/blocks/mod.rs, the registry's `channel` list), for Core::set;
 // and the chapel organ's settings, in its `set` order
 // (core/src/blocks/organ.rs, queue item 61).
-export const CORE_OWN = { organ: 3, wash: 4 };
+export const CORE_OWN = { organ: 3, wash: 4, subDuck: 5 };
 export const ORGAN_SETTINGS = [
   'bar16', 'bar5', 'bar8', 'bar4', 'bar2_3', 'bar2', 'bar1_3_5', 'bar1_1_3', 'bar1',
   'speak', 'chiff', 'celeste', 'celesteLevel', 'release', 'tone', 'low', 'carve', 'shimmer', 'level', 'verb', 'dry',
@@ -89,6 +89,10 @@ export const WASH_CHANNEL = 5;
 // routed into the wash's input of the same number.
 export const WASH_SETTINGS = ['period', 'level', 'tint', 'tintGain', 'tintHigh', 'tintQ'];
 export const WASH_WEIGHT = 6;
+// subDuck's settings (core/src/blocks/sub_duck.rs, queue item 68): its depth
+// in dB and its recovery in seconds; its key is the drums' channel, routed
+// into its input 0.
+export const SUB_DUCK_SETTINGS = ['depth', 'recover'];
 // The kinds of channel event (core/src/block.rs, `event`).
 export const EVENTS = { damp: 0, release: 1, bend: 2, retune: 3, choke: 4 };
 // A sung note's vowel and where it drifts to, as the core numbers them

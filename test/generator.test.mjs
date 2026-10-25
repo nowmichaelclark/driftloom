@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1110,6 +1110,44 @@ console.log('\ntunedKick (queue item 67)');
   check('short and long half and half; booming leans long, hushed away', Math.abs(plainLong - 0.5) < 0.03 && booming > 0.6 && hushed < 0.4 && hushed > 0,
     `${hushed.toFixed(3)} ${plainLong.toFixed(3)} ${booming.toFixed(3)}`);
   check('every setting is named, with its range', ['options', 'optionVibes', 'note', 'short', 'long', 'loud', 'tailLoud', 'band', 'swap'].every((k) => k in KICK));
+}
+
+// ---------------------------------------------------------------------
+console.log('\nsubDuck (queue item 68)');
+{
+  // The sketch's draws: whether, then the depth and the recovery, on its
+  // stream; the depth 5-9 dB, the recovery 0.15-0.25 s and never over 0.8 of
+  // a beat.
+  let same = true, inRange = true;
+  for (let i = 0; i < 2000; i++) {
+    const seed = i * 7919 + 1;
+    const bpm = 70 + (i % 120);
+    const r = new Rng(((seed ^ 0x5dc4) >>> 0) || 1);
+    r.chance(0.5);
+    const db = r.range(5, 9);
+    const rec = Math.min(r.range(0.15, 0.25), 0.8 * 60 / bpm);
+    const d = subDuckOf(seed, bpm);
+    if (d.depth !== db || d.recover !== rec) same = false;
+    if (!(d.depth >= 5 && d.depth <= 9 && d.recover <= 0.25 && d.recover <= 0.8 * 60 / bpm + 1e-12)) inRange = false;
+  }
+  check('the depth and recovery the sketch drew', same);
+  check('5-9 dB, back in 0.15-0.25 s, never over 0.8 of a beat', inRange);
+  check('a pin moves nothing else', subDuckOf(5, 120, { depth: 6 }).recover === subDuckOf(5, 120).recover && subDuckOf(5, 120, { depth: 6 }).depth === 6);
+  const list = CHOICES.filter((c) => c.id === 'subDuck');
+  const loop = (kick, bass) => ({ tracks: { drums: [{ inst: kick ? 'kick' : 'hat', vel: 0.8, step: 0 }], bass: bass ? [{ midi: 40, vel: 0.6, step: 0 }] : [] } });
+  check('only with a kick and a bass line', list[0].eligible(loop(true, true)) && !list[0].eligible(loop(false, true)) && !list[0].eligible(loop(true, false)));
+  const share = (vibes) => {
+    let n = 0;
+    // Beside a neutral choice, so a lean shows in which is picked.
+    const two = [...list, { id: 'other', options: [['today', 1], ['on', 1]], eligible: () => true }];
+    for (let i = 0; i < 4000; i++) if (drawChoices(i, loop(true, true), vibes, two).subDuck === 'on') n++;
+    return n / 4000;
+  };
+  const plain = share(null);
+  const bouncy = share({ vibes: { bouncy: 1 }, strength: 0.9 });
+  const serene = share({ vibes: { serene: 1 }, strength: 0.9 });
+  check('bouncy leans toward it, serene away, never to none', bouncy > plain && serene < plain && serene > 0, `${serene.toFixed(3)} ${plain.toFixed(3)} ${bouncy.toFixed(3)}`);
+  check('every setting is named, with its range', ['weight', 'vibes', 'depth', 'recover', 'beat'].every((k) => k in SUBDUCK));
 }
 
 // ---------------------------------------------------------------------
