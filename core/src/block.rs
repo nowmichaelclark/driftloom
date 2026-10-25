@@ -133,8 +133,13 @@ pub mod event {
     /// go and spoken again (`blocks::retune`). Reaches every held note,
     /// every time.
     pub const RETUNE: u32 = 3;
+    /// A choke: a voice whose next hit cuts its last (the tuned kick, queue
+    /// item 67) falls away from the event's time. Sent with every hit, it
+    /// reaches every note held when its time comes, every time; a note
+    /// passes by the choke sent with its own hit.
+    pub const CHOKE: u32 = 4;
     /// How many kinds there are.
-    pub const KINDS: usize = 4;
+    pub const KINDS: usize = 5;
     /// The kinds that reach each note once are numbered first, `0..ONCE`:
     /// a note still waiting keeps one of each of these (`Core::event`).
     pub const ONCE: usize = 2;
@@ -159,7 +164,7 @@ pub mod event {
     pub const fn reach(kind: u32) -> Option<Reach> {
         match kind {
             DAMP | RELEASE => Some(Reach::Once),
-            BEND | RETUNE => Some(Reach::Every),
+            BEND | RETUNE | CHOKE => Some(Reach::Every),
             _ => None,
         }
     }
@@ -173,6 +178,7 @@ pub mod event {
             RELEASE => "release",
             BEND => "bend",
             RETUNE => "retune",
+            CHOKE => "choke",
             _ => "unknown",
         }
     }
@@ -589,7 +595,7 @@ pub enum Play {
 /// The events the test kit sends a block that hears a kind (`Block::HEARS`),
 /// for every probe: a damp or a release a quarter second in; a bend up a
 /// semitone, down one, and back; and a retune five times, through chords
-/// that share some notes and not others.
+/// that share some notes and not others; a choke a quarter second in.
 #[must_use]
 pub fn probe_events(kind: u32) -> &'static [Event] {
     const NAN: f64 = f64::NAN;
@@ -598,6 +604,7 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
     }
     const DAMP: [Event; 1] = [Event::new(event::DAMP, 0.25, 0.0)];
     const RELEASE: [Event; 1] = [Event::new(event::RELEASE, 0.25, 0.0)];
+    const CHOKE: [Event; 1] = [Event::new(event::CHOKE, 0.25, 0.0)];
     const BEND: [Event; 3] = [
         Event::new(event::BEND, 0.15, 100.0),
         Event::new(event::BEND, 0.3, -100.0),
@@ -615,6 +622,7 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
         event::RELEASE => &RELEASE,
         event::BEND => &BEND,
         event::RETUNE => &RETUNE,
+        event::CHOKE => &CHOKE,
         _ => &[],
     }
 }

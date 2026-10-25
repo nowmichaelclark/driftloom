@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1050,6 +1050,66 @@ console.log('\nThe arc\'s two shapes (queue item 63b)');
   const pinned = arcOf(4242, null, { shape: free.shape === 'deep' ? 'dip' : 'deep', period: 200 });
   check('a pin moves nothing else', pinned.period === 200 && pinned.floor === free.floor && pinned.shape !== free.shape);
   check('every setting is named, with its range', ['weight', 'shapes', 'period', 'from', 'floor', 'dip'].every((k) => k in ARC));
+}
+
+// ---------------------------------------------------------------------
+console.log('\ntunedKick (queue item 67)');
+{
+  // The key's note between G1 and D2, D# to F# on their fifth; the falls in
+  // their ranges; today's loudness by ear; a long boom's tail under its punch.
+  let notes = true, falls = true, lifts = true, tails = true;
+  for (let root = 36; root < 48; root++) {
+    for (let i = 0; i < 40; i++) {
+      const k = kickOf(i * 7919 + 3, root);
+      const pc = root % 12;
+      const use = pc >= 3 && pc <= 6 ? (pc + 7) % 12 : pc;
+      if (!(k.midi >= 31 && k.midi <= 38 && k.midi % 12 === use)) notes = false;
+      if (!(k.short.dbps >= 180 && k.short.dbps <= 260 && k.long.dbps >= 45 && k.long.dbps <= 80)) falls = false;
+      for (const f of [k.short.lift, k.short.softLift, k.long.lift, k.long.softLift]) if (!(f > 0.9 && f < 1.1)) lifts = false;
+      const db = 20 * Math.log10(k.long.tail);
+      if (!(k.short.tail === 1 && db < -5 && db > -20 && k.long.softTail < 1)) tails = false;
+    }
+  }
+  check('on the key\'s note, G1 to D2, D# to F# on their fifth', notes);
+  check('short falls 180-260 dB a second, long 45-80', falls);
+  check('each at today\'s loudness by ear (lift 0.9 to 1.1)', lifts);
+  check('a long boom\'s tail under its punch, none on a short kick', tails);
+  check('the same seed, the same kick', JSON.stringify(kickOf(99, 41)) === JSON.stringify(kickOf(99, 41)));
+  const pinned = kickOf(99, 41, { long: 60 });
+  check('a pin moves nothing else', pinned.long.dbps === 60 && pinned.short.dbps === kickOf(99, 41).short.dbps && pinned.midi === kickOf(99, 41).midi);
+  // A wandering loop's swaps: never on the first pass, about one pass in
+  // four after it, to either of the other two, the same every time.
+  let swaps = 0, first = true, steady = true;
+  const to = { today: 0, short: 0, long: 0 };
+  for (let i = 0; i < 4000; i++) {
+    const seed = i * 104729 + 11;
+    if (kickKindOf(seed, 'long', 0) !== 'long') first = false;
+    const k = kickKindOf(seed, 'long', 1 + (i % 50));
+    if (k !== kickKindOf(seed, 'long', 1 + (i % 50))) steady = false;
+    if (k !== 'long') { swaps++; to[k]++; }
+  }
+  check('a swap is never on the first pass, and the same pass swaps the same way', first && steady);
+  check('about one pass in four swaps, half to each of the others', Math.abs(swaps / 4000 - KICK.swap) < 0.03 && to.long === 0
+    && Math.abs(to.today / swaps - 0.5) < 0.05, `${swaps} ${JSON.stringify(to)}`);
+  // The choice: only on a loop with a kick; booming leans long.
+  const list = CHOICES.filter((c) => c.id === 'tunedKick');
+  const kicks = { tracks: { drums: [{ inst: 'kick', vel: 0.8, step: 0 }] } };
+  const none = { tracks: { drums: [{ inst: 'hat', vel: 0.5, step: 0 }] } };
+  check('only on a loop with a kick', list[0].eligible(kicks) && !list[0].eligible(none));
+  const longShare = (vibes) => {
+    let l = 0, n = 0;
+    for (let i = 0; i < 4000; i++) {
+      const c = drawChoices(i, kicks, vibes, list).tunedKick;
+      if (c !== 'today') { n++; if (c === 'long') l++; }
+    }
+    return l / n;
+  };
+  const plainLong = longShare(null);
+  const booming = longShare({ vibes: { booming: 1 }, strength: 0.9 });
+  const hushed = longShare({ vibes: { hushed: 1 }, strength: 0.9 });
+  check('short and long half and half; booming leans long, hushed away', Math.abs(plainLong - 0.5) < 0.03 && booming > 0.6 && hushed < 0.4 && hushed > 0,
+    `${hushed.toFixed(3)} ${plainLong.toFixed(3)} ${booming.toFixed(3)}`);
+  check('every setting is named, with its range', ['options', 'optionVibes', 'note', 'short', 'long', 'loud', 'tailLoud', 'band', 'swap'].every((k) => k in KICK));
 }
 
 // ---------------------------------------------------------------------

@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf } from './choices.js';
+import { notesPerSecond, arcOf, kickOf, kickKindOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -323,6 +323,8 @@ export class Engine {
     // started.
     this.arc = null;
     this.arcChange = false;
+    // The loop's tuned kick (queue item 67) and its kind, or null.
+    this.kick = null;
     // The loop's space (queue item 65), and whether it is still to be sent.
     this.space = null;
     this.spaceChange = false;
@@ -441,6 +443,10 @@ export class Engine {
     const held = keepPosition && JSON.stringify(arc) === JSON.stringify(this.arc);
     this.arcChange = !held && !!(arc || this.arc);
     this.arc = arc;
+    // And the tuned kick (queue item 67): its note, falls and levels, worked
+    // out here, at load, as the sketch did.
+    const tuned = this.base.choices && this.base.choices.tunedKick;
+    this.kick = tuned && tuned !== 'today' ? { kick: kickOf(spec.seed, spec.root), kind: tuned } : null;
     // And its space (queue item 65).
     const space = spaceOf(spec, this.base);
     this.spaceChange = !(keepPosition && JSON.stringify(space) === JSON.stringify(this.space));
@@ -884,6 +890,13 @@ export class Engine {
     return drift(this.base, new Rng(seed || 1), this.driftAmount);
   }
 
+  // The tuned kick a pass plays (queue item 67): the loop's own, but a
+  // wandering pass may swap it at its top (`kickKindOf`).
+  _kickOn(p, pass) {
+    const kind = p === this.base ? this.kick.kind : kickKindOf(this.spec.seed, this.kick.kind, pass);
+    return kind === this.kick.kind ? this.kick : { kick: this.kick.kick, kind };
+  }
+
   _advance() {
     this.nextStepTime += this.stepDur;
     this.step++;
@@ -1118,7 +1131,8 @@ export class Engine {
         const key = keyOf('drums');
         const jitter = e.roll ? 0 : (draw(key, 'drums', HOST_JITTER) - 0.5) * 0.008;
         const at = t + micro + jitter;
-        this._play(at, () => this.synth.drum(e.inst, at, e.vel), key);
+        const kick = this.kick && (e.inst === 'kick' || e.inst === 'softkick') ? this._kickOn(p, pass) : null;
+        this._play(at, () => this.synth.drum(e.inst, at, e.vel, kick), key);
         if (pump && (e.inst === 'kick' || e.inst === 'softkick')) this._play(at, () => this.synth.duck(t + micro, pump * e.vel));
       }
     }

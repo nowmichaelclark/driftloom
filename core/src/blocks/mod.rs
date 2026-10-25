@@ -483,6 +483,7 @@ registry! {
         texture::Texture = TEXTURE 23;
         drum::Drum = DRUM 24;
         dub_stab::DubStab = DUBSTAB 28;
+        kick::TunedKick = TUNEDKICK 29;
     }
     pooled {
         sung::Sung [sung::POOL] = VOWEL 25, HUM 26, CHOIR 27;

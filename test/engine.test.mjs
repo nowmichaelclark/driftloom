@@ -423,6 +423,39 @@ console.log('\ndubStab (queue item 60)');
   check('each with a place of its own', stabs.every((c) => c.key.ord === 256));
 }
 
+console.log('\ntunedKick (queue item 67)');
+{
+  // A loop that draws the tuned kick, played 30 s: every kick carries the
+  // loop's kick and kind; wandering, a pass may swap it, as `kickKindOf` says.
+  let r = null;
+  for (let s = 1; s < 3000 && !r; s++) {
+    const x = rig(true, s * 7919);
+    if (x.engine.kick) r = x;
+  }
+  r.run(20);
+  const kicks = r.calls.filter((c) => c.name === 'drum' && (c.args[0] === 'kick' || c.args[0] === 'softkick'));
+  check('a loop with the tuned kick hands each kick its kind', kicks.length > 0 && kicks.every((c) => c.args[3] && c.args[3].kind === r.engine.kick.kind
+    && c.args[3].kick === r.engine.kick.kick), `${kicks.length} kicks, ${r.engine.kick.kind}`);
+  const others = r.calls.filter((c) => c.name === 'drum' && c.args[0] !== 'kick' && c.args[0] !== 'softkick');
+  check('and no other drum', others.every((c) => !c.args[3]));
+  const plain = (() => {
+    for (let s = 1; s < 3000; s++) {
+      const x = rig(true, s * 7919);
+      if (!x.engine.kick && x.engine.base.tracks.drums.some((e) => e.inst === 'kick' && e.vel)) return x;
+    }
+    return null;
+  })();
+  plain.run(10);
+  check('a loop without it plays today\'s kick, as before', plain.calls.filter((c) => c.name === 'drum').every((c) => c.args[3] == null));
+  // Wandering: the kind of each pass's kicks is that pass's draw.
+  const w = rig(true, r.spec.seed);
+  w.engine.driftOn = true;
+  w.run(240);
+  const byPass = new Map();
+  for (const c of w.calls.filter((c) => c.name === 'drum' && c.args[3])) byPass.set(c.args[3].kind, (byPass.get(c.args[3].kind) || 0) + 1);
+  check('wandering, the kick swaps now and then', byPass.size > 1 && byPass.has(w.engine.kick.kind), JSON.stringify([...byPass]));
+}
+
 console.log('\nThe chapel organ (queue item 61)');
 {
   // A loop that draws the organ, played 30 s: set up once at its first step,

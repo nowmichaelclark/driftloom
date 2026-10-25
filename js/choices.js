@@ -79,15 +79,54 @@ export const ARC = {
   dip: 0.35,
 };
 
+// The tuned kick's settings (queue item 67; Ears 8's tunedKick, approved by
+// Mikey 2026-10-18; docs/ears/batch-5.md): every variable of it, named, with
+// its range, in this one place, as ARC's are. `kickOf` draws a loop's from
+// them and works out its level at load; the core plays it
+// (core/src/blocks/kick.rs).
+//
+// The kick and the soft kick keep today's sweep and land on the key's note
+// between G1 and D2, where the records' kicks sit; a key of D# to F# takes
+// its fifth. Short is today's shape falling at `short` dB a second; long is
+// today's punch (213 dB a second) down to a tail that rings on at `long`.
+export const KICK = {
+  // Short and long, half and half; long leans toward booming and the rest of
+  // batch 5's table, away from the hushed and the soothing.
+  options: [['today', 1], ['short', 1], ['long', 1]],
+  optionVibes: {
+    long: { booming: 2.5, hypnotic: 2, steady: 1.5, cool: 1.5, hushed: 0.4, tiptoeing: 0.4, twinkling: 0.4, serene: 0.5, soothing: 0.5 },
+  },
+  // The note: the lowest and highest, as MIDI notes (G1, D2).
+  note: [31, 38],
+  // The falls, in dB a second.
+  short: [180, 260],
+  long: [45, 80],
+  // Level by ear: each kick's K-weighted energy against today's kick's
+  // (`loud`, 1: no louder), and a long boom's tail as loud as fits within
+  // `tailLoud` of today's by ear (1.26: +1 dB) and `band` of today's kick's
+  // own energy under 60 Hz and at 60-120 Hz (2: +3 dB).
+  loud: 1,
+  tailLoud: 1.26,
+  band: 2,
+  // A wandering loop that plays a tuned kick may change its kick at the top
+  // of a pass ("Let the loop wander"; Mikey, 2026-10-18), to today's or the
+  // other tuned one, half and half: `swap` is how often a pass does (a taste
+  // call, for Mikey's ears). The pass's first kick chokes the last one
+  // still ringing, as every tuned kick's next hit does.
+  swap: 0.25,
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
-//     eligible: (ctx) => bool, vibes: { vibe: lean, ... } }
+//     eligible: (ctx) => bool, vibes: { vibe: lean, ... },
+//     optionVibes: { option: { vibe: lean, ... }, ... } }
 //
 // `weight` is how often the choice is picked among those a loop is eligible
 // for, before the vibes lean it (1 if missing); `options` past the first
-// are what it plays when picked, by their weights. `ctx` is what the
-// generator knows of the loop when it draws (see `choicesOf`).
+// are what it plays when picked, by their weights, each leaned by its
+// `optionVibes`. `ctx` is what the generator knows of the loop when it draws
+// (see `choicesOf`).
 export const CHOICES = [
   // glass (queue item 59; the prototypes, approved by Mikey 2026-10-10): on
   // a chord's first beat, now and then, two or three of its notes ring out
@@ -110,7 +149,16 @@ export const CHOICES = [
   // the whole mix breathing dark and bright over minutes, in one of two
   // shapes (ARC, above; `arcOf`). Any loop.
   { id: 'arc', options: [['today', 1], ['on', 1]], weight: ARC.weight, vibes: ARC.vibes, eligible: () => true },
+  // tunedKick (queue item 67; Ears 8, approved 2026-10-18): the kick on the
+  // key's note, short as today or a long boom (KICK, above; `kickOf`). Any
+  // loop with a kick.
+  { id: 'tunedKick', options: KICK.options, optionVibes: KICK.optionVibes, eligible: (ctx) => hasKick(ctx) },
 ];
+
+// Whether the loop plays a kick (or a soft kick).
+function hasKick(ctx) {
+  return !!ctx.tracks && ctx.tracks.drums.some((e) => e.vel && (e.inst === 'kick' || e.inst === 'softkick'));
+}
 
 // How many notes a second the loop plays, every layer, as heard.
 export function notesPerSecond(spec, tracks) {
@@ -169,7 +217,7 @@ export function drawChoices(seed, ctx, vibes = null, list = CHOICES) {
     const c = r.weighted(pool);
     pool = pool.filter(([x]) => x !== c);
     const others = c.options.slice(1);
-    out[c.id] = others.length === 1 ? others[0][0] : r.weighted(others);
+    out[c.id] = others.length === 1 ? others[0][0] : r.weighted(others.map(([o, w]) => [o, w * leanOf(c.optionVibes && c.optionVibes[o], vibes)]));
   }
   return out;
 }
@@ -216,4 +264,88 @@ function arcPace(vibes) {
     if (ARC.bright.includes(id)) bright += w;
   }
   return calm > bright ? 'calm' : bright > calm ? 'bright' : 'rest';
+}
+
+// The tuned kick's own stream (the sketch's salt), and the stream a
+// wandering loop's kick swaps are drawn from.
+const KICK_SALT = 0x7c1d;
+const KICK_SWAP_SALT = 0x6b5a;
+
+// A loop's tuned kick, drawn from KICK on a stream of its own: { midi, hz,
+// short, long }, `short` and `long` each { dbps, lift, tail, softLift,
+// softTail } (the kick's and the soft kick's level by ear; a tail of 1 is
+// none), so a wandering loop can swap between them. `root` is the loop's key.
+// `pins` may fix the note (a MIDI note) or either fall.
+export function kickOf(seed, root, pins = {}) {
+  const r = new Rng(((seed ^ KICK_SALT) >>> 0) || 1);
+  const shortRate = r.range(KICK.short[0], KICK.short[1]);
+  const longRate = r.range(KICK.long[0], KICK.long[1]);
+  // The key's note between G1 and D2; D# to F# take their fifth (A# to C#).
+  const pc = ((root % 12) + 12) % 12;
+  const use = pc >= 3 && pc <= 6 ? (pc + 7) % 12 : pc;
+  const midi = pins.midi ?? 24 + use + (use < 7 ? 12 : 0);
+  const hz = 440 * Math.pow(2, (midi - 69) / 12);
+  const fits = (kind, dbps) => {
+    const hard = kickFit(hz, kind, dbps, 128, 44, 0.09, 0.004);
+    const soft = kickFit(hz, kind, dbps, 96, 46, 0.14, 0.009);
+    return { dbps, lift: hard.lift, tail: hard.tail, softLift: soft.lift, softTail: soft.tail };
+  };
+  return { midi, hz, short: fits('short', pins.short ?? shortRate), long: fits('long', pins.long ?? longRate) };
+}
+
+// The kick a wandering loop plays on pass `pass`: the loop's own (`kind`) on
+// the first pass and most others; now and then (KICK.swap) one of the other
+// two, drawn from the pass alone, so any pass can be reached without playing
+// the ones before it.
+export function kickKindOf(seed, kind, pass) {
+  if (!pass) return kind;
+  const r = new Rng((((seed ^ KICK_SWAP_SALT) >>> 0) + Math.imul(pass, 0x9e3779b1)) >>> 0 || 1);
+  if (!r.chance(KICK.swap)) return kind;
+  const others = ['today', 'short', 'long'].filter((k) => k !== kind);
+  return others[r.chance(0.5) ? 0 : 1];
+}
+
+// The tuned kick's level by ear, as the sketch worked it out at load: the
+// lift that keeps the kick (or, for a long boom, its punch) at today's
+// loudness by ear (K-weighting's 38 Hz high-pass) and its own energy under 60
+// Hz and at 60-120 Hz within KICK.band of today's kick's; then, for a long
+// boom, the tail's level, as loud as fits within KICK.tailLoud by ear and the
+// same band guard. `f0`, `today`, `sweep` and `att` are today's start, end,
+// sweep time and attack.
+function kickFit(hz, kind, dbps, f0, today, sweep, att) {
+  const H2 = (f) => Math.pow(f, 4) / (Math.pow(f * f - 38 * 38, 2) + Math.pow(f * 38 / 0.5, 2));
+  const SUB = (f) => (f < 60 ? 1 : 0);
+  const LOW = (f) => (f >= 60 && f < 120 ? 1 : 0);
+  const PUNCH = 213;
+  const energy = (f1, tail, rate, w) => {
+    const t1 = att + -20 * Math.log10(tail) / PUNCH;
+    const end = t1 + (80 + 20 * Math.log10(tail)) / rate;
+    let e = 0;
+    for (let t = 0; t < end; t += 0.0005) {
+      const f = t < sweep ? f0 * Math.pow(f1 / f0, t / sweep) : f1;
+      const a = t < att ? t / att : t < t1 ? Math.pow(10, -PUNCH * (t - att) / 20) : tail * Math.pow(10, -rate * (t - t1) / 20);
+      e += a * a * w(f);
+    }
+    return e;
+  };
+  const ref = [H2, SUB, LOW].map((w) => energy(today, 1, PUNCH, w));
+  const ok = (lift, tail, rate, loud) => [[H2, loud], [SUB, KICK.band], [LOW, KICK.band]]
+    .every(([w, room], i) => lift * lift * energy(hz, tail, rate, w) <= room * ref[i] * 1.0001);
+  let lo = 0;
+  let hi = 1.5;
+  for (let i = 0; i < 24; i++) {
+    const m = (lo + hi) / 2;
+    if (ok(m, 1, kind === 'short' ? dbps : PUNCH, KICK.loud)) lo = m;
+    else hi = m;
+  }
+  const lift = lo;
+  if (kind === 'short') return { lift, tail: 1 };
+  let tlo = 0.001;
+  let thi = 1;
+  for (let i = 0; i < 24; i++) {
+    const m = Math.sqrt(tlo * thi);
+    if (ok(lift, m, dbps, KICK.tailLoud)) tlo = m;
+    else thi = m;
+  }
+  return { lift, tail: tlo };
 }

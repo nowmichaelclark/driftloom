@@ -3953,6 +3953,103 @@ Mikey decides this line:
     touched in items 64-66. The core baseline: nothing moved (mono and
     stereo parts).
 
+- **Item 67, tunedKick: what was built, where it differs from the sketch,
+  what Mikey decided (Session 25c, hands, Opus 5.5, 2026-10-25).** A core
+  voice of its own, `blocks::kick` (`TunedKick`, voice 29): today's kick or
+  soft kick (`parts`), the same sweep and attack, landing on a target in Hz,
+  falling at a drawn rate, and for a long boom today's punch (213 dB a
+  second) down to a tail that rings on at the drawn rate (`extra`: target,
+  fall, lift, tail). A new event kind, **`CHOKE`** (46c had none; every
+  time, number 4): the host sends one to the drums' channel with every kick
+  of a loop that plays the tuned kick, and a tuned kick still ringing falls
+  away from the curve it is on (`cancelAndHoldAtTime`, then 5 ms to -80 dB,
+  the sketch's) and plays nothing 60 ms later; the hit it was sent with
+  passes it by. The host side: `KICK` in `js/choices.js` (every variable,
+  named, with its range), `kickOf` (the note, both falls on the sketch's
+  stream, and the sketch's level fit at load, about 30 ms), `kickKindOf`
+  (a wandering pass's swap), the choice `tunedKick` in item 54's list
+  (`today`, `short`, `long`; long leaned by batch 5's table through a new
+  `optionVibes`), the engine handing each kick its kind, `Synth._coreKick`.
+  The fallback plays today's kick. On 14.1% of 10,000 loops (short 6.9%,
+  long 7.2%).
+  - **Decided by Mikey (2026-10-25):**
+    1. **The budget:** the tuned kick is held as the kick it replaces (0.45
+       s the kick, 0.36 the soft kick), not the sketch's 0.36 for every
+       kick. With 0.36, the 80 corpus loops (60 s, full) refused 3308 →
+       3312 notes, more on three (+1 musicbox, +3 bell, +6 accordion: the
+       freed room let a texture part in, which cost a chord note later) and
+       fewer on one (-6). With today's holds: 3308 → 3308, every loop the
+       same.
+    2. **The low bands:** "within 3 dB of today's kick" is read as the
+       sketch's cap (no band more than +3 dB over today's kick: at most
+       +1.2 dB), since a kick on G1-D2 moves energy out of 20-60 Hz by
+       design (the report: "short moves energy up out of 20 to 60 Hz"). The
+       short kick reads 3.7 to 6.3 dB under today's there.
+  - **Where it differs from the sketch (the sketch's code was built
+    otherwise):** the kind (short or long) is item 54's draw, not the
+    sketch's half and half on its own stream, and both falls are drawn on
+    the sketch's stream (short's, then long's), so a loop's rate is not the
+    one the sketch drew it; eligibility reads the loop's kicks, not the
+    listener's mutes (a mute never changes a draw); the core chokes every
+    kick of a tuned loop's, today's too when a wandering pass swaps to it
+    (today's kick doesn't hear it); the choked kick stops 60 ms after (the
+    sketch's ran on at -80 dB to its stop). **For Mikey's ears:** the
+    kick's pitch rests at where its sweep starts, not at 440 Hz, so it never
+    carries the chance blip item 55 found in today's kick and frame drum
+    (the sketch, in Chromium, had it); the sketch's tuned kick has no click
+    (today's kick has a 30 ms lowpassed grain), built as the sketch.
+  - **The swap** (Mikey's rule, not in the sketch): a wandering loop that
+    draws the tuned kick changes it at the top of a pass, one pass in four
+    (`KICK.swap`, a taste call, for Mikey's ears), to today's or the other
+    tuned one, half and half, drawn from the pass alone; the first kick of
+    the pass chokes the boom still ringing (a 5 ms crossfade). A loop that
+    doesn't draw it never swaps.
+  - **Measured** (the report's four loops, corpus 20261009, 90 s, wander
+    on, core, swaps off; `kick_check.py kick` on the drums' tap):
+
+    | loop | kind | note | on the note | from 12 s | fall (drawn) | loop | under 60 Hz | 60-120 Hz |
+    |---|---|---|---|---|---|---|---|---|
+    | grove #62 | today | F1 | 82% | 98% | 200 | | | |
+    | | short | A#1 | 87% | 100% | 207 (214) | -0.13 LU | -3.7 dB | -0.2 dB |
+    | | long | A#1 | 89% | 100% | 92 (74, tail -12.2 dB) | +0.21 | +0.7 | +0.0 |
+    | undertow #45 | today | F1 | 84% | 97% | 200 | | | |
+    | | short | A#1 | 91% | 100% | 222 (230) | -0.28 | -4.2 | -0.4 |
+    | | long | A#1 | 93% | 100% | 95 (77, -11.9) | +0.23 | +0.7 | +0.0 |
+    | dust #69 | today | F1 | 76% | 94% | 200 | | | |
+    | | short | C#2 | 86% | 100% | 171 (181) | +0.05 | -6.3 | -0.3 |
+    | | long | C#2 | 88% | 100% | 57 (47, -9.9) | +0.78 | -1.9 | +1.2 |
+    | halcyon #48 | today | F1 | 80% | 96% | 200 | | | |
+    | | short | A#1 | 84% | 98% | 222 (236) | -0.32 | -4.3 | -0.4 |
+    | | long | A#1 | 91% | 100% | 87 (67, -13.2) | +0.12 | +0.6 | -0.0 |
+
+    The report read 89-94% on the note (today's F1 83-87%), falls 207-222
+    short and 82-87 long, loudness -0.24 to +0.08 LU short, +0.21 to +0.27
+    long and +0.95 on dust's C#2 boom: the core matches but for the note
+    share over the whole render, which `kick_check.py` reads high in the
+    first 10-12 s of every loop, today's kick too (48 Hz against its 44 in
+    halcyon's first 10 s; the kick itself sits on 58.3 Hz from its first
+    hit by zero crossings), so halcyon's short reads 84.2% whole and 97.6%
+    from 12 s. Every loop within ±0.5 LU of today, dust's boom on C#2
+    (above B1) +0.78 within +1. Refused notes: the same in every one of the
+    80 corpus loops (above).
+  - **Stereo** (`stereo_guard.py`, 60 s, the report's stereo four: grove
+    #62, undertow #45, glade #21, dust #69; today, short and long, mono
+    against stereo): fold 0.00 LU, worst octave 0.00 dB; side under mid
+    below 120 Hz -38.8 to -46.9 dB; correlation median 0.99-1.00, 5th
+    percentile 0.89 or more; balance within 0.15 dB. The kick is centered
+    by construction (`place_of` places only hats, shakers, jingles and
+    glass).
+  - **The kit:** `kick/short`, `kick/long`, `kick/soft-long` and their
+    `@choke` rows; peaks -1.53 to -1.64 dBFS at the probe (today's kick
+    -1.08), 0.0% at 2-5 kHz; about 0.03-0.05% of real time a hit against
+    today's kick's 0.09-0.13% (no click). `VOICE_COST` stays the kick's.
+  - **Goldens:** 08-bloom and 17-bloom draw the tuned kick (10 kicks and 10
+    chokes each); 01-glade, 16-grove, 19-glade and 20-tide move with the
+    reshuffle a new choice brings (organ and wash come and go). **For item
+    75:** 16-grove, the rates list's `steady` organ case, no longer draws
+    the organ (it draws the wash); `tools/rates.mjs` still passes. 20-tide
+    keeps its organ.
+
 ## Done
 
 - #59, fiddle and accordion take two (v44),
@@ -4609,3 +4706,12 @@ Mikey decides this line:
   anything sitting on one side, and for nothing lost on a phone speaker. For
   the album: glade #57, from 0:00 (the room and the spreads), and vapor #30,
   from 0:00 (the wash's width).
+- #264, the Mono switch, and stereo by default (item 66, v116),
+  https://41916f9a-driftloom.nowmichaelclark.workers.dev: the app plays the
+  stereo render by default; **Mono** (Advanced, under "Sound") plays the mono
+  render, exactly today's balance, and switching while a loop plays fades
+  over a quarter second without a restart. Kept with the settings, never in a
+  share code. Diagnostics shows the layout and what the render costs this
+  device in each. Listen for: a switch that never clicks or restarts the loop,
+  and (Session 26) the blind stereo-against-mono A/B; on Mikey's phone, the
+  `render:` line in Diagnostics after a minute each way.
