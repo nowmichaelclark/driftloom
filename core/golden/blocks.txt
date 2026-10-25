@@ -160,3 +160,8 @@ kick/long@choke ae2c5d6b10fe04c9 -21.34 -1.53 0.0
 kick/soft-long@choke a2ba9f9a1a2b8d8c -20.47 -1.64 0.0
 sub_duck/kick 2b52ba0cc00e226c -20.27 -8.81 34.1
 sub_duck/kick~key 615cb9998266b7bc -21.06 -9.24 34.0
+pad_sweep/sweep 293e561749e49def -21.26 -9.12 26.4
+pad_sweep/sweep=lo be39eaad978d957b -23.00 -9.89 2.7
+pad_sweep/sweep=oct 94d1671d387d6f67 -22.45 -8.65 23.7
+pad_sweep/sweep=period b39d09cedc200df2 -22.53 -9.98 29.0
+pad_sweep/sweep=q f24d15d2a9d7fc5b -21.74 -8.38 18.6

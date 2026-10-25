@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1419,6 +1419,39 @@ console.log('\npedalBass (queue item 71)');
   check('the flat second only in a mode that has it', flat);
   check('drift spends the loop\'s own bass\'s draws: no other layer\'s variation moves', replay, `${passes} passes`);
   check('every setting is named, with its range', ['weight', 'vibes', 'styles', 'rhythms', 'neighbors', 'neighborVibes', 'share', 'low', 'high'].every((k) => k in PEDAL));
+}
+
+console.log('\npadSweep (queue item 72)');
+{
+  // The sketch's draws, in its order, on its stream; only over a sustained
+  // chord voice; still and restful vibes lean away.
+  let same = true, inRange = true;
+  for (let i = 0; i < 2000; i++) {
+    const seed = i * 7919 + 5;
+    const r = new Rng(((seed ^ 0x5e3e) >>> 0) || 1);
+    r.chance(0.3);
+    const want = { lo: r.range(450, 800), oct: r.range(2, 3.5), period: r.range(12, 28), q: r.range(0.7, 1.2) };
+    const o = padSweepOf(seed);
+    if (JSON.stringify(o) !== JSON.stringify(want)) same = false;
+    if (!(o.lo >= 450 && o.lo <= 800 && o.oct >= 2 && o.oct <= 3.5 && o.period >= 12 && o.period <= 28 && o.q >= 0.7 && o.q <= 1.2)) inRange = false;
+  }
+  check('the sweep the sketch drew', same);
+  check('closed at 450-800 Hz, opening 2-3.5 octaves, every 12-28 s, Q 0.7-1.2', inRange);
+  check('a pin moves nothing else', padSweepOf(3, { period: 20 }).lo === padSweepOf(3).lo && padSweepOf(3, { period: 20 }).period === 20);
+  const list = CHOICES.filter((c) => c.id === 'padSweep');
+  const loop = (voice) => ({ tracks: { chords: [{ notes: [60, 64], vel: 0.5, step: 0, voice }] } });
+  check('only over a sustained chord voice', list[0].eligible(loop('pad')) && list[0].eligible(loop('choir')) && !list[0].eligible(loop('kalimba')));
+  const share = (vibes) => {
+    const two = [...list, { id: 'other', options: [['today', 1], ['on', 1]], eligible: () => true }];
+    let n = 0;
+    for (let i = 0; i < 4000; i++) if (drawChoices(i, loop('pad'), vibes, two).padSweep === 'on') n++;
+    return n / 4000;
+  };
+  const plain = share(null);
+  const hypnotic = share({ vibes: { hypnotic: 1 }, strength: 0.9 });
+  const still = share({ vibes: { still: 1 }, strength: 0.9 });
+  check('hypnotic leans toward it, still away, never to none', hypnotic > plain && still < plain && still > 0, `${still.toFixed(3)} ${plain.toFixed(3)} ${hypnotic.toFixed(3)}`);
+  check('every setting is named, with its range', ['weight', 'vibes', 'sustained', 'lo', 'oct', 'period', 'q'].every((k) => k in PADSWEEP));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

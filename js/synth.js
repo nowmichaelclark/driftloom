@@ -7,7 +7,7 @@ import {
   CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
   MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS, WASH_CHANNEL, WASH_SETTINGS, WASH_WEIGHT,
-  SUB_DUCK_SETTINGS,
+  SUB_DUCK_SETTINGS, PAD_SWEEP_SETTINGS,
 } from './core.js';
 import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
 
@@ -534,6 +534,8 @@ export class Synth {
     this._washRouted = false;
     // The loop's subDuck (subDuckSetup), or null.
     this._subDuck = null;
+    // The loop's padSweep (padSweepSetup), or null.
+    this._padSweep = null;
     // Notes for a core voice that played in JS instead: the core had not
     // arrived, had failed, or does not serve the note's channel.
     this.fallbacks = 0;
@@ -564,6 +566,7 @@ export class Synth {
     if (this._organ) this._organSend(this._raw.currentTime);
     if (this._wash) this._washSend(this._raw.currentTime);
     if (this._subDuck) this._subDuckSend(this._raw.currentTime);
+    if (this._padSweep) this._padSweepSend(this._raw.currentTime);
   }
 
   // The listener's Mono switch (queue item 66): the core's render from
@@ -2198,6 +2201,30 @@ export class Synth {
     const bass = CORE_CHANNELS.indexOf('bass');
     SUB_DUCK_SETTINGS.forEach((name, n) => core.set(bass, CORE_OWN.subDuck, n, o[name], time));
     core.route(bass, CORE_OWN.subDuck, 0, CORE_CHANNELS.indexOf('drums'), time);
+  }
+
+  // padSweep (queue item 72): a lowpass on the chords' channel swinging from
+  // `o.lo` Hz up `o.oct` octaves and back every `o.period` seconds, at Q
+  // `o.q` (core/src/blocks/pad_sweep.rs), starting closed at `time`; across a
+  // load the core glides the cutoff from where it was. null lets the last
+  // loop's glide open and stop. The JavaScript synth (the fallback) has no
+  // padSweep: it leaves it out.
+  padSweepSetup(o, time) {
+    const had = this._padSweep;
+    this._padSweep = o ? { ...o } : null;
+    const core = this._coreMix();
+    if (!core) return;
+    if (o) this._padSweepSend(time);
+    else if (had) core.set(CORE_CHANNELS.indexOf('chords'), CORE_OWN.padSweep, PAD_SWEEP_SETTINGS.indexOf('oct'), 0, time);
+  }
+
+  _padSweepSend(time) {
+    const core = this._coreMix();
+    const o = this._padSweep;
+    if (!core || !o) return;
+    const chords = CORE_CHANNELS.indexOf('chords');
+    // `oct` last: the sweep starts once every other setting is in.
+    for (const name of ['lo', 'period', 'q', 'oct']) core.set(chords, CORE_OWN.padSweep, PAD_SWEEP_SETTINGS.indexOf(name), o[name], time);
   }
 
   // The arc (queue items 63 and 63b): a second lowpass after the master's

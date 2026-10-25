@@ -301,6 +301,14 @@ impl Filter {
         self.biquad.reset();
         self.biquad.set(settings.kind, settings.freq, settings.q, settings.gain, rate);
     }
+
+    /// New settings for a filter already running, keeping its memory: the
+    /// coefficients follow at the next frame they are worked out (a driven
+    /// setting's, at once), as a `BiquadFilterNode`'s do when its parameters
+    /// change under a signal (padSweep, queue item 72).
+    pub fn retarget(&mut self, settings: Settings) {
+        self.settings = settings;
+    }
 }
 
 impl Default for Filter {

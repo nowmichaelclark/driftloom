@@ -217,6 +217,25 @@ export const PEDAL = {
   high: 57,
 };
 
+// padSweep's settings (queue item 72; Ears 8's padSweep, approved by Mikey
+// 2026-10-18): a lowpass on the chord layer swings open and shut every 12-28
+// s while the rest stays as bright as it was. Every variable, named, with its
+// range; `padSweepOf` draws a loop's; the core plays it
+// (core/src/blocks/pad_sweep.rs).
+export const PADSWEEP = {
+  // How often a loop draws it, and batch 5's vibe table for it.
+  weight: 1,
+  vibes: { hypnotic: 2, floating: 1.5, wondrous: 1.5, hazy: 1.5, strange: 1.5, still: 0.4, restful: 0.4, hushed: 0.4, serene: 0.4 },
+  // The chord voices it sweeps: the sustained ones (the sketch's list).
+  sustained: ['pad', 'softpad', 'moogpad', 'analogpad', 'accordion', 'organ', 'choir', 'vowel', 'hum'],
+  // Where it closes (Hz), how far it opens (octaves), one swing (seconds),
+  // and its resonance (dB, as a BiquadFilterNode's Q).
+  lo: [450, 800],
+  oct: [2, 3.5],
+  period: [12, 28],
+  q: [0.7, 1.2],
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
@@ -273,6 +292,11 @@ export const CHOICES = [
   // held, pulse, dub or walking bass.
   { id: 'pedalBass', options: [['today', 1], ['on', 1]], weight: PEDAL.weight, vibes: PEDAL.vibes,
     eligible: (ctx) => !!ctx.bass && PEDAL.styles.includes(ctx.bass.style) && !!ctx.tracks && ctx.tracks.bass.some((e) => e.vel) },
+  // padSweep (queue item 72; Ears 8, approved 2026-10-18): the chord layer
+  // swings dark and bright (PADSWEEP, above; `padSweepOf`). Only where the
+  // chords are a sustained voice.
+  { id: 'padSweep', options: [['today', 1], ['on', 1]], weight: PADSWEEP.weight, vibes: PADSWEEP.vibes,
+    eligible: (ctx) => !!ctx.tracks && ctx.tracks.chords.some((e) => e.vel && PADSWEEP.sustained.includes(e.voice)) },
 ];
 
 // Whether the loop has a floor to hold back (drums or a bass) and something
@@ -557,4 +581,21 @@ export function pedalOf(bassSeed, steps, vibes = null) {
   const nb = nbs.length ? r.weighted(nbs) : 0;
   const share = r.range(PEDAL.share[0], PEDAL.share[1]);
   return { rhythm, nb, share, rng: r };
+}
+
+// padSweep's own stream (the sketch's salt).
+const PADSWEEP_SALT = 0x5e3e;
+
+// A loop's padSweep, drawn from PADSWEEP on a stream of its own: { lo, oct,
+// period, q }, in the sketch's order. The sketch drew whether a loop sweeps
+// first, on the same stream; that draw is spent here too, so a loop sweeps as
+// the sketch drew it. `pins` may fix any.
+export function padSweepOf(seed, pins = {}) {
+  const r = new Rng(((seed ^ PADSWEEP_SALT) >>> 0) || 1);
+  r.f();
+  const lo = r.range(PADSWEEP.lo[0], PADSWEEP.lo[1]);
+  const oct = r.range(PADSWEEP.oct[0], PADSWEEP.oct[1]);
+  const period = r.range(PADSWEEP.period[0], PADSWEEP.period[1]);
+  const q = r.range(PADSWEEP.q[0], PADSWEEP.q[1]);
+  return { lo: pins.lo ?? lo, oct: pins.oct ?? oct, period: pins.period ?? period, q: pins.q ?? q };
 }

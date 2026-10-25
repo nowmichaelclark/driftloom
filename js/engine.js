@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf, lateFloorOf } from './choices.js';
+import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -332,6 +332,10 @@ export class Engine {
     // be sent.
     this.subDuck = null;
     this.subDuckChange = false;
+    // The loop's padSweep (queue item 72) or null, and whether it is still to
+    // be sent.
+    this.padSweep = null;
+    this.padSweepChange = false;
     // The loop's space (queue item 65), and whether it is still to be sent.
     this.space = null;
     this.spaceChange = false;
@@ -462,6 +466,11 @@ export class Engine {
     const stays = keepPosition && JSON.stringify(duck) === JSON.stringify(this.subDuck);
     this.subDuckChange = !stays && !!(duck || this.subDuck);
     this.subDuck = duck;
+    // And padSweep (queue item 72), the same way.
+    const sweep = this.base.choices && this.base.choices.padSweep === 'on' ? padSweepOf(spec.seed) : null;
+    const swept = keepPosition && JSON.stringify(sweep) === JSON.stringify(this.padSweep);
+    this.padSweepChange = !swept && !!(sweep || this.padSweep);
+    this.padSweep = sweep;
     // And lateFloor (queue item 69): after a load the kit and the bass sit
     // out a while, counted from its first step. Never on a reroll, which
     // keeps its place (and whatever wait it was in), nor on a loop resumed
@@ -708,6 +717,8 @@ export class Engine {
     // subDuck's settings may have been handed over ahead, and cancelled:
     // sent again with the loop on Play.
     if (this.subDuck) this.subDuckChange = true;
+    // So may padSweep's.
+    if (this.padSweep) this.padSweepChange = true;
     this.lastTick = null;
     this.visualQueue = [];
     this.synth.silence();
@@ -1105,6 +1116,10 @@ export class Engine {
     if (this.subDuckChange) {
       this.synth.subDuckSetup(this.subDuck, Math.max(time, this.floor));
       this.subDuckChange = false;
+    }
+    if (this.padSweepChange) {
+      this.synth.padSweepSetup(this.padSweep, Math.max(time, this.floor));
+      this.padSweepChange = false;
     }
     if (this.spaceChange) {
       this.synth.spaceSetup(this.space, Math.max(time, this.floor));

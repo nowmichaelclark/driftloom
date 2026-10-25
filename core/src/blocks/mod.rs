@@ -493,6 +493,7 @@ registry! {
         organ::Organ = ORGAN (organ::REST);
         wash::Wash = WASH (wash::REST);
         sub_duck::SubDuck = SUB_DUCK (sub_duck::REST);
+        pad_sweep::PadSweep = PAD_SWEEP (pad_sweep::REST);
         #[cfg(test)] swell::Swell = SWELL (swell::REST);
         #[cfg(test)] chorale::Chorale = CHORALE (chorale::REST);
         #[cfg(test)] duck::Duck = DUCK (duck::REST);

@@ -2072,6 +2072,66 @@ mod tests {
         }
     }
 
+    /// padSweep (queue item 72): the chords' channel through a lowpass that
+    /// starts closed and is open half a period later; a new sweep glides from
+    /// where the cutoff was (no jump); with its octaves set to 0 it glides
+    /// open and then passes the channel as it is.
+    #[test]
+    fn pad_sweep_swings_the_chords_open_and_shut() {
+        use blocks::{own, pad_sweep};
+        let play = |sweep: Option<[f64; 4]>, off_at: Option<f64>| -> Vec<f32> {
+            let mut core = boxed();
+            core.key(key(6, 0, 0, 0));
+            // A held tone at C6 (1047 Hz): past the sweep's closed cutoff,
+            // under its open one.
+            core.note(SINE, CHORDS, 0.0, 84.0, 6.0, 1.0, 0, NO);
+            if let Some(settings) = sweep {
+                for (n, v) in [(pad_sweep::LO, settings[0]), (pad_sweep::PERIOD, settings[2]), (pad_sweep::Q, settings[3]), (pad_sweep::OCT, settings[1])] {
+                    assert!(core.set(CHORDS, own::PAD_SWEEP, n, v, 0.5));
+                }
+            }
+            if let Some(t) = off_at {
+                assert!(core.set(CHORDS, own::PAD_SWEEP, pad_sweep::OCT, 0.0, t));
+            }
+            (0..(5.0 * RATE) as usize / QUANTUM).flat_map(|b| core.process((b * QUANTUM) as u64)[CHORDS as usize]).collect()
+        };
+        let rms = |x: &[f32], a: f64, b: f64| {
+            let s = &x[(a * RATE) as usize..(b * RATE) as usize];
+            (s.iter().map(|v| f64::from(*v).powi(2)).sum::<f64>() / s.len() as f64).sqrt()
+        };
+        let plain = play(None, None);
+        let swept = play(Some([450.0, 3.0, 2.0, 1.0]), None);
+        // A setting takes hold from the start of the block holding its time.
+        let before = (0.5 * RATE) as usize / QUANTUM * QUANTUM;
+        assert!(plain[..before] == swept[..before], "untouched before it starts");
+        let closed = 20.0 * (rms(&swept, 0.55, 0.65) / rms(&plain, 0.55, 0.65)).log10();
+        let open = 20.0 * (rms(&swept, 1.45, 1.55) / rms(&plain, 1.45, 1.55)).log10();
+        assert!(closed < -6.0, "closed at its start: {closed:.1} dB");
+        assert!(open > -1.0, "open half a period later: {open:.1} dB");
+        // Off at 2.5 s: open within half a second, then the channel as it is.
+        let off = play(Some([450.0, 3.0, 2.0, 1.0]), Some(2.5));
+        let a = (3.2 * RATE) as usize;
+        let diff = off[a..].iter().zip(plain[a..].iter()).fold(0.0f32, |m, (x, y)| m.max((x - y).abs()));
+        assert!(diff < 1e-3, "off, the channel passes as it is: {diff}");
+        // No jump anywhere: frame to frame it moves no more than the tone does.
+        let step = |x: &[f32]| x.windows(2).fold(0.0f32, |m, w| m.max((w[1] - w[0]).abs()));
+        assert!(step(&off) <= step(&plain) * 1.05, "no click: {} against {}", step(&off), step(&plain));
+        // A new loop's sweep at 1.5 s, the old one wide open: it glides there,
+        // and is closed again a period after it started.
+        let mut core = boxed();
+        core.key(key(6, 0, 0, 0));
+        core.note(SINE, CHORDS, 0.0, 84.0, 6.0, 1.0, 0, NO);
+        for (t, lo) in [(0.5, 450.0), (1.5, 700.0)] {
+            for (n, v) in [(pad_sweep::LO, lo), (pad_sweep::PERIOD, 2.0), (pad_sweep::Q, 1.0), (pad_sweep::OCT, 3.0)] {
+                assert!(core.set(CHORDS, own::PAD_SWEEP, n, v, t));
+            }
+        }
+        let next: Vec<f32> = (0..(4.0 * RATE) as usize / QUANTUM).flat_map(|b| core.process((b * QUANTUM) as u64)[CHORDS as usize]).collect();
+        assert!(step(&next) <= step(&plain) * 1.05, "a new loop's sweep glides in: {} against {}", step(&next), step(&plain));
+        let then = 20.0 * (rms(&next, 3.45, 3.55) / rms(&plain, 3.45, 3.55)).log10();
+        assert!(then < -3.0, "and closed a period on: {then:.1} dB");
+    }
+
     /// subDuck (queue item 68): the bass channel dips at each kick of the
     /// drums' channel routed into it, by its depth (scaled by the kick's
     /// velocity, full at 0.8), within 10-50 ms of the kick, and is back
