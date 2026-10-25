@@ -752,6 +752,38 @@ Stated decisions, not inferences. Dated where the date matters.
 
 ### The log
 
+**Brain, 2026-10-25: what Broken Friends needs from the core** (read
+from the game's repo, `plan/systems/audio-music`, decisions 0016, 0037,
+0038, spike 2; for Session 26 to order phase 2's items around):
+- **Phase 2 is the game's gate.** The extension plays golden note lists
+  bit for bit (Linux 22-32x real time, browser about 19x), but new music
+  waits for the generator in Rust. What the game will ask of it: a loop
+  from a seed or a stored code (each friend's theme), steered by the
+  friend, its mood, the time of day and camp events (promise 11's
+  requests).
+- **Music changes at moments, not on a timer** (decision 0038): a new
+  room, a friend made well, a mood, surgery. So the core needs a cheap
+  change of loop at a musical boundary, with a crossfade. Today a new
+  list resets a core (about 15 ms on a laptop, more on a phone), too slow
+  for the audio thread, so the game keeps two cores and switches. A
+  loop change without a full reset, and a crossfade in the core, belong
+  in phase 2 or 3 (the app's Next would use them too).
+- **The browser has no audio thread** in Godot's web engine; music fed
+  frame by frame crackled on Mikey's phone, so the game renders each
+  loop whole and plays it as one sound. With the Rust generator (and
+  wandering or endless loops) it will need loops rendered ahead pass by
+  pass, quickly: render speed stays a gate (stereo costs 1.2-1.4 times
+  mono).
+- **Target phone: a Moto G Power (2022)** and weaker; the game uses the
+  lite mix on phones and in the browser. Worth adding to promise 2's
+  measured devices.
+- **The game pins the core** (at f654fdb, before stereo and the space
+  recipes); its six golden hashes need refreshing at each repin, and the
+  host calls it uses changed with items 64-66 (layout, space). Its web
+  build needs Emscripten with panic=abort, which the core's no-panic rule
+  already serves; an Emscripten target in the core's CI is a phase 4
+  thought.
+
 **Broken Friends session (Opus 5.5, 2026-10-24), not a brain session.**
 Mikey made Broken Friends the one game that proves the core (promise 10
 rewritten; phases 4 and 7; "Answered"; Painter section 9). That
