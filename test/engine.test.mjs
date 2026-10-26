@@ -35,11 +35,13 @@ function check(label, condition, detail = '') {
 // Where each call carries its time, by the synth's own signatures.
 const TIME_AT = { drum: 1, bass: 1, pad: 1, voice: 2, texture: 2, damp: 1, duck: 0 };
 
-function stubSynth(queuesAhead, renderAhead = null, worstAhead = 0) {
+// `measured`: a note has reached the core (queue item 76); false is a cold start.
+function stubSynth(queuesAhead, renderAhead = null, worstAhead = 0, measured = true) {
   const calls = [];
   const target = {
     queuesAhead,
     renderAhead,
+    aheadMeasured: measured,
     worstAhead,
     channels: { drums: { gain: 'drums' }, bass: { gain: 'bass' }, chords: { gain: 'chords' }, melody: { gain: 'melody' }, texture: { gain: 'texture' } },
   };
@@ -57,9 +59,9 @@ function stubSynth(queuesAhead, renderAhead = null, worstAhead = 0) {
   return { synth, calls };
 }
 
-function rig(queuesAhead, seed = 4242, renderAhead = null, worstAhead = 0) {
-  const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
-  const { synth, calls } = stubSynth(queuesAhead, renderAhead, worstAhead);
+function rig(queuesAhead, seed = 4242, renderAhead = null, worstAhead = 0, measured = true, ctxExtra = {}) {
+  const ctx = { currentTime: 0, state: 'running', sampleRate: 48000, ...ctxExtra };
+  const { synth, calls } = stubSynth(queuesAhead, renderAhead, worstAhead, measured);
   const engine = new Engine(ctx, synth);
   const spec = newSpec(seed);
   spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
@@ -278,6 +280,63 @@ console.log('\nA phone that renders far ahead of its clock (queue item 41)');
     `first at ${jsFirst}`);
 }
 
+console.log('\nThe first loop after the app starts (queue item 76)');
+{
+  // Nothing has reached the core yet: no render-ahead to plan from. The
+  // Moto's core had rendered 133 ms past the clock; the first notes were
+  // posted 77-82 ms ahead.
+  const cold = rig(true, 4242, null, 0, false, { baseLatency: 0.02 });
+  const first = Math.min(...notes(cold.calls).map((c) => c.time));
+  check('cold, the engine knows it', cold.engine.cold === true);
+  check('cold, the first note is no closer than 250 ms', first >= 0.25 - 0.03, `first at ${first.toFixed(3)}`);
+  check('cold, the core is told the notes were planned from the margin', cold.calls.length > 0
+    && notes(cold.calls).every((c) => /\[margin\]$/.test(c.why)), [...new Set(notes(cold.calls).map((c) => c.why))].join(' / '));
+
+  // The device's own output latency, where the browser gives one, when it
+  // is more than 250 ms; else the render callback.
+  const slow = rig(true, 4242, null, 0, false, { outputLatency: 0.45, baseLatency: 0.02 });
+  const slowFirst = Math.min(...notes(slow.calls).map((c) => c.time));
+  check('cold, the output latency when it is more than 250 ms', slowFirst >= 0.45 - 0.03 && Math.abs(slow.engine.coldMargin - 0.45) < 1e-9,
+    `first at ${slowFirst.toFixed(3)}`);
+  const noOut = rig(true, 4242, null, 0, false, { baseLatency: 0.4 });
+  check('and the render callback when there is no output latency', Math.abs(noOut.engine.coldMargin - 0.4) < 1e-9);
+  const none = rig(true, 4242, null, 0, false, {});
+  check('and 250 ms when the browser gives neither', Math.abs(none.engine.coldMargin - 0.25) < 1e-9);
+
+  // A change decided near the clock right after the start (Next, a tempo
+  // change in the first seconds) waits for the margin too.
+  const next = change(cold, 0.5, () => {
+    const spec = newSpec(31337);
+    spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
+    cold.engine.load(spec);
+  });
+  await null;
+  const fresh = notes(cold.calls.slice(next.kept.length));
+  check('cold, a new loop right after Play starts no closer than 250 ms either',
+    fresh.length > 0 && Math.min(...fresh.map((c) => c.time)) >= 0.5 + 0.25 - 0.07, `first at ${Math.min(...fresh.map((c) => c.time)).toFixed(3)}`);
+
+  // Once a note has reached the core, it is planned from the measurement
+  // as ever: a mute or a re-roll is heard from 60 ms ahead, the loop starts
+  // at 80 ms.
+  const warm = rig(true, 4242, null, 0, true, { baseLatency: 0.02 });
+  const warmFirst = Math.min(...notes(warm.calls).map((c) => c.time));
+  check('measured, Play starts at 80 ms as before', warm.engine.cold === false && Math.abs(warmFirst - 0.08) < 0.02, `first at ${warmFirst.toFixed(3)}`);
+  check('measured, the core is told so', notes(warm.calls).every((c) => /\[measured\]$/.test(c.why)));
+  const heard = change(warm, 1.0, () => {
+    warm.spec.mutes.melody = true;
+    warm.engine.redecide();
+  });
+  check('measured, a change is still heard from 60 ms ahead', heard.from != null && Math.abs(heard.from - 1.06) < 1e-6, `from ${heard.from}`);
+
+  // The measurement arriving mid-session ends the margin.
+  cold.engine.synth.aheadMeasured = true;
+  check('and a measurement ends the cold margin', cold.engine.cold === false);
+
+  const js = rig(false, 4242, null, 0, false, { baseLatency: 0.02 });
+  const jsFirst = Math.min(...notes(js.calls).map((c) => c.time));
+  check('the JavaScript synth is unchanged: Play at 80 ms', js.engine.cold === false && Math.abs(jsFirst - 0.08) < 0.02, `first at ${jsFirst}`);
+}
+
 console.log('\nHidden, a deep buffer assumed at once (queue item 47)');
 {
   // The Pixel 9: 6-21 ms ahead on screen, 1.4 s at least once with the
@@ -322,7 +381,7 @@ console.log('\nHidden, a deep buffer assumed at once (queue item 47)');
     && !n.after.some((c) => c.name === 'cancelAhead'), `from ${n.from}`);
   check('Next: no new note inside the deep buffer', firstNew >= 5 + 1.875 - 0.07, `first at ${firstNew}`);
   const told = [...new Set(fresh.filter((c) => c.time < 5 + 1.875 + 0.1).map((c) => c.why))];
-  check('the core is told Next decided them', told.length === 1 && told[0] === 'jump, new loop', told.join(' / '));
+  check('the core is told Next decided them', told.length === 1 && told[0] === 'jump, new loop [measured]', told.join(' / '));
 
   // Pause, then Play, from the lock screen.
   r.engine.stop();
