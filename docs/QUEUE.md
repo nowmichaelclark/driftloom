@@ -1877,7 +1877,13 @@ above):
 - **The album loops, re-checked** (brain, 2026-10-20): at the end of group
   (c), re-check every Done line's album loops against `main` (adding choices
   reshuffles which loops draw what) and update the lines whose loop no
-  longer plays its sound, before Session 26.
+  longer plays its sound, before Session 26. **Done** (hands, 2026-10-26,
+  against `main` after item 73): every album loop from #241 on checked
+  through the real engine (wander on); eleven lines updated, each saying
+  which loop no longer plays its sound, and cinder #12's frame drum moved
+  from 0:03.4 to 0:03.5. The loops kept still play it at the times given
+  (dust #69 60 → 66 refused and undertow #45's texture -0.78 dB
+  with their choices forced, as before).
 
 **Group (a): instruments (Session 25a).**
 
@@ -4895,7 +4901,7 @@ Mikey decides this line:
   dBFS by where it fell in its block, now -1.0 to -1.1), and its skin rings
   0.40 s instead of 0.32 to keep its loudness; the kit fails any voice over -1
   dBFS alone. Listen for the frame drum losing that click and ringing a little
-  longer. For the album: cinder #12 at 0:03.4 and tide #52 at 0:00.
+  longer. For the album: cinder #12 at 0:03.5 and tide #52 at 0:00.
 - #248, roundBass (item 56, v105),
   https://bbdb00f6-driftloom.nowmichaelclark.workers.dev: the bass sits an
   octave higher at the bottom (36-57, never the extra octave down), and every
@@ -4932,8 +4938,9 @@ Mikey decides this line:
   loop under one chord a bar; never from a one-note chord, and it never costs
   another part a note. Listen for bells that sparkle over the chords without
   standing in front of them, and for shatter's quiet prepared-piano loops
-  (tei-har), where they play at full level. For the album: thaw #82 from 0:00
-  and vapor #30 from 0:08.9.
+  (tei-har), where they play at full level. For the album: thaw #82 from 0:02.8
+  and thaw #58 from 0:07.5 (re-checked 2026-10-26: vapor #30 no longer draws
+  it).
 - #253, dubStab (item 60, v109),
   https://9d274c1b-driftloom.nowmichaelclark.workers.dev: in busy loops
   (drums and seven or more notes a second; about one loop in four), on the
@@ -4943,8 +4950,9 @@ Mikey decides this line:
   short tail, and a darker, lighter throw into the echo. Only over a groove,
   never in a silent bar, and it never costs another part a note. Listen for a
   warm dub chord that answers the beat and dissolves into the echo without
-  taking over the loop. For the album: wayfare #23 from 0:10.6 (busy) and
-  cinder #12 from 0:07.2 (sparse).
+  taking over the loop. For the album: bloom #37 from 0:00.3 (busy) and
+  cinder #12 from 0:20.9 (sparse) (re-checked 2026-10-26: wayfare #23 no
+  longer draws it).
 - #254, the chapel organ (item 61, v110),
   https://7a353b2b-driftloom.nowmichaelclark.workers.dev: in loops that draw it
   (about three in five), the chords are held on a soft pipe organ for the
@@ -4955,8 +4963,9 @@ Mikey decides this line:
   sounds on; it moves at most once a bar, holds through passing chords, and
   lets go at a long rest, a silent bar, Pause or a muted chords layer. Listen
   for an organ that surrounds the tune without covering it, and for chords
-  that change without a gap. For the album: haven #38 from 0:00 and glade #21
-  from 0:00.6.
+  that change without a gap. For the album: haven #56 from 0:00 and dust #49
+  from 0:00 (re-checked 2026-10-26: haven #38 and glade #21 no longer draw
+  it).
 - #255, the wash (item 62, v111),
   https://a12a0cdb-driftloom.nowmichaelclark.workers.dev: in loops that draw it
   (about two in five), a slow swell of air every 17-26 s on a channel of its
@@ -4965,8 +4974,9 @@ Mikey decides this line:
   fifth), like wind across a bottle. Its level follows the other five layers,
   so it is heard under a beat, stays behind a sparse loop and fades with the
   loop into a rest. Listen for air that breathes behind the music and never
-  hisses or sits in front. For the album: shrine #0 at 0:20.3 and grove #47 at
-  0:23.4 (each at its first swell's peak).
+  hisses or sits in front. For the album: vapor #30 at 0:15.7 and undertow #45
+  at 0:22.4 (each at its first swell's peak; re-checked 2026-10-26: shrine #0
+  and grove #47 no longer draw it).
 - #256, the arc (item 63, v112),
   https://1ae42640-driftloom.nowmichaelclark.workers.dev: in loops that draw it
   (about one in three), a second lowpass after the master's tone breathes from
@@ -4975,8 +4985,9 @@ Mikey decides this line:
   at a bright point of its swing (the prototype started closed: for Mikey's
   ears). The group's balance lock re-baselined. Listen for the whole mix
   breathing dark and bright over minutes, and for the instruments always
-  coming back. For the album: haven #38, bright from 0:00, darkest at 1:05.5,
-  and undertow #6, darkest at 1:31.9.
+  coming back. For the album: bloom #66, bright from 0:00, darkest at 1:33.6,
+  and dust #42, darkest at 1:26.6 (both the deep swing; re-checked 2026-10-26:
+  haven #38 and undertow #6 no longer draw the arc).
 - #260, the arc's two shapes (item 63b, v113),
   https://7702bdc6-driftloom.nowmichaelclark.workers.dev: a loop that draws the
   arc now draws one of two shapes: deep (about one in three), item 63's swing
@@ -4987,9 +4998,11 @@ Mikey decides this line:
   lean dip and 1.5-2.5 minutes. Every variable is a named setting (`ARC` in
   `js/choices.js`). Listen for the dip as a gentle dimming that comes and goes,
   never long enough to lose the instruments, and for the deep swing as before.
-  For the album: vapor #4 (deep), bright from 0:00, darkest at 1:16.4; wayfare
-  #25 (dip), open until 0:06, darkest at 0:44.2 (1.24 kHz), open from 1:22.
-  Mikey's loop (seed 102356715) draws the dip, darkest at 2:05.5.
+  For the album: bloom #79 (deep), bright from 0:00, darkest at 1:44.8; dust
+  #40 (dip), open until 0:39.5, darkest at 1:03.5 (884 Hz), open from 1:27.5
+  (re-checked 2026-10-26: vapor #4 and wayfare #25 no longer draw the arc, and
+  Mikey's loop, seed 102356715, now draws the organ, the wash and padSweep
+  instead).
 - #261, CI on Ubuntu 24.04 (no version),
   https://776de890-driftloom.nowmichaelclark.workers.dev: the core job's runner
   pinned, since Playwright 1.56.1 can't install Chromium on ubuntu-latest's
@@ -5031,8 +5044,10 @@ Mikey decides this line:
   lean long. With "Let the loop wander" on, a pass now and then swaps the kick
   (today's, short, long). Listen for a kick that sits with the bass instead of
   under it, a boom that thumps without getting louder, and for swaps that
-  don't click. For the album: undertow #6 from 0:00 (a long boom on C2) and
-  glade #63 from 0:00 (short, on C#2).
+  don't click. For the album: dust #32 from 0:00 (a long boom on B1) and
+  undertow #59 from 0:15.6, when its kit comes in (short, on A1; it draws
+  lateFloor too) (re-checked 2026-10-26: undertow #6 and glade #63 no longer
+  draw it).
 - #267, subDuck (item 68, v118),
   https://c54ff1f8-driftloom.nowmichaelclark.workers.dev: in loops with a kick
   and a bass that draw it (about one in eight), the bass alone dips 5-9 dB at
@@ -5040,7 +5055,8 @@ Mikey decides this line:
   and the sub take turns while the pads and the tune stay where they were.
   Listen on speakers or headphones with some low end for a bass that breathes
   with the kick without pumping, and for nothing else moving. For the album:
-  halcyon #18 from 0:00 (7.6 dB) and halcyon #68 from 0:00 (6.6 dB).
+  grove #31 from 0:00 (8.9 dB) and glade #67 from 0:00 (5.4 dB) (re-checked
+  2026-10-26: halcyon #18 and halcyon #68 no longer draw it).
 - #268, lateFloor (item 69, v119),
   https://8e44cc27-driftloom.nowmichaelclark.workers.dev: in loops that draw it
   (about one in five), after a load the kit and the bass sit out 8-30 s while
@@ -5052,7 +5068,8 @@ Mikey decides this line:
   for no silence at the start. For the album: undertow #45 with lateFloor
   forced on (the report's loop, Mikey's ask: the kit at 0:29.8, the bass at
   0:33.5; its texture is 0.8 dB lighter from the budget's ripple), and
-  clockwork #33 from 0:00 (the kit at 0:07.8, the bass at 0:15.5).
+  undertow #6 from 0:00 (the kit at 0:13.4, the bass at 0:17.8) (re-checked
+  2026-10-26: clockwork #33 no longer draws it).
 - #269, floorDrop shapes (item 70, v120),
   https://29f8bbc6-driftloom.nowmichaelclark.workers.dev: with "Let the loop
   wander" on, in loops that draw them (about one in six), each floor drop takes
@@ -5061,19 +5078,23 @@ Mikey decides this line:
   (a dozen seconds, or the whole pass of a short loop); the drops come as often
   and where they did. Listen for a floor that leaves and comes back in more
   than one way, never a full stop. For the album, both ends: vapor #4, the
-  whole pass dropped for 34.3 s from 1:08.6 (a slow 8-bar loop), and halcyon
-  #18, four 2.7 s stutter drops from 1:30.7 (131 bpm).
+  whole pass dropped for 34.3 s from 1:08.6 (a slow 8-bar loop), and cinder
+  #93, two 2.8 s stutter drops from 1:55.4 (128 bpm) (re-checked 2026-10-26:
+  halcyon #18 no longer draws the shapes).
 - #270, pedalBass (item 71, v121),
   https://3ba6d476-driftloom.nowmichaelclark.workers.dev: in loops that draw it
   (about one in eight), a held, pulse, dub or walking bass holds the key's
   tonic under whatever the chords do, held, in half bars, on the beats or off
   them, now and then stepping to one neighbor (a whole tone up, the tone
   below, the flat second or the fifth) between downbeats. Listen for a floor
-  that stays put while the harmony moves over it. For the album: cinder #5
-  from 0:00 (a beat pedal a whole tone up, drawn on its own); with pedalBass
-  forced on, dust #69 from 1:02 (its busiest moment, 60 → 66 refused: do the
-  missing chord and bell notes matter?), undertow #8 from 0:00 (the heavier
-  low end) and clockwork #65 from 0:00 (the lighter one).
+  that stays put while the harmony moves over it. For the album: clockwork
+  #64 from 0:00 (a beat pedal, the fifth on about a fifth of its notes, drawn
+  on its own); undertow #8 from 0:00 (the heavier low end; it now draws the
+  pedal on its own, half bars a whole tone up, as forced before); with
+  pedalBass forced on, dust #69 from 1:02 (its busiest moment, 60 → 66
+  refused: do the missing chord and bell notes matter?) and clockwork #65
+  from 0:00 (the lighter one) (re-checked 2026-10-26: cinder #5 no longer
+  draws it).
 - #271, padSweep (item 72, v122),
   https://0231e9a4-driftloom.nowmichaelclark.workers.dev: in loops whose chords
   are a pad, an organ, a choir or another held voice and that draw it (about
@@ -5083,3 +5104,12 @@ Mikey decides this line:
   bright, slowly, and for nothing else moving. For the album: dust #77 from
   0:00 (a hum pad, 3.4 octaves every 23.7 s, drawn on its own) and thaw #71
   with padSweep forced on, from 0:00 (the pad is most of what plays).
+- #272, echoTime (item 73, v123),
+  https://75ca9b80-driftloom.nowmichaelclark.workers.dev: every loop draws its
+  echo's time, in beats: today's dotted eighth (45%), one beat (25%), half a
+  beat (15%) or two thirds (15%), one beat leaning spacious and floating, half
+  a beat nimble and skipping. Not counted among a loop's changes, so nothing
+  else moves; the tempo slider keeps the loop's own time. Listen for echoes
+  that fall where the music breathes rather than always on the same off-beat.
+  For the album: haven #38 from 0:00 (one beat, 779 ms) and thaw #10 from 0:00
+  (half a beat, 448 ms).
