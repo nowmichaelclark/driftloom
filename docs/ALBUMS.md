@@ -4,6 +4,76 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## Session 26 (2026-10-26, on v123): the sound batch -- out for listening
+
+Everything is on one private listening page, "Session 26 Listening"
+(https://claude.ai/artifact/4hof83esqPq6qFbWb1NTmK, Mikey's own), where his
+verdicts save as he taps (its database, collection `verdicts`, one document per
+track; the brain reads them back). Three albums play in the app (codes below);
+four sets of clips play on the page, rendered by the brain through the app's
+own Engine and Synth on the core in headless Chromium (stereo, wander on, 48
+kHz, Opus 160 kb/s), because a code can't carry them:
+
+- **The bass level** (item 56; labeled): dust #7, dust #42 and noan-nou, each
+  at today's level, +3 dB and +5.5 dB (`LIFT_DB` in `core/src/blocks/bass.rs`,
+  set in a scratch build). The whole loop rises with the bass (dust #7
+  -18.5/-17.6/-16.3 LUFS, dust #42 -25.0/-22.6/-20.2, noan-nou
+  -24.9/-23.7/-22.1); the page says so. His pick sets `LIFT_DB`.
+- **Stereo against mono** (blind, 30 s a pair): glade #57, vapor #30 from 0:05,
+  haven #56, thaw #82, grove #31, wayfare #23; pair 7 is tide #52 mono on both
+  sides (the null, his test-retest noise). Key, for the brain: in pair *n*
+  (1-6), X is the stereo render when the first hex digit of
+  SHA-256("S26-AB-*n*") is even. The guards on all six (fold within 0.00 LU,
+  side under mid below 120 Hz -28.6 dB or lower, correlation median 0.98-1.00,
+  5th percentile 0.93 or more, balance within 0.12 dB): every one passes.
+- **Forced, or deep into a loop** (labeled): undertow #45 with lateFloor forced
+  (kit 0:30, bass 0:34: his ask); dust #69 0:50-1:20 without and with pedalBass
+  forced (60 -> 66 refused); thaw #71 with padSweep forced; cinder #93
+  1:48-2:10 (the stutter at 1:55); vapor #4 1:00-1:50 (the long drop at 1:08.6).
+
+Corpus loops are "profile #n" of corpus seed 20261009 (the ears' and the Done
+lines'); tei-har and noan-nou are the baseline's (corpus seed 1). Each track's
+length is set in its code (`playFor`), so the album moves on by itself.
+
+### S26 New sounds
+
+- frame drum: tide #52, 4 x 7.8 s = 31 s; draws: none
+- longChords: grove #47, 2 x 18.3 s = 37 s; draws: floorDrop:shapes
+- glass: thaw #58, 5 x 8.9 s = 44 s; draws: glass
+- dubStab: bloom #37, 5 x 6.4 s = 32 s; draws: dubStab
+- chapel organ: haven #56, 3 x 15.5 s = 46 s; draws: organ
+- wash: vapor #30, 1 x 71.1 s = 71 s; draws: wash
+- echoTime: half beat: thaw #10, 1 x 57.3 s = 57 s; draws: none
+- echoTime: one beat: haven #38, 2 x 24.9 s = 50 s; draws: floorDrop:shapes
+
+```
+DLA1-0C756-CHP41-76AXS-0EDQQ-AVK4E-C00G0-1W0W0-G8303-MVR1Y-DP0CF-SFR9Z-VDHK8-Y1BZ5-YG3T6-V24CK-T5X37-0C6R2-1T71R-VG60F-50RAG-61EBG-B39VA-T3000-00004-014G8-20820-1SZ08-VCR6Z-DKRGS-B567V-X9TSX-W1Y3R-EQR19-FK3CN-H0410-K1BP0-41JG0-2QWS6-Y3MXE-KA000-00004-00X10-50630-FER0X-5Z81T-C8CX8-GCA5T-QRYY1-815ZT-YC844-PRQHG-H081F-A1GA0-83ZP1-049RW-7E9XB-3C000-0000M-05008-80G61-B14J4-3M4S7-8E9FK-7QBBW-5YTWK-5N22B-X37XV-K0HER-E084Z-W0G7Z-XRKSN-NF0AK-00000-00500-F0C20-42039-2AZXN-5YKFG-3D6KZ-5C7VH-AHEPS-8MHN7-X0686-CECTG-42KD0-E9040-D70HC-BYSYA-F1XHE-00000-00600-P0W11-0400F-ZX43C-3EFCA-MW5Q9-7RTRQ-NXG43-Z1KQR-9QHPW-Q8T80-C2WT2-S31R7-G61RR-0ESGC-D5486-1N3JG-50000-20000-2R00G-00600-80001-00HG4-20G20-7A2MR-VTXHF-YHG3K-DVAV1-HF31P-28AGA-AXG6T-VZED0-4G40P-H1MQ0-40EV0-8JD6Q-M28FK-0W000-00002-01D0C-40G40-DEVJC-GPPAZ-7Q9JY-R9GKA-68567-1XZGN-AJRY6-S9ANA-C0C14-80VC1-57G21-QZH9E-C9240-1C000-0000A-PRP
+```
+
+### S26 Mixing ideas
+
+- floorDrop: undertow #45, 2 x 29.8 s = 60 s; draws: wash
+- tunedKick (long boom): dust #32, 2 x 21.1 s = 42 s; draws: tunedKick:long
+- subDuck: grove #31, 2 x 16.6 s = 33 s; draws: wash subDuck
+- lateFloor: undertow #6, 2 x 17.8 s = 36 s; draws: lateFloor
+- pedalBass: undertow #8, 2 x 15.9 s = 32 s; draws: pedalBass
+
+```
+DLA1-0C856-CHP41-6PJY3-9DSKJ-0TB4C-NGQ60-0501G-GM0RG-2029M-6S195-W8FK1-J1MJX-PNG3W-SQXPD-PNCC6-P4EM8-N9BG4-2FS10-3040V-A06AV-Z3X1G-TZ4E0-00040-00010-01000-80000-00401-V1C20-G42BN-XWWCE-SMZVB-Z8T9H-CB9N3-JWG98-ZSCHJ-N1QKZ-QZRG0-87G80-7V081-7J0C6-SJSVH-FMAG4-00000-00803-E0041-06215-H07Z5-MM8YC-HPWP0-S4KQY-65W40-H0ZEX-XPT6S-84CP1-0AGR0-N628V-08506-0F200-AG62E-KHB1S-QF1P0-00000-02016-000G8-205A1-KHDH4-YVE43-ZTS85-GCV37-07W38-17YRG-GQJ8A-RYPG8-11Z1H-4G04R-9CM0G-5ZYJR-AM8K9-S4000-02000-00800-G0040-00000-201CG-G0082-06RA1-Z1QKA-SH560-A64N5-1H4HG-JR661-D628W-CNDE4-V2042-FG007-G40WK-09PBZ-F45P2-Q3600-00400-00200-1000C-00000-05H93
+```
+
+### S26 Flagged
+
+- tei-har's glass: tei-har, 2 x 30.0 s = 60 s; draws: glass wash lateFloor
+- organ after a rest: clockwork #27, 1 x 36.2 s = 36 s; draws: organ
+- arc: deep: bloom #79, 17 x 12.1 s = 206 s; draws: arc
+- arc: dip: dust #40, 18 x 5.9 s = 107 s; draws: arc
+- padSweep: dust #77, 7 x 6.8 s = 47 s; draws: pedalBass padSweep
+
+```
+DLA1-0C5N6-CHP41-36RRB-7CXJP-80050-1G080-0G208-7SN5G-RP5X8-ZRSHP-TF4EG-SGXE4-70B54-8YK8J-VWJY2-0424E-0XRG2-1FZJJ-59JQA-Y9800-00000-801A1-GA108-1CWN5-VB5W5-7S89A-3BXF5-MYJF3-ZXHQT-EBA06-BWTWM-GM0G7-KM664-0G0WC-11SHM-8PE6S-4M000-00000-80AW0-0820C-0TQS9-G75BN-KNNBR-K8Z1Y-22JRX-G0D8G-ESXSS-0WX3V-GC1G8-ZRDF4-50E0G-2700C-FT62P-HQSYP-R0000-00480-64004-0GG3Y-VNNHT-K57K3-KC1TF-T0WD3-HSGCP-S967X-PBNVJ-157NM-101Q8-9481G-EQG25-407KC-4HKQ8-9F3G0-00000-4G04W-5080G-G423X-K5JBS-FAMWY-HPCXB-AS9Z0-660FS-WFTZ4-WSQP8-QEW0G-1ZR20-60GEZ-MGBYF-REVKD-00000-0072Z-V0
+```
+
 ## "Phase 1 check" (2026-10-18, blind A/B, v92 against v99) -- heard 2026-10-18: "everything sounds the same on both versions"
 
 Core phase 1 (items 42-45) was meant to change nothing a listener hears:

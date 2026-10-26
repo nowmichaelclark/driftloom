@@ -6,6 +6,53 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Session 26 (brain, Opus 5.5, 2026-10-26): the sound batch checked, the
+albums, phase 2.** What the brain ran itself on `main` at v123 (a7eb64d), not
+taken from the reports:
+- **Goldens:** `build-core.sh --check` (the `.wasm` matches its source,
+  246,992 bytes); `cargo test --release` (139 tests); x86-64 and wasm32, mono
+  and stereo, `--strict` (x86-64 also `--flush`), `--blocks all` and
+  `--rates`: all equal; `node tools/rates.mjs` passes. Every target's hash
+  file, mono and stereo, equals wasm32's line for line, and CI on `main` is
+  green on all five legs.
+- **JavaScript:** the generator's tests three times and the other eight
+  suites pass; the balance lock: all 22 figures within tolerance.
+- **The core baseline:** `node tools/baseline.mjs` here: "Nothing moved" (loops 1280 figures, voices 245, refusals 26, costs 55, stereo 480, repeat 2), so the committed baseline is what `main` plays, mono and stereo, full and lite.
+- **Item 72's big baseline moves** (shil-doask +7.6 LU, reisk-foa +4.6,
+  their-roask +3.2): the reshuffle, not a bug. Every baseline loop's choices
+  drawn at item 71 and at 72: those three drew lateFloor at 71 and not at 72
+  (padSweep joining the list moves item 54's weighted draw), so at 71 their
+  kit or bass sat out most of the baseline's 20 s; ri-houng gained lateFloor
+  (-2.6 LU). Exact: the 29 loops whose choices didn't change are bit for bit
+  unchanged, and the 11 that moved are exactly those whose choices changed.
+- **Costs** (instructions, cachegrind, the native host; before = #244, the
+  last item before the batch): the same old note lists on `main`'s core
+  +1.4% (09-shrine) to +6.1% (07-dust, lite), mostly roundBass's harmonics
+  on every bass note (item 56's note: 40-70% a bass note) plus the stereo
+  lane's bookkeeping; today's lists, with the batch's sounds, +4.7%
+  (15-wayfare), +6.3% (09-shrine), +18.0% (07-dust, which now draws more).
+  Stereo against mono on today's lists 1.25-1.34 times, under 1.5.
+- **The stereo guards** on six loops (glade #57, vapor #30, haven #56, thaw
+  #82, grove #31, wayfare #23; 30 s, the brain's renders through the app's
+  engine): fold 0.00 LU; side under mid below 120 Hz -28.6 dB or lower;
+  correlation median 0.98-1.00, 5th percentile 0.93 or more; balance within
+  0.12 dB. All pass.
+- **Mikey's decisions along the way** (the hands' notes, items 55-73): read,
+  each recorded in the archived notes and the items; nothing undone or left
+  hanging. The open taste calls are in the album.
+**The albums** (`docs/ALBUMS.md`, "Session 26"): three in-app codes (new
+sounds, mixing ideas, flagged cases; each track's length set by `playFor`)
+and four sets of clips (the bass at 0/+3/+5.5 dB, a blind stereo/mono A/B
+with a null, the forced cases, and two moments deep into loops) on one
+private page with a verdict database. The clips came from a scratch
+renderer through the app's own engine on the core
+(`docs/archive/session26-clips.md`), which reproduced the hands' lateFloor
+figure for undertow #45. **With Mikey:** phase 2 takes the sequencer; the
+port is proven note for note; glacial is vast and cool, its arc 5-8 minutes
+(8-12 with a glacial-adjacent vibe). **Phase 2 written** (#275): items 77-92
+in Broken Friends' order, 48-52 folded in, 74 before 79, 75 after 82, and
+76b (glacial) before the port.
+
 **Brain, 2026-10-25: what Broken Friends needs from the core** (read
 from the game's repo, `plan/systems/audio-music`, decisions 0016, 0037,
 0038, spike 2; for Session 26 to order phase 2's items around):
