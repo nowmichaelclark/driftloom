@@ -4250,6 +4250,62 @@ Mikey decides this line:
   - **The dials' scale** (`test/dial-scale.json`) rebuilt on purpose, as item
     57 did: the pedal moves the corpus's ground dial most (its largest
     quantile 3.1% of its range, the median 0.508 → 0.503), the others 0.1-2.1%.
+- **Item 72, padSweep: what was built, where it differs from the sketch
+  (Session 25c, hands, Opus 5.5, 2026-10-25).** A channel's own block on the
+  whole chords channel, `blocks::pad_sweep` (`PadSweep`, `own::PAD_SWEEP`):
+  its own `Lfo` into its own `Filter`'s frequency, as 46c's swell carries an
+  `Lfo` into a gain. Its settings, set for the loop (`Core::set`): where it
+  closes (Hz), how far it opens (octaves; 0 is off, and costs nothing), the
+  period (s) and the Q (dB, as a `BiquadFilterNode`'s). The cutoff is lo ×
+  2^(oct × (1 − cos) / 2), as the sketch's detuned lowpass: closed at its
+  start, open half a period on. The host: `PADSWEEP` in `js/choices.js`
+  (every variable named, with its range), `padSweepOf` (the sketch's stream
+  and draws, its "whether" draw spent), the choice `padSweep` (sustained
+  chord voices only, the sketch's list; batch 5's vibe leans), and
+  `Synth.padSweepSetup` (the settings at the loop's first step; off for a
+  loop without). The fallback leaves it out. On 5.3% of 10,000 loops.
+  - **Where it differs from the sketch:** across a load the sketch's filter
+    jumped to the new loop's settings (and offline, a second load's applied
+    from the render's start, so it was never checked). Here the cutoff glides
+    from where it was onto the new loop's curve over 0.5 s; a loop with no
+    sweep glides it open (20 kHz) and then the block stands still, out of
+    the path; a sweep coming in from still crossfades with the dry channel
+    over 20 ms (a filter starting under a playing pad clicks). Measured
+    across a load (grove #62 then undertow #45 at 45 s): sweep to sweep,
+    the cutoff from grove's 980 Hz to undertow's closed 576 Hz within the
+    half second, then opening on its curve; sweep to none, open within the
+    half second; none to sweep, closed at 582 Hz from the load; no sample
+    step near the load larger than the same render without it.
+  - **Measured** (the report's loops, corpus 20261009, 90 s, wander on,
+    core): the cutoff the chord layer was given, fitted each second as a
+    lowpass's response (the drawn Q) to the chords' tap with the sweep over
+    the same tap without it:
+
+    | loop | drawn: lo, octaves, period | cutoff, 3rd-97th percentile | swing | fitted period | off the drawn curve, median |
+    |---|---|---|---|---|---|
+    | grove #62 | 762 Hz, 2.63, 13.89 s | 778-4800 Hz | 2.63 oct | 13.9 s | 0.05 oct |
+    | undertow #45 | 576, 3.06, 25.33 | 583-4941 | 3.08 | 25.3 | 0.03 |
+    | shrine #0 | 662, 2.91, 24.66 | 673-5085 | 2.92 | 24.7 | 0.03 |
+    | thaw #71 | 658, 2.60, 14.10 | 657-3921 | 2.58 | 14.1 | 0.04 |
+
+    The yardstick is met as the filter's swing. Read as the chords' 90%
+    rolloff (`techniques.py`), the brightness hardly moves: these sustained
+    voices keep over 90% of their energy under the closed cutoff (their
+    rolloff sits at 108-1376 Hz with or without the sweep), so what the
+    sweep opens and shuts is the upper harmonics, -1.9 to -4.5 dB at their
+    darkest and +1.3 to +1.6 dB open (the Q) in the band from lo to 8 kHz.
+    The sketch can't be read the same way: its stems are taken before its
+    filter. The chords' tap is 0.05-0.37 dB louder with it (the Q's lift),
+    the loop -0.004 to +0.036 LU (the report: 0.00-0.01); the other four
+    layers' taps the same to 0.001 dB; refused notes the same (103, 198, 1,
+    0).
+  - **Stereo** (`stereo_guard.py`, the same four, 60 s): fold 0.00 LU; side
+    under mid below 120 Hz -40.3 to -71.6 dB, as without it; correlation
+    median 1.00, 5th percentile 0.97 or more; balance within 0.02 dB of
+    without it. Thaw's side over mid +0.9 dB (its pad is most of the loop).
+  - **Costs:** the kit's `pad_sweep/sweep` 0.12% of real time while it
+    sweeps (a filter with its frequency driven costs the same); still, its
+    early return.
 
 ## Done
 
@@ -4958,3 +5014,14 @@ Mikey decides this line:
   than one way, never a full stop. For the album, both ends: vapor #4, the
   whole pass dropped for 34.3 s from 1:08.6 (a slow 8-bar loop), and halcyon
   #18, four 2.7 s stutter drops from 1:30.7 (131 bpm).
+- #270, pedalBass (item 71, v121),
+  https://3ba6d476-driftloom.nowmichaelclark.workers.dev: in loops that draw it
+  (about one in eight), a held, pulse, dub or walking bass holds the key's
+  tonic under whatever the chords do, held, in half bars, on the beats or off
+  them, now and then stepping to one neighbor (a whole tone up, the tone
+  below, the flat second or the fifth) between downbeats. Listen for a floor
+  that stays put while the harmony moves over it. For the album: cinder #5
+  from 0:00 (a beat pedal a whole tone up, drawn on its own); with pedalBass
+  forced on, dust #69 from 1:02 (its busiest moment, 60 → 66 refused: do the
+  missing chord and bell notes matter?), undertow #8 from 0:00 (the heavier
+  low end) and clockwork #65 from 0:00 (the lighter one).

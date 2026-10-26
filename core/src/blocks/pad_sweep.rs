@@ -218,7 +218,7 @@ impl Block for PadSweep {
         // In from still, and, glided open with no sweep to follow, out to
         // still, by a crossfade with the dry channel.
         let to = if done { 0.0 } else { 1.0 };
-        if self.wet != to || to < 1.0 {
+        if to < 1.0 || self.wet < 1.0 {
             for (y, x) in signal.iter_mut().zip(dry.iter()) {
                 self.wet = if to > self.wet { (self.wet + self.fade).min(1.0) } else { (self.wet - self.fade).max(0.0) };
                 *y = *x + (*y - *x) * self.wet;
