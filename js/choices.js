@@ -236,6 +236,20 @@ export const PADSWEEP = {
   q: [0.7, 1.2],
 };
 
+// echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
+// 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
+// loop as the sketch drew it, outside the list of choices and not counted
+// among a loop's changes, as roundBass and longChords aren't (the brain,
+// 2026-10-26); `echoTimeOf` draws a loop's.
+export const ECHO = {
+  // The times, in beats, and how often each is drawn: today's dotted eighth
+  // first.
+  beats: [[0.75, 45], [1, 25], [0.5, 15], [2 / 3, 15]],
+  // Batch 5's vibe table, by time: one beat toward spacious and floating,
+  // half a beat toward nimble and skipping.
+  vibes: { 1: { spacious: 1.5, floating: 1.5 }, 0.5: { nimble: 1.5, skipping: 1.5 } },
+};
+
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
@@ -598,4 +612,15 @@ export function padSweepOf(seed, pins = {}) {
   const period = r.range(PADSWEEP.period[0], PADSWEEP.period[1]);
   const q = r.range(PADSWEEP.q[0], PADSWEEP.q[1]);
   return { lo: pins.lo ?? lo, oct: pins.oct ?? oct, period: pins.period ?? period, q: pins.q ?? q };
+}
+
+// echoTime's own stream (the sketch's salt).
+const ECHO_SALT = 0xec40;
+
+// A loop's echo time in beats, drawn from ECHO on a stream of its own, the
+// sketch's one draw; `vibes` is the loop's ({ vibes, strength }, or null).
+// With no vibes a loop draws the time the sketch drew it.
+export function echoTimeOf(seed, vibes = null) {
+  const r = new Rng(((seed ^ ECHO_SALT) >>> 0) || 1);
+  return r.weighted(ECHO.beats.map(([b, w]) => [b, w * leanOf(ECHO.vibes[b], vibes)]));
 }

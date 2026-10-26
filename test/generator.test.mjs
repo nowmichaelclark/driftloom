@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1452,6 +1452,39 @@ console.log('\npadSweep (queue item 72)');
   const still = share({ vibes: { still: 1 }, strength: 0.9 });
   check('hypnotic leans toward it, still away, never to none', hypnotic > plain && still < plain && still > 0, `${still.toFixed(3)} ${plain.toFixed(3)} ${hypnotic.toFixed(3)}`);
   check('every setting is named, with its range', ['weight', 'vibes', 'sustained', 'lo', 'oct', 'period', 'q'].every((k) => k in PADSWEEP));
+}
+
+console.log('\nechoTime (queue item 73)');
+{
+  // Drawn for every loop, the sketch's one draw on its stream; outside the
+  // list of choices, so it is never counted as a change; one beat toward
+  // spacious and floating, half a beat toward nimble and skipping.
+  let same = true;
+  const count = {};
+  for (let i = 0; i < 4000; i++) {
+    const seed = i * 7919 + 5;
+    const r = new Rng(((seed ^ 0xec40) >>> 0) || 1);
+    const want = r.weighted([[0.75, 45], [1, 25], [0.5, 15], [2 / 3, 15]]);
+    const b = echoTimeOf(seed);
+    if (b !== want) same = false;
+    count[b] = (count[b] || 0) + 1;
+  }
+  check('the time the sketch drew', same);
+  const pct = (b) => (100 * (count[b] || 0)) / 4000;
+  check('3/4 of a beat 45%, one beat 25%, half 15%, two thirds 15%, each within two points',
+    Math.abs(pct(0.75) - 45) <= 2 && Math.abs(pct(1) - 25) <= 2 && Math.abs(pct(0.5) - 15) <= 2 && Math.abs(pct(2 / 3) - 15) <= 2,
+    [0.75, 1, 0.5, 2 / 3].map((b) => pct(b).toFixed(1)).join(' '));
+  const share = (vibes, b) => {
+    let n = 0;
+    for (let i = 0; i < 4000; i++) if (echoTimeOf(i, vibes) === b) n++;
+    return n / 4000;
+  };
+  const spacious = { vibes: { spacious: 1 }, strength: 0.9 };
+  const nimble = { vibes: { nimble: 1 }, strength: 0.9 };
+  check('spacious leans toward one beat, nimble toward half a beat', share(spacious, 1) > share(null, 1) && share(nimble, 0.5) > share(null, 0.5),
+    `${share(null, 1).toFixed(3)} ${share(spacious, 1).toFixed(3)} ${share(null, 0.5).toFixed(3)} ${share(nimble, 0.5).toFixed(3)}`);
+  check('not among the choices, so never counted as a change', !CHOICES.some((c) => c.id === 'echoTime') && !('echoTime' in render(newSpec(77)).choices));
+  check('every setting is named, with its range', ['beats', 'vibes'].every((k) => k in ECHO));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

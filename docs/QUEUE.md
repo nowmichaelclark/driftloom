@@ -1900,9 +1900,10 @@ an option.
   repeats), then each one's non-today option. The rest stay today.
 - What counts as a change: the new parts (glass, dubStab, the organ, the
   wash, the arc) and Ears 8's ideas (tunedKick, lateFloor, floorDrop
-  shapes, pedalBass, subDuck, padSweep, echoTime). Not counted: roundBass,
-  longChords, the single floorDrop and the stereo baseline (see the rules
-  above).
+  shapes, pedalBass, subDuck, padSweep). Not counted: roundBass,
+  longChords, the single floorDrop, the stereo baseline (see the rules
+  above) and echoTime, drawn for every loop on the sketch's stream (the
+  brain, 2026-10-26; item 73).
 - `stats.mjs` reports, over 10,000 loops, the share of loops by number of
   changes and by choice; a test checks the counts' shares within two
   points of the weights and that every choice is reachable.
@@ -4306,6 +4307,54 @@ Mikey decides this line:
   - **Costs:** the kit's `pad_sweep/sweep` 0.12% of real time while it
     sweeps (a filter with its frequency driven costs the same); still, its
     early return.
+- **Item 73, echoTime: what was built, what the brain decided (Session 25c,
+  hands, Opus 5.5, 2026-10-26).** The core already took the echo's time per
+  loop: `Synth.setEchoTime` sends `MIX.echo` (gliding, 50 ms), and the
+  JavaScript echo's `delayTime` without the core. Nothing was missing there,
+  so this is host only. `ECHO` in `js/choices.js` (the times in beats with
+  their weights, and batch 5's vibe table), `echoTimeOf` (the sketch's one
+  draw on its stream, 0xec40), and the engine at each load:
+  `setEchoTime(60 / bpm × the loop's beats)`, kept as `Engine.echoBeats`, so
+  the tempo slider moves the loop's own time rather than today's dotted
+  eighth.
+  - **Decided by the brain (2026-10-26): outside the list, as the sketch.**
+    The queue's shares (today 45%, one beat 25%, half 15%, two thirds 15%)
+    can't come out of item 54's list: there, as a choice of weight 1, it
+    reached 15.3% of loops (one beat 7.3%, half 4.1%, two thirds 4.0%), and
+    only a weight of 8 reached the queue's shares, taking 20-40% of every
+    other choice's reach (4,000 loops simulated). So echoTime is drawn for
+    every loop, not counted among a loop's changes, as roundBass, longChords,
+    the single floorDrop and the stereo baseline aren't (the batch rules
+    above say so now). It keeps its vibe leans: one beat ×1.5 toward
+    spacious and floating, half a beat ×1.5 toward nimble and skipping. No
+    other choice's reach moves. A loop with no vibes draws the time the
+    sketch drew it.
+  - **Shares** (4,000 loops): within two points of 45/25/15/15 (the test).
+    The corpus's 80: 31 on the dotted eighth, 20 on one beat, 16 on two
+    thirds, 13 on half.
+  - **Measured** (the yardstick: the time as drawn, within 4 ms): each loop
+    loaded through the real engine and synth on the core, then one rim hit
+    alone; the echo's repeat found by cross-correlating the mix with the
+    dry hit. Thirteen loops, 45-168 bpm, every time: all within 1.3 ms of
+    drawn (178.6-1071.4 ms drawn; every one read 0.27-1.29 ms early). shrine #0 0.75 beat, 692.3 → 691.5 ms; haven #38 one beat,
+    779.2 → 778.6; grove #62 two thirds, 449.4 → 449.0; thaw #10 half,
+    447.8 → 447.5; vapor #4 one beat at 56 bpm, 1071.4 → 1070.4.
+  - **Stereo** (`stereo_guard.py`, haven #38, undertow #45, grove #62, thaw
+    #10, 60 s, each drawn time against the same loop at the dotted eighth):
+    fold 0.00 LU; side under mid below 120 Hz the same (-30.3 to -66.6 dB);
+    correlation median 1.00, 5th percentile 0.97 or more; balance within
+    0.01 dB; side over mid within 0.4 dB; refused notes the same.
+  - **The balance lock re-baselined** (the group's, as the item asks):
+    `stats.mjs --check` read every one of its 22 figures at +0.0000 against
+    the lock item 63 wrote, and `--n 10000 --write-baseline` wrote it again
+    byte for byte. Nothing in items 67-73 reaches what it locks (the melody,
+    its motifs, the choir, keys against melody): their changes are the kick,
+    the bass, the floor, the chords' filter and the echo, all drawn after the
+    tune.
+  - **What moves:** 14 of the 21 golden lists, each by its echo time alone
+    (one `param` line); 20 of the core baseline's 40 loops, by at most 0.4
+    LU, their layers, voices, refusals and costs unchanged (side over mid
+    within 0.5 dB, the fold's residual -68 dB or under).
 
 ## Done
 
@@ -5025,3 +5074,12 @@ Mikey decides this line:
   forced on, dust #69 from 1:02 (its busiest moment, 60 → 66 refused: do the
   missing chord and bell notes matter?), undertow #8 from 0:00 (the heavier
   low end) and clockwork #65 from 0:00 (the lighter one).
+- #271, padSweep (item 72, v122),
+  https://0231e9a4-driftloom.nowmichaelclark.workers.dev: in loops whose chords
+  are a pad, an organ, a choir or another held voice and that draw it (about
+  one in twenty), a lowpass on the chord layer alone swings from closed at
+  450-800 Hz up 2-3.5 octaves and back once every 12-28 s, while the rest of
+  the loop stays as bright as it was. Listen for pads that breathe dark and
+  bright, slowly, and for nothing else moving. For the album: dust #77 from
+  0:00 (a hum pad, 3.4 octaves every 23.7 s, drawn on its own) and thaw #71
+  with padSweep forced on, from 0:00 (the pad is most of what plays).

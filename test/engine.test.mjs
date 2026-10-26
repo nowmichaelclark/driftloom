@@ -14,7 +14,8 @@
 // visible changes keep their 60 ms.
 
 import { Engine } from '../js/engine.js';
-import { newSpec, rerollLayer } from '../js/generator.js';
+import { newSpec, rerollLayer, vibesOf } from '../js/generator.js';
+import { echoTimeOf } from '../js/choices.js';
 
 // The engine draws its jitter from Math.random: seeded, so a run is a run.
 let seed = 20261012;
@@ -639,6 +640,22 @@ console.log('\npadSweep (queue item 72)');
   }
   none.run(10);
   check('a loop without it makes no padSweep call', !none.calls.some((c) => c.name === 'padSweepSetup'));
+}
+
+console.log('\nechoTime (queue item 73)');
+{
+  // The echo's time at load: the loop's own draw, in beats, at its tempo.
+  const times = new Set();
+  for (const seed of [3, 41, 77, 1234, 9001, 31337]) {
+    const r = rig(true, seed);
+    const beats = echoTimeOf(r.spec.seed, vibesOf(r.spec));
+    const set = r.calls.filter((c) => c.name === 'setEchoTime');
+    const last = set[set.length - 1];
+    check(`loop ${seed}: the echo at ${beats.toFixed(3)} of a beat`, r.engine.echoBeats === beats && last && Math.abs(last.args[0] - (60 / r.spec.bpm) * beats) < 1e-9,
+      JSON.stringify(set.map((c) => c.args[0])));
+    times.add(beats);
+  }
+  check('not every loop at the dotted eighth', times.size > 1, [...times].join(' '));
 }
 
 console.log('\nThe arc (queue item 63)');

@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf } from './choices.js';
+import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -336,6 +336,8 @@ export class Engine {
     // be sent.
     this.padSweep = null;
     this.padSweepChange = false;
+    // The loop's echo time in beats (queue item 73).
+    this.echoBeats = 0.75;
     // The loop's space (queue item 65), and whether it is still to be sent.
     this.space = null;
     this.spaceChange = false;
@@ -488,7 +490,10 @@ export class Engine {
     const character = characterOf(spec);
     this.synth.setCharacterLevel(character.level ?? 1);
     this.pumpAmount = character.pump ?? 0;
-    this.synth.setEchoTime((60 / spec.bpm) * 0.75);
+    // The echo's time, drawn per loop (queue item 73; today's dotted eighth
+    // for 45% of loops).
+    this.echoBeats = echoTimeOf(spec.seed, vibesOf(spec));
+    this.synth.setEchoTime((60 / spec.bpm) * this.echoBeats);
     for (const [layer, muted] of Object.entries(spec.mutes || {})) {
       this.synth.setMute(layer, muted);
     }
