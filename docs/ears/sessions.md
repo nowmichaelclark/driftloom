@@ -115,7 +115,7 @@ it into queue items.
   cards (sounds, techniques, theory per album; `docs/ears/plan.md`).
 - **Brain:** decides. Turns ears findings into queue items, sequences them
   around other work (the core phases), verifies the hands' PRs, owns
-  `docs/BRAIN.md` and `docs/QUEUE.md`.
+  `docs/BRAIN.md`, `docs/DECISIONS.md` and `docs/QUEUE.md`.
 - **Hands:** builds. Claude Code sessions working through the queue, with
   the level, refusal and balance-lock checks.
 

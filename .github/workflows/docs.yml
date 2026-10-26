@@ -1,0 +1,25 @@
+# The live docs stay small (docs/BRAIN.md, "The docs stay small"): each role
+# loads only its own docs and the claude.ai Project syncs some of them, so
+# AGENTS.md, core/AGENTS.md, docs/QUEUE.md, docs/BRAIN.md and
+# docs/DECISIONS.md each have a size limit (tools/check-docs.mjs). Over one,
+# the fix is to archive the finished parts.
+name: docs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  size:
+    name: the live docs are small
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/check-docs.mjs

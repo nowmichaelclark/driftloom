@@ -94,7 +94,7 @@ so the notes can go to a DAW, a groovebox, or anything with a MIDI in.
 Whatever the browser synth sounds like, the composition itself travels.
 
 Saving, share codes and albums, track length, playing with the screen off,
-and the Diagnostics panel (Library > More) are covered in `docs/NOTES.md`, with the rest of
+and the Diagnostics panel (Library > More) are covered in `docs/archive/engineering-notes.md`, with the rest of
 how it works inside.
 
 ## Profiles
@@ -134,19 +134,25 @@ that pool, because voices are drawn at render time from the blended pool
 and one added entry shifts that draw and every random decision after it.
 While the app is in testing that is allowed -- old share codes are not
 protected -- and the fiddle and accordion went straight into Glade that
-way. The balance lock (`stats.mjs --check`, in `docs/NOTES.md`) is what guards the
+way. The balance lock (`stats.mjs --check`, in `docs/archive/engineering-notes.md`) is what guards the
 overall character when pools change.
 
 ## Project documents
 
-- `ROADMAP.md` -- everything planned, shipped or decided against, and the
-  contribution rules.
+`docs/README.md` is the map: which doc is for what and who reads it.
+
+- `AGENTS.md` -- the guide for Claude sessions: what Driftloom is, the roles,
+  the rules that hold everywhere, build and test commands (`CLAUDE.md` imports
+  it; `core/AGENTS.md` adds the core's rules).
+- `ROADMAP.md` -- what is still ahead, what was decided against, and the
+  contribution rules; what shipped is in `docs/archive/roadmap-shipped.md`.
 - `docs/QUEUE.md` -- the work queue Claude Code works down, with its
-  standing rules and merge policy, and a Done list of what shipped.
-- `docs/NOTES.md` -- how it works inside: the sound, the measurements, and
-  why things are the way they are.
-- `docs/BRAIN.md` -- the planning side's handoff: decisions, listening
-  results, methods, current state.
+  standing rules and merge policy; `docs/DONE.md` lists what shipped.
+- `docs/archive/engineering-notes.md` -- how it works inside: the sound, the
+  measurements, and why things are the way they are.
+- `docs/BRAIN.md` -- the planning side's handoff: how the work is organized,
+  listening results, methods, current state; `docs/DECISIONS.md` has what
+  Mikey has decided.
 - `docs/MOODS.md` -- the mood vocabulary and its draft recipes.
 - `docs/ALBUMS.md` -- listening albums waiting for answers.
 - `docs/EARS.md` -- what the ears sessions measured on Mikey's albums
@@ -154,7 +160,7 @@ overall character when pools change.
 - `docs/ears/` -- everything the ears sessions write: reports, the plan,
   album cards, raw data (index in `docs/ears/README.md`). Ears outputs live
   in the repo, not only in the Project (Mikey, 2026-10-17).
-- `docs/perf-baseline.md` -- the live performance baseline and what came
+- `docs/archive/perf-baseline.md` -- the performance baseline and what came
   of it.
 - `core/` -- the Rust core's source; `js/dlcore.wasm` is built from it.
 - `docs/theory-sheets.md` -- music theory notes.

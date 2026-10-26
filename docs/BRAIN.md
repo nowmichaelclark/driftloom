@@ -1,8 +1,9 @@
 # Brain session handoff
 
 Read this first in any new "brain" session. It is the working memory of the
-project's planning side: how the work is organized, what Mikey has decided,
-what he has heard, which methods proved themselves, and where things stand.
+project's planning side: how the work is organized, what he has heard, which
+methods proved themselves, and where things stand. What Mikey has decided is
+`docs/DECISIONS.md`; the log and history are in `docs/archive/brain-log.md`.
 Keep **State** current as you go, not only at the end; a long session can
 stop without warning.
 
@@ -79,6 +80,27 @@ lose detail; start a fresh brain chat per phase (the words, the Rust port)
 and a fresh hands chat per phase too, since the queue file carries
 everything a session needs.
 
+**The docs stay small (since 2026-10-26).** Each role loads only its own
+live docs (`docs/README.md` is the map), so a doc holds what is live and
+nothing else; the history sits in `docs/archive/`, which nothing loads by
+default. Move text, don't rewrite decisions.
+
+- **Every brain session ends with an archive pass.** Move what is finished
+  out of the live docs: finished items from `docs/QUEUE.md` to
+  `docs/archive/queue-items.md`; the notes it has read and answered from
+  `docs/notes/` to `docs/archive/notes/`; Done lines older than the current
+  phase from `docs/DONE.md` to `docs/archive/done.md`; the session's own log
+  entry to the top of `docs/archive/brain-log.md` (newest first); the long
+  reasoning behind a decision to `docs/archive/decisions-reasoning.md`,
+  leaving the decision itself as one dated line in `docs/DECISIONS.md`. Then
+  run `node tools/check-docs.mjs`.
+- **The limits,** checked in CI by that script: `AGENTS.md` 6 KB,
+  `core/AGENTS.md` 10 KB, `docs/QUEUE.md` 80 KB, `docs/BRAIN.md` 50 KB,
+  `docs/DECISIONS.md` 40 KB. Over one, CI fails with "archive the finished
+  parts".
+- **Each new decision of Mikey's** is one dated line in `docs/DECISIONS.md`
+  under its topic, written in his words, the day he made it.
+
 ## Getting oriented
 
 - Repo (public): `https://github.com/nowmichaelclark/driftloom`. A PR:
@@ -94,14 +116,18 @@ everything a session needs.
   Since the move, PR branches build as Cloudflare **Previews**: the commit
   link is the Deployment URL, `<deployment-id>-driftloom...`; the
   branch's Preview URL moves (see Session 5 in State). Previews from the
-  old account's links in QUEUE.md's Done list depend on that account.
+  old account's links in the Done lists (`docs/DONE.md`,
+  `docs/archive/done.md`) depend on that account.
 - The app's Diagnostics panel reports `build` (bump `BUILD` in `js/main.js`
   and `CACHE` in `sw.js` together on every app change), `sw` state, and
   `choir`.
-- Read `ROADMAP.md`, `docs/QUEUE.md`, `docs/MOODS.md`, `docs/ALBUMS.md`,
-  `docs/perf-baseline.md`, `README.md` (a short front page since
-  2026-10-08) and `docs/NOTES.md` (the engineering sections that were the
-  README's body). `Mikey's Thoughts.md` is his.
+- Read `docs/README.md` (the map of the docs), `docs/DECISIONS.md`,
+  `docs/QUEUE.md`, `docs/MOODS.md`, `docs/ALBUMS.md`, `ROADMAP.md` and
+  `README.md` (a short front page since 2026-10-08). The engineering notes
+  (`docs/archive/engineering-notes.md`, the README's old body) and the
+  performance baseline (`docs/archive/perf-baseline.md`) are archive
+  reading: open them when a question needs them. `Mikey's Thoughts.md` is
+  his.
 - Credentials: Mikey pastes a GitHub token in the session's opening
   message. With it the brain commits and merges **docs-only** changes --
   `docs/*.md`, `ROADMAP.md`, `README.md` -- through small PRs it merges
@@ -160,309 +186,8 @@ imports every loop in order.
 
 ## What Mikey has decided
 
-Stated decisions, not inferences. Dated where the date matters.
-
-**The music**
-
-- **Best sound wins, not how it used to be (Mikey, 2026-10-20):** "I just
-  want whatever is best / sounds the best for the core and app going
-  forward. I'm not married at all to how things used to be or operate or
-  function." Today's behavior is a reference to measure against, not a
-  thing to protect; his ears decide. (Level changes still go to his ears
-  level-matched or labeled, since louder wins a quick listen.)
-- **The current balance is right.** Preserve it as things are added.
-  Meandering, ambient loops alongside tuneful ones; not every loop a
-  triumphant melody. The balance lock (`stats.mjs --check`) guards it; a
-  deliberate change re-baselines and says so.
-- Whimsy in the Ocarina of Time sense, sometimes: catchy, childlike,
-  hummable. Inspiration also from Wind Waker and Spirit Tracks.
-- **The north star for tone: pleasant** -- nothing that would bother people
-  in a coffee shop. Harsh, buzzy or toy-like timbres fail whatever their
-  level. Respectable through an aux cable at a live venue or in a car.
-- **Moods stay wholesome, never negative or depressing** (Animal Crossing,
-  a nice coffee shop). In the spirit of Buddhadasa and Ajahn Dhammarato:
-  feelings and sensations are textures, neither good nor bad. See
-  `docs/MOODS.md`.
-- **Dynamic but sensible:** quiet loops and a spread across the catalog
-  are wanted, but the listener shouldn't need the volume every other
-  track. Fixed at the source, never by a limiter, compressor or
-  normalization on the mix. (Solved in practice by the lead trims, #48 and
-  #53. "Twenty in a row" is not needed for now.)
-- **One behavior for everybody:** no user-facing modes, toggles or sliders
-  to scroll through.
-- **Loops with fewer layers are wanted variety**, not a bug, even drums
-  over a texture alone.
-- **About twice the variety it had in September 2026**: some loops wider
-  and deeper, very simple ones still possible at any length.
-- **The choir is a rarity** (about 1 loop in 30) that should feel special.
-- Fine with retro, strange, and occasionally wrong if it opens things up.
-- **6/8:** chords move on the dotted beats and hold; figures between the
-  beats are welcome; an entry on a weak eighth tied over the beat is not.
-  In the rhythm section he likes the old cross-rhythm (hints of 3/4 and
-  2/4 against the 6/8); only the chords wanted to be strict.
-- **Cinder's added F over the E chord stays; wayfare's minor v stays.**
-- **Composition depth:** some loops develop, simple ones stay (his
-  favorite in the Depth album was a simple 24-bar loop). The share is a
-  knob to tune by ear.
-- **New instruments are welcome again** (2026-10-09; the 2026-09-25
-  pause on new sounds was temporary). Mikey liked the ears' first five
-  as clips (stereo, roundBass, glass, floorDrop, arc: "all the new stuff
-  is sounding really great"); build the ones he approves, in the core,
-  except stereo (dropped 2026-10-11: mono only).
-  Inspiration only from wholesome, comforting music, not harsh or dark
-  records. No new *profiles* still. Fiddle, accordion and drone may get
-  more nuance later.
-- **The playhead fade is gone for speed** (2026-09-27).
-
-**The words (roadmap 19)**
-
-- 178 mood words of his own, in `docs/MOODS.md` (lively added
-  2026-09-28; candidates for more listed there). Near-synonyms may
-  differ ("a happy song isn't the same as a merry song").
-- Labels of one to five words, mostly two or three of different kinds;
-  some loops one word fully embraced. Words steer generation, bending a
-  profile within its character; how each word meets each profile is
-  defined with him by ear.
-- **No pair is forbidden:** words that pull apart find their in-between,
-  a shape over time (bouncy + floating is a helium balloon).
-- A pilot dozen is agreed: merry, tender, serene, golden, twinkling,
-  crisp, velvety, sour, bouncy, floating, swaying, quirky. Draft recipes
-  in `docs/MOODS.md`; he loves most of the approach (2026-09-28).
-- **Heart words replace the eight moods** (2026-09-28), eventually; the
-  eight become heart words with recipes. Tender is close, soothing
-  settling; serene still and wide, peaceful content and gently moving.
-- **Percentages stay only if honest:** measured from the rendered loop.
-- **Ten dials, five maps (option B), loops as clouds**, word regions
-  fitted from his rankings (`docs/MOODS.md`). Open: which candidate words
-  join.
-- **Listening tests don't ask him to describe tracks freely** (too
-  abstract). The word-ranking test (queue item 19) is the tool.
-- **Pool 3** (2026-10-11): 39 of the candidate words joined `/rank`
-  (71 in all; `docs/MOODS.md`). He ranks in bulk and exports.
-- **Reflective may be neutral** (2026-10-11): leaning brighter since
-  #107 is okay, and it can also sit in the middle of the mode axis.
-- **Cinder and shatter may take a bright mode when a word calls for
-  one** (2026-10-11). Both built in queue item 36.
-- **Word albums** (2026-10-11, his idea after 181 rankings): one word at
-  a time, "Is this playlist heartwarming? Which songs are not?" The brain
-  guesses loops for a word and mixes in a couple it expects not to fit.
-  The five-word ranking rests; its answers stay the base for the fit.
-- **Vibes in the app** (2026-10-11, top priority): the words are called
-  vibes; a **Vibes** key on Now Playing opens a scrolling two-column list
-  with Close and Clear All; pick any number; each new loop leans toward up
-  to five of them, weights shifting loop to loop (one vibe alone at 50%
-  or more). All 71 pool-3 words. A real feature, and the tuning tool: he
-  picks vibes and sends loops that fit well or don't. Queue item 38;
-  recipes in `docs/VIBES.md`. A Painter session can refine the look.
-- The old branches stay: he likes looking back on them.
-
-**The engine (Mikey, 2026-10-10)** -- the direction from here.
-
-- **Driftloom has its own Rust audio engine, and copying Chromium is no
-  longer the goal.** The port used Chromium as the reference so that
-  every step could be proven; now that the whole sound path runs in the
-  core, the core is the thing. Aim for what audiophiles, game developers
-  and programmers who value efficient, easy-to-run software would favor:
-  an app and an engine people marvel at for its beauty and commitment to
-  excellence. Do things better than Chromium where better is possible,
-  and in the way that fits Driftloom's own aims.
-- What that means in practice: Chromium-parity work stops unless it
-  serves a purpose (it still does as a safety net until the core is the
-  default). Improvements are judged by measurement (level, cost, tone,
-  determinism, performance on a phone) and by Mikey's ears, not by
-  nulling against Chromium. Changes to sounds he already likes still go
-  to blind A/Bs; the balance lock and the refusal checks still hold.
-- Candidates (brain, 2026-10-10, unranked): a warm compressor start (no
-  first-note dip; done in 31b); smooth curve and parameter changes where Chromium
-  switches abruptly (the saturator's curve swap); better oversampling
-  and a true-peak ceiling; a reverb designed for this music rather than
-  six plain combs (a sound change: blind A/B); an offline renderer for audio export (roadmap
-  17) from the same core; a documented host API for native and game
-  hosts (`no_std`-friendly, sample-rate independent, deterministic);
-  the generator in Rust when the words settle.
-- **Stereo across the board, with a mono switch (Mikey, 2026-10-15)** --
-  replaces the two lines below. Stereo everywhere by default; an
-  optional switch makes everything mono for listeners and devs who like
-  that (a settings exception he chose). Ears sessions propose stereo
-  treatments as clips first; the core's stereo render, the mono switch
-  and the first space recipes come after the instrument batch, before
-  phase 2 (`docs/CORE.md`, promise 9).
-- *(Superseded 2026-10-15.)* **Stereo possible, mono the default (Mikey, 2026-10-13)** -- replaces
-  the line below. The app stays mono for now; stereo comes much later,
-  experimental first, and the core must make it implementable without a
-  rebuild. Stereo's variables (width, per-instrument pan that changes
-  track to track, how much and how fast things move, and more) must be
-  easy for developers and users to tweak. Carefully: "stereo holds its
-  own set of infinite possibilities". `docs/CORE.md`, promise 9.
-- *(Superseded 2026-10-13.)* **Mono only, for now (Mikey, 2026-10-11).** The ears put stereo first;
-  Mikey decided against it: mono gives a controlled soundscape that
-  sounds the same from system to system, where stereo can sound wildly
-  different. The output stays one channel. The core's per-channel
-  structure (one lane today) costs nothing and can stay, but nothing is
-  built toward stereo: no ping-pong echoes, no panning, no width.
-
-**The core (Mikey, 2026-10-12)** -- the next phase.
-
-- **Now is the time to get the core right:** the part users never see but
-  developers do -- good for battery, fast, written beautifully,
-  immaculate. "There are still a lot of things I may want to do and change
-  with the app", so the core must make change easy, not freeze the app.
-- **The website must never glitch from screen work.** Notes are decided
-  and played away from the page's main thread, whatever the page is doing.
-- **The generator's Rust port no longer waits for the words.** "The words
-  will never fully settle, and I imagine I will still want to add more
-  sounds or profiles." Vibes, profiles and voices stay easy to change (data
-  where possible).
-- **A native Android app (F-Droid) is the likely later step**, from the
-  same Rust core, with the web screens inside it; the website stays, on the
-  same core. Chromium is not a requirement for the website (it plays in
-  Firefox); the test tools use it.
-- **Anything may break** (Mikey, 2026-10-12): share codes, saved loops,
-  albums. "Breaking is how we learn. I'm playful and experimental." The app
-  stays in testing for a long time; even the F-Droid release is an alpha or
-  beta. So the port is proven step by step for the brain's own safety, not
-  to protect old codes.
-- **The number one priority: an excellent, beautifully made core**
-  (Mikey, 2026-10-12). "Shoot for the moon." Take the time it needs. So
-  good and so well written that developers could put it in anything: any
-  game engine, any game mod, any operating system, any kind of device.
-- **Platforms, each its own phase, after the core:** the native Android
-  app on F-Droid; later Google Play; an **itch.io** desktop release for
-  people who run it locally. **No iOS app for now** (Apple's yearly
-  developer fee), but the core must make iOS and macOS easy if that
-  changes. His first multi-platform app: the brain and hands carry as much
-  of it as they can.
-- **For the charter (brain, 2026-10-12; Mikey's question):** a seed or
-  share code is a recipe, so "same seed, same music" holds only with the
-  same core version and the same data. Mikey asked whether a code could
-  carry a modder's new instrument to someone who doesn't have it. Since
-  Driftloom's instruments are synthesized, not sampled, an instrument as
-  **data** (a small patch description, not code) could be a few hundred
-  bytes and could travel inside the code or be named by it with a hash.
-  Instruments are Rust code today; making them data is a charter-level
-  choice. The code should at least say what it needs (core version, packs
-  with hashes) and degrade clearly when something is missing.
-  **Mikey likes doing both** (2026-10-12): hand-written Rust building
-  blocks, and instruments as small data recipes (patches) that wire and
-  set them -- like a synth's presets.
-- **Shorter share codes** (Mikey, 2026-10-12): an album fills half a phone
-  screen in Discord; not tidy. Brain's proposal for the charter: with a
-  deterministic, versioned core, a loop's code is the version, the seed
-  and only what the listener changed (vibes, mutes, edits) -- about 10-16
-  characters; an album, a list of those (about 60 for eight loops, against
-  over a thousand now). Shared as a link, so Discord shows a tidy preview.
-  Explicit parameters were written down only so a code survived generator
-  changes; the version in the code does that job now that anything may
-  break.
-  **No online server for albums** (Mikey, 2026-10-12): codes carry
-  everything. He'd like them shorter still. Levers, biggest first: fewer
-  bits (an album drawn from one album seed is a single seed; seeds sized to
-  what's needed); then a wider alphabet (base32's 5 bits a character;
-  URL-safe base64, 6; a Unicode alphabet such as base2048 or emoji, 10-11,
-  so an eight-loop album of hand-picked seeds in about 25-30 symbols, not
-  typeable but fun). Keep one plain, link-safe form whatever else exists.
-  **Decided (Mikey, 2026-10-12): codes never need reading aloud, but must
-  show correctly on almost any device of the last 30 years** (a DS, a PSP,
-  an old computer, "maybe some wild dev will want to port the core to
-  something like GameCube"). So **plain ASCII only**: no emoji, no other
-  Unicode. Brain's recommendation: the 64 link-safe characters
-  (`A-Z a-z 0-9 - _`), 6 bits each; the wider ASCII sets (base85, base91)
-  save only about 8% and carry characters that break links and Discord's
-  formatting. The same rule for everything the core emits (names, codes,
-  errors).
-- **The building blocks are open to change too** (Mikey, 2026-10-13):
-  developers, AI agents and Mikey can add blocks or make fundamental
-  changes to them easily. He doesn't know yet which blocks could be
-  added or are worth changing: the brain drafts a catalogue of ideas for
-  him before phase 4.
-- **The JavaScript synth retires at the end of phase 3** (Mikey,
-  2026-10-13); earlier only on its own branch, merged when the
-  replacement is ready. **The charter's targets stand**, to be revisited:
-  the brain proposes changes, or higher aims, as measurements come in.
-- **Bit-identical everywhere** (Mikey, 2026-10-13): the same code makes
-  exactly the same samples on every device; the core carries its own
-  math.
-- **Broken Friends is the one game that proves the core** (Mikey,
-  2026-10-24): his own Godot game is "the one and the only test game
-  we're going to use. I don't want to make music mods for those other
-  games anymore anyways. Maybe another time." It replaces the three
-  games of 2026-10-13 (Luanti, OpenRCT2, Stardew Valley) and takes
-  phase 4. In the game's own plans it is "Driftloom's most important
-  proof game" (its decision 0016). `docs/CORE.md`, promise 10.
-- **Requests (Mikey, 2026-10-13):** in the app, listeners choose more
-  for the next loop -- bars, tempo, rhythm, scale, etc. -- alongside the
-  vibes; developers ask the same way ("a peaceful, zany loop at 77 bpm,
-  16 bars, when the sun rises"). Charter promise 11: one request, each
-  choice pinned, ranged or left to chance; the generator port (phase 2)
-  is built around it. Picks like the vibes, not settings (brain's
-  reading; the settings rule stands).
-- **Longer loops (Mikey, 2026-10-13):** listeners and developers can pick
-  far more bars than today's 32, e.g. 3,072. Charter promise 11: any
-  length up to endless; the generator works section by section, so
-  length costs nothing; long-form composition is later work by ear.
-  Both kinds wanted: a symphony-like journey (3,072 came from
-  Beethoven's Ninth) and long slow wandering. Decided: no cap in the
-  core; the app's picker to 32,768 bars plus Endless.
-- **Next picks, the design (Mikey, 2026-10-13):** chosen after four
-  rounds and 70 options (Painter session 5); the brief is
-  `design/next-picks.md` (it wins over the renders). In short: a **New
-  loops** panel of five lines -- moods (the vibes), tempo and length,
-  key and scale, style, voices -- each value an outline pill in its
-  line's color, with an **any** key per line; **Now Playing** outside an
-  album shows the picked values as pills (one button into the panel)
-  and drops "Next: something new"; in an album the picks are hidden and
-  Now Playing stays as today; a **Length** picker with cancel / done,
-  -1 / +1, a typed number, a doubling slider 1 to 32,768, and Endless.
-  Moods past three end in "...". Tempo, key, style and voices pickers
-  are not designed yet. **Painter 6** (app track) builds the screens:
-  moods wired to vibes; length and tempo to today's generator only if
-  cheap, clamped. The real wiring is queue items 48-53 (phases 2 and 3).
-  **Open, for Mikey:** (1) the way into New loops during an album
-  (Painter suggests today's top-left Vibes key renamed "new loops", in
-  albums only; until he decides, the Vibes key stays); (2) how to set
-  only length, or only tempo, back to "any" (line two's any key clears
-  both; until he decides, the line-level key alone is built).
-- **Exports, safe first (Mikey, 2026-10-13):** never crash or break
-  anything on the user's end, whatever the hardware, old Android and
-  weak chips included; fast only where safe. He suggested "fast" or
-  "lossless" as a toggle in settings; decided, from the brain's proposal (charter phase 7):
-  format chosen per export, speed from the existing "lighter on
-  processor" setting, so no new setting.
-- **A new brain chat for the core.** Before it: one more bug fix if the
-  Pixel 10a tester's report on #187 calls for one.
-
-**The platform**
-
-- **Old share codes, saved loops and albums may change or break** while the
-  app is in testing (2026-09-23). Keep draws stable where it's free, only
-  because it keeps A/B albums comparing the same loops.
-- **Merging before an A/B is fine**, and the hands merge their own PRs
-  under the queue's policy. Production is testers only; merges can be
-  reverted.
-- **Performance: excellence.** Light and fast even at full quality,
-  "DHH-wow" smooth with a hundred other apps open.
-- **Baking loops for playback: no.** "Let the loop wander" is on by default
-  and changes the loop every pass, and re-rolls must be instant. Baking
-  lives on as an audio export (roadmap 17).
-- **Rust:** the synth, then the generator, move to a host-agnostic Rust
-  core (WebAssembly in an AudioWorklet for the web), in its own brain
-  chat. **(Superseded 2026-10-12: the generator no longer waits; see "The
-  core".)** **Timing (2026-10-03): the synth ports now; the generator waits
-  until the words' draws stop moving.** Its case is
-  portability, not speed (the performance baseline showed the fixable
-  costs were elsewhere). The deliverable is the phone app; a native build
-  and games are separate projects. Rust over C++ and the rest: roadmap 16.
-- **Games:** chill ones -- Animal Crossing, point-and-click, turn-based --
-  where music follows time of day, weather, place, season, turn. Not
-  action. Roadmap 18.
-
-**Working style**
-
-- Briefs ready to paste; concise answers; instructions step by step.
-- His ears are the scarce resource: batch listening, keep albums short,
-  let the tools judge level, cost and tone.
-- Voices he likes: struck and sung -- kalimba, musicbox, marimba, hum,
-  vowel since #14; the fiddle and accordion since take two.
+Moved to `docs/DECISIONS.md` (2026-10-26): one dated line each, grouped by
+topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ## What he has heard
 
@@ -538,13 +263,26 @@ Stated decisions, not inferences. Dated where the date matters.
 - `tools/perf.mjs` -- live performance in headless Chromium under CPU
   throttling: audio health, main-thread cost, graph churn, memory, time
   to first sound, page weight, hidden tab; `--ab` for before/after.
-  Baseline in `docs/perf-baseline.md`.
+  Baseline in `docs/archive/perf-baseline.md`.
 - `tools/listen.mjs` -- one-command albums; still not built (roadmap 20).
+- `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
+  stay small"); CI runs it.
 
 ## State -- 2026-10-13
 
 ### Start here (for the next brain)
 
+- **Since 2026-10-26 (hands, docs restructure and item 76).** All three
+  groups of the sound batch are merged (items 54-73, #245-#272, v103-v123;
+  group (b) is items 64-66, group (c) 67-73), and the album loops in the
+  Done lines were re-checked against `main` after item 73 (#273). `main` is
+  at v123. **Item 76** is queued from Mikey's Moto Diagnostics (v116,
+  2026-10-25): the first loop after the app starts loses its first notes
+  (app track, Sonnet 5.5, high). The docs were split by role: this file
+  keeps the orientation and this "Start here"; the decisions are
+  `docs/DECISIONS.md`; the log, History, finished items, old notes and Done
+  lines are in `docs/archive/`; `docs/README.md` is the map. **For Session
+  26:** end the session with the archive pass (see "The docs stay small").
 - **The plan to phase 2 (Mikey, 2026-10-15).** He wants more
   instruments, profiles and vibes before the Broken Friends step, with ears
   sessions to find them. Timed so nothing is built twice:
@@ -554,7 +292,8 @@ Stated decisions, not inferences. Dated where the date matters.
     2 starts (data in `js/vibes.js`).
   - **Session 22** (brain, Opus, 2026-10-18): **done.** Items 42-45
     verified, 47's PR read; the control album "Phase 1 check" heard by
-    Mikey the same day: no difference. See the log; one known issue for phase 2
+    Mikey the same day: no difference. See the log
+    (`docs/archive/brain-log.md`); one known issue for phase 2
     (wander across the slider's upper range should not repeat; `docs/QUEUE.md`,
     "Known issues").
   - **Session 23** (hands, Opus, high): item 46, the building-block
@@ -564,8 +303,9 @@ Stated decisions, not inferences. Dated where the date matters.
     (modulation input, stereo signal shape, channel events and a
     channel's own blocks; bit-identical); **the sound batch** written as
     items 54-73, with item 74 (clippy) low priority; the wander note
-    carried into the charter's phase 2. See the log. As planned before
-    it: write **the sound batch** into the queue, three groups, from `docs/ears/`
+    carried into the charter's phase 2. See the log
+    (`docs/archive/brain-log.md`). As planned before it: write **the sound
+    batch** into the queue, three groups, from `docs/ears/`
     (batch-4 and batch-5 and Mikey's verdicts):
     (a) **instruments**: dubStab, longChords, wash, the chapel organ,
     roundBass, glass, floorDrop, arc; built in the core on 46's
@@ -632,7 +372,9 @@ Stated decisions, not inferences. Dated where the date matters.
     groups in that order (a: items 54-63; b: 64-66; c: 67-73), one PR per
     item; a new session per group (or when usage runs out), same brief.
     Item 74 whenever a session has usage to spare (Sonnet is enough).
-  - **Session 26** (brain, Opus): check all three groups; a labeled
+  - **Session 26** (brain, Opus): check all three groups (the hands' notes
+    on items 55-73 are in `docs/archive/notes.md`; their Done lines in
+    `docs/DONE.md`); a labeled
     album (keep / tune / drop) of the new sounds and mixing, and a blind
     stereo-vs-mono A/B; **the bass level** (item 56, #248, Mikey chose
     today's level for now, 2026-10-20): the same few loops with the bass
@@ -704,8 +446,8 @@ Stated decisions, not inferences. Dated where the date matters.
   Session 24, after 46 (phase review, then phase 2's items). Each a
   new brain chat, Opus 5.5. Session 18 closed after this. Before phase 5: the block
   catalogue for Mikey (charter, promise 5).
-- **Next: the core** -- a new brain chat. Read **"The core"** under "What
-  Mikey has decided" first: the number one priority, shoot for the moon,
+- **Next: the core** -- a new brain chat. Read **"The core: aims and design"**
+  in `docs/DECISIONS.md` first: the number one priority, shoot for the moon,
   embeddable anywhere (game engines, mods, any OS or device, iOS and
   macOS kept easy), notes decided and played away from the page so the
   website never glitches from screen work, instruments as Rust building
@@ -752,701 +494,9 @@ Stated decisions, not inferences. Dated where the date matters.
 
 ### The log
 
-**Brain, 2026-10-25: what Broken Friends needs from the core** (read
-from the game's repo, `plan/systems/audio-music`, decisions 0016, 0037,
-0038, spike 2; for Session 26 to order phase 2's items around):
-- **Phase 2 is the game's gate.** The extension plays golden note lists
-  bit for bit (Linux 22-32x real time, browser about 19x), but new music
-  waits for the generator in Rust. What the game will ask of it: a loop
-  from a seed or a stored code (each friend's theme), steered by the
-  friend, its mood, the time of day and camp events (promise 11's
-  requests).
-- **Music changes at moments, not on a timer** (decision 0038): a new
-  room, a friend made well, a mood, surgery. So the core needs a cheap
-  change of loop at a musical boundary, with a crossfade. Today a new
-  list resets a core (about 15 ms on a laptop, more on a phone), too slow
-  for the audio thread, so the game keeps two cores and switches. A
-  loop change without a full reset, and a crossfade in the core, belong
-  in phase 2 or 3 (the app's Next would use them too).
-- **The browser has no audio thread** in Godot's web engine; music fed
-  frame by frame crackled on Mikey's phone, so the game renders each
-  loop whole and plays it as one sound. With the Rust generator (and
-  wandering or endless loops) it will need loops rendered ahead pass by
-  pass, quickly: render speed stays a gate (stereo costs 1.2-1.4 times
-  mono).
-- **Target phone: a Moto G Power (2022)** and weaker; the game uses the
-  lite mix on phones and in the browser. Worth adding to promise 2's
-  measured devices.
-- **The game pins the core** (at f654fdb, before stereo and the space
-  recipes); its six golden hashes need refreshing at each repin, and the
-  host calls it uses changed with items 64-66 (layout, space). Its web
-  build needs Emscripten with panic=abort, which the core's no-panic rule
-  already serves; an Emscripten target in the core's CI is a phase 4
-  thought.
-
-**Broken Friends session (Opus 5.5, 2026-10-24), not a brain session.**
-Mikey made Broken Friends the one game that proves the core (promise 10
-rewritten; phases 4 and 7; "Answered"; Painter section 9). That
-session is building the Godot extension in the game's repo
-(`rust/driftloom-godot/`), checked against the golden hashes, and
-testing Godot's web build with extensions; its results will come back
-here as notes, not as queue items.
-
-**Brain, 2026-10-19 (Session 22, continued), after item 46b.** #241
-read (its report and notes; the figures not rerun): the stereo shape is a
-second signal, the mono render untouched (same `.wasm` bytes without the
-stereo code), demonstrations test-only, the baseline green in CI. Its
-notes showed four batch items assuming seams 46b did not build (per-loop
-settings and modulation on channel blocks, repeated retunes, sidechains):
-queued as item 46c, first in Session 25a.
-
-**Session 24 (brain, Opus 5.5, 2026-10-19), phase 1 review and the sound
-batch.** Item 46 (#238) checked against its yardsticks, run here, not
-taken from the report: `build-core.sh --check`; `cargo test --release`
-(101 library tests with the kit and its cost check, and the golden, draw
-and math tests); goldens `--strict` on x86-64 and wasm32, `--strict
---flush`, `--blocks all` on both, `--rates` on both: all equal, and #238
-touched no hash file; `node tools/baseline.mjs`: "Nothing moved";
-cachegrind against #237: busy-cinder -0.37%, 09-shrine -0.05%,
-15-wayfare -0.11%, 07-dust +0.34% (the report's figures); the release
-library's assembly: no panic, trap or allocation; `js/core.js`: comments
-only; pedantic clippy 405 left, as reported. "One file plus one line"
-checked independently: a throwaway processor added in a scratch copy
-(one file, one registry line) was found by the kit, asked for its stored
-render, passed once stored, and a 2% gain change was flagged as a sound
-change. **Phase 1 is done.** Then, at Mikey's request: **item 46b**
-(Session 25-0, Opus 5.5, high): a modulation input, the stereo signal
-shape and channel events (with a channel's own blocks), a refactor like
-46, so the batch builds on one way of doing each; **the sound batch** as
-items 54-73 under three groups: (a) the per-loop choices (54), the frame
-drum's solo peak with a -1 dBFS voice ceiling in the kit (55), roundBass,
-longChords, floorDrop, glass, dubStab, the chapel organ, the wash, the
-arc (56-63); (b) the stereo render, the approved baseline as space
-recipes, the Mono switch (64-66); (c) tunedKick, subDuck, lateFloor,
-floorDrop shapes, pedalBass, padSweep, echoTime (67-73); item 74, the
-clippy cleanup, low priority. The wander note carried into the charter's
-phase 2 and "Known issues". **Brain's calls, written in the queue:** the
-per-loop choices go in one framework first (54), so every later item
-only adds an option; the new parts count toward Mikey's "one or two
-changes a loop"; the core's stereo master links its compressors (one
-gain from the mono detector) so stereo folds like mono; the arc starts
-bright. Phase 2's items wait for Session 26. Docs only.
-
-**Brain, 2026-10-19 (Session 22, continued), after item 46.** Read
-#238's report and notes (not its figures; Session 24 checks those).
-Nothing to redo. Advised, and Mikey agreed: item 46b (modulation input
-and the stereo signal shape, bit-identical) before the sound batch, so
-the new instruments aren't built twice; a clippy cleanup later; the
-frame drum's solo peak into group (a). Written into "Start here".
-
-**Session 22 (brain, Opus 5.5, 2026-10-18), phase 1 check.** Items
-42-45 (#204, #208, #211, #213) checked against their yardsticks; all
-pass. What the brain ran itself, not taken from the reports:
-- **Goldens:** native x86-64, `tools/golden.sh --strict`, `--strict
-  --flush`, `--rates`, `--blocks all`: 21 of 21 equal to wasm32's, the
-  same with flush-to-zero, the 12 renders at 22.05-192 kHz match, the
-  speaker output the same at every block size. The five targets' hash
-  files are line for line identical, and CI on main (run 39123172239)
-  is green on all five legs with `--strict`.
-- **The moved draws (#211):** every `Math.random` in `js/synth.js` and
-  `js/engine.js` before the PR accounted for (moved into the core, moved
-  to `js/draw.js`, or left in the JavaScript synth, which is the
-  fallback); each slot the core fills matches what the page sent before,
-  and the formulas and ranges match (the sung voices' too). Checked that
-  no two notes on a channel share a key where a draw is made (21
-  goldens: none; the only shared keys are swell textures, which draw
-  nothing), so a chord's notes don't move in lockstep.
-- **Costs, which #213 did not report:** instruction counts (native,
-  cachegrind) for busy-cinder, 09-shrine (choir) and 15-wayfare at items
-  43, 44 and 45: within +-0.25% step to step, except the choir 1.1%
-  cheaper at 44 (no arena). #208's three loops over 5% (+5.0 to +7.4%
-  in wasm instructions) were reported with the reason (the silence
-  floors, code layout); accepted.
-- Not rerun: `tools/baseline.mjs` (no Chromium in this container; CI
-  runs it and it is green on main).
-**Notes for later (Session 24):** existing files carry hundreds of
-pedantic clippy warnings (lib.rs 81, wave.rs 69, timeline.rs 68, #211),
-so the "clean in every file touched" rule can't be met; a cleanup item
-belongs before or with 46's refactor. 45's other rates were hashed on
-three goldens only (13-dust, 16-grove, 18-shatter), which is enough
-for now. **For Mikey, small:** since 44, "Let the loop wander" is
-drawn from the loop's code, so a saved loop wanders the same way every
-time it is played. **Mikey pushed back (2026-10-18):** at the top of the
-wander slider a loop should wander in an experimental, non-repeatable
-way; across the slider's whole upper range (his decision, the
-boundary tuned by ear as we go). Not a fix now; filed under "Known
-issues" in `docs/QUEUE.md`, for phase 2's generator port.
-**Session 22 closed** (2026-10-18), with #237 for Mikey to merge.
-**The control album, "Phase 1 check"** (`docs/ALBUMS.md`): blind A/B,
-v92 (PR #204's preview) against v99 (PR #236's, which is main), nine
-corpus loops covering every kind of moved draw, one pass each, and a
-null track that is bit-identical on both. **Heard the same evening:
-"everything sounds the same on both versions"** -- phase 1 changed
-nothing he can hear, as intended. Next: Session 23 (hands, Opus 5.5,
-high), item 46.
-
-**Brain, 2026-10-13 evening (Opus 5.5), next picks.** Recorded Mikey's
-choice of the next-picks design (Painter 5) under "The core"; queued
-the real wiring as items 48-53 inside phases 2 and 3 (request and
-tempo; length to 32,768 and Endless, section by section; key and
-scale; style; voices and layers; the picks as core commands). Carried
-the brief's two open questions to Mikey. Docs only.
-
-**Session 18 (brain, Opus 5.5, 2026-10-13), the core.** Drafted the
-core charter, `docs/CORE.md` (PR #196, draft): promises each with a
-measure, phases, questions for Mikey. His answers (2026-10-13) added
-promise 9 (stereo possible, mono default) and open building blocks;
-then bit-identical everywhere (yes) and three games (promise 10).
-**Approved by Mikey (2026-10-13).** Phase 1 queued as items 42-46
-(golden renders on five targets; the core's own math and `no_std`;
-randomness into the core; any rate, block size and channel layout; the
-building-block interface). Hands: Session 19, Opus 5.5, high.
-
-**Session 16 (brain, 2026-10-11 to 10-12), the words, then the glitches.**
-Its State bullets, newest first, kept here as written:
-
-- **2026-10-12, late: item 41 (#187, v92)** -- notes now planned from the
-  phone's measured render-ahead, late notes past 30 ms dropped rather than
-  bunched, covers drawn in a Worker. The 1.3-1.8 s stalls on the Pixel
-  10a were **not reproduced** (the covers were already on CPU canvases;
-  the brain's readback lead was wrong); the tester's next Diagnostics will
-  say more. **Next: a new brain chat for the core** (see "The core");
-  before it, one more fix if that report calls for one.
-- **2026-10-12, evening: queue item 41 (urgent).** The Pixel 10a
-  tester's Diagnostics on v91: late notes even with no stall (the Sound
-  view: 67 ms gap, 78 late), and Library / Save stalls of 1.3-1.8 s
-  against a 2 s queue on a phone with ~0.6 s of output buffer. Brain's
-  reading: notes handed over inside the device's render-ahead, and
-  software graphics making blur and canvas covers slow; the harness
-  modelled neither. Asked Mikey for the tester's `chrome://gpu`.
-  Hands: Opus 5.5, high.
-- **2026-10-12, afternoon:** items 39 (#180, v89) and 40 (#182, v90)
-  merged; both wait on the GrapheneOS testers' Diagnostics (the "while
-  hidden" and "views" sections; steps in the PRs). Item 40's cause was the
-  page's own work (Library drew every cover at once, 1-2 s on a slow
-  phone) against a 0.3 s queue; the core now gets 2 s visible, 8 s hidden.
-  The brain strengthened the vibes' profile and instrument leans (#183,
-  v91; `docs/VIBES.md`, tuning log). Nothing queued for the hands; 37 on
-  hold. Next: Mikey picks vibes and sends loops; the testers' reports.
-- **Urgent (2026-10-12): queue item 40**, glitches with the screen on,
-  worst on Library and Save / Share (second tester, Pixel 10a,
-  GrapheneOS). Lead: visible, the core still gets notes only 0.3 s ahead,
-  and those views are the heaviest on the main thread; or the audio
-  thread itself starves. Item 39 merged (#180, v89): the hidden lookahead
-  on the core is 8 s and Pause / Next / Previous cancel queued notes;
-  waiting on the first tester's Diagnostics. Hands: Opus 5.5, high.
-- **Emergency (2026-10-12): queue item 39**, the music skips when a
-  tester's phone is locked (Pixel 9, GrapheneOS, installed app). The
-  brain's lead from the code: hidden, the core still gets each note only
-  a few tenths of a second ahead (the JavaScript synth's build window).
-  Hands: Opus 5.5, high. Mikey heard item 36's tracks (#177): "everything
-  is sounding great."
-- **Next: Vibes (queue item 38), Mikey's top priority.** The words go
-  into the app as vibes (see "The words"); recipes for all 71 drafted in
-  `docs/VIBES.md`. Hands: **Session 17, Opus 5.5, high**, 38a then 38b;
-  Mikey attaches his two screenshots. Then items 34-36 (Sonnet 5.5 can
-  take 36; 34-35 Opus); 37 is on hold.
-- **The pilot word albums worked** (`docs/MOODS.md`): about half of the
-  brain's guesses fit words that fit almost no random loop. Their
-  verdicts went into the heartwarming and joyful recipes.
-- **For the next words brain** (after 38 merges): read "Getting
-  oriented", "What Mikey has decided", this State, ROADMAP.md item 19,
-  `docs/MOODS.md` and `docs/VIBES.md`; skip QUEUE.md's history. Check 38
-  against its brief; run `stats.mjs --vibe-each` and fix any vibe that
-  does nothing or the wrong thing; then tune from the loops Mikey sends
-  (codes carry their vibes), editing `js/vibes.js` directly. Item 36's
-  album from its PR's list when it lands.
-
-
-`main` at **v68**, deployed at the new address (see Session 5, below).
-No open PRs. Nothing is queued. Item 20
-(#122, v66) and items 21-22 (#126 v67, #127 v68, Session 4) are merged
-and brain-verified (below).
-
-As of 2026-09-28: queue items 0-17 done (13
-stopped at its gate, by design); item 18, the housekeeping pass over
-code comments and the README, merged as #111 (brain check: tests pass,
-`--check` holds, `stats.mjs` output byte-identical). Nothing is queued. The
-brain's document audit (2026-09-28) rewrote this file, updated the
-roadmap's statuses (items 3, 9, 13, 14, 16, new 20 and 21) and the
-README (profiles, rough edges, `--retire`, `--profile`, a project
-documents list).
-
-Since the last full State: the performance wins (#96 paint, #100 voices
-let go, #102 hidden-tab build window, #103 always-on chain costed, #104
-page weight, #105 fade dropped), the temple bell as a chord voice lifted
-1.9 LU (#106), moods steering the mode with the vocabulary as data in
-`js/moods.js` (#107: loops 90%+ happy in minor-ish modes 38% -> about
-20%), and composition depth's second pass (#108: 16-bar developing loops
-8.8 distinct melody bars against 6.7 simple). Brain check on v64: tests
-and `--check` pass.
-
-**Open decisions for Mikey:**
-- **32-bar micro-loops** (three in four 32-bar loops) never develop, by
-  design; developing them would be a new kind of form. Say if wanted.
-- **Reflective leans brighter** since #107; is that right?
-- **Cinder and shatter can't sound bright**: no bright modes in their
-  pools. Part of roadmap 19.
-- The ocarina over drums: ease back 2-3 dB if it comes up buried again.
-- **Short loops' gaps** (from #111): `genGaps` draws at every length, so
-  about a third of 2- and 4-bar loops take a gap and 7-8% a whole bar of
-  silence (half a 2-bar loop). Keep, keep only beat-long ones, or none?
-
-**Out for listening:** `docs/ALBUMS.md` -- "Depth two" (goes somewhere /
-loops / too busy). "Moods" was retired unheard (2026-09-28).
-
-**Sessions (Mikey, 2026-10-03).** Every session gets a label, one
-counter for brain and hands: Session 1 is the words brain chat
-(2026-09-28 to 10-03). For each next session, tell Mikey: brain or a new
-hands session, which model, which effort, and its label. Defaults: brain
-chats on Opus 5.5; hands on Sonnet 5.5 at medium effort for items with a
-clear spec, Opus 5.5 at high for hard or judgment-heavy ones (DSP
-parity, first prototypes). Next labels: Session 2, hands, queue item 20;
-Session 3, brain, the Rust port.
-
-**Words session (Session 1, 2026-09-28 to 10-03, closed):** State checked against GitHub;
-item 18 (#111) verified. Decided this session (details in `docs/MOODS.md`):
-lively joins (178 words); tender/soothing and serene/peaceful told apart;
-heart words will replace the eight moods; percentages stay only if honest;
-ten dials, paired as option B into five maps; a loop measured as a cloud,
-with each word's region fitted from Mikey's own answers. **American
-English** for the project (docs converted; identifiers left alone).
-Free description and most/least albums were too slow and abstract, so the
-words get a **ranking test** instead: queue item 19 (`rank.html`), for the
-hands: merged as #117 (v65), brain-verified (tests pass, `--check`
-holds, app untouched but the stamps; live page matches the repo). It
-lives at https://driftloom.nowmichaelclark.workers.dev/rank
-(`/rank.html` redirects there). The Moods album is retired; Depth two is
-still out. Next: Mikey does a first batch of rankings, exports, and the
-brain reads them with `tools/ranks.mjs`. Candidate words later (he
-likes about half).
-
-**Rust session (Session 3, brain, 2026-10-03, in progress):** State
-checked against GitHub (drift fixed here: v65, the Rust timing line,
-the retired album). Feasibility settled -- see roadmap 16, "Feasibility":
-the hands' sandbox can build Rust, Cloudflare's build image can't without
-installing it on every build, and the decision is to **commit the built
-`.wasm`**, built by a pinned toolchain, with a check that it
-matches its source. Mikey said go: queue items 21 (the pipeline and
-kalimba) and 22 (fiddle and pad, the performance A/B) are written. Next
-label: **Session 4, hands, Opus 5.5 at high effort**, items 21-22. After
-21 merges, the brain checks the `?engine=rust` preview and sends Mikey a
-few kalimba loops to try on his phone; after 22, a blind X/Y album.
-
-**Rust core, items 21-22 verified (brain, 2026-10-05).** On a third
-machine, the pinned toolchain (1.99.0) rebuilt `js/dlcore.wasm`
-byte for byte (41,832 bytes); 32 core tests, the generator tests three
-times and `--check` (22 of 22) pass. `measure.mjs --null` reproduces the
-hands' figures: notes null at -95 to -119 dB, core layers in whole loops
-at -105 to -123 dB, and the mix sits at Chromium's own JS-against-JS
-floor (about -86 dB), with no late notes or fallbacks. The live site
-serves the same `.wasm` (`application/wasm`) and 404s the crate's
-source. Performance, from the hands: audio thread about 10-20% busier
-with Rust, main thread the same or lighter, 4x fewer Web Audio nodes.
-
-**The album is labeled, not blind (a change from the plan):** the engine
-is a URL flag Mikey can see, and Diagnostics names it, so a blind X/Y
-isn't possible without a hidden toggle. On Chromium a blind test would
-find nothing anyway (the residual is float rounding). The open question
-is his phone: on iPhone, the JS voices are rendered by WebKit while the
-core copies Chromium, so the two engines could differ audibly there --
-the case for a hidden toggle and a real blind test. Asked Mikey which
-phone and browser he listens on.
-
-**Rust check heard (2026-10-07):** Mikey played the album with and
-without `?engine=rust` in **Firefox on desktop (Fedora)** and heard no
-difference. That is a cross-engine result: Firefox renders the JS voices
-with its own Web Audio, while the core copies Chromium's, so the two
-engines agreeing there is good evidence the port holds outside Chrome.
-iPhone/WebKit is still unheard; a hidden-toggle blind test stays optional.
-
-**Account move (planned 2026-10-07, done 2026-10-08):** Mikey is moving Driftloom from
-the Kruu-Mikey GitHub and Claude accounts to his nowmichaelclark ones.
-Nothing is queued and no PR is open, so it's a clean point to move.
-After the move, the repo URL, the brain's token and possibly the live
-URL change; the next brain fixes the links (README, this file, the
-Done lines) once Mikey confirms the new addresses. Old preview links in
-QUEUE.md's Done list keep working only if the Cloudflare account stays.
-
-**Session 5 (brain, 2026-10-08), the first on the new account.** State
-checked against GitHub and the live site: the repo arrived with its
-history (#129 the last merge, no open PRs, Workers Builds green on
-main); the live site serves v68 and `/rank` works. The old site's saved
-songs and ranking answers stay behind, and Mikey is fine with that. The
-handoff file from the old account's memory is in the Project's
-knowledge; what it held that this file lacked (the variety goal) is now
-under the decisions. This session, as a docs PR: links moved to the new
-repo and site (README, this file; the Done list's old preview links are
-history and stay), the commit identity switched, and the README trimmed
-to a front page -- what Driftloom is, the live link, how to use and run
-it, Profiles, the documents list -- with the engineering sections moved
-unchanged into `docs/NOTES.md` (one relative link fixed so it still
-resolves). The intro now names the Rust core behind `?engine=rust`, and
-the British spellings left in the README and NOTES are American now.
-Its PR (#130) was the first build on the new Cloudflare account, and
-the preview failed. The new Cloudflare account builds PR branches as
-**Previews** (beta, "Previews Base" in Settings -> Build), whose command
-is `npx wrangler preview` and which needs a `previews` block in
-`wrangler.jsonc` (added in this PR; config, not code, so the brain made
-it). `npx wrangler versions upload` doesn't work there: the preview
-build runs as a different Worker and rejects the config's name. Each
-Preview deploy gets a **Deployment URL** that "never changes"
-(`<deployment-id>-driftloom.nowmichaelclark.workers.dev`): use it as the
-commit preview for A/Bs. The branch's Preview URL moves with each push.
-Limits: 100 deployments per Preview, 100 Previews per Worker on the free
-plan, oldest pruned first. Production stays `npx wrangler deploy`.
-**Each Preview keeps its own copy of the build settings**, taken from
-Previews Base when its branch first builds: fixing Base doesn't fix a
-Preview that already exists (a typo'd command broke `brain-rust-6`'s
-until Mikey fixed it in that Preview's own settings). When a branch's
-preview fails and Base looks right, check that branch's Preview.
-
-**Next (Mikey, 2026-10-08): the Rust port first.** The brain wrote
-queue items 23-28 (every remaining voice, behind `?engine=rust`), from a
-read-only survey of `synth.js` done by two Sonnet subagents and
-spot-checked by the brain. Mikey's note: Sonnet 5.5 and Haiku 5.5 (new
-that day) are available, and the brain chooses models and effort. The
-sessions:
-- **Session 6:** hands, **Sonnet 5.5, high effort**: items 23-24 (the FM
-  voices, sine, tubular; the wave-table voices). Existing building
-  blocks and Chromium's own wave formulas; high effort because parity is
-  exact.
-- **Session 7:** hands, **Opus 5.5, high effort**: items 25-26 (bodies
-  and nylon's damp; bandpass, highpass and the noise source). Chromium
-  behavior to read and match: judgment-heavy.
-- **Session 8:** hands, **Sonnet 5.5, high effort**: item 27 (bass,
-  textures, drums; five channels; the performance A/B). Routine by then,
-  but many voices.
-- **Session 9:** hands, **Opus 5.5, high effort**: item 28 (the sung
-  voices).
-- **Brain checks between sessions.** The brain verifies each merged item
-  from GitHub, as before, and hands the mechanical reruns (the `.wasm`
-  byte check, tests three times, `--check`, the null and equivalence
-  runs) to **Haiku 5.5** subagents, reviewing their figures itself; a
-  Sonnet subagent reads diffs against the briefs. Haiku starts on these
-  low-risk reruns until it has a track record.
-- **Listening is batched:** one labeled album after item 28 across the
-  new voices, unless a null comes out shallow enough to be worth
-  hearing sooner.
-**Session 6 (hands, Sonnet 5.5, high) merged items 23 (#133, v69) and
-24 (#134, v70); brain-verified 2026-10-08.** A Sonnet subagent read
-both diffs against the briefs: no bugs; flag-off paths, draw order and
-count (tubular's five, whistle's slide), budget costs and fallbacks
-unchanged; voice constants live in Rust; the 0.2 s filter tail (a fix
-the hands found: the core freed the voice before the resonant lowpass
-had rung out) only on filtered voices. A Haiku subagent reran: generator
-tests three times pass, `--check` holds (22 of 22), and `--null` over
-all 18 ported voices reproduces the hands' figures (single notes -85 to
--121 dB worst note; loops at the JS-against-JS floor, late 0). The
-`.wasm` byte check and `cargo test` could not run here: **this
-container's proxy refuses `static.rust-lang.org`** (policy, not a
-glitch), so the pinned 1.99.0 toolchain can't be installed; GitHub
-Actions' `core` job ran both, green on #133 and #134, and that is the
-independent machine for now. Found while verifying: the Rust per-voice
-probe over many voices runs Chromium out of memory and hangs -- a
-harness fix put in front of item 25. Haiku 5.5's first job: accurate
-and candid (it reported the toolchain failure and the stall plainly),
-but slow (about 100 minutes, mostly the stall); fine for reruns.
-Wasm 55,229 bytes; core memory 7.08 MB (the hands' figure).
-
-**Session 7 (hands, Opus 5.5, high) merged items 25 (#136, v71) and
-26 (#137, v72); brain-verified 2026-10-08.** Harness fix first: Chromium
-never frees an offline context that loaded a worklet module (about
-1.6 MB a render), so `measure.mjs` now splits Rust and `--null` runs
-across fresh page loads and exits non-zero when the renderer crashes;
-the app can't leak this way (it never renders offline; 200 cores built
-and disposed on one live context stayed flat). A Sonnet subagent read
-both diffs: no bugs; flag-off paths, draw orders (accordion, the winds,
-panflute, temple bell, prepared's knock) and budgets unchanged; nylon's
-damp handled ahead, live and late; Chromium's "a setTarget starts from
-the last rendered value" rule (`reset_at`) applied only to the new
-voices, so earlier ones render as before. A Haiku subagent reran:
-generator tests three times, `--check` 22 of 22, `--null` over the new
-voices (noise source -146 dB; voices -99 to -131 dB; loops at the floor,
-late 0), and the per-voice probe through the core, which now finishes.
-CI's `core` job (byte check, core tests) green on both. Wasm 81,796
-bytes; core memory 10.9 MB. Haiku flagged its two probe runs (Rust and
-JS) as byte-identical as suspicious; the brain's reading: expected,
-since the tool prints levels to 0.1 LU and the engines differ by about
--100 dB.
-
-**The one-frame click** (found by the hands in #137, traced by the
-brain's Sonnet subagent from the code): a real defect in the
-JavaScript synth, on `main` today. A noise note on the bare grid at
-certain tempos plays one sample through a gain still at 1. Queued as
-**item 26b**, a fix in both engines, before the drums are ported.
-
-**Session 8 (hands, Sonnet 5.5, high) merged 26b (#139, v73), 27a
-(#140, v74) and 27b (#141, v75); brain-verified 2026-10-09.** 26b: a
-`--clicks` probe found 26 voices clicking on `main` and none after, on
-both engines; 1.4% of noise starts landed in the window (215 of 15,340
-in 200 loops). 27a/27b: bass, textures and drums play from the core,
-which serves all five channels; #140 also made every core parameter
-compare event times in frames (a loop at 11.3 s nulled at -38 dB
-before). Performance A/B, four loops with full kits: late ticks 0 both
-sides, audio thread 4-5% busier, main thread 9-13% lighter, node
-creation 110/s -> 0. Wasm 106,458 bytes; core memory 10.4 MB. Only the
-sung voices remain in JavaScript (not counted as fallbacks in
-Diagnostics). Brain's check: a Sonnet subagent read all three diffs
-(26b touched exactly the noise-fed gains, nothing else; flag-off paths,
-draws, budgets, ducking and the drums channel unchanged); a Haiku
-subagent reran tests three times, `--check`, `--clicks` on both engines
-(no clicks) and `--null` over every new voice (-95 to -147 dB; loops at
-the floor, late 0, fallback 0) and over the earlier voices. Three small
-problems found, queued as **item 27c**: 26b's `value` setter misbehaves
-for notes built late (offline proofs can't see it); the jingle draws
-its zils twice on a fallback; pan flute grace notes regressed to a
--68.5 dBFS worst sample (was -125 at v72).
-
-**Session 9 (hands, Opus 5.5, high) merged 27c (#143, v76) and 28
-(#144, v77); brain-verified 2026-10-09. Every voice now plays from the
-Rust core behind `?engine=rust`.** 27c: the -68.5 dBFS pan flute was a
-core bug since item 21, not 26b or 27a: Chromium times sources to
-1/1024 of a frame, the core used whole frames, so notes starting or
-stopping a hair past a frame (about 1 in 2000) came out wrong in every
-voice; fixed, and `--null` now starts one note in five in that window.
-The 26b setter did not cut late notes in Chromium (it moves a late
-note's past events to the present), but the safer form went in anyway,
-for WebKit. The jingle draws 7 on a fallback. 28: vowel, hum and choir;
-each singer's detune holds 13.5 s (longest sung note in 30,000 loops:
-10.2 s); the formant trim is computed in JavaScript and sent (a native
-host needs it ported, about 40 lines). Wasm 121,209 bytes; core memory
-12.44 MB. Brain's check: a Sonnet subagent read both diffs (no bugs; the
-source-timing fix goes through one `schedule` for every voice; every
-`_core*` call site checks the channel before drawing; the sung draws
-match in order and count, and a note over 13.5 s falls back before
-drawing); a Haiku subagent reran tests three times, `--check`, `--null`
-over every voice (worst note -84 dB or deeper, worst sample -89 dBFS;
-12 loops late 0, fallback 0) and `--clicks` on both engines (none).
-Small, unverified, for later: the core's sung step count isn't clamped
-to the draws it got (only a corrupt message could exploit it); a sung
-note's draws (up to about 7 KB) are cloned per message, where a
-transferred `Float64Array` would avoid garbage on the audio thread; no
-test plays a 13.5 s three-singer note.
-
-**Out for listening: "Rust, all voices"** (`docs/ALBUMS.md`), ten
-loops, each played with and without the flag.
-
-**Mikey, 2026-10-09: move the rest to Rust now** (the album waits for
-his evening). The brain wrote queue items 29-31: the channels, sends,
-duck, echo and reverb (29); wobble, saturator with Chromium's 2x
-oversampling, tone and highpass (30); both DynamicsCompressors, master
-and kill, the core's output straight to the destination (31). JS
-fallback notes reach the core's effects through one worklet input per
-channel. The generator's port still waits on the words (his 2026-10-03
-decision), unless he says otherwise. Sessions: **Session 10, hands,
-Opus 5.5, high: items 29-30; Session 11, hands, Opus 5.5, high: item
-31** (Chromium's compressor kernel and oversampling filters are the
-judgment-heavy parts). The brain verifies between them, as before.
-
-**Session 10 (2026-10-09): item 29 merged (#147, v78); item 30 (#148)
-done but left unmerged under the block's performance rule.** 29: the
-core mixes (channels, sends, duck, echo, reverb, tails); mix stage
-nulls at -143 to -175 dB, loops at the floor; flag off byte-identical;
-main thread 8-12% lighter, no fill-ins. 30: wobble, saturator with
-Chromium's 2x oversampling, tone, highpass; nulls at -77 to -86 dB
-before the compressor (JS against JS -78 to -104 there: last-bit LFO
-differences moving the wobble's read by a fraction of a sample), loops
-at the floor. The blocker: device fill-ins in 3 of 40 runs on item 30's
-core, none in 40 on item 29's core or JavaScript. **Brain's call:** 3
-against 0 in 40 runs each is within chance (one-sided p about 0.12), and
-the runs predate the fix for the LFOs' start-up catch-up, so not yet a
-finding either way. Session 10 continues: (1) the worklet fix
-(Chromium sometimes hands `process()` the previous block's
-`currentFrame`; the core then renders that block 128 frames late; `main`
-is exposed too) lands now in its own PR; (2) the 256-tap downsampler
-becomes an FFT convolution, as Chromium does it (cheaper, and closer to
-Chromium's rounding); (3) a longer interleaved A/B, item 29's core
-against item 30's, with each fill-in's time and the worst `process()`
-block; merge if item 30's fill-in rate is no worse, else stop with the
-figures. Mikey also plays the #148 preview on his phone.
-
-**The rerun (Session 10, 2026-10-09 evening).** The worklet fix landed
-on its own (#150, v79). The downsampler is now an FFT convolution
-(half the cost; re-null unchanged). The interleaved A/B, 60 runs a side:
-fill-ins in 5 runs on item 30's core against 1 on item 29's; pooled
-with the first A/B, 8 of 100 against 1 of 100 (p about 0.017). Item
-30's runs also have far more long render quanta (90th percentile 28 ms
-against 11; 7 runs over 20 ms against 1), four of its fill-in runs had a
-38-71 ms quantum, and it happens on lite too, where item 30 costs *less*
-than item 29 on average. So: real, and not compute cost. Something
-stalls the audio thread now and then. **Brain's call:** find the stall
-before deciding anything (suspects: garbage collection in the worklet's
-scope, a message or allocation item 30 added, nodes of the old JS chain
-still pulling or running after it's cut off, `memory.grow`); use runs
-with a quantum over 20 ms as the measure (seven times commoner than
-fill-ins, so a bisect needs far fewer runs). #148 stays open.
-
-**The stall hunt (Session 10, 2026-10-10).** Not item 30's code. Traces
-(V8 GC, wasm, per-node Web Audio) put every quantum over 15 ms in one of
-two kinds in *both* builds: off the CPU (15-322 ms of wall time for
-0.5-20 ms of CPU), or charged as CPU wherever the thread happened to be
-(item 29 inside native DelayNode and gains, item 30 inside its script,
-once inside Chromium's topology check). During one, a separate sampler
-process went 115 ms without a tick: the whole VM stopped. The core's
-`process()` takes 0.15-0.4 ms; no allocator, fixed memory, GCs under
-0.5 ms, the old JS chain doesn't render once cut off, page faults and
-context switches the same in both builds. **Slot order mattered:** with
-item 30 run first, item 29 had more long quanta; the earlier A/Bs put
-item 30 second every time, so their "8 of 100 against 1" was partly the
-slot, and the brain read it too strongly. Counterbalanced, all 120 runs
-a side: fill-ins 5 (item 29) against 4 (item 30); quanta over 20 ms 3
-against 8 (p about 0.11). **Brain's call (2026-10-10): merge #148.**
-The stalls are the test machine's, item 30 adds nothing that could
-cause one, and fill-ins are even; the flag is testers-only and the merge
-revertible. The phone is the real test (the "Rust, all voices" album,
-then the item-31 album). **For future A/Bs:** counterbalance the slot
-order, and use `perf.mjs --trace-dir/--trace-over` to look inside any
-long quantum before blaming code; the sandbox VM freezes now and then.
-
-**Session 10 merged #148 (item 30, v80); Session 11 merged item 31
-(#156, v81). Brain-verified 2026-10-10: with `?engine=rust` the whole
-sound path runs in the core** -- voices, mix, wobble, saturator, both
-compressors (ported from Chromium 141's DynamicsCompressorKernel),
-master and kill -- and the worklet goes straight to the speakers; Web
-Audio carries only fallback notes. Live audio nodes 62 instead of about
-1,280; audio thread lighter than item 30's; fill-ins even against item
-30 (counterbalanced). Stereo-ready (per-channel state, linked
-detection), still mono. Wasm 157,544 bytes; core memory 14.50 MB. A
-Sonnet subagent read #150, #148 and #156: no bugs; flag off unchanged;
-the JS chain cut on attach, fallback notes reach the core through its
-inputs, a load failure restores the JS graph; every runtime method
-carries the same automation. A Haiku subagent reran: tests three times,
-`--check`, the full `--null` (loops -85 to -87 dB at the JS floor, late
-and fallback 0, the ceiling pressed in the loud set; mix and chain
-stages -77 to -94 dB beside their own JS floors), `--clicks` and
-`--endings` on the core (clean). Hardening the review found, none seen
-in a render, queued as **item 31b**: a core that traps while playing
-goes silent instead of falling back; Diagnostics after a load failure;
-#150's forward-only frame count; the LFO catch-up in one block; the
-handover re-glide.
-
-**Open for Mikey: the compressors' cold start.** Chromium's compressors
-start with an empty detector, so the first tenth of a second of music
-after first Play (and after every rebuild, e.g. a quality change) can
-dip by up to about 10 dB for a few tenths of a second. The JavaScript
-app has always done this; the core copies it, and with the flag on it
-happens when the core arrives (a core arriving mid-music dips again). A
-warm start is one line in the core; in JavaScript it needs a short,
-inaudible signal into both compressors before the music. *Settled
-(Mikey, 2026-10-10, "The engine"):* warm the core's compressors, in item
-31b; the JavaScript engine keeps its cold start.
-
-**Listening:** the "Rust, all voices" album now covers the whole mix.
-
-**Next:** Session 12, hands, **Sonnet 5.5, high**: item 31b. After
-Mikey's listening: making the core the default (the flag's last step),
-then the ears reports' sound items (stereo first), and the generator's
-port when the words settle.
-
-**Ears reports** (`docs/ears/batch-1.md`, `batch-2.md`, `tools.md`): a parallel sounds-and-ideas brain chat
-measured 32 albums against Driftloom (stereo, too much 60-120 Hz and
-too little 1-5 kHz, chords changing too often, loops that circle,
-short tails, full stops where records drop the floor). Its candidate
-items 1 (stereo), 2 (bass and presence) and 5 (tails, echo throws)
-touch the effects chain, so they come after item 31. Not started: the word rankings, Depth two, the open decisions,
-the iPhone check.
-
-Not started, for Mikey's own time: the word rankings, Depth two, the
-open decisions above, the iPhone check.
-
-**Session 12 (hands, Sonnet 5.5, high) merged item 31b (#161, v82).
-Brain-verified 2026-10-11 (Session 13).** A Sonnet subagent read the
-diff against the brief: all six parts do what it asks; flag off
-unchanged (every new path behind the flag); no test hook ships (the
-trap is injected by `tools/core-paths.mjs`); v82 in both stamps. The
-warm start plays each compressor on silence until it rests (at most 195
-blocks, at 96 kHz), bit-identical at every sample rate to a long cold
-run. A Haiku subagent reran: worklet and generator tests, the balance
-lock (22 of 22), `core-paths.mjs` twice (29 of 29), `--clicks` and
-`--endings` on the core (clean), and `--null --voice kalimba` twice
-(core renders identical across runs; late and fallback 0; first second
--15.8 to -22.7 dB against JavaScript's cold start, as expected; after
-it -83.6 to -87.3 dB, at JavaScript's own floor). Cargo tests and the
-`.wasm` byte check can't run here (the pinned toolchain is behind the
-proxy); CI's `core` job ran both, green. **Found, folded into item 32:**
-`dispose()` leaves the failure handlers set (a narrow window where a
-disposed synth reconnects its JS chain); a quality toggle after a trap
-rebuilds the core; a block that goes backward into the core after three
-stale frames is untraced; the flutter's catch-up error is about 1000x
-the stated figure (still harmless); the JS-vs-JS floor moved up to
-2.8 dB between identical runs, against `measure.mjs`'s stated
-repeatability; and 31b's +3% render on full is unexplained.
-
-**Mikey decided: mono only** (see "The engine"), and closed #152.
-
-**Next:** Session 14, hands, **Sonnet 5.5, high**: item 32.
-
-**Later on 2026-10-11:** item 32 merged (#164, v83) and the Design v17
-UI (#166, v84); neither brain-verified yet. Mikey chose the words next,
-with ranking in bulk: item 33 widens `/rank`'s pool first.
-
-**Session 16 (brain, Opus 5.5, 2026-10-11), the words, roadmap 19 only.**
-Item 33 merged (#168, v85; not brain-verified, by Mikey's choice: no
-verifying other merged items this session). Read Mikey's first 41 pool-3
-trials with `ranks.mjs` (findings in `docs/MOODS.md`): nothing fit 8% of
-the time (was 40%); he reaches for air and motion words, seldom the heart
-words; 2-5 shows a word, far too few to fit. The fit needs every ranked
-loop placed on the ten dials, which nothing measures yet, so the queue
-gets the tools first. **Mikey decided:** reflective may also be neutral;
-cinder and shatter may take a bright mode when a word calls for one.
-Queued items 34 (dials), 35 (the fit) and 36 (the two mode decisions).
-Then Mikey ranked 181 trials in all: nothing fit 3%; steady, cool,
-wistful and zany fit nearly every loop, heartwarming and joyful almost
-none; the energy words follow tempo and drums clearly, but a scratch fit
-on spec features (32% top word) did not beat base rates (38%). Mikey
-proposed **word albums** instead of more five-word trials; the brain sent
-two pilots and queued 37 (answering them on `/rank`), with 35 gaining the
-album builder and an honest check against base rates.
-Mikey heard both pilots the same evening: about half the guesses fit
-(details in `docs/MOODS.md`). He then asked for the words in the app as
-**vibes**, his top priority, with a sketch: queued as item 38 ahead of
-34-37 (37 on hold), and the brain drafted all 71 recipes in
-`docs/VIBES.md` (names checked against the generator's).
+Moved to `docs/archive/brain-log.md` (2026-10-26), newest first. A brain
+session's own entry goes there at its archive pass.
 
 ## History
 
-One line per PR; details are in the PRs, `ROADMAP.md` and the queue's
-Done list.
-
-- **#1-#15 (to v32):** rhythm cells and `stats.mjs`; Cloudflare deploy,
-  build stamp, offline fix; melody forward in the mix; `measure.mjs`;
-  motif-level omission, stepwise walk, register separation; audible
-  contour; anchor by transposition; phrase velocity; vowel drift; the
-  choir; the glottal source (v31); slid attacks (v32).
-- **#16-#18:** this file.
-- **#19 (v33):** the melody starvation fix -- `keys` priced 25 -> 12, the
-  soft cap made a reserve that works on lite. Lite still lost >5% of the
-  melody on 12% of loops then.
-- **#20 (v34):** `keys` chords had played through the melody bus since the
-  app began; moved to the chords bus.
-- **#21-#25:** roadmap item 13; the loudness yardstick in `measure.mjs`.
-- **#26 (v35):** three level bugs -- bells took velocity twice, pad skipped
-  the chord spread, rhodesbass trimmed twice.
-- **#30, #31:** the balance lock; the punch figures (no metric matched the
-  ear, so levels went to listening).
-- **#34, #38, #40, #46 (v36-v39):** 6/8 -- chords made strict, then the
-  rhythm section restored to the cross-rhythm he preferred.
-- **#42:** the drum knob, a listening test, closed unmerged.
-- **#48, #53 (v40, v42):** the loud leads trimmed at the source (pluck,
-  saw; then ocarina, flute, whistle, moog, analoglead).
-- **#51, #59 (v41, v44):** fiddle and accordion, take one (disliked) and
-  take two.
-- **#57, #62, #63 (v43, v45, v46):** `tide` -- profile, progressions per
-  mode, drone, 3/4; waltz melodies, grace notes, harmony; waves and the
-  hand kit.
-- **#64, #65 (v47, v48):** the harsh leads softened; nylon with strumming,
-  pan flute.
-- **#66, #67 (v49, v50):** `cinder` (the Andalusian cadence spelled per
-  mode), `wayfare` (the chug, with its budget fix).
-- **#74, #75 (v51, v52):** grace notes shorter than the attack cut off with
-  a click (pan flute, flute, ocarina, analoglead) and `--endings`; the
-  nylon strum tightened.
-- **#79, #82 (v53, v54):** wayfare's own drum grooves; then their variety
-  back.
-- **#88, #89 (v55):** the performance harness and baseline; sound polish
-  (sung notes on formant peaks, 5/4 chords, arpeggios clipped).
-- **#92 (v56):** composition depth, first pass.
-- **#96-#108 (v57-v64):** performance wins, the temple bell, the moods,
-  composition depth's second pass.
-- Docs PRs from the brain are the rest of the numbers in between.
+Moved to `docs/archive/brain-log.md`, below the log.

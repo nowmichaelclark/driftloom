@@ -1,5 +1,7 @@
 # Performance baseline (v54)
 
+*Archived 2026-10-26, moved from `docs/perf-baseline.md` unchanged.*
+
 Queue item 10: numbers before any overhaul. Measured with
 `tools/perf.mjs` on 2026-09-26, on `main` at v54. Nothing in `js/` was
 changed to take them. This is also the baseline a compiled audio engine

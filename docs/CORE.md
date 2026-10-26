@@ -1,7 +1,7 @@
 # The core: charter
 
 **Status: approved by Mikey, 2026-10-13** (drafted by the brain,
-Session 18). Phase 1 is in `docs/QUEUE.md` as items 42-46. Changes to the
+Session 18). Phase 1 (items 42-46, done) is in `docs/archive/queue-items.md`. Changes to the
 charter are his to make; the brain proposes them, with the reason.
 
 The core is Driftloom's engine: the part users never see but developers
@@ -56,7 +56,7 @@ Everything allocated once, at start; nothing allocated, locked or freed
 while playing (true today for the synth; extended to the generator).
 
 - *Measure:* audio-thread time per second of the heaviest loops, against
-  today's core and the old JavaScript synth (`docs/perf-baseline.md`:
+  today's core and the old JavaScript synth (`docs/archive/perf-baseline.md`:
   54-95 ms/s): target **under half of today's core** (*proposed*).
 - *Measure:* the whole engine's memory, fixed and reported in bytes;
   the `.wasm` size (159 KB today) kept under a stated budget.
@@ -348,8 +348,8 @@ one before it.
    today's voices re-expressed as recipes where it fits (each proven to
    null against its Rust original, or A/B'd if it changes), the
    ears-approved sounds among them: since 2026-10-15 those are built
-   before phase 2 as Rust blocks (the sound batch, `docs/QUEUE.md` items
-   54-73), so here they become recipes like today's voices.
+   before phase 2 as Rust blocks (the sound batch, items 54-73 in
+   `docs/archive/queue-items.md`), so here they become recipes like today's voices.
 6. **Codes, version 2.** Short codes, album seeds, recipe packs by hash,
    plain links. Old codes stop working; that's fine.
 7. **The host kit.** The finished C header, the audio export in the app
