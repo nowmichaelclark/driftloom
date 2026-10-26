@@ -691,6 +691,14 @@ export class Synth {
     return Math.max(core.ahead != null ? core.ahead : 0, callback) || null;
   }
 
+  // Whether any note has reached the core yet, so `renderAhead` is a
+  // measurement and not just the render callback (queue item 76); false
+  // without the core.
+  get aheadMeasured() {
+    const core = this._coreMix();
+    return !!core && core.ahead != null;
+  }
+
   // The worst render-ahead the core has measured this session, seconds
   // (queue item 47); 0 without the core.
   get worstAhead() {

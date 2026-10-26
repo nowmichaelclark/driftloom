@@ -49,6 +49,12 @@ const REDECIDE_LEAD = 0.06;
 // worth (`node tools/views.mjs --buffer 0.37 --delay 400`), so a quarter of
 // it, and never less than this.
 const AHEAD_MARGIN = 0.05;
+// Until a note has reached the core there is no render-ahead to plan from
+// (queue item 76). A Moto's core had rendered 133 ms past the clock when
+// the first loop's notes, posted 77-82 ms ahead, reached it: six were late
+// and left out. Until the first measurement every note is planned no
+// closer than the device's output latency, and never less than this.
+const COLD_MARGIN = 0.25;
 const AHEAD_SHARE = 0.25;
 // And the queue, visible, deep enough for the longest recent stall plus
 // the render-ahead, with this to spare, up to the hidden depth. A stall
@@ -556,17 +562,35 @@ export class Engine {
     return Math.min(DEEP_MOST, worst);
   }
 
+  // On the core, before any note has reached it (queue item 76): nothing
+  // has measured the render-ahead yet, so notes are planned from the cold
+  // margin instead.
+  get cold() {
+    return !!this.synth.queuesAhead && !this.synth.aheadMeasured;
+  }
+
+  // The cold margin: the device's output latency where the browser gives
+  // one, else the render callback, and never less than COLD_MARGIN.
+  get coldMargin() {
+    const declared = Number(this.ctx.outputLatency) || Number(this.ctx.baseLatency) || 0;
+    return Math.max(COLD_MARGIN, declared);
+  }
+
   // What decided the notes handed over next, for Diagnostics' log of late
-  // notes (queue item 47): the synth passes it to the core with each note.
+  // notes (queue item 47): the synth passes it to the core with each note,
+  // with what they were planned from (item 76): the cold margin, or the
+  // render-ahead as measured.
   _why(cause) {
-    if (this.synth.queuesAhead) this.synth.why = cause;
+    if (this.synth.queuesAhead) this.synth.why = `${cause} [${this.cold ? 'margin' : 'measured'}]`;
   }
 
   // The soonest a note decided now may start: `least` ahead of the clock,
-  // and on the core never inside its render-ahead.
+  // on the core never inside its render-ahead, and before that is measured
+  // never inside the cold margin.
   _soonest(least) {
     const a = this.ahead;
-    return this.ctx.currentTime + (a > 0 ? Math.max(least, a + Math.max(AHEAD_MARGIN, a * AHEAD_SHARE)) : least);
+    const planned = a > 0 ? Math.max(least, a + Math.max(AHEAD_MARGIN, a * AHEAD_SHARE)) : least;
+    return this.ctx.currentTime + (this.cold ? Math.max(planned, this.coldMargin) : planned);
   }
 
   // Called when the page is shown or hidden, so the tick rate follows.
@@ -764,6 +788,8 @@ export class Engine {
     return {
       // Planned from (at least a render callback), and as measured.
       renderAheadMs: `${ms(this.ahead)} (measured ${c.ahead == null ? '- no notes yet' : ms(c.ahead)})`,
+      // Queue item 76: until a note reaches the core, planned from this.
+      plannedFrom: this.cold ? `the cold margin, ${ms(this.coldMargin)} ms` : 'the measured render-ahead',
       worstRenderAheadMs: ms(c.worstAhead),
       // Queue item 47: what is planned from while hidden, and this device's
       // worst before this session.
