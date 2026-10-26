@@ -272,6 +272,23 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
+- **Session 26 (brain, Opus 5.5, 2026-10-26): done; Mikey's verdicts
+  pending.** The sound batch (46b-73) checked: it passes (the log,
+  `docs/archive/brain-log.md`). Item 72's big baseline moves are the
+  reshuffle: shil-doask, reisk-foa and their-roask drew lateFloor at item 71
+  and not at 72, and every loop whose choices didn't change is bit for bit
+  unchanged. **The albums** (`docs/ALBUMS.md`, "Session 26"): three in-app
+  codes and four sets of clips on one private page whose verdicts save to its
+  database. **Read them back** with `ArtifactData` (`list`, collection
+  `verdicts`, the page's URL in `docs/ALBUMS.md`); each verdict becomes a
+  queue item ahead of 77 (tune and drop) or nothing (keep); the bass pick
+  sets `LIFT_DB`; the blind A/B's key is in `docs/ALBUMS.md`. **Phase 2
+  written** (items 77-92, #275), with Mikey's three decisions of the day:
+  phase 2 takes the sequencer, the port is proven note for note, glacial
+  (76b). **Next:** the hands take 76, 76b, 74, then 77. The brain's next
+  check: after item 82 (the player), or sooner if the verdicts call for one.
+  Done lines #241-#274 stay live until the verdicts are in, then go to the
+  archive.
 - **Since 2026-10-26 (hands, docs restructure and item 76).** All three
   groups of the sound batch are merged (items 54-73, #245-#272, v103-v123;
   group (b) is items 64-66, group (c) 67-73), and the album loops in the
@@ -372,7 +389,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
     groups in that order (a: items 54-63; b: 64-66; c: 67-73), one PR per
     item; a new session per group (or when usage runs out), same brief.
     Item 74 whenever a session has usage to spare (Sonnet is enough).
-  - **Session 26** (brain, Opus): check all three groups (the hands' notes
+  - **Session 26** (brain, Opus; **done 2026-10-26**, see the first bullet): check all three groups (the hands' notes
     on items 55-73 are in `docs/archive/notes.md`; their Done lines in
     `docs/DONE.md`); a labeled
     album (keep / tune / drop) of the new sounds and mixing, and a blind
