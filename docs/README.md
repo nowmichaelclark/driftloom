@@ -48,6 +48,7 @@ Out of the Project sync. Open one when a question needs it.
 | `roadmap-shipped.md` | The roadmap items that shipped or closed. |
 | `engineering-notes.md` | How Driftloom works inside (it was the README's body): feeling, measurement, the core, the voices. |
 | `perf-baseline.md` | The performance baseline (v54) and what came of it. |
+| `session26-clips.md` | The brain's clip renderer from Session 26 (forced choices, a moved constant), for item 83. |
 
 Archived text keeps the pointers it was written with; where one names a
 heading that moved, this map and the headings above say where it went.

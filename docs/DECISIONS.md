@@ -47,6 +47,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 - 2026-10-11 -- **Cinder and shatter may take a bright mode when a word calls for one** (2026-10-11). Both built in queue item 36.
 - 2026-10-11 -- **Word albums** (2026-10-11, his idea after 181 rankings): one word at a time, "Is this playlist heartwarming? Which songs are not?" The brain guesses loops for a word and mixes in a couple it expects not to fit. The five-word ranking rests; its answers stay the base for the fit.
 - 2026-10-11 -- **Vibes in the app** (2026-10-11, top priority): the words are called vibes; a **Vibes** key on Now Playing opens a scrolling two-column list with Close and Clear All; pick any number; each new loop leans toward up to five of them, weights shifting loop to loop (one vibe alone at 50% or more). All 71 pool-3 words. A real feature, and the tuning tool: he picks vibes and sends loops that fit well or don't. Queue item 38; recipes in `docs/VIBES.md`. A Painter session can refine the look.
+- 2026-10-26 -- **Glacial, a new vibe (Mikey, 2026-10-26; his idea of 2026-10-22):** very slow and vast; "vast and cool" in color (soft pads and swells, held bass, almost no drums, wide space, cool tone, long chords); the arc swinging 5-8 minutes, and "maybe it can swing to 8-12 if it is paired with another glacial-adjacent vibe". Queue item 76b.
 - by 2026-10-16 -- The old branches stay: he likes looking back on them.
 
 ## The engine and stereo
@@ -70,6 +71,8 @@ stays, marked superseded, with the date. Long reasoning goes to
 - 2026-10-13 -- **The JavaScript synth retires at the end of phase 3** (Mikey, 2026-10-13); earlier only on its own branch, merged when the replacement is ready. **The charter's targets stand**, to be revisited: the brain proposes changes, or higher aims, as measurements come in.
 - 2026-10-13 -- **Bit-identical everywhere** (Mikey, 2026-10-13): the same code makes exactly the same samples on every device; the core carries its own math.
 - 2026-10-12 -- **A new brain chat for the core.** Before it: one more bug fix if the Pixel 10a tester's report on #187 calls for one.
+- 2026-10-26 -- **Phase 2 takes the sequencer** (Mikey, 2026-10-26): Broken Friends needs a loop from a seed with no JavaScript, so what the page's engine and synth do between the generator's events and the core's notes moves into the core in phase 2, not phase 3. `docs/CORE.md`, phase 2.
+- 2026-10-26 -- **The port is proven note for note** (Mikey, 2026-10-26): the JavaScript generator's few transcendental calls move onto the core's math first, then the Rust port is held to exact hashes of every decision, rather than to statistics and a blind album alone (which still close the phase). Queue item 77.
 
 ## Share codes, requests and exports
 
