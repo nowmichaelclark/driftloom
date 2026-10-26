@@ -305,7 +305,14 @@ one before it.
    block interface (promise 5), so phase 5 starts from a clean place.
 2. **The generator in Rust.** `generator.js`, vibes, moods and characters
    ported, with profiles and vibes as data, built around the request
-   (promise 11) from the start. *Done when:* every choice can be pinned
+   (promise 11) from the start. **And the sequencer** (Mikey, 2026-10-26:
+   Broken Friends needs a loop from a seed with no JavaScript): what the
+   page's engine and synth do between the generator's events and the core's
+   notes moves into the core in this phase, so a seed plays natively and in
+   the game; phase 3 moves the app onto it. **Proven note for note**
+   (Mikey, 2026-10-26): the JavaScript generator's few transcendental calls
+   move onto the core's math first, and the port is held to exact hashes of
+   every decision (queue items 77-82). *Done when:* every choice can be pinned
    (promise 11's measure), and the balance lock
    and `stats.mjs` corpus numbers match the JavaScript generator's within
    stated tolerances, and a blind album (old vs new generator) passes his
@@ -326,7 +333,7 @@ one before it.
    time. *Measured:* the same code played twice with the slider in the
    upper range wanders differently; below it, identically.
 3. **Off the page.** The whole core runs on the audio side; the page
-   sends commands and draws events. The scheduler, the lookahead and the
+   sends commands and draws events (on the sequencer phase 2 built). The scheduler, the lookahead and the
    JavaScript synth and generator are retired at the end of this phase
    (Mikey, 2026-10-13). If retiring the JavaScript synth earlier saves
    work, it happens on its own branch, merged only when the replacement
