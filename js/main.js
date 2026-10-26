@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v122';
+const BUILD = 'v123';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -1474,7 +1474,8 @@ function wire() {
     ui.el('bpmVal').textContent = state.spec.bpm;
     // The same number of passes takes a different time at a new tempo.
     ui.el('lenVal').textContent = describeLength(state.spec.playFor || 0, state.spec);
-    if (state.synth) state.synth.setEchoTime((60 / state.spec.bpm) * 0.75);
+    // The loop's own echo time in beats (queue item 73), at the new tempo.
+    if (state.synth) state.synth.setEchoTime((60 / state.spec.bpm) * (state.engine ? state.engine.echoBeats : 0.75));
     if (state.engine) state.engine.redecide();
   });
 
