@@ -17,7 +17,7 @@ taken from the reports:
   green on all five legs.
 - **JavaScript:** the generator's tests three times and the other eight
   suites pass; the balance lock: all 22 figures within tolerance.
-- **The core baseline:** `node tools/baseline.mjs` run here (result in the next commit); green in CI on `main`.
+- **The core baseline:** `node tools/baseline.mjs` here: "Nothing moved" (loops 1280 figures, voices 245, refusals 26, costs 55, stereo 480, repeat 2), so the committed baseline is what `main` plays, mono and stereo, full and lite.
 - **Item 72's big baseline moves** (shil-doask +7.6 LU, reisk-foa +4.6,
   their-roask +3.2): the reshuffle, not a bug. Every baseline loop's choices
   drawn at item 71 and at 72: those three drew lateFloor at 71 and not at 72
