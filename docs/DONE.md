@@ -251,3 +251,8 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #241 are in
   that fall where the music breathes rather than always on the same off-beat.
   For the album: haven #38 from 0:00 (one beat, 779 ms) and thaw #10 from 0:00
   (half a beat, 448 ms).
+- #274, the docs split by role (no version bump; docs and comments only,
+  `main` redeploys): nothing to hear. `AGENTS.md`, `core/AGENTS.md` and
+  `docs/README.md` are new; the queue, the brain's file, the roadmap and the
+  decisions are small live docs, with the history in `docs/archive/`; queue
+  item 76 (the first loop after the app starts) is queued.
