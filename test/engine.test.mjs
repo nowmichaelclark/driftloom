@@ -614,6 +614,33 @@ console.log('\nlateFloor (queue item 69)');
   check('a resumed loop doesn\'t wait again', re.engine.late === null);
 }
 
+console.log('\npadSweep (queue item 72)');
+{
+  // A loop that draws padSweep: its sweep handed to the synth once, at its
+  // first step, and again on Play; a loop without it makes no call.
+  let seed = 0;
+  for (let s = 1; s < 3000 && !seed; s++) if (rig(true, s * 7907).engine.padSweep) seed = s * 7907;
+  const r = rig(true, seed);
+  r.run(20);
+  const setups = r.calls.filter((c) => c.name === 'padSweepSetup');
+  const o = setups[0] && setups[0].args[0];
+  check('set up once, at the first step', setups.length === 1 && setups[0].args[1] < 0.1, JSON.stringify(setups.map((c) => c.args[1])));
+  check('closed at 450-800 Hz, 2-3.5 octaves, every 12-28 s', o && o.lo >= 450 && o.lo <= 800 && o.oct >= 2 && o.oct <= 3.5 && o.period >= 12 && o.period <= 28, JSON.stringify(o));
+  const n = r.calls.length;
+  r.engine.stop();
+  r.engine.start();
+  r.engine.clock.stop();
+  r.run(r.ctx.currentTime + 1);
+  check('and sent again on Play', r.calls.slice(n).filter((c) => c.name === 'padSweepSetup' && c.args[0]).length === 1);
+  let none = null;
+  for (let s = 1; s < 50 && !none; s++) {
+    const y = rig(true, s * 13);
+    if (!y.engine.padSweep) none = y;
+  }
+  none.run(10);
+  check('a loop without it makes no padSweep call', !none.calls.some((c) => c.name === 'padSweepSetup'));
+}
+
 console.log('\nThe arc (queue item 63)');
 {
   // A loop that draws the arc: started once, at its first step, over 2-5
