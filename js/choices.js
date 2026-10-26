@@ -1,8 +1,8 @@
 // The per-loop choices (queue item 54): the one place that decides which of
 // the sound batch's changes a loop gets.
 //
-// Mikey's rules for every choice (2026-10-18; docs/QUEUE.md, "Before phase
-// 2: the sound batch"):
+// Mikey's rules for every choice (2026-10-18; core/AGENTS.md, "Rules for
+// sound items"):
 //
 // - today's behavior stays one option of every choice, never replaced;
 // - each choice is drawn per loop, from the loop's seed on a stream of its

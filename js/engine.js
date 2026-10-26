@@ -82,9 +82,9 @@ const TICK_HIDDEN = 250;
 // decided wired its oscillators and filters into the mix up to 3 s early,
 // and the browser renders a wired-up voice -- silence and all -- from the
 // moment it is connected: a hidden tab cost the audio thread 20-100% more
-// than a visible one (docs/perf-baseline.md). So a decided note waits in a
-// queue and is built on the tick before it is needed, with room for three
-// late ticks. The gap is measured, so if the timer does slow to a tick a
+// than a visible one (docs/archive/perf-baseline.md). So a decided note
+// waits in a queue and is built on the tick before it is needed, with room
+// for three late ticks. The gap is measured, so if the timer does slow to a tick a
 // second the window widens to match, back to 3 s. Visible, the lookahead
 // is already shorter than the window and every note is built at once, as
 // before.

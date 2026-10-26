@@ -1,5 +1,7 @@
 # Engineering notes
 
+*Archived 2026-10-26, moved from `docs/NOTES.md` unchanged. Reference reading; open it when a question needs it.*
+
 How Driftloom works inside, what was measured, and why things are the way
 they are. These sections were the body of `README.md` until 2026-10-08,
 moved here unchanged; the README is now a short front page, and
@@ -531,7 +533,7 @@ alike. It reports each side's device fill-ins and long render quanta;
 `--trace-dir` keeps the trace of any run with a quantum over
 `--trace-over` ms, to look inside before blaming code.
 The fixed set of loops, how they were chosen and what the first baseline
-found are in [`docs/perf-baseline.md`](perf-baseline.md).
+found are in [`docs/archive/perf-baseline.md`](perf-baseline.md).
 
 ### The word-ranking test
 

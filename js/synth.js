@@ -426,9 +426,9 @@ function tanhCurve(drive = 1.0, n = 2048) {
 // Nothing used to disconnect a finished voice. Its sources stopped, but
 // its gains and filters stayed wired to the channel, and the browser kept
 // rendering them -- silence, at full cost -- until the garbage collector
-// happened to find them. Measured live (docs/perf-baseline.md), that was
-// 40-45% of the audio thread's work at normal speed and about 70% when the
-// main thread was slow and collected less often.
+// happened to find them. Measured live (docs/archive/perf-baseline.md),
+// that was 40-45% of the audio thread's work at normal speed and about 70%
+// when the main thread was slow and collected less often.
 //
 // So the synth notes every node a voice creates, and once the voice is
 // over it disconnects them all. A voice is one call into one of the entry

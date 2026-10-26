@@ -1,10 +1,10 @@
 // Vibes: the recipes (queue item 38a).
 //
-// Data only. The brain edits this file from now on (docs/BRAIN.md, "The
-// words"); docs/VIBES.md keeps the reasoning, the history and "How a recipe
-// works". The generator reads these in js/generator.js (`newSpec` and
-// `characterOf`); test/generator.test.mjs checks every field and every name
-// in them and fails on an unknown one.
+// Data only. The brain edits this file from now on (docs/DECISIONS.md, "The
+// words and vibes"); docs/VIBES.md keeps the reasoning, the history and
+// "How a recipe works". The generator reads these in js/generator.js
+// (`newSpec` and `characterOf`); test/generator.test.mjs checks every field
+// and every name in them and fails on an unknown one.
 
 export const VIBES = {
   adventurous: { feel: { lift: 0.75, energy: 0.8 }, tempo: 0.7, profiles: { wayfare: 20, tide: 8, glade: 3.4, cinder: 3.4, haven: 0.05, vapor: 0.05 }, melody: { fiddle: 5.7, whistle: 2.8, panflute: 2.8 }, drums: 1.5, long: 1.5 },

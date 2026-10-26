@@ -8,7 +8,9 @@ bit for bit, on every target. Its promises and how each is measured are in
 [`docs/CORE.md`](../docs/CORE.md).
 
 This guide is for developers and AI agents. It covers how a host drives the
-core, how the sound is built, and how to add to it.
+core, how the sound is built, and how to add to it. The rules for changing
+the core (what every PR must hold, and the rules for new sounds) are in
+[`AGENTS.md`](AGENTS.md) beside this file.
 
 ## Hosting it
 

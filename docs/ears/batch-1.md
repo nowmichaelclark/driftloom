@@ -33,7 +33,7 @@ That's still Mikey's call.
 All 20 albums are stereo: side-to-mid energy is -8 dB at the median, from
 -2 (*Drukqs*, the piano wide across the room) to -15 (*Cupid's Head*,
 nearly centered). Driftloom's left and right are identical. There is no
-panner anywhere in `synth.js`, and NOTES.md calls the mix "the mono bus".
+panner anywhere in `synth.js`, and NOTES.md (now `docs/archive/engineering-notes.md`) calls the mix "the mono bus".
 
 This is the cheapest large change on the list. Bass and kick stay
 centered, voices take places left and right by role and register, and the

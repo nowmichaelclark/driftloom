@@ -2,3 +2,6 @@
 # tools/build-core.sh, is committed.
 core/target/
 node_modules/
+
+# Python bytecode (tools/ears/ runs under python3).
+__pycache__/
