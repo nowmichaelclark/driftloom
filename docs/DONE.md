@@ -25,3 +25,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   pairs side by side: foggy and misty, experimental and strange, airy and
   breezy, mellow and chill. Lively should drive as hard as energetic did,
   restful should sound like a lullaby. Loops without vibes are unchanged.
+- #282, the bass level (item 76c, v126), preview URL:
+  <https://6fee2058-driftloom.nowmichaelclark.workers.dev> (commit 3383d71):
+  the bass layer is +3 dB (by ear, K-weighted) in loops that play a kick (a
+  soft kick or the hand kit's frame drum count), today's level in loops
+  without one; rhodesbass (an FM voice) stays as it was. Listen to dust #7
+  and noan-nou (corpus seed 20261009 and the baseline's seed 1, 0:20 on) for
+  the fuller low end, and to dust #42 (no kit) for no change at all. A kit
+  or bass that comes in late (lateFloor) or drops out (floorDrop) keeps its
+  loop's level throughout. Loops without a kick are unchanged to the bit.
