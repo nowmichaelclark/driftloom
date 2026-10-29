@@ -230,6 +230,82 @@ tuning: the calm vibes still draw a kit in 20-35% of loops, and **foggy and
 misty draw the same profiles in the same shares** (dust 15%, vapor 11%,
 thaw 11%), which item 76b separates.
 
+**As built (queue item 76b, v125).** `js/vibes.js` holds 88; `VIBE_IDS`
+is rewritten in alphabetical order, so codes made before v125 may play
+other vibes or none (Mikey: no bloat for compatibility). What the hands
+moved from the drafts and from `main`, to meet the item's yardsticks:
+
+- **Drums, the calm five** (under 15% of loops): the lean is on the odds of
+  a kit and raised to the loop's strength, so a draft's 0.1 still let a kit
+  into 20-41% of loops. glacial 0.1 -> 0.01, droning 0.1 -> 0.01, moonlit
+  0.3 -> 0.01, mellow 0.2 -> 0.005, restful 0.15 (the item's fold) -> 0.02.
+- **Drums, the beat four** (over 70%): chill 1.4 -> 2.8, pulsing 1.8 -> 3.5,
+  cruising 1.8 -> 2.2 (margin; it passed); groovy as drafted.
+- **moonlit** tempo 0.2 -> 0.15 (into the slowest tenth with room).
+- **rippling** clockwork 8 -> 15.6, glade 3.4 -> 2.2 (thaw and clockwork were
+  not leading).
+- **mellow** tempo 0.3 -> 0.2, dust 3.4 -> 1 (dust led it, as it leads chill).
+- **The folds:** lively tempo 0.7 -> 0.85, drums 1.8 -> 2.5, hats 1.5 -> 2,
+  shatter 3.4; restful tempo 0.2 -> 0.15, melody music box and hum 5.7,
+  drums 0.3 -> 0.02.
+- **foggy** (darker, denser): lift 0.45 -> 0.3, energy 0.25 -> 0.22, tempo
+  0.3 -> 0.2, space 0.75 -> 0.9; vapor 15.6 and hollow 8 lead (dust 1, thaw
+  0.3); moogpad 9.9; swell 15.6, wind 2.8; rests 0.6; the deep arc (it was
+  already on the arc's calm list).
+- **misty** (lighter, dewier): lift 0.68, tempo 0.5, space 0.65, wobble 0.3;
+  thaw and glade lead (dust 0.3); celeste and flute 5.7; drops 9.9, wind
+  5.7; the dip arc (still on the calm list for the arc and its period, but
+  dip x2 in place of deep).
+- **experimental** (the unusual sounds): no modes lean; prepared 9.9, vowel
+  and saw 5.7, wobble 0.85; clockwork and shatter lead.
+- **strange** (the odd scales): its modes kept; prepared, vowel and saw
+  x0.3, no wobble target; hollow 15.6 and vapor lead (clockwork 0.3).
+- **airy** (still, open): energy 0.25, tempo 0.25, long 1.3, drums 0.3, thaw
+  15.6 and vapor 8 lead.
+- Everything else is the draft as written.
+
+Each new vibe alone, 300 loops (`stats.mjs`'s corpus seed 1; drums and
+tunes rendered):
+
+| vibe | median bpm | drums | top profiles | top tunes |
+|---|---|---|---|---|
+| breezy | 96 | 60% | glade 22%, tide 21%, thaw 7% | whistle 15%, fiddle 11%, ocarina 8% |
+| bubbly | 98.5 | 65% | bloom 27%, grove 11%, clockwork 11% | moog 17%, whistle 13%, pluck 8% |
+| chill | 79.5 | 74% | dust 36%, halcyon 12%, haven 8% | keys 23%, pluck 10%, rhodes 6% |
+| cosmic | 85 | 48% | clockwork 17%, undertow 12%, vapor 9% | sine 13%, prepared 9%, fiddle 9% |
+| cruising | 121 | 88% | wayfare 27%, undertow 13%, tide 11% | whistle 21%, fiddle 11%, ocarina 9% |
+| dewy | 83.5 | 41% | glade 27%, thaw 14%, haven 9% | flute 9%, musicbox 9%, fiddle 8% |
+| dreamy | 78 | 64% | dust 30%, vapor 10%, halcyon 8% | sine 14%, pluck 9%, fiddle 7% |
+| droning | 68 | 9% | shrine 16%, hollow 11%, glade 10% | sine 16%, fiddle 8%, hum 8% |
+| dusky | 79 | 58% | dust 29%, halcyon 17%, haven 7% | keys 16%, sine 10%, pluck 9% |
+| earthy | 96 | 66% | tide 20%, grove 19%, glade 14% | fiddle 17%, kalimba 11%, marimba 11% |
+| glacial | 57 | 6% | vapor 19%, thaw 16%, glade 11% | sine 15%, piano 11%, fiddle 7% |
+| groovy | 92 | 78% | dust 27%, grove 11%, undertow 10% | keys 11%, sine 8%, pluck 8% |
+| jazzy | 88 | 67% | dust 29%, halcyon 15%, haven 7% | keys 17%, pluck 9%, fiddle 7% |
+| mellow | 84 | 8% | halcyon 22%, haven 14%, glade 10% | rhodes 12%, sine 10%, analoglead 9% |
+| moonlit | 69 | 9% | thaw 16%, vapor 12%, glade 10% | piano 20%, sine 10%, musicbox 10% |
+| playful | 92.5 | 64% | bloom 19%, grove 17%, glade 15% | whistle 19%, kalimba 10%, marimba 8% |
+| pulsing | 99 | 77% | undertow 27%, dust 8%, glade 7% | sine 12%, fiddle 9%, bell 9% |
+| rainy | 82 | 55% | dust 28%, haven 12%, thaw 8% | keys 13%, rhodes 9%, pluck 9% |
+| rippling | 84 | 51% | clockwork 22%, tide 13%, thaw 12% | celeste 11%, fiddle 10%, musicbox 9% |
+| soaring | 105 | 67% | glade 24%, tide 13%, wayfare 13% | whistle 19%, fiddle 17%, flute 8% |
+| whimsical | 89 | 60% | glade 24%, clockwork 15%, tide 13% | ocarina 22%, musicbox 16%, whistle 14% |
+Slowest tenth of the 88: glacial 57, still 59, meditative 62, restful 67,
+droning 68, moonlit 69, floating 70, serene 70.5, hushed 71. Fastest:
+triumphant 109, joyful 110, booming 111, zany 113, spicy 115.5,
+enthusiastic 118, cruising 121, adventurous 122.5, lively 124.5.
+
+The pairs (2 of 4 needed: lead profile, 8 bpm, 20 points of drums, top
+tune): foggy/misty vapor/glade, 82/92 bpm, tune sine/music box (3);
+experimental/strange clockwork/hollow, 91.5/83.5 bpm, prepared/sine (3); airy/breezy thaw/glade, 80.5/96 bpm, 40/60% drums, sine/whistle
+(4); mellow/chill halcyon/dust, 8/74% drums, rhodes/keys (3). Checked on
+corpus seeds 1-3; each pair kept 2 or more on every seed.
+
+Glacial's arc: deep 72% of its arcs, 5-8 minutes alone and 8-12 with an
+adjacent vibe, as asked; but the arc in only 31% of its loops, not half
+(`docs/notes/76b-vibes.md`). For Mikey's ears: every recipe above, and
+glacial's adjacent list.
+
 ## Tuning log
 
 **v91 (brain, Session 16, 2026-10-12): profile and instrument leans

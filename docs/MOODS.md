@@ -391,6 +391,11 @@ new loop leans toward up to five of them in shifting amounts (queue item
 38; recipes in `docs/VIBES.md`). Tuning moves there: Mikey picks vibes and
 sends the loops that fit well or badly.
 
+**The vibes to 88 (Mikey, 2026-10-29; queue item 76b, v125).** Soft,
+energetic, silly and comfy left the vibes and `/rank`'s pool (pool 4);
+twenty-one joined. The pool-3 lists above are the record of what was
+ranked then. The reasons and recipes are in `docs/VIBES.md`.
+
 ## Decided (Mikey, 2026-10-11)
 
 - **Reflective** leaning brighter since #107 is okay, and reflective can
