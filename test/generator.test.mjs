@@ -1213,8 +1213,8 @@ console.log('\nthe bass lift (queue item 76c)');
 console.log('\nlateFloor (queue item 69)');
 {
   // The sketch's draws: whether, how long, then the order, on its stream;
-  // the wait rounded to two bars and at least two; the second part two bars
-  // after the first.
+  // the wait rounded to two bars and at least two; then (item 76d) the gap
+  // to the second part, whole bars, 1 to 8, after the sketch's draws.
   let same = true, shape = true;
   const seen = { together: 0, kitFirst: 0, bassFirst: 0 };
   for (let i = 0; i < 3000; i++) {
@@ -1231,11 +1231,12 @@ console.log('\nlateFloor (queue item 69)');
     if (l.bars !== bars || l.order !== order) same = false;
     const first = Math.min(l.drums, l.bass);
     const second = Math.max(l.drums, l.bass);
-    if (first !== bars * spb || second - first !== (l.order === 'together' ? 0 : 2 * spb) || l.bars % 2) shape = false;
+    if (first !== bars * spb || second - first !== (l.order === 'together' ? 0 : l.gap * spb) || l.bars % 2) shape = false;
+    if (!Number.isInteger(l.gap) || l.gap < 1 || l.gap > 8) shape = false;
     if ((l.order === 'kitFirst' && l.drums > l.bass) || (l.order === 'bassFirst' && l.bass > l.drums)) shape = false;
   }
   check('the wait and the order the sketch drew', same);
-  check('two bars at the least, in twos; the second part two bars after the first', shape);
+  check('two bars at the least, in twos; the second part a gap of 1-8 whole bars after the first', shape);
   check('together 40, the kit first 35, the bass first 25', Math.abs(seen.together / 3000 - 0.4) < 0.03 && Math.abs(seen.kitFirst / 3000 - 0.35) < 0.03, JSON.stringify(seen));
   check('a pin moves nothing else', lateFloorOf(9, 16, 0.125, { order: 'together' }).bars === lateFloorOf(9, 16, 0.125).bars);
   const list = CHOICES.filter((c) => c.id === 'lateFloor');
@@ -1258,7 +1259,46 @@ console.log('\nlateFloor (queue item 69)');
   const enthusiastic = share({ vibes: { enthusiastic: 1 }, strength: 0.9 });
   check('hypnotic leans toward it, enthusiastic away, never to none', hypnotic > plain && enthusiastic < plain && enthusiastic > 0,
     `${enthusiastic.toFixed(3)} ${plain.toFixed(3)} ${hypnotic.toFixed(3)}`);
-  check('every setting is named, with its range', ['weight', 'vibes', 'seconds', 'round', 'first', 'orders', 'lag'].every((k) => k in LATEFLOOR));
+  // The gap (queue item 76d).
+  {
+    const counts = Array(9).fill(0);
+    let n = 0;
+    for (let i = 0; i < 6000; i++) {
+      const l = lateFloorOf(i * 7919 + 3, 16, 0.125);
+      if (l.order === 'together') continue;
+      counts[l.gap]++; n++;
+    }
+    check('the gaps cover 1 to 8 bars, the short end commonest', counts.slice(1).every((c) => c > 0) && counts[1] > counts[2] && counts[2] > counts[4] && counts[4] > counts[8], counts.slice(1).join(' '));
+    check('a pin sets the gap and moves nothing else', lateFloorOf(9, 16, 0.125, { gap: 5 }).bars === lateFloorOf(9, 16, 0.125).bars && lateFloorOf(9, 16, 0.125, { gap: 5, order: 'kitFirst' }).gap === 5);
+    // Inside the first pass when the first part is; otherwise within a
+    // loop's length of it. A bar at the least.
+    let inside = true;
+    for (let i = 0; i < 6000; i++) {
+      const bars = [1, 2, 3, 4, 6, 8, 16][i % 7];
+      const l = lateFloorOf(i * 31 + 5, 16, 0.125, {}, null, bars);
+      const top = l.bars < bars ? bars - l.bars : bars;
+      if (l.gap > top || l.gap < 1) inside = false;
+    }
+    check('the second part comes in inside the first pass (or within a loop\'s length), a bar at the least', inside);
+    // The vibes' lean on the wait and on the gap: means.
+    const mean = (v, key) => {
+      let t = 0, c = 0;
+      for (let i = 0; i < 6000; i++) {
+        const l = lateFloorOf(i * 7919 + 3, 16, 0.125, {}, v);
+        if (key === 'gap' && l.order === 'together') continue;
+        t += l[key]; c++;
+      }
+      return t / c;
+    };
+    const calm = { vibes: { glacial: 1 }, strength: 0.9 };
+    const lively = { vibes: { lively: 1 }, strength: 0.9 };
+    const w = { plain: mean(null, 'bars'), calm: mean(calm, 'bars'), lively: mean(lively, 'bars') };
+    check('the wait leans long for glacial and short for lively', w.calm > w.plain && w.lively < w.plain, JSON.stringify(w));
+    const g = { plain: mean(null, 'gap'), calm: mean(calm, 'gap'), lively: mean(lively, 'gap') };
+    check('and so does the gap', g.calm > g.plain && g.lively < g.plain, JSON.stringify(g));
+    check('a vibe that is not in the table moves nothing', JSON.stringify(lateFloorOf(77, 16, 0.125, {}, { vibes: { tender: 1 }, strength: 0.9 })) === JSON.stringify(lateFloorOf(77, 16, 0.125)));
+  }
+  check('every setting is named, with its range', ['weight', 'vibes', 'seconds', 'round', 'first', 'orders', 'gap', 'maxGap', 'gapLong', 'longVibes'].every((k) => k in LATEFLOOR));
 }
 
 // ---------------------------------------------------------------------
