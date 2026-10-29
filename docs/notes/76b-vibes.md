@@ -56,3 +56,13 @@ The most any lean can give is 85%: 15% of loops draw no change at all.
 The hands would take 2 (the item's own number, nothing new) unless the arc
 being most of glacial's loops matters to Mikey, then 1. Say which, and the
 PR is finished and merged as the item says.
+
+## A smaller one: experimental's refusals at lite
+
+Not a stop on its own, but for the brain: experimental (one of the pairs,
+not a new vibe) loses 2.2% of its tune at lite over 150 loops, against the
+catalog's 1.3% on the same seeds. On `main` it lost 2.8%, so this item makes
+it better, not worse. The rest is prepared piano and vowel, the voices the
+item asks it to lead with (cost 25 and 22); getting to the catalog would
+mean leaning away from them. At full it stays near zero. Every new vibe is
+at or under the catalog at lite (the PR's table).
