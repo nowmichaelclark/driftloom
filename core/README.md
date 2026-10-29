@@ -169,4 +169,4 @@ the whole table.
 - **`golden/`:** whole loops as the app plays them. Each must hash the same on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every block size and at other rates (`golden/README.md`).
 - **`tools/baseline.mjs`:** the core in the real app, in Chromium: every voice, 40 loops, the refusals.
 - **`tools/build-core.sh --check`:** the committed `js/dlcore.wasm` is exactly what this source builds. Run `tools/build-core.sh` after any change here.
-- **Clippy, pedantic:** run `cargo clippy -- -W clippy::pedantic`. Every public item has a doc comment that gives the reason, not only the what.
+- **Clippy, pedantic:** run `cargo clippy --all-targets -- -W clippy::pedantic`; it reports zero, and CI fails on any warning (queue item 74). Every public item has a doc comment that gives the reason, not only the what.

@@ -9,6 +9,12 @@
 //! every sample; `set` caches the last ones, so a filter whose parameters
 //! hold still costs a comparison a sample.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation)]
+
 use crate::block::{Block, Context, Mod, Mods, Probe, Signal};
 use crate::math;
 
@@ -64,7 +70,7 @@ impl Decibels {
 
     fn get(&mut self, x: f32, per: f64) -> f64 {
         if !self.ready || self.of.to_bits() != x.to_bits() {
-            self.value = math::pow(10.0, x as f64 / per);
+            self.value = math::pow(10.0, f64::from(x) / per);
             self.of = x;
             self.ready = true;
         }
@@ -108,8 +114,8 @@ impl Biquad {
         }
         self.last = (freq, q, gain);
         self.ready = true;
-        let nyquist = rate as f64 / 2.0;
-        let w = (freq as f64 / nyquist).clamp(0.0, 1.0);
+        let nyquist = f64::from(rate) / 2.0;
+        let w = (f64::from(freq) / nyquist).clamp(0.0, 1.0);
         let (b0, b1, b2, a0, a1, a2) = match kind {
             Kind::Lowpass => {
                 if w >= 1.0 {
@@ -141,6 +147,9 @@ impl Biquad {
                     let theta = core::f64::consts::PI * w;
                     let alpha = math::sin(theta) / (2.0 * resonance);
                     let cosw = math::cos(theta);
+                    // Chromium's own arithmetic; `midpoint` adds a branch for
+                    // the extremes that cosw never reaches.
+                    #[allow(clippy::manual_midpoint)]
                     let beta = (1.0 + cosw) / 2.0;
                     (
                         beta,
@@ -156,7 +165,7 @@ impl Biquad {
                 }
             }
             Kind::Bandpass => {
-                let q = (q as f64).max(0.0);
+                let q = f64::from(q).max(0.0);
                 if w > 0.0 && w < 1.0 {
                     if q > 0.0 {
                         let w0 = core::f64::consts::PI * w;
@@ -173,7 +182,7 @@ impl Biquad {
                 }
             }
             Kind::Peaking => {
-                let q = (q as f64).max(0.0);
+                let q = f64::from(q).max(0.0);
                 let a = self.amplitude.get(gain, 40.0);
                 if w > 0.0 && w < 1.0 {
                     if q > 0.0 {
@@ -218,7 +227,7 @@ impl Biquad {
 
     /// One sample through the filter.
     pub fn step(&mut self, x: f32) -> f32 {
-        let x = x as f64;
+        let x = f64::from(x);
         let wide = self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2
             - self.a1 * self.y1
             - self.a2 * self.y2;
@@ -229,12 +238,13 @@ impl Biquad {
         self.x2 = self.x1;
         self.x1 = x;
         self.y2 = self.y1;
-        self.y1 = y as f64;
+        self.y1 = f64::from(y);
         y
     }
 
     /// Whether the filter is still: nothing in its memory, so zeros in give
     /// zeros out.
+    #[must_use]
     pub fn at_rest(&self) -> bool {
         self.x1 == 0.0 && self.x2 == 0.0 && self.y1 == 0.0 && self.y2 == 0.0
     }
@@ -243,7 +253,7 @@ impl Biquad {
     /// 32-bit float goes to zero.
     pub fn flush(&mut self) {
         for v in [&mut self.x1, &mut self.x2, &mut self.y1, &mut self.y2] {
-            if v.abs() < f32::MIN_POSITIVE as f64 {
+            if v.abs() < f64::from(f32::MIN_POSITIVE) {
                 *v = 0.0;
             }
         }
@@ -415,7 +425,7 @@ mod tests {
         f.set(Kind::Peaking, 1000.0, 1.0, 6.0, rate);
         let mut peak = 0.0f32;
         for k in 0..44100 {
-            let x = (2.0 * core::f64::consts::PI * 1000.0 * k as f64 / rate as f64).sin() as f32;
+            let x = (2.0 * core::f64::consts::PI * 1000.0 * f64::from(k) / f64::from(rate)).sin() as f32;
             let y = f.step(x);
             if k > 22050 {
                 peak = peak.max(y.abs());

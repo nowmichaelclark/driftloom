@@ -27,9 +27,10 @@ on every PR.
 - Nothing allocates, locks or frees after `Core::new`; nothing reachable
   from rendering can panic. Say how you checked.
 - Every public item the PR touches is documented, with the reason, not
-  only the what. `cargo clippy -- -W clippy::pedantic` is clean in the
-  files the PR touches (allow a lint locally, with a one-line reason,
-  only where following it would make the code worse).
+  only the what. `cargo clippy --all-targets -- -W clippy::pedantic` reports
+  zero in every file, and CI holds it there (`-D warnings`); allow a lint
+  locally, with a one-line reason, only where following it would make the
+  code worse.
 - No dependencies in `core/` (dev-only tools in CI are fine).
 - Everything the core emits (names, errors, logs) is plain ASCII.
 - Costs: the core baseline's render costs may not rise by more than 5%

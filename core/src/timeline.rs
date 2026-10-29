@@ -32,6 +32,24 @@
 //! A timeline holds a fixed number of events and never allocates; one
 //! added past that is dropped, and the call returns false.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
+// `!(a < b)` is true for NaN and `a >= b` is not; the port keeps Chromium's
+// handling of a NaN.
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+// A node's setup or render is one function in Chromium; split, it would no
+// longer read against it.
+#![allow(clippy::too_many_lines)]
+// The names follow Chromium's (and the synth's), so the port reads against them.
+#![allow(clippy::similar_names)]
+// Exact comparisons are meant here: a value unchanged since the last call, an
+// event on its own frame, and tests that hold a sample to the bit.
+#![allow(clippy::float_cmp)]
+
 use crate::math;
 use crate::QUANTUM;
 
@@ -79,6 +97,7 @@ pub struct Timeline<const N: usize> {
 
 impl<const N: usize> Timeline<N> {
     /// A parameter holding `value`, kept within `min` and `max`.
+    #[must_use]
     pub const fn new(value: f32, min: f32, max: f32) -> Self {
         Timeline {
             intrinsic: value,
@@ -105,11 +124,13 @@ impl<const N: usize> Timeline<N> {
     }
 
     /// The `value` attribute.
+    #[must_use]
     pub fn value(&self) -> f32 {
         self.intrinsic
     }
 
     /// Whether anything is scheduled or in force.
+    #[must_use]
     pub fn idle(&self) -> bool {
         self.len == 0
     }
@@ -145,13 +166,13 @@ impl<const N: usize> Timeline<N> {
     /// `cancelScheduledValues`: every event at or after `time` goes. A ramp
     /// is at the time it ends, so one under way then goes too.
     pub fn cancel_scheduled_values(&mut self, time: f64, now: f64) {
-        self.line().cancel_scheduled_values(time, now)
+        self.line().cancel_scheduled_values(time, now);
     }
 
     /// The value at every frame of the block starting at frame `block`
     /// (`CalculateTimelineValues`): the parameter rendered at audio rate.
     pub fn fill(&mut self, block: u64, rate: f64, out: &mut [f32; QUANTUM]) {
-        self.line().fill(block, rate, out)
+        self.line().fill(block, rate, out);
     }
 }
 
@@ -248,12 +269,9 @@ impl Line<'_> {
         rate: f64,
         control: f64,
     ) -> f32 {
-        let first_time = match self.list().first() {
-            Some(e) => e.time,
-            None => {
-                values.fill(default);
-                return default;
-            }
+        let first_time = if let Some(e) = self.list().first() { e.time } else {
+            values.fill(default);
+            return default;
         };
         if end as f64 / rate <= first_time {
             values.fill(default);
@@ -307,8 +325,8 @@ impl Line<'_> {
             let mut e = e;
             if e.kind == Kind::Target && next.is_some_and(|x| x.kind == Kind::Linear) {
                 if (2.0 * rate * e.time - 2.0 * current as f64 + 1.0).abs() <= 1.0 {
-                    value = (e.value as f64
-                        + (value - e.value) as f64
+                    value = (f64::from(e.value)
+                        + f64::from(value - e.value)
                             * math::exp(-(current as f64 / rate - e.time) / e.tau))
                         as f32;
                 } else {
@@ -468,7 +486,7 @@ fn discrete_time_constant(tau: f64, rate: f64) -> f64 {
 
 // `HasSetTargetConverged`.
 fn converged(value: f32, target: f32, now: f64, start: f64, tau: f64) -> bool {
-    if now > start + TIME_CONSTANTS_TO_CONVERGE as f64 * tau {
+    if now > start + f64::from(TIME_CONSTANTS_TO_CONVERGE) * tau {
         return true;
     }
     if target == 0.0 && value.abs() < SET_TARGET_THRESHOLD {
@@ -493,7 +511,7 @@ fn linear_ramp(
     mut write: usize,
 ) -> (u64, f32, usize) {
     let dt = time2 - time1;
-    let k: f32 = if dt <= f32::MIN_POSITIVE as f64 {
+    let k: f32 = if dt <= f64::from(f32::MIN_POSITIVE) {
         0.0
     } else {
         (1.0 / dt) as f32
@@ -507,14 +525,14 @@ fn linear_ramp(
         for (lane, x) in v.iter_mut().enumerate() {
             *x = (step * lane as f32 + offset) * scale + value1;
         }
-        let inc = (4.0 / rate * k as f64 * delta as f64) as f32;
+        let inc = (4.0 / rate * f64::from(k) * f64::from(delta)) as f32;
         let trunc = write + ((fill - write) / 4) * 4;
         current += (trunc - write) as u64;
         while write < trunc {
             if let Some(span) = values.get_mut(write..write + 4) {
                 span.copy_from_slice(&v);
             }
-            for x in v.iter_mut() {
+            for x in &mut v {
                 *x += inc;
             }
             write += 4;
@@ -524,7 +542,7 @@ fn linear_ramp(
         value = v;
     }
     while write < fill {
-        let x = ((current as f64 / rate - time1) * k as f64) as f32;
+        let x = ((current as f64 / rate - time1) * f64::from(k)) as f32;
         value = value1 + x * delta;
         if let Some(y) = values.get_mut(write) {
             *y = value;
@@ -552,17 +570,17 @@ fn set_target(
     mut write: usize,
 ) -> (u64, f32, usize) {
     let tau32 = tau as f32;
-    let c0 = discrete_time_constant(tau32 as f64, control) as f32;
+    let c0 = discrete_time_constant(f64::from(tau32), control) as f32;
     let start = time1 * rate;
     let c = current as f64;
     if start <= c && c < start + 1.0 {
-        value = (target as f64
-            + (value - target) as f64 * math::exp(-(c / rate - time1) / tau32 as f64))
+        value = (f64::from(target)
+            + f64::from(value - target) * math::exp(-(c / rate - time1) / f64::from(tau32)))
             as f32;
     } else {
         value += (target - value) * c0;
     }
-    if converged(value, target, c / rate, time1, tau32 as f64) {
+    if converged(value, target, c / rate, time1, f64::from(tau32)) {
         current += (fill - write) as u64;
         if let Some(span) = values.get_mut(write..fill) {
             span.fill(target);
@@ -646,7 +664,7 @@ mod tests {
         let first = block(&mut t, 0);
         assert_eq!(first[0], 1.0);
         let want = (-(1.0f64) / (0.01 * RATE)).exp();
-        assert!((first[1] as f64 - want).abs() < 1e-6);
+        assert!((f64::from(first[1]) - want).abs() < 1e-6);
         // Ten time constants is 0.1 s, about 35 blocks.
         for b in 1..40 {
             block(&mut t, b);
@@ -681,7 +699,7 @@ mod tests {
         let mut t: Timeline<16> = Timeline::new(1.0, f32::MIN, f32::MAX);
         let mut b = 0;
         for kick in 0..200 {
-            let at = 0.01 + kick as f64 * 0.25;
+            let at = 0.01 + f64::from(kick) * 0.25;
             let now = (b * QUANTUM) as f64 / RATE;
             t.cancel_scheduled_values(at, now);
             assert!(t.set_value_at_time(0.5, at, now));

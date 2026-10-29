@@ -22,17 +22,25 @@
 //! The samples live in a buffer the caller owns (`mix::Mix`), so a delay is
 //! a few numbers and the memory is all in one place.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
 use crate::math;
 use crate::QUANTUM;
 
 /// `TimeToSampleFrame(time, rate, kRoundUp)`: the time in frames, to
 /// 1/1024 of one, then up to a whole frame.
+#[must_use]
 pub fn frames_up(time: f64, rate: f64) -> usize {
     let f = math::ceil(math::round(time * rate * 1024.0) / 1024.0);
     if f > 0.0 { f as usize } else { 0 }
 }
 
 /// The buffer a delay made for `max` seconds needs at `rate`.
+#[must_use]
 pub fn buffer_len(max: f64, rate: f64) -> usize {
     QUANTUM + frames_up(max, rate)
 }
@@ -48,6 +56,7 @@ pub struct Delay {
 }
 
 impl Delay {
+    #[must_use]
     pub const fn new() -> Self {
         Delay {
             max: 0.0,
@@ -145,8 +154,8 @@ mod tests {
     fn a_whole_frame_delay_moves_an_impulse_by_that_many_frames() {
         let rate = 44100.0f32;
         let mut d = Delay::new();
-        let mut memory = vec![0.0f32; buffer_len(0.5, rate as f64)];
-        d.place(0.5, rate as f64, 0);
+        let mut memory = vec![0.0f32; buffer_len(0.5, f64::from(rate))];
+        d.place(0.5, f64::from(rate), 0);
         // 300 frames, as a 32-bit time: lands within a hair of a frame.
         let t = 300.0f32 / rate;
         let times = [t; QUANTUM];
@@ -172,8 +181,8 @@ mod tests {
     fn a_zero_delay_passes_the_block_straight_through() {
         let rate = 44100.0f32;
         let mut d = Delay::new();
-        let mut memory = vec![0.0f32; buffer_len(0.2, rate as f64)];
-        d.place(0.2, rate as f64, 0);
+        let mut memory = vec![0.0f32; buffer_len(0.2, f64::from(rate))];
+        d.place(0.2, f64::from(rate), 0);
         let input: [f32; QUANTUM] = core::array::from_fn(|i| i as f32);
         let mut out = [0.0f32; QUANTUM];
         d.process(&mut memory, &input, &[0.0; QUANTUM], rate, &mut out);

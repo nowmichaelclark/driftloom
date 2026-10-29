@@ -38,6 +38,12 @@
 //! numbers that are multiples of it: the host hands every block to the
 //! core in order, and these rules are counted from frame 0.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
 use crate::math;
 use crate::QUANTUM;
 use crate::block::{Block, Context, Mod, Mods, Probe, Signal};
@@ -47,6 +53,7 @@ use crate::wave::{Wave, Waves};
 use super::shared::starts_in;
 
 /// `TimeToSampleFrame`'s first step: the time in frames, to 1/1024 of one.
+#[must_use]
 pub fn frames(time: f64, rate: f64) -> f64 {
     math::round(time * rate * 1024.0) / 1024.0
 }
@@ -56,6 +63,7 @@ pub fn frames(time: f64, rate: f64) -> f64 {
 /// (`AudioScheduledSourceHandler::UpdateSchedulingInfo`): the time is
 /// rounded to 1/1024 of a frame first, so a time a hair past a frame is
 /// that frame.
+#[must_use]
 pub fn frame_at(time: f64, rate: f64) -> u64 {
     let f = math::ceil(frames(time, rate));
     if f > 0.0 { f as u64 } else { 0 }
@@ -122,6 +130,7 @@ impl TableOsc {
     }
 
     /// Where the oscillator is in the table, in table samples.
+    #[must_use]
     pub fn index(&self) -> f64 {
         self.index
     }
@@ -138,7 +147,7 @@ impl TableOsc {
     fn lead(&mut self, f: f32, rate_scale: f32) {
         if self.start >= QUANTUM as u64 {
             let first = self.start + u64::from(self.at > self.start as f64);
-            self.index = (first as f64 - self.at) * f as f64 * rate_scale as f64;
+            self.index = (first as f64 - self.at) * f64::from(f) * f64::from(rate_scale);
         }
     }
 
@@ -253,7 +262,7 @@ impl TableOsc {
                 for (y, &step) in out.iter_mut().skip(lo).zip(steps) {
                     let v = wave.read(index, wave.pick(inverse * step));
                     *y = if ADD { *y + v } else { v };
-                    index = wrap_to(index + step as f64, size);
+                    index = wrap_to(index + f64::from(step), size);
                 }
                 self.index = index;
             }
@@ -285,7 +294,7 @@ impl TableOsc {
             self.lead(f, rate_scale);
         }
         let n = (hi - lo) as f32;
-        self.index = wrap_to(self.index + (n * (f * rate_scale)) as f64, wave.size() as f64);
+        self.index = wrap_to(self.index + f64::from(n * (f * rate_scale)), wave.size() as f64);
     }
 }
 
@@ -304,7 +313,7 @@ impl TableOsc {
     /// the one the oscillator started in, and before it stops.
     pub fn skip_whole(&mut self, blocks: u64, wave: &Wave, freq: f32, rate: f32) {
         let f = within(freq, rate / 2.0);
-        let step = (QUANTUM as f32 * (f * wave.rate_scale())) as f64;
+        let step = f64::from(QUANTUM as f32 * (f * wave.rate_scale()));
         self.index = wrap_to(self.index + blocks as f64 * step, wave.size() as f64);
     }
 }

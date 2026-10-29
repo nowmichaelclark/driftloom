@@ -3,7 +3,7 @@
 //! The JavaScript synth shapes every note with `setValueAtTime`, the two
 //! ramps and `setTargetAtTime`, so a ported voice has to read the same
 //! curves off the same calls. This is the automation timeline as the Web
-//! Audio spec defines it (section 1.6.3, "AudioParam"), evaluated at the time
+//! Audio spec defines it (section 1.6.3, "`AudioParam`"), evaluated at the time
 //! of each sample frame:
 //!
 //! - Events are kept in time order. One added at the time of an existing
@@ -47,6 +47,16 @@
 //! events and never allocates; one added past that is dropped and the call
 //! returns false. Every voice knows how many it schedules, so this is a
 //! guard and not a policy.
+
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
+// Exact comparisons are meant here: a value unchanged since the last call, an
+// event on its own frame, and tests that hold a sample to the bit.
+#![allow(clippy::float_cmp)]
 
 use crate::math;
 use crate::QUANTUM;
@@ -101,6 +111,7 @@ pub struct Param<const N: usize = MAX_EVENTS> {
 }
 
 impl<const N: usize> Param<N> {
+    #[must_use]
     pub const fn new(intrinsic: f32) -> Self {
         Param {
             intrinsic,
@@ -186,7 +197,7 @@ impl<const N: usize> Param<N> {
     // Where each curve starts depends on the events before it, so it is
     // worked out again, front to back, whenever the list changes.
     fn resolve(&mut self) {
-        let intrinsic = self.intrinsic as f64;
+        let intrinsic = f64::from(self.intrinsic);
         let rate = self.rate;
         let mut prev: Option<Event> = None;
         let len = self.len;
@@ -203,7 +214,7 @@ impl<const N: usize> Param<N> {
                                 (e.added, target_at(&p, e.added))
                             }
                         }
-                        Some(p) => (p.time, p.value as f64),
+                        Some(p) => (p.time, f64::from(p.value)),
                     };
                     e.t0 = t0;
                     e.v0 = v0;
@@ -214,7 +225,7 @@ impl<const N: usize> Param<N> {
                         None => intrinsic,
                         Some(p) if rate > 0.0 => chromium_start(&p, e.time, rate),
                         Some(p) if p.kind == Kind::Target => target_at(&p, e.time),
-                        Some(p) => p.value as f64,
+                        Some(p) => f64::from(p.value),
                     };
                 }
                 Kind::Set => {}
@@ -232,6 +243,7 @@ impl<const N: usize> Param<N> {
     }
 
     /// The value at time `t`, in seconds.
+    #[must_use]
     pub fn value_at(&self, t: f64) -> f32 {
         let events = self.list();
         // The last event at or before t, and the one after it.
@@ -264,8 +276,7 @@ impl<const N: usize> Param<N> {
             let (curve, until) = self.curve(frame, rate);
             let mut v = match curve {
                 Curve::Hold(v) => v,
-                Curve::Linear(e) => ramp_at(e, t),
-                Curve::Exponential(e) => ramp_at(e, t),
+                Curve::Linear(e) | Curve::Exponential(e) => ramp_at(e, t),
                 Curve::Target(e) => target_at(e, t),
             };
             let step = match curve {
@@ -287,7 +298,7 @@ impl<const N: usize> Param<N> {
                 }
                 v = match curve {
                     Curve::Exponential(_) => v * step,
-                    Curve::Target(e) => e.value as f64 + (v - e.value as f64) * step,
+                    Curve::Target(e) => f64::from(e.value) + (v - f64::from(e.value)) * step,
                     _ => v,
                 };
                 i += 1;
@@ -323,9 +334,9 @@ impl<const N: usize> Param<N> {
             None => f64::INFINITY,
         };
         let curve = match n.checked_sub(1).and_then(|i| events.get(i)) {
-            None => Curve::Hold(self.intrinsic as f64),
+            None => Curve::Hold(f64::from(self.intrinsic)),
             Some(e) if e.kind == Kind::Target => Curve::Target(e),
-            Some(e) => Curve::Hold(e.value as f64),
+            Some(e) => Curve::Hold(f64::from(e.value)),
         };
         (curve, until)
     }
@@ -337,6 +348,7 @@ impl<const N: usize> Param<N> {
     /// in the past (or is a target curve, which never arrives). With more,
     /// until they are all in the past -- and for one block more, the block in
     /// which Chromium notices and folds them into one held value.
+    #[must_use]
     pub fn moving_from(&self, t: f64, block: f64) -> bool {
         let events = self.list();
         match (events.len(), events.last()) {
@@ -399,7 +411,7 @@ enum Curve<'a> {
 
 // What an exponential ramp is multiplied by from one frame to the next.
 fn exponential_step(e: &Event, rate: f64) -> f64 {
-    let (v0, v1, span) = (e.v0, e.value as f64, e.time - e.t0);
+    let (v0, v1, span) = (e.v0, f64::from(e.value), e.time - e.t0);
     if v0 == 0.0 || v0 * v1 <= 0.0 || span <= 0.0 {
         return 1.0;
     }
@@ -411,7 +423,7 @@ fn is_ramp(e: &Event) -> bool {
 }
 
 fn ramp_at(e: &Event, t: f64) -> f64 {
-    let (t0, v0, t1, v1) = (e.t0, e.v0, e.time, e.value as f64);
+    let (t0, v0, t1, v1) = (e.t0, e.v0, e.time, f64::from(e.value));
     if t1 <= t0 {
         return v1;
     }
@@ -447,15 +459,15 @@ fn chromium_start(p: &Event, time: f64, rate: f64) -> f64 {
             target_at(p, if exact && block { first / rate } else { before })
         }
         Kind::Target => p.v0,
-        _ if exact => p.value as f64,
+        _ if exact => f64::from(p.value),
         Kind::Linear if running => ramp_at(p, before),
         Kind::Exponential if running && block => ramp_at(p, before),
-        _ => p.value as f64,
+        _ => f64::from(p.value),
     }
 }
 
 fn target_at(e: &Event, t: f64) -> f64 {
-    let v1 = e.value as f64;
+    let v1 = f64::from(e.value);
     if e.tau <= 0.0 {
         return v1;
     }
@@ -474,9 +486,9 @@ mod tests {
         let mut p: Param = Param::new(1.0);
         p.set_value_at_time(0.5, 11.3);
         let mut out = [0.0; QUANTUM];
-        p.fill(498304, 44100.0, &mut out);
-        assert_eq!(out[498330 - 498304], 1.0);
-        assert_eq!(out[498331 - 498304], 0.5);
+        p.fill(498_304, 44100.0, &mut out);
+        assert_eq!(out[498_330 - 498_304], 1.0);
+        assert_eq!(out[498_331 - 498_304], 0.5);
     }
 
     #[test]
@@ -493,7 +505,7 @@ mod tests {
     }
 
     fn close(a: f32, b: f64) -> bool {
-        ((a as f64) - b).abs() <= 1e-6 * b.abs().max(1e-3)
+        (f64::from(a) - b).abs() <= 1e-6 * b.abs().max(1e-3)
     }
 
     #[test]

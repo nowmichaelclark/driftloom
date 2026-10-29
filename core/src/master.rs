@@ -46,6 +46,19 @@
 //! target. Fed the same on both sides (no space recipe), each side is the
 //! mono render, bit for bit.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
+// Built once, as the core starts (or in a test), in a fixed array on a stack
+// sized for it; nothing allocates after that.
+#![allow(clippy::large_stack_arrays)]
+// A node's setup or render is one function in Chromium; split, it would no
+// longer read against it.
+#![allow(clippy::too_many_lines)]
+
 use crate::block::Signal;
 use crate::math;
 use crate::blocks::arc::{self, Arc};
@@ -69,7 +82,7 @@ const FLUTTER_DEPTH: f64 = 0.00018;
 const TONE_HZ: f64 = 7200.0;
 const TONE_Q: f64 = 0.6;
 const HIGHPASS_HZ: f64 = 38.0;
-/// A BiquadFilterNode's Q, untouched.
+/// A `BiquadFilterNode`'s Q, untouched.
 const Q: f32 = 1.0;
 
 /// Points on the saturator's curve (`tanhCurve`'s `n`).
@@ -197,6 +210,7 @@ pub struct Master {
 
 impl Master {
     /// All zeros, as `Mix::new`; `init` builds it.
+    #[must_use]
     pub const fn new() -> Self {
         Master {
             rate: 0.0,
@@ -238,7 +252,7 @@ impl Master {
         self.start(0.0);
         let r = f(rate);
         let mut fits = true;
-        for lane in self.lanes.iter_mut() {
+        for lane in &mut self.lanes {
             let end = lane.wobble.place(WOBBLE_MAX, rate, 0);
             fits &= end <= MEMORY;
             self.wobble_max = lane.wobble.max;
@@ -407,6 +421,7 @@ impl Master {
 
     /// The compressors' `reduction`: the bus compressor's (0) or the
     /// ceiling's (1), in dB.
+    #[must_use]
     pub fn reduction(&self, which: usize) -> f32 {
         match (which, self.layout) {
             (0, 2) => self.comp2.reduction(),
@@ -429,11 +444,13 @@ impl Master {
 
     /// What the last block sent to the speakers, a block a lane (the second
     /// only in stereo).
+    #[must_use]
     pub fn output(&self) -> &[Signal; OUT] {
         &self.out
     }
 
     /// What the last block brought to the bus compressor, a block a lane.
+    #[must_use]
     pub fn before_comp(&self) -> &[Signal; OUT] {
         &self.before_comp
     }
@@ -618,7 +635,7 @@ impl Master {
             if let Some(y) = out.as_deref_mut().and_then(|o| o.get_mut(i)) {
                 *y = wave.read_slow(self.wow_index, incr, pick);
             }
-            self.wow_index += incr as f64;
+            self.wow_index += f64::from(incr);
             self.wow_index -= math::floor(self.wow_index * inverse) * size;
         }
     }
@@ -648,6 +665,7 @@ fn shape(curve: &[f32; CURVE], samples: &mut [f32]) {
 }
 
 /// The memory the wobble's delay needs at `rate`, a lane.
+#[must_use]
 pub fn memory_for(rate: f64) -> usize {
     buffer_len(WOBBLE_MAX, rate)
 }
@@ -697,7 +715,7 @@ mod tests {
         // Starts in the first block, mid-block, a hair past a frame, and
         // well in; the blocks asked for run from the start itself to an
         // hour on.
-        for start in [0.0, 0.00123, 0.5 / RATE, 1.0, 12.3456789, 3600.0] {
+        for start in [0.0, 0.00123, 0.5 / RATE, 1.0, 12.345_678_9, 3600.0] {
             for blocks in [0u64, 1, 2, 3, 17, 1000, 10_337, 1_238_000] {
                 direct.start(start);
                 reference.start(start);

@@ -22,6 +22,16 @@
 //! The tables are built once, when the core starts, in a fixed array: no
 //! allocation.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
+// Built once, as the core starts (or in a test), in a fixed array on a stack
+// sized for it; nothing allocates after that.
+#![allow(clippy::large_stack_arrays)]
+
 use crate::math;
 use core::f64::consts::PI;
 
@@ -54,6 +64,7 @@ pub struct Pick {
 impl Wave {
     /// All zeros, so a static of these costs nothing in the `.wasm`, and
     /// silent until `build`.
+    #[must_use]
     pub const fn new() -> Self {
         Wave {
             size: 0,
@@ -65,10 +76,12 @@ impl Wave {
         }
     }
 
+    #[must_use]
     pub fn size(&self) -> usize {
         self.size
     }
 
+    #[must_use]
     pub fn rate_scale(&self) -> f32 {
         self.rate_scale
     }
@@ -111,8 +124,8 @@ impl Wave {
             scratch.clear(size);
             for n in 1..keep {
                 let (re, im) = (
-                    real.get(n).copied().unwrap_or(0.0) as f64,
-                    imag.get(n).copied().unwrap_or(0.0) as f64,
+                    f64::from(real.get(n).copied().unwrap_or(0.0)),
+                    f64::from(imag.get(n).copied().unwrap_or(0.0)),
                 );
                 scratch.set(n, re, -im);
             }
@@ -136,6 +149,7 @@ impl Wave {
     }
 
     /// Which tables to read for a fundamental of `f` Hz.
+    #[must_use]
     pub fn pick(&self, f: f32) -> Pick {
         let f = f.abs();
         if f < self.same_below {
@@ -164,6 +178,7 @@ impl Wave {
     /// with a 3-point Lagrange interpolator (from 0.16) or a 5-point one
     /// (`DoInterpolation`), in 64-bit floats, from each of the two tables,
     /// then blends them. Only an LFO is that slow (`master`).
+    #[must_use]
     pub fn read_slow(&self, index: f64, incr: f32, pick: Pick) -> f32 {
         let mask = self.size.wrapping_sub(1);
         let i0 = index as usize;
@@ -173,7 +188,7 @@ impl Wave {
         };
         let at = |table: &[f32; SIZE], k: isize| -> f64 {
             let i = (i0 as isize + k) as usize & mask;
-            table.get(i).copied().unwrap_or(0.0) as f64
+            f64::from(table.get(i).copied().unwrap_or(0.0))
         };
         let (mut lower, mut higher) = (0.0f64, 0.0f64);
         if incr >= 0.16 {
@@ -197,13 +212,14 @@ impl Wave {
             }
         }
         let f = pick.blend;
-        ((1.0 - f) as f64 * higher + f as f64 * lower) as f32
+        (f64::from(1.0 - f) * higher + f64::from(f) * lower) as f32
     }
 
     /// The wave at table position `index`, linearly read from each of the
     /// two tables and blended, as Chromium reads one when the step between
     /// samples is a third of a table sample or more (every pitch over about
     /// 3 Hz).
+    #[must_use]
     pub fn read(&self, index: f64, pick: Pick) -> f32 {
         let mask = self.size.wrapping_sub(1);
         let i0 = (index as usize) & mask;
@@ -291,6 +307,7 @@ const GLOTTAL_SLOPE: f64 = 2.5;
 const GLOTTAL_PARTIALS: usize = 64;
 
 impl Waves {
+    #[must_use]
     pub const fn new() -> Self {
         Waves {
             sine: Wave::new(),
@@ -396,12 +413,13 @@ impl Default for Waves {
 /// The partials range `r` keeps, out of `half`.
 fn partials_for_range(r: usize, half: usize) -> usize {
     let cents = r as f32 * (1200.0 / 3.0);
-    let keep = math::pow(2.0, -(cents as f64) / 1200.0) as f32;
+    let keep = math::pow(2.0, -f64::from(cents) / 1200.0) as f32;
     (keep * half as f32) as usize
 }
 
 /// The partials of Web Audio's built-in triangle, as Chromium writes them:
 /// `8 / (pi n)^2`, alternating in sign, odd partials only.
+#[must_use]
 pub fn triangle(n: usize) -> f32 {
     if n.is_multiple_of(2) {
         return 0.0;
@@ -414,6 +432,7 @@ pub fn triangle(n: usize) -> f32 {
 
 /// The partials of Web Audio's built-in sawtooth, as Chromium writes them:
 /// `2 / (pi n)`, alternating in sign, so the wave ramps upward.
+#[must_use]
 pub fn sawtooth(n: usize) -> f32 {
     if n == 0 {
         return 0.0;
@@ -423,6 +442,7 @@ pub fn sawtooth(n: usize) -> f32 {
 }
 
 /// The partials of Web Audio's built-in square: `4 / (pi n)`, odd ones only.
+#[must_use]
 pub fn square(n: usize) -> f32 {
     if n.is_multiple_of(2) {
         return 0.0;
@@ -441,6 +461,7 @@ pub struct Fft {
 }
 
 impl Fft {
+    #[must_use]
     pub const fn new() -> Self {
         Fft {
             re: [0.0; SIZE],
@@ -576,7 +597,7 @@ mod tests {
             let t = &w.tables[r];
             t.iter()
                 .enumerate()
-                .map(|(k, &x)| x as f64 * (2.0 * PI * (n * k) as f64 / 4096.0).sin())
+                .map(|(k, &x)| f64::from(x) * (2.0 * PI * (n * k) as f64 / 4096.0).sin())
                 .sum::<f64>()
                 / 2048.0
         };
