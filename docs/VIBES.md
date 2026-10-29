@@ -271,7 +271,21 @@ moved from the drafts and from `main`, to meet the item's yardsticks:
   vowel 0.2, rests 0.8 -> 1, and thaw out of its profiles (wayfare 2.2,
   vapor and shatter 0.1 in) (2.0% -> 1.2%); mellow softpad 2.8 -> 0.3
   (1.8% -> 1.3%); experimental saw 9.9 first, prepared 5.7, vowel 2.8,
-  bigChords 0.6 (3.0% -> 2.2%; main's experimental was 2.8%).
+  bigChords 0.6 (3.0% -> 2.2%; main's experimental was 2.8%); dreamy
+  softpad 5.7 -> 0.2, sine 5.7 first (2.2% -> 0.9%); droning softpad 0.2,
+  vowel 0.3, choir 0.5 (2.2% -> 0.9%); airy piano and softpad 0.3 (2.4% ->
+  1.8%; main's 2.1%); misty piano and softpad 0.3 (1.9% -> 1.1%; main's
+  1.5%).
+- **Refusals after tuning**, the share of the tune lost at lite, mean per
+  loop over 150 loops (catalog 1.3% on the same seeds): rainy 0.2, soaring
+  0.5, jazzy 0.6, whimsical 0.7, cruising 0.8, rippling 0.8, groovy 0.9,
+  dreamy 0.9, droning 0.9, cosmic 1.0, dewy 1.0, dusky 1.0, moonlit 1.0,
+  pulsing 1.0, bubbly 1.1, chill 1.1, glacial 1.1, breezy 1.2, playful 1.2,
+  earthy 1.3, mellow 1.3; the touched ones lively 0.7, restful 1.0, misty
+  1.1, foggy 1.2, strange 1.5, airy 1.8, experimental 2.2. At full, near zero:
+  0.0-0.2% on 150 loops for the ten tuned here, but droning 0.6% (one
+  12-note loop, neim-ro, losing 9; 1 loop in 132 against the catalog's 2.2%
+  of loops), and 0.0-0.4% on 40 loops for the rest (catalog 0.2%).
 - Everything else is the draft as written.
 
 Each new vibe alone, 300 loops (`stats.mjs`'s corpus seed 1; drums and
@@ -285,8 +299,8 @@ tunes rendered):
 | cosmic | 85 | 48% | clockwork 17%, undertow 12%, vapor 9% | sine 13%, prepared 9%, fiddle 9% |
 | cruising | 121 | 88% | wayfare 27%, undertow 13%, tide 11% | whistle 21%, fiddle 11%, ocarina 9% |
 | dewy | 83.5 | 41% | glade 27%, thaw 14%, haven 9% | flute 9%, musicbox 9%, fiddle 8% |
-| dreamy | 78 | 64% | dust 30%, vapor 10%, halcyon 8% | sine 14%, pluck 9%, fiddle 7% |
-| droning | 68 | 9% | shrine 16%, hollow 11%, glade 10% | sine 16%, fiddle 8%, hum 8% |
+| dreamy | 78 | 64% | dust 30%, vapor 10%, halcyon 8% | sine 21%, pluck 9%, fiddle 8% |
+| droning | 68 | 9% | shrine 16%, hollow 11%, glade 10% | sine 17%, hum 10%, fiddle 9% |
 | dusky | 79 | 58% | dust 29%, halcyon 17%, haven 7% | keys 16%, sine 10%, pluck 9% |
 | earthy | 96 | 66% | tide 20%, grove 19%, glade 14% | fiddle 17%, kalimba 11%, marimba 11% |
 | glacial | 57 | 6% | vapor 19%, thaw 16%, glade 11% | sine 30%, piano 9%, fiddle 8% |
@@ -307,7 +321,7 @@ triumphant 109, joyful 110, booming 111, zany 113, spicy 115.5,
 enthusiastic 118, cruising 121, adventurous 122.5, lively 124.5.
 
 The pairs (2 of 4 needed: lead profile, 8 bpm, 20 points of drums, top
-tune): foggy/misty vapor/glade, 82/92 bpm, tune sine/music box (3);
+tune): foggy/misty vapor/glade, 82/92 bpm, 47/57% drums, tune sine/sine (2);
 experimental/strange clockwork/hollow, 91.5/83.5 bpm, prepared/sine (3);
 airy/breezy thaw/glade, 80.5/97 bpm, 40/67% drums, sine/whistle (4);
 mellow/chill halcyon/dust, 8/74% drums, rhodes/keys (3). Checked on corpus
