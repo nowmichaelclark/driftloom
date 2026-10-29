@@ -5,7 +5,7 @@
 // voicing or an out-of-range note does not throw, it just sounds wrong,
 // and often only on one seed in a thousand. So we check thousands.
 
-import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords } from '../js/generator.js';
+import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf } from '../js/generator.js';
 import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -780,7 +780,8 @@ console.log('\nVibes (queue item 38a)');
   check('VIBE_IDS holds every vibe once, and nothing else',
     ids.size === VIBE_IDS.length && VIBE_IDS.every((id) => VIBES[id]) && Object.keys(VIBES).every((id) => ids.has(id)),
     `${VIBE_IDS.length} ids, ${Object.keys(VIBES).length} recipes`);
-  check('71 vibes, every pool-3 word', VIBE_IDS.length === 71);
+  check('88 vibes (queue item 76b)', VIBE_IDS.length === 88);
+  check('VIBE_IDS is alphabetical', VIBE_IDS.every((id, i) => i === 0 || VIBE_IDS[i - 1] < id));
 }
 
 // No vibes is today's loop, draw for draw: the spec, the render and the code.
@@ -876,11 +877,11 @@ console.log('\nVibes (queue item 38a)');
   const share = (specs, f) => specs.filter(f).length / specs.length;
   const mean = (specs, f) => specs.reduce((a, s) => a + f(s), 0) / specs.length;
   const plain = corpus(null);
-  const energetic = corpus(['energetic']);
+  const lively = corpus(['lively']);
   const still = corpus(['still']);
-  check('energetic loops are quicker, still loops slower', mean(energetic, (s) => s.bpm) > mean(plain, (s) => s.bpm) + 5
+  check('lively loops are quicker, still loops slower', mean(lively, (s) => s.bpm) > mean(plain, (s) => s.bpm) + 5
     && mean(still, (s) => s.bpm) < mean(plain, (s) => s.bpm) - 5,
-    `${mean(still, (s) => s.bpm).toFixed(1)} / ${mean(plain, (s) => s.bpm).toFixed(1)} / ${mean(energetic, (s) => s.bpm).toFixed(1)}`);
+    `${mean(still, (s) => s.bpm).toFixed(1)} / ${mean(plain, (s) => s.bpm).toFixed(1)} / ${mean(lively, (s) => s.bpm).toFixed(1)}`);
   check('skipping loops are 6/8 more often', share(corpus(['skipping']), (s) => s.stepsPerBar === 12) > share(plain, (s) => s.stepsPerBar === 12) + 0.1);
   check('bright loops sit in brighter modes', mean(corpus(['bright']), (s) => SCALE_BRIGHTNESS[s.scale]) > mean(plain, (s) => SCALE_BRIGHTNESS[s.scale]) + 0.05);
   check('a vibe leans the render-time pools through characterOf', (() => {
@@ -1050,6 +1051,52 @@ console.log('\nThe arc\'s two shapes (queue item 63b)');
   const pinned = arcOf(4242, null, { shape: free.shape === 'deep' ? 'dip' : 'deep', period: 200 });
   check('a pin moves nothing else', pinned.period === 200 && pinned.floor === free.floor && pinned.shape !== free.shape);
   check('every setting is named, with its range', ['weight', 'shapes', 'period', 'from', 'floor', 'dip'].every((k) => k in ARC));
+  // Glacial's arc (queue item 76b): deep about 3 in 4, over 5-8 minutes
+  // alone and 8-12 with a glacial-adjacent vibe; misty leans dip.
+  const glacialStrengths = (vibes) => {
+    let d = 0, lo = Infinity, hi = 0;
+    for (let i = 0; i < 3000; i++) {
+      const a = arcOf(i * 104729 + 1, { vibes, strength: 0.5 + 0.4 * (i % 9) / 8 });
+      if (a.shape === 'deep') d++;
+      lo = Math.min(lo, a.period);
+      hi = Math.max(hi, a.period);
+    }
+    return { deep: d / 3000, lo, hi };
+  };
+  const glacial = glacialStrengths({ glacial: 1 });
+  const near = glacialStrengths({ glacial: 0.6, still: 0.4 });
+  const glacialCozy = glacialStrengths({ glacial: 0.6, cozy: 0.4 });
+  check('glacial alone leans deep (about 3 in 4), over 5-8 minutes', Math.abs(glacial.deep - 0.75) < 0.05 && glacial.lo >= 300 && glacial.hi <= 480, JSON.stringify(glacial));
+  check('glacial with an adjacent vibe swings over 8-12 minutes', near.lo >= 480 && near.hi <= 720, JSON.stringify(near));
+  check('glacial with another vibe keeps 5-8 minutes', glacialCozy.lo >= 300 && glacialCozy.hi <= 480, JSON.stringify(glacialCozy));
+  check('misty leans dip, foggy deep', shareOf({ vibes: { misty: 1 }, strength: 0.7 }).deep < 0.25 && calm.deep > 0.4);
+  // Against the arc alone, where the wash's own lean toward glacial (also
+  // item 76b) can't compete with it.
+  const arcAlone = (vibes) => {
+    let n = 0;
+    const list = [CHOICES.find((c) => c.id === 'arc'), { id: 'other', options: [['today', 1], ['on', 1]], eligible: () => true }];
+    for (let i = 0; i < 4000; i++) if (drawChoices(i, {}, vibes, list).arc === 'on') n++;
+    return n / 4000;
+  };
+  const glacialArc = arcAlone({ vibes: { glacial: 1 }, strength: 0.9 });
+  const stillArc = arcAlone({ vibes: { still: 1 }, strength: 0.9 });
+  check('glacial draws the arc more than still does', glacialArc > stillArc, `${glacialArc.toFixed(3)} ${stillArc.toFixed(3)}`);
+  // Outside the choices (the brain's answer to 76b's note): glacial alone
+  // plays the arc in at least 60% of its loops; without glacial a loop plays
+  // it exactly when its choices say.
+  let plays = 0, differ = 0;
+  for (let i = 0; i < 300; i++) {
+    const spec = newSpec(7000 + i, ['glacial']);
+    const { choices } = render(spec);
+    if (arcPlays(spec.seed, choices, vibesOf(spec))) plays++;
+    for (const vibes of [null, { vibes: { still: 1 }, strength: 0.7 }, { vibes: { cozy: 0.5, misty: 0.5 }, strength: 0.9 }]) {
+      const ch = drawChoices(i, {}, vibes);
+      if (arcPlays(i, ch, vibes) !== (ch.arc === 'on')) differ++;
+    }
+  }
+  check('glacial alone plays the arc in at least 60% of its loops', plays / 300 >= 0.6, (plays / 300).toFixed(3));
+  check('without glacial the arc plays exactly when the choices draw it', differ === 0, `${differ}`);
+  check('the glacial chance is a named setting', ARC.glacialChance === 0.6);
 }
 
 // ---------------------------------------------------------------------
@@ -1196,9 +1243,9 @@ console.log('\nlateFloor (queue item 69)');
   };
   const plain = share(null);
   const hypnotic = share({ vibes: { hypnotic: 1 }, strength: 0.9 });
-  const energetic = share({ vibes: { energetic: 1 }, strength: 0.9 });
-  check('hypnotic leans toward it, energetic away, never to none', hypnotic > plain && energetic < plain && energetic > 0,
-    `${energetic.toFixed(3)} ${plain.toFixed(3)} ${hypnotic.toFixed(3)}`);
+  const enthusiastic = share({ vibes: { enthusiastic: 1 }, strength: 0.9 });
+  check('hypnotic leans toward it, enthusiastic away, never to none', hypnotic > plain && enthusiastic < plain && enthusiastic > 0,
+    `${enthusiastic.toFixed(3)} ${plain.toFixed(3)} ${hypnotic.toFixed(3)}`);
   check('every setting is named, with its range', ['weight', 'vibes', 'seconds', 'round', 'first', 'orders', 'lag'].every((k) => k in LATEFLOOR));
 }
 

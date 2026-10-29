@@ -98,6 +98,8 @@ driftloom offline audio measurement
   --vibe-mix        draw each loop with 1, 3, 5 or 10 random vibes in
                     turn (queue item 38a), for the loudness report and
                     --refusals
+  --vibes <a,b>     draw every loop with this vibe selection (queue item
+                    76b), for the loudness report and --refusals
   --profile <id>    keep only loops that profile leads, drawing from the
                     same corpus until --n of them are in
   --engine <e>      'rust' or 'js': which synth plays. 'rust' is the Rust
@@ -287,6 +289,9 @@ function parseArgs(argv) {
       }
       case '--vibe-mix':
         opts.vibeMix = true;
+        break;
+      case '--vibes':
+        opts.vibeMix = String(value()).split(',').map((v) => v.trim()).filter(Boolean);
         break;
       case '--moods':
         opts.moods = String(value()).split(',').map((m) => m.trim()).filter(Boolean);
@@ -616,7 +621,7 @@ function leadOf(spec) {
 }
 // --vibe-mix (queue item 38a): each loop drawn with a random selection of
 // 1, 3, 5 or 10 vibes in turn, from a stream of its own, so the loops'
-// seeds are the corpus's own.
+// seeds are the corpus's own. --vibes hands its selection instead.
 function vibeMixFor(seed, i) {
   const r = new Rng(((seed ^ 0x56494245) + Math.imul(i + 1, 0x9e3779b1)) >>> 0 || 1);
   return r.shuffle(VIBE_IDS).slice(0, [1, 3, 5, 10][i % 4]);
@@ -630,7 +635,7 @@ function drawCorpus(seed, n, profile, vibeMix = false, moods = null) {
   const specs = [];
   // Capped, so a profile that never leads cannot spin forever.
   for (let tries = 0; specs.length < n && tries < n * 1000; tries++) {
-    const spec = newSpec(master.seed32(), vibeMix ? vibeMixFor(seed, tries) : null);
+    const spec = newSpec(master.seed32(), Array.isArray(vibeMix) ? vibeMix : vibeMix ? vibeMixFor(seed, tries) : null);
     if (moods && !moods.includes(topMood(spec))) continue;
     if (!profile || leadOf(spec) === profile) specs.push(spec);
   }
@@ -638,7 +643,7 @@ function drawCorpus(seed, n, profile, vibeMix = false, moods = null) {
 }
 `;
 const ledBy = (opts) => (opts.profile ? `, loops led by ${opts.profile}` : '')
-  + (opts.vibeMix ? ', with 1, 3, 5 or 10 random vibes' : '')
+  + (Array.isArray(opts.vibeMix) ? `, with the vibes ${opts.vibeMix.join(', ')}` : opts.vibeMix ? ', with 1, 3, 5 or 10 random vibes' : '')
   + (opts.moods ? `, top mood ${opts.moods.join(' or ')}` : '');
 
 const PAGE = `<!doctype html><meta charset="utf-8"><title>measure</title>

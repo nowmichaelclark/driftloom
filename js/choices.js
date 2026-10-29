@@ -46,26 +46,54 @@ const LEAN_MAX = 3;
 // lingering dark (under 700 Hz for about half of every swing); `dip` is open
 // at 9 kHz but for one smooth dip, over `dip` of the swing, to `floor`.
 // Calm, vast vibes lean deep and long; bright, lively ones lean dip and short.
-const ARC_CALM = ['hazy', 'foggy', 'misty', 'frosty', 'still', 'meditative', 'spacious', 'floating', 'hypnotic', 'mysterious', 'reflective', 'wondrous'];
-const ARC_LIVELY = ['bouncy', 'lively', 'energetic', 'skipping', 'zany'];
+// Misty leans toward the arc and its calm period, but dip, not deep (queue
+// item 76b: misty the lighter of the misty-foggy pair).
+const ARC_CALM = ['hazy', 'foggy', 'misty', 'frosty', 'still', 'meditative', 'spacious', 'floating', 'hypnotic', 'mysterious', 'reflective', 'wondrous',
+  'droning', 'dreamy', 'moonlit', 'dusky', 'cosmic', 'rainy'];
+const ARC_DEEP = ARC_CALM.filter((id) => id !== 'misty');
+const ARC_LIVELY = ['bouncy', 'lively', 'skipping', 'zany', 'playful', 'bubbly', 'breezy', 'whimsical', 'soaring', 'groovy'];
 const ARC_BRIGHT = ['sunny', 'bright', 'happy', 'joyful', 'merry', ...ARC_LIVELY];
 // The vibe leans below: toward x2 and away x0.4, the middle of the rule's
 // ranges (Mikey, 2026-10-24).
 const leans = (ids, x) => Object.fromEntries(ids.map((id) => [id, x]));
 
+// Glacial's arc (queue item 76b; Mikey, 2026-10-29): toward the arc and
+// toward deep, and slower than any other loop's swing.
+const GLACIAL = {
+  // Its lean toward the arc, and on the shapes: with glacial alone, deep is
+  // about 3 in 4 of the loops that draw the arc.
+  arc: 2.5,
+  deep: 3,
+  dip: 0.25,
+  // The vibes that, with glacial, make its swing slower still (the brain's
+  // list, for Mikey's ears).
+  near: ['still', 'serene', 'meditative', 'spacious', 'floating', 'frosty', 'foggy', 'misty', 'hushed', 'droning'],
+};
+
 export const ARC = {
   // How often a loop draws the arc: its weight among the choices a loop is
   // eligible for (item 54), and the vibes that lean it on or away.
   weight: 1,
-  vibes: { ...leans(ARC_CALM, 2), ...leans(ARC_LIVELY, 0.4) },
+  vibes: { ...leans(ARC_CALM, 2), ...leans(ARC_LIVELY, 0.4), glacial: GLACIAL.arc },
   // Which shape: deep about 1 in 3, dip about 2 in 3, each leaned by vibes.
   shapes: [['deep', 1], ['dip', 2]],
-  shapeVibes: { deep: leans(ARC_CALM, 2), dip: leans(ARC_BRIGHT, 2) },
+  shapeVibes: {
+    deep: { ...leans(ARC_DEEP, 2), glacial: GLACIAL.deep },
+    dip: { ...leans(ARC_BRIGHT, 2), misty: 2, glacial: GLACIAL.dip },
+  },
   // The swing's period, in seconds: whichever of the calm and bright lists
-  // a loop's vibes weigh more picks its range; neither, the rest's.
-  period: { calm: [180, 300], bright: [90, 150], rest: [120, 300] },
-  calm: ARC_CALM,
+  // a loop's vibes weigh more picks its range; neither, the rest's. A calm
+  // loop with glacial among its vibes takes glacial's own, 5-8 minutes
+  // (Mikey), and 8-12 when one of `glacialNear` is with it.
+  period: { calm: [180, 300], bright: [90, 150], rest: [120, 300], glacial: [300, 480], glacialNear: [480, 720] },
+  calm: [...ARC_CALM, 'glacial'],
   bright: ARC_BRIGHT,
+  glacialNear: GLACIAL.near,
+  // A loop with glacial among its vibes that didn't draw the arc among its
+  // choices plays it anyway with this chance times glacial's weight in the
+  // loop, outside the choices (`arcPlays`; the brain, 2026-10-29: the arc is
+  // what glacial is). For Mikey's ears.
+  glacialChance: 0.6,
   // Where a loop starts on its swing (0 the darkest point, 0.5 the
   // brightest): deep, a bright point (the cutoff 4.9 to 9 kHz; the
   // prototype started every loop closed, at 300 Hz: a taste call, for
@@ -91,10 +119,11 @@ export const ARC = {
 // today's punch (213 dB a second) down to a tail that rings on at `long`.
 export const KICK = {
   // Short and long, half and half; long leans toward booming and the rest of
-  // batch 5's table, away from the hushed and the soothing.
+  // batch 5's table (and pulsing and groovy, item 76b), away from the hushed,
+  // the soothing and glacial.
   options: [['today', 1], ['short', 1], ['long', 1]],
   optionVibes: {
-    long: { booming: 2.5, hypnotic: 2, steady: 1.5, cool: 1.5, hushed: 0.4, tiptoeing: 0.4, twinkling: 0.4, serene: 0.5, soothing: 0.5 },
+    long: { booming: 2.5, hypnotic: 2, steady: 1.5, cool: 1.5, pulsing: 1.5, groovy: 1.5, hushed: 0.4, tiptoeing: 0.4, twinkling: 0.4, serene: 0.5, soothing: 0.5, glacial: 0.4 },
   },
   // The note: the lowest and highest, as MIDI notes (G1, D2).
   note: [31, 38],
@@ -121,9 +150,10 @@ export const KICK = {
 // the kick and the sub take turns. Every variable, named, with its range;
 // `subDuckOf` draws a loop's; the core plays it (core/src/blocks/sub_duck.rs).
 export const SUBDUCK = {
-  // How often a loop draws it, and batch 5's vibe table for it.
+  // How often a loop draws it, and batch 5's vibe table for it (groovy,
+  // pulsing and chill from item 76b).
   weight: 1,
-  vibes: { bouncy: 2, energetic: 2, lively: 1.5, skipping: 1.5, steady: 1.5, restful: 0.4, serene: 0.4, soothing: 0.4, hushed: 0.4 },
+  vibes: { bouncy: 2, lively: 1.5, skipping: 1.5, steady: 1.5, groovy: 1.5, pulsing: 1.5, chill: 1.5, restful: 0.4, serene: 0.4, soothing: 0.4, hushed: 0.4 },
   // The dip at a kick of velocity 0.8 or more, in dB (never deeper than 9:
   // the records' 20 dB "gates" are a bass playing off the beat).
   depth: [5, 9],
@@ -139,9 +169,10 @@ export const SUBDUCK = {
 // Every variable, named, with its range; `lateFloorOf` draws a loop's; the
 // engine plays it (js/engine.js).
 export const LATEFLOOR = {
-  // How often a loop draws it, and batch 5's vibe table for it.
+  // How often a loop draws it, and batch 5's vibe table for it (cruising,
+  // pulsing and glacial from item 76b).
   weight: 1,
-  vibes: { hypnotic: 2, meditative: 1.5, spacious: 1.5, wondrous: 1.5, adventurous: 1.5, energetic: 0.4, enthusiastic: 0.4, skipping: 0.4, bouncy: 0.5 },
+  vibes: { hypnotic: 2, meditative: 1.5, spacious: 1.5, wondrous: 1.5, adventurous: 1.5, cruising: 1.5, pulsing: 1.5, enthusiastic: 0.4, skipping: 0.4, bouncy: 0.5, glacial: 0.4 },
   // How long they wait, in seconds, rounded to this many bars (and at least
   // that many).
   seconds: [8, 30],
@@ -172,7 +203,7 @@ export const FLOORDROP = {
   needBass: ['stagger', 'stutter'],
   // batch 5's vibe table, each shape's own; single and stagger have none.
   shapeVibes: {
-    stutter: { energetic: 1.5, hypnotic: 1.5, lively: 1.5, mischievous: 1.5, serene: 0.4, soothing: 0.4, restful: 0.4 },
+    stutter: { hypnotic: 1.5, lively: 1.5, mischievous: 1.5, serene: 0.4, soothing: 0.4, restful: 0.4 },
     long: { hypnotic: 2, spacious: 2, meditative: 1.5, reflective: 1.5, bouncy: 0.5, skipping: 0.5 },
   },
   // The shapes follow the bar's length (Mikey's rule, the sketch's way): a
@@ -223,9 +254,10 @@ export const PEDAL = {
 // range; `padSweepOf` draws a loop's; the core plays it
 // (core/src/blocks/pad_sweep.rs).
 export const PADSWEEP = {
-  // How often a loop draws it, and batch 5's vibe table for it.
+  // How often a loop draws it, and batch 5's vibe table for it (glacial,
+  // dreamy and cosmic from item 76b).
   weight: 1,
-  vibes: { hypnotic: 2, floating: 1.5, wondrous: 1.5, hazy: 1.5, strange: 1.5, still: 0.4, restful: 0.4, hushed: 0.4, serene: 0.4 },
+  vibes: { hypnotic: 2, floating: 1.5, wondrous: 1.5, hazy: 1.5, strange: 1.5, glacial: 1.5, dreamy: 1.5, cosmic: 1.5, still: 0.4, restful: 0.4, hushed: 0.4, serene: 0.4 },
   // The chord voices it sweeps: the sustained ones (the sketch's list).
   sustained: ['pad', 'softpad', 'moogpad', 'analogpad', 'accordion', 'organ', 'choir', 'vowel', 'hum'],
   // Where it closes (Hz), how far it opens (octaves), one swing (seconds),
@@ -245,10 +277,17 @@ export const ECHO = {
   // The times, in beats, and how often each is drawn: today's dotted eighth
   // first.
   beats: [[0.75, 45], [1, 25], [0.5, 15], [2 / 3, 15]],
-  // Batch 5's vibe table, by time: one beat toward spacious and floating,
-  // half a beat toward nimble and skipping.
-  vibes: { 1: { spacious: 1.5, floating: 1.5 }, 0.5: { nimble: 1.5, skipping: 1.5 } },
+  // Batch 5's vibe table, by time: one beat toward spacious and floating
+  // (and glacial, droning, dreamy and cosmic, item 76b), half a beat toward
+  // nimble and skipping (and bubbly and playful).
+  vibes: {
+    1: { spacious: 1.5, floating: 1.5, glacial: 1.5, droning: 1.5, dreamy: 1.5, cosmic: 1.5 },
+    0.5: { nimble: 1.5, skipping: 1.5, bubbly: 1.5, playful: 1.5 },
+  },
 };
+
+// The wash's vibe table (queue item 76b; it had none before).
+const WASH_VIBES = { glacial: 1.5, rainy: 1.5, breezy: 1.5, droning: 1.5 };
 
 // The choices, in a fixed order (the draw walks them in it). Each is
 //
@@ -277,8 +316,9 @@ export const CHOICES = [
   // For any loop that plays a chord. No vibe leans (for Mikey's ears).
   { id: 'organ', options: [['today', 1], ['on', 1]], eligible: (ctx) => playsChords(ctx) },
   // The wash (queue item 62; Ears 4, round 5, approved 2026-10-16): a slow
-  // swell of air every 17-26 s, under whatever the loop plays. Any loop.
-  { id: 'wash', options: [['today', 1], ['on', 1]], eligible: () => true },
+  // swell of air every 17-26 s, under whatever the loop plays. Any loop;
+  // leaned toward glacial, rainy, breezy and droning (item 76b).
+  { id: 'wash', options: [['today', 1], ['on', 1]], vibes: WASH_VIBES, eligible: () => true },
   // The arc (queue items 63 and 63b; the prototypes, approved 2026-10-10):
   // the whole mix breathing dark and bright over minutes, in one of two
   // shapes (ARC, above; `arcOf`). Any loop.
@@ -414,14 +454,8 @@ const ARC_SALT = 0x0a4c;
 // The period and the start are drawn first, as item 63 drew them, so a loop
 // with no vibes that draws the deep swing plays exactly the swing it did.
 export function arcOf(seed, vibes = null, pins = {}) {
-  const r = new Rng(((seed ^ ARC_SALT) >>> 0) || 1);
-  const [lo, hi] = ARC.period[arcPace(vibes)];
-  const period = r.range(lo, hi);
-  const at = r.f();
-  const shapes = ARC.shapes.map(([id, w]) => [id, w * leanOf(ARC.shapeVibes[id], vibes)]);
-  const drawn = r.weighted(shapes);
+  const { period, at, drawn, floor } = arcDraws(seed, vibes);
   const shape = pins.shape ?? drawn;
-  const floor = r.range(ARC.floor[0], ARC.floor[1]);
   const dip = pins.dip ?? ARC.dip;
   // Deep: a bright point, as item 63 drew it (Rng.range's arithmetic, so the
   // same bits). Dip: anywhere in the open part, outside the dip's share
@@ -431,7 +465,33 @@ export function arcOf(seed, vibes = null, pins = {}) {
   return { shape, period: pins.period ?? period, from: pins.from ?? from, floor: pins.floor ?? floor, dip };
 }
 
-// Which period range a loop's vibes pick: 'calm', 'bright' or 'rest'.
+// The arc's draws, in their order on its stream, and the stream, left after
+// them.
+function arcDraws(seed, vibes) {
+  const r = new Rng(((seed ^ ARC_SALT) >>> 0) || 1);
+  const [lo, hi] = ARC.period[arcPace(vibes)];
+  const period = r.range(lo, hi);
+  const at = r.f();
+  const shapes = ARC.shapes.map(([id, w]) => [id, w * leanOf(ARC.shapeVibes[id], vibes)]);
+  const drawn = r.weighted(shapes);
+  const floor = r.range(ARC.floor[0], ARC.floor[1]);
+  return { period, at, drawn, floor, r };
+}
+
+// Whether a loop plays the arc (queue item 76b): when it drew it among its
+// choices, or, with glacial among its vibes, with ARC.glacialChance times
+// glacial's weight, drawn on the arc's own stream after arcOf's draws. Not
+// one of the loop's changes, so its other choices and draws stay as they
+// are; a loop without glacial plays the arc exactly when its choices say.
+export function arcPlays(seed, choices, vibes = null) {
+  if (choices && choices.arc === 'on') return true;
+  const w = vibes && vibes.vibes.glacial;
+  if (!w) return false;
+  return arcDraws(seed, vibes).r.chance(ARC.glacialChance * w);
+}
+
+// Which period range a loop's vibes pick: 'calm' (or glacial's own),
+// 'bright' or 'rest'.
 function arcPace(vibes) {
   if (!vibes) return 'rest';
   let calm = 0;
@@ -440,6 +500,7 @@ function arcPace(vibes) {
     if (ARC.calm.includes(id)) calm += w;
     if (ARC.bright.includes(id)) bright += w;
   }
+  if (calm > bright && vibes.vibes.glacial) return Object.keys(vibes.vibes).some((id) => ARC.glacialNear.includes(id)) ? 'glacialNear' : 'glacial';
   return calm > bright ? 'calm' : bright > calm ? 'bright' : 'rest';
 }
 

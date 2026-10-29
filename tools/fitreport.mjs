@@ -8,7 +8,8 @@ import {
   ALWAYS, NEVER,
 } from './fit.mjs';
 
-// The pool-3 groups, as in rank.html and ranks.mjs.
+// The pool-3 groups, as in ranks.mjs (rank.html's pool 4 drops four of
+// them; queue item 76b).
 const GROUPS = {
   color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful',
     'bright', 'sunny', 'starry', 'wondrous', 'triumphant', 'wistful', 'warm', 'cool',

@@ -74,6 +74,8 @@ console.log(`nothing tapped on ${none} of ${answered.length} (${pct(none, answer
 
 // The pool-3 groups, as in rank.html (the maps: color, shimmer, air,
 // motion, flavor). Pool 1 had no groups, but every pool-1 word sits in one.
+// Pool 4 is pool 3 less soft, comfy, energetic and silly (queue item 76b);
+// they stay here, so older answers keep their groups.
 const GROUPS = {
   color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful',
     'bright', 'sunny', 'starry', 'wondrous', 'triumphant', 'wistful', 'warm', 'cool',
