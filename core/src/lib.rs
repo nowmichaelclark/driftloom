@@ -336,6 +336,10 @@ const NO_ROUTE: Route = Route { on: false, to: 0, block: 0, setting: 0, from: 0,
 /// (`blocks`).
 pub const EXTRA: usize = 12;
 
+/// The most the bass lift may be, up or down, in dB (`Core::bass_lift`): a
+/// host's slip can't make the bass roar or vanish.
+pub const BASS_LIFT_MAX: f64 = 12.0;
+
 /// A slot of the voice pool: a sounding note, and what the core needs to
 /// know of it without asking its voice.
 struct Slot {
@@ -484,6 +488,9 @@ pub struct Core {
     space_at: u64,
     space_drawn: space::Drawn,
     space_on: bool,
+    /// The bass layer's lift for the loop, in dB (queue item 76c), stamped on
+    /// each bass note as it arrives. 0 is today's level.
+    bass_lift: f64,
     /// In a stereo render with a space, this block: each channel's notes
     /// placed apart from it (`Slot::place`), and its own blocks' width.
     placed: [Signal; CHANNELS],
@@ -555,6 +562,7 @@ impl Core {
             space_at: 0,
             space_drawn: space::ZERO,
             space_on: false,
+            bass_lift: 0.0,
             placed: [[0.0; QUANTUM]; CHANNELS],
             own_side: [[0.0; QUANTUM]; CHANNELS],
             layout: 0,
@@ -604,6 +612,7 @@ impl Core {
         self.drawn = space::CENTERED;
         self.spaced = false;
         self.space_waits = false;
+        self.bass_lift = 0.0;
         self.quality(true);
     }
 
@@ -771,6 +780,23 @@ impl Core {
     /// and nothing changes, for no such setting or a range that isn't one.
     pub fn space_range(&mut self, which: usize, lo: f64, hi: f64) -> bool {
         self.space.range(which, lo, hi)
+    }
+
+    /// Set the bass layer's level for the loop, in dB over today's (queue
+    /// item 76c): every bass voice alike, the same for every note that
+    /// arrives from now on (a note already waiting keeps the lift it
+    /// arrived with, so a loop handed over keeps its own). The host sends it
+    /// at each load: `BASS_LIFT_KICK` in `js/choices.js` for a loop that
+    /// plays a kick, 0 for one that doesn't (the bass carries the low end
+    /// alone there). False, and nothing changes, for a value that isn't a
+    /// number or is outside `BASS_LIFT_MAX` either way. Not reset by
+    /// `clear` or `cancel`; `init` sets it to 0.
+    pub fn bass_lift(&mut self, db: f64) -> bool {
+        if !(db.is_finite() && db.abs() <= BASS_LIFT_MAX) {
+            return false;
+        }
+        self.bass_lift = db;
+        true
     }
 
     /// Whether the core mixes at this sample rate (`mix::MAX_RATE`). A
@@ -1068,6 +1094,10 @@ impl Core {
             extra,
             draws: Draws::new(self.key, channel),
         };
+        // The loop's bass lift rides on each bass note (item 76c).
+        if voice == BASS {
+            note.extra[blocks::bass::LIFT_SLOT] = self.bass_lift;
+        }
         if !blocks::known(voice)
             || (blocks::uses_noise(&note) && !self.noise.ready())
             || channel as usize >= CHANNELS
@@ -2130,6 +2160,37 @@ mod tests {
         assert!(step(&next) <= step(&plain) * 1.05, "a new loop's sweep glides in: {} against {}", step(&next), step(&plain));
         let then = 20.0 * (rms(&next, 3.45, 3.55) / rms(&plain, 3.45, 3.55)).log10();
         assert!(then < -3.0, "and closed a period on: {then:.1} dB");
+    }
+
+    /// The bass lift (queue item 76c): a loop's setting raises every bass
+    /// voice by that many dB, a note that arrives before the next setting
+    /// keeps the lift it arrived with, a note with none is today's level to
+    /// the bit, and a number that isn't one is refused.
+    #[test]
+    fn the_bass_lift_raises_every_bass_voice() {
+        let play = |lift: Option<f64>, parts: u32| -> Vec<f32> {
+            let mut core = boxed();
+            if let Some(db) = lift {
+                assert!(core.bass_lift(db));
+            }
+            core.key(key(7, 0, 0, 0));
+            core.note(BASS, BASS_CHANNEL, 0.0, 40.0, 0.8, 0.8, parts, NO);
+            let mut out = Vec::new();
+            for b in 0..(1.2 * RATE) as usize / QUANTUM {
+                out.extend(core.process((b * QUANTUM) as u64)[BASS_CHANNEL as usize]);
+            }
+            out
+        };
+        let rms = |x: &[f32]| (x.iter().map(|v| f64::from(*v).powi(2)).sum::<f64>() / x.len() as f64).sqrt();
+        for parts in [bass::SUB, bass::ROUND, bass::FIFTHS, bass::PLUCKBASS, bass::MOOGBASS] {
+            let today = play(None, parts);
+            assert_eq!(today, play(Some(0.0), parts), "0 dB is today's, bit for bit (voice {parts})");
+            let lifted = 20.0 * (rms(&play(Some(3.0), parts)) / rms(&today)).log10();
+            assert!((lifted - 3.0).abs() < 0.05, "voice {parts} lifts {lifted:.3} dB");
+        }
+        let mut core = boxed();
+        assert!(!core.bass_lift(f64::NAN) && !core.bass_lift(BASS_LIFT_MAX + 1.0));
+        assert!(core.bass_lift(3.0) && core.bass_lift(-BASS_LIFT_MAX));
     }
 
     /// subDuck (queue item 68): the bass channel dips at each kick of the

@@ -15,7 +15,8 @@
 //!
 //! The note's `parts` are the voice (`SUB` and the rest) with the flags
 //! `GLIDE` and `CHUG`; its first two extra values, the pluck's click's
-//! rate and offset draws.
+//! rate and offset draws; its third, the loop's bass lift in dB
+//! (`LIFT_SLOT`), which the core stamps from `Core::bass_lift`.
 
 // Web Audio's parameters are 32-bit floats, set from the host's 64-bit
 // numbers: a voice narrows every value it hands one.
@@ -60,6 +61,12 @@ pub const GLIDE: u32 = 8;
 /// The flag for a chug.
 pub const CHUG: u32 = 16;
 
+/// The note's extra value that holds the loop's bass lift, in dB (item 76c).
+/// The core stamps it on each bass note as the note arrives (`Core::note`),
+/// from the setting the host sent for the loop; a note without one (the kit's
+/// probe, a golden list) reads it as 0 dB, today's level.
+pub const LIFT_SLOT: usize = 2;
+
 /// The trims, each voice's measured level (`TRIM` in `bass()`).
 fn trim(kind: u32) -> f64 {
     match kind {
@@ -74,12 +81,13 @@ fn trim(kind: u32) -> f64 {
 /// add 3 to 7 dB by ear (K-weighted, across the register), so the whole
 /// note, harmonics and all, comes down by that much and the bass layer
 /// keeps today's level; `REGISTER_DB` takes back what the higher register
-/// adds on top, and `LIFT_DB` lifts them all. The harmonics keep the
+/// adds on top, and the loop's lift (`LIFT_SLOT`) lifts them all. The harmonics keep the
 /// prototype's balance against the note, so the timbre is what Mikey heard;
-/// the prototype played the bass about 6 dB louder by ear than today, and
-/// Mikey chose today's level (2026-10-20) until he hears the two side by
-/// side (Session 26's album).
-fn round_trim(kind: u32) -> f64 {
+/// the prototype played the bass about 6 dB louder by ear than today. Mikey
+/// heard the two side by side (Session 26's album) and chose +3 dB in loops
+/// with a kick, today's level in loops without (item 76c); the host decides
+/// which, per loop.
+fn round_trim(kind: u32, lift_db: f64) -> f64 {
     let db = match kind {
         SUB => -5.5,
         ROUND => -4.8,
@@ -87,18 +95,13 @@ fn round_trim(kind: u32) -> f64 {
         PLUCKBASS => -3.2,
         _ => -6.7,
     } + REGISTER_DB
-        + LIFT_DB;
+        + lift_db;
     math::pow(10.0, db / 20.0)
 }
 
 /// What the higher register (36-57, from 28-52) adds by ear on the layer,
 /// taken back, in dB.
 const REGISTER_DB: f64 = -1.0;
-
-/// The bass layer's level by ear against today's, in dB, every voice alike:
-/// 0 keeps today's level (Mikey's choice for now). Session 26's album hears
-/// it at 0, +3 and +5.5 (about the prototype's).
-const LIFT_DB: f64 = 0.0;
 
 /// A sine, its frequency set once, under its own gain.
 struct Sine {
@@ -211,6 +214,7 @@ impl Bass {
         vel: f64,
         draws: (f64, f64),
         noise: usize,
+        lift_db: f64,
         rate: f64,
     ) {
         let kind = parts & KIND;
@@ -218,7 +222,7 @@ impl Bass {
         let chug = parts & CHUG != 0;
         self.kind = kind;
         let f = midi_to_freq(midi);
-        let vel = vel * trim(kind) * round_trim(kind);
+        let vel = vel * trim(kind) * round_trim(kind, lift_db);
         let stop = time + dur + 0.4;
         // A chug note lets go in under half the time.
         let let_go = |release: f64| if chug { release * 0.45 } else { release };
@@ -393,9 +397,11 @@ impl Block for Bass {
     ];
 
     fn start(&mut self, note: &Note, cx: &Context) {
-        let [a, b, ..] = note.extra;
+        let [a, b, lift, ..] = note.extra;
         let (noise, rate) = (cx.noise.len(), cx.rate);
-        self.play(note.parts, note.midi, note.time, note.dur, note.vel, (a, b), noise, rate);
+        // No lift stamped (the kit's probe) is today's level.
+        let lift = if lift.is_finite() { lift } else { 0.0 };
+        self.play(note.parts, note.midi, note.time, note.dur, note.vel, (a, b), noise, lift, rate);
     }
 
     fn span(&self) -> (u64, u64) {

@@ -2254,6 +2254,14 @@ export class Synth {
     core.param(MIX.arcPeriod, SET, o ? o.period : 0, time);
   }
 
+  // The bass layer's level for the loop, in dB over the bass's own (queue
+  // item 76c; Core::bass_lift): every bass note that follows carries it. The
+  // JavaScript synth (the fallback) leaves its bass as it is.
+  bassLiftSetup(db) {
+    const core = this._coreMix();
+    if (core) core.bassLift(db);
+  }
+
   // The loop's space (queue item 65; core/src/space.rs): its seed, how busy
   // and wet it is and whether its texture is light; the core draws the
   // widths and placements from it and takes them from `time` in a stereo

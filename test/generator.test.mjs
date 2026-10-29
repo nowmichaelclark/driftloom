@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf, BASS_LIFT, bassLiftOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1198,6 +1198,18 @@ console.log('\nsubDuck (queue item 68)');
 }
 
 // ---------------------------------------------------------------------
+console.log('\nthe bass lift (queue item 76c)');
+{
+  check('named, with its two values: +3 dB with a kick, today\'s without', BASS_LIFT.kick === 3 && BASS_LIFT.noKick === 0);
+  const t = (inst, vel = 0.8) => ({ drums: [{ step: 0, inst, vel }], bass: [] });
+  check('a kick lifts it', bassLiftOf(t('kick')) === 3);
+  check('and a soft kick', bassLiftOf(t('softkick')) === 3);
+  check('and the hand kit\'s kick, the frame drum', bassLiftOf(t('frame')) === 3);
+  check('a kick at no velocity doesn\'t', bassLiftOf(t('kick', 0)) === 0);
+  check('a snare, a hat or the hand kit\'s tap and jingle don\'t', ['snare', 'hat', 'tap', 'jingle', 'rim'].every((i) => bassLiftOf(t(i)) === 0));
+  check('no drums doesn\'t', bassLiftOf({ drums: [], bass: [] }) === 0);
+}
+
 console.log('\nlateFloor (queue item 69)');
 {
   // The sketch's draws: whether, how long, then the order, on its stream;

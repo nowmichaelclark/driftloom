@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf } from './choices.js';
+import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf, bassLiftOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -344,6 +344,10 @@ export class Engine {
     this.padSweepChange = false;
     // The loop's echo time in beats (queue item 73).
     this.echoBeats = 0.75;
+    // The loop's bass lift in dB (queue item 76c), and whether it is still
+    // to be sent.
+    this.bassLift = 0;
+    this.bassLiftChange = false;
     // The loop's space (queue item 65), and whether it is still to be sent.
     this.space = null;
     this.spaceChange = false;
@@ -480,6 +484,11 @@ export class Engine {
     const swept = keepPosition && JSON.stringify(sweep) === JSON.stringify(this.padSweep);
     this.padSweepChange = !swept && !!(sweep || this.padSweep);
     this.padSweep = sweep;
+    // And the bass layer's level (queue item 76c): +3 dB in a loop with a
+    // kick, today's without, for the whole loop, from its first step decided.
+    const lift = bassLiftOf(this.base.tracks);
+    this.bassLiftChange = !(keepPosition && lift === this.bassLift);
+    this.bassLift = lift;
     // And lateFloor (queue item 69): after a load the kit and the bass sit
     // out a while, counted from its first step. Never on a reroll, which
     // keeps its place (and whatever wait it was in), nor on a loop resumed
@@ -749,6 +758,7 @@ export class Engine {
     if (this.subDuck) this.subDuckChange = true;
     // So may padSweep's.
     if (this.padSweep) this.padSweepChange = true;
+    this.bassLiftChange = true;
     this.lastTick = null;
     this.visualQueue = [];
     this.synth.silence();
@@ -1152,6 +1162,10 @@ export class Engine {
     if (this.padSweepChange) {
       this.synth.padSweepSetup(this.padSweep, Math.max(time, this.floor));
       this.padSweepChange = false;
+    }
+    if (this.bassLiftChange) {
+      this.synth.bassLiftSetup(this.bassLift);
+      this.bassLiftChange = false;
     }
     if (this.spaceChange) {
       this.synth.spaceSetup(this.space, Math.max(time, this.floor));

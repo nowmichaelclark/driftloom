@@ -209,6 +209,13 @@ pub extern "C" fn dl_space_range(which: u32, lo: f64, hi: f64) -> u32 {
     u32::from(core().space_range(which as usize, lo, hi))
 }
 
+/// Set the bass layer's lift in dB for the loop; see `Core::bass_lift`
+/// (queue item 76c). 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_bass_lift(db: f64) -> u32 {
+    u32::from(core().bass_lift(db))
+}
+
 /// The number of output channels: the layout, 1 or 2.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_outputs() -> u32 {
