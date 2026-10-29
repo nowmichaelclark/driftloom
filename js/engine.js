@@ -9,7 +9,7 @@ import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from
 import { Rng } from './rng.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
-import { notesPerSecond, arcOf, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf } from './choices.js';
+import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf } from './choices.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -459,8 +459,9 @@ export class Engine {
     this.washChange = !kept && !!(wash || this.wash);
     this.wash = wash;
     // And the arc (queue items 63 and 63b): its shape, period, start and
-    // floor, drawn from the loop's seed and vibes (js/choices.js, ARC).
-    const arc = this.base.choices && this.base.choices.arc === 'on' ? arcOf(spec.seed, vibesOf(spec)) : null;
+    // floor, drawn from the loop's seed and vibes (js/choices.js, ARC); a
+    // glacial loop may play it outside its choices (item 76b, `arcPlays`).
+    const arc = arcPlays(spec.seed, this.base.choices, vibesOf(spec)) ? arcOf(spec.seed, vibesOf(spec)) : null;
     const held = keepPosition && JSON.stringify(arc) === JSON.stringify(this.arc);
     this.arcChange = !held && !!(arc || this.arc);
     this.arc = arc;

@@ -89,6 +89,11 @@ export const ARC = {
   calm: [...ARC_CALM, 'glacial'],
   bright: ARC_BRIGHT,
   glacialNear: GLACIAL.near,
+  // A loop with glacial among its vibes that didn't draw the arc among its
+  // choices plays it anyway with this chance times glacial's weight in the
+  // loop, outside the choices (`arcPlays`; the brain, 2026-10-29: the arc is
+  // what glacial is). For Mikey's ears.
+  glacialChance: 0.6,
   // Where a loop starts on its swing (0 the darkest point, 0.5 the
   // brightest): deep, a bright point (the cutoff 4.9 to 9 kHz; the
   // prototype started every loop closed, at 300 Hz: a taste call, for
@@ -449,14 +454,8 @@ const ARC_SALT = 0x0a4c;
 // The period and the start are drawn first, as item 63 drew them, so a loop
 // with no vibes that draws the deep swing plays exactly the swing it did.
 export function arcOf(seed, vibes = null, pins = {}) {
-  const r = new Rng(((seed ^ ARC_SALT) >>> 0) || 1);
-  const [lo, hi] = ARC.period[arcPace(vibes)];
-  const period = r.range(lo, hi);
-  const at = r.f();
-  const shapes = ARC.shapes.map(([id, w]) => [id, w * leanOf(ARC.shapeVibes[id], vibes)]);
-  const drawn = r.weighted(shapes);
+  const { period, at, drawn, floor } = arcDraws(seed, vibes);
   const shape = pins.shape ?? drawn;
-  const floor = r.range(ARC.floor[0], ARC.floor[1]);
   const dip = pins.dip ?? ARC.dip;
   // Deep: a bright point, as item 63 drew it (Rng.range's arithmetic, so the
   // same bits). Dip: anywhere in the open part, outside the dip's share
@@ -464,6 +463,31 @@ export function arcOf(seed, vibes = null, pins = {}) {
   const [a, b] = shape === 'deep' ? ARC.from.deep : [dip / 2, 1 - dip / 2];
   const from = a + at * (b - a);
   return { shape, period: pins.period ?? period, from: pins.from ?? from, floor: pins.floor ?? floor, dip };
+}
+
+// The arc's draws, in their order on its stream, and the stream, left after
+// them.
+function arcDraws(seed, vibes) {
+  const r = new Rng(((seed ^ ARC_SALT) >>> 0) || 1);
+  const [lo, hi] = ARC.period[arcPace(vibes)];
+  const period = r.range(lo, hi);
+  const at = r.f();
+  const shapes = ARC.shapes.map(([id, w]) => [id, w * leanOf(ARC.shapeVibes[id], vibes)]);
+  const drawn = r.weighted(shapes);
+  const floor = r.range(ARC.floor[0], ARC.floor[1]);
+  return { period, at, drawn, floor, r };
+}
+
+// Whether a loop plays the arc (queue item 76b): when it drew it among its
+// choices, or, with glacial among its vibes, with ARC.glacialChance times
+// glacial's weight, drawn on the arc's own stream after arcOf's draws. Not
+// one of the loop's changes, so its other choices and draws stay as they
+// are; a loop without glacial plays the arc exactly when its choices say.
+export function arcPlays(seed, choices, vibes = null) {
+  if (choices && choices.arc === 'on') return true;
+  const w = vibes && vibes.vibes.glacial;
+  if (!w) return false;
+  return arcDraws(seed, vibes).r.chance(ARC.glacialChance * w);
 }
 
 // Which period range a loop's vibes pick: 'calm' (or glacial's own),

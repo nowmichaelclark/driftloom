@@ -5,7 +5,7 @@
 // voicing or an out-of-range note does not throw, it just sounds wrong,
 // and often only on one seed in a thousand. So we check thousands.
 
-import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords } from '../js/generator.js';
+import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf } from '../js/generator.js';
 import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
@@ -13,7 +13,7 @@ import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/mood
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
-import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf } from '../js/choices.js';
+import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
 // Override it so the export can be inspected byte for byte.
@@ -1081,6 +1081,22 @@ console.log('\nThe arc\'s two shapes (queue item 63b)');
   const glacialArc = arcAlone({ vibes: { glacial: 1 }, strength: 0.9 });
   const stillArc = arcAlone({ vibes: { still: 1 }, strength: 0.9 });
   check('glacial draws the arc more than still does', glacialArc > stillArc, `${glacialArc.toFixed(3)} ${stillArc.toFixed(3)}`);
+  // Outside the choices (the brain's answer to 76b's note): glacial alone
+  // plays the arc in at least 60% of its loops; without glacial a loop plays
+  // it exactly when its choices say.
+  let plays = 0, differ = 0;
+  for (let i = 0; i < 300; i++) {
+    const spec = newSpec(7000 + i, ['glacial']);
+    const { choices } = render(spec);
+    if (arcPlays(spec.seed, choices, vibesOf(spec))) plays++;
+    for (const vibes of [null, { vibes: { still: 1 }, strength: 0.7 }, { vibes: { cozy: 0.5, misty: 0.5 }, strength: 0.9 }]) {
+      const ch = drawChoices(i, {}, vibes);
+      if (arcPlays(i, ch, vibes) !== (ch.arc === 'on')) differ++;
+    }
+  }
+  check('glacial alone plays the arc in at least 60% of its loops', plays / 300 >= 0.6, (plays / 300).toFixed(3));
+  check('without glacial the arc plays exactly when the choices draw it', differ === 0, `${differ}`);
+  check('the glacial chance is a named setting', ARC.glacialChance === 0.6);
 }
 
 // ---------------------------------------------------------------------
