@@ -34,3 +34,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   the fuller low end, and to dust #42 (no kit) for no change at all. A kit
   or bass that comes in late (lateFloor) or drops out (floorDrop) keeps its
   loop's level throughout. Loops without a kick are unchanged to the bit.
+- #283, lateFloor's second arrival drawn (item 76d, v127), preview URL:
+  <https://0f9be036-driftloom.nowmichaelclark.workers.dev> (commit 8d0490c):
+  when the kit and the bass arrive apart, the gap between them is drawn per
+  loop, 1-8 bars (the short end commonest, mean about 2.5 bars; it was always
+  2), and it ends inside the loop's first pass when the first part does.
+  Calm, vast vibes (glacial, droning, meditative, serene, still, spacious,
+  floating, dreamy, hypnotic) lean the wait and the gap long; lively ones
+  (lively, enthusiastic, bouncy, skipping, groovy, pulsing, cruising) lean
+  them short. Listen to undertow #45 with lateFloor forced (kit 0:30, bass
+  0:34 before) and to any lateFloor loop under glacial against lively: the
+  second part should not always come two bars after the first. Loops
+  without vibes, or that draw `together`, wait as before.
