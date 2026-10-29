@@ -289,6 +289,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   check: after item 82 (the player), or sooner if the verdicts call for one.
   Done lines #241-#274 stay live until the verdicts are in, then go to the
   archive.
+- **Since Session 26 (brain, 2026-10-29):** item 76 merged (#277, v124;
+  archived with its note). Mikey took the vibes to 88: queue item 76b now
+  holds glacial and twenty more, four dropped (`docs/VIBES.md`, "The vibes
+  to 88"; `docs/DECISIONS.md`). And no compatibility bloat for old codes.
+  The album is still unheard.
 - **Since 2026-10-26 (hands, docs restructure and item 76).** All three
   groups of the sound batch are merged (items 54-73, #245-#272, v103-v123;
   group (b) is items 64-66, group (c) 67-73), and the album loops in the

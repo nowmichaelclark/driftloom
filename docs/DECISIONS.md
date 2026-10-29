@@ -48,6 +48,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 - 2026-10-11 -- **Word albums** (2026-10-11, his idea after 181 rankings): one word at a time, "Is this playlist heartwarming? Which songs are not?" The brain guesses loops for a word and mixes in a couple it expects not to fit. The five-word ranking rests; its answers stay the base for the fit.
 - 2026-10-11 -- **Vibes in the app** (2026-10-11, top priority): the words are called vibes; a **Vibes** key on Now Playing opens a scrolling two-column list with Close and Clear All; pick any number; each new loop leans toward up to five of them, weights shifting loop to loop (one vibe alone at 50% or more). All 71 pool-3 words. A real feature, and the tuning tool: he picks vibes and sends loops that fit well or don't. Queue item 38; recipes in `docs/VIBES.md`. A Painter session can refine the look.
 - 2026-10-26 -- **Glacial, a new vibe (Mikey, 2026-10-26; his idea of 2026-10-22):** very slow and vast; "vast and cool" in color (soft pads and swells, held bass, almost no drums, wide space, cool tone, long chords); the arc swinging 5-8 minutes, and "maybe it can swing to 8-12 if it is paired with another glacial-adjacent vibe". Queue item 76b.
+- 2026-10-29 -- **The vibes go to 88 (Mikey, 2026-10-29):** twenty join beside glacial (dewy, dusky, moonlit, rainy, whimsical, dreamy, chill, groovy, pulsing, cruising, droning, cosmic, bubbly, earthy, soaring, jazzy, breezy, rippling, playful, mellow) and four leave (soft, energetic, silly, comfy; enthusiastic, goofy, cozy, restful and soothing stay). Turned down: nostalgic ("it has too many meanings of what it could be to be a good mood word for music") and sleepy. The reasons and drafts: `docs/VIBES.md`, "The vibes to 88". Queue item 76b.
 - by 2026-10-16 -- The old branches stay: he likes looking back on them.
 
 ## The engine and stereo
@@ -94,6 +95,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 ## How the project runs
 
 - 2026-09-23 -- **Old share codes, saved loops and albums may change or break** while the app is in testing (2026-09-23). Keep draws stable where it's free, only because it keeps A/B albums comparing the same loops.
+- 2026-10-29 -- **No compatibility bloat (Mikey, 2026-10-29):** "There's zero need to try to preserve old codes. The app is still in it's testing phase. Old codes and old programming code is fine to change and or get rid of. We don't want to build bloat for no reason." No retired slots, shims or fallbacks kept for old codes.
 - by 2026-10-16 -- **Merging before an A/B is fine**, and the hands merge their own PRs under the queue's policy. Production is testers only; merges can be reverted.
 - by 2026-10-16 -- **Performance: excellence.** Light and fast even at full quality, "DHH-wow" smooth with a hundred other apps open.
 - by 2026-10-16 -- **Baking loops for playback: no.** "Let the loop wander" is on by default and changes the loop every pass, and re-rolls must be instant. Baking lives on as an audio export (roadmap 17).
