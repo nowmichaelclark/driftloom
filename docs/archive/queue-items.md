@@ -88,6 +88,7 @@ queue is `docs/QUEUE.md`. The notes the hands left on these items are in
 - [34. The ten dials, measured: tools/dials.mjs (measure only)](#34-the-ten-dials-measured-toolsdialsmjs-measure-only)
 - [35. Fitting the words, and building word albums (measure only)](#35-fitting-the-words-and-building-word-albums-measure-only)
 - [36. Two mode decisions: reflective may be neutral; cinder and shatter may be bright](#36-two-mode-decisions-reflective-may-be-neutral-cinder-and-shatter-may-be-bright)
+- [76. The first loop after the app starts loses its first notes (app track)](#76-the-first-loop-after-the-app-starts-loses-its-first-notes-app-track)
 
 ## Old status notes (until 2026-10-25)
 
@@ -2815,3 +2816,58 @@ exactly as before.
   modes and 6 glad cinder and shatter loops in bright modes (seeds and
   codes), so the brain can build the listening album from them directly.
 
+## 76. The first loop after the app starts loses its first notes (app track)
+
+**App track.** Hands: **Sonnet 5.5, high**. Stay out of `core/`: the fix
+belongs in the page's scheduling (`js/engine.js`, `js/synth.js`,
+`js/core.js`). If it truly needs a core change, stop and leave a note.
+
+**What the field shows** (Mikey's Moto, Diagnostics on v116, 2026-10-25):
+the first loop after the app starts loses its first notes. Six notes were
+late at 3.8 s into the page's time, every one "inside the buffer, left out"
+(item 41's rule: a note more than 30 ms late is left out, not bunched). They
+had been posted 77-82 ms ahead of their start; the render-ahead measured
+right after was 133 ms. Later loops were fine.
+
+**What the brain reads in it (unproven; check before relying on it):** the
+planner places a note no closer than the render-ahead plus a margin, but
+at a cold start there is no render-ahead yet. `Synth.renderAhead` is null
+until a note has reached the core, or at best the context's `baseLatency`
+(a callback's worth, tens of milliseconds), and `Engine._soonest` then falls
+back to its own lead (0.08 s for the loop's start), which matches the 77-82
+ms. The core was already rendering 133 ms past the clock, so the first
+notes landed inside what it had rendered. Item 41 plans from a
+measurement and item 47 assumes a deep buffer when hidden; a cold start
+visible has neither.
+
+**What:** until the render-ahead has been measured (no note has reached the
+core yet this session), plan every note with a safe margin instead of the
+short lead: **the device's reported output latency** (`AudioContext.outputLatency`,
+where the browser gives one, else `baseLatency`), **and never less than
+250 ms**. Once it is measured, plan from the measurement as item 41 left it.
+- It covers every note decided before the first measurement: the first
+  loop, and whatever is decided near the clock right after the start (a
+  new loop, Next, a tempo change in the first seconds).
+- The cost is that sound starts up to a quarter of a second after Play on
+  the first loop; nobody can see that. Take the more conservative option
+  wherever the choice is open and write it in the PR, "for Mikey's ears".
+- The JavaScript synth is unchanged (it has no render-ahead).
+- Diagnostics' log of late notes says whether a note was planned from the
+  margin or from a measurement, so the next report shows which.
+
+**Yardsticks:**
+- **No late notes at a cold start on a phone in Diagnostics** (the item's
+  measure): app started from nothing, first loop played to the end, the
+  copied Diagnostics report `late: 0` for it, on full and on lite.
+- In the harness, first reproduce the failure on `main` (a core that
+  renders further ahead than 80 ms from the first note, as
+  `node tools/views.mjs --buffer ... --delay ...` models a buffer), then show
+  zero late notes in the first loop with the margin, across several seeds.
+- Visible behavior after the first measurement unchanged: the latency of a
+  mute or re-roll as item 41 measured it, and item 47's hidden planning.
+- Steps for the tester in the PR (what to do, what to copy), so his next
+  Diagnostics answers whether anything is left.
+- Bump `BUILD` and `CACHE` together to the next version; the usual tests
+  and checks.
+
+**Done** (#277, v124, 2026-10-27): the note is `docs/archive/notes/76-cold-start.md`.

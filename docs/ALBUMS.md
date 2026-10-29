@@ -4,7 +4,34 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
-## Session 26 (2026-10-26, on v123): the sound batch -- out for listening
+## Session 26 (2026-10-26, on v123): the sound batch -- heard 2026-10-29
+
+**Heard (Mikey, 2026-10-29), every verdict from the page's database:**
+- **Keep, everything.** New sounds: frame drum, longChords, glass, dubStab,
+  the organ, the wash, both echo times. Mixing ideas: floorDrop, tunedKick,
+  subDuck, lateFloor, pedalBass. Flagged: tei-har's glass, the organ after a
+  rest, the deep arc, the dip arc ("almost has a bit of a lynchian vibe to
+  it; just a bit"), padSweep. Clips: undertow #45's long late floor, thaw
+  #71's padSweep, cinder #93's stutter, vapor #4's long drop.
+- **floorDrop** (undertow #45): "I didn't actually hear the kick drop out
+  unless I'm crazy, but I like the idea for sure." (One bar at 129 bpm, 1.9
+  s, under the wash.)
+- **lateFloor, with a caveat:** "the bass can come in later too in relation
+  to the kit. It doesn't need a set come in time though. I like when things
+  are weighted or determined by vibe or somewhat random." Queue item 76d.
+- **dust #69's pedal:** "very little difference between with and without."
+  Kept as built (his keep on pedalBass; the refused notes weren't heard).
+- **The bass level:** +3 dB on dust #7 and noan-nou, today's on dust #42 (no
+  kit). Queue item 76c: +3 dB with a kick, today's without.
+- **Stereo against mono:** "same" on pairs 1, 2, 3, 5 and 6 and on the null
+  (7); pair 4 (thaw #82) "just barely x sounds nicer but about the same
+  here", and X was the stereo render there. Key, read back: X stereo in
+  pairs 1, 2, 4 and 5, mono in 3 and 6. "Maybe my ears are getting older?"
+  More likely the design: the approved baseline keeps the side 21-25 dB
+  under the mid on these loops, steady, so the fold sounds like mono by
+  construction. Stereo stays the default (it costs nothing he can hear);
+  a wider, moving space is the later, experimental option the charter
+  already names.
 
 Everything is on one private listening page, "Session 26 Listening"
 (https://claude.ai/artifact/4hof83esqPq6qFbWb1NTmK, Mikey's own), where his

@@ -210,6 +210,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 | Depth two (blind, 6 x 16 bars) | 4/4 developing "goes somewhere"; simple: 1 goes somewhere, 1 loops (and looping is welcome sometimes) |
 | Rust, all voices (10, core on, phone) | "it sounded great!" |
 | Phase 1 check (blind A/B, 9, v92 vs v99) | "everything sounds the same on both versions"; no difference he could hear |
+| Session 26 (the sound batch, 3 albums + clips, v123) | every new sound and mixing idea kept; bass +3 dB with a kick, today's without; lateFloor's second arrival should vary; stereo vs mono: "same" on 5 of 6 (and the null), stereo "just barely" nicer on the sixth |
 
 ## Methods that proved themselves
 
@@ -289,6 +290,13 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   check: after item 82 (the player), or sooner if the verdicts call for one.
   Done lines #241-#274 stay live until the verdicts are in, then go to the
   archive.
+- **Since Session 26 (brain, 2026-10-29):** item 76 merged (#277, v124;
+  archived with its note). Mikey took the vibes to 88: queue item 76b now
+  holds glacial and twenty more, four dropped (`docs/VIBES.md`, "The vibes
+  to 88"; `docs/DECISIONS.md`). And no compatibility bloat for old codes.
+  **The album was heard the same day** (`docs/ALBUMS.md`): everything kept;
+  two tunes queued as 76c (the bass level) and 76d (lateFloor's second
+  arrival). Done lines #241-#274 archived.
 - **Since 2026-10-26 (hands, docs restructure and item 76).** All three
   groups of the sound batch are merged (items 54-73, #245-#272, v103-v123;
   group (b) is items 64-66, group (c) 67-73), and the album loops in the

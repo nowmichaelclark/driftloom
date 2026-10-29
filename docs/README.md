@@ -21,7 +21,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `AGENTS.md`, `CLAUDE.md` | What Driftloom is, the roles, the rules that hold everywhere, build and test. `CLAUDE.md` imports it. | everyone |
 | `core/AGENTS.md` | The core's standing rules, and the rules for sound items. | hands (core) |
 | `docs/QUEUE.md` | The work queue: status, standing rules, the open items, known issues, the merge policy. | hands, brain |
-| `docs/DONE.md` | One line for each merged PR since #241. | hands (to add), brain |
+| `docs/DONE.md` | One line for each merged PR since #277. | hands (to add), brain |
 | `docs/notes/` | One file for each note from the hands (`<item>-<name>.md`). | brain |
 | `docs/BRAIN.md` | How the work is organized, getting oriented, "Start here", listening albums, methods, tools. | brain |
 | `docs/DECISIONS.md` | What Mikey has decided: one dated line each, by topic. | brain, hands |
@@ -42,7 +42,7 @@ Out of the Project sync. Open one when a question needs it.
 |---|---|
 | `queue-items.md` | The full text of every finished item, with an index; an item number like "item 46" means the text there. Also the queue's old status notes. |
 | `notes.md`, `notes/` | The hands' notes: everything before 2026-10-26 in `notes.md`; closed notes from `docs/notes/` after. |
-| `done.md` | Done lines before #241. |
+| `done.md` | Done lines before #277. |
 | `brain-log.md` | The brain's log and the early History, newest first. |
 | `decisions-reasoning.md` | The long reasoning behind the short lines in `docs/DECISIONS.md`. |
 | `roadmap-shipped.md` | The roadmap items that shipped or closed. |

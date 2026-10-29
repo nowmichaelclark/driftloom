@@ -156,6 +156,80 @@ export const VIBES = {
 };
 ```
 
+## The vibes to 88 (brain, Session 26, 2026-10-29; queue item 76b)
+
+**Decided by Mikey (2026-10-29):** the vibes go from 71 to 88. Twenty-one
+join: glacial (designed with him on 2026-10-26) and twenty the brain proposed
+from the gaps in the list and the records the ears still have to hear. Four
+leave: **soft** (it fit 18 of 23 loops in the ranking test, so it named
+Driftloom rather than a loop; mellow and chill take its place), **energetic**
+(enthusiastic and lively stay; lively takes its drive), **silly** (goofy
+stays) and **comfy** (cozy stays). He turned down *nostalgic* ("too many
+meanings") and *sleepy* (restful and soothing stay; restful takes the
+bedtime role). Old codes are not kept working: the four leave the list
+outright, with no retired slots.
+
+**Why each one** (the gaps it fills):
+- **Time of day**, for Broken Friends' music that follows the hours: dewy
+  (early morning), dusky (the warm dim hour before night), moonlit (cool,
+  silvery night). Sunny and starry were the only two before.
+- **Weather:** rainy (cozy, not gloomy; the commonest lo-fi weather).
+- **What Driftloom is about:** whimsical (the Ocarina of Time sense: catchy,
+  childlike magic, where goofy and quirky are jokes), dreamy (Boards of
+  Canada, Ulrich Schnauss, Bowery Electric), chill (relaxed *with* a beat;
+  soothing and restful are mostly drumless), mellow (soft's gentle side,
+  drumless).
+- **Groove**, for the ears' coming records (Basic Channel, The Field,
+  Monoton, LFO, Neu!, Harmonia): groovy (a loose, swung bass and kit),
+  pulsing (a steady electronic throb), cruising (motorik, the open road).
+- **Sound worlds from the records:** droning (Eno, Steve Roach, Kankyo
+  Ongaku; glacial's neighbor), cosmic (arpeggiated synth space: Pauline Anna
+  Strom, Iasos, Solar Fields), bubbly (the Analogue Bubblebath side of
+  Aphex), earthy (wood, hand drums, folk warmth), soaring (Beethoven 9, Jaga
+  Jazzist), jazzy (Miles Davis, Jaga Jazzist).
+- **Motion and air:** breezy (moving air, where airy stays still and open),
+  rippling (water and arpeggios), playful (broad and light, under whimsical
+  and cheeky).
+
+**Waiting on the ears:** groovy, pulsing, cruising, cosmic, rainy and jazzy
+will get much better once the ears hear their records (grooves, arpeggios, a
+rain texture, extended chords). Their first recipes lean on what exists.
+
+**The drafts** (every name checked against `test/generator.test.mjs`; the
+hands tune them to the yardsticks in item 76b and record what moved):
+
+```js
+  glacial: { feel: { energy: 0.05, warmth: 0.3, lift: 0.5 }, tempo: 0.05, tone: { space: 0.9, warmth: 0.3 }, profiles: { vapor: 15.6, thaw: 8, shrine: 3.4, hollow: 3.4, shatter: 0.05, cinder: 0.05, wayfare: 0.05, bloom: 0.05 }, chords: { softpad: 5.7, pad: 5.7, moogpad: 2.8 }, bassStyle: { held: 9.9, sparse: 2.8, pulse: 0.2, walk: 0.1 }, texture: { swell: 9.9, wind: 5.7 }, drums: 0.1, rests: 1.6, long: 1.8 },
+  dewy: { feel: { lift: 0.68, energy: 0.3, warmth: 0.45 }, tempo: 0.3, tone: { space: 0.6, warmth: 0.4 }, profiles: { glade: 8, thaw: 8, haven: 3.4, cinder: 0.05, shatter: 0.05 }, melody: { flute: 5.7, celeste: 2.8, harp: 2.8, kalimba: 2.8 }, texture: { drops: 9.9, wind: 2.8 }, drums: 0.4, rests: 1.3 },
+  dusky: { feel: { lift: 0.45, energy: 0.28, warmth: 0.75 }, tempo: 0.3, tone: { warmth: 0.75, space: 0.6, wobble: 0.3 }, modes: { dorian: 1.5, mixolydian: 1.5, aeolian: 1.3 }, profiles: { halcyon: 8, dust: 8, haven: 3.4, hollow: 3.4, bloom: 0.1 }, melody: { rhodes: 5.7, keys: 2.8, hum: 2.8 }, chords: { rhodes: 5.7, analogpad: 2.8 }, texture: { swell: 2.8 }, drums: 0.6 },
+  moonlit: { feel: { lift: 0.55, energy: 0.18, warmth: 0.3 }, tempo: 0.2, tone: { space: 0.8, warmth: 0.3 }, profiles: { thaw: 8, vapor: 8, shrine: 3.4, haven: 3.4, cinder: 0.05, wayfare: 0.05 }, melody: { piano: 5.7, celeste: 2.8, sine: 2.8, musicbox: 2.8 }, chords: { softpad: 5.7, pad: 2.8 }, texture: { bells: 2.8, swell: 2.8 }, drums: 0.3, rests: 1.4 },
+  rainy: { feel: { lift: 0.45, energy: 0.3, warmth: 0.6 }, tone: { warmth: 0.6, space: 0.5, wobble: 0.3 }, profiles: { dust: 8, haven: 8, thaw: 3.4, halcyon: 3.4 }, melody: { piano: 5.7, rhodes: 5.7, keys: 2.8 }, chords: { rhodes: 5.7, softpad: 2.8 }, texture: { drops: 20, waves: 2.8 }, drums: 0.7, hats: 0.6 },
+  whimsical: { feel: { lift: 0.8, energy: 0.5, warmth: 0.7 }, modes: { lydian: 1.8, majorPent: 1.5, ionian: 1.3 }, profiles: { glade: 8, clockwork: 8, grove: 3.4, tide: 3.4, undertow: 0.1 }, melody: { ocarina: 9.9, musicbox: 5.7, kalimba: 5.7, celeste: 2.8, whistle: 2.8 }, chords: { harp: 2.8 }, texture: { bells: 2.8, chime: 2.8 }, rests: 1.2 },
+  dreamy: { feel: { lift: 0.6, energy: 0.3, warmth: 0.65 }, tempo: 0.3, tone: { space: 0.8, wobble: 0.55, warmth: 0.6 }, modes: { lydian: 1.8, majorPent: 1.3 }, profiles: { dust: 8, vapor: 8, halcyon: 3.4, hollow: 3.4 }, melody: { softpad: 5.7, rhodes: 2.8, celeste: 2.8, sine: 2.8 }, chords: { softpad: 5.7, analogpad: 2.8, moogpad: 2.8 }, texture: { swell: 5.7 }, long: 1.3 },
+  chill: { feel: { energy: 0.4, warmth: 0.7 }, tempo: 0.4, tone: { warmth: 0.7, wobble: 0.35 }, swing: 0.6, profiles: { dust: 15.6, halcyon: 8, haven: 3.4, grove: 3.4, shatter: 0.05, cinder: 0.1 }, melody: { rhodes: 5.7, keys: 5.7, piano: 2.8 }, chords: { rhodes: 5.7 }, bass: { round: 2.8, sub: 2.8 }, bassStyle: { pulse: 2.8, walk: 1.9 }, drums: 1.4 },
+  groovy: { feel: { energy: 0.6, warmth: 0.7 }, swing: 0.7, profiles: { grove: 8, dust: 8, bloom: 3.4, undertow: 3.4, vapor: 0.05, haven: 0.05 }, melody: { rhodes: 2.8, moog: 2.8, keys: 2.8 }, bass: { moogbass: 5.7, round: 2.8 }, bassStyle: { walk: 5.7, dub: 2.8, held: 0.2 }, drums: 2, hats: 1.5 },
+  pulsing: { feel: { energy: 0.55 }, swing: 0.15, profiles: { undertow: 15.6, clockwork: 3.4, vapor: 3.4 }, chords: { analogpad: 2.8, moogpad: 2.8 }, bass: { sub: 5.7, moogbass: 2.8 }, bassStyle: { pulse: 9.9 }, drums: 1.8, hats: 1.3, rests: 0.5, long: 0.8 },
+  cruising: { feel: { lift: 0.7, energy: 0.6 }, tempo: 0.6, swing: 0.2, profiles: { wayfare: 15.6, undertow: 3.4, tide: 3.4, vapor: 0.05, haven: 0.05 }, melody: { analoglead: 2.8, whistle: 2.8, flute: 2.8 }, bassStyle: { pulse: 5.7 }, drums: 1.8, rests: 0.5, long: 1.3 },
+  droning: { feel: { energy: 0.08 }, tempo: 0.1, tone: { space: 0.75 }, profiles: { shrine: 15.6, hollow: 8, vapor: 8, shatter: 0.05, cinder: 0.05, bloom: 0.05 }, melody: { hum: 5.7, sine: 2.8 }, chords: { hum: 5.7, softpad: 5.7, analogpad: 2.8, accordion: 2.8 }, bassStyle: { held: 20 }, drums: 0.1, rests: 1.4, long: 1.8 },
+  cosmic: { feel: { lift: 0.65, energy: 0.4 }, tone: { space: 0.85 }, modes: { lydian: 2, dorianSharp4: 1.3, wholeTone: 1.2 }, profiles: { vapor: 8, clockwork: 8, hollow: 3.4, undertow: 3.4 }, melody: { celeste: 2.8, analoglead: 2.8, sine: 2.8, vowel: 1.9 }, chords: { analogpad: 5.7, moogpad: 5.7 }, texture: { swell: 5.7, bells: 2.8 }, drums: 0.6 },
+  bubbly: { feel: { lift: 0.8, energy: 0.65 }, tone: { warmth: 0.45 }, profiles: { bloom: 15.6, clockwork: 8, grove: 3.4, vapor: 0.1, haven: 0.1 }, melody: { pluck: 5.7, marimba: 5.7, kalimba: 2.8, moog: 2.8 }, bass: { moogbass: 2.8 }, texture: { drops: 9.9 }, hats: 1.5, rests: 0.7 },
+  earthy: { feel: { energy: 0.45, warmth: 0.75 }, tone: { warmth: 0.7, space: 0.35 }, profiles: { tide: 8, grove: 8, glade: 3.4, cinder: 3.4, vapor: 0.1 }, melody: { marimba: 5.7, kalimba: 5.7, fiddle: 2.8, flute: 2.8 }, chords: { nylon: 5.7, accordion: 2.8 }, bass: { pluckbass: 2.8, round: 2.8 }, drums: 1.3 },
+  soaring: { feel: { lift: 0.85, energy: 0.6 }, tone: { space: 0.75 }, modes: { ionian: 1.8, lydian: 1.8 }, profiles: { wayfare: 8, glade: 8, halcyon: 3.4, tide: 3.4 }, melody: { flute: 5.7, whistle: 5.7, choir: 2.8, fiddle: 2.8 }, chords: { pad: 2.8, choir: 1.9 }, bigChords: 1.6, long: 1.4 },
+  jazzy: { feel: { energy: 0.45, warmth: 0.75 }, swing: 0.75, modes: { dorian: 1.8, mixolydian: 1.8, lydianDominant: 1.3 }, profiles: { halcyon: 8, dust: 8, haven: 3.4 }, melody: { rhodes: 5.7, piano: 5.7, keys: 2.8 }, chords: { rhodes: 9.9 }, bass: { rhodesbass: 2.8, round: 2.8 }, bassStyle: { walk: 9.9 }, bigChords: 1.8 },
+  breezy: { feel: { lift: 0.75, energy: 0.5, warmth: 0.5 }, tempo: 0.55, tone: { space: 0.6, warmth: 0.4 }, swing: 0.5, profiles: { glade: 8, tide: 8, grove: 3.4, thaw: 3.4 }, melody: { flute: 5.7, whistle: 2.8, harp: 2.8 }, chords: { nylon: 2.8, harp: 2.8 }, texture: { wind: 9.9 }, rests: 0.8 },
+  rippling: { feel: { lift: 0.65, energy: 0.45 }, tone: { space: 0.65 }, profiles: { clockwork: 8, thaw: 8, tide: 3.4, glade: 3.4 }, melody: { harp: 9.9, celeste: 5.7, marimba: 2.8, piano: 2.8 }, chords: { harp: 5.7 }, texture: { waves: 5.7, drops: 2.8 }, rests: 0.7 },
+  playful: { feel: { lift: 0.8, energy: 0.62 }, swing: 0.6, profiles: { bloom: 8, grove: 8, glade: 3.4, clockwork: 3.4, vapor: 0.1 }, melody: { kalimba: 5.7, marimba: 5.7, whistle: 2.8, pluck: 2.8, ocarina: 2.8 }, drums: 1.3, rests: 0.9 },
+  mellow: { feel: { energy: 0.25, warmth: 0.75 }, tempo: 0.3, tone: { warmth: 0.75, space: 0.45, wobble: 0.2 }, profiles: { haven: 8, halcyon: 8, dust: 3.4, hollow: 2.2, shatter: 0.05, cinder: 0.05 }, melody: { rhodes: 5.7, softpad: 2.8, piano: 2.8, hum: 2.8 }, chords: { softpad: 5.7, rhodes: 2.8 }, drums: 0.2 },
+```
+
+**What the brain measured on the drafts** (300 loops each, the vibe alone;
+no vibes: median 95 bpm): glacial 60 bpm, thaw and vapor lead; droning 65
+bpm, shrine leads; moonlit 68; cruising 121, wayfare leads; pulsing 106,
+undertow leads; bubbly bloom; jazzy and chill dust. Two things to fix in
+tuning: the calm vibes still draw a kit in 20-35% of loops, and **foggy and
+misty draw the same profiles in the same shares** (dust 15%, vapor 11%,
+thaw 11%), which item 76b separates.
+
 ## Tuning log
 
 **v91 (brain, Session 16, 2026-10-12): profile and instrument leans
