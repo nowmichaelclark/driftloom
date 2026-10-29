@@ -16,6 +16,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 ## The music
 
 - 2026-10-20 -- **Best sound wins, not how it used to be (Mikey, 2026-10-20):** "I just want whatever is best / sounds the best for the core and app going forward. I'm not married at all to how things used to be or operate or function." Today's behavior is a reference to measure against, not a thing to protect; his ears decide. (Level changes still go to his ears level-matched or labeled, since louder wins a quick listen.)
+- 2026-10-29 -- **The sound batch kept, all of it (Mikey, 2026-10-29),** from Session 26's album: every new sound and mixing idea; the bass +3 dB where a kick plays, today's level where none does (his picks, loop by loop); lateFloor's second arrival not fixed: "weighted or determined by vibe or somewhat random". Queue items 76c and 76d; `docs/ALBUMS.md`.
 - by 2026-10-16 -- **The current balance is right.** Preserve it as things are added. Meandering, ambient loops alongside tuneful ones; not every loop a triumphant melody. The balance lock (`stats.mjs --check`) guards it; a deliberate change re-baselines and says so.
 - by 2026-10-16 -- Whimsy in the Ocarina of Time sense, sometimes: catchy, childlike, hummable. Inspiration also from Wind Waker and Spirit Tracks.
 - by 2026-10-16 -- **The north star for tone: pleasant** -- nothing that would bother people in a coffee shop. Harsh, buzzy or toy-like timbres fail whatever their level. Respectable through an aux cable at a live venue or in a car.

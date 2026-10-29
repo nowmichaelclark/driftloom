@@ -11,10 +11,10 @@ builds from the Done list.
 stopped at its gate by design), the core's phase 1 (42-46c), the whole sound
 batch (items 54-73, #245-#272, checked by the brain's Session 26) and item 76
 (the cold start, #277). Phase 2 is written (items 77-92, below). **Next:
-item 76b** (the vibes to 88, the last generator change before the port),
-**then 74, then phase 2 from item 77.** Item 75 is low priority. 37 stays on
-hold. Mikey's verdicts on Session 26's album may add items ahead of 77
-(`docs/ALBUMS.md`). A new Claude Code session starts here: read the standing
+item 76b** (the vibes to 88), **then 76c and 76d** (from Mikey's verdicts on
+Session 26's album; the last generator changes before the port), **then 74,
+then phase 2 from item 77.** Item 75 is low priority. 37 stays on
+hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
@@ -66,7 +66,7 @@ tracks").
   `docs/archive/notes.md`.
 - **When a PR is merged,** add one line to `docs/DONE.md`: the PR number,
   the commit preview URL, and what the ears should listen for. (Lines
-  before #241 are in `docs/archive/done.md`.)
+  before #277 are in `docs/archive/done.md`.)
 - **Items that touch `core/`** also follow `core/AGENTS.md` (the core's
   standing rules, and the rules for sound items).
 - **Finished items** are in `docs/archive/queue-items.md`, by number: an
@@ -154,6 +154,56 @@ brain's draft recipes, every name already checked against the test).
 extended chords that groovy, pulsing, cruising, cosmic, rainy and jazzy will
 want once the ears have heard their records. Today's recipes lean on what
 exists.
+
+## 76c. The bass level, from Session 26's album
+
+**Core and host, before phase 2.** Hands: **Sonnet 5.5, high**. From Mikey's
+picks (2026-10-29, `docs/ALBUMS.md`, "Session 26"): roundBass at +3 dB on
+dust #7 and noan-nou (both with a kit), today's level on dust #42 (no kit;
+the bass carries the low end alone, and +3 there lifted the whole loop 2.4
+LU).
+
+**What:** the bass layer **+3 dB in loops that play a kick, today's level
+in loops without one**, as a per-loop setting the host sends at load (the
+core's `LIFT_DB` constant becomes that setting, every bass voice alike),
+not a compile-time number. A loop whose kick only arrives late (lateFloor)
+or drops out (floorDrop) keeps its loop's setting throughout. Named, with
+its two values, so a vibe or phase 2's request can move it later. The
+fallback leaves its bass as it is.
+
+**Yardsticks:** on dust #7 and noan-nou the bass layer +3.0 dB by ear
+(K-weighted) against `main`, on dust #42 unchanged to the bit; over the
+baseline's 40, loops without a kick unchanged, loops with one moved by the
+bass alone (the other layers' taps the same); refusals unchanged; the core
+baseline updated, saying what moved; bump `BUILD` and `CACHE`.
+
+## 76d. lateFloor: the second arrival drawn, not fixed
+
+**Generator, before phase 2.** Hands: **Sonnet 5.5, high**. From Mikey's
+verdict on undertow #45 (2026-10-29): keep it, "with the caveat that the
+bass can come in later too in relation to the kit. It doesn't need a set
+come in time though. I like when things are weighted or determined by vibe
+or somewhat random."
+
+**What** (`LATEFLOOR` in `js/choices.js`):
+- When the kit and the bass arrive apart (`kitFirst`, `bassFirst`), the
+  gap between them is **drawn per loop** instead of today's fixed two bars:
+  1 to 8 bars, rounded to a bar, weighted toward the short end (the
+  conservative choice, "for Mikey's ears"), still capped so the second
+  arrival comes inside the loop's first pass.
+- **Vibe leans** on the gap and on the wait itself: calm, vast vibes
+  (glacial, droning, meditative, serene, still, spacious, floating, dreamy,
+  hypnotic) lean long; lively ones (lively, enthusiastic, bouncy, skipping,
+  groovy, pulsing, cruising) lean short. Every variable named, with its
+  range, as `LATEFLOOR`'s are.
+- Drawn on lateFloor's own stream, after its present draws, so a loop that
+  draws `together` waits exactly as before.
+
+**Yardsticks:** loops that don't draw lateFloor, or draw `together`, render
+as before; over the corpus's lateFloor loops, the gaps cover 1-8 bars with
+the short end commonest (report the spread), never past the first pass;
+the vibe leans move the medians the right way (report them); refusals equal
+or fewer; tests three times; bump `BUILD` and `CACHE`.
 
 ## 74. Clippy pedantic in the files 46 left (before item 79)
 
