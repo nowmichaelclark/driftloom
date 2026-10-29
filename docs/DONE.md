@@ -46,3 +46,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   0:34 before) and to any lateFloor loop under glacial against lively: the
   second part should not always come two bars after the first. Loops
   without vibes, or that draw `together`, wait as before.
+- #284, clippy pedantic at zero (item 74, v128), preview URL:
+  <https://4c9485da-driftloom.nowmichaelclark.workers.dev> (commit 201d923):
+  a refactor of the core's source in the eleven files item 46 left; CI now
+  fails on any pedantic clippy warning. Nothing should sound different: the
+  goldens on every target and mode, the core baseline and the sample-rate
+  checks did not move, and native render time is the same to 0.05%. Listen for
+  nothing. Tester: the app reports v128 (its `.wasm` has new bytes, so the
+  service worker fetches it once). No album loop (nothing in the music
+  changed).
