@@ -179,10 +179,28 @@ export const LATEFLOOR = {
   round: 2,
   // Only where something else plays within this many seconds of the start.
   first: 1,
-  // In what order they arrive: together, the kit first and the bass `lag`
-  // bars later, or the bass first.
+  // In what order they arrive: together, the kit first and the bass later,
+  // or the bass first.
   orders: [['together', 40], ['kitFirst', 35], ['bassFirst', 25]],
-  lag: 2,
+  // The gap between the two arrivals (kitFirst, bassFirst), drawn per loop
+  // (queue item 76d; Mikey, 2026-10-29: "it doesn't need a set come in
+  // time"), in whole bars with these weights, weighted toward the short end
+  // (the conservative choice, "for Mikey's ears"; item 69's fixed gap was two
+  // bars). Never past `maxGap`, and never past the end of the loop's first
+  // pass when the first arrival is inside it (otherwise within one loop's
+  // length of the first), so the second part comes in inside the loop's own
+  // pass, not after another.
+  gap: [[1, 30], [2, 24], [3, 16], [4, 11], [5, 7], [6, 5], [7, 4], [8, 3]],
+  maxGap: 8,
+  // The gaps from this many bars up are the long end the vibes lean.
+  gapLong: 3,
+  // The vibes' lean on the gap's long end and on the wait itself (item 76d,
+  // "for Mikey's ears"): calm, vast vibes toward long, lively ones toward
+  // short. A lean on the wait bends its one draw (u^(1/lean) across the
+  // seconds above), so no other draw moves, and a loop without vibes waits as
+  // before.
+  longVibes: { glacial: 1.6, droning: 1.6, meditative: 1.6, serene: 1.6, still: 1.6, spacious: 1.6, floating: 1.6, dreamy: 1.6, hypnotic: 1.6,
+    lively: 0.5, enthusiastic: 0.5, bouncy: 0.5, skipping: 0.5, groovy: 0.5, pulsing: 0.5, cruising: 0.5 },
 };
 
 // floorDrop's shapes (queue item 70; Ears 8, approved by Mikey 2026-10-18):
@@ -629,23 +647,36 @@ export function subDuckOf(seed, bpm, pins = {}) {
 const LATEFLOOR_SALT = 0x1a7e;
 
 // A loop's lateFloor, drawn from LATEFLOOR on a stream of its own: { order,
-// bars, drums, bass }, the last two the steps from the load each sits out.
-// The sketch drew whether a loop waits first, on the same stream; that draw
-// is spent here too, so a loop waits as long as the sketch drew it. `spb` is
-// the loop's steps a bar, `stepDur` a step's seconds. `pins` may fix the
-// order or the seconds.
-export function lateFloorOf(seed, spb, stepDur, pins = {}) {
+// bars, gap, drums, bass }, the last two the steps from the load each sits
+// out. The sketch drew whether a loop waits first, on the same stream; that
+// draw is spent here too, so a loop waits as long as the sketch drew it. The
+// gap between the two arrivals (queue item 76d) is the last draw on the
+// stream, after the sketch's, so nothing before it moves. `spb` is the
+// loop's steps a bar, `stepDur` a step's seconds, `vibes` its vibes ({
+// vibes, strength }, or null), `loopBars` its length in bars (the second
+// arrival stays inside the first pass, or within a loop's length of the first). `pins` may fix the order, the
+// seconds or the gap.
+export function lateFloorOf(seed, spb, stepDur, pins = {}, vibes = null, loopBars = Infinity) {
   const r = new Rng(((seed ^ LATEFLOOR_SALT) >>> 0) || 1);
   r.f();
-  const secs = pins.seconds ?? r.range(LATEFLOOR.seconds[0], LATEFLOOR.seconds[1]);
+  const lean = leanOf(LATEFLOOR.longVibes, vibes);
+  const u = r.f();
+  const [lo, hi] = LATEFLOOR.seconds;
+  const secs = pins.seconds ?? lo + Math.pow(u, 1 / lean) * (hi - lo);
   const drawn = r.weighted(LATEFLOOR.orders);
   const order = pins.order ?? drawn;
   const k = LATEFLOOR.round;
   const bars = Math.max(k, Math.round(secs / (spb * stepDur) / k) * k);
+  const gaps = LATEFLOOR.gap.map(([g, w]) => [g, g >= LATEFLOOR.gapLong ? w * lean : w]);
+  const gapDrawn = r.weighted(gaps);
+  // Inside the loop's first pass when the first part is (up to its last
+  // bar); past it, within one loop's length of the first.
+  const room = bars < loopBars ? loopBars - bars : loopBars;
+  const gap = Math.max(1, Math.min(pins.gap ?? gapDrawn, LATEFLOOR.maxGap, room));
   return {
-    order, bars,
-    drums: (order === 'bassFirst' ? bars + LATEFLOOR.lag : bars) * spb,
-    bass: (order === 'kitFirst' ? bars + LATEFLOOR.lag : bars) * spb,
+    order, bars, gap,
+    drums: (order === 'bassFirst' ? bars + gap : bars) * spb,
+    bass: (order === 'kitFirst' ? bars + gap : bars) * spb,
   };
 }
 

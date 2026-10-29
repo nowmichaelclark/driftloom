@@ -495,7 +495,8 @@ export class Engine {
     // (the engine rebuilt under a loop already playing: `resume`).
     if (!keepPosition) {
       const late = !resume && this.base.choices && this.base.choices.lateFloor === 'on';
-      this.late = late ? lateFloorOf(spec.seed, this.base.stepsPerBar || 16, 60 / spec.bpm / 4) : null;
+      const spb = this.base.stepsPerBar || 16;
+      this.late = late ? lateFloorOf(spec.seed, spb, 60 / spec.bpm / 4, {}, vibesOf(spec), Math.round(this.base.totalSteps / spb)) : null;
     }
     // And its space (queue item 65).
     const space = spaceOf(spec, this.base);
