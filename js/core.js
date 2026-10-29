@@ -352,6 +352,13 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'spaceRange', which, lo, hi });
   }
 
+  // The bass layer's level for the loop, in dB over today's (queue item
+  // 76c; Core::bass_lift): sent at each load, it rides on every bass note
+  // that arrives after it.
+  bassLift(db) {
+    this.node.port.postMessage({ type: 'bassLift', db });
+  }
+
   // Move one of the mix's parameters (MIX) by an AudioParam call (SET,
   // LINEAR, TARGET, CANCEL), as the synth would move its own node's:
   // `value` at `time`, with time constant `tau` for a target.

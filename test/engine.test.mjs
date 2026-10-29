@@ -674,6 +674,33 @@ console.log('\nlateFloor (queue item 69)');
   check('a resumed loop doesn\'t wait again', re.engine.late === null);
 }
 
+console.log('\nthe bass lift (queue item 76c)');
+{
+  // +3 dB in a loop with a kick, none in one without: handed to the synth
+  // once at the first step, held through the loop (a late kit or a floor
+  // drop doesn't change it), and sent again on Play.
+  let withKick = null;
+  let without = null;
+  for (let s = 1; s < 400 && !(withKick && without); s++) {
+    const x = rig(true, s * 31);
+    const kick = x.engine.base.tracks.drums.some((e) => e.vel && (e.inst === 'kick' || e.inst === 'softkick'));
+    if (kick && !withKick) withKick = x;
+    else if (!kick && !without) without = x;
+  }
+  withKick.run(10);
+  const sent = withKick.calls.filter((c) => c.name === 'bassLiftSetup');
+  check('a loop with a kick sends +3 dB once, at its first step', sent.length === 1 && sent[0].args[0] === 3, JSON.stringify(sent.map((c) => c.args)));
+  const n = withKick.calls.length;
+  withKick.engine.stop();
+  withKick.engine.start();
+  withKick.engine.clock.stop();
+  withKick.run(withKick.ctx.currentTime + 1);
+  check('and sends it again on Play', withKick.calls.slice(n).filter((c) => c.name === 'bassLiftSetup' && c.args[0] === 3).length === 1);
+  without.run(10);
+  const none = without.calls.filter((c) => c.name === 'bassLiftSetup');
+  check('a loop without one sends today\'s level, 0', none.length === 1 && none[0].args[0] === 0, JSON.stringify(none.map((c) => c.args)));
+}
+
 console.log('\npadSweep (queue item 72)');
 {
   // A loop that draws padSweep: its sweep handed to the synth once, at its

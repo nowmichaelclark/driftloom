@@ -286,6 +286,27 @@ export const ECHO = {
   },
 };
 
+// The bass layer's level for a loop (queue item 76c; Mikey's picks from
+// Session 26's album, 2026-10-29), in dB over the level the bass had before
+// roundBass's lift: +3 in a loop that plays a kick (dust #7, noan-nou), none
+// in one without (dust #42: the bass carries the low end alone there, and +3
+// lifted the whole loop 2.4 LU). Named, with its two values, so a vibe or a
+// request can move either later; the host sends the loop's to the core at
+// each load (`Core::bass_lift`). The JavaScript synth leaves its bass alone.
+export const BASS_LIFT = { kick: 3, noKick: 0 };
+
+// The bass lift for a loop whose tracks are `tracks`: the kick's is for a
+// loop that plays a kick, a soft kick or, in the hand kit, the frame drum
+// that is its kick (`HAND_KIT` in js/generator.js; Mikey's +3 on noan-nou is
+// a hand-kit loop) anywhere in it. A kick that only arrives late (lateFloor)
+// or drops out (floorDrop) is still the loop's kick, so the setting holds
+// throughout; a muted kit is still the loop's (the mutes are the listener's,
+// and change while it plays).
+export function bassLiftOf(tracks) {
+  const kick = tracks.drums.some((e) => e.vel && (e.inst === 'kick' || e.inst === 'softkick' || e.inst === 'frame'));
+  return kick ? BASS_LIFT.kick : BASS_LIFT.noKick;
+}
+
 // The wash's vibe table (queue item 76b; it had none before).
 const WASH_VIBES = { glacial: 1.5, rainy: 1.5, breezy: 1.5, droning: 1.5 };
 

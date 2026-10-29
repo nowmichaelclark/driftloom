@@ -150,6 +150,11 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'spaceRange':
         if (core) core.dl_space_range(m.which, m.lo, m.hi);
         return;
+      // The bass layer's lift in dB for the loop (queue item 76c):
+      // Core::bass_lift.
+      case 'bassLift':
+        if (core) core.dl_bass_lift(m.db);
+        return;
       // A setting of one of a channel's own blocks for the loop, a channel
       // event and a retune (queue items 46c and 61): Core::set, Core::event
       // and Event::retune, waiting in the core for their time.
