@@ -683,7 +683,7 @@ console.log('\nthe bass lift (queue item 76c)');
   let without = null;
   for (let s = 1; s < 400 && !(withKick && without); s++) {
     const x = rig(true, s * 31);
-    const kick = x.engine.base.tracks.drums.some((e) => e.vel && (e.inst === 'kick' || e.inst === 'softkick'));
+    const kick = x.engine.base.tracks.drums.some((e) => e.vel && (e.inst === 'kick' || e.inst === 'softkick' || e.inst === 'frame'));
     if (kick && !withKick) withKick = x;
     else if (!kick && !without) without = x;
   }
