@@ -28,12 +28,25 @@
 //! later than its delay alone, and here each keeps its last block for the
 //! next, in the same place.
 //!
-//! **The parameters** are `Timeline`s, Chromium's AudioParam timeline, and
+//! **The parameters** are `Timeline`s, Chromium's `AudioParam` timeline, and
 //! the delays `Delay`s, Chromium's delay line; the lowpasses are the same
 //! `Biquad` the voices use. Gains that never move are plain numbers, each a
 //! 32-bit float as the node holds it. Where several signals meet at one node
 //! Chromium does not fix the order it adds them in, so sums here can differ
 //! in the last bit.
+
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+
+// Built once, as the core starts (or in a test), in a fixed array on a stack
+// sized for it; nothing allocates after that.
+#![allow(clippy::large_stack_arrays)]
+// A node's setup or render is one function in Chromium; split, it would no
+// longer read against it.
+#![allow(clippy::too_many_lines)]
 
 use crate::block::{Sends, Signal};
 use crate::delay::{Delay, buffer_len};
@@ -86,11 +99,11 @@ const PRE_DELAY: f64 = 0.02;
 const ECHO_TIME: f64 = 0.36;
 const ECHO_FEEDBACK: f64 = 0.34;
 const ECHO_LOWPASS: f64 = 2000.0;
-/// A BiquadFilterNode's Q, untouched.
+/// A `BiquadFilterNode`'s Q, untouched.
 const Q: f32 = 1.0;
 
 /// The parameters a host can move, by number (`Core::param`). Each is one
-/// AudioParam of synth.js, or, for the combs, the same one of each comb,
+/// `AudioParam` of synth.js, or, for the combs, the same one of each comb,
 /// which `setTone` always moves together.
 pub const GAINS: u32 = 0; // to 4: each layer's channel's gain, by channel number (the wash's has none)
 pub const PUMP: u32 = 5;
@@ -104,7 +117,7 @@ pub const REVERB_GAIN: u32 = 11;
 /// (`master`), numbered by the core (`TONE_FREQ` and the rest in lib.rs).
 pub const LAST_PARAM: u32 = REVERB_GAIN;
 
-/// How a parameter is moved: the AudioParam call.
+/// How a parameter is moved: the `AudioParam` call.
 pub const SET: u32 = 0;
 pub const LINEAR: u32 = 1;
 pub const TARGET: u32 = 2;
@@ -411,6 +424,7 @@ impl Side {
 impl Mix {
     /// An empty mix, all zeros (so a core in a static costs nothing in
     /// the `.wasm`); `init` builds it.
+    #[must_use]
     pub const fn new() -> Self {
         Mix {
             rate: 0.0,
@@ -477,7 +491,7 @@ impl Mix {
         if at > MEMORY {
             self.ready = false;
         }
-        for lp in self.comb_lps.iter_mut() {
+        for lp in &mut self.comb_lps {
             lp.reset();
         }
         self.echo_lp.reset();
@@ -512,17 +526,19 @@ impl Mix {
     }
 
     /// The last block's bus.
+    #[must_use]
     pub fn bus(&self) -> &Signal {
         &self.bus
     }
 
     /// Whether the mix can play at this rate (`MAX_RATE`).
+    #[must_use]
     pub fn ready(&self) -> bool {
         self.ready
     }
 
     /// Move a parameter (`GAINS` and the rest) by `op` (`SET`, `LINEAR`,
-    /// `TARGET`, `CANCEL`), as the AudioParam call of the same name: to
+    /// `TARGET`, `CANCEL`), as the `AudioParam` call of the same name: to
     /// `value`, at `time`, with time constant `tau` for a target. `now` is
     /// the host's current time. False if there is no such parameter or it
     /// is full.
@@ -590,7 +606,7 @@ impl Mix {
         // pump bus, the four channels the duck presses.
         let mut verb_in = [0.0f32; QUANTUM];
         let mut echo_in = [0.0f32; QUANTUM];
-        for &c in ORDER.iter() {
+        for &c in &ORDER {
             let ch = at(c);
             let send = |sends: &[f64; CHANNELS]| f(sends.get(c as usize).copied().unwrap_or(0.0));
             let (verb, echo) = (send(&VERB), send(&ECHO));
@@ -608,7 +624,7 @@ impl Mix {
             }
         }
         let mut pumped = [0.0f32; QUANTUM];
-        for &c in PUMPED.iter() {
+        for &c in &PUMPED {
             let ch = at(c);
             for (y, &x) in pumped.iter_mut().zip(ch.iter()) {
                 *y += x;
@@ -755,6 +771,7 @@ impl Default for Mix {
 }
 
 /// The memory the mix needs at `rate`, for a host checking ahead.
+#[must_use]
 pub fn memory_for(rate: f64, full: bool) -> usize {
     let combs = if full { 6 } else { 3 };
     combs * buffer_len(COMB_MAX, rate) + buffer_len(PRE_DELAY_MAX, rate) + buffer_len(ECHO_MAX, rate)

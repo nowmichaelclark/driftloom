@@ -39,6 +39,28 @@
 //! so they are plain numbers here (`set`); Chromium reads each one's value
 //! once a block, as this does.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
+// The field is named for the Web Audio attribute it holds.
+#![allow(clippy::struct_field_names)]
+// A node's setup or render is one function in Chromium; split, it would no
+// longer read against it.
+#![allow(clippy::too_many_lines)]
+// The names follow Chromium's coefficients, so the port reads against them.
+#![allow(clippy::many_single_char_names)]
+// The names follow Chromium's (and the synth's), so the port reads against them.
+#![allow(clippy::similar_names)]
+// Exact comparisons are meant here: a value unchanged since the last call, an
+// event on its own frame, and tests that hold a sample to the bit.
+#![allow(clippy::float_cmp)]
+// `!(a < b)` is true for NaN and `a >= b` is not; the port keeps Chromium's
+// handling of a NaN.
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+
 use crate::block::{Block, Context, Probe, Signal};
 use crate::math;
 use crate::QUANTUM;
@@ -74,21 +96,21 @@ const ZONE1: f32 = 0.09;
 const ZONE2: f32 = 0.16;
 const ZONE3: f32 = 0.42;
 const ZONE4: f32 = 0.98;
-const A_BASE: f32 = 0.999_999_999_999_999_8_f32 * ZONE1 + 1.843_221_968_432_392_3e-16_f32 * ZONE2
-    - 1.937_339_435_167_642_3e-16_f32 * ZONE3
-    + 8.824_516_011_816_245e-18_f32 * ZONE4;
-const B_BASE: f32 = -1.578_832_035_284_588_8_f32 * ZONE1 + 2.330_583_703_207_428_6_f32 * ZONE2
-    - 0.914_119_420_484_042_9_f32 * ZONE3
-    + 0.162_367_752_561_203_2_f32 * ZONE4;
-const C_BASE: f32 = 0.533_414_286_910_642_4_f32 * ZONE1 - 1.272_736_789_213_631_f32 * ZONE2
-    + 0.925_885_604_220_751_2_f32 * ZONE3
-    - 0.186_563_101_917_762_26_f32 * ZONE4;
-const D_BASE: f32 = 0.087_834_631_382_072_34_f32 * ZONE1 - 0.169_416_296_792_562_2_f32 * ZONE2
-    + 0.085_880_579_515_952_72_f32 * ZONE3
-    - 0.004_298_914_105_462_83_f32 * ZONE4;
-const E_BASE: f32 = -0.042_416_883_008_123_074_f32 * ZONE1 + 0.111_569_382_798_760_2_f32 * ZONE2
-    - 0.097_646_763_252_658_72_f32 * ZONE3
-    + 0.028_494_263_462_021_576_f32 * ZONE4;
+const A_BASE: f32 = 0.999_999_999_999_999_8_f32 * ZONE1 + 1.843_221_9e-16_f32 * ZONE2
+    - 1.937_339_4e-16_f32 * ZONE3
+    + 8.824_516e-18_f32 * ZONE4;
+const B_BASE: f32 = -1.578_832_f32 * ZONE1 + 2.330_583_8_f32 * ZONE2
+    - 0.914_119_4_f32 * ZONE3
+    + 0.162_367_75_f32 * ZONE4;
+const C_BASE: f32 = 0.533_414_3_f32 * ZONE1 - 1.272_736_8_f32 * ZONE2
+    + 0.925_885_6_f32 * ZONE3
+    - 0.186_563_1_f32 * ZONE4;
+const D_BASE: f32 = 0.087_834_634_f32 * ZONE1 - 0.169_416_3_f32 * ZONE2
+    + 0.085_880_58_f32 * ZONE3
+    - 0.004_298_914_f32 * ZONE4;
+const E_BASE: f32 = -0.042_416_88_f32 * ZONE1 + 0.111_569_38_f32 * ZONE2
+    - 0.097_646_765_f32 * ZONE3
+    + 0.028_494_263_f32 * ZONE4;
 
 /// A `DynamicsCompressorNode`'s settings: threshold and knee in dB, the
 /// ratio, attack and release in seconds.
@@ -117,11 +139,11 @@ fn to_db(linear: f32) -> f32 {
 
 // `fdlibm::powf` and `fdlibm::asinf`: the 64-bit function, rounded.
 fn pow64(x: f32, y: f32) -> f32 {
-    math::pow(x as f64, y as f64) as f32
+    math::pow(f64::from(x), f64::from(y)) as f32
 }
 
 fn asin64(x: f32) -> f32 {
-    math::asin(x as f64) as f32
+    math::asin(f64::from(x)) as f32
 }
 
 fn finite_or(x: f32, default: f32) -> f32 {
@@ -279,6 +301,7 @@ impl<const C: usize> Compressor<C> {
 
     /// The node's `reduction`: the metered gain reduction in dB, as of the
     /// last block.
+    #[must_use]
     pub fn reduction(&self) -> f32 {
         self.metering_gain
     }
@@ -292,6 +315,7 @@ impl<const C: usize> Compressor<C> {
     }
 
     /// The gain the envelope is at, before the makeup gain and the warp.
+    #[must_use]
     pub fn gain(&self) -> f32 {
         self.compressor_gain
     }
@@ -390,7 +414,7 @@ impl<const C: usize> Compressor<C> {
                 self.max_attack_diff = -1.0;
                 diff = finite_or(diff, -1.0);
                 // From -12 dB to 0, scaled to 0 to 3.
-                let x = diff.max(-12.0).min(0.0);
+                let x = diff.clamp(-12.0, 0.0);
                 let x = 0.25 * (x + 12.0);
                 let x2 = x * x;
                 let x3 = x2 * x;
@@ -461,7 +485,7 @@ impl<const C: usize> Compressor<C> {
                 // Warped, to smooth the exponential's corners.
                 if compressor_gain.to_bits() != self.warp_for.to_bits() {
                     self.warp_for = compressor_gain;
-                    self.warped = math::sin((PI_OVER_TWO * compressor_gain) as f64) as f32;
+                    self.warped = math::sin(f64::from(PI_OVER_TWO * compressor_gain)) as f32;
                     self.warped_db = to_db(self.warped);
                 }
                 let total_gain = post_gain * self.warped;
@@ -508,7 +532,7 @@ impl<const C: usize> Compressor<C> {
             return x;
         }
         let lt = self.linear_threshold;
-        lt + (1.0 - math::exp((-k * (x - lt)) as f64) as f32) / k
+        lt + (1.0 - math::exp(f64::from(-k * (x - lt))) as f32) / k
     }
 
     // `Saturate`: the whole curve, a constant ratio past the knee.
@@ -529,7 +553,7 @@ impl<const C: usize> Compressor<C> {
         let (mut x2, mut db_x2) = (1.0f32, 0.0f32);
         let above = !(x < self.linear_threshold);
         if above {
-            x2 = (x as f64 * 1.001) as f32;
+            x2 = (f64::from(x) * 1.001) as f32;
             db_x2 = to_db(x2);
         }
         let (mut min_k, mut max_k, mut k) = (0.1f32, 10000.0f32, 5.0f32);
@@ -680,8 +704,8 @@ mod tests {
             let db = |x: f32| 20.0 * (x / steady).log10();
             let cold_dip = (2..5).map(|b| db(cold_peaks[b])).fold(f32::MAX, f32::min);
             assert!(cold_dip < -dip, "cold {cold_dip}");
-            for b in 2..12 {
-                assert!(db(warm_peaks[b]).abs() < 0.5, "warm block {b}: {}", db(warm_peaks[b]));
+            for (b, peak) in warm_peaks.iter().enumerate().take(12).skip(2) {
+                assert!(db(*peak).abs() < 0.5, "warm block {b}: {}", db(*peak));
             }
         }
     }

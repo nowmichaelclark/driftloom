@@ -46,6 +46,14 @@ jobs:
       - name: Core tests
         working-directory: core
         run: cargo test --locked
+      # Pedantic clippy holds at zero in every file (queue item 74); a lint
+      # that would make the code worse is allowed where it occurs, with a
+      # reason. The pinned toolchain is the profile without clippy.
+      - name: Clippy, pedantic, at zero
+        working-directory: core
+        run: |
+          rustup component add clippy
+          cargo clippy --all-targets --locked -- -W clippy::pedantic -D warnings
       - name: Worklet tests
         run: node test/worklet.test.mjs
       - name: Core host tests

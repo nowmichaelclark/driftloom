@@ -19,6 +19,12 @@
 //!   the offset plus the duration in buffer frames, rounded to the nearest;
 //!   a loop wraps around the whole buffer, keeping the fraction.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
 use crate::math;
 use crate::QUANTUM;
 use crate::block::{Block, Context, Probe, Signal};
@@ -111,7 +117,7 @@ impl NoiseSource {
     fn begin(&mut self, when: f64, index: f64, playback: f64, rate: f64) {
         self.start = frame_at(when, rate);
         // A k-rate AudioParam: a 32-bit float.
-        self.step = playback as f32 as f64;
+        self.step = f64::from(playback as f32);
         self.index = index;
         // The fraction of a frame the start fell before its first frame.
         let missed = when * rate - self.start as f64;
@@ -124,6 +130,7 @@ impl NoiseSource {
     /// The same as `new`, but all zeros, for a pool that must cost nothing
     /// in the `.wasm`: with no stop it plays nothing until `grain` or
     /// `looped`.
+    #[must_use]
     pub const fn idle() -> Self {
         NoiseSource {
             done: false,
@@ -139,6 +146,7 @@ impl NoiseSource {
 
     /// The frame it has certainly finished by: its stop, or for a grain
     /// the frame its read position reaches the grain's end.
+    #[must_use]
     pub fn end_frame(&self) -> u64 {
         if self.looped {
             return self.stop;
@@ -193,12 +201,12 @@ impl NoiseSource {
                 };
             }
             let (a, b) = (
-                noise.get(i).copied().unwrap_or(0.0) as f64,
-                noise.get(j).copied().unwrap_or(0.0) as f64,
+                f64::from(noise.get(i).copied().unwrap_or(0.0)),
+                f64::from(noise.get(j).copied().unwrap_or(0.0)),
             );
             let sample = if i == j && i >= 1 {
                 // The end of the buffer: on from the last two samples.
-                let before = noise.get(i - 1).copied().unwrap_or(0.0) as f64;
+                let before = f64::from(noise.get(i - 1).copied().unwrap_or(0.0));
                 a + (a - before) * fraction
             } else {
                 (1.0 - fraction) * a + fraction * b

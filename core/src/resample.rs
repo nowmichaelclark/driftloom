@@ -22,6 +22,12 @@
 //! each (the node's reported latency); Web Audio does not compensate for
 //! it, and neither does this.
 
+// The arithmetic follows Chromium's, f32 and f64 mixed as its code mixes
+// them, and frame counts, indices and sample values cross between ints
+// and floats on purpose; a checked conversion would add a branch to every
+// sample and change no result.
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+
 use crate::math;
 use crate::QUANTUM;
 
@@ -48,6 +54,7 @@ pub struct Up {
 }
 
 impl Up {
+    #[must_use]
     pub const fn new() -> Self {
         Up {
             kernel: [0.0; UP_TAPS],
@@ -97,6 +104,12 @@ impl Up {
             }
         }
         self.input.copy_within(QUANTUM.., 0);
+    }
+}
+
+impl Default for Up {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -188,6 +201,7 @@ pub struct Down {
 }
 
 impl Down {
+    #[must_use]
     pub const fn new() -> Self {
         Down {
             kernel_re: [0.0; FFT],
@@ -257,12 +271,18 @@ impl Down {
             let sum = conv + self.overlap.get(i).copied().unwrap_or(0.0);
             let centre = self.input.get(at + 2 * i - half).copied().unwrap_or(0.0);
             // Chromium adds the centre in 64 bits to its 32-bit sum.
-            *y = (sum as f64 + 0.5 * centre as f64) as f32;
+            *y = (f64::from(sum) + 0.5 * f64::from(centre)) as f32;
         }
         for (i, o) in self.overlap.iter_mut().enumerate() {
             *o = re.get(QUANTUM + i).copied().unwrap_or(0.0) * scale;
         }
         self.input.copy_within(at.., 0);
+    }
+}
+
+impl Default for Down {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -310,7 +330,7 @@ mod against_direct {
             .map(|i| {
                 let s = 0.5 * core::f64::consts::PI * (i - n / 2) as f64;
                 let sinc = if s == 0.0 { 1.0 } else { s.sin() / s } * 0.5;
-                (sinc * blackman(i as f64 / n as f64)) as f32 as f64
+                f64::from((sinc * blackman(i as f64 / n as f64)) as f32)
             })
             .collect();
         let mut seed = 7u64;
@@ -320,8 +340,8 @@ mod against_direct {
         let mut worst = 0.0f64;
         let mut all_in = Vec::new();
         for _ in 0..30 {
-            for x in high.iter_mut() {
-                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            for x in &mut high {
+                seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
                 *x = ((seed >> 40) as f32 / (1u64 << 24) as f32) - 0.5;
             }
             all_in.extend_from_slice(&high);
@@ -337,12 +357,12 @@ mod against_direct {
                 let mut sum = 0.0f64;
                 for (k, &h) in kernel.iter().enumerate() {
                     if base + i >= k {
-                        sum += h * odd[base + i - k] as f64;
+                        sum += h * f64::from(odd[base + i - k]);
                     }
                 }
                 let at = all_in.len() - 2 * QUANTUM + 2 * i;
-                let centre = if at >= 128 { all_in[at - 128] as f64 } else { 0.0 };
-                worst = worst.max((sum + 0.5 * centre - out[i] as f64).abs());
+                let centre = if at >= 128 { f64::from(all_in[at - 128]) } else { 0.0 };
+                worst = worst.max((sum + 0.5 * centre - f64::from(out[i])).abs());
             }
         }
         assert!(worst < 2e-6, "{worst}");
