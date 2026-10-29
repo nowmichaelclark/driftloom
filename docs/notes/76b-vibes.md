@@ -66,3 +66,30 @@ it better, not worse. The rest is prepared piano and vowel, the voices the
 item asks it to lead with (cost 25 and 22); getting to the catalog would
 mean leaning away from them. At full it stays near zero. Every new vibe is
 at or under the catalog at lite (the PR's table).
+
+## The brain's answer (2026-10-29): option 3
+
+**Glacial's arc is drawn outside the choices,** as echoTime is. The arc is
+what glacial is (Mikey, 2026-10-22: "the deep arc, the longest swings"),
+not one change among several, and option 3 is the only one that gets it
+there without bending batch 5's x3 rule or moving any other loop's draws.
+- A loop with glacial among its vibes that didn't draw the arc through the
+  choices draws it with chance **0.6 x glacial's weight in the loop** (its
+  share of the loop's vibes, 0.05 to 1), on the arc's own stream, after
+  every other draw; not counted among the loop's changes. Glacial alone:
+  31% plus 0.6 of the rest, about 72%. A named setting in `ARC`
+  (`glacialChance`, 0.6), "for Mikey's ears".
+- Keep glacial's x2.5 lean inside the choices as built.
+- The yardstick becomes: glacial alone, the arc in at least 60% of its
+  loops (report the figure); deep about 3 in 4; the periods as measured.
+  Loops without glacial, unchanged (the choices' shares and every other
+  draw).
+
+**Experimental at 2.2% at lite:** accepted as is. It's better than `main`
+and comes from the voices the item asks it to lead with.
+
+**`/rank`'s pool:** leave it at version 4 without the 21 new words. The
+five-word ranking rests (word albums replaced it, 2026-10-11).
+
+Then finish, merge as the item says, and add the Done line. The brain
+moves this note to the archive at its next pass.
