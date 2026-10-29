@@ -15,3 +15,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   first notes. Tester: close the app, open it, Play, let the first loop end,
   copy Diagnostics, on full and on lite: `late: 0`; any late note says
   `[margin]` or `[measured]`. No album loop (nothing in the music changed).
+- #280, the vibes to 88 (item 76b, v125), preview URL:
+  <https://19b7a2e6-driftloom.nowmichaelclark.workers.dev> (commit 1fa8bf2):
+  twenty-one new vibes, soft, energetic, silly and comfy gone, codes made
+  before v125 may play other vibes. Listen to each new vibe alone, above all
+  glacial (the arc in most of its loops, deep, 5-8 minute swings; 8-12 with
+  still, droning or another of its neighbors), droning, moonlit and mellow
+  (no kit) against chill, groovy, pulsing and cruising (a beat), and the four
+  pairs side by side: foggy and misty, experimental and strange, airy and
+  breezy, mellow and chill. Lively should drive as hard as energetic did,
+  restful should sound like a lullaby. Loops without vibes are unchanged.
