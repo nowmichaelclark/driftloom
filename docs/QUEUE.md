@@ -7,15 +7,15 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-10-29:** `main` is at v124. Done: items 0-36 and 38-47 (13
+**Status, 2026-10-30:** `main` is at v128. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the whole sound
-batch (items 54-73, #245-#272, checked by the brain's Session 26) and item 76
-(the cold start, #277). Phase 2 is written (items 77-92, below). **Next:
-item 76b** (the vibes to 88), **then 76c and 76d** (from Mikey's verdicts on
-Session 26's album; the last generator changes before the port), **then 74,
-then phase 2 from item 77.** Item 75 is low priority. 37 stays on
-hold. A new Claude Code session starts here: read the standing
-rules and the merge policy, then take the next item.
+batch (items 54-73, #245-#272, checked by the brain's Session 26), item 76
+(the cold start, #277), and the last changes before the port: 76b (the vibes
+to 88, #280), 76c (the bass level, #282), 76d (lateFloor's second arrival,
+#283) and 74 (clippy pedantic at zero, held by CI, #284). **Next: phase 2,
+from item 77.** Item 75 is low priority. 37 stays on hold. A new Claude Code
+session starts here: read the standing rules and the merge policy, then take
+the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
 on alongside the core track, as separate PRs; app-track sessions stay out of
@@ -71,155 +71,6 @@ tracks").
   standing rules, and the rules for sound items).
 - **Finished items** are in `docs/archive/queue-items.md`, by number: an
   older item cited as "item 46" is the text there.
-
-## 76b. The vibes to 88: glacial, twenty more, four gone
-
-**Generator, before phase 2.** Hands: **Opus 5.5, high** (twenty-one
-recipes tuned by measurement). Mikey's decision (2026-10-29): 71 vibes
-become 88. It goes in now, while the JavaScript generator is the only one:
-from item 77 on, a change like this is made twice.
-
-**Read first:** `docs/VIBES.md`, "The vibes to 88" (why each word, and the
-brain's draft recipes, every name already checked against the test).
-
-**What:**
-- **Twenty-one new vibes** in `js/vibes.js`, from the drafts: glacial,
-  dewy, dusky, moonlit, rainy, whimsical, dreamy, chill, groovy, pulsing,
-  cruising, droning, cosmic, bubbly, earthy, soaring, jazzy, breezy,
-  rippling, playful, mellow. Tune any draft that misses its yardstick below
-  and say what moved.
-- **Four gone:** soft, energetic, silly, comfy. **Old codes don't need to
-  keep working** (Mikey, 2026-10-29: no bloat for compatibility): the four
-  leave `js/vibes.js`, `VIBE_IDS` is rewritten in alphabetical order (88
-  ids), and every table that names them changes (`ARC_LIVELY`, `SUBDUCK`,
-  `LATEFLOOR`, `FLOORDROP` and the rest in `js/choices.js`; the tests;
-  `docs/MOODS.md` and `/rank`'s pool if it names them). Codes made before
-  this item may play different vibes or none; that's fine.
-- **Two folds:** **lively** takes energetic's drive (its tempo up to
-  energetic's 0.85, drums 2.5, hats 2, shatter 3.4 among its profiles), so
-  the top of the energy range doesn't get softer; **restful** takes the
-  bedtime role sleepy would have had (a lullaby lean: tempo 0.15, music box
-  and hum in the tune, drums 0.15).
-- **Pairs that must sound apart** (today's recipes nearly match): **foggy**
-  darker and denser (more space, moogpad and swell,
-  the deep arc, few rests), **misty** lighter and dewier (higher lift,
-  celeste and flute, drops and wind, the dip arc); **experimental** the
-  unusual sounds (prepared piano, vowel, saw, wide wobble, shatter and
-  clockwork) and **strange** the odd scales (keep its modes; ordinary
-  voices); **airy** still and open (low energy, long notes, rests), **breezy**
-  moving (its tempo and swing); **mellow** drumless and gentle, **chill**
-  with a relaxed beat (drums in most loops).
-- **Glacial's arc** (`ARC` in `js/choices.js`): glacial leans toward the arc
-  (x2.5) and toward deep (so that, with glacial alone, deep is about 3 in 4
-  of the loops that draw the arc), with a period of its own, **5-8 minutes**
-  (Mikey), and **8-12 minutes when glacial is paired with a glacial-adjacent
-  vibe**: still, serene, meditative, spacious, floating, frosty, foggy,
-  misty, hushed or droning (the brain's list, "for Mikey's ears"), a named
-  setting like every `ARC` variable.
-- **The new vibes in the choice tables,** as the calm and lively ones are:
-  the arc's calm list (toward, deep) gains droning, dreamy, moonlit, dusky,
-  cosmic and rainy; its lively list (dip) gains playful, bubbly, breezy,
-  whimsical, soaring and groovy; the echo's one beat leans toward glacial,
-  droning, dreamy and cosmic, half a beat toward bubbly and playful; the wash
-  toward glacial, rainy, breezy and droning; padSweep toward glacial, dreamy
-  and cosmic; subDuck toward groovy, pulsing and chill; lateFloor toward
-  cruising and pulsing, away from glacial; tunedKick's long boom toward
-  pulsing and groovy, away from glacial. Multipliers as the batch's table
-  uses them (toward x1.5-2, away x0.4).
-- `docs/VIBES.md`: what the tuning changed, per vibe. The app's Vibes list
-  shows 88 (no design change).
-
-**Yardsticks:**
-- Loops without vibes render exactly as before (core baseline, balance lock,
-  `test/generator.test.mjs`'s "no vibes is today's loop").
-- **Each new vibe, alone, over 300 loops** (the brain's figures for the
-  drafts are in `docs/VIBES.md`): its first-named profiles lead; its tempo on
-  the side the recipe says (glacial, droning, moonlit, restful among the
-  slowest tenth of the vibes; cruising, lively, enthusiastic among the
-  fastest); drums in under 15% of glacial, droning, moonlit, mellow and
-  restful loops and in over 70% of chill, groovy, pulsing and cruising.
-  Report a table: vibe, median bpm, drums share, top three profiles, top
-  three tunes.
-- **The pairs apart:** foggy and misty, experimental and strange, airy and
-  breezy, mellow and chill each differ in at least two of: their leading
-  profile, median tempo by 8 bpm or more, drums share by 20 points or more,
-  their top tune voice.
-- **Glacial's arc:** alone, the arc in at least half its loops, deep about
-  3 in 4 of those, every period 5-8 minutes; with one adjacent vibe, 8-12.
-- Refusals on full and lite for each new vibe's loops no worse than the
-  catalog.
-- The test's count reads 88; tests three times; bump `BUILD` and `CACHE`.
-
-**Not now** (the ears' later work): grooves, arpeggios, a rain texture and
-extended chords that groovy, pulsing, cruising, cosmic, rainy and jazzy will
-want once the ears have heard their records. Today's recipes lean on what
-exists.
-
-## 76c. The bass level, from Session 26's album
-
-**Core and host, before phase 2.** Hands: **Sonnet 5.5, high**. From Mikey's
-picks (2026-10-29, `docs/ALBUMS.md`, "Session 26"): roundBass at +3 dB on
-dust #7 and noan-nou (both with a kit), today's level on dust #42 (no kit;
-the bass carries the low end alone, and +3 there lifted the whole loop 2.4
-LU).
-
-**What:** the bass layer **+3 dB in loops that play a kick, today's level
-in loops without one**, as a per-loop setting the host sends at load (the
-core's `LIFT_DB` constant becomes that setting, every bass voice alike),
-not a compile-time number. A loop whose kick only arrives late (lateFloor)
-or drops out (floorDrop) keeps its loop's setting throughout. Named, with
-its two values, so a vibe or phase 2's request can move it later. The
-fallback leaves its bass as it is.
-
-**Yardsticks:** on dust #7 and noan-nou the bass layer +3.0 dB by ear
-(K-weighted) against `main`, on dust #42 unchanged to the bit; over the
-baseline's 40, loops without a kick unchanged, loops with one moved by the
-bass alone (the other layers' taps the same); refusals unchanged; the core
-baseline updated, saying what moved; bump `BUILD` and `CACHE`.
-
-## 76d. lateFloor: the second arrival drawn, not fixed
-
-**Generator, before phase 2.** Hands: **Sonnet 5.5, high**. From Mikey's
-verdict on undertow #45 (2026-10-29): keep it, "with the caveat that the
-bass can come in later too in relation to the kit. It doesn't need a set
-come in time though. I like when things are weighted or determined by vibe
-or somewhat random."
-
-**What** (`LATEFLOOR` in `js/choices.js`):
-- When the kit and the bass arrive apart (`kitFirst`, `bassFirst`), the
-  gap between them is **drawn per loop** instead of today's fixed two bars:
-  1 to 8 bars, rounded to a bar, weighted toward the short end (the
-  conservative choice, "for Mikey's ears"), still capped so the second
-  arrival comes inside the loop's first pass.
-- **Vibe leans** on the gap and on the wait itself: calm, vast vibes
-  (glacial, droning, meditative, serene, still, spacious, floating, dreamy,
-  hypnotic) lean long; lively ones (lively, enthusiastic, bouncy, skipping,
-  groovy, pulsing, cruising) lean short. Every variable named, with its
-  range, as `LATEFLOOR`'s are.
-- Drawn on lateFloor's own stream, after its present draws, so a loop that
-  draws `together` waits exactly as before.
-
-**Yardsticks:** loops that don't draw lateFloor, or draw `together`, render
-as before; over the corpus's lateFloor loops, the gaps cover 1-8 bars with
-the short end commonest (report the spread), never past the first pass;
-the vibe leans move the medians the right way (report them); refusals equal
-or fewer; tests three times; bump `BUILD` and `CACHE`.
-
-## 74. Clippy pedantic in the files 46 left (before item 79)
-
-**Hands:** Sonnet 5.5, high, any session with usage to spare; it may go
-between items of the batch, never inside one. **Why:** the core rule
-("clean in the files the PR touches") can't be met in eleven files that
-carry 405 old pedantic warnings (#238's table: `wave.rs` 69, `timeline.rs`
-68, `blocks/compressor.rs` 56, `resample.rs` 41, `param.rs` 38,
-`master.rs` 38, `blocks/osc.rs` 31, `blocks/noise_source.rs` 22, `mix.rs`
-16, `delay.rs` 16, `blocks/filter.rs` 14). Fix them, or allow a lint
-locally with a one-line reason where following it would make the code
-worse; one PR, or one per file if that is cleaner. **Yardsticks:** a
-refactor: goldens on every mode, baseline and `blocks.txt` unchanged
-byte for byte; costs within 1%; `cargo clippy --all-targets -- -W
-clippy::pedantic` reports zero, and CI gains that check so it stays
-zero.
 
 ## 75. The reverb, rate-true for steady tones (low priority, after the batch)
 
@@ -302,7 +153,7 @@ JavaScript; it just has less to build.
   `Core::new` (the generator's working memory sized there, and said in
   bytes), no panic, no `dyn` on the hot path, plain ASCII out, `no_std`,
   bit-identical on every target (goldens for generation on all five, as for
-  audio), pedantic clippy clean in every file touched (item 74 first).
+  audio), pedantic clippy clean in every file touched (CI holds it at zero since item 74).
 - **Spread the work:** generating a loop never spikes one audio block
   (promise 1); say the worst block's cost on the slowest target.
 - **Taste:** the conservative option, "for Mikey's ears", as always.
@@ -310,12 +161,14 @@ JavaScript; it just has less to build.
 Hands, by item, as the brain suggests: Opus 5.5, high, for 77, 79-82, 85-88
 and 92; Sonnet 5.5, high, for 74, 78, 83, 84, 89-91.
 
-## 74 first, then 77
+## Before 77
 
-Item 74 (clippy pedantic in the files 46 left, above) goes **before 79**:
-the generator lands in `core/`, and with CI holding pedantic at zero it can't
-inherit the old warnings. Item 75 (the reverb, rate-true) stays low priority,
-for any session with usage to spare after 82.
+Item 74 is done (#284): pedantic clippy is zero in `core/` and CI holds it
+there, so the generator lands clean. Item 75 (the reverb, rate-true) stays
+low priority, for any session with usage to spare after 82. **Vibes and
+generator changes from here on follow the phase's first rule** (one source
+of truth at a time, above): after item 78 the data is one file both
+generators read.
 
 ## 77. Generation made exact, and its goldens (JavaScript, no sound change)
 

@@ -297,6 +297,9 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   **The album was heard the same day** (`docs/ALBUMS.md`): everything kept;
   two tunes queued as 76c (the bass level) and 76d (lateFloor's second
   arrival). Done lines #241-#274 archived.
+- **2026-10-30:** 76b, 76c, 76d and 74 merged (#280-#285, v125-v128) and
+  archived. **Next: phase 2 from item 77** (hands, Opus 5.5, high). The
+  brain's next check: after item 82, or sooner if a note comes in.
 - **Since 2026-10-26 (hands, docs restructure and item 76).** All three
   groups of the sound batch are merged (items 54-73, #245-#272, v103-v123;
   group (b) is items 64-66, group (c) 67-73), and the album loops in the
