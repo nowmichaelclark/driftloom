@@ -7,9 +7,10 @@
 //! `meta` and `choices`.
 
 use super::canon::{Sink, Writer};
-use super::data::{self, CHOICES, MAX_BARS, PADSWEEP_SUSTAINED, PEDAL};
+use super::choices::lean_of;
+use super::data::{self, CHOICES, MAX_BARS, PADSWEEP, PEDAL};
 use super::js;
-use super::layers::{self, Bass, BassOut, Drums, DrumsOut, PedalOut, Texture};
+use super::layers::{self, Bass, BassEvent, BassOut, DrumEvent, Drums, DrumsOut, PedalOut, Texture, TextureEvent};
 use super::list::List;
 use super::melody::{self, Depth, Melody, MelodyOut, Over};
 use super::plan::{self, CHORD_EVENTS_MAX, ChordEvent, Cx, Form, Gap, Harmony, Plan};
@@ -361,7 +362,9 @@ impl Render {
         out
     }
 
-    fn choice(&self, id: &str) -> Option<&'static str> {
+    /// The loop's option for the choice `id` (`render(spec).choices[id]`).
+    #[must_use]
+    pub fn choice(&self, id: &str) -> Option<&'static str> {
         CHOICES.iter().position(|c| c.id == id).and_then(|i| self.choices.get(i).copied())
     }
 
@@ -381,7 +384,7 @@ impl Render {
         let mut pool: List<(usize, f64), CHOICES_MAX> = List::filled((0, 0.0));
         for (i, c) in CHOICES.iter().enumerate() {
             if self.eligible(cx, c.id) {
-                pool.push((i, c.weight.unwrap_or(1.0) * layers::lean_of(c.vibes, v)));
+                pool.push((i, c.weight.unwrap_or(1.0) * lean_of(c.vibes, v)));
             }
         }
         let mut k = 0.0;
@@ -395,8 +398,7 @@ impl Render {
             } else {
                 let mut leaned: List<(&'static str, f64), 8> = List::filled(("", 0.0));
                 for &(o, w) in others {
-                    let table = c.option_vibes.iter().find(|(k, _)| *k == o).map(|x| x.1);
-                    leaned.push((o, w * layers::lean_of(table, v)));
+                    leaned.push((o, w * lean_of(data::table_named(c.option_vibes, o), v)));
                 }
                 r.weighted(&leaned).unwrap_or("")
             };
@@ -432,7 +434,7 @@ impl Render {
             "subDuck" => has_kick && has_bass,
             "lateFloor" => {
                 let step = 60.0 / cx.spec.bpm / 4.0;
-                let first = |s: f64| s * step < data::LATEFLOOR_FIRST;
+                let first = |s: f64| s * step < data::LATEFLOOR.first;
                 (has_drums || has_bass)
                     && (self.chords.iter().any(|e| e.vel != 0.0 && first(e.step))
                         || self.melody.iter().any(|e| e.vel != 0.0 && first(e.step))
@@ -440,13 +442,15 @@ impl Render {
             }
             "floorDrop" => cx.spec.bars >= 4.0 && (has_drums || has_bass),
             "pedalBass" => PEDAL.styles.contains(&self.bass_out.style) && has_bass,
-            "padSweep" => self.chords.iter().any(|e| e.vel != 0.0 && PADSWEEP_SUSTAINED.contains(&e.voice)),
+            "padSweep" => self.chords.iter().any(|e| e.vel != 0.0 && PADSWEEP.sustained.contains(&e.voice)),
             _ => false,
         }
     }
 
-    /// `notesPerSecond(spec, tracks)`.
-    fn notes_per_second(&self, cx: &Cx) -> f64 {
+    /// `notesPerSecond(spec, tracks)`: how many notes a second the loop
+    /// plays, every layer, as heard.
+    #[must_use]
+    pub fn notes_per_second(&self, cx: &Cx) -> f64 {
         let seconds = cx.spec.bars * cx.spb * (60.0 / cx.spec.bpm / 4.0);
         let mut n = 0.0;
         for layer in LAYERS {
@@ -631,157 +635,47 @@ impl Render {
 
     /// `form`'s text: what render decides besides the layers' notes.
     pub fn write_form<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan) {
-        let spec = cx.spec;
-        let full = spec.bars * cx.spb;
         w.obj();
         w.key("cycles");
-        w.obj();
-        for (key, layer) in [("bass", Layer::Bass), ("chords", Layer::Chords), ("drums", Layer::Drums), ("melody", Layer::Melody), ("texture", Layer::Texture)] {
-            w.key(key);
-            w.num(spec.cycles.and_then(|c| c[layer as usize]).filter(|&c| c != 0.0).unwrap_or(full));
-        }
-        w.end_obj();
+        write_cycles(w, cx);
         w.key("form");
         plan::write_form(w, self.form.as_ref());
         w.key("gaps");
         plan::write_gaps(w, &self.gaps);
         w.key("harmony");
-        plan::write_harmony(w, &self.harmony, plan.development.is_some().then_some(&plan.sections));
+        self.write_harmony(w, plan);
         w.key("silentBars");
+        self.write_silent_bars(w);
+        w.key("stepsPerBar");
+        w.num(cx.spb);
+        w.key("totalSteps");
+        w.num(cx.spec.bars * cx.spb);
+        w.end_obj();
+    }
+
+    /// The harmony's text (with a developing loop's sections).
+    pub fn write_harmony<S: Sink>(&self, w: &mut Writer<S>, plan: &Plan) {
+        plan::write_harmony(w, &self.harmony, plan.development.is_some().then_some(&plan.sections));
+    }
+
+    /// The bars where nothing plays (`silentBars`).
+    pub fn write_silent_bars<S: Sink>(&self, w: &mut Writer<S>) {
         w.list();
         for &b in self.quiet.iter() {
             w.num(js::num(b));
         }
         w.end_list();
-        w.key("stepsPerBar");
-        w.num(cx.spb);
-        w.key("totalSteps");
-        w.num(full);
-        w.end_obj();
     }
 
     /// A layer's events' text.
-    #[allow(clippy::too_many_lines)] // every layer's event, key by key
     pub fn write_layer<S: Sink>(&self, w: &mut Writer<S>, layer: Layer) {
         w.list();
         match layer {
-            Layer::Drums => {
-                for e in self.drums.iter() {
-                    w.obj();
-                    w.key("inst");
-                    w.str(e.inst);
-                    if let Some(m) = e.micro {
-                        w.key("micro");
-                        w.num(m);
-                    }
-                    if e.roll {
-                        w.key("roll");
-                        w.bool(true);
-                    }
-                    w.key("step");
-                    w.num(e.step);
-                    w.key("vel");
-                    w.num(e.vel);
-                    w.end_obj();
-                }
-            }
-            Layer::Bass => {
-                for e in self.bass.iter() {
-                    w.obj();
-                    if e.chug {
-                        w.key("chug");
-                        w.bool(true);
-                    }
-                    w.key("dur");
-                    w.num(e.dur);
-                    w.key("glide");
-                    w.bool(e.glide);
-                    w.key("midi");
-                    w.num(e.midi);
-                    w.key("step");
-                    w.num(e.step);
-                    if let Some(s) = &e.steps {
-                        w.key("steps");
-                        w.nums(s);
-                    }
-                    w.key("vel");
-                    w.num(e.vel);
-                    w.key("voice");
-                    w.str(e.voice);
-                    w.end_obj();
-                }
-            }
-            Layer::Chords => {
-                for e in self.chords.iter() {
-                    plan::write_chord(w, e);
-                }
-            }
-            Layer::Melody => {
-                for e in self.melody.iter() {
-                    w.obj();
-                    w.key("degree");
-                    w.num(e.degree);
-                    if let Some(d) = e.detune {
-                        w.key("detune");
-                        w.num(d);
-                    }
-                    w.key("dur");
-                    w.num(e.dur);
-                    if let Some(h) = e.harm {
-                        w.key("harm");
-                        w.str(h);
-                    }
-                    w.key("midi");
-                    w.num(e.midi);
-                    if let Some(o) = e.orn {
-                        w.key("orn");
-                        w.str(o);
-                    }
-                    w.key("phrase");
-                    w.num(e.phrase);
-                    if let Some(p) = e.prev {
-                        w.key("prev");
-                        w.num(p);
-                    }
-                    w.key("step");
-                    w.num(e.step);
-                    if let Some(s) = &e.steps {
-                        w.key("steps");
-                        w.nums(s);
-                    }
-                    w.key("vel");
-                    w.num(e.vel);
-                    w.key("voice");
-                    w.str(e.voice);
-                    w.key("vowel");
-                    w.str(e.vowel);
-                    w.end_obj();
-                }
-            }
-            Layer::Texture => {
-                for e in self.texture.iter() {
-                    w.obj();
-                    if let Some(b) = e.band {
-                        w.key("band");
-                        w.num(b);
-                    }
-                    w.key("dur");
-                    w.num(e.dur);
-                    w.key("kind");
-                    w.str(e.kind);
-                    w.key("notes");
-                    w.list();
-                    for &n in e.notes.iter() {
-                        w.num(f64::from(n));
-                    }
-                    w.end_list();
-                    w.key("step");
-                    w.num(e.step);
-                    w.key("vel");
-                    w.num(e.vel);
-                    w.end_obj();
-                }
-            }
+            Layer::Drums => self.drums.iter().for_each(|e| write_drum(w, e)),
+            Layer::Bass => self.bass.iter().for_each(|e| write_bass(w, e)),
+            Layer::Chords => self.chords.iter().for_each(|e| plan::write_chord(w, e, None)),
+            Layer::Melody => self.melody.iter().for_each(|e| write_melody(w, e)),
+            Layer::Texture => self.texture.iter().for_each(|e| write_texture(w, e)),
         }
         w.end_list();
     }
@@ -875,6 +769,130 @@ impl Default for Render {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Each layer's own cycle in steps (`cycles`).
+pub fn write_cycles<S: Sink>(w: &mut Writer<S>, cx: &Cx) {
+    let spec = cx.spec;
+    let full = spec.bars * cx.spb;
+    w.obj();
+    for (key, layer) in [("bass", Layer::Bass), ("chords", Layer::Chords), ("drums", Layer::Drums), ("melody", Layer::Melody), ("texture", Layer::Texture)] {
+        w.key(key);
+        w.num(spec.cycles.and_then(|c| c[layer as usize]).filter(|&c| c != 0.0).unwrap_or(full));
+    }
+    w.end_obj();
+}
+
+/// A drum hit's text.
+pub fn write_drum<S: Sink>(w: &mut Writer<S>, e: &DrumEvent) {
+    w.obj();
+    w.key("inst");
+    w.str(e.inst);
+    if let Some(m) = e.micro {
+        w.key("micro");
+        w.num(m);
+    }
+    if e.roll {
+        w.key("roll");
+        w.bool(true);
+    }
+    w.key("step");
+    w.num(e.step);
+    w.key("vel");
+    w.num(e.vel);
+    w.end_obj();
+}
+
+/// A bass note's text.
+pub fn write_bass<S: Sink>(w: &mut Writer<S>, e: &BassEvent) {
+    w.obj();
+    if e.chug {
+        w.key("chug");
+        w.bool(true);
+    }
+    w.key("dur");
+    w.num(e.dur);
+    w.key("glide");
+    w.bool(e.glide);
+    w.key("midi");
+    w.num(e.midi);
+    w.key("step");
+    w.num(e.step);
+    if let Some(s) = &e.steps {
+        w.key("steps");
+        w.nums(s);
+    }
+    w.key("vel");
+    w.num(e.vel);
+    w.key("voice");
+    w.str(e.voice);
+    w.end_obj();
+}
+
+/// A melody note's text.
+pub fn write_melody<S: Sink>(w: &mut Writer<S>, e: &melody::MelodyEvent) {
+    w.obj();
+    w.key("degree");
+    w.num(e.degree);
+    if let Some(d) = e.detune {
+        w.key("detune");
+        w.num(d);
+    }
+    w.key("dur");
+    w.num(e.dur);
+    if let Some(h) = e.harm {
+        w.key("harm");
+        w.str(h);
+    }
+    w.key("midi");
+    w.num(e.midi);
+    if let Some(o) = e.orn {
+        w.key("orn");
+        w.str(o);
+    }
+    w.key("phrase");
+    w.num(e.phrase);
+    if let Some(p) = e.prev {
+        w.key("prev");
+        w.num(p);
+    }
+    w.key("step");
+    w.num(e.step);
+    if let Some(s) = &e.steps {
+        w.key("steps");
+        w.nums(s);
+    }
+    w.key("vel");
+    w.num(e.vel);
+    w.key("voice");
+    w.str(e.voice);
+    w.key("vowel");
+    w.str(e.vowel);
+    w.end_obj();
+}
+
+/// A texture event's text.
+pub fn write_texture<S: Sink>(w: &mut Writer<S>, e: &TextureEvent) {
+    w.obj();
+    if let Some(b) = e.band {
+        w.key("band");
+        w.num(b);
+    }
+    w.key("dur");
+    w.num(e.dur);
+    w.key("kind");
+    w.str(e.kind);
+    w.key("notes");
+    w.list();
+    for &n in e.notes.iter() {
+        w.num(f64::from(n));
+    }
+    w.end_list();
+    w.key("step");
+    w.num(e.step);
+    w.key("vel");
+    w.num(e.vel);
+    w.end_obj();
 }
 
 /// `+x.toFixed(3)`: `x` at three decimals, as JavaScript writes it (the

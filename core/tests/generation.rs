@@ -1,9 +1,10 @@
-//! The Rust generator against the generation goldens (queue item 79): every
-//! case of `core/golden/generation.hashes` generated on this machine, each
-//! part the generator makes (`Part::ALL`) equal to its hash, and nothing
-//! dropped for want of room. `tools/gen-core.sh` runs the same on every
-//! target; this is the native test run, and the language rules the port
-//! leans on.
+//! The Rust generator against the generation goldens (queue items 79 to
+//! 81): every case of `core/golden/generation.hashes` generated on this
+//! machine, every part (`Part::ALL`: the spec, the plan, the form, the
+//! layers, the meta, the choices, the load and the eight wandered passes)
+//! equal to its hash, and nothing dropped for want of room.
+//! `tools/gen-core.sh` runs the same on every target; this is the native
+//! test run, and the language rules the port leans on.
 
 use dlcore::generator::{Generator, Part, canon, data, js};
 
@@ -24,8 +25,8 @@ fn every_case() {
             if fields[2] == "-" { Vec::new() } else { fields[2].split(',').map(|v| data::vibe_index(v).expect("a vibe")).collect() };
         generator.load(seed, &vibes);
         for part in Part::ALL {
-            let want = fields.iter().find_map(|f| f.strip_prefix(part.name()).and_then(|f| f.strip_prefix('='))).expect("the part's hash");
-            assert_eq!(format!("{:016x}", generator.hash(part)), want, "{} {}", fields[0], part.name());
+            let want = part.in_line(line).expect("the part's hash");
+            assert_eq!(format!("{:016x}", generator.hash(part)), want, "{} {:?}", fields[0], part);
         }
         assert_eq!(generator.lost(), 0, "{}: the lists ran out of room", fields[0]);
         cases += 1;

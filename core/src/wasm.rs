@@ -354,8 +354,8 @@ mod generator {
     // Single-threaded, as above.
     unsafe impl<const N: usize> Sync for Bytes<N> {}
     static INPUT: Bytes<{ data::VIBE_COUNT }> = Bytes(UnsafeCell::new([0; data::VIBE_COUNT]));
-    /// Room for a part's text: the spec's is about 600 bytes, a busy
-    /// loop's chords some 100 KB.
+    /// Room for a part's text: the spec's is about 600 bytes, the longest
+    /// in the goldens (a wandered pass, the whole pattern) 74 KB.
     const TEXT_MAX: usize = 1 << 20;
     static TEXT: Bytes<TEXT_MAX> = Bytes(UnsafeCell::new([0; TEXT_MAX]));
 

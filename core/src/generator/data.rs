@@ -155,11 +155,133 @@ pub struct Pedal {
     pub high: f64,
 }
 
+/// The arc's swing periods in seconds, by the pace a loop's vibes pick
+/// (`period.*`; `arcPace`).
+#[derive(Clone, Copy, Debug)]
+pub struct ArcPeriods {
+    pub calm: [f64; 2],
+    pub bright: [f64; 2],
+    pub rest: [f64; 2],
+    pub glacial: [f64; 2],
+    pub glacial_near: [f64; 2],
+}
+
+/// The arc's settings (`[setting arc]`; `ARC` in `js/choices.js`, with the
+/// choice's own weight and vibes in `CHOICES`).
+#[derive(Clone, Copy, Debug)]
+pub struct Arc {
+    /// deep or dip, by weight, each leaned by its `shape_vibes`.
+    pub shapes: Pool,
+    pub shape_vibes: &'static [(&'static str, Table)],
+    pub period: ArcPeriods,
+    /// The vibes that weigh a loop toward the calm period, and the bright.
+    pub calm: &'static [&'static str],
+    pub bright: &'static [&'static str],
+    /// The vibes that, with glacial, slow its swing further.
+    pub glacial_near: &'static [&'static str],
+    /// A glacial loop's chance of the arc outside its choices, times
+    /// glacial's weight.
+    pub glacial_chance: f64,
+    /// Where a deep swing starts (`from.deep`).
+    pub from_deep: [f64; 2],
+    pub floor: [f64; 2],
+    pub dip: f64,
+}
+
+/// The tuned kick's settings (`[setting kick]`).
+#[derive(Clone, Copy, Debug)]
+pub struct Kick {
+    /// The lowest and highest note, as MIDI notes (the data's; the note
+    /// itself is worked out from the key, `kickOf`).
+    pub note: [f64; 2],
+    /// The falls, in dB a second.
+    pub short: [f64; 2],
+    pub long: [f64; 2],
+    /// Level by ear against today's kick, the tail's room, the bands' room.
+    pub loud: f64,
+    pub tail_loud: f64,
+    pub band: f64,
+    /// How often a wandered pass swaps its kick.
+    pub swap: f64,
+}
+
+/// subDuck's settings (`[setting subduck]`).
+#[derive(Clone, Copy, Debug)]
+pub struct SubDuck {
+    pub depth: [f64; 2],
+    pub recover: [f64; 2],
+    /// The recovery's longest, as a share of a beat.
+    pub beat: f64,
+}
+
+/// lateFloor's settings (`[setting latefloor]`).
+#[derive(Clone, Copy, Debug)]
+pub struct LateFloor {
+    pub seconds: [f64; 2],
+    /// The wait is rounded to this many bars.
+    pub round: f64,
+    /// The eligibility test: something else plays within this many seconds.
+    pub first: f64,
+    pub orders: Pool,
+    /// The gap between the two arrivals, in bars, by weight.
+    pub gap: NumPool,
+    pub max_gap: f64,
+    /// The gaps from this many bars up are the long end the vibes lean.
+    pub gap_long: f64,
+    pub long_vibes: Table,
+}
+
+/// floorDrop's shapes (`[setting floordrop]`).
+#[derive(Clone, Copy, Debug)]
+pub struct FloorDrop {
+    pub shapes: Pool,
+    /// The shapes that need a bass line.
+    pub need_bass: &'static [&'static str],
+    pub shape_vibes: &'static [(&'static str, Table)],
+    pub stagger_short: f64,
+    pub stutter_short: f64,
+    pub stutter: [f64; 2],
+    pub long_seconds: f64,
+    pub long_bars: [f64; 2],
+    pub whole_under: f64,
+}
+
+/// padSweep's settings (`[setting padsweep]`).
+#[derive(Clone, Copy, Debug)]
+pub struct PadSweep {
+    /// The chord voices it sweeps (its eligibility test).
+    pub sustained: &'static [&'static str],
+    pub lo: [f64; 2],
+    pub oct: [f64; 2],
+    pub period: [f64; 2],
+    pub q: [f64; 2],
+}
+
+/// echoTime's settings (`[setting echo]`).
+#[derive(Clone, Copy, Debug)]
+pub struct Echo {
+    /// The times in beats, by weight.
+    pub beats: NumPool,
+    /// The vibes that lean each time, by time.
+    pub vibes: &'static [(f64, Table)],
+}
+
+/// The bass layer's level in dB, with a kick and without
+/// (`[setting basslift]`).
+#[derive(Clone, Copy, Debug)]
+pub struct BassLift {
+    pub kick: f64,
+    pub no_kick: f64,
+}
+
 // The tables, written by build.rs: every number by its bits, which are long
 // hex literals on purpose.
 #[allow(clippy::unreadable_literal)]
 mod tables {
-    use super::{Character, Choice, Degree, Gait, Mood, NumPool, Pedal, Progressions, Vibe, f};
+    use super::{
+        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
+        Progressions, SubDuck, Vibe, f,
+    };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }
 pub use tables::*;
@@ -168,6 +290,18 @@ pub use tables::*;
 #[must_use]
 pub fn lookup(table: Table, name: &str) -> Option<f64> {
     table.iter().find(|(k, _)| *k == name).map(|x| x.1)
+}
+
+/// A name's table among tables by name (`ARC.shapeVibes[id]`), or none.
+#[must_use]
+pub fn table_named(tables: &[(&'static str, Table)], name: &str) -> Option<Table> {
+    tables.iter().find(|(k, _)| *k == name).map(|x| x.1)
+}
+
+/// A number's table among tables by number (`ECHO.vibes[b]`), or none.
+#[must_use]
+pub fn table_at(tables: &[(f64, Table)], x: f64) -> Option<Table> {
+    tables.iter().find(|(k, _)| *k == x).map(|t| t.1)
 }
 
 /// A profile's index by id.

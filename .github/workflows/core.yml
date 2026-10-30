@@ -173,8 +173,9 @@ jobs:
         if: matrix.target != 'powerpc-unknown-linux-gnu'
         run: tools/golden.sh --stereo --rates ${{ matrix.target }}
       # The Rust generator (phase 2, queue items 79 on) against the generation
-      # goldens, every case on every target: the parts it makes so far must
-      # equal the JavaScript's hashes (on wasm32 through a build with the
-      # generator's exports, which the app's .wasm leaves out).
+      # goldens, every case on every target: every part, the load and the
+      # wandered passes too, must equal the JavaScript's hashes (on wasm32
+      # through a build with the generator's exports, which the app's .wasm
+      # leaves out).
       - name: The generation goldens, on the Rust generator
         run: tools/gen-core.sh ${{ matrix.target }}

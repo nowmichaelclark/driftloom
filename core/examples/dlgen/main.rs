@@ -4,7 +4,7 @@
 //! ```text
 //! cargo run --release --example dlgen -- --check golden/generation.hashes
 //!     every case of the file, generated here: fails on any part that
-//!     differs from its hash (the parts the Rust generator makes so far)
+//!     differs from its hash (every part, the load and the eight passes too)
 //! cargo run --release --example dlgen -- --show SEED [VIBE,...] [PART]
 //!     a loop's canonical texts, to diff against
 //!     `node tools/gen-golden.mjs --show CASE`
@@ -64,13 +64,12 @@ fn check(file: &str) -> Result<(), String> {
         lost += generator.lost();
         let mut moved = Vec::new();
         for (i, part) in Part::ALL.iter().enumerate() {
-            let want = fields.iter().find_map(|f| f.strip_prefix(part.name()).and_then(|f| f.strip_prefix('=')));
-            let Some(want) = want else { continue };
+            let Some(want) = part.in_line(line) else { continue };
             let got = format!("{:016x}", generator.hash(*part));
             if got == want {
                 counts[i] += 1;
             } else {
-                moved.push(part.name());
+                moved.push(label(*part));
             }
         }
         if !moved.is_empty() {
@@ -83,7 +82,7 @@ fn check(file: &str) -> Result<(), String> {
     if lost > 0 {
         return Err(format!("the generator's lists ran out of room ({lost} items lost)"));
     }
-    let parts: Vec<String> = Part::ALL.iter().zip(&counts).map(|(p, n)| format!("{} {n}", p.name())).collect();
+    let parts: Vec<String> = Part::ALL.iter().zip(&counts).map(|(p, n)| format!("{} {n}", label(*p))).collect();
     println!("dlgen: {} of {cases} cases equal {file} ({})", cases - bad, parts.join(", "));
     println!(
         "dlgen: a loop takes {:.0} us on average, {:.0} us at most ({}); the generator's working memory is {} bytes",
@@ -108,9 +107,22 @@ fn show(args: &[String]) -> Result<(), String> {
         let mut text = Text(String::new());
         generator.write(part, &mut text);
         let text = text.0;
-        println!("{} {:016x}\n{text}\n", part.name(), generator.hash(part));
+        // As `node tools/gen-golden.mjs --show` names them.
+        let name = match part {
+            Part::Pass(n) => format!("passes[{}]", n.saturating_sub(1)),
+            _ => part.name().to_string(),
+        };
+        println!("{name} {:016x}\n{text}\n", generator.hash(part));
     }
     Ok(())
+}
+
+/// A part as a person reads it: a pass by its number.
+fn label(part: Part) -> String {
+    match part {
+        Part::Pass(n) => format!("pass {n}"),
+        _ => part.name().to_string(),
+    }
 }
 
 struct Text(String);

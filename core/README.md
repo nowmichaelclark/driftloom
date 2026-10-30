@@ -167,22 +167,31 @@ the whole table.
 ## The generator (phase 2)
 
 `src/generator/` is `js/generator.js` in Rust, ported note for note (queue
-items 79 on): a loop's spec, the plan `render` draws before the layers, the
-layers themselves and `render`'s choices (so far; the load's draws and the
-wander are item 81), from its seed, its vibes and the generation data. The data,
-`data/*.txt`, is compiled in by `build.rs` as read-only tables, so a host
-hands nothing over and an edit to a data file rebuilds the core. A host keeps
-one `generator::Generator` (fixed lists, about 1.4 MB on 64-bit targets, 1.1
-MB on 32-bit; nothing allocates) and calls `load(seed, vibes)`; `hash` and
-`write` give each part's canonical text (`tools/gen-golden.mjs` documents
-it). The app's `.wasm` leaves the generator out until the player (item 82);
-the `generator` feature builds its exports (`dl_gen_load`, `dl_spec`, ...)
-for the checks.
+items 79 to 81): a loop's spec, the plan `render` draws before the layers,
+the layers themselves and `render`'s choices, each choice's own draws
+(`js/choices.js`), what the engine decides at load (`Engine.load`: the
+per-loop settings the host sends the core) and each wandered pass
+(`drift`), from its seed, its vibes and the generation data: every decision
+the JavaScript makes before scheduling. The data, `data/*.txt`, is compiled
+in by `build.rs` as read-only tables, so a host hands nothing over and an
+edit to a data file rebuilds the core. A host keeps one
+`generator::Generator` (fixed lists, 1,406,840 bytes on 64-bit targets,
+1,090,016 on 32-bit; nothing allocates) and calls `load(seed, vibes)`, then
+`settings()` for the load's decisions and `wander(pass)` for a pass as it
+wanders (any pass, without the ones before it: a pass is the loop's own
+events with what it changed marked on them, a few bytes an event); `hash`
+and `write` give each part's canonical text (`tools/gen-golden.mjs`
+documents it). A load takes about 0.5 ms on a laptop, 11 ms at most: a loop
+with a tuned kick works out the kick's level by ear there (`kickOf`'s fit,
+about 10 ms, a tenth of the JavaScript's), and that is nearly all of it;
+the player (item 82) spreads it across blocks. The app's `.wasm` leaves the
+generator out until the player; the `generator` feature builds its exports
+(`dl_gen_load`, `dl_spec`, ...) for the checks.
 
 ## The other checks
 
 - **`golden/`:** whole loops as the app plays them. Each must hash the same on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every block size and at other rates (`golden/README.md`).
-- **`tools/gen-core.sh [TARGET]`:** the Rust generator against the generation goldens (`golden/generation.hashes`): every case, each part it makes equal to the JavaScript's hash, on every target CI renders (`examples/dlgen`; wasm32 through a `generator` build in Node). `node tools/stats.mjs --check --core` draws the balance lock's corpus from that build and fails unless every loop's figures equal the JavaScript's.
+- **`tools/gen-core.sh [TARGET]`:** the Rust generator against the generation goldens (`golden/generation.hashes`): every case, every part (the load and the eight wandered passes too) equal to the JavaScript's hash, on every target CI renders (`examples/dlgen`; wasm32 through a `generator` build in Node). `node tools/stats.mjs --check --core` draws the balance lock's corpus from that build and fails unless every loop's figures equal the JavaScript's.
 - **`tools/baseline.mjs`:** the core in the real app, in Chromium: every voice, 40 loops, the refusals.
 - **`tools/build-core.sh --check`:** the committed `js/dlcore.wasm` is exactly what this source builds. Run `tools/build-core.sh` after any change here.
 - **Clippy, pedantic:** run `cargo clippy --all-targets -- -W clippy::pedantic`; it reports zero, and CI fails on any warning (queue item 74). Every public item has a doc comment that gives the reason, not only the what.

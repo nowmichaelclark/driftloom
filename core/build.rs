@@ -520,8 +520,88 @@ fn moods(out: &mut String, blocks: &[Block]) {
     out.push_str("];\n");
 }
 
-/// The choices' tables the generator reads so far (queue item 80: the draw,
-/// the eligibility tests' and the pedal's; item 81 adds the rest).
+impl Reader<'_> {
+    // The readings a setting's keys need, each failing the build when the
+    // key is missing: every key `js/choices.js` reads is read there too.
+    fn need_num(&self, key: &str) -> String {
+        f(self.num(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    fn need_range(&self, key: &str) -> String {
+        show_range(self.range(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    fn need_words(&self, key: &str) -> String {
+        let w = self.words(key).unwrap_or_else(|| panic!("{}: missing", self.at(key)));
+        format!("&[{}]", w.iter().map(|x| quote(x)).collect::<Vec<_>>().join(","))
+    }
+    fn need_pool(&self, key: &str) -> String {
+        show_pool(self.pool(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    fn need_numpool(&self, key: &str) -> String {
+        show_numpool(self.numpool(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    /// A table (`READ.table`: `Object.fromEntries`, so a name given twice
+    /// keeps its last number), as a pool.
+    fn table(&self, key: &str) -> Option<String> {
+        self.pool(key).map(|p| {
+            let mut seen: Vec<(String, f64)> = Vec::new();
+            for (n, w) in p {
+                if let Some(e) = seen.iter_mut().find(|(x, _)| *x == n) {
+                    e.1 = w;
+                } else {
+                    seen.push((n, w));
+                }
+            }
+            show_pool(seen)
+        })
+    }
+    fn need_table(&self, key: &str) -> String {
+        self.table(key).unwrap_or_else(|| panic!("{}: missing", self.at(key)))
+    }
+    /// The entries `HEAD.part` (a `'HEAD.*'` key), in the block's order:
+    /// each part and its key.
+    fn parts(&self, head: &str) -> Vec<(String, String)> {
+        let prefix = format!("{head}.");
+        self.block.entries.iter().filter_map(|e| e.key.strip_prefix(&prefix).map(|p| (p.to_string(), e.key.clone()))).collect()
+    }
+    /// `HEAD.NAME` tables by name, as `&[(name, table)]`.
+    fn tables_by_name(&self, head: &str) -> String {
+        let mut s = String::from("&[");
+        for (part, key) in self.parts(head) {
+            let _ = write!(s, "({}, {}),", quote(&part), self.need_table(&key));
+        }
+        s.push(']');
+        s
+    }
+    /// `HEAD.NUMBER` tables by number, as `&[(number, table)]`. The
+    /// JavaScript looks one up by the number's own text (`ECHO.vibes[b]`),
+    /// so a part must be written as JavaScript writes its number ('0.5',
+    /// not '.5' or '0.50'), or the two would disagree on what it names.
+    fn tables_by_number(&self, head: &str) -> String {
+        let mut s = String::from("&[");
+        for (part, key) in self.parts(head) {
+            let n = number(&part, &self.at(&key));
+            assert!(format!("{n}") == part, "{}: write the number as {n}", self.at(&key));
+            let _ = write!(s, "({}, {}),", f(n), self.need_table(&key));
+        }
+        s.push(']');
+        s
+    }
+    /// `HEAD.NAME`'s range, for a NAME that must be there. Every part of
+    /// `HEAD` must read as a range, as the JavaScript reads them all.
+    fn part_range(&self, head: &str, name: &str) -> String {
+        for (_, key) in self.parts(head) {
+            self.need_range(&key);
+        }
+        self.need_range(&format!("{head}.{name}"))
+    }
+}
+
+/// The choices and every setting they draw from (queue items 80 and 81):
+/// the draw's counts and leans, each choice's options and vibes, and the
+/// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
+/// shapes, the pedal, padSweep, the echo time and the bass's level, each
+/// block's keys exactly the ones `js/choices.js` reads.
+#[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
 fn choices(out: &mut String, blocks: &[Block]) {
     let file = "data/choices.txt";
     let find = |kind: &str, name: &str| {
@@ -529,56 +609,145 @@ fn choices(out: &mut String, blocks: &[Block]) {
         Reader { file, block }
     };
     let all = find("choices", "all");
-    assert!(all.rows("changes").is_some(), "{}: missing", all.at("changes"));
-    let _ = writeln!(out, "/// How many changes a loop gets, by weight.\npub static CHANGE_COUNTS: NumPool = {};", show_numpool(all.numpool("changes").unwrap_or_default()));
-    let _ = writeln!(out, "/// A choice's lean for one vibe is held between these.\npub const CHOICE_LEAN: [f64; 2] = {};", show_range(all.range("lean").expect("[choices all] lean")));
+    all.only(&["changes", "lean"]);
+    let _ = writeln!(out, "/// How many changes a loop gets, by weight.\npub static CHANGE_COUNTS: NumPool = {};", all.need_numpool("changes"));
+    let _ = writeln!(out, "/// A choice's lean for one vibe is held between these.\npub const CHOICE_LEAN: [f64; 2] = {};", all.need_range("lean"));
     out.push_str("/// The choices, in the order the draw walks them.\npub static CHOICES: &[Choice] = &[\n");
     for b in blocks.iter().filter(|b| b.kind == "choice") {
         let r = Reader { file, block: b };
         r.only(&["options", "weight", "vibes", "optionVibes.*"]);
-        let mut per = String::from("&[");
-        for e in b.entries.iter().filter(|e| e.key.starts_with("optionVibes.")) {
-            let _ = write!(per, "({}, {}),", quote(&e.key["optionVibes.".len()..]), show_pool(r.pool(&e.key).unwrap_or_default()));
-        }
-        per.push(']');
         let _ = writeln!(
             out,
-            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {per} }},",
+            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {} }},",
             quote(&b.name),
-            show_pool(r.pool("options").unwrap_or_else(|| panic!("{}: missing", r.at("options")))),
+            r.need_pool("options"),
             opt(r.num("weight"), f),
-            opt(r.pool("vibes"), show_pool)
+            opt(r.table("vibes"), |s| s),
+            r.tables_by_name("optionVibes")
         );
     }
     out.push_str("];\n");
-    let pedal = find("setting", "pedal");
-    let mut per = String::from("&[");
-    for e in pedal.block.entries.iter().filter(|e| e.key.starts_with("neighborVibes.")) {
-        let n = number(&e.key["neighborVibes.".len()..], &pedal.at(&e.key));
-        let _ = write!(per, "({}, {}),", f(n), show_pool(pedal.pool(&e.key).unwrap_or_default()));
-    }
-    per.push(']');
-    let words = |r: &Reader, k: &str| {
-        let w = r.words(k).unwrap_or_else(|| panic!("{}: missing", r.at(k)));
-        format!("&[{}]", w.iter().map(|x| quote(x)).collect::<Vec<_>>().join(","))
-    };
+
+    let arc = find("setting", "arc");
+    arc.only(&["shapes", "shapeVibes.*", "period.*", "calm", "bright", "glacialNear", "glacialChance", "from.*", "floor", "dip"]);
     let _ = writeln!(
         out,
-        "/// pedalBass's settings (`[setting pedal]`).\npub static PEDAL: Pedal = Pedal {{ styles: {}, rhythms: {}, neighbors: {}, neighbor_vibes: {per}, share: {}, low: {}, high: {} }};",
-        words(&pedal, "styles"),
-        show_pool(pedal.pool("rhythms").expect("pedal rhythms")),
-        show_numpool(pedal.numpool("neighbors").expect("pedal neighbors")),
-        show_range(pedal.range("share").expect("pedal share")),
-        f(pedal.num("low").expect("pedal low")),
-        f(pedal.num("high").expect("pedal high"))
+        "/// The arc's settings (`[setting arc]`).\npub static ARC: Arc = Arc {{ shapes: {}, shape_vibes: {}, period: ArcPeriods {{ calm: {}, bright: {}, rest: {}, glacial: {}, glacial_near: {} }}, calm: {}, bright: {}, glacial_near: {}, glacial_chance: {}, from_deep: {}, floor: {}, dip: {} }};",
+        arc.need_pool("shapes"),
+        arc.tables_by_name("shapeVibes"),
+        arc.part_range("period", "calm"),
+        arc.part_range("period", "bright"),
+        arc.part_range("period", "rest"),
+        arc.part_range("period", "glacial"),
+        arc.part_range("period", "glacialNear"),
+        arc.need_words("calm"),
+        arc.need_words("bright"),
+        arc.need_words("glacialNear"),
+        arc.need_num("glacialChance"),
+        arc.part_range("from", "deep"),
+        arc.need_range("floor"),
+        arc.need_num("dip")
+    );
+    let kick = find("setting", "kick");
+    kick.only(&["note", "short", "long", "loud", "tailLoud", "band", "swap"]);
+    let _ = writeln!(
+        out,
+        "/// The tuned kick's settings (`[setting kick]`).\npub static KICK: Kick = Kick {{ note: {}, short: {}, long: {}, loud: {}, tail_loud: {}, band: {}, swap: {} }};",
+        kick.need_range("note"),
+        kick.need_range("short"),
+        kick.need_range("long"),
+        kick.need_num("loud"),
+        kick.need_num("tailLoud"),
+        kick.need_num("band"),
+        kick.need_num("swap")
+    );
+    let duck = find("setting", "subduck");
+    duck.only(&["depth", "recover", "beat"]);
+    let _ = writeln!(
+        out,
+        "/// subDuck's settings (`[setting subduck]`).\npub static SUBDUCK: SubDuck = SubDuck {{ depth: {}, recover: {}, beat: {} }};",
+        duck.need_range("depth"),
+        duck.need_range("recover"),
+        duck.need_num("beat")
+    );
+    let late = find("setting", "latefloor");
+    late.only(&["seconds", "round", "first", "orders", "gap", "maxGap", "gapLong", "longVibes"]);
+    let _ = writeln!(
+        out,
+        "/// lateFloor's settings (`[setting latefloor]`).\npub static LATEFLOOR: LateFloor = LateFloor {{ seconds: {}, round: {}, first: {}, orders: {}, gap: {}, max_gap: {}, gap_long: {}, long_vibes: {} }};",
+        late.need_range("seconds"),
+        late.need_num("round"),
+        late.need_num("first"),
+        late.need_pool("orders"),
+        late.need_numpool("gap"),
+        late.need_num("maxGap"),
+        late.need_num("gapLong"),
+        late.need_table("longVibes")
+    );
+    let drop = find("setting", "floordrop");
+    drop.only(&[
+        "shapes",
+        "needBass",
+        "shapeVibes.*",
+        "staggerShort",
+        "stutterShort",
+        "stutter",
+        "longSeconds",
+        "longBars",
+        "wholeUnder",
+    ]);
+    let _ = writeln!(
+        out,
+        "/// floorDrop's shapes (`[setting floordrop]`).\npub static FLOORDROP: FloorDrop = FloorDrop {{ shapes: {}, need_bass: {}, shape_vibes: {}, stagger_short: {}, stutter_short: {}, stutter: {}, long_seconds: {}, long_bars: {}, whole_under: {} }};",
+        drop.need_pool("shapes"),
+        drop.need_words("needBass"),
+        drop.tables_by_name("shapeVibes"),
+        drop.need_num("staggerShort"),
+        drop.need_num("stutterShort"),
+        drop.need_range("stutter"),
+        drop.need_num("longSeconds"),
+        drop.need_range("longBars"),
+        drop.need_num("wholeUnder")
+    );
+    let pedal = find("setting", "pedal");
+    pedal.only(&["styles", "rhythms", "neighbors", "neighborVibes.*", "share", "low", "high"]);
+    let _ = writeln!(
+        out,
+        "/// pedalBass's settings (`[setting pedal]`).\npub static PEDAL: Pedal = Pedal {{ styles: {}, rhythms: {}, neighbors: {}, neighbor_vibes: {}, share: {}, low: {}, high: {} }};",
+        pedal.need_words("styles"),
+        pedal.need_pool("rhythms"),
+        pedal.need_numpool("neighbors"),
+        pedal.tables_by_number("neighborVibes"),
+        pedal.need_range("share"),
+        pedal.need_num("low"),
+        pedal.need_num("high")
     );
     let pad = find("setting", "padsweep");
-    let _ = writeln!(out, "/// The chord voices padSweep sweeps.\npub static PADSWEEP_SUSTAINED: &[&str] = {};", words(&pad, "sustained"));
-    let late = find("setting", "latefloor");
+    pad.only(&["sustained", "lo", "oct", "period", "q"]);
     let _ = writeln!(
         out,
-        "/// lateFloor's test: something else plays within this many seconds.\npub const LATEFLOOR_FIRST: f64 = {};",
-        f(late.num("first").expect("latefloor first"))
+        "/// padSweep's settings (`[setting padsweep]`).\npub static PADSWEEP: PadSweep = PadSweep {{ sustained: {}, lo: {}, oct: {}, period: {}, q: {} }};",
+        pad.need_words("sustained"),
+        pad.need_range("lo"),
+        pad.need_range("oct"),
+        pad.need_range("period"),
+        pad.need_range("q")
+    );
+    let echo = find("setting", "echo");
+    echo.only(&["beats", "vibes.*"]);
+    let _ = writeln!(
+        out,
+        "/// echoTime's settings (`[setting echo]`).\npub static ECHO: Echo = Echo {{ beats: {}, vibes: {} }};",
+        echo.need_numpool("beats"),
+        echo.tables_by_number("vibes")
+    );
+    let lift = find("setting", "basslift");
+    lift.only(&["kick", "noKick"]);
+    let _ = writeln!(
+        out,
+        "/// The bass layer's level (`[setting basslift]`).\npub static BASS_LIFT: BassLift = BassLift {{ kick: {}, no_kick: {} }};",
+        lift.need_num("kick"),
+        lift.need_num("noKick")
     );
 }
 
