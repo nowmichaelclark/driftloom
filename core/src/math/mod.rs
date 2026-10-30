@@ -12,6 +12,10 @@
 //! `asin`, `exp`, `expm1`, `tanh` and `pow` in 64 bits; `powf`, `exp2f`,
 //! `log10f` and `log2f` in 32; and the exact operations (`floor`, `ceil`,
 //! `round`, `trunc`, `sqrt`), which `core` does not offer on stable Rust.
+//! And for the generator (queue item 77; phase 2 ports it here), `log`,
+//! `log10` and `log2` in 64 bits. The generator's JavaScript calls the
+//! same functions through their mirror, `js/dlmath.js`, which
+//! `test/dlmath.test.mjs` holds to these bit for bit (through `dl_math`).
 //!
 //! **Where they come from.** FreeBSD's msun (fdlibm), as musl and Rust's
 //! `libm` carry it: the very code the WebAssembly build ran before (its
@@ -71,7 +75,7 @@ mod trig;
 
 pub use exact::{ceil, floor, round, scalbn, scalbnf, sqrt, sqrtf, trunc};
 pub use exp::{exp, exp2f, expm1, tanh};
-pub use log::{log2f, log10f};
+pub use log::{log, log2, log2f, log10, log10f};
 pub use pow::{pow, powf};
 pub use trig::{asin, cos, sin};
 

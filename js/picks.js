@@ -12,6 +12,7 @@
 // picker yet and always read "any".
 
 import { el } from './ui.js';
+import { log2, pow } from './dlmath.js';
 
 export const MIN_BARS = 1;
 export const MAX_BARS = 32768;
@@ -268,7 +269,7 @@ function fitPanel() {
 
 // --------------------------------------------------------- Length picker
 
-function stopOf(bars) { return Math.log2(bars); }
+function stopOf(bars) { return log2(bars); }
 
 // Seconds of play for `bars` bars, at each end of the picked tempo range
 // (or the playing loop's tempo), in the playing loop's metre.
@@ -419,7 +420,7 @@ export function wirePicks(handlers) {
   // The slider snaps to its sixteen stops; arrows step a stop at a time,
   // from a number between stops to the stop on that side.
   const slide = el('lenSlide');
-  slide.addEventListener('input', () => setDraftBars(2 ** Math.round(Number(slide.value))));
+  slide.addEventListener('input', () => setDraftBars(pow(2, Math.round(Number(slide.value)))));
   slide.addEventListener('keydown', (e) => {
     const up = e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'PageUp';
     const down = e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === 'PageDown';
@@ -431,7 +432,7 @@ export function wirePicks(handlers) {
     else if (e.key === 'End') next = STOPS;
     if (next == null) return;
     e.preventDefault();
-    setDraftBars(2 ** Math.max(0, Math.min(STOPS, next)));
+    setDraftBars(pow(2, Math.max(0, Math.min(STOPS, next))));
   });
 
   // The ∞ key lights while endless is on; pressed again, it goes back to

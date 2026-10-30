@@ -9,6 +9,8 @@
 //
 // Names are deliberately about the sound rather than where it came from.
 
+import { pow } from './dlmath.js';
+
 export const CHARACTERS = {
   // Worn tape. The original voice of the app, and still the commonest draw.
   dust: {
@@ -660,7 +662,7 @@ export function blendMix(mix) {
   const sharp = {};
   let sharpTotal = 0;
   for (const key of keys) {
-    sharp[key] = Math.pow(w[key], 2.2);
+    sharp[key] = pow(w[key], 2.2);
     sharpTotal += sharp[key];
   }
   for (const key of keys) sharp[key] /= sharpTotal;

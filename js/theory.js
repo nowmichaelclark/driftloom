@@ -2,6 +2,8 @@
 // very last moment, which keeps generation, display and MIDI export
 // speaking the same language.
 
+import { exp, pow } from './dlmath.js';
+
 export const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 export const SCALES = {
@@ -33,7 +35,7 @@ export const SCALES = {
 };
 
 export function midiToFreq(m) {
-  return 440 * Math.pow(2, (m - 69) / 12);
+  return 440 * pow(2, (m - 69) / 12);
 }
 
 export function noteLabel(midi) {
@@ -149,8 +151,8 @@ export function moodWeighted(pool, mood) {
   return pool.map(([key, w]) => {
     const bright = SCALE_BRIGHTNESS[key] ?? 0.5;
     const near = 0.2 + 2.1 * (1 - Math.abs(bright - mood));
-    const tilt = Math.exp(GLAD_TILT * glad * (bright - 0.5)
-      - INWARD_PULL * inward * ((bright - INWARD_CENTRE) / 0.3) ** 2);
+    const tilt = exp(GLAD_TILT * glad * (bright - 0.5)
+      - INWARD_PULL * inward * pow((bright - INWARD_CENTRE) / 0.3, 2));
     return [key, w * near * tilt];
   });
 }

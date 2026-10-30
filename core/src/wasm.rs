@@ -216,6 +216,28 @@ pub extern "C" fn dl_bass_lift(db: f64) -> u32 {
     u32::from(core().bass_lift(db))
 }
 
+/// One of the core's own math functions (`crate::math`) at `x` (and `y`,
+/// for `pow`): 0 `pow`, 1 `exp`, 2 `log`, 3 `log2`, 4 `log10`, 5 `sin`,
+/// 6 `cos`, 7 `sqrt`; NaN for any other `which`. Nothing that plays calls
+/// it: it is how `test/dlmath.test.mjs` holds the generator's JavaScript
+/// mirror (`js/dlmath.js`, queue item 77) to these functions bit for bit,
+/// in the very module the app runs.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_math(which: u32, x: f64, y: f64) -> f64 {
+    use crate::math;
+    match which {
+        0 => math::pow(x, y),
+        1 => math::exp(x),
+        2 => math::log(x),
+        3 => math::log2(x),
+        4 => math::log10(x),
+        5 => math::sin(x),
+        6 => math::cos(x),
+        7 => math::sqrt(x),
+        _ => f64::NAN,
+    }
+}
+
 /// The number of output channels: the layout, 1 or 2.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_outputs() -> u32 {

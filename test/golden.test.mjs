@@ -88,7 +88,8 @@ console.log('\nThe committed goldens');
     }
   }
   check('each reads, writes back the same and is plain ASCII', all);
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && !f.startsWith('rates.'))) {
+  // (generation.hashes is the generator's, not a target's: tools/gen-golden.mjs.)
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && !f.startsWith('rates.') && f !== 'generation.hashes')) {
     // A stereo file (queue item 64) has both sides of the output and the bus.
     const names = file.endsWith('.stereo.hashes') ? STEREO_SIGNALS : SIGNALS;
     const rows = fs.readFileSync(path.join(dir, file), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));

@@ -59,8 +59,13 @@ that changes how it sounds.
   (ES modules don't load over `file://`).
 - Tests (Node 22; run the generator's three times, it uses random seeds):
   `node test/generator.test.mjs`, and `worklet`, `core-host`, `engine`,
-  `dials`, `fit`, `golden`, `draw`, `picks`, each as
+  `dials`, `fit`, `golden`, `draw`, `picks`, `dlmath`, each as
   `node test/<name>.test.mjs`.
+- Generation goldens (item 77): `node tools/gen-golden.mjs --check` (and
+  `--chromium`); after a change meant to move what is generated, run it
+  without `--check` and say in the PR which cases moved. The generator's
+  paths call `js/dlmath.js` (the core's math), never `Math.pow`, `log`,
+  `sin` and the rest.
 - Balance lock: `node tools/stats.mjs --check`. Core baseline:
   `node tools/baseline.mjs` (`--update` on purpose, saying what moved).
 - Core: `tools/build-core.sh` rebuilds `js/dlcore.wasm`, and `--check`
