@@ -6,6 +6,58 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Session 28 (brain, Opus 5.5, 2026-10-31): phase 2's port checked, items
+77-82 (#287-#296); it passes.** What the brain ran itself on `main` at v132
+(d5b15e6), not taken from the reports:
+- **Tests:** the JavaScript suites (the generator's three times, and
+  `data`); `cargo test --locked --release` in `core/`, 153 tests, with
+  `tests/generation.rs` holding the Rust generator to all 3,060 cases and all
+  19 parts each (spec, plan, form, five layers, meta, choices, load, eight
+  passes) and `tests/player.rs`. The generation goldens in Node, 3,060 of
+  3,060; the balance lock, 22 of 22; `tools/build-core.sh --check`, both
+  modules (`js/dlcore.wasm` 248,648 bytes, `js/dlplayer.wasm` 1,799,552). CI on
+  #296's head green on all eight checks, PowerPC included (40 minutes), before
+  the self-merge.
+- **The goldens hash exact numbers:** the canonical text writes every
+  non-integer as its IEEE bits (`tools/gen-golden.mjs`), so "equal" means
+  equal to the last bit, not to a rounding.
+- **The player against the app's engine, on cases the hands never ran.** The
+  hands' 160 renders are the baseline's 40 loops (corpus seed 1); 38 of the 40
+  cross at least one pass boundary in 45 s (passes run 3 to 86 s), so the
+  wander is exercised. The brain ran `tools/player.mjs` (the app's Engine and
+  Synth in Chromium, handing notes over as the player does) against
+  `dlrender --corpus` natively on: **200 loops of the ears' corpus** (seed
+  20261009), full and lite, mono and stereo, 45 s: **800 of 800 equal**; **16
+  loops at 300 s** (corpus seed 777, from a few to about a hundred wandered passes each), all
+  four ways: **64 of 64 equal**; and **loops with vibes** (a scratch copy of
+  the tool passing vibes to `newSpec`; corpus seed 4242, 15 loops, 60 s, all
+  four ways, under glacial; lively, zany, groovy; peaceful, foggy; dreamy,
+  booming, sour, jazzy): **240 of 240 equal** (each set moves the hashes, so the vibes reached both sides).
+- **Found, and fixed in the docs:** since item 82 `js/dlplayer.wasm` compiles
+  `data/` in, so a vibe edit also has to rebuild it, or CI's
+  `build-core.sh --check` fails (the brain changed one number in
+  `data/vibes.txt` and the check failed on the player's module; `dlcore.wasm`
+  did not move). `docs/VIBES.md` and this file's vibe rule now say so; and
+  the brain's container runs Node, the pinned Rust and Chromium, so the
+  brain does both steps itself. Also stale and fixed: the next-picks
+  questions in `docs/DECISIONS.md` (answered 2026-10-14).
+- **Item 82's hand-over note** (the core sums its voices in an order that
+  depends on when notes were handed over; up-front renders differ from the
+  player's 77-105 dB under the music): no canonical order now; in phase 3 the
+  core baseline's older parts move onto player renders (the queue's "For
+  phase 3", with the player module's 1.8 MB and a phone check before the app
+  switches).
+- **Not checked by the brain:** the C header, the QEMU targets and the costs
+  (CI and the PR's figures); a real phone. The hands' cost figures meet
+  promise 1 on the cloud machine (a load's worst stage 4.7% of a block
+  natively, a block while a loop is made 9.6% in wasm).
+- **The queue:** items 77-82 and "Before 77" archived; a "Since item 82"
+  paragraph for 83-92 (generator changes made twice now; build on `Player`;
+  compare player renders with player renders); item 83's clips may be the
+  player's; item 86 changes loops on `Player::load`, not `Core`. Done lines
+  #277-#284 archived. `docs/BRAIN.md`'s old "Start here" moved below, whole.
+  Next: the hands take item 83; the brain checks after item 87.
+
 **Session 26 (brain, Opus 5.5, 2026-10-26): the sound batch checked, the
 albums, phase 2.** What the brain ran itself on `main` at v123 (a7eb64d), not
 taken from the reports:

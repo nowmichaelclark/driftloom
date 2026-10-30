@@ -62,9 +62,10 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   with mute, tempo, volume, pause, a C header (`core/include/dlcore.h`) and
   `dlrender --seed`. The baseline's 40 loops, full and lite, mono and stereo,
   45 s, equal the app's engine in Chromium bit for bit when the page hands its
-  notes over as the player does (the brain re-checked it on 200 other loops,
-  2026-10-31). The app still plays the JavaScript: `js/dlcore.wasm` is the
-  same bytes. Listen for nothing in the app. To hear the player, open the
-  preview with `?engine=player`: it should sound exactly as the app does
-  (Play, Next, Pause, a mute, the tempo). Tester: Diagnostics there,
-  `late: 0`. No album loop.
+  notes over as the player does (the brain re-checked it on 1,104 renders
+  the hands never ran, vibes and 300 s passes included, 2026-10-31). The app
+  still plays the JavaScript: `js/dlcore.wasm` is the same bytes. Listen for
+  nothing in the app. To hear the player, open the preview with
+  `?engine=player`: it should sound exactly as the app does (Play, Next,
+  Pause, a mute, the tempo). Tester: Diagnostics there, `late: 0`. No album
+  loop.
