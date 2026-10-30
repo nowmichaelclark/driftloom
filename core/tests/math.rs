@@ -302,7 +302,17 @@ fn the_64_bit_functions_are_under_their_bounds() {
         |x| math::pow(x, exponent(x)),
         |x| dd_pow(x, exponent(x)),
     );
-    for e in [sin, sin_far, cos, cos_far, asin, exp, exp_near, expm1, expm1_near, pow_db, pow_pitch, pow_any] {
+    // The generator's logarithms (queue item 77), over its ranges (the
+    // vibes' exponential draws, decibels, octaves) and far past them.
+    let ln10 = dd_ln(10.0);
+    let ln2 = Dd(LN2[0], LN2[1]);
+    let natural = worst("log", "[1e-300, 1e300]", |r| r.binades(1e-300, 1e300), math::log, dd_ln);
+    let natural_near = worst("log", "[0.5, 2]", |r| r.within(0.5, 2.0), math::log, dd_ln);
+    let log10 = worst("log10", "[1e-300, 1e300]", |r| r.binades(1e-300, 1e300), math::log10, |x| dd_ln(x).div(ln10));
+    let log10_near = worst("log10", "[0.5, 2]", |r| r.within(0.5, 2.0), math::log10, |x| dd_ln(x).div(ln10));
+    let log2 = worst("log2", "[1e-300, 1e300]", |r| r.binades(1e-300, 1e300), math::log2, |x| dd_ln(x).div(ln2));
+    let log2_near = worst("log2", "[0.5, 2]", |r| r.within(0.5, 2.0), math::log2, |x| dd_ln(x).div(ln2));
+    for e in [sin, sin_far, cos, cos_far, asin, exp, exp_near, expm1, expm1_near, pow_db, pow_pitch, pow_any, natural, natural_near, log10, log10_near, log2, log2_near] {
         assert!(e < 1.0, "{e} ulp");
     }
     for e in [tanh, tanh_near] {
@@ -377,6 +387,31 @@ fn subnormal_results_are_zero() {
 }
 
 #[test]
+fn the_logarithms_are_exact_where_they_can_be() {
+    // 1 to 0, powers of two and ten to their integers, and C's special
+    // cases.
+    assert_eq!(math::log(1.0).to_bits(), 0);
+    assert_eq!(math::log10(1.0).to_bits(), 0);
+    assert_eq!(math::log2(1.0).to_bits(), 0);
+    for k in -1074..1024 {
+        let x = if k >= -1022 { f64::from_bits(((k + 1023) as u64) << 52) } else { f64::from_bits(1 << (k + 1074)) };
+        assert_eq!(math::log2(x), f64::from(k), "log2 2^{k}");
+    }
+    for k in 0..23 {
+        assert_eq!(math::log10(10f64.powi(k)), f64::from(k), "log10 10^{k}");
+    }
+    for x in [0.0, -0.0] {
+        assert_eq!(math::log(x), f64::NEG_INFINITY);
+        assert_eq!(math::log10(x), f64::NEG_INFINITY);
+        assert_eq!(math::log2(x), f64::NEG_INFINITY);
+    }
+    for x in [-1.0, -1e-300, f64::NEG_INFINITY, f64::NAN] {
+        assert!(math::log(x).is_nan() && math::log10(x).is_nan() && math::log2(x).is_nan(), "{x:e}");
+    }
+    assert_eq!(math::log(f64::INFINITY), f64::INFINITY);
+}
+
+#[test]
 fn huge_angles_stay_in_range() {
     // Beyond 2^20 pi/2 the answer is not accurate, but it is a sine.
     for x in [1e7, -3e9, 1e15, 1e22, 1.7e308] {
@@ -400,7 +435,8 @@ fn no_input_panics() {
             math::pow(a, b), math::sqrt(a), math::floor(a), math::ceil(a), math::round(a), math::trunc(a),
             math::scalbn(a, k), f64::from(math::powf(fa, fb)), f64::from(math::exp2f(fa)),
             f64::from(math::log10f(fa)), f64::from(math::log2f(fa)), f64::from(math::sqrtf(fa)), f64::from(math::scalbnf(fa, k)),
+            math::log(a), math::log10(a), math::log2(a),
         ];
-        assert_eq!(all.len(), 19);
+        assert_eq!(all.len(), 22);
     }
 }

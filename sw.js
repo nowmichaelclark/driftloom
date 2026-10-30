@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v128';
+const CACHE = 'driftloom-v129';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -48,6 +48,9 @@ const FILES = [
   // The per-loop choices: which of the sound batch's changes a loop gets.
   './js/choices.js',
   './js/rng.js',
+  // The core's math in JavaScript: what the generator calls for pow, log,
+  // sin and the rest, so a loop is the same in every browser.
+  './js/dlmath.js',
   // Where a note sits in its loop: the draws the page still takes itself.
   './js/draw.js',
   './js/midi.js',

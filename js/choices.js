@@ -22,6 +22,7 @@
 // kick swap is the one exception). Pins come with phase 2's requests.
 
 import { Rng } from './rng.js';
+import { log10, pow, sqrt } from './dlmath.js';
 
 const CHOICE_SALT = 0x43484f49;
 
@@ -453,7 +454,7 @@ function leanOf(table, vibes) {
   for (const [id, w] of Object.entries(vibes.vibes)) {
     const x = table[id];
     if (typeof x !== 'number') continue;
-    m *= Math.pow(Math.min(LEAN_MAX, Math.max(LEAN_MIN, x)), vibes.strength * w);
+    m *= pow(Math.min(LEAN_MAX, Math.max(LEAN_MIN, x)), vibes.strength * w);
   }
   return m;
 }
@@ -561,7 +562,7 @@ export function kickOf(seed, root, pins = {}) {
   const pc = ((root % 12) + 12) % 12;
   const use = pc >= 3 && pc <= 6 ? (pc + 7) % 12 : pc;
   const midi = pins.midi ?? 24 + use + (use < 7 ? 12 : 0);
-  const hz = 440 * Math.pow(2, (midi - 69) / 12);
+  const hz = 440 * pow(2, (midi - 69) / 12);
   const fits = (kind, dbps) => {
     const hard = kickFit(hz, kind, dbps, 128, 44, 0.09, 0.004);
     const soft = kickFit(hz, kind, dbps, 96, 46, 0.14, 0.009);
@@ -590,17 +591,17 @@ export function kickKindOf(seed, kind, pass) {
 // same band guard. `f0`, `today`, `sweep` and `att` are today's start, end,
 // sweep time and attack.
 function kickFit(hz, kind, dbps, f0, today, sweep, att) {
-  const H2 = (f) => Math.pow(f, 4) / (Math.pow(f * f - 38 * 38, 2) + Math.pow(f * 38 / 0.5, 2));
+  const H2 = (f) => pow(f, 4) / (pow(f * f - 38 * 38, 2) + pow(f * 38 / 0.5, 2));
   const SUB = (f) => (f < 60 ? 1 : 0);
   const LOW = (f) => (f >= 60 && f < 120 ? 1 : 0);
   const PUNCH = 213;
   const energy = (f1, tail, rate, w) => {
-    const t1 = att + -20 * Math.log10(tail) / PUNCH;
-    const end = t1 + (80 + 20 * Math.log10(tail)) / rate;
+    const t1 = att + -20 * log10(tail) / PUNCH;
+    const end = t1 + (80 + 20 * log10(tail)) / rate;
     let e = 0;
     for (let t = 0; t < end; t += 0.0005) {
-      const f = t < sweep ? f0 * Math.pow(f1 / f0, t / sweep) : f1;
-      const a = t < att ? t / att : t < t1 ? Math.pow(10, -PUNCH * (t - att) / 20) : tail * Math.pow(10, -rate * (t - t1) / 20);
+      const f = t < sweep ? f0 * pow(f1 / f0, t / sweep) : f1;
+      const a = t < att ? t / att : t < t1 ? pow(10, -PUNCH * (t - att) / 20) : tail * pow(10, -rate * (t - t1) / 20);
       e += a * a * w(f);
     }
     return e;
@@ -620,7 +621,7 @@ function kickFit(hz, kind, dbps, f0, today, sweep, att) {
   let tlo = 0.001;
   let thi = 1;
   for (let i = 0; i < 24; i++) {
-    const m = Math.sqrt(tlo * thi);
+    const m = sqrt(tlo * thi);
     if (ok(lift, m, dbps, KICK.tailLoud)) tlo = m;
     else thi = m;
   }
@@ -662,7 +663,7 @@ export function lateFloorOf(seed, spb, stepDur, pins = {}, vibes = null, loopBar
   const lean = leanOf(LATEFLOOR.longVibes, vibes);
   const u = r.f();
   const [lo, hi] = LATEFLOOR.seconds;
-  const secs = pins.seconds ?? lo + Math.pow(u, 1 / lean) * (hi - lo);
+  const secs = pins.seconds ?? lo + pow(u, 1 / lean) * (hi - lo);
   const drawn = r.weighted(LATEFLOOR.orders);
   const order = pins.order ?? drawn;
   const k = LATEFLOOR.round;

@@ -12,6 +12,7 @@ import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
 import { drawChoices, dropShapeOf, FLOORDROP, PEDAL, pedalOf } from './choices.js';
+import { cos, log, pow, sin } from './dlmath.js';
 
 export const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 export const LAYER_LABELS = {
@@ -54,7 +55,7 @@ export function newSpec(seed = randomSeed(), selection = null) {
   // three slow palettes and no amount of enthusiasm survives the clamp.
   // Drive therefore steers both, and the profile draw is what actually
   // decides whether a loop can be fast at all.
-  const drive = Math.pow(r.f(), 0.82) * 1.8 - 0.5;
+  const drive = pow(r.f(), 0.82) * 1.8 - 0.5;
   const pool = CHARACTER_WEIGHTS.map(([k, wt]) => {
     const fe = CHARACTERS[k].feel.energy;
     const mid = (fe[0] + fe[1]) / 2;
@@ -72,7 +73,7 @@ export function newSpec(seed = randomSeed(), selection = null) {
     // -log(u) is an exponential draw; normalising a set of them is a
     // Dirichlet, which spreads weight much more naturally than picking
     // fractions by hand.
-    mix[key] = -Math.log(1 - r.f() * 0.999) * (i === 0 ? 1.6 : 1);
+    mix[key] = -log(1 - r.f() * 0.999) * (i === 0 ? 1.6 : 1);
   }
   const total = Object.values(mix).reduce((a, b) => a + b, 0);
   for (const k of Object.keys(mix)) mix[k] = q8(mix[k] / total);
@@ -111,7 +112,7 @@ export function newSpec(seed = randomSeed(), selection = null) {
     const key = r.weighted(takenMoods);
     const idx = takenMoods.findIndex(([k]) => k === key);
     if (idx >= 0) takenMoods.splice(idx, 1);
-    feelMix[key] = -Math.log(1 - r.f() * 0.999) * (i === 0 ? 1.7 : 1);
+    feelMix[key] = -log(1 - r.f() * 0.999) * (i === 0 ? 1.7 : 1);
   }
   const moodTotal = Object.values(feelMix).reduce((a, b) => a + b, 0);
   for (const k of Object.keys(feelMix)) {
@@ -328,7 +329,7 @@ function drawVibes(seed, selection) {
   // One vibe is the whole loop. Two to five share it: the floor each, and a
   // Dirichlet draw (normalised exponentials) over the rest, so the fifth may
   // be 5% one loop and 70% the next.
-  const draws = picked.map(() => -Math.log(1 - r.f() * 0.999));
+  const draws = picked.map(() => -log(1 - r.f() * 0.999));
   const total = draws.reduce((a, b) => a + b, 0);
   const spare = 1 - VIBE_FLOOR * picked.length;
   const vibes = {};
@@ -377,7 +378,7 @@ function vibeLean(v, field, name = null) {
   for (const [id, w] of Object.entries(v.vibes)) {
     const lean = VIBES[id][field];
     const value = name == null ? lean : lean && lean[name];
-    if (typeof value === 'number' && value > 0) m *= Math.pow(value, v.strength * w);
+    if (typeof value === 'number' && value > 0) m *= pow(value, v.strength * w);
   }
   return m;
 }
@@ -1418,7 +1419,7 @@ function cellsFor(spb, metre) {
 function drawCell(r, spb, metre, energy, lift) {
   return r.weighted(cellsFor(spb, metre).map((c) => [
     c,
-    c.w * Math.pow(2, c.e * (energy - 0.5) * 2) * Math.pow(2, c.l * (lift - 0.5) * 2),
+    c.w * pow(2, c.e * (energy - 0.5) * 2) * pow(2, c.l * (lift - 0.5) * 2),
   ]));
 }
 
@@ -1659,7 +1660,7 @@ function genMelody(spec, harmony, dev = null) {
     // sine returns to zero at both ends, so a two-phrase loop got an arc of
     // zero at each end -- no arc at all, which is why widening it changed
     // nothing the first time it was tried.
-    const arc = Math.sin(Math.PI * Math.min(0.97, pos * 0.72 + 0.14)) * (driven ? 4.5 : 3.2);
+    const arc = sin(Math.PI * Math.min(0.97, pos * 0.72 + 0.14)) * (driven ? 4.5 : 3.2);
     const lift = Math.round(arc) + (kind === 'sequence' ? step : 0);
 
     for (let bar = 0; bar < barsPerPhrase; bar++) {
@@ -1733,7 +1734,7 @@ function genMelody(spec, harmony, dev = null) {
         let midi = pitchOf(degreeOf(m) + anchorShift);
         const isLast = lastBarOfPhrase && i === shaped.length - 1;
         const pos = phraseNotes > 1 ? (bar * shaped.length + i) / (phraseNotes - 1) : 0;
-        const arc = Math.cos(pos * Math.PI * 2);
+        const arc = cos(pos * Math.PI * 2);
         if (pointillist && r.chance(pointillist)) midi += r.pick([-12, 12, 12]);
         barOf.push(absBar);
         centreSum += midi;

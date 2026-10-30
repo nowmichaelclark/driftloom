@@ -7,6 +7,7 @@
 
 import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from './generator.js';
 import { Rng } from './rng.js';
+import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
 import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf, bassLiftOf } from './choices.js';
@@ -199,10 +200,10 @@ function organOf(spec, base) {
   const mix = Object.entries(ORGAN_MIX);
   const total = mix.reduce((a, [, w]) => a + w, 0);
   const mean = (key) => mix.reduce((a, [k, w]) => a + w * (src[k][key] ?? 0), 0) / total;
-  const amp = (b) => (b ? Math.pow(10, (b - 8) * 3 / 20) : 0);
+  const amp = (b) => (b ? pow(10, (b - 8) * 3 / 20) : 0);
   const bars = Array.from({ length: 9 }, (_, i) => {
     const a = mix.reduce((x, [k, w]) => x + w * amp(src[k].bars[i]), 0) / total;
-    return a > 0.01 ? 8 + 20 * Math.log10(a) / 3 : 0;
+    return a > 0.01 ? 8 + 20 * log10(a) / 3 : 0;
   });
   const nps = notesPerSecond(spec, base.tracks);
   const o = {
@@ -232,13 +233,13 @@ function washOf(spec) {
   const period = r.range(17, 26);
   const r5 = new Rng(((spec.seed ^ WASH_SALT_5) >>> 0) || 1);
   const pc = ((spec.root ?? 0) + (r5.chance(0.6) ? 0 : 7)) % 12;
-  let hz = 440 * Math.pow(2, (pc - 9) / 12);
+  let hz = 440 * pow(2, (pc - 9) / 12);
   while (hz < 600) hz *= 2;
   while (hz > 1200) hz /= 2;
   const tintGain = r5.range(4, 7);
   const tintHigh = r5.range(2, 4);
   const tintQ = r5.range(3, 5);
-  return { period, level: WASH_K * Math.pow(10, rel / 20), tint: hz, tintGain, tintHigh, tintQ };
+  return { period, level: WASH_K * pow(10, rel / 20), tint: hz, tintGain, tintHigh, tintQ };
 }
 
 // The loop's space (queue item 65; core/src/space.rs): what the core needs to

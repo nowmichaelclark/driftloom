@@ -72,6 +72,12 @@ jobs:
         run: node test/draw.test.mjs
       - name: Next picks tests
         run: node test/picks.test.mjs
+      # The generator's math (js/dlmath.js) against the core's, bit for bit,
+      # and what the generator decides against its goldens (queue item 77).
+      - name: The generator's math against the core's
+        run: node test/dlmath.test.mjs
+      - name: The generation goldens, in Node
+        run: node tools/gen-golden.mjs --check
       # Level, tone and what folds back at 22,050 to 192,000 Hz against 48 kHz
       # (queue item 45); makes the 192 kHz build of the core for itself.
       - name: The core at other sample rates
@@ -84,6 +90,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: The core against its baseline
         run: node tools/baseline.mjs
+      - name: The generation goldens, in Chromium
+        run: node tools/gen-golden.mjs --check --chromium
 
   golden:
     name: golden renders (${{ matrix.target }})
