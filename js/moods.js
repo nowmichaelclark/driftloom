@@ -1,31 +1,16 @@
-// The mood vocabulary, in one place (queue item 16).
+// The mood vocabulary, in one place (queue items 16 and 78).
 //
 // Everything that names a mood reads it from here: the generator's regions
 // of the feeling space, the numbers a share code writes and the words the
-// readout shows. Adding, renaming or merging a mood is an edit to this file
-// and nothing else.
-//
-// Each mood has:
-//   code  -- its number in a share code. Frozen: a code written down last
-//            month says 1 for happy forever, so a number is never reused
-//            or reassigned. A new mood takes the next free one; a renamed
-//            mood keeps its own.
-//   word  -- what the readout shows. Renaming a mood for listeners is a
-//            change here and nowhere else.
-//   lift, energy, warmth -- the region of the feeling space it names.
-//
-// Both wings of the axis are wholesome: the bright, quickened side and the
-// settled, comforted side, plus two inward ones. Nothing here is a sad end.
-export const MOODS = {
-  joyful: { code: 0, word: 'joyful', lift: 0.92, energy: 0.72, warmth: 0.72 },
-  happy: { code: 1, word: 'happy', lift: 0.82, energy: 0.52, warmth: 0.78 },
-  enthusiastic: { code: 2, word: 'enthusiastic', lift: 0.88, energy: 0.9, warmth: 0.66 },
-  refreshing: { code: 3, word: 'refreshing', lift: 0.72, energy: 0.62, warmth: 0.42 },
-  soothing: { code: 4, word: 'soothing', lift: 0.62, energy: 0.18, warmth: 0.82 },
-  peaceful: { code: 5, word: 'peaceful', lift: 0.58, energy: 0.28, warmth: 0.6 },
-  comforting: { code: 6, word: 'comforting', lift: 0.54, energy: 0.36, warmth: 0.86 },
-  reflective: { code: 7, word: 'reflective', lift: 0.3, energy: 0.22, warmth: 0.46 },
-};
+// readout shows. The moods themselves are data, data/moods.txt, which has
+// the rules for a mood's code and word; adding, renaming or merging a mood
+// is an edit to that file (and, for a merge, FORMER_CODES below).
+
+import { blocksOf, readBlock } from './data.js';
+
+const SCHEMA = { code: 'num', word: 'word', lift: 'num', energy: 'num', warmth: 'num' };
+
+export const MOODS = Object.fromEntries(blocksOf('moods', 'mood').map((b) => [b.name, readBlock(b, SCHEMA, 'data/moods.txt')]));
 
 // Codes of moods that have been merged away, and the mood each now reads
 // as, so share codes written before the merge still open. Empty until a

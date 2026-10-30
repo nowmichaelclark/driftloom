@@ -15,304 +15,128 @@
 // choice stays today. A choice the loop is not eligible for is never drawn,
 // so a loop eligible for fewer changes than it drew gets all it can.
 //
-// Each later item of the batch adds its choice to CHOICES: an id, its
-// options (today's first), an eligibility test and the vibes it leans
-// toward or away from. Nothing here goes in the share code: the code's seed
-// gives the draws, and "Let the loop wander" never redraws them (item 67's
-// kick swap is the one exception). Pins come with phase 2's requests.
+// Every number the choices decide by is data (queue item 78):
+// data/choices.txt, with the comments that say where each came from, read
+// here into the same tables the code has always used (CHOICES, ARC, KICK, and
+// so on). What stays in code is the draws and each choice's eligibility test.
+// Each later item of the batch adds its choice to the file (an id, its
+// options with today's first, and the vibes it leans toward or away from) and
+// its eligibility test to ELIGIBLE below. Nothing here goes in the share
+// code: the code's seed gives the draws, and "Let the loop wander" never
+// redraws them (item 67's kick swap is the one exception). Pins come with
+// phase 2's requests.
 
 import { Rng } from './rng.js';
 import { log10, pow, sqrt } from './dlmath.js';
+import { blockOf, blocksOf, readBlock } from './data.js';
 
 const CHOICE_SALT = 0x43484f49;
 
-// How many changes a loop gets: none 15%, one 45%, two 30%, three 10%. A
-// taste call, for Mikey's ears: most loops get one or two (his rule), a few
-// stay as they are, and three is rare enough that a loop never feels like a
-// demo of the batch.
-export const CHANGE_COUNTS = [[0, 15], [1, 45], [2, 30], [3, 10]];
+const WHERE = 'data/choices.txt';
+const setting = (name, schema) => readBlock(blockOf('choices', 'setting', name), schema, WHERE);
+const ALL = readBlock(blockOf('choices', 'choices', 'all'), { changes: 'numpool', lean: 'range' }, WHERE);
 
-// A choice's lean for one vibe: toward x1.5 to x3, away x0.2 to x0.5, never
-// 0 (docs/ears/batch-5.md, "The [JUDGMENT] lines"). A vibe not named keeps x1.
-const LEAN_MIN = 0.2;
-const LEAN_MAX = 3;
+// How many changes a loop gets: none 15%, one 45%, two 30%, three 10% (a
+// taste call, for Mikey's ears; the file says why).
+export const CHANGE_COUNTS = ALL.changes;
 
-// The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
-// every variable of the arc, named, with the range a loop draws it from, in
-// this one place, so phase 2's requests can pin them (docs/CORE.md, promises
-// 9 and 11) and a later slider or a game host can set them. `arcOf` draws a
-// loop's from them; the core plays it (core/src/blocks/arc.rs).
-//
-// The two shapes: `deep` is the prototype's swing, 300 Hz to 9 kHz and back,
-// lingering dark (under 700 Hz for about half of every swing); `dip` is open
-// at 9 kHz but for one smooth dip, over `dip` of the swing, to `floor`.
-// Calm, vast vibes lean deep and long; bright, lively ones lean dip and short.
-// Misty leans toward the arc and its calm period, but dip, not deep (queue
-// item 76b: misty the lighter of the misty-foggy pair).
-const ARC_CALM = ['hazy', 'foggy', 'misty', 'frosty', 'still', 'meditative', 'spacious', 'floating', 'hypnotic', 'mysterious', 'reflective', 'wondrous',
-  'droning', 'dreamy', 'moonlit', 'dusky', 'cosmic', 'rainy'];
-const ARC_DEEP = ARC_CALM.filter((id) => id !== 'misty');
-const ARC_LIVELY = ['bouncy', 'lively', 'skipping', 'zany', 'playful', 'bubbly', 'breezy', 'whimsical', 'soaring', 'groovy'];
-const ARC_BRIGHT = ['sunny', 'bright', 'happy', 'joyful', 'merry', ...ARC_LIVELY];
-// The vibe leans below: toward x2 and away x0.4, the middle of the rule's
-// ranges (Mikey, 2026-10-24).
-const leans = (ids, x) => Object.fromEntries(ids.map((id) => [id, x]));
+// A choice's lean for one vibe is held between these (the file says why). A
+// vibe not named keeps x1.
+const [LEAN_MIN, LEAN_MAX] = ALL.lean;
 
-// Glacial's arc (queue item 76b; Mikey, 2026-10-29): toward the arc and
-// toward deep, and slower than any other loop's swing.
-const GLACIAL = {
-  // Its lean toward the arc, and on the shapes: with glacial alone, deep is
-  // about 3 in 4 of the loops that draw the arc.
-  arc: 2.5,
-  deep: 3,
-  dip: 0.25,
-  // The vibes that, with glacial, make its swing slower still (the brain's
-  // list, for Mikey's ears).
-  near: ['still', 'serene', 'meditative', 'spacious', 'floating', 'frosty', 'foggy', 'misty', 'hushed', 'droning'],
-};
+// The data of every choice: { options, weight?, vibes?, optionVibes? }.
+const CHOICE_DATA = Object.fromEntries(blocksOf('choices', 'choice').map((b) => [b.name, readBlock(b, {
+  options: 'pool', weight: 'num', vibes: 'table', 'optionVibes.*': 'table',
+}, WHERE)]));
+const choiceData = (id) => CHOICE_DATA[id];
 
+// The arc's settings (queue items 63 and 63b): every variable of the arc,
+// named, with the range a loop draws it from, in this one place, so phase 2's
+// requests can pin them (docs/CORE.md, promises 9 and 11) and a later slider
+// or a game host can set them. `arcOf` draws a loop's from them; the core
+// plays it (core/src/blocks/arc.rs). The file says what each is.
 export const ARC = {
-  // How often a loop draws the arc: its weight among the choices a loop is
-  // eligible for (item 54), and the vibes that lean it on or away.
-  weight: 1,
-  vibes: { ...leans(ARC_CALM, 2), ...leans(ARC_LIVELY, 0.4), glacial: GLACIAL.arc },
-  // Which shape: deep about 1 in 3, dip about 2 in 3, each leaned by vibes.
-  shapes: [['deep', 1], ['dip', 2]],
-  shapeVibes: {
-    deep: { ...leans(ARC_DEEP, 2), glacial: GLACIAL.deep },
-    dip: { ...leans(ARC_BRIGHT, 2), misty: 2, glacial: GLACIAL.dip },
-  },
-  // The swing's period, in seconds: whichever of the calm and bright lists
-  // a loop's vibes weigh more picks its range; neither, the rest's. A calm
-  // loop with glacial among its vibes takes glacial's own, 5-8 minutes
-  // (Mikey), and 8-12 when one of `glacialNear` is with it.
-  period: { calm: [180, 300], bright: [90, 150], rest: [120, 300], glacial: [300, 480], glacialNear: [480, 720] },
-  calm: [...ARC_CALM, 'glacial'],
-  bright: ARC_BRIGHT,
-  glacialNear: GLACIAL.near,
-  // A loop with glacial among its vibes that didn't draw the arc among its
-  // choices plays it anyway with this chance times glacial's weight in the
-  // loop, outside the choices (`arcPlays`; the brain, 2026-10-29: the arc is
-  // what glacial is). For Mikey's ears.
-  glacialChance: 0.6,
-  // Where a loop starts on its swing (0 the darkest point, 0.5 the
-  // brightest): deep, a bright point (the cutoff 4.9 to 9 kHz; the
-  // prototype started every loop closed, at 300 Hz: a taste call, for
-  // Mikey's ears); dip, anywhere in the open part.
-  from: { deep: [0.4, 0.6] },
-  // The dip's floor, in Hz.
-  floor: [800, 1500],
-  // The share of the swing the dip takes (open at 9 kHz for the rest). Kept
-  // at 35% for every period (Mikey, 2026-10-24): within twice its floor for
-  // 15-45 s of a 2-5 minute swing, 11-22 s of a bright loop's short one.
-  dip: 0.35,
+  weight: choiceData('arc').weight,
+  vibes: choiceData('arc').vibes,
+  ...setting('arc', {
+    shapes: 'pool', 'shapeVibes.*': 'table', 'period.*': 'range', calm: 'words', bright: 'words', glacialNear: 'words',
+    glacialChance: 'num', 'from.*': 'range', floor: 'range', dip: 'num',
+  }),
 };
 
-// The tuned kick's settings (queue item 67; Ears 8's tunedKick, approved by
-// Mikey 2026-10-18; docs/ears/batch-5.md): every variable of it, named, with
-// its range, in this one place, as ARC's are. `kickOf` draws a loop's from
-// them and works out its level at load; the core plays it
-// (core/src/blocks/kick.rs).
-//
-// The kick and the soft kick keep today's sweep and land on the key's note
-// between G1 and D2, where the records' kicks sit; a key of D# to F# takes
-// its fifth. Short is today's shape falling at `short` dB a second; long is
-// today's punch (213 dB a second) down to a tail that rings on at `long`.
+// The tuned kick's settings (queue item 67): every variable of it, named,
+// with its range, as ARC's are. `kickOf` draws a loop's from them and works
+// out its level at load; the core plays it (core/src/blocks/kick.rs).
 export const KICK = {
-  // Short and long, half and half; long leans toward booming and the rest of
-  // batch 5's table (and pulsing and groovy, item 76b), away from the hushed,
-  // the soothing and glacial.
-  options: [['today', 1], ['short', 1], ['long', 1]],
-  optionVibes: {
-    long: { booming: 2.5, hypnotic: 2, steady: 1.5, cool: 1.5, pulsing: 1.5, groovy: 1.5, hushed: 0.4, tiptoeing: 0.4, twinkling: 0.4, serene: 0.5, soothing: 0.5, glacial: 0.4 },
-  },
-  // The note: the lowest and highest, as MIDI notes (G1, D2).
-  note: [31, 38],
-  // The falls, in dB a second.
-  short: [180, 260],
-  long: [45, 80],
-  // Level by ear: each kick's K-weighted energy against today's kick's
-  // (`loud`, 1: no louder), and a long boom's tail as loud as fits within
-  // `tailLoud` of today's by ear (1.26: +1 dB) and `band` of today's kick's
-  // own energy under 60 Hz and at 60-120 Hz (2: +3 dB).
-  loud: 1,
-  tailLoud: 1.26,
-  band: 2,
-  // A wandering loop that plays a tuned kick may change its kick at the top
-  // of a pass ("Let the loop wander"; Mikey, 2026-10-18), to today's or the
-  // other tuned one, half and half: `swap` is how often a pass does (a taste
-  // call, for Mikey's ears). The pass's first kick chokes the last one
-  // still ringing, as every tuned kick's next hit does.
-  swap: 0.25,
+  options: choiceData('tunedKick').options,
+  optionVibes: choiceData('tunedKick').optionVibes,
+  ...setting('kick', {
+    note: 'range', short: 'range', long: 'range', loud: 'num', tailLoud: 'num', band: 'num', swap: 'num',
+  }),
 };
 
-// subDuck's settings (queue item 68; Ears 8's subDuck, approved by Mikey
-// 2026-10-18): the bass channel alone dips at each kick and comes back, so
-// the kick and the sub take turns. Every variable, named, with its range;
-// `subDuckOf` draws a loop's; the core plays it (core/src/blocks/sub_duck.rs).
+// subDuck's settings (queue item 68): the bass channel alone dips at each
+// kick and comes back, so the kick and the sub take turns. `subDuckOf` draws
+// a loop's; the core plays it (core/src/blocks/sub_duck.rs).
 export const SUBDUCK = {
-  // How often a loop draws it, and batch 5's vibe table for it (groovy,
-  // pulsing and chill from item 76b).
-  weight: 1,
-  vibes: { bouncy: 2, lively: 1.5, skipping: 1.5, steady: 1.5, groovy: 1.5, pulsing: 1.5, chill: 1.5, restful: 0.4, serene: 0.4, soothing: 0.4, hushed: 0.4 },
-  // The dip at a kick of velocity 0.8 or more, in dB (never deeper than 9:
-  // the records' 20 dB "gates" are a bass playing off the beat).
-  depth: [5, 9],
-  // How long it takes to come back, in seconds, and never longer than this
-  // share of a beat.
-  recover: [0.15, 0.25],
-  beat: 0.8,
+  weight: choiceData('subDuck').weight,
+  vibes: choiceData('subDuck').vibes,
+  ...setting('subduck', { depth: 'range', recover: 'range', beat: 'num' }),
 };
 
-// lateFloor's settings (queue item 69; Ears 8's lateFloor, approved by Mikey
-// 2026-10-18): after a load the kit and the bass sit out a while, then
-// arrive, as the records open with the pads and let the beat come to them.
-// Every variable, named, with its range; `lateFloorOf` draws a loop's; the
-// engine plays it (js/engine.js).
+// lateFloor's settings (queue item 69): after a load the kit and the bass sit
+// out a while, then arrive. `lateFloorOf` draws a loop's; the engine plays it
+// (js/engine.js).
 export const LATEFLOOR = {
-  // How often a loop draws it, and batch 5's vibe table for it (cruising,
-  // pulsing and glacial from item 76b).
-  weight: 1,
-  vibes: { hypnotic: 2, meditative: 1.5, spacious: 1.5, wondrous: 1.5, adventurous: 1.5, cruising: 1.5, pulsing: 1.5, enthusiastic: 0.4, skipping: 0.4, bouncy: 0.5, glacial: 0.4 },
-  // How long they wait, in seconds, rounded to this many bars (and at least
-  // that many).
-  seconds: [8, 30],
-  round: 2,
-  // Only where something else plays within this many seconds of the start.
-  first: 1,
-  // In what order they arrive: together, the kit first and the bass later,
-  // or the bass first.
-  orders: [['together', 40], ['kitFirst', 35], ['bassFirst', 25]],
-  // The gap between the two arrivals (kitFirst, bassFirst), drawn per loop
-  // (queue item 76d; Mikey, 2026-10-29: "it doesn't need a set come in
-  // time"), in whole bars with these weights, weighted toward the short end
-  // (the conservative choice, "for Mikey's ears"; item 69's fixed gap was two
-  // bars). Never past `maxGap`, and never past the end of the loop's first
-  // pass when the first arrival is inside it (otherwise within one loop's
-  // length of the first), so the second part comes in inside the loop's own
-  // pass, not after another.
-  gap: [[1, 30], [2, 24], [3, 16], [4, 11], [5, 7], [6, 5], [7, 4], [8, 3]],
-  maxGap: 8,
-  // The gaps from this many bars up are the long end the vibes lean.
-  gapLong: 3,
-  // The vibes' lean on the gap's long end and on the wait itself (item 76d,
-  // "for Mikey's ears"): calm, vast vibes toward long, lively ones toward
-  // short. A lean on the wait bends its one draw (u^(1/lean) across the
-  // seconds above), so no other draw moves, and a loop without vibes waits as
-  // before.
-  longVibes: { glacial: 1.6, droning: 1.6, meditative: 1.6, serene: 1.6, still: 1.6, spacious: 1.6, floating: 1.6, dreamy: 1.6, hypnotic: 1.6,
-    lively: 0.5, enthusiastic: 0.5, bouncy: 0.5, skipping: 0.5, groovy: 0.5, pulsing: 0.5, cruising: 0.5 },
+  weight: choiceData('lateFloor').weight,
+  vibes: choiceData('lateFloor').vibes,
+  ...setting('latefloor', {
+    seconds: 'range', round: 'num', first: 'num', orders: 'pool', gap: 'numpool', maxGap: 'num', gapLong: 'num', longVibes: 'table',
+  }),
 };
 
-// floorDrop's shapes (queue item 70; Ears 8, approved by Mikey 2026-10-18):
-// a loop that draws them gives each of its floor drops (item 58: the kick
-// and the bass out for a bar or two, with "Let the loop wander" on) a shape
-// of its own. Every variable, named, with its range; the generator plays
-// them, at the end of drift's draws (js/generator.js, `drift`).
+// floorDrop's shapes (queue item 70): a loop that draws them gives each of
+// its floor drops a shape of its own. The generator plays them, at the end of
+// drift's draws (js/generator.js, `drift`).
 export const FLOORDROP = {
-  // How often a loop draws the shapes (the drops themselves, their rate and
-  // where they fall, stay item 58's).
-  weight: 1,
-  // Each drop's shape, by weight: single (item 58's), stagger (the kick back
-  // on time, the bass `stagger` bars later), stutter (`stutter` short drops,
-  // one every two of their lengths), long (`long` seconds, or the whole pass
-  // in a loop of `wholeUnder` bars or fewer). Stagger and stutter need a bass
-  // line (Mikey's rule); without one a drop is single or long.
-  shapes: [['single', 40], ['stagger', 25], ['stutter', 20], ['long', 15]],
-  needBass: ['stagger', 'stutter'],
-  // batch 5's vibe table, each shape's own; single and stagger have none.
-  shapeVibes: {
-    stutter: { hypnotic: 1.5, lively: 1.5, mischievous: 1.5, serene: 0.4, soothing: 0.4, restful: 0.4 },
-    long: { hypnotic: 2, spacious: 2, meditative: 1.5, reflective: 1.5, bouncy: 0.5, skipping: 0.5 },
-  },
-  // The shapes follow the bar's length (Mikey's rule, the sketch's way): a
-  // stagger's bass waits two bars when a bar is shorter than `staggerShort`
-  // seconds, one otherwise; a stutter's drops last two bars when a bar is
-  // shorter than `stutterShort` seconds, one otherwise, and there are three
-  // or four of them, half and half (fewer where the loop has no room: under
-  // two, the drop is single); a long drop is about `longSeconds`, 4-8 bars.
-  staggerShort: 2.5,
-  stutterShort: 2.2,
-  stutter: [3, 4],
-  longSeconds: 12,
-  longBars: [4, 8],
-  wholeUnder: 8,
+  weight: choiceData('floorDrop').weight,
+  ...setting('floordrop', {
+    shapes: 'pool', needBass: 'words', 'shapeVibes.*': 'table', staggerShort: 'num', stutterShort: 'num', stutter: 'range',
+    longSeconds: 'num', longBars: 'range', wholeUnder: 'num',
+  }),
 };
 
-// pedalBass's settings (queue item 71; Ears 8's pedalBass, approved by Mikey
-// 2026-10-18): the bass holds the key's tonic in a rhythm while the chords
-// move, now and then stepping to one neighbor and back. Every variable,
-// named, with its range; the generator plays it (js/generator.js,
-// `pedalBass`).
+// pedalBass's settings (queue item 71): the bass holds the key's tonic in a
+// rhythm while the chords move, now and then stepping to one neighbor and
+// back. The generator plays it (js/generator.js, `pedalBass`).
 export const PEDAL = {
-  // How often a loop draws it, and batch 5's vibe table for it.
-  weight: 1,
-  vibes: { hypnotic: 2, steady: 1.5, meditative: 1.5, cool: 1.5, mysterious: 1.5, joyful: 0.5, triumphant: 0.5, merry: 0.5 },
-  // The bass styles it can take over (the drone, the chug and the sparse bass
-  // stay as they are).
-  styles: ['held', 'pulse', 'dub', 'walk'],
-  // Its rhythm, by weight: one note a bar, two, one a beat, or off the beat
-  // between the kicks.
-  rhythms: [['held', 25], ['half', 30], ['quarter', 25], ['offbeat', 20]],
-  // Its neighbor, in semitones from the tonic, by weight, each only where the
-  // loop's mode has it: a whole tone up, the tone below, the flat second, the
-  // fifth. The flat second leans toward mysterious and strange and away from
-  // the happy vibes (batch 5's table).
-  neighbors: [[2, 3], [-2, 2], [1, 3], [7, 2]],
-  neighborVibes: { 1: { mysterious: 2, strange: 2, happy: 0.3, sunny: 0.3, sweet: 0.3, peaceful: 0.3 } },
-  // How often a note steps to the neighbor.
-  share: [0.1, 0.25],
-  // The bass's register (roundBass, queue item 56).
-  low: 36,
-  high: 57,
+  weight: choiceData('pedalBass').weight,
+  vibes: choiceData('pedalBass').vibes,
+  ...setting('pedal', {
+    styles: 'words', rhythms: 'pool', neighbors: 'numpool', 'neighborVibes.*': 'table', share: 'range', low: 'num', high: 'num',
+  }),
 };
 
-// padSweep's settings (queue item 72; Ears 8's padSweep, approved by Mikey
-// 2026-10-18): a lowpass on the chord layer swings open and shut every 12-28
-// s while the rest stays as bright as it was. Every variable, named, with its
-// range; `padSweepOf` draws a loop's; the core plays it
-// (core/src/blocks/pad_sweep.rs).
+// padSweep's settings (queue item 72): a lowpass on the chord layer swings
+// open and shut while the rest stays as bright as it was. `padSweepOf` draws
+// a loop's; the core plays it (core/src/blocks/pad_sweep.rs).
 export const PADSWEEP = {
-  // How often a loop draws it, and batch 5's vibe table for it (glacial,
-  // dreamy and cosmic from item 76b).
-  weight: 1,
-  vibes: { hypnotic: 2, floating: 1.5, wondrous: 1.5, hazy: 1.5, strange: 1.5, glacial: 1.5, dreamy: 1.5, cosmic: 1.5, still: 0.4, restful: 0.4, hushed: 0.4, serene: 0.4 },
-  // The chord voices it sweeps: the sustained ones (the sketch's list).
-  sustained: ['pad', 'softpad', 'moogpad', 'analogpad', 'accordion', 'organ', 'choir', 'vowel', 'hum'],
-  // Where it closes (Hz), how far it opens (octaves), one swing (seconds),
-  // and its resonance (dB, as a BiquadFilterNode's Q).
-  lo: [450, 800],
-  oct: [2, 3.5],
-  period: [12, 28],
-  q: [0.7, 1.2],
+  weight: choiceData('padSweep').weight,
+  vibes: choiceData('padSweep').vibes,
+  ...setting('padsweep', { sustained: 'words', lo: 'range', oct: 'range', period: 'range', q: 'range' }),
 };
 
-// echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
-// 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
-// loop as the sketch drew it, outside the list of choices and not counted
-// among a loop's changes, as roundBass and longChords aren't (the brain,
-// 2026-10-26); `echoTimeOf` draws a loop's.
-export const ECHO = {
-  // The times, in beats, and how often each is drawn: today's dotted eighth
-  // first.
-  beats: [[0.75, 45], [1, 25], [0.5, 15], [2 / 3, 15]],
-  // Batch 5's vibe table, by time: one beat toward spacious and floating
-  // (and glacial, droning, dreamy and cosmic, item 76b), half a beat toward
-  // nimble and skipping (and bubbly and playful).
-  vibes: {
-    1: { spacious: 1.5, floating: 1.5, glacial: 1.5, droning: 1.5, dreamy: 1.5, cosmic: 1.5 },
-    0.5: { nimble: 1.5, skipping: 1.5, bubbly: 1.5, playful: 1.5 },
-  },
-};
+// echoTime's settings (queue item 73): the echo's time drawn per loop, in
+// beats. Drawn for every loop as the sketch drew it, outside the list of
+// choices and not counted among a loop's changes; `echoTimeOf` draws a
+// loop's.
+export const ECHO = setting('echo', { beats: 'numpool', 'vibes.*': 'table' });
 
-// The bass layer's level for a loop (queue item 76c; Mikey's picks from
-// Session 26's album, 2026-10-29), in dB over the level the bass had before
-// roundBass's lift: +3 in a loop that plays a kick (dust #7, noan-nou), none
-// in one without (dust #42: the bass carries the low end alone there, and +3
-// lifted the whole loop 2.4 LU). Named, with its two values, so a vibe or a
-// request can move either later; the host sends the loop's to the core at
-// each load (`Core::bass_lift`). The JavaScript synth leaves its bass alone.
-export const BASS_LIFT = { kick: 3, noKick: 0 };
+// The bass layer's level for a loop (queue item 76c), in dB over the level
+// the bass had before roundBass's lift, with a kick and without; the host
+// sends the loop's to the core at each load (`Core::bass_lift`). The
+// JavaScript synth leaves its bass alone.
+export const BASS_LIFT = setting('basslift', { kick: 'num', noKick: 'num' });
 
 // The bass lift for a loop whose tracks are `tracks`: the kick's is for a
 // loop that plays a kick, a soft kick or, in the hand kit, the frame drum
@@ -326,10 +150,9 @@ export function bassLiftOf(tracks) {
   return kick ? BASS_LIFT.kick : BASS_LIFT.noKick;
 }
 
-// The wash's vibe table (queue item 76b; it had none before).
-const WASH_VIBES = { glacial: 1.5, rainy: 1.5, breezy: 1.5, droning: 1.5 };
 
-// The choices, in a fixed order (the draw walks them in it). Each is
+// The choices, in a fixed order (the draw walks them in it): the file's
+// [choice id] blocks, each
 //
 //   { id, options: [['today', w], [option, w], ...], weight,
 //     eligible: (ctx) => bool, vibes: { vibe: lean, ... },
@@ -339,59 +162,44 @@ const WASH_VIBES = { glacial: 1.5, rainy: 1.5, breezy: 1.5, droning: 1.5 };
 // for, before the vibes lean it (1 if missing); `options` past the first
 // are what it plays when picked, by their weights, each leaned by its
 // `optionVibes`. `ctx` is what the generator knows of the loop when it draws
-// (see `choicesOf`).
-export const CHOICES = [
-  // glass (queue item 59; the prototypes, approved by Mikey 2026-10-10): on
-  // a chord's first beat, now and then, two or three of its notes ring out
-  // high as a soft FM bell. For any loop with a chord of two notes or more
-  // (a one-note "chord" never rings out). No vibe leans: the batch's table
-  // has none for the instruments (for Mikey's ears).
-  { id: 'glass', options: [['today', 1], ['on', 1]], eligible: (ctx) => hasChords(ctx) },
-  // dubStab (queue item 60; Ears 4, round 4, approved 2026-10-16): a soft
-  // chord stab on the offbeat over a busy groove, thrown into the echo.
+// (see `choicesOf`). The eligibility tests, by id, are what the file can't
+// say; they are the same ones the choices were written with, and a choice
+// without one (or a test without a choice) is an error.
+const ELIGIBLE = {
+  // For any loop with a chord of two notes or more (a one-note "chord" never
+  // rings out).
+  glass: (ctx) => hasChords(ctx),
   // Busy loops only: drums, and seven or more notes a second.
-  { id: 'dubStab', options: [['today', 1], ['on', 1]], eligible: (ctx) => playsChords(ctx) && busy(ctx) },
-  // The chapel organ (queue item 61; Ears 4, round 7, approved 2026-10-16):
-  // a pipe organ the loop holds its chords on, outside the voice budget.
-  // For any loop that plays a chord. No vibe leans (for Mikey's ears).
-  { id: 'organ', options: [['today', 1], ['on', 1]], eligible: (ctx) => playsChords(ctx) },
-  // The wash (queue item 62; Ears 4, round 5, approved 2026-10-16): a slow
-  // swell of air every 17-26 s, under whatever the loop plays. Any loop;
-  // leaned toward glacial, rainy, breezy and droning (item 76b).
-  { id: 'wash', options: [['today', 1], ['on', 1]], vibes: WASH_VIBES, eligible: () => true },
-  // The arc (queue items 63 and 63b; the prototypes, approved 2026-10-10):
-  // the whole mix breathing dark and bright over minutes, in one of two
-  // shapes (ARC, above; `arcOf`). Any loop.
-  { id: 'arc', options: [['today', 1], ['on', 1]], weight: ARC.weight, vibes: ARC.vibes, eligible: () => true },
-  // tunedKick (queue item 67; Ears 8, approved 2026-10-18): the kick on the
-  // key's note, short as today or a long boom (KICK, above; `kickOf`). Any
-  // loop with a kick.
-  { id: 'tunedKick', options: KICK.options, optionVibes: KICK.optionVibes, eligible: (ctx) => hasKick(ctx) },
-  // subDuck (queue item 68; Ears 8, approved 2026-10-18): the bass alone dips
-  // at each kick (SUBDUCK, above; `subDuckOf`). Only on a loop with a kick
-  // and a bass line (Mikey's rule; the sketch's test).
-  { id: 'subDuck', options: [['today', 1], ['on', 1]], weight: SUBDUCK.weight, vibes: SUBDUCK.vibes, eligible: (ctx) => hasKick(ctx) && hasBass(ctx) },
-  // lateFloor (queue item 69; Ears 8, approved 2026-10-18): after a load the
-  // kit and the bass wait 8-30 s (LATEFLOOR, above; `lateFloorOf`). Only on a
-  // loop with drums or a bass and something else that plays from its first
-  // second, so it never starts with nothing.
-  { id: 'lateFloor', options: [['today', 1], ['on', 1]], weight: LATEFLOOR.weight, vibes: LATEFLOOR.vibes, eligible: (ctx) => floorAndMore(ctx) },
-  // floorDrop's shapes (queue item 70; Ears 8, approved 2026-10-18): each of
-  // the loop's floor drops draws a shape (FLOORDROP, above). Only where a
-  // floor can drop: a loop of 4 bars or more, with drums or a bass.
-  { id: 'floorDrop', options: [['today', 1], ['shapes', 1]], weight: FLOORDROP.weight,
-    eligible: (ctx) => !!ctx.tracks && ctx.spec.bars >= 4 && (ctx.tracks.drums.some((e) => e.vel) || ctx.tracks.bass.some((e) => e.vel)) },
-  // pedalBass (queue item 71; Ears 8, approved 2026-10-18): the bass holds
-  // the tonic in a rhythm under moving chords (PEDAL, above). Only over a
-  // held, pulse, dub or walking bass.
-  { id: 'pedalBass', options: [['today', 1], ['on', 1]], weight: PEDAL.weight, vibes: PEDAL.vibes,
-    eligible: (ctx) => !!ctx.bass && PEDAL.styles.includes(ctx.bass.style) && !!ctx.tracks && ctx.tracks.bass.some((e) => e.vel) },
-  // padSweep (queue item 72; Ears 8, approved 2026-10-18): the chord layer
-  // swings dark and bright (PADSWEEP, above; `padSweepOf`). Only where the
-  // chords are a sustained voice.
-  { id: 'padSweep', options: [['today', 1], ['on', 1]], weight: PADSWEEP.weight, vibes: PADSWEEP.vibes,
-    eligible: (ctx) => !!ctx.tracks && ctx.tracks.chords.some((e) => e.vel && PADSWEEP.sustained.includes(e.voice)) },
-];
+  dubStab: (ctx) => playsChords(ctx) && busy(ctx),
+  // For any loop that plays a chord.
+  organ: (ctx) => playsChords(ctx),
+  // Any loop.
+  wash: () => true,
+  arc: () => true,
+  // Any loop with a kick.
+  tunedKick: (ctx) => hasKick(ctx),
+  // Only on a loop with a kick and a bass line (Mikey's rule; the sketch's
+  // test).
+  subDuck: (ctx) => hasKick(ctx) && hasBass(ctx),
+  // Only on a loop with drums or a bass and something else that plays from
+  // its first second, so it never starts with nothing.
+  lateFloor: (ctx) => floorAndMore(ctx),
+  // Only where a floor can drop: a loop of 4 bars or more, with drums or a
+  // bass.
+  floorDrop: (ctx) => !!ctx.tracks && ctx.spec.bars >= 4 && (ctx.tracks.drums.some((e) => e.vel) || ctx.tracks.bass.some((e) => e.vel)),
+  // Only over a held, pulse, dub or walking bass.
+  pedalBass: (ctx) => !!ctx.bass && PEDAL.styles.includes(ctx.bass.style) && !!ctx.tracks && ctx.tracks.bass.some((e) => e.vel),
+  // Only where the chords are a sustained voice.
+  padSweep: (ctx) => !!ctx.tracks && ctx.tracks.chords.some((e) => e.vel && PADSWEEP.sustained.includes(e.voice)),
+};
+
+export const CHOICES = Object.keys(CHOICE_DATA).map((id) => {
+  if (!ELIGIBLE[id]) throw new Error(`${WHERE}: [choice ${id}] has no eligibility test in js/choices.js`);
+  return { id, ...CHOICE_DATA[id], eligible: ELIGIBLE[id] };
+});
+for (const id of Object.keys(ELIGIBLE)) {
+  if (!CHOICE_DATA[id]) throw new Error(`js/choices.js: eligibility test for '${id}', which ${WHERE} lacks`);
+}
 
 // Whether the loop has a floor to hold back (drums or a bass) and something
 // else that plays from its first second (chords, a tune or a texture), as

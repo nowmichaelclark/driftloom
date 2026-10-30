@@ -1,0 +1,116 @@
+# The voice table (queue items 32 and 78): the layers, what each voice costs
+# the JavaScript synth's voice budget, and the levels the folk and hand-kit
+# voices sit at. The format is in js/data.js. The costs and levels here are
+# the JavaScript fallback's (js/synth.js); the core has its own voices and
+# levels (core/src/blocks/).
+
+# The layers, in the order the app lists them and the generator draws them,
+# and the label each shows.
+[voices layers]
+order = drums bass chords melody texture
+label.drums = Drums
+label.bass = Bass
+label.chords = Keys
+label.melody = Melody
+label.texture = Air
+
+# A voice budget in cost units, not a count of voices (js/synth.js, "A voice
+# budget"): the weights are ratios from OfflineAudioContext render-time
+# measurements taken on a development machine, not a real phone, so the
+# relative costs should hold and the absolute BUDGET figures are a reasoned
+# starting point.
+[voices costs]
+default = 12
+# dubStab's cost (queue item 60; it yields, as glass does: YIELD_MARGIN).
+dubstab = 8
+cost = hat 1, ohat 1, shaker 1, rim 1, kick 1, snare 1.5, clap 1.5,
+    drop 1.5, bell 4, chime 4, celeste 4, musicbox 4,
+    sub 8, round 8, fifths 8, pluckbass 9, rhodesbass 10, moogbass 7,
+    stab 4, sine 4, pluck 11,
+    # The softened leads, re-measured the way the folk voices were (1 s notes
+    # against an empty render, through the tonal voices above): saw 6.8 and
+    # 7.7, moog 12.9 and 13.6, analoglead 14.0 and 15.3. The analoglead used
+    # to bill the moog's 18; by the same method, before this change, the saw
+    # read 10.9, the moog 13.9 and the analoglead 17.0.
+    saw 7, moog 13, analoglead 15,
+    rhodes 15, whistle 14, harp 20,
+    # keys is ONE two-operator FM note. piano below is two of them, and the
+    # table used to price them the same, which cannot both be right. Measured
+    # marginal render time puts keys at 2.1x a sine and 0.47x a piano -- the
+    # structure exactly -- so it is half of piano rather than equal to it.
+    # At 25 it was reserving twice what an actual piano note costs and
+    # starving the melody behind it; see "Why the melody was losing notes".
+    keys 12, prepared 25, piano 26,
+    pad 25, moogpad 25,
+    choir 34, analogpad 32, softpad 25,
+    kalimba 11, marimba 9, vowel 22, hum 16,
+    ocarina 15, flute 16,
+    # Measured, not guessed: marginal render time of 1s notes through the real
+    # Synth, budget off, against an empty render, converted through the voices
+    # above at the median rate (1.14-1.18 units a ms). Take one was 24 and 23,
+    # and the same method still reads 24.8 and 23.2 for it. Take two drops
+    # the bow noise and shares one fixed body per channel instead of filters
+    # on every note, so a note is its oscillators and a gain or two. Two
+    # passes: fiddle 7.9 and 8.3, accordion 8.7 and 9.1.
+    fiddle 8, accordion 9,
+    # Pair 2, measured the same way: nylon 6.6 and 7.2 (two oscillators and
+    # two gains a note, into the shared body); pan flute 15.4 and 14.5 once
+    # its chiff rode the breath's own path -- with a noise source of its own
+    # it read 22.8 and 21.5.
+    nylon 7, panflute 15,
+    templebell 12, tubular 12,
+    # The hand kit, measured the way the folk voices were, but priced against
+    # the kit instruments they stand in for rather than through the tonal
+    # voices: by the same render timing a kick reads 7.5 units and a hat 4.6,
+    # so the drum rows above are on a scale of their own, and pricing these
+    # on the tonal one would make the same pattern six times dearer on a
+    # frame drum. Two passes, as ratios to what each replaces: frame 1.43
+    # and 1.39 of a kick, tap 1.21 and 1.19 of a snare, jingle 3.3 and 3.2
+    # of a hat, the long jingle 3.0 and 3.3 of an open hat. The zils are
+    # five partials where a hat is one noise burst.
+    frame 1.4, tap 1.8, jingle 3.2, ojingle 3.2,
+    # Wayfare's soft kick, one sine and a gain, the kick without its click:
+    # priced as the hand kit is, against the kick it replaces, by the same
+    # render timing -- 0.31 and 0.29 of a kick in two passes (a hat reads
+    # 0.66 and 0.62, as 4.6 against 7.5 above).
+    softkick 0.3,
+    # Waves, through the tonal voices like the other textures (wind's 12
+    # reads 18 by the same method): 15.9 and 14.3 for a 1 s event.
+    waves 15,
+
+# Levels for the folk voices, calibrated with measure.mjs --voice all at
+# 0.4 s notes to the median of each layer that draws them (contribution rule
+# 5). The accordion is drawn for both melody and chords, and a chord note
+# goes through the engine's spread, so each layer gets its own level.
+# Re-measured for take two (--voice all --note 0.4, the mean of the two
+# velocities): the new fiddle arrives in 20-40 ms where take one's bow took
+# 80-120, so it came out 5.6 LU over the melody median and gave that back
+# (0.141 -> 0.0736); the accordion 0.1 under as a tune (0.088 -> 0.0892) and
+# 1.0 over as chords (0.102 -> 0.0909).
+[voices levels]
+fiddle = 0.0736
+accordion.melody = 0.0892
+accordion.chords = 0.0909
+# Nylon guitar, to the chords layer's median at 0.4 s notes: 5.8 LU over it
+# at first, 0.2 -> 0.1029. No profile draws nylon as a melody yet, so there
+# is no melody median to measure it against.
+nylon = 0.1029
+# Pan flute, to the melody median at 0.4 s: 1.5 LU over at first, 0.12 ->
+# 0.1011.
+panflute = 0.1011
+# Wayfare's soft kick: a raw kick velocity, so that wayfare's drums sit over
+# its music about as tide's hand-kit jigs do (measure.mjs --profile wayfare,
+# "the drums over the music"): 6.4 LU against the jigs' 6.7, on the gentle
+# side. The drums there are mostly the kick, so this moves that figure dB for
+# dB.
+softkick = 1.15
+# The hand kit's levels, per instrument, against the one each replaces on
+# the same pattern; see "the hand kit" in `drum`.
+hand.frame = 1.097
+hand.tap = 0.2918
+hand.jingle = 0.02227
+hand.ojingle = 0.04494
+# Waves (tide's air): its level.
+waves = 0.67
+# dubStab's level in the JavaScript fallback against the core's voice.
+dubstab = 1.67

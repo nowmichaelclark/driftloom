@@ -59,8 +59,9 @@ colliding:
   sessions don't share a branch.
 - **Free any time:** the look (`css/`, `design/`, icons, themes),
   menus and views that don't touch playback, Library, covers, text.
-- **Vibe tuning** (`js/vibes.js`): free until phase 2 starts; during
-  phase 2's port it pauses, then continues in the new data format.
+- **Vibe tuning** (`data/vibes.txt`): free again since item 78 (v130): the
+  vibes are plain text both generators read, so tuning never waits for the
+  port (`docs/VIBES.md`, "How to edit a vibe").
 - **Generator changes** (`js/generator.js`, profiles, moods): fine
   until phase 2, then made in Rust only (otherwise made twice).
 - **Audio bugs:** in `core/`, they go through the brain into the core
@@ -131,8 +132,8 @@ default. Move text, don't rewrite decisions.
 - Credentials: Mikey pastes a GitHub token in the session's opening
   message. With it the brain commits and merges **docs-only** changes --
   `docs/*.md`, `ROADMAP.md`, `README.md` -- through small PRs it merges
-  itself. Once item 38a lands, also **`js/vibes.js`** (the vibe recipes,
-  data only; bump `BUILD` and `CACHE` with it, and merge only when CI is
+  itself. Once item 38a lands, also **`data/vibes.txt`** (the vibe recipes,
+  data only, since item 78 in plain text; bump `BUILD` and `CACHE` with it, and merge only when CI is
   green: a test checks every recipe's names). Brain's call, Session 16,
   so tuning a vibe is an edit rather than a hands session. Code stays with the hands. Never write the token into a file, a
   commit, memory, Project knowledge, or a brief. Mikey manages his own
@@ -317,7 +318,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   - **Now, alongside everything:** ears sessions (records he loves ->
     candidate sounds as offline clips; his verdicts, including on
     dubStab, organ, wash and longChords). Vibes may be added until phase
-    2 starts (data in `js/vibes.js`).
+    2 starts (data in `data/vibes.txt`).
   - **Session 22** (brain, Opus, 2026-10-18): **done.** Items 42-45
     verified, 47's PR read; the control album "Phase 1 check" heard by
     Mikey the same day: no difference. See the log
@@ -443,7 +444,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - **Where it is:** `main` at v100 (2026-10-19; phase 1's items 42-47
   merged and checked, Painter 6's next-picks screens). The Rust core plays by default (the
   JavaScript synth is the fallback, `?engine=js`); Vibes are in the app
-  (items 38a-b, v86-87; recipes in `js/vibes.js`, tuned once, v91); the
+  (items 38a-b, v86-87; recipes in `data/vibes.txt`, tuned once, v91); the
   dials, the word fit and the word-album builder are tools (items 34-35);
   cinder and shatter borrow bright modes when glad (item 36).
 - **Glitches on GrapheneOS phones (items 39-41, v89-v92):** the core now
@@ -518,7 +519,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   the voice budget as fixed overhead, the stab is a budget probe that
   holds nothing) -- under the charter they may become the first
   instruments built as recipes; vibe tuning from the loops Mikey sends
-  (`js/vibes.js`, the brain's to edit).
+  (`data/vibes.txt`, the brain's to edit).
 
 ### The log
 
