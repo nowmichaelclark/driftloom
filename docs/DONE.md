@@ -83,3 +83,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   JavaScript on all 3,060 generation-golden cases on all five targets. The
   goldens gained a `plan` hash; nothing else moved, and the app's `.wasm` is
   the same bytes. Listen for nothing. No album loop.
+- #292, the Rust generator, 2: the layers (item 80), preview URL:
+  <https://eb02d0f6-driftloom.nowmichaelclark.workers.dev> (commit a1cf9e4):
+  the generator in the core now makes every layer (bass and its pedal,
+  melody and its development, drums and wayfare's grooves, texture) and the
+  rest of render, the per-loop choices included; it equals the JavaScript on
+  all 3,060 generation-golden cases on all five targets, and the balance
+  lock's corpus drawn from it gives every loop the JavaScript's figures
+  (`node tools/stats.mjs --check --core`). The app still plays the
+  JavaScript, and its `.wasm` is the same bytes. Listen for nothing. No
+  album loop.
