@@ -17,7 +17,13 @@
 //! cells, phrases and development) and the rest of `render` (`render`: the
 //! repairs, the gaps, the per-loop choices the pedal needs, the register
 //! work, the spellings, the long chords' octave, the slurs, strums,
-//! ornaments and the harmony line).
+//! ornaments and the harmony line). Item 81: each choice's own draws
+//! (`choices`: the arc, the tuned kick, subDuck, lateFloor, the floor
+//! drop's shapes, padSweep, the echo time, the bass's level), what the
+//! engine decides at load (`load`: dubStab, the organ, the wash, the
+//! space, and the rest), and "Let the loop wander" (`wander`: each pass's
+//! `drift`, its floor drop and its kick). With these, every decision the
+//! JavaScript makes before scheduling has its twin here.
 //!
 //! **The data** (`data/*.txt`) is compiled in by `core/build.rs`, into
 //! read-only tables (`data`): the core reads nothing at run time and a host
@@ -45,16 +51,19 @@
 
 pub mod canon;
 pub mod character;
+pub mod choices;
 pub mod data;
 pub mod js;
 pub mod layers;
 pub mod list;
+pub mod load;
 pub mod melody;
 pub mod plan;
 pub mod render;
 pub mod rng;
 pub mod spec;
 pub mod theory;
+pub mod wander;
 
 /// The layers, in the order the generator draws them and the app lists
 /// them (`data/voices.txt`'s `[voices layers]`, which `build.rs` checks).
@@ -84,8 +93,8 @@ impl Layer {
     }
 }
 
-/// The parts of a loop the generation goldens hash, as far as the Rust
-/// generator makes them (`tools/gen-golden.mjs` names each).
+/// The parts of a loop the generation goldens hash (`tools/gen-golden.mjs`
+/// names each).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Part {
     /// The spec, as `newSpec` makes it.
@@ -100,11 +109,19 @@ pub enum Part {
     Meta,
     /// The per-loop choices (`drawChoices`, through render).
     Choices,
+    /// What the engine decides at load (`Engine.load`).
+    Load,
+    /// A wandered pass, from 1 (`drift`, through `Engine._wander(pass)`).
+    Pass(u32),
 }
 
+/// How many wandered passes the goldens hash.
+pub const PASSES: u32 = 8;
+
 impl Part {
-    /// Every part the generator makes, in the file's order.
-    pub const ALL: [Part; 10] = [
+    /// Every part the goldens hash, in the file's order: the passes last,
+    /// in their order.
+    pub const ALL: [Part; 19] = [
         Part::Spec,
         Part::Plan,
         Part::Form,
@@ -115,9 +132,18 @@ impl Part {
         Part::Layer(Layer::Texture),
         Part::Meta,
         Part::Choices,
+        Part::Load,
+        Part::Pass(1),
+        Part::Pass(2),
+        Part::Pass(3),
+        Part::Pass(4),
+        Part::Pass(5),
+        Part::Pass(6),
+        Part::Pass(7),
+        Part::Pass(8),
     ];
 
-    /// The part's name in the file.
+    /// The part's name in the file (every pass is one of `passes`).
     #[must_use]
     pub const fn name(self) -> &'static str {
         match self {
@@ -127,6 +153,19 @@ impl Part {
             Part::Layer(l) => l.name(),
             Part::Meta => "meta",
             Part::Choices => "choices",
+            Part::Load => "load",
+            Part::Pass(_) => "passes",
+        }
+    }
+
+    /// The part's hash in a line of the goldens (`name=H`, a pass the
+    /// pass's own of `passes=H1,...,H8`), if the line has it.
+    #[must_use]
+    pub fn in_line(self, line: &str) -> Option<&str> {
+        let field = line.split(' ').find_map(|f| f.strip_prefix(self.name()).and_then(|f| f.strip_prefix('=')))?;
+        match self {
+            Part::Pass(n) => field.split(',').nth(usize::try_from(n).ok()?.checked_sub(1)?),
+            _ => Some(field),
         }
     }
 }
@@ -138,6 +177,8 @@ pub struct Generator {
     spec: spec::Spec,
     plan: plan::Plan,
     render: render::Render,
+    settings: load::Load,
+    pass: wander::Pass,
 }
 
 impl Generator {
@@ -145,7 +186,13 @@ impl Generator {
     /// in a static.
     #[must_use]
     pub const fn empty() -> Self {
-        Generator { spec: spec::Spec::EMPTY, plan: plan::Plan::new(), render: render::Render::new() }
+        Generator {
+            spec: spec::Spec::EMPTY,
+            plan: plan::Plan::new(),
+            render: render::Render::new(),
+            settings: load::Load::EMPTY,
+            pass: wander::Pass::new(),
+        }
     }
 
     /// An empty generator (`empty`).
@@ -155,7 +202,8 @@ impl Generator {
     }
 
     /// Generate the loop of `seed`, with the vibes `vibes` (their numbers,
-    /// `data::VIBES`; any order, as a listener's selection).
+    /// `data::VIBES`; any order, as a listener's selection), and decide
+    /// what the engine decides loading it (`settings`).
     pub fn load(&mut self, seed: u32, vibes: &[usize]) {
         let chosen = character::selection(vibes);
         self.spec = spec::new_spec(seed, &chosen);
@@ -183,6 +231,8 @@ impl Generator {
                 self.render.shift_chords(sh as i16);
             }
         }
+        self.settings = load::Load::of(&plan::Cx::new(&self.spec), &self.render);
+        self.pass.number = None;
     }
 
     /// The loop's spec.
@@ -191,8 +241,29 @@ impl Generator {
         &self.spec
     }
 
-    /// Write a part's canonical text into `sink`.
-    pub fn write<S: canon::Sink>(&self, part: Part, sink: &mut S) {
+    /// What the engine decides loading the loop: its per-loop settings.
+    #[must_use]
+    pub fn settings(&self) -> &load::Load {
+        &self.settings
+    }
+
+    /// The loop as pass `pass` plays it when it wanders (`drift`, at the
+    /// default amount): drawn now, unless it is the pass drawn last. Any
+    /// pass can be drawn without the ones before it.
+    pub fn wander(&mut self, pass: u32) -> &wander::Pass {
+        if self.pass.number != Some(pass) {
+            let kick = self.settings.kick.map(|k| k.kind);
+            self.pass.draw(&plan::Cx::new(&self.spec), &self.render, kick, pass);
+        }
+        &self.pass
+    }
+
+    /// Write a part's canonical text into `sink` (a pass is drawn first,
+    /// if it is not the one drawn last).
+    pub fn write<S: canon::Sink>(&mut self, part: Part, sink: &mut S) {
+        if let Part::Pass(n) = part {
+            self.wander(n);
+        }
         let mut w = canon::Writer::new(sink);
         let cx = plan::Cx::new(&self.spec);
         match part {
@@ -202,12 +273,14 @@ impl Generator {
             Part::Layer(l) => self.render.write_layer(&mut w, l),
             Part::Meta => self.render.write_meta(&mut w, &cx, &self.plan),
             Part::Choices => self.render.write_choices(&mut w),
+            Part::Load => self.settings.write(&mut w),
+            Part::Pass(_) => self.pass.write(&mut w, &cx, &self.plan, &self.render),
         }
     }
 
     /// A part's hash: FNV-1a 64 over its canonical text.
     #[must_use]
-    pub fn hash(&self, part: Part) -> u64 {
+    pub fn hash(&mut self, part: Part) -> u64 {
         let mut h = canon::Fnv::new();
         self.write(part, &mut h);
         h.0

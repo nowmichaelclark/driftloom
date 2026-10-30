@@ -7,8 +7,9 @@
 //
 //   node tools/gen-golden-wasm.mjs --wasm FILE [core/golden/generation.hashes]
 //
-// The parts, in the order the exports number them (`Part::ALL`). Prints one
-// line per case that differs, and a summary; exits with 1 on any difference.
+// The parts, in the order the exports number them (`Part::ALL`): the eight
+// wandered passes last, each its own of the line's `passes`. Prints one line
+// per case that differs, and a summary; exits with 1 on any difference.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { fnv1a64 } from './gen-golden-lib.mjs';
 import { VIBE_IDS } from '../js/vibes.js';
 
-const PARTS = ['spec', 'plan', 'form', 'drums', 'bass', 'chords', 'melody', 'texture', 'meta', 'choices'];
+const PARTS = ['spec', 'plan', 'form', 'drums', 'bass', 'chords', 'melody', 'texture', 'meta', 'choices', 'load', ...Array.from({ length: 8 }, (_, i) => `pass ${i + 1}`)];
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -38,6 +39,7 @@ for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
   if (!line || line.startsWith('#')) continue;
   const [name, seed, vibes, ...fields] = line.split(' ');
   const want = Object.fromEntries(fields.map((f) => f.split('=')));
+  want.passes.split(',').forEach((h, i) => { want[`pass ${i + 1}`] = h; });
   const ids = vibes === '-' ? [] : vibes.split(',').map((v) => VIBE_IDS.indexOf(v));
   new Uint8Array(x.memory.buffer, x.dl_gen_input(), ids.length).set(ids);
   if (!x.dl_gen_load(Number(seed) >>> 0, ids.length)) throw new Error(`${name}: the core refused its vibes`);

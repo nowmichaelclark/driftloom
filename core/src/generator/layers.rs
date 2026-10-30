@@ -3,8 +3,8 @@
 //! with wayfare's travelling grooves (`travelGroove`), and `genTexture`,
 //! from `js/generator.js` and `js/choices.js`.
 
-use super::character::Vibes;
-use super::data::{self, MAX_BARS, PEDAL, Table};
+use super::choices::lean_of;
+use super::data::{self, MAX_BARS, PEDAL};
 use super::js;
 use super::list::List;
 use super::plan::{Cx, Notes, Slot, slot_at, SLOTS_MAX};
@@ -12,7 +12,6 @@ use super::rng::Rng;
 use super::spec::Metre;
 use super::theory::scale_pitch;
 use super::Layer;
-use crate::math;
 
 // --------------------------------------------------------------- bass
 
@@ -224,20 +223,6 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
 
 const PEDAL_SALT: u32 = 0x0009_eda1;
 
-/// `leanOf(table, vibes)`: a choice's lean, each vibe's held between the
-/// choices' bounds.
-#[must_use]
-pub fn lean_of(table: Option<Table>, v: Option<&Vibes>) -> f64 {
-    let (Some(v), Some(table)) = (v, table) else { return 1.0 };
-    let [lo, hi] = data::CHOICE_LEAN;
-    let mut m = 1.0;
-    for &(id, w) in v.list.iter() {
-        let Some(x) = data::lookup(table, data::VIBES[id].id) else { continue };
-        m *= math::pow(js::min(hi, js::max(lo, x)), v.strength * w);
-    }
-    m
-}
-
 /// A pedal's draws (`pedalBass`'s, and its meta).
 #[derive(Clone, Copy)]
 pub struct PedalOut {
@@ -260,8 +245,7 @@ pub fn pedal_bass(cx: &Cx, bars: f64, drawn: &Bass, voice: &'static str, out: &m
     let mut nbs: List<(f64, f64), 8> = List::filled((0.0, 0.0));
     for &(nb, w) in PEDAL.neighbors {
         if scale.contains(&(((nb % 12.0) + 12.0) % 12.0)) {
-            let table = PEDAL.neighbor_vibes.iter().find(|(k, _)| *k == nb).map(|x| x.1);
-            nbs.push((nb, w * lean_of(table, v)));
+            nbs.push((nb, w * lean_of(data::table_at(PEDAL.neighbor_vibes, nb), v)));
         }
     }
     let nb = if nbs.is_empty() { 0.0 } else { rng.weighted(&nbs).unwrap_or(0.0) };
@@ -383,8 +367,10 @@ const SNARE_34: [&[f64]; 4] = [&[4.0, 8.0], &[8.0], &[6.0, 10.0], &[4.0, 8.0]];
 const KICK_20: [&[f64]; 4] = [&[0.0, 12.0], &[0.0], &[0.0, 8.0, 12.0], &[0.0, 12.0, 16.0]];
 const SNARE_20: [&[f64]; 3] = [&[8.0], &[8.0, 16.0], &[12.0]];
 
-/// `HAND_KIT`: the hand kit's instrument for each kit instrument.
-fn hand(inst: &'static str) -> &'static str {
+/// `HAND_KIT`: the hand kit's instrument for each kit instrument (any
+/// other plays as itself).
+#[must_use]
+pub fn hand(inst: &'static str) -> &'static str {
     match inst {
         "kick" => "frame",
         "snare" | "clap" | "rim" => "tap",

@@ -1097,16 +1097,17 @@ pub fn write_gaps<S: Sink>(w: &mut Writer<S>, gaps: &[Gap]) {
     w.end_list();
 }
 
-fn write_notes<S: Sink>(w: &mut Writer<S>, notes: &[i16]) {
+fn write_notes<S: Sink>(w: &mut Writer<S>, notes: &[i16], extra: Option<i16>) {
     w.list();
-    for &n in notes {
+    for &n in notes.iter().chain(extra.as_ref()) {
         w.num(f64::from(n));
     }
     w.end_list();
 }
 
-/// A chord event's canonical text.
-pub fn write_chord<S: Sink>(w: &mut Writer<S>, e: &ChordEvent) {
+/// A chord event's canonical text; `extra`, a note a wandered pass added
+/// to it (`drift`'s chord that opens up).
+pub fn write_chord<S: Sink>(w: &mut Writer<S>, e: &ChordEvent, extra: Option<i16>) {
     w.obj();
     if let Some(d) = e.detune {
         w.key("detune");
@@ -1115,7 +1116,7 @@ pub fn write_chord<S: Sink>(w: &mut Writer<S>, e: &ChordEvent) {
     w.key("dur");
     w.num(e.dur);
     w.key("notes");
-    write_notes(w, &e.notes);
+    write_notes(w, &e.notes, extra);
     w.key("step");
     w.num(e.step);
     if let Some(s) = e.strum {
@@ -1160,7 +1161,7 @@ pub fn write_harmony<S: Sink>(w: &mut Writer<S>, h: &Harmony, sections: Option<&
     w.key("events");
     w.list();
     for e in h.events.iter() {
-        write_chord(w, e);
+        write_chord(w, e, None);
     }
     w.end_list();
     if let Some(l) = h.long_chords {
@@ -1205,7 +1206,7 @@ pub fn write_harmony<S: Sink>(w: &mut Writer<S>, h: &Harmony, sections: Option<&
         w.key("lengthSteps");
         w.num(s.length_steps);
         w.key("notes");
-        write_notes(w, &s.notes);
+        write_notes(w, &s.notes, None);
         w.key("rootMidi");
         w.num(s.root_midi);
         w.key("startStep");
