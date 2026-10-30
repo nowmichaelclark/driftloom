@@ -197,6 +197,9 @@ pub struct StabOpts {
 /// The synth's side of the player: the budget, the quality, the rate's
 /// references for the sung trims, and what the loop's own instruments are
 /// set to (whether the organ, the wash, subDuck and padSweep are set up).
+// Its flags are the synth's own, each a state of its own (an instrument set
+// up for the loop), not one state spelled in bools.
+#[allow(clippy::struct_excessive_bools)]
 pub struct Synth {
     pub budget: Budget,
     refs: Refs,

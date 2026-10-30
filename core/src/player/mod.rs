@@ -34,6 +34,17 @@
 //! are fixed, in the player, which a host keeps (a static, or boxed: it is
 //! a megabyte and a half, `size_of::<Player>()`).
 
+// The port compares doubles as the JavaScript does (`===`, `!(a > b)` where a
+// NaN must fall through, `(a + b) / 2` in its own order), and keeps its short
+// names and its calls' arguments, so the two read side by side.
+#![allow(
+    clippy::float_cmp,
+    clippy::neg_cmp_op_on_partial_ord,
+    clippy::manual_midpoint,
+    clippy::many_single_char_names,
+    clippy::too_many_arguments
+)]
+
 pub mod budget;
 pub mod formant;
 pub mod host;
@@ -134,6 +145,9 @@ pub struct Player {
 impl Player {
     /// A player with nothing loaded, the wander on at the app's default.
     /// `const`, so a host can keep one in a static.
+    // Built in a `const` for a host's static player, never on a stack at run
+    // time (as `Core::new`).
+    #[allow(clippy::large_stack_arrays)]
     #[must_use]
     pub const fn new() -> Self {
         Player {
@@ -298,14 +312,14 @@ impl Player {
     /// under way, or the next pass drawn ahead; then every step due within
     /// `LOOKAHEAD`, its notes handed over. `render` calls it before each
     /// block; a host that drives `Core::process` itself calls it before
-    /// each.
-    pub fn decide<H: Host>(&mut self, host: &mut H) {
+    /// each. Returns how many steps it decided.
+    pub fn decide<H: Host>(&mut self, host: &mut H) -> usize {
         if self.state == State::Loading || self.state == State::Wandering {
             self.stage(host);
-            return;
+            return 0;
         }
         if self.state != State::Playing {
-            return;
+            return 0;
         }
         let now = self.now(host);
         let due = |seq: &Sequencer| seq.next_step_time < now + LOOKAHEAD;
@@ -313,8 +327,10 @@ impl Player {
             let n = self.seq.loop_count.wrapping_add(1);
             self.draw(1 - self.current, n);
             self.next_drawn = true;
-            return;
+            return 0;
         }
+        // A step is a tenth of a second or so: this many in one block would
+        // be a tempo past any the generator draws.
         let mut guard = 0;
         while due(&self.seq) && guard < 4096 {
             guard += 1;
@@ -324,6 +340,7 @@ impl Player {
                 self.next_pass();
             }
         }
+        guard
     }
 
     /// The top of a new pass: the next one drawn (now, if it is not yet),
@@ -353,7 +370,9 @@ impl Player {
     /// `Error::Layout` if `out` is not one slice for each channel of the
     /// core's layout, all the same length; nothing is rendered.
     pub fn render(&mut self, core: &mut Core, out: &mut [&mut [f32]]) -> Result<(), Error> {
-        core.render_with(out, |core| self.decide(core))
+        core.render_with(out, |core| {
+            self.decide(core);
+        })
     }
 
     /// How far each pass wanders from now on ("Let the loop wander", 0 to

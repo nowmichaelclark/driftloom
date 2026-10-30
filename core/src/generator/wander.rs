@@ -446,7 +446,7 @@ impl Pass {
         w.list();
         for (i, e) in base.bass.iter().enumerate() {
             let (vel, midi) = self.bass(i, e);
-            render::write_bass(w, &BassEvent { vel, midi, ..*e });
+            render::write_bass(w, &BassEvent { midi, vel, ..*e });
         }
         w.end_list();
         w.key("chords");
@@ -460,7 +460,7 @@ impl Pass {
         w.list();
         for (i, e) in base.drums.iter().enumerate() {
             let (vel, inst) = self.drum(i, e);
-            render::write_drum(w, &DrumEvent { vel, inst, ..*e });
+            render::write_drum(w, &DrumEvent { inst, vel, ..*e });
         }
         if let Some(g) = self.ghost() {
             render::write_drum(w, g);
@@ -470,7 +470,7 @@ impl Pass {
         w.list();
         for (i, e) in base.melody.iter().enumerate() {
             let (vel, midi) = self.melody(i, e);
-            render::write_melody(w, &MelodyEvent { vel, midi, ..*e });
+            render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
         }
         w.end_list();
         w.key("texture");

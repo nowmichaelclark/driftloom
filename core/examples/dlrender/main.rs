@@ -21,6 +21,16 @@
 //!                                           output differs from the plain
 //!                                           render's
 //! cargo run --release --example dlrender -- --wav OUT.wav [--signal NAME] LIST
+//! cargo run --release --example dlrender -- --seed N[,N...] [--vibes ID,...]
+//!     [--seconds 45] [--rate 44100] [--stereo] [--lite] [--wander 1]
+//!     [--wav OUT.wav] [--calls OUT.calls]
+//!                                           a loop from its seed on the
+//!                                           player (queue item 82), no note
+//!                                           list: one hash line a seed
+//! cargo run --release --example dlrender -- --corpus SEED:N [the same]
+//!     [--wav DIR] [--calls DIR]             the first N loops of corpus SEED
+//!                                           (Rng(SEED).seed32() a loop), each
+//!                                           to DIR/I-NAME.wav with --wav
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! cargo run --release --example dlrender -- --block NAME/PROBE [--rate HZ] [--wav OUT.wav]
 //!                                           one building block alone, as the
@@ -38,6 +48,7 @@
 //! Everything it prints is plain ASCII. It exits with 1 on any error.
 
 mod notelist;
+mod seed;
 
 use std::process::ExitCode;
 
@@ -46,7 +57,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -63,9 +74,28 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let mut layout = 1;
     let (mut compare, mut lists, mut block) = (false, Vec::new(), None);
     let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
+    // A loop from its seed (queue item 82).
+    let (mut seeds, mut calls_to, mut lite, mut seconds, mut wander, mut vibes) = (Vec::new(), None, false, 45.0, 1.0, Vec::new());
+    let number = |word: Option<String>| -> Result<f64, String> { word.ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE.to_string()) };
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--seed" => {
+                for word in args.next().ok_or(USAGE)?.split(',') {
+                    seeds.push((None, word.parse::<u32>().map_err(|_| format!("not a seed: {word}"))?));
+                }
+            }
+            "--corpus" => {
+                let word = args.next().ok_or(USAGE)?;
+                let (from, n) = word.split_once(':').ok_or_else(|| format!("--corpus is SEED:N, not {word}"))?;
+                let (from, n) = (from.parse::<u32>().map_err(|_| USAGE)?, n.parse::<usize>().map_err(|_| USAGE)?);
+                seeds.extend(seed::corpus(from, n).into_iter().enumerate().map(|(i, s)| (Some(i), s)));
+            }
+            "--calls" => calls_to = Some(args.next().ok_or(USAGE)?),
+            "--lite" => lite = true,
+            "--seconds" => seconds = number(args.next())?,
+            "--wander" => wander = number(args.next())?,
+            "--vibes" => vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),
             "--twice" => twice = true,
             "--stereo" => layout = 2,
             "--flush" => flush = true,
@@ -93,6 +123,10 @@ fn run(args: Vec<String>) -> Result<(), String> {
     }
     if let Some(name) = block {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
+    }
+    if !seeds.is_empty() {
+        let way = seed::Way { seconds, rate: rate.unwrap_or(44_100.0), full: !lite, layout, wander, vibes };
+        return seed_renders(&seeds, &way, wav_to.as_deref(), calls_to.as_deref());
     }
     if lists.is_empty() || (wav_to.is_some() && lists.len() != 1) {
         return Err(USAGE.to_string());
@@ -134,6 +168,43 @@ fn run(args: Vec<String>) -> Result<(), String> {
         if let Some(out) = &wav_to {
             let bytes = if layout == 2 && keep == Some(0) { wav_channels(&first.kept, list.rate, 2) } else { wav(&first.kept, list.rate) };
             std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+/// Loops from their seeds (`seed.rs`): a hash line each, and with `--wav`
+/// and `--calls` their samples and the player's calls, to a file for one
+/// seed, or into a directory for a corpus (`I-NAME.wav`,
+/// `I-NAME.QUALITY.LAYOUT.calls`, as `tools/player.mjs --calls` names the
+/// page's).
+fn seed_renders(seeds: &[(Option<usize>, u32)], way: &seed::Way, wav_to: Option<&str>, calls_to: Option<&str>) -> Result<(), String> {
+    let corpus = seeds.iter().any(|(i, _)| i.is_some());
+    if !corpus && seeds.len() > 1 && (wav_to.is_some() || calls_to.is_some()) {
+        return Err("--wav and --calls take one --seed, or a --corpus and a directory".to_string());
+    }
+    for dir in [wav_to, calls_to].into_iter().flatten().filter(|_| corpus) {
+        std::fs::create_dir_all(dir).map_err(|e| format!("{dir}: {e}"))?;
+    }
+    for &(index, s) in seeds {
+        let r = seed::render_seed(s, way, calls_to.is_some())?;
+        let name = r.line.split(' ').find_map(|w| w.strip_prefix("name=")).unwrap_or("loop").to_string();
+        let file = |dir: &str, ext: &str| match index {
+            Some(i) => format!("{dir}/{i}-{name}{ext}"),
+            None => dir.to_string(),
+        };
+        match index {
+            Some(i) => println!("{i} {}", r.line),
+            None => println!("{}", r.line),
+        }
+        if let Some(dir) = wav_to {
+            let path = file(dir, ".wav");
+            std::fs::write(&path, seed::wav_of(&r, way)).map_err(|e| format!("{path}: {e}"))?;
+        }
+        if let (Some(dir), Some(calls)) = (calls_to, &r.calls) {
+            let kind = format!(".{}.{}.calls", if way.full { "full" } else { "lite" }, if way.layout == 2 { "stereo" } else { "mono" });
+            let path = file(dir, &kind);
+            std::fs::write(&path, calls).map_err(|e| format!("{path}: {e}"))?;
         }
     }
     Ok(())

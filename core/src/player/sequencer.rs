@@ -92,7 +92,7 @@ impl Chord {
 
 /// A note's pitch class, as the engine folds one (`((n % 12) + 12) % 12`).
 fn pc(n: i16) -> i16 {
-    ((n % 12) + 12) % 12
+    n.rem_euclid(12)
 }
 
 /// What the chapel organ holds (`organHold`): the chord, until when (in
@@ -161,6 +161,9 @@ impl Loop<'_> {
 /// The engine's state as it decides: where it is in the loop and in time,
 /// the organ's hold and the tails, the setups still to send, and the
 /// loop's settings it plays by.
+// Its flags are the engine's own, each a state of its own (a setup still to
+// send, a loop that had one), not one state spelled in bools.
+#[allow(clippy::struct_excessive_bools)]
 pub struct Sequencer {
     /// When the next step falls, in seconds on the core's clock.
     pub next_step_time: f64,
@@ -500,7 +503,7 @@ impl Sequencer {
                 Self::glass(host, synth, lp, s_at, t, sd, Key { seed, pass, step: step32, ord: 0 });
             }
             if let Some(stab) = &s.stab {
-                Self::dub_stab(host, synth, lp, stab, &mutes, &at, s_at, t, abs, Key { seed, pass, step: step32, ord: 0 });
+                Self::dub_stab(host, synth, lp, stab, mutes, &at, s_at, t, abs, Key { seed, pass, step: step32, ord: 0 });
             }
         }
         // Muted, the chords' organ lets go.
@@ -523,12 +526,12 @@ impl Sequencer {
                 synth.voice(host, key_of(Layer::Melody), e.voice, midi, t + slip, dur, vel, MELODY, &opts);
                 // Asked for after the note, so where the budget is short it
                 // is the decoration that yields, never the tune.
-                let steps = e.steps.as_ref().map_or(lp.spec.steps(), |s| &s[..]);
+                let mode = e.steps.as_ref().map_or(lp.spec.steps(), |s| &s[..]);
                 let line = Opts { vowel, detune: e.detune, ..Opts::default() };
-                if let Some(under) = harmony_of(e.harm, midi, root, steps) {
+                if let Some(under) = harmony_of(e.harm, midi, root, mode) {
                     synth.voice(host, key_of(Layer::Melody), e.voice, under, t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
                 }
-                let (graces, n) = graces_of(e.orn, midi, root, steps);
+                let (graces, n) = graces_of(e.orn, midi, root, mode);
                 for (k, &g) in graces.iter().take(n).enumerate() {
                     let at = t + slip - GRACE * js::num(n - k);
                     synth.voice(host, key_of(Layer::Melody), e.voice, g, js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
@@ -652,7 +655,7 @@ impl Sequencer {
     /// loop's density, a soft stab of the chord sounding now, folded into
     /// G3-C5; never in a silent bar, and only over a groove.
     #[allow(clippy::too_many_arguments)] // the step's own place and times
-    fn dub_stab<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, stab: &Stab, mutes: &[bool; 5], at: &impl Fn(Layer) -> f64, s: f64, t: f64, abs: f64, key: Key) {
+    fn dub_stab<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, stab: &Stab, mutes: [bool; 5], at: &impl Fn(Layer) -> f64, s: f64, t: f64, abs: f64, key: Key) {
         let spb = lp.spec.steps_per_bar;
         let pos = s % spb;
         let which = if pos == 2.0 {
