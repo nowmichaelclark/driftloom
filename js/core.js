@@ -24,6 +24,19 @@ export const ENGINE = (() => {
   }
 })();
 
+// `?engine=player` (queue item 82, for testing): the core plays the loop
+// itself, from its seed and its vibes, with its own sequencer
+// (core/src/player/), through js/dlplayer.wasm; the page's engine only keeps
+// the cursor and the controls. The core is otherwise the 'rust' engine, as
+// above. The app does not switch to it until phase 3.
+export const PLAYER = (() => {
+  try {
+    return new URLSearchParams(globalThis.location?.search || '').get('engine') === 'player';
+  } catch {
+    return false;
+  }
+})();
+
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
 export function coreUnsupported() {
@@ -195,7 +208,7 @@ function logEntry(entry) {
   if (coreLog.entries.length > LOG_MOST) coreLog.entries.shift();
 }
 
-const WASM_URL = new URL('./dlcore.wasm', import.meta.url);
+const WASM_URL = new URL(PLAYER ? './dlplayer.wasm' : './dlcore.wasm', import.meta.url);
 const WORKLET_URL = new URL('./worklet.js', import.meta.url);
 
 // Fetched once per page, however many contexts and synths come and go.
@@ -301,6 +314,9 @@ export class CoreHost {
     this.cost = { ms: [0, 0], seconds: [0, 0] };
     this._pings = new Map();
     this._ping = 0;
+    // With `?engine=player`, where the core's player was as of the last
+    // flush(): { state, step, time } (queue item 82).
+    this.playerAt = null;
     const outputs = taps ? 2 + CORE_CHANNEL_COUNT : 1;
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
       numberOfInputs: dests.length,
@@ -310,7 +326,7 @@ export class CoreHost {
       channelCount: 1,
       channelCountMode: 'explicit',
       // Copied, not moved: the page keeps its copy for the next synth.
-      processorOptions: { bytes: core.bytes, quality, layout: this.layout },
+      processorOptions: { bytes: core.bytes, quality, layout: this.layout, player: PLAYER },
     });
     this.node.port.onmessage = (e) => this._receive(e.data);
     // The processor threw while playing (a trap in the core, say): the node
@@ -414,6 +430,40 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'retune', channel, time, notes: notes.slice(0, 6) });
   }
 
+  // With `?engine=player` (queue item 82): the core's player plays the loop
+  // of `seed` with the vibes numbered `vibes` (VIBE_IDS' order), its first
+  // step at `at` on the context's clock (or as soon as it is made, if that
+  // has passed); stops, going on where it stood with its next step at `at`;
+  // and takes the controls: how far it wanders, a layer muted (by its index
+  // in LAYERS), the tempo and the volume.
+  playLoad(seed, vibes, at) {
+    this.node.port.postMessage({ type: 'playLoad', seed, vibes, at });
+  }
+
+  playStop() {
+    this.node.port.postMessage({ type: 'playStop' });
+  }
+
+  playResume(at) {
+    this.node.port.postMessage({ type: 'playResume', at });
+  }
+
+  playWander(amount) {
+    this.node.port.postMessage({ type: 'playWander', amount });
+  }
+
+  playMute(layer, muted) {
+    this.node.port.postMessage({ type: 'playMute', layer, muted });
+  }
+
+  playTempo(bpm) {
+    this.node.port.postMessage({ type: 'playTempo', bpm });
+  }
+
+  playVolume(volume) {
+    this.node.port.postMessage({ type: 'playVolume', volume });
+  }
+
   // Every note handed over that has not started yet, dropped; the ones
   // sounding carry on (queue item 39). With `from`, only those asked for
   // at that time or later (queue item 40).
@@ -452,8 +502,12 @@ export class CoreHost {
     }
     if (m.note) this._late(m.note);
     if (m.type === 'arrivals') this._arrivals(m);
-    if (m.type === 'cost') this.cost = { ms: m.ms, seconds: m.seconds };
+    if (m.type === 'cost') {
+      this.cost = { ms: m.ms, seconds: m.seconds };
+      if (m.player) this.playerAt = m.player;
+    }
     if (m.type === 'pong') {
+      if (m.player) this.playerAt = m.player;
       if (m.reduction) this.reduction = m.reduction;
       if (m.deepest) this.deepest = this.deepest.map((d, i) => Math.min(d, m.deepest[i]));
       const resolve = this._pings.get(m.id);

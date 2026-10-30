@@ -36,12 +36,13 @@
 pub mod block;
 pub mod blocks;
 pub mod delay;
-// The generator (phase 2) is left out of the app's web build until the player
-// is in it (item 82): the web build compiles the crate as an rlib too, so code
-// it never calls can still shift the .wasm's bytes, and a generator or data
-// edit must not change what the app ships. The `generator` feature brings it
-// back for the checks' wasm build.
-#[cfg(any(not(feature = "web"), feature = "generator"))]
+// The generator (phase 2) is left out of the app's web build until the app
+// plays the player (phase 3): the web build compiles the crate as an rlib too,
+// so code it never calls can still shift the .wasm's bytes, and a generator or
+// data edit must not change what the app ships. The `generator` feature brings
+// it back for the checks' wasm build, the `player` feature for the player's
+// (js/dlplayer.wasm, queue item 82).
+#[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
 pub mod generator;
 pub mod master;
 pub mod math;
@@ -49,8 +50,8 @@ pub mod mix;
 pub mod noise;
 pub mod param;
 // The player (queue item 82) stands on the generator, and is left out of the
-// app's web build with it.
-#[cfg(any(not(feature = "web"), feature = "generator"))]
+// app's web build with it (the `player` feature builds js/dlplayer.wasm).
+#[cfg(any(not(feature = "web"), feature = "player"))]
 pub mod player;
 pub mod resample;
 pub mod rng;
@@ -60,6 +61,9 @@ pub mod wave;
 
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
+// The C face (`include/dlcore.h`), for a native C host's static library.
+#[cfg(all(not(target_arch = "wasm32"), feature = "capi"))]
+mod capi;
 
 use block::{Context, Event, Mods, Note, Sends, Signal, event};
 use block::event::Reach;

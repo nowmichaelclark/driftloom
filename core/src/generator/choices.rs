@@ -161,6 +161,7 @@ const PUNCH: f64 = 213.0;
 
 /// Today's kick, hard or soft, as `kickFit` measures it: its sweep's start
 /// and end (Hz), the sweep's time and the attack (seconds).
+#[derive(Clone, Copy)]
 struct Today {
     f0: f64,
     end: f64,
@@ -217,27 +218,65 @@ const PUNCH_STEPS: usize = 800;
 /// time in every walk), the weight of each band through the sweep to `f1`,
 /// and the punch's amplitude. What every measurement of one kick shares is
 /// worked out once, here (the JavaScript works it out at every step of
-/// every measurement: the same numbers).
-struct Walk<'a> {
-    k: &'a Today,
+/// every measurement: the same numbers). Built a slice at a time
+/// (`Walk::build`), as the player spreads a load across blocks.
+#[derive(Clone, Copy)]
+struct Walk {
+    k: Today,
     f1: f64,
     landed: [f64; 3],
     sweep: [[f64; 3]; SWEEP_STEPS],
     punch: [f64; PUNCH_STEPS],
+    /// How many steps of the tables are built, and the next one's time.
+    built: usize,
+    t: f64,
 }
 
-impl<'a> Walk<'a> {
-    fn new(k: &'a Today, f1: f64) -> Self {
-        let mut walk = Walk { k, f1, landed: BANDS.map(|b| b.weight(f1)), sweep: [[0.0; 3]; SWEEP_STEPS], punch: [0.0; PUNCH_STEPS] };
-        let mut t = 0.0;
-        for i in 0..PUNCH_STEPS {
-            if i < SWEEP_STEPS && t < k.sweep {
-                walk.sweep[i] = walk.sweeping(t);
+/// What a step of a walk's tables costs against a slice's budget, in the
+/// units a step of `energies` costs one of (`KickFit::step`): a step of the
+/// sweep works out four powers, one of the energies one.
+const BUILD_COST: usize = 4;
+
+/// An `energies` walk under way: where it is, the sums so far, and what it
+/// was asked.
+#[derive(Clone, Copy)]
+struct Walking {
+    t: f64,
+    i: usize,
+    e: [f64; 3],
+    t1: f64,
+    end: f64,
+    tail: f64,
+    rate: f64,
+    stop: Option<(f64, [f64; 3])>,
+}
+
+impl Walk {
+    const EMPTY: Walk =
+        Walk { k: HARD, f1: 0.0, landed: [0.0; 3], sweep: [[0.0; 3]; SWEEP_STEPS], punch: [0.0; PUNCH_STEPS], built: 0, t: 0.0 };
+
+    /// A walk of kick `k` landing on `f1`, its tables still to build.
+    fn start(k: Today, f1: f64) -> Self {
+        Walk { k, f1, landed: BANDS.map(|b| b.weight(f1)), built: 0, t: 0.0, ..Walk::EMPTY }
+    }
+
+    /// Build the tables, spending at most `left` (or what one entry costs,
+    /// if `left` is less, so any slice gets on): true once built.
+    fn build(&mut self, left: &mut usize) -> bool {
+        while self.built < PUNCH_STEPS {
+            if *left == 0 {
+                return false;
             }
-            walk.punch[i] = walk.punching(t);
-            t += 0.0005;
+            *left = left.saturating_sub(BUILD_COST);
+            let (i, t) = (self.built, self.t);
+            if i < SWEEP_STEPS && t < self.k.sweep {
+                self.sweep[i] = self.sweeping(t);
+            }
+            self.punch[i] = self.punching(t);
+            self.t += 0.0005;
+            self.built += 1;
         }
-        walk
+        true
     }
 
     /// The bands' weights at time `t` of the sweep.
@@ -251,45 +290,49 @@ impl<'a> Walk<'a> {
         if t < self.k.att { t / self.k.att } else { math::pow(10.0, -PUNCH * (t - self.k.att) / 20.0) }
     }
 
-    /// `energy(f1, tail, rate, w)` through the three bands at once: the
-    /// kick's energy, its sweep landing on `f1`, its punch falling to `tail`
-    /// (1: none), then at `rate` dB a second; each band's sum its own, added
-    /// in the JavaScript's order. With `stop` (the lift squared and each
-    /// band's bound): none as soon as one band's lifted sum passes its
+    /// `energy(f1, tail, rate, w)` through the three bands at once, begun:
+    /// the kick's energy, its sweep landing on `f1`, its punch falling to
+    /// `tail` (1: none), then at `rate` dB a second; each band's sum its own,
+    /// added in the JavaScript's order. With `stop` (the lift squared and
+    /// each band's bound): none as soon as one band's lifted sum passes its
     /// bound, as the whole sum then would (every step adds a number of zero
     /// or more, and a sum of IEEE doubles never falls as it grows).
-    fn energies(&self, tail: f64, rate: f64, stop: Option<(f64, [f64; 3])>) -> Option<[f64; 3]> {
-        let k = self.k;
+    fn begin(&self, tail: f64, rate: f64, stop: Option<(f64, [f64; 3])>) -> Walking {
+        let k = &self.k;
         let t1 = k.att + -20.0 * math::log10(tail) / PUNCH;
         let end = t1 + (80.0 + 20.0 * math::log10(tail)) / rate;
-        let mut e = [0.0; 3];
-        let mut t = 0.0;
-        let mut i = 0;
-        while t < end {
-            let a = if t < k.att || t < t1 {
-                self.punch.get(i).copied().unwrap_or_else(|| self.punching(t))
-            } else {
-                tail * math::pow(10.0, -rate * (t - t1) / 20.0)
-            };
-            let w = if t < k.sweep { self.sweep.get(i).copied().unwrap_or_else(|| self.sweeping(t)) } else { self.landed };
-            for (x, w) in e.iter_mut().zip(w) {
-                *x += a * a * w;
-            }
-            if let Some((lift2, bound)) = stop
-                && e.iter().zip(bound).any(|(x, b)| lift2 * x > b)
-            {
+        Walking { t: 0.0, i: 0, e: [0.0; 3], t1, end, tail, rate, stop }
+    }
+
+    /// Walk on, spending at most `left` (a unit a step): `None` while there
+    /// is more to walk, then the energies (`None` within: stopped).
+    #[allow(clippy::option_option)] // done or not, and then the energies or a stop
+    fn walk(&self, w: &mut Walking, left: &mut usize) -> Option<Option<[f64; 3]>> {
+        let k = &self.k;
+        while w.t < w.end {
+            if *left == 0 {
                 return None;
             }
-            t += 0.0005;
-            i += 1;
+            *left -= 1;
+            let a = if w.t < k.att || w.t < w.t1 {
+                self.punch.get(w.i).copied().unwrap_or_else(|| self.punching(w.t))
+            } else {
+                w.tail * math::pow(10.0, -w.rate * (w.t - w.t1) / 20.0)
+            };
+            let weights = if w.t < k.sweep { self.sweep.get(w.i).copied().unwrap_or_else(|| self.sweeping(w.t)) } else { self.landed };
+            for (x, wt) in w.e.iter_mut().zip(weights) {
+                *x += a * a * wt;
+            }
+            if let Some((lift2, bound)) = w.stop
+                && w.e.iter().zip(bound).any(|(x, b)| lift2 * x > b)
+            {
+                return Some(None);
+            }
+            w.t += 0.0005;
+            w.i += 1;
         }
-        Some(e)
+        Some(Some(w.e))
     }
-}
-
-/// Today's kick's three energies (`ref`), the same for every loop.
-fn today(k: &Today) -> [f64; 3] {
-    Walk::new(k, k.end).energies(1.0, PUNCH, None).unwrap_or([0.0; 3])
 }
 
 /// `kickFit`: the lift that keeps a kick (for a long boom, its punch) at
@@ -298,59 +341,205 @@ fn today(k: &Today) -> [f64; 3] {
 /// long boom, its tail as loud as fits within the tail's room. Each by 24
 /// halvings, as the sketch did. A lift's test measures the kick with no
 /// tail, the same for every lift tried, so its energies are measured once.
-fn kick_fit(walk: &Walk, long: bool, dbps: f64, refs: &[f64; 3]) -> (f64, f64) {
-    // `ok`'s test, band by band: `lift * lift * e <= room * ref * 1.0001`.
-    let bounds = |room: f64| [room * refs[0] * 1.0001, KICK.band * refs[1] * 1.0001, KICK.band * refs[2] * 1.0001];
-    let fits = |lift: f64, e: &[f64; 3], bound: &[f64; 3]| e.iter().zip(bound).all(|(&x, &b)| lift * lift * x <= b);
-    let punch = walk.energies(1.0, if long { PUNCH } else { dbps }, None).unwrap_or([f64::NAN; 3]);
-    let bound = bounds(KICK.loud);
-    let (mut lo, mut hi) = (0.0, 1.5);
-    for _ in 0..24 {
-        let m = (lo + hi) / 2.0;
-        if fits(m, &punch, &bound) {
-            lo = m;
-        } else {
-            hi = m;
+/// Resumable: each `step` walks on as far as its budget lets it.
+#[derive(Clone, Copy)]
+struct Fitting {
+    long: bool,
+    dbps: f64,
+    refs: [f64; 3],
+    /// The punch's lift, once measured; the tail's halvings so far.
+    lift: Option<f64>,
+    k: u32,
+    tlo: f64,
+    thi: f64,
+    walking: Option<Walking>,
+}
+
+impl Fitting {
+    fn new(long: bool, dbps: f64, refs: [f64; 3]) -> Self {
+        Fitting { long, dbps, refs, lift: None, k: 0, tlo: 0.001, thi: 1.0, walking: None }
+    }
+
+    /// `ok`'s test, band by band: `lift * lift * e <= room * ref * 1.0001`.
+    fn bounds(&self, room: f64) -> [f64; 3] {
+        let refs = &self.refs;
+        [room * refs[0] * 1.0001, KICK.band * refs[1] * 1.0001, KICK.band * refs[2] * 1.0001]
+    }
+
+    fn fits(lift: f64, e: &[f64; 3], bound: &[f64; 3]) -> bool {
+        e.iter().zip(bound).all(|(&x, &b)| lift * lift * x <= b)
+    }
+
+    /// Fit on along `walk`, spending at most `left`: the lift and the tail
+    /// once fitted.
+    fn step(&mut self, walk: &Walk, budget: &mut usize) -> Option<(f64, f64)> {
+        let (long, dbps) = (self.long, self.dbps);
+        if self.lift.is_none() {
+            let w = self.walking.get_or_insert_with(|| walk.begin(1.0, if long { PUNCH } else { dbps }, None));
+            let punch = walk.walk(w, budget)?.unwrap_or([f64::NAN; 3]);
+            self.walking = None;
+            let bound = self.bounds(KICK.loud);
+            let (mut lo, mut hi) = (0.0, 1.5);
+            for _ in 0..24 {
+                let m = (lo + hi) / 2.0;
+                if Self::fits(m, &punch, &bound) {
+                    lo = m;
+                } else {
+                    hi = m;
+                }
+            }
+            self.lift = Some(lo);
+        }
+        let punch = self.lift.unwrap_or(0.0);
+        if !long {
+            return Some((punch, 1.0));
+        }
+        let bound = self.bounds(KICK.tail_loud);
+        while self.k < 24 {
+            let m = math::sqrt(self.tlo * self.thi);
+            let w = self.walking.get_or_insert_with(|| walk.begin(m, dbps, Some((punch * punch, bound))));
+            let e = walk.walk(w, budget)?;
+            self.walking = None;
+            if e.is_some_and(|e| Self::fits(punch, &e, &bound)) {
+                self.tlo = m;
+            } else {
+                self.thi = m;
+            }
+            self.k += 1;
+        }
+        Some((punch, self.tlo))
+    }
+}
+
+/// How much of `kickOf`'s work a slice does at most (`KickFit::step`), in
+/// steps of a walk: about 40 microseconds on a laptop's core.
+pub const KICK_SLICE: usize = 1500;
+
+/// `kickOf(seed, root)`'s work, a slice at a time (`step`): its draws, then
+/// today's kick's energies, hard and soft, then the walks at the loop's
+/// note, then the four fits (each fall, hard and soft). The same numbers
+/// `kick_of` works out at once: it is this, run to the end.
+#[derive(Clone, Copy)]
+pub struct KickFit {
+    short_rate: f64,
+    long_rate: f64,
+    midi: f64,
+    hz: f64,
+    /// Where the work is (`step`'s stages), its two walks and what they
+    /// measured: today's kick's energies, each fit's lift and tail.
+    stage: u8,
+    walks: [Walk; 2],
+    walking: Option<Walking>,
+    todays: [[f64; 3]; 2],
+    fitting: Option<Fitting>,
+    fits: [(f64, f64); 4],
+}
+
+impl KickFit {
+    /// Nothing to fit. Built in a `const` (the generator's static), never on
+    /// a stack at run time.
+    #[allow(clippy::large_stack_arrays)]
+    pub const EMPTY: KickFit = KickFit {
+        short_rate: 0.0,
+        long_rate: 0.0,
+        midi: 0.0,
+        hz: 0.0,
+        stage: 0,
+        walks: [Walk::EMPTY; 2],
+        walking: None,
+        todays: [[0.0; 3]; 2],
+        fitting: None,
+        fits: [(0.0, 0.0); 4],
+    };
+
+    /// The tuned kick of a loop of `seed` in `root`: its draws, its note
+    /// (the key's, between G1 and D2; D# to F# take their fifth), its fits
+    /// still to work out.
+    #[must_use]
+    pub fn new(seed: u32, root: f64) -> Self {
+        let mut r = Rng::new(js::salted(seed, KICK_SALT, 1));
+        let short_rate = r.range(KICK.short[0], KICK.short[1]);
+        let long_rate = r.range(KICK.long[0], KICK.long[1]);
+        let pc = ((root % 12.0) + 12.0) % 12.0;
+        let key = if (3.0..=6.0).contains(&pc) { (pc + 7.0) % 12.0 } else { pc };
+        let midi = 24.0 + key + if key < 7.0 { 12.0 } else { 0.0 };
+        let hz = 440.0 * math::pow(2.0, (midi - 69.0) / 12.0);
+        KickFit { short_rate, long_rate, midi, hz, ..KickFit::EMPTY }
+    }
+
+    /// Work on, at most `budget` steps of a walk (`KICK_SLICE`); true once
+    /// the kick is worked out (`kick`).
+    pub fn step(&mut self, budget: usize) -> bool {
+        let mut left = budget;
+        loop {
+            match self.stage {
+                // Today's kick, hard then soft: its walk, then its energies.
+                0 | 3 => {
+                    let k = if self.stage == 0 { HARD } else { SOFT };
+                    self.walks[0] = Walk::start(k, k.end);
+                    self.stage += 1;
+                }
+                1 | 4 | 7 | 9 => {
+                    let slot = usize::from(self.stage == 9);
+                    if !self.walks[slot].build(&mut left) {
+                        return false;
+                    }
+                    self.stage += 1;
+                }
+                2 | 5 => {
+                    let w = self.walking.get_or_insert_with(|| self.walks[0].begin(1.0, PUNCH, None));
+                    let Some(e) = self.walks[0].walk(w, &mut left) else { return false };
+                    self.walking = None;
+                    self.todays[usize::from(self.stage == 5)] = e.unwrap_or([0.0; 3]);
+                    self.stage += 1;
+                }
+                // The walks at the loop's note, hard then soft.
+                6 => {
+                    self.walks[0] = Walk::start(HARD, self.hz);
+                    self.stage = 7;
+                }
+                8 => {
+                    self.walks[1] = Walk::start(SOFT, self.hz);
+                    self.stage = 9;
+                }
+                // The fits: the short fall hard and soft, the long fall hard
+                // and soft.
+                10..=13 => {
+                    let n = usize::from(self.stage - 10);
+                    let (slot, long) = (n % 2, n >= 2);
+                    let (dbps, refs) = (if long { self.long_rate } else { self.short_rate }, self.todays[slot]);
+                    let f = self.fitting.get_or_insert_with(|| Fitting::new(long, dbps, refs));
+                    let Some(fit) = f.step(&self.walks[slot], &mut left) else { return false };
+                    self.fitting = None;
+                    self.fits[n] = fit;
+                    self.stage += 1;
+                }
+                _ => return true,
+            }
         }
     }
-    let lift = lo;
-    if !long {
-        return (lift, 1.0);
-    }
-    let bound = bounds(KICK.tail_loud);
-    let (mut tlo, mut thi) = (0.001, 1.0);
-    for _ in 0..24 {
-        let m = math::sqrt(tlo * thi);
-        if walk.energies(m, dbps, Some((lift * lift, bound))).is_some_and(|e| fits(lift, &e, &bound)) {
-            tlo = m;
-        } else {
-            thi = m;
+
+    /// The kick worked out (once `step` says so).
+    #[must_use]
+    pub fn kick(&self) -> TunedKick {
+        let fall = |dbps: f64, hard: (f64, f64), soft: (f64, f64)| Fall { dbps, lift: hard.0, tail: hard.1, soft_lift: soft.0, soft_tail: soft.1 };
+        TunedKick {
+            midi: self.midi,
+            hz: self.hz,
+            short: fall(self.short_rate, self.fits[0], self.fits[1]),
+            long: fall(self.long_rate, self.fits[2], self.fits[3]),
         }
     }
-    (lift, tlo)
 }
 
 /// `kickOf(seed, root)`: a loop's tuned kick, drawn on its own stream: both
-/// falls' rates, its note (the key's, between G1 and D2; D# to F# take
-/// their fifth), and each fall's level by ear, worked out as the sketch did
-/// at load.
+/// falls' rates, its note, and each fall's level by ear, worked out as the
+/// sketch did at load (`KickFit`, run to the end at once).
 #[must_use]
 pub fn kick_of(seed: u32, root: f64) -> TunedKick {
-    let mut r = Rng::new(js::salted(seed, KICK_SALT, 1));
-    let short_rate = r.range(KICK.short[0], KICK.short[1]);
-    let long_rate = r.range(KICK.long[0], KICK.long[1]);
-    let pc = ((root % 12.0) + 12.0) % 12.0;
-    let key = if (3.0..=6.0).contains(&pc) { (pc + 7.0) % 12.0 } else { pc };
-    let midi = 24.0 + key + if key < 7.0 { 12.0 } else { 0.0 };
-    let hz = 440.0 * math::pow(2.0, (midi - 69.0) / 12.0);
-    let (hard_today, soft_today) = (today(&HARD), today(&SOFT));
-    let (hard, soft) = (Walk::new(&HARD, hz), Walk::new(&SOFT, hz));
-    let fall = |long: bool, dbps: f64| {
-        let (lift, tail) = kick_fit(&hard, long, dbps, &hard_today);
-        let (soft_lift, soft_tail) = kick_fit(&soft, long, dbps, &soft_today);
-        Fall { dbps, lift, tail, soft_lift, soft_tail }
-    };
-    TunedKick { midi, hz, short: fall(false, short_rate), long: fall(true, long_rate) }
+    let mut fit = KickFit::new(seed, root);
+    while !fit.step(usize::MAX) {}
+    fit.kick()
 }
 
 /// `kickKindOf(seed, kind, pass)`: the kick a wandering loop plays on pass

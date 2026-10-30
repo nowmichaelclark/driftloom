@@ -4,7 +4,7 @@
 
 import { midiToFreq } from './theory.js';
 import {
-  CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
+  CoreHost, PLAYER, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
   MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS, WASH_CHANNEL, WASH_SETTINGS, WASH_WEIGHT,
   SUB_DUCK_SETTINGS, PAD_SWEEP_SETTINGS,
@@ -615,6 +615,12 @@ export class Synth {
     this.kill.gain.value = this._asked.killed ? 0 : 1;
   }
 
+  // Whether the core's player plays the notes (`?engine=player`, queue item
+  // 82): the engine then sends none, and hands the loop and the controls over.
+  get player() {
+    return PLAYER && !!this._coreMix();
+  }
+
   // The core, when it is the one mixing.
   _coreMix() {
     return this.core && !this.core.failed ? this.core : null;
@@ -707,6 +713,11 @@ export class Synth {
         : `rust (loading)  fallback: ${this.fallbacks}`;
     }
     if (c.failed) return `js (fallback: ${c.failed})  fallback: ${this.fallbacks}`;
+    if (PLAYER) {
+      const p = c.playerAt;
+      const at = p ? `  player: ${['idle', 'making a loop', 'its first pass', 'playing'][p.state] || p.state}, step ${p.step}` : '';
+      return `rust (the core's player, ?engine=player)  late: ${c.late}  dropped: ${c.dropped}${at}`;
+    }
     const late = c.late ? ` (stall ${c.lateStall}, inside the buffer ${c.lateBuffer}; left out ${c.missed})` : '';
     const dropped = c.dropped
       ? `  dropped: ${c.dropped} (${DROP_CAUSES.map((cause, i) => `${cause} ${c.droppedBy[i] || 0}`).join(', ')})` : '';
@@ -1275,6 +1286,8 @@ export class Synth {
   setVolume(v) {
     this.userVolume = v;
     this._applyGain();
+    // The core's player sets the master gain itself at each loop it starts.
+    if (this.player) this.core.playVolume(v);
   }
 
   // Per-character trim, kept separate from the user's volume so the two do

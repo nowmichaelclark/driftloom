@@ -74,28 +74,13 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let mut layout = 1;
     let (mut compare, mut lists, mut block) = (false, Vec::new(), None);
     let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
-    // A loop from its seed (queue item 82).
-    let (mut seeds, mut calls_to, mut lite, mut seconds, mut wander, mut vibes) = (Vec::new(), None, false, 45.0, 1.0, Vec::new());
-    let number = |word: Option<String>| -> Result<f64, String> { word.ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE.to_string()) };
+    let mut by_seed = BySeed::default();
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
+        if by_seed.take(&arg, &mut args)? {
+            continue;
+        }
         match arg.as_str() {
-            "--seed" => {
-                for word in args.next().ok_or(USAGE)?.split(',') {
-                    seeds.push((None, word.parse::<u32>().map_err(|_| format!("not a seed: {word}"))?));
-                }
-            }
-            "--corpus" => {
-                let word = args.next().ok_or(USAGE)?;
-                let (from, n) = word.split_once(':').ok_or_else(|| format!("--corpus is SEED:N, not {word}"))?;
-                let (from, n) = (from.parse::<u32>().map_err(|_| USAGE)?, n.parse::<usize>().map_err(|_| USAGE)?);
-                seeds.extend(seed::corpus(from, n).into_iter().enumerate().map(|(i, s)| (Some(i), s)));
-            }
-            "--calls" => calls_to = Some(args.next().ok_or(USAGE)?),
-            "--lite" => lite = true,
-            "--seconds" => seconds = number(args.next())?,
-            "--wander" => wander = number(args.next())?,
-            "--vibes" => vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),
             "--twice" => twice = true,
             "--stereo" => layout = 2,
             "--flush" => flush = true,
@@ -124,9 +109,13 @@ fn run(args: Vec<String>) -> Result<(), String> {
     if let Some(name) = block {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
     }
-    if !seeds.is_empty() {
-        let way = seed::Way { seconds, rate: rate.unwrap_or(44_100.0), full: !lite, layout, wander, vibes };
-        return seed_renders(&seeds, &way, wav_to.as_deref(), calls_to.as_deref());
+    if !by_seed.seeds.is_empty() {
+        let b = by_seed;
+        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes };
+        if b.costs {
+            return seed_costs(&b.seeds, &way);
+        }
+        return seed_renders(&b.seeds, &way, wav_to.as_deref(), b.calls_to.as_deref());
     }
     if lists.is_empty() || (wav_to.is_some() && lists.len() != 1) {
         return Err(USAGE.to_string());
@@ -173,6 +162,48 @@ fn run(args: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// The options of a loop from its seed (queue item 82): the seeds (each
+/// with its place in a corpus, if from one), and how to play them.
+#[derive(Default)]
+struct BySeed {
+    seeds: Vec<(Option<usize>, u32)>,
+    calls_to: Option<String>,
+    costs: bool,
+    lite: bool,
+    seconds: Option<f64>,
+    wander: Option<f64>,
+    vibes: Vec<String>,
+}
+
+impl BySeed {
+    /// Take `arg` (and its value, from `args`) if it is one of these
+    /// options: true if it was.
+    fn take(&mut self, arg: &str, args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
+        let number = |word: Option<String>| -> Result<f64, String> { word.ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE.to_string()) };
+        match arg {
+            "--seed" => {
+                for word in args.next().ok_or(USAGE)?.split(',') {
+                    self.seeds.push((None, word.parse::<u32>().map_err(|_| format!("not a seed: {word}"))?));
+                }
+            }
+            "--corpus" => {
+                let word = args.next().ok_or(USAGE)?;
+                let (from, n) = word.split_once(':').ok_or_else(|| format!("--corpus is SEED:N, not {word}"))?;
+                let (from, n) = (from.parse::<u32>().map_err(|_| USAGE)?, n.parse::<usize>().map_err(|_| USAGE)?);
+                self.seeds.extend(seed::corpus(from, n).into_iter().enumerate().map(|(i, s)| (Some(i), s)));
+            }
+            "--calls" => self.calls_to = Some(args.next().ok_or(USAGE)?),
+            "--costs" => self.costs = true,
+            "--lite" => self.lite = true,
+            "--seconds" => self.seconds = Some(number(args.next())?),
+            "--wander" => self.wander = Some(number(args.next())?),
+            "--vibes" => self.vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
+}
+
 /// Loops from their seeds (`seed.rs`): a hash line each, and with `--wav`
 /// and `--calls` their samples and the player's calls, to a file for one
 /// seed, or into a directory for a corpus (`I-NAME.wav`,
@@ -207,6 +238,50 @@ fn seed_renders(seeds: &[(Option<usize>, u32)], way: &seed::Way, wav_to: Option<
             std::fs::write(&path, calls).map_err(|e| format!("{path}: {e}"))?;
         }
     }
+    Ok(())
+}
+
+/// What each loop costs to play (`--costs`, `seed::cost_seed`), a line each
+/// in microseconds and against a block's deadline, and the worst of all.
+fn seed_costs(seeds: &[(Option<usize>, u32)], way: &seed::Way) -> Result<(), String> {
+    let deadline = f64::from(u32::try_from(dlcore::QUANTUM).unwrap_or(128)) / way.rate;
+    let us = |s: f64| s * 1e6;
+    let pct = |s: f64| 100.0 * s / deadline;
+    let (mut worst, mut worst_gen, mut worst_audio, mut gen_share, mut longest): (f64, f64, f64, f64, usize) = (0.0, 0.0, 0.0, 0.0, 0);
+    println!("# the deadline: a block of {} frames at {} Hz, {:.0} us; times are each block's least over 3 runs", dlcore::QUANTUM, way.rate, us(deadline));
+    for &(index, s) in seeds {
+        let c = seed::cost_seed(s, way, 3)?;
+        let all = c.generating + c.deciding + c.audio;
+        println!(
+            "{}seed={s} load={} blocks; worst block {:.0} us ({:.1}%): load stage {:.0} ({}), pass {:.0}, steps {:.0}, audio {:.0}; over {:.0} s: generating {:.2}%, deciding {:.2}%, audio {:.1}% of the time it played",
+            index.map_or(String::new(), |i| format!("{i} ")),
+            c.load_blocks,
+            us(c.worst_block),
+            pct(c.worst_block),
+            us(c.worst_load),
+            c.worst_stage,
+            us(c.worst_pass),
+            us(c.worst_steps),
+            us(c.worst_audio),
+            c.seconds,
+            100.0 * c.generating / c.seconds,
+            100.0 * c.deciding / c.seconds,
+            100.0 * c.audio / c.seconds,
+        );
+        worst = worst.max(c.worst_block);
+        worst_gen = worst_gen.max(c.worst_load.max(c.worst_pass));
+        worst_audio = worst_audio.max(c.worst_audio);
+        gen_share = gen_share.max(c.generating / all);
+        longest = longest.max(c.load_blocks);
+    }
+    println!(
+        "worst block {:.0} us ({:.1}% of the deadline); worst generation in a block {:.0} us; worst audio block {:.0} us; generation's largest share of a render {:.2}%; longest load {longest} blocks",
+        us(worst),
+        pct(worst),
+        us(worst_gen),
+        us(worst_audio),
+        100.0 * gen_share
+    );
     Ok(())
 }
 

@@ -185,6 +185,7 @@ pub struct Generator {
     seed: u32,
     chosen: [bool; data::VIBE_COUNT],
     today: Option<f64>,
+    kick: choices::KickFit,
 }
 
 /// The stages of a load, in order (`Generator::step`): each a part of
@@ -199,12 +200,16 @@ pub enum Stage {
     /// A loop that does not develop is planned and rendered once on today's
     /// chord lengths first, for its chords' centre (`withTodaysChords`).
     PlanToday,
-    RenderToday,
+    /// The render, a part a stage (`render::PARTS`).
+    RenderToday(usize),
     /// The plan and the render.
     Plan,
-    Render,
-    /// What the engine decides at load, the tuned kick's fit included.
+    Render(usize),
+    /// What the engine decides at load, but the tuned kick's level.
     Settings,
+    /// The tuned kick's level by ear, a slice a stage (`KickFit`): the
+    /// heaviest of a load's work, some ten milliseconds on a laptop.
+    Kick,
     /// The loop is ready.
     Done,
 }
@@ -224,6 +229,7 @@ impl Generator {
             seed: 0,
             chosen: [false; data::VIBE_COUNT],
             today: None,
+            kick: choices::KickFit::EMPTY,
         }
     }
 
@@ -275,21 +281,29 @@ impl Generator {
                 let mut cx = plan::Cx::new(&self.spec);
                 cx.long_chords_off = true;
                 self.plan.make(&cx);
-                self.stage = Stage::RenderToday;
+                self.stage = Stage::RenderToday(0);
             }
-            Stage::RenderToday => {
+            Stage::RenderToday(part) => {
                 let mut cx = plan::Cx::new(&self.spec);
                 cx.long_chords_off = true;
-                self.render.run(&cx, &self.plan);
-                self.today = self.render.chord_centre();
-                self.stage = Stage::Plan;
+                self.render.part(part, &cx, &self.plan);
+                if part + 1 < render::PARTS {
+                    self.stage = Stage::RenderToday(part + 1);
+                } else {
+                    self.today = self.render.chord_centre();
+                    self.stage = Stage::Plan;
+                }
             }
             Stage::Plan => {
                 self.plan.make(&plan::Cx::new(&self.spec));
-                self.stage = Stage::Render;
+                self.stage = Stage::Render(0);
             }
-            Stage::Render => {
-                self.render.run(&plan::Cx::new(&self.spec), &self.plan);
+            Stage::Render(part) => {
+                self.render.part(part, &plan::Cx::new(&self.spec), &self.plan);
+                if part + 1 < render::PARTS {
+                    self.stage = Stage::Render(part + 1);
+                    return false;
+                }
                 if self.render.harmony.long_chords.is_some()
                     && let (Some(a), Some(b)) = (self.today, self.render.chord_centre())
                 {
@@ -302,9 +316,21 @@ impl Generator {
                 self.stage = Stage::Settings;
             }
             Stage::Settings => {
-                self.settings = load::Load::of(&plan::Cx::new(&self.spec), &self.render);
+                self.settings = load::Load::without_kick(&plan::Cx::new(&self.spec), &self.render);
                 self.pass.number = None;
-                self.stage = Stage::Done;
+                self.stage = if load::Load::kick_kind(&self.render).is_some() {
+                    self.kick = choices::KickFit::new(self.spec.seed, self.spec.root);
+                    Stage::Kick
+                } else {
+                    Stage::Done
+                };
+            }
+            Stage::Kick => {
+                if self.kick.step(choices::KICK_SLICE) {
+                    let kick = self.kick.kick();
+                    self.settings.kick = load::Load::kick_kind(&self.render).map(|kind| load::Kick { kick, kind });
+                    self.stage = Stage::Done;
+                }
             }
         }
         self.stage == Stage::Done

@@ -11,10 +11,18 @@ import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
 import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf, bassLiftOf } from './choices.js';
+import { VIBE_IDS } from './vibes.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
 const DRIFT_SALT = 0x5eed1e55;
+
+// With `?engine=player` (queue item 82, for testing), the core's player plays
+// the loop from its seed and vibes; this engine keeps time for the cursor and
+// hands the controls over. The player makes a loop across the blocks after it
+// is asked for (a few to a hundred), so the first step falls this much later
+// than the engine's own would, to give it the time.
+const PLAYER_LEAD = 0.4;
 
 // While you are looking at it, a short lookahead keeps mutes and re-rolls
 // feeling immediate. Once the page is hidden the timer may be throttled to
@@ -360,6 +368,8 @@ export class Engine {
     // A track that ran its length asked for the next one (onTrackEnd): that
     // load follows on from what is decided, where any other cuts it short.
     this.handover = false;
+    // With `?engine=player`: whether the core's player has the loop.
+    this._playerOn = false;
     // What happened while the page was last hidden, for Diagnostics (queue
     // item 39): from when it was hidden until it was shown again.
     this.spell = null;
@@ -525,11 +535,56 @@ export class Engine {
       this.step = this.step % this.base.totalSteps;
     }
     if (back) this._redecideFrom(back, this.live);
+    // The core's player takes a new loop, from its first step, a moment on.
+    if (this.player && this.playing && !keepPosition && !resume) this._playerStart();
     return this.base;
+  }
+
+  // The core's player (`?engine=player`): the loop of this spec's seed and
+  // vibes (the ones it drew, in VIBE_IDS' order: the loop a selection of five
+  // or fewer made), its first step where this engine's next falls. Picks,
+  // edits and re-rolls are this engine's; the player plays the seed's loop.
+  _playerLoad() {
+    const core = this.synth.core;
+    if (!core || !this.spec) return;
+    const vibes = Object.keys(this.spec.vibes || {}).map((id) => VIBE_IDS.indexOf(id)).filter((i) => i >= 0).sort((a, b) => a - b);
+    core.playWander(this.driftOn ? this.driftAmount : 0);
+    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime);
+    this._playerControls();
+    this._playerOn = true;
+  }
+
+  // The player plays the loop from its first step, a moment on: this engine
+  // starts there with it, for the cursor. At Play, or as the core arrives if
+  // Play came first (the steps until then played in JavaScript).
+  _playerStart() {
+    this.nextStepTime = Math.max(this.nextStepTime, this._soonest(0.08)) + PLAYER_LEAD;
+    this.step = 0;
+    this.absStep = 0;
+    this.loopCount = 0;
+    this.live = this.driftOn ? this._wander(0) : this.base;
+    this.visualQueue = [];
+    this._playerLoad();
+  }
+
+  // The controls the player follows: each layer's mute and the tempo.
+  _playerControls() {
+    const core = this.synth.core;
+    if (!core || !this.spec) return;
+    const mutes = this.spec.mutes || {};
+    LAYERS.forEach((layer, i) => core.playMute(i, !!mutes[layer]));
+    core.playTempo(this.spec.bpm);
+    core.playWander(this.driftOn ? this.driftAmount : 0);
   }
 
   get stepDur() {
     return 60 / this.spec.bpm / 4;
+  }
+
+  // Whether the core's player plays the notes (`?engine=player`, queue item
+  // 82): the synth says so, with its core.
+  get player() {
+    return this.synth.player === true;
   }
 
   get hidden() {
@@ -683,6 +738,7 @@ export class Engine {
   // had. On the JavaScript synth there is nothing that far ahead to redo;
   // false, and the change is heard as the next steps are decided, as ever.
   redecide(live = null) {
+    if (this.player && this.playing) this._playerControls();
     const back = this._rewindPoint();
     if (!back) return false;
     this._redecideFrom(back, live);
@@ -732,11 +788,15 @@ export class Engine {
     this.floor = -Infinity;
     this.synth.unsilence();
     this.nextStepTime = this._soonest(0.08);
+    this._playerOn = false;
+    if (this.player) this._playerStart();
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
     this._tick('play');
   }
 
   stop() {
+    if (this.player) this.synth.core.playStop();
+    this._playerOn = false;
     this.playing = false;
     this.handover = false;
     this.clock.stop();
@@ -909,6 +969,7 @@ export class Engine {
     }
     this.lastTick = now;
     this._flush();
+    if (this.player && !this._playerOn) this._playerStart();
     // If the next step was already due before we woke up, the queue ran dry
     // and something audible was missed. On the core it is due once it is
     // inside the render-ahead: it could only arrive late.
@@ -1134,6 +1195,13 @@ export class Engine {
   }
 
   _scheduleStep(step, time) {
+    // The core's player plays the notes (`?engine=player`): only the cursor's
+    // step is kept here.
+    if (this.player) {
+      this.visualQueue.push({ step, time });
+      if (this.visualQueue.length > 512) this.visualQueue.shift();
+      return;
+    }
     const p = this.live;
     const cyc = p.cycles || {};
     const abs = this.absStep;

@@ -123,6 +123,17 @@ pub enum State {
     Playing,
 }
 
+/// What `decide` did before a block: nothing, a stage of a load (its first
+/// pass drawn and the loop's start among them), the next pass drawn, or
+/// steps decided (how many).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Work {
+    None,
+    Load,
+    Pass,
+    Steps(usize),
+}
+
 /// A loop from a seed, on a core (the module's doc says how).
 pub struct Player {
     generator: Generator,
@@ -140,6 +151,12 @@ pub struct Player {
     /// How far each pass wanders (`Engine.driftAmount`), 0 for the loop as
     /// composed.
     wander: f64,
+    /// When the loop asked for should take its first step, on the core's
+    /// clock (0: as soon as it is made); and, stopped, when to go on.
+    start_at: f64,
+    resume_at: Option<f64>,
+    /// A tempo asked while the loop is being made: it starts at that.
+    tempo: Option<f64>,
 }
 
 impl Player {
@@ -162,6 +179,9 @@ impl Player {
             was_playing: false,
             rate: 0.0,
             wander: AMOUNT,
+            start_at: 0.0,
+            resume_at: None,
+            tempo: None,
         }
     }
 
@@ -217,9 +237,42 @@ impl Player {
     /// once, with `ready`). A loop playing stops being decided now; what it
     /// has handed over plays out.
     pub fn load(&mut self, seed: u32, request: &Request) {
+        self.load_at(seed, request, 0.0);
+    }
+
+    /// `load`, the loop's first step at `at` seconds on the core's clock if
+    /// it is made by then (a host keeping its own clock in step with the
+    /// player's: the app's page, drawing the steps); as soon as it is made
+    /// if not, or for `at` 0.
+    pub fn load_at(&mut self, seed: u32, request: &Request, at: f64) {
         self.was_playing = self.state == State::Playing || self.was_playing;
         self.generator.begin_with(seed, &request.vibes);
         self.state = State::Loading;
+        self.start_at = if at.is_finite() { at } else { 0.0 };
+        self.resume_at = None;
+        self.tempo = None;
+    }
+
+    /// Stop deciding (the app's Pause): the loop stays loaded, a load under
+    /// way is dropped, and what was handed over plays out (a host that wants
+    /// silence at once cancels it, `Core::cancel`).
+    pub fn stop(&mut self) {
+        if self.state == State::Loading || self.state == State::Wandering {
+            self.state = State::Idle;
+            self.was_playing = false;
+        } else if self.state == State::Playing {
+            self.state = State::Idle;
+        }
+        self.resume_at = None;
+    }
+
+    /// Go on with the loop stopped (the app's Play after Pause), from where
+    /// it stood, its next step at `at` seconds on the core's clock (or as
+    /// soon as the next block, if that has passed).
+    pub fn resume(&mut self, at: f64) {
+        if self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done && self.seq.bpm > 0.0 {
+            self.resume_at = Some(if at.is_finite() { at } else { 0.0 });
+        }
     }
 
     /// Make what is left of the loop asked for, now, and start it (its first
@@ -300,7 +353,17 @@ impl Player {
         let g = &self.generator;
         let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings() };
         self.seq.load(host, &mut self.synth, &lp, now);
-        self.seq.next_step_time = if self.was_playing && at > now { at } else { now + START };
+        if let Some(bpm) = self.tempo.take() {
+            self.seq.bpm = bpm;
+            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats, now);
+        }
+        self.seq.next_step_time = if self.start_at > now {
+            self.start_at
+        } else if self.was_playing && at > now {
+            at
+        } else {
+            now + START
+        };
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.pass_begins(&lp);
         self.next_drawn = false;
@@ -312,22 +375,26 @@ impl Player {
     /// under way, or the next pass drawn ahead; then every step due within
     /// `LOOKAHEAD`, its notes handed over. `render` calls it before each
     /// block; a host that drives `Core::process` itself calls it before
-    /// each. Returns how many steps it decided.
-    pub fn decide<H: Host>(&mut self, host: &mut H) -> usize {
+    /// each. Returns what it did.
+    pub fn decide<H: Host>(&mut self, host: &mut H) -> Work {
         if self.state == State::Loading || self.state == State::Wandering {
             self.stage(host);
-            return 0;
-        }
-        if self.state != State::Playing {
-            return 0;
+            return Work::Load;
         }
         let now = self.now(host);
+        if let Some(at) = self.resume_at.take() {
+            self.seq.next_step_time = if at > now { at } else { now + START };
+            self.state = State::Playing;
+        }
+        if self.state != State::Playing {
+            return Work::None;
+        }
         let due = |seq: &Sequencer| seq.next_step_time < now + LOOKAHEAD;
         if self.wandering && !self.next_drawn && !due(&self.seq) {
             let n = self.seq.loop_count.wrapping_add(1);
             self.draw(1 - self.current, n);
             self.next_drawn = true;
-            return 0;
+            return Work::Pass;
         }
         // A step is a tenth of a second or so: this many in one block would
         // be a tempo past any the generator draws.
@@ -340,7 +407,7 @@ impl Player {
                 self.next_pass();
             }
         }
-        guard
+        if guard == 0 { Work::None } else { Work::Steps(guard) }
     }
 
     /// The top of a new pass: the next one drawn (now, if it is not yet),
@@ -388,7 +455,8 @@ impl Player {
 
     /// Mute a layer or bring it back, as the app's layer buttons do: its
     /// channel glides out or in at once, and its notes are left out (or
-    /// played) from the next step decided.
+    /// played) from the next step decided. It holds, across loads, until
+    /// brought back.
     pub fn set_mute<H: Host>(&mut self, host: &mut H, layer: Layer, muted: bool) {
         let now = self.now(host);
         if let Some(m) = self.seq.mutes.get_mut(layer as usize) {
@@ -398,14 +466,20 @@ impl Player {
     }
 
     /// The tempo, in beats a minute, as the app's slider sets it: from the
-    /// next step decided, the echo's time following it.
+    /// next step decided, the echo's time following it. Asked while a loop
+    /// is being made, the loop starts at it (a load starts at the loop's
+    /// own).
     pub fn set_tempo<H: Host>(&mut self, host: &mut H, bpm: f64) {
-        if !(bpm.is_finite() && bpm > 0.0) || self.state != State::Playing {
+        if !(bpm.is_finite() && bpm > 0.0) {
             return;
         }
-        let now = self.now(host);
-        self.seq.bpm = bpm;
-        Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats, now);
+        if self.state == State::Loading || self.state == State::Wandering {
+            self.tempo = Some(bpm);
+        } else if self.seq.bpm > 0.0 {
+            let now = self.now(host);
+            self.seq.bpm = bpm;
+            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats, now);
+        }
     }
 
     /// The listener's volume, 0 to 1 (the app's 0.85 until set), as the

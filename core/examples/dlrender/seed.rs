@@ -18,7 +18,7 @@ use dlcore::block::Event;
 use dlcore::block::event::RETUNE;
 use dlcore::generator::rng::Rng;
 use dlcore::player::host::Host;
-use dlcore::player::{Player, Request};
+use dlcore::player::{Player, Request, Work};
 use dlcore::{Core, EXTRA, Key, Tap};
 
 use crate::notelist::{Fnv, wav, wav_channels};
@@ -204,7 +204,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
                 let mut host = Tracer { core, lines: &mut block };
                 player.decide(&mut host)
             };
-            if decided > 0 {
+            if matches!(decided, Work::Steps(_)) {
                 let _ = writeln!(lines, "at {frame}");
             }
             lines.push_str(&block);
@@ -233,4 +233,110 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
 #[must_use]
 pub fn wav_of(r: &Rendered, way: &Way) -> Vec<u8> {
     if way.layout == 2 { wav_channels(&r.samples, way.rate, 2) } else { wav(&r.samples, way.rate) }
+}
+
+/// What a loop costs to play from its seed, block by block (`--costs`): the
+/// load spread across blocks as a real-time host plays it (`Player::load`,
+/// no `ready`), each block's work timed (the player's `decide`, then the
+/// core's block), each block's least time over `runs` renders kept (the
+/// work is the same every run; the machine's own interruptions are not).
+pub struct Costs {
+    /// The blocks the load took, and when its first step fell.
+    pub load_blocks: usize,
+    /// The worst block's whole time, and its parts' worst: a load's stage,
+    /// a pass drawn, steps decided, the core's own block.
+    pub worst_block: f64,
+    pub worst_load: f64,
+    pub worst_pass: f64,
+    pub worst_steps: f64,
+    pub worst_audio: f64,
+    /// The load's stage that cost the most.
+    pub worst_stage: String,
+    /// The time in all: generating (the load and the passes), deciding the
+    /// steps, the core's blocks; and the audio's length.
+    pub generating: f64,
+    pub deciding: f64,
+    pub audio: f64,
+    pub seconds: f64,
+}
+
+/// Time playing the loop of `seed` as `way` says, `runs` times.
+pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
+    let mut request = Request::new();
+    for id in &way.vibes {
+        request = request.with_vibe(id).ok_or_else(|| format!("no vibe '{id}'"))?;
+    }
+    let blocks = (way.seconds * way.rate / dlcore::QUANTUM as f64).ceil() as usize;
+    let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
+    std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .stack_size(stack)
+            .spawn_scoped(scope, || {
+                let mut best: Vec<(f64, f64, Work)> = vec![(f64::INFINITY, f64::INFINITY, Work::None); blocks];
+                let mut stages: Vec<Option<dlcore::generator::Stage>> = vec![None; blocks];
+                let mut core = Box::new(Core::new());
+                let mut player = Box::new(Player::new());
+                for _ in 0..runs.max(1) {
+                    core.init(way.rate);
+                    core.quality(way.full);
+                    if way.layout == 2 {
+                        core.set_layout(2);
+                    }
+                    player.set_wander(way.wander);
+                    player.attach(&mut *core, way.rate, way.full);
+                    player.load(seed, &request);
+                    for (b, st) in best.iter_mut().zip(stages.iter_mut()) {
+                        *st = (player.state() == dlcore::player::State::Loading).then(|| player.generator().stage());
+                        let t0 = std::time::Instant::now();
+                        let work = player.decide(&mut *core);
+                        let t1 = std::time::Instant::now();
+                        let frame = core.next_frame();
+                        core.process(frame);
+                        let t2 = std::time::Instant::now();
+                        let (d, p) = ((t1 - t0).as_secs_f64(), (t2 - t1).as_secs_f64());
+                        *b = (b.0.min(d), b.1.min(p), work);
+                    }
+                }
+                let mut c = Costs {
+                    load_blocks: best.iter().take_while(|b| matches!(b.2, Work::Load | Work::None)).count(),
+                    worst_block: 0.0,
+                    worst_load: 0.0,
+                    worst_pass: 0.0,
+                    worst_steps: 0.0,
+                    worst_audio: 0.0,
+                    worst_stage: String::new(),
+                    generating: 0.0,
+                    deciding: 0.0,
+                    audio: 0.0,
+                    seconds: blocks as f64 * dlcore::QUANTUM as f64 / way.rate,
+                };
+                for (&(d, p, work), st) in best.iter().zip(&stages) {
+                    if work == Work::Load && d > c.worst_load {
+                        c.worst_stage = st.map_or_else(|| "first pass".to_string(), |s| format!("{s:?}"));
+                    }
+                    c.worst_block = c.worst_block.max(d + p);
+                    c.worst_audio = c.worst_audio.max(p);
+                    c.audio += p;
+                    match work {
+                        Work::Load => {
+                            c.worst_load = c.worst_load.max(d);
+                            c.generating += d;
+                        }
+                        Work::Pass => {
+                            c.worst_pass = c.worst_pass.max(d);
+                            c.generating += d;
+                        }
+                        Work::Steps(_) => {
+                            c.worst_steps = c.worst_steps.max(d);
+                            c.deciding += d;
+                        }
+                        Work::None => c.deciding += d,
+                    }
+                }
+                Ok(c)
+            })
+            .map_err(|e| format!("could not start the render thread: {e}"))?
+            .join()
+            .map_err(|_| "the render thread panicked".to_string())?
+    })
 }

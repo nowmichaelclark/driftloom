@@ -1,9 +1,11 @@
 #!/bin/sh
-# Build the Rust core (core/) to WebAssembly and copy it to js/dlcore.wasm.
+# Build the Rust core (core/) to WebAssembly and copy it to js/dlcore.wasm,
+# and the player's build of it to js/dlplayer.wasm (queue item 82).
 #
-#   tools/build-core.sh          build, and replace js/dlcore.wasm
-#   tools/build-core.sh --check  build, and fail if js/dlcore.wasm differs
-#                                from the build by a single byte
+#   tools/build-core.sh          build, and replace js/dlcore.wasm and
+#                                js/dlplayer.wasm
+#   tools/build-core.sh --check  build, and fail if either differs from its
+#                                build by a single byte
 #   tools/build-core.sh --wide   build the 192 kHz variant, to
 #                                core/target/dlcore-wide.wasm (not committed:
 #                                the tools that render goldens above 96 kHz
@@ -53,24 +55,35 @@ if [ "$wide" = yes ]; then
   echo "build-core: wrote core/target/dlcore-wide.wasm ($(wc -c < "$root/core/target/dlcore-wide.wasm" | tr -d ' ') bytes)"
   exit 0
 fi
-cargo rustc --release --locked --target wasm32-unknown-unknown --no-default-features --features web --crate-type cdylib,rlib
+# Two modules: the app's (the `web` feature), and the player's (queue item
+# 82: the `player` feature, the generator and the player with their exports),
+# which the app plays only with ?engine=player, for testing, until phase 3.
+# Each is built and kept beside the other; the app's stays the same bytes
+# whatever the player does.
+status=0
+for module in dlcore:web dlplayer:player; do
+  name=${module%%:*}
+  feature=${module#*:}
+  cargo rustc --release --locked --target wasm32-unknown-unknown --no-default-features --features "$feature" --crate-type cdylib,rlib
 
-built="$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm"
-committed="$root/js/dlcore.wasm"
-size=$(wc -c < "$built" | tr -d ' ')
+  built="$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm"
+  committed="$root/js/$name.wasm"
+  size=$(wc -c < "$built" | tr -d ' ')
 
-if [ "$check" = yes ]; then
-  if [ ! -f "$committed" ]; then
-    echo "build-core: js/dlcore.wasm is missing; run tools/build-core.sh and commit it" >&2
-    exit 1
+  if [ "$check" = yes ]; then
+    if [ ! -f "$committed" ]; then
+      echo "build-core: js/$name.wasm is missing; run tools/build-core.sh and commit it" >&2
+      status=1
+    elif ! cmp -s "$built" "$committed"; then
+      echo "build-core: js/$name.wasm does not match a build of core/ ($size bytes built," >&2
+      echo "  $(wc -c < "$committed" | tr -d ' ') committed). Run tools/build-core.sh and commit the result." >&2
+      status=1
+    else
+      echo "build-core: js/$name.wasm matches its source ($size bytes)"
+    fi
+  else
+    cp "$built" "$committed"
+    echo "build-core: wrote js/$name.wasm ($size bytes)"
   fi
-  if ! cmp -s "$built" "$committed"; then
-    echo "build-core: js/dlcore.wasm does not match a build of core/ ($size bytes built," >&2
-    echo "  $(wc -c < "$committed" | tr -d ' ') committed). Run tools/build-core.sh and commit the result." >&2
-    exit 1
-  fi
-  echo "build-core: js/dlcore.wasm matches its source ($size bytes)"
-else
-  cp "$built" "$committed"
-  echo "build-core: wrote js/dlcore.wasm ($size bytes)"
-fi
+done
+exit $status

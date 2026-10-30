@@ -94,6 +94,11 @@ class DriftloomCore extends AudioWorkletProcessor {
       if (options.processorOptions.layout === 2 && !this.core.dl_layout(2)) {
         throw new Error('no stereo render');
       }
+      // `?engine=player` (queue item 82): the core's player on the core, which
+      // decides each block's steps before the block (dl_play_process).
+      this.player = !!options.processorOptions.player && typeof this.core.dl_play_attach === 'function';
+      if (options.processorOptions.player && !this.player) throw new Error('no player in this module');
+      if (this.player) this.core.dl_play_attach(options.processorOptions.quality === 'lite' ? 0 : 1);
     } catch (err) {
       // Too old a browser for the module, most likely (it needs Safari 15
       // or later). The synth hears this and plays everything in JS.
@@ -194,6 +199,31 @@ class DriftloomCore extends AudioWorkletProcessor {
         this.views = null;
         this.port.onmessage = null;
         return;
+      // The core's player (queue item 82; CoreHost.playLoad and the rest).
+      case 'playLoad':
+        if (core && this.player) {
+          for (const i of m.vibes || []) core.dl_play_vibe(i);
+          core.dl_play_load(m.seed >>> 0, m.at || 0);
+        }
+        return;
+      case 'playStop':
+        if (core && this.player) core.dl_play_stop();
+        return;
+      case 'playResume':
+        if (core && this.player) core.dl_play_resume(m.at || 0);
+        return;
+      case 'playWander':
+        if (core && this.player) core.dl_play_wander(m.amount);
+        return;
+      case 'playMute':
+        if (core && this.player) core.dl_play_mute(m.layer, m.muted ? 1 : 0);
+        return;
+      case 'playTempo':
+        if (core && this.player) core.dl_play_tempo(m.bpm);
+        return;
+      case 'playVolume':
+        if (core && this.player) core.dl_play_volume(m.volume);
+        return;
       case 'ping':
         // Every message before this one has been taken: the measure
         // harness waits for this before it renders.
@@ -208,6 +238,9 @@ class DriftloomCore extends AudioWorkletProcessor {
           // And how hard the signal has pressed each since the last ping:
           // the deepest its curve has gone under the line.
           deepest: core ? [core.dl_deepest(0), core.dl_deepest(1)] : [0, 0],
+          // The core's player (queue item 82): where it is (0 idle, 1 making a
+          // loop, 2 its first pass, 3 playing) and the step it decides next.
+          player: core && this.player ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null,
         });
         return;
       default:
@@ -253,7 +286,10 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.cost.seconds[i] += QUANTUM / sampleRate;
     if (block < this.costAt) return;
     this.costAt = block + Math.round(COST_EVERY * sampleRate);
-    this.port.postMessage({ type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice() });
+    const core = this.core;
+    // And, with the core's player (queue item 82), where it is.
+    const player = core && this.player ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null;
+    this.port.postMessage({ type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice(), player });
   }
 
   process(inputs, outputs) {
@@ -296,7 +332,7 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.next = block + QUANTUM;
     this.arrivalReport(block);
     const began = clock();
-    const at = core.dl_process(block);
+    const at = this.player ? core.dl_play_process(block) : core.dl_process(block);
     // Each of the output's channels from a lane the core rendered: the
     // mono render in every one, or left and right.
     const lanes = core.dl_lanes();

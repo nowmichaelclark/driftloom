@@ -130,6 +130,22 @@ impl Load {
     /// nor a loop resumed under a rebuilt engine).
     #[must_use]
     pub fn of(cx: &Cx, r: &Render) -> Self {
+        let mut load = Self::without_kick(cx, r);
+        load.kick = Self::kick_kind(r).map(|kind| Kick { kick: choices::kick_of(cx.spec.seed, cx.spec.root), kind });
+        load
+    }
+
+    /// The tuned kick's kind a loop rendered as `r` plays ("short" or
+    /// "long"), or none.
+    #[must_use]
+    pub fn kick_kind(r: &Render) -> Option<&'static str> {
+        r.choice("tunedKick").filter(|&kind| kind != "today")
+    }
+
+    /// `of`, all but the tuned kick's fit (`kick` none): a load spread across
+    /// blocks works the fit out a slice at a time (`choices::KickFit`).
+    #[must_use]
+    pub fn without_kick(cx: &Cx, r: &Render) -> Self {
         let spec = cx.spec;
         let v = spec.vibes.as_ref();
         let on = |id: &str| r.choice(id) == Some("on");
@@ -137,10 +153,7 @@ impl Load {
         let total = spec.bars * spb;
         let busy = r.notes_per_second(cx);
         let chords = r.chords.iter().filter(|e| e.vel != 0.0).count();
-        let kick = match r.choice("tunedKick") {
-            Some(kind) if kind != "today" => Some(Kick { kick: choices::kick_of(spec.seed, spec.root), kind }),
-            _ => None,
-        };
+        let kick = None;
         let space = spec.tone[1];
         Load {
             glass_scale: js::min(1.0, js::num(chords) / js::max(1.0, total / spb)),

@@ -431,3 +431,175 @@ mod generator {
         TEXT.0.get().cast()
     }
 }
+
+// --------------------------------------------------------------- the player
+
+/// The player's exports (queue item 82), in a build with the `player`
+/// feature: `js/dlplayer.wasm`, which the app plays with `?engine=player`
+/// (for testing; the app's own `.wasm` stays without it until phase 3). The
+/// worklet starts the core as always (`dl_init`, `dl_quality`, `dl_layout`),
+/// then the player on it (`dl_play_attach`); it asks for a loop (the vibes
+/// first, `dl_play_vibe`, then `dl_play_load`) and renders each block with
+/// `dl_play_process`, which decides the block's steps first. The load is
+/// spread across the blocks that follow, so it never spikes one.
+#[cfg(feature = "player")]
+mod player {
+    use core::cell::UnsafeCell;
+
+    use super::core;
+    use crate::generator::Layer;
+    use crate::player::{Player, Request, State};
+
+    struct Global(UnsafeCell<Player>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Global {}
+    static PLAYER: Global = Global(UnsafeCell::new(Player::new()));
+
+    struct Asked(UnsafeCell<Request>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Asked {}
+    static REQUEST: Asked = Asked(UnsafeCell::new(Request::new()));
+
+    fn player() -> &'static mut Player {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *PLAYER.0.get() }
+    }
+
+    fn request() -> &'static mut Request {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *REQUEST.0.get() }
+    }
+
+    /// Start the player on the core just started (`Player::attach`), with
+    /// the full mix (1) or lite's (0), as the worklet asked `dl_quality`.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_attach(full: u32) {
+        let rate = core().context().rate;
+        player().attach(core(), rate, full != 0);
+    }
+
+    /// Add the vibe numbered `index` to what the next `dl_play_load` asks for
+    /// (`generator::data::VIBES`, `VIBE_IDS` in `js/vibes.js`). 1 if the core
+    /// has it.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_vibe(index: u32) -> u32 {
+        let known = (index as usize) < crate::generator::data::VIBE_COUNT;
+        *request() = request().with(index as usize);
+        u32::from(known)
+    }
+
+    /// Ask for the loop of `seed` with the vibes added since the last load,
+    /// its first step at `at` seconds on the core's clock, or as soon as it
+    /// is made if that has passed (0: as soon as made). See `Player::load`.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_load(seed: u32, at: f64) {
+        player().load_at(seed, request(), at);
+        *request() = Request::new();
+    }
+
+    /// Make what is left of the loop asked for, now (`Player::ready`): for a
+    /// host with no deadline (an offline render, the checks), never on an
+    /// audio thread.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_ready() {
+        player().ready(core());
+    }
+
+    /// Go on with the loop stopped, its next step at `at` seconds
+    /// (`Player::resume`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_resume(at: f64) {
+        player().resume(at);
+    }
+
+    /// Stop deciding: the loop stays loaded, and what is handed over plays
+    /// out (`Player::stop`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_stop() {
+        player().stop();
+    }
+
+    /// Render the block that starts at frame `block` (`dl_process`), the
+    /// player deciding its steps first (`Player::decide`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_process(block: f64) -> *const f32 {
+        player().decide(core());
+        super::dl_process(block)
+    }
+
+    /// How far each pass wanders (`Player::set_wander`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_wander(amount: f64) {
+        player().set_wander(amount);
+    }
+
+    /// Mute layer `layer` (the generator's order: drums, bass, chords,
+    /// melody, texture) or bring it back (`Player::set_mute`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_mute(layer: u32, muted: u32) {
+        if let Some(&l) = crate::generator::LAYERS.get(layer as usize) {
+            let l: Layer = l;
+            player().set_mute(core(), l, muted != 0);
+        }
+    }
+
+    /// The tempo, in beats a minute (`Player::set_tempo`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_tempo(bpm: f64) {
+        player().set_tempo(core(), bpm);
+    }
+
+    /// The listener's volume, 0 to 1 (`Player::set_volume`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_volume(volume: f64) {
+        player().set_volume(core(), volume);
+    }
+
+    /// Where the player is: 0 idle, 1 making a loop, 2 drawing its first
+    /// pass, 3 playing.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_state() -> u32 {
+        match player().state() {
+            State::Idle => 0,
+            State::Loading => 1,
+            State::Wandering => 2,
+            State::Playing => 3,
+        }
+    }
+
+    struct Name(UnsafeCell<[u8; 64]>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Name {}
+    static NAME: Name = Name(UnsafeCell::new([0; 64]));
+
+    /// The name of the loop made (plain ASCII), at `dl_play_text`; returns
+    /// its length.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_name() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *NAME.0.get() };
+        let name = player().generator().spec().name.as_str().as_bytes();
+        let n = name.len().min(buf.len());
+        buf[..n].copy_from_slice(&name[..n]);
+        u32::try_from(n).unwrap_or(0)
+    }
+
+    /// Where `dl_play_name` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_text() -> *const u8 {
+        NAME.0.get().cast()
+    }
+
+    /// The step the player decides next, in its loop.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a step, far below 2^53
+    pub extern "C" fn dl_play_step() -> f64 {
+        player().position().0 as f64
+    }
+
+    /// When that step falls, in seconds on the core's clock.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_time() -> f64 {
+        player().position().2
+    }
+}
