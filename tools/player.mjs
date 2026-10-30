@@ -16,6 +16,9 @@
 //   --calls DIR      write each render's calls to the core, in the order they
 //                    were made, to DIR/NAME.QUALITY.LAYOUT.calls, to set
 //                    beside the player's (`dlrender --seed ... --calls`)
+//   --upfront        render each loop a second time handing every note over
+//                    before the render starts, as tools/measure.mjs does, and
+//                    say how far its samples are from the player's way's
 //   --chrome PATH, --port N, --jobs N (renders at once, default 4)
 //
 // Why it hands notes over as it does. The measure harness (tools/measure.mjs)
@@ -74,6 +77,7 @@ const opts = {
   layouts: { mono: [1], stereo: [2], both: [1, 2] }[flag('--layout', 'both')],
   json: flag('--json', null),
   calls: flag('--calls', null),
+  upfront: argv.includes('--upfront'),
   port: Number(flag('--port', 8763)),
   chrome: flag('--chrome', null),
   jobs: Math.max(1, Number(flag('--jobs', 4))),
@@ -167,8 +171,9 @@ for (const name of ['cancel', 'spaceRange']) {
   };
 }
 
-// One loop, one way: what it plays, as the player hands it over.
-async function play({ seed, seconds, rate, quality, layout, wander, calls }) {
+// One loop, one way: what it plays, as the player hands it over (or, with
+// \`upfront\`, every note handed over before the render starts).
+async function play({ seed, seconds, rate, quality, layout, wander, calls, upfront = false, keep = false }) {
   const frames = Math.ceil(seconds * rate);
   const ctx = new OfflineAudioContext(2, frames, rate);
   const core = await loadCore(ctx);
@@ -231,9 +236,13 @@ async function play({ seed, seconds, rate, quality, layout, wander, calls }) {
     }
     ctx.resume();
   };
-  decide(0);
-  const first = after(0);
-  if (first < frames) ctx.suspend(first / rate).then(() => hop(first));
+  if (upfront) {
+    decide(Math.ceil(seconds * rate) + Math.ceil(LOOKAHEAD * rate));
+  } else {
+    decide(0);
+    const first = after(0);
+    if (first < frames) ctx.suspend(first / rate).then(() => hop(first));
+  }
   await synth.core.flush();
   const buf = await ctx.startRendering();
   const counts = await synth.core.flush();
@@ -245,6 +254,37 @@ async function play({ seed, seconds, rate, quality, layout, wander, calls }) {
   return {
     hashes, frames, fallbacks: synth.fallbacks, late: counts.late, missed: counts.missed, dropped: counts.dropped,
     name: engine.spec.name, bars: engine.spec.bars, bpm: engine.spec.bpm, calls: own ? own.join('\\n') + '\\n' : null,
+    buf: keep ? buf : null,
+  };
+}
+
+// How far the up-front render's samples are from the player's way's: the
+// frames that differ, the first, and the largest difference and the
+// difference's whole level, in dB under full scale and under the render.
+async function upfrontOf(job) {
+  const a = await play({ ...job, keep: true, upfront: false });
+  const b = await play({ ...job, keep: true, upfront: true });
+  let differ = 0, first = -1, most = 0, sum = 0, level = 0, n = 0;
+  for (let c = 0; c < a.buf.numberOfChannels && c < job.layout; c++) {
+    const x = a.buf.getChannelData(c), y = b.buf.getChannelData(c);
+    for (let i = 0; i < x.length; i++) {
+      const d = Math.abs(x[i] - y[i]);
+      if (d > 0) {
+        differ++;
+        if (first < 0 || i < first) first = i;
+      }
+      most = Math.max(most, d);
+      sum += d * d;
+      level += x[i] * x[i];
+      n++;
+    }
+  }
+  const db = (v) => (v > 0 ? 20 * Math.log10(v) : -Infinity);
+  return {
+    hashes: a.hashes, upfront: b.hashes, frames: a.frames, name: a.name, fallbacks: a.fallbacks + b.fallbacks,
+    late: a.late + b.late, missed: a.missed + b.missed, dropped: a.dropped + b.dropped,
+    differ, first: first < 0 ? null : first / job.rate, most, mostDb: db(most),
+    underDb: sum > 0 ? db(Math.sqrt(sum / n)) - db(Math.sqrt(level / n)) : -Infinity,
   };
 }
 
@@ -255,7 +295,7 @@ window.playLoops = async (jobs, width) => {
     while (next < jobs.length) {
       const i = next++;
       try {
-        out[i] = { ...jobs[i], ...(await play(jobs[i])) };
+        out[i] = { ...jobs[i], ...(await (jobs[i].upfront ? upfrontOf(jobs[i]) : play(jobs[i]))) };
       } catch (err) {
         out[i] = { ...jobs[i], error: String((err && err.stack) || err) };
       }
@@ -324,7 +364,7 @@ const jobs = [];
 for (const i of picked) {
   for (const quality of opts.qualities) {
     for (const layout of opts.layouts) {
-      jobs.push({ index: i, seed: seeds[i], seconds: opts.seconds, rate: opts.rate, quality, layout, wander: opts.wander, calls: !!opts.calls });
+      jobs.push({ index: i, seed: seeds[i], seconds: opts.seconds, rate: opts.rate, quality, layout, wander: opts.wander, calls: !!opts.calls, upfront: opts.upfront });
     }
   }
 }
@@ -353,7 +393,12 @@ for (const r of rows) {
   if (r.fallbacks) problems.push(`${r.fallbacks} note(s) played in JavaScript`);
   if (r.late || r.missed) problems.push(`${r.late} late, ${r.missed} missed`);
   if (problems.length) bad++;
-  console.log(`${label}  ${Object.entries(r.hashes).map(([k, v]) => `${k}=${v}`).join(' ')}${r.dropped ? `  dropped ${r.dropped}` : ''}${problems.length ? `  FAILS: ${problems.join('; ')}` : ''}`);
+  const upfront = r.upfront
+    ? (r.differ
+      ? `  up front: ${r.differ} of ${r.frames * r.layout} samples differ, from ${r.first.toFixed(3)} s; the most by ${r.most.toExponential(2)} (${r.mostDb.toFixed(1)} dBFS); in all ${(-r.underDb).toFixed(1)} dB under the render`
+      : '  up front: the same samples')
+    : '';
+  console.log(`${label}  ${Object.entries(r.hashes).map(([k, v]) => `${k}=${v}`).join(' ')}${r.dropped ? `  dropped ${r.dropped}` : ''}${upfront}${problems.length ? `  FAILS: ${problems.join('; ')}` : ''}`);
   if (opts.calls && r.calls) {
     fs.mkdirSync(opts.calls, { recursive: true });
     fs.writeFileSync(path.join(opts.calls, `${r.index}-${r.name}.${r.quality}.${r.layout === 2 ? 'stereo' : 'mono'}.calls`), r.calls);

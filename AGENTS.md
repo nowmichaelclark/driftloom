@@ -10,7 +10,8 @@ relaxing, nostalgic loops, generated and synthesized in the browser, played
 forever. A loop is a small spec (`js/generator.js`); its notes play on a Rust
 audio core compiled to WebAssembly (`core/`, built to the committed
 `js/dlcore.wasm`) in an AudioWorklet; the JavaScript synth is the fallback
-(`?engine=js`). The page has no build step and no dependencies, and it
+(`?engine=js`), and `?engine=player` plays the core's own player (item 82),
+for testing. The page has no build step and no dependencies, and it
 deploys as static files (`wrangler.jsonc`; pushing to `main` deploys). Mikey
 (nowmichaelclark) owns it. His ears are the acceptance test for anything
 that changes how it sounds.

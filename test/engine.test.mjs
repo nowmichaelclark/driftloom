@@ -11,7 +11,9 @@
 // touched by any of it. And (queue item 47) hidden or frozen, the core is
 // planned for a deep output buffer at once: Next, Play and the catch-up after
 // a freeze start past it, the old loop playing on until the new one starts;
-// visible changes keep their 60 ms.
+// visible changes keep their 60 ms. And (queue item 82) with
+// `?engine=player` the core's player is handed the loop, at Play or as the
+// core arrives, and the controls; the page sends no notes of its own.
 
 import { Engine } from '../js/engine.js';
 import { newSpec, rerollLayer, vibesOf } from '../js/generator.js';
@@ -785,6 +787,64 @@ console.log('\nThe space (queue item 65)');
     if (['bells', 'chime', 'drops'].includes(y.engine.base.meta.textureKind)) light = y;
   }
   check('a light texture (bells, chimes, drops) says so', light && light.engine.space.light === true);
+}
+
+{
+  // `?engine=player` (queue item 82): the core's player plays the notes. The
+  // engine hands it the loop, a moment on, at Play, or as the core arrives
+  // if Play came first; sends no notes itself once it has; and passes the
+  // controls on.
+  const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
+  const posts = [];
+  const core = new Proxy({}, { get: (t, prop) => (...args) => posts.push([prop, ...args]) });
+  const notes = [];
+  const target = {
+    queuesAhead: true, renderAhead: null, aheadMeasured: true, worstAhead: 0, player: false, core: null,
+    channels: { drums: { gain: 'drums' }, bass: { gain: 'bass' }, chords: { gain: 'chords' }, melody: { gain: 'melody' }, texture: { gain: 'texture' } },
+  };
+  const synth = new Proxy(target, {
+    get(t, prop) {
+      if (prop in t) return t[prop];
+      return (...args) => { if (['drum', 'bass', 'pad', 'voice', 'texture'].includes(prop)) notes.push(prop); };
+    },
+  });
+  const engine = new Engine(ctx, synth);
+  const spec = newSpec(8282);
+  spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
+  engine.load(spec);
+  engine.start();
+  engine.clock.stop();
+  const run = (to) => {
+    while (ctx.currentTime < to - 1e-9) {
+      ctx.currentTime = +(ctx.currentTime + 0.05).toFixed(6);
+      engine._tick();
+    }
+  };
+  run(0.5);
+  check('player: before the core, the page plays the notes', notes.length > 0 && posts.length === 0);
+  // The core arrives.
+  target.player = true;
+  target.core = core;
+  const arrived = ctx.currentTime;
+  run(0.55);
+  const load = posts.find((p) => p[0] === 'playLoad');
+  check('player: as the core arrives, the player is handed the loop of the spec\'s seed', !!load && load[1] === spec.seed >>> 0);
+  check('player: its first step a moment on, and the cursor starts there with it', !!load && load[3] >= arrived + 0.4 && engine.step <= 1 && engine.loopCount === 0);
+  check('player: the layers\' mutes and the tempo go with it', posts.filter((p) => p[0] === 'playMute').length === 5 && posts.some((p) => p[0] === 'playTempo' && p[1] === spec.bpm));
+  const before = notes.length;
+  run(3);
+  check('player: the page sends no notes once the player has the loop', notes.length === before);
+  posts.length = 0;
+  spec.mutes.drums = true;
+  engine.redecide();
+  check('player: a mute is passed on', posts.some((p) => p[0] === 'playMute' && p[1] === 0 && p[2] === true));
+  posts.length = 0;
+  engine.stop();
+  check('player: Pause stops the player', posts.some((p) => p[0] === 'playStop'));
+  posts.length = 0;
+  engine.start();
+  engine.clock.stop();
+  check('player: Play again hands it the loop again', posts.some((p) => p[0] === 'playLoad'));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

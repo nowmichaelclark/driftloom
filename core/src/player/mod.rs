@@ -21,10 +21,12 @@
 //! itself calls before each block). Wander, mutes, tempo and volume are
 //! the app's controls, as it has them (`set_wander` and the rest).
 //!
-//! **Spread across blocks** (promise 1). A load is a few stages of work,
-//! each run whole in a block of its own (`Generator::step`): the spec, the
-//! plan, the render, what the engine decides at load, the first pass; then
-//! the loop starts. So a load never spikes one block. A host with no
+//! **Spread across blocks** (promise 1). A load is stages of work, each run
+//! in a block of its own (`Generator::step`): the spec, the plan, the render
+//! in five parts, what the engine decides at load, the tuned kick's fit in
+//! slices (`choices::KICK_SLICE`), the first pass; then the loop starts. So
+//! a load never spikes one block: its worst stage is about 0.12 ms on a
+//! laptop, against a block's 2.9 ms at 44.1 kHz. A host with no
 //! deadline (an offline render, a loading screen, `dlrender --seed`) runs
 //! them all at once with `ready`, and the loop starts on the next block.
 //! Each pass's wandering is drawn a pass ahead, in a block where no step is
@@ -123,14 +125,18 @@ pub enum State {
     Playing,
 }
 
-/// What `decide` did before a block: nothing, a stage of a load (its first
-/// pass drawn and the loop's start among them), the next pass drawn, or
-/// steps decided (how many).
+/// What `decide` did before a block, so a host timing its blocks (`dlrender
+/// --costs`, `tools/player-wasm.mjs --costs`) can say what each cost.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Work {
+    /// Nothing: no step was due.
     None,
+    /// A stage of a load (the first pass drawn and the loop's start among
+    /// them).
     Load,
+    /// The next pass drawn, a pass ahead.
     Pass,
+    /// Steps decided and their notes handed over: how many.
     Steps(usize),
 }
 

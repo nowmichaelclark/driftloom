@@ -118,9 +118,13 @@ fn truthy(x: f64) -> bool {
 /// the pass wandering over it (none: the loop as composed), and what the
 /// engine decided at load.
 pub struct Loop<'a> {
+    /// The loop's spec.
     pub spec: &'a Spec,
+    /// The loop as rendered (`render`'s tracks and choices).
     pub base: &'a Render,
+    /// The pass wandering over it; none, the loop as composed.
     pub pass: Option<&'a Pass>,
+    /// What the engine decided at load.
     pub settings: &'a Load,
 }
 
@@ -167,11 +171,12 @@ impl Loop<'_> {
 pub struct Sequencer {
     /// When the next step falls, in seconds on the core's clock.
     pub next_step_time: f64,
-    /// The step in the loop, from its first; the step from the load (it
-    /// never resets as layers with their own cycles index off it); and the
-    /// pass.
+    /// The step in the loop, from its first.
     pub step: u64,
+    /// The step from the load: it never resets, as layers with their own
+    /// cycles index off it.
     pub abs_step: u64,
+    /// The pass, from the load's first (0).
     pub loop_count: u32,
     /// The tempo playing, in beats a minute (the loop's, unless a host set
     /// another).

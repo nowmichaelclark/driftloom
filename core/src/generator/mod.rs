@@ -202,8 +202,9 @@ pub enum Stage {
     PlanToday,
     /// The render, a part a stage (`render::PARTS`).
     RenderToday(usize),
-    /// The plan and the render.
+    /// The plan.
     Plan,
+    /// The render, a part a stage (`render::PARTS`).
     Render(usize),
     /// What the engine decides at load, but the tuned kick's level.
     Settings,

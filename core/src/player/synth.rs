@@ -141,6 +141,7 @@ const VOWEL_DRIFT_COST: f64 = 5.0;
 pub struct KickHit {
     /// None: today's kick, choked into.
     pub fall: Option<crate::generator::choices::Fall>,
+    /// Its pitch, in Hz.
     pub hz: f64,
 }
 
@@ -148,13 +149,19 @@ pub struct KickHit {
 /// `fm`'s defaults.
 #[derive(Clone, Copy)]
 pub struct Fm {
+    /// Asks the budget's soft ceiling (a pad's or a texture's).
     pub soft: bool,
+    /// The core's channel it plays into.
     pub channel: u32,
+    /// The modulator's ratio to the carrier, and its depth in Hz.
     pub ratio: f64,
+    /// See `ratio`.
     pub index: f64,
+    /// The attack, in seconds.
     pub attack: f64,
     /// None: the note's own length.
     pub decay: Option<f64>,
+    /// Cents off the note.
     pub detune: f64,
     /// None: `DEFAULT_COST`.
     pub cost: Option<f64>,
@@ -175,15 +182,24 @@ impl Fm {
 /// A sung note's or a chord voice's options (`voice`'s `opts`).
 #[derive(Clone, Copy, Default)]
 pub struct Opts {
+    /// The vowel a sung voice sings ("a", "e", "o", "u"; none: its own).
     pub vowel: Option<&'static str>,
+    /// Cents off the note (none: the voice's own).
     pub detune: Option<f64>,
+    /// The note before, when this one is joined to it: a held voice
+    /// (bowed, fiddle, accordion) slurs from it.
     pub prev: Option<f64>,
+    /// A chord's string, strummed (the nylon plays it as a strum).
     pub strum: bool,
+    /// Asks for room and holds nothing (a part that yields).
     pub yields: bool,
 }
 
-/// dubStab's settings for the loop (`stabOf`'s `opts`).
+/// dubStab's settings for the loop (`stabOf`'s `opts`, by its names: the
+/// stab's decay, its filter's opening, its saw's share, the echo's throw,
+/// its tone, its reverb send and its level).
 #[derive(Clone, Copy)]
+#[allow(missing_docs)] // the struct's doc names them, as stabOf does
 pub struct StabOpts {
     pub decay: f64,
     pub open: f64,
@@ -201,6 +217,7 @@ pub struct StabOpts {
 // up for the loop), not one state spelled in bools.
 #[allow(clippy::struct_excessive_bools)]
 pub struct Synth {
+    /// The voice budget (`_budget`, `_room`, `_releases`).
     pub budget: Budget,
     refs: Refs,
     lite: bool,
@@ -211,8 +228,9 @@ pub struct Synth {
     pad_sweep: bool,
     /// Each channel muted (`_asked.mutes`), in the core's channel order.
     pub mutes: [bool; 5],
-    /// The listener's volume and the profile's level (`_gain`).
+    /// The listener's volume (`_gain`).
     pub volume: f64,
+    /// The profile's level (`_gain`).
     pub level: f64,
 }
 

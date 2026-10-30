@@ -2887,5 +2887,493 @@
     "sideMidDb": -35.3
    }
   }
+ },
+ "player": {
+  "seconds": 45,
+  "wander": 1,
+  "full": {
+   "reisk-waith": {
+    "seed": 2693262067,
+    "out": "a0bc4880",
+    "left": "9d1b4e99",
+    "right": "3becab5b"
+   },
+   "yui-deng": {
+    "seed": 11749833,
+    "out": "aa96a374",
+    "left": "039f1dea",
+    "right": "83cdef1a"
+   },
+   "toask-ha": {
+    "seed": 2265367787,
+    "out": "7afebe59",
+    "left": "259e9417",
+    "right": "41b626df"
+   },
+   "theith-yaing": {
+    "seed": 4213581821,
+    "out": "f99c6424",
+    "left": "e331a15c",
+    "right": "98629c0b"
+   },
+   "hai-waim": {
+    "seed": 4159151403,
+    "out": "7f2bf2e4",
+    "left": "eb452dd4",
+    "right": "a9c54393"
+   },
+   "kor-thu": {
+    "seed": 1207330352,
+    "out": "df22c690",
+    "left": "f163a4ed",
+    "right": "100d6f27"
+   },
+   "reisk-foa": {
+    "seed": 2632122864,
+    "out": "f132eb13",
+    "left": "1ce9746b",
+    "right": "684c2185"
+   },
+   "dith-shuisk": {
+    "seed": 3095568220,
+    "out": "ad3b0983",
+    "left": "2a131981",
+    "right": "19737e36"
+   },
+   "neir-luin": {
+    "seed": 1828783984,
+    "out": "cb1eca42",
+    "left": "83d3bfb8",
+    "right": "16d6abb6"
+   },
+   "noan-nou": {
+    "seed": 4272732017,
+    "out": "5896d2b7",
+    "left": "45f97389",
+    "right": "a6ee7178"
+   },
+   "mul-voa": {
+    "seed": 1955374602,
+    "out": "701f7bbd",
+    "left": "0b0f9156",
+    "right": "14353a17"
+   },
+   "shil-doask": {
+    "seed": 2099329838,
+    "out": "ac59d14c",
+    "left": "f52fdc1d",
+    "right": "e19599ce"
+   },
+   "broa-naisk": {
+    "seed": 596715197,
+    "out": "d37cd507",
+    "left": "a3644f8e",
+    "right": "871c5d71"
+   },
+   "shoar-brol": {
+    "seed": 1734070562,
+    "out": "edab42d5",
+    "left": "4900c061",
+    "right": "b367c997"
+   },
+   "foang-shou": {
+    "seed": 1063107040,
+    "out": "15921d78",
+    "left": "73d8d4b0",
+    "right": "2a48bae4"
+   },
+   "rei-saisk": {
+    "seed": 663542962,
+    "out": "228f9888",
+    "left": "ff82655b",
+    "right": "d52ccfa6"
+   },
+   "sang-hoth": {
+    "seed": 2100857034,
+    "out": "7cf1fe11",
+    "left": "e8d870dd",
+    "right": "e0dab721"
+   },
+   "ri-houng": {
+    "seed": 289351446,
+    "out": "e9856997",
+    "left": "1a08a6ec",
+    "right": "8fe406fd"
+   },
+   "koun-nuing": {
+    "seed": 1694877057,
+    "out": "2c3e35b5",
+    "left": "ecf86887",
+    "right": "0ee440d3"
+   },
+   "loung-rang": {
+    "seed": 3294703884,
+    "out": "82290084",
+    "left": "7f7c26b4",
+    "right": "7368510e"
+   },
+   "duin-sar": {
+    "seed": 1227766539,
+    "out": "f1e702e2",
+    "left": "c87f1723",
+    "right": "f5223158"
+   },
+   "loum-seng": {
+    "seed": 819795777,
+    "out": "fefa14bb",
+    "left": "8a284282",
+    "right": "99574863"
+   },
+   "han-vaing": {
+    "seed": 183522707,
+    "out": "9febe81f",
+    "left": "c9480b6d",
+    "right": "a2adaecb"
+   },
+   "their-roask": {
+    "seed": 1835591523,
+    "out": "db12f4dc",
+    "left": "9c8dd9a4",
+    "right": "eec3a7a2"
+   },
+   "brou-fun": {
+    "seed": 2535673501,
+    "out": "d24df6e3",
+    "left": "ffe24de4",
+    "right": "346cd853"
+   },
+   "va-gloung": {
+    "seed": 3430322586,
+    "out": "fe0698d5",
+    "left": "545fe4c6",
+    "right": "4e9bfb6c"
+   },
+   "tei-har": {
+    "seed": 1266456452,
+    "out": "007fb2a2",
+    "left": "9326356f",
+    "right": "91c53033"
+   },
+   "war-bri": {
+    "seed": 882486014,
+    "out": "80823217",
+    "left": "28694318",
+    "right": "ed461f8d"
+   },
+   "woung-shain": {
+    "seed": 2826645300,
+    "out": "38e80ed0",
+    "left": "864ea738",
+    "right": "b7cd6263"
+   },
+   "sheing-glar": {
+    "seed": 2345405884,
+    "out": "c3b3a750",
+    "left": "c8fcff18",
+    "right": "1ab1229b"
+   },
+   "dum-futh": {
+    "seed": 3257487196,
+    "out": "483de764",
+    "left": "6360663f",
+    "right": "16e9cc47"
+   },
+   "voth-rur": {
+    "seed": 828129958,
+    "out": "157e513e",
+    "left": "c207fe6c",
+    "right": "49fbe233"
+   },
+   "broul-fuisk": {
+    "seed": 3096446930,
+    "out": "b6b090e3",
+    "left": "6418d11f",
+    "right": "762ed9f1"
+   },
+   "taing-doan": {
+    "seed": 1950499338,
+    "out": "7e85147c",
+    "left": "4c38b123",
+    "right": "6d1334e7"
+   },
+   "brum-nosk": {
+    "seed": 3308902181,
+    "out": "14eb805a",
+    "left": "a580986a",
+    "right": "04af1068"
+   },
+   "koth-loar": {
+    "seed": 4271491011,
+    "out": "7848c736",
+    "left": "cbdeedd0",
+    "right": "ee3f8b93"
+   },
+   "shaisk-sha": {
+    "seed": 1027928796,
+    "out": "4672d1ce",
+    "left": "97874db2",
+    "right": "3a237b0b"
+   },
+   "vei-koan": {
+    "seed": 3251295801,
+    "out": "361c8320",
+    "left": "22cd0d49",
+    "right": "ec31d8c9"
+   },
+   "vin-ten": {
+    "seed": 658293683,
+    "out": "66be8afc",
+    "left": "62a7b1bb",
+    "right": "f64217b7"
+   },
+   "leisk-tom": {
+    "seed": 1388698732,
+    "out": "8bc199c7",
+    "left": "5c2b479e",
+    "right": "75400584"
+   }
+  },
+  "lite": {
+   "reisk-waith": {
+    "seed": 2693262067,
+    "out": "08d6a3da",
+    "left": "ee2af016",
+    "right": "b70e5b91"
+   },
+   "yui-deng": {
+    "seed": 11749833,
+    "out": "d7f39c99",
+    "left": "5644038f",
+    "right": "e33e5a6f"
+   },
+   "toask-ha": {
+    "seed": 2265367787,
+    "out": "2dc7e41b",
+    "left": "6e7203b3",
+    "right": "62a611c9"
+   },
+   "theith-yaing": {
+    "seed": 4213581821,
+    "out": "d1fea3cd",
+    "left": "72bbfe2b",
+    "right": "965ad27b"
+   },
+   "hai-waim": {
+    "seed": 4159151403,
+    "out": "da948351",
+    "left": "0deb5079",
+    "right": "dc20f4b2"
+   },
+   "kor-thu": {
+    "seed": 1207330352,
+    "out": "388413c6",
+    "left": "7fd952b9",
+    "right": "5b9d4024"
+   },
+   "reisk-foa": {
+    "seed": 2632122864,
+    "out": "f668d20c",
+    "left": "eec430ed",
+    "right": "78b3109d"
+   },
+   "dith-shuisk": {
+    "seed": 3095568220,
+    "out": "6d795581",
+    "left": "a122b6b7",
+    "right": "864eadd5"
+   },
+   "neir-luin": {
+    "seed": 1828783984,
+    "out": "05af882e",
+    "left": "9b9ee2be",
+    "right": "43fd8370"
+   },
+   "noan-nou": {
+    "seed": 4272732017,
+    "out": "21890130",
+    "left": "c9c63ce6",
+    "right": "447b4f06"
+   },
+   "mul-voa": {
+    "seed": 1955374602,
+    "out": "95d21bbb",
+    "left": "a45206e7",
+    "right": "780226f3"
+   },
+   "shil-doask": {
+    "seed": 2099329838,
+    "out": "2ab2315a",
+    "left": "4cab0a8e",
+    "right": "48c5a014"
+   },
+   "broa-naisk": {
+    "seed": 596715197,
+    "out": "629a0087",
+    "left": "c0e0571a",
+    "right": "4d76b30c"
+   },
+   "shoar-brol": {
+    "seed": 1734070562,
+    "out": "29962f8a",
+    "left": "d6c1cbac",
+    "right": "bc958bc2"
+   },
+   "foang-shou": {
+    "seed": 1063107040,
+    "out": "1ccb9fea",
+    "left": "f9eed02a",
+    "right": "6cf412c9"
+   },
+   "rei-saisk": {
+    "seed": 663542962,
+    "out": "8334c657",
+    "left": "5046e5b6",
+    "right": "0a5c42d6"
+   },
+   "sang-hoth": {
+    "seed": 2100857034,
+    "out": "655f1ea3",
+    "left": "6ad81a38",
+    "right": "2064ab7e"
+   },
+   "ri-houng": {
+    "seed": 289351446,
+    "out": "feb1f89e",
+    "left": "54ae9eda",
+    "right": "fea906e1"
+   },
+   "koun-nuing": {
+    "seed": 1694877057,
+    "out": "22fde690",
+    "left": "0dc4da8e",
+    "right": "91aa1493"
+   },
+   "loung-rang": {
+    "seed": 3294703884,
+    "out": "580dbde6",
+    "left": "d53947a3",
+    "right": "090c99d3"
+   },
+   "duin-sar": {
+    "seed": 1227766539,
+    "out": "b8a644c8",
+    "left": "59e2a51d",
+    "right": "42b6ef5a"
+   },
+   "loum-seng": {
+    "seed": 819795777,
+    "out": "f699f732",
+    "left": "93bf3cf0",
+    "right": "8660dc53"
+   },
+   "han-vaing": {
+    "seed": 183522707,
+    "out": "21cc77bc",
+    "left": "ec57c51b",
+    "right": "8fc17690"
+   },
+   "their-roask": {
+    "seed": 1835591523,
+    "out": "7f397a6a",
+    "left": "ce59f328",
+    "right": "09ec4865"
+   },
+   "brou-fun": {
+    "seed": 2535673501,
+    "out": "6764549f",
+    "left": "24fd3164",
+    "right": "681a939a"
+   },
+   "va-gloung": {
+    "seed": 3430322586,
+    "out": "433a72c5",
+    "left": "4d31433a",
+    "right": "e778c1d4"
+   },
+   "tei-har": {
+    "seed": 1266456452,
+    "out": "3999145e",
+    "left": "b9116f55",
+    "right": "eacf28da"
+   },
+   "war-bri": {
+    "seed": 882486014,
+    "out": "ba40a535",
+    "left": "52f1e861",
+    "right": "e44bcc11"
+   },
+   "woung-shain": {
+    "seed": 2826645300,
+    "out": "f6461de7",
+    "left": "1bb99f77",
+    "right": "280aab85"
+   },
+   "sheing-glar": {
+    "seed": 2345405884,
+    "out": "ac99d2c7",
+    "left": "0c681420",
+    "right": "a217e9fc"
+   },
+   "dum-futh": {
+    "seed": 3257487196,
+    "out": "efeb1825",
+    "left": "6dddfcab",
+    "right": "d0aa4b1a"
+   },
+   "voth-rur": {
+    "seed": 828129958,
+    "out": "e88d5f2c",
+    "left": "b6d2466d",
+    "right": "36fd013b"
+   },
+   "broul-fuisk": {
+    "seed": 3096446930,
+    "out": "8539d75b",
+    "left": "e8726bf2",
+    "right": "a6a947e4"
+   },
+   "taing-doan": {
+    "seed": 1950499338,
+    "out": "39b9078e",
+    "left": "af57ecc5",
+    "right": "080740a3"
+   },
+   "brum-nosk": {
+    "seed": 3308902181,
+    "out": "f26321cd",
+    "left": "5adb967a",
+    "right": "3bbad2d9"
+   },
+   "koth-loar": {
+    "seed": 4271491011,
+    "out": "72b18ef9",
+    "left": "1ffafde0",
+    "right": "28875508"
+   },
+   "shaisk-sha": {
+    "seed": 1027928796,
+    "out": "bc5bc6b6",
+    "left": "82ff2266",
+    "right": "42097925"
+   },
+   "vei-koan": {
+    "seed": 3251295801,
+    "out": "05682eb6",
+    "left": "9594b88c",
+    "right": "07e31e3d"
+   },
+   "vin-ten": {
+    "seed": 658293683,
+    "out": "a3e351f8",
+    "left": "4e348532",
+    "right": "40a78472"
+   },
+   "leisk-tom": {
+    "seed": 1388698732,
+    "out": "a89fa208",
+    "left": "cce2f4f2",
+    "right": "9db30144"
+   }
+  }
  }
 }
