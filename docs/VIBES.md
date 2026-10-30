@@ -73,11 +73,16 @@ melody = flute 9.9, sine 2.8,            # a long line goes on the next,
   `core/golden/generation.hashes` (item 77), so a tuning edit fails it
   until the file is written again: `node tools/gen-golden.mjs`, committed
   in the same PR, with the PR saying which cases moved (`--check` names
-  them). A session that can run Node does that; the brain, which cannot,
-  asks the hands to. The Rust generator compiles the same file in
-  (`core/build.rs`, since item 79) and is held to the same hashes on every
-  target (`tools/gen-core.sh`, in CI), so it moves with the file and needs
-  no edit of its own.
+  them). The Rust generator compiles the same file in (`core/build.rs`,
+  since item 79) and is held to the same hashes on every target
+  (`tools/gen-core.sh`, in CI), so it moves with the file and needs no edit
+  of its own.
+- **And the player's module moves with it** (since item 82): `js/dlplayer.wasm`
+  compiles the vibes in, so run `tools/build-core.sh` and commit the rebuilt
+  file in the same PR, or CI's `build-core.sh --check` fails (`js/dlcore.wasm`
+  has no generator in it until phase 3, so it doesn't move). The brain's
+  container has Node, the pinned Rust and Chromium (Session 28 ran all three),
+  so a brain vibe PR does both steps itself.
 
 ## As built (queue item 38a, v86)
 
