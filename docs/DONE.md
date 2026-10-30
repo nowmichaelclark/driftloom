@@ -75,3 +75,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   Node and Chromium), the core baseline and the balance lock are unchanged.
   Listen for nothing; if the app fails to start offline or on a first visit,
   that is this. No album loop.
+- #291, the Rust generator, 1: the spec and the harmony (item 79, v131),
+  preview URL: <https://3cf773f6-driftloom.nowmichaelclark.workers.dev>
+  (commit 1aa9feb): `core/src/generator/` makes a loop's spec and what render
+  plans before the layers (development, progression, long chords, entry
+  schedules, gaps) from its seed, with the data compiled in; it equals the
+  JavaScript on all 3,060 generation-golden cases on all five targets. The
+  goldens gained a `plan` hash; nothing else moved, and the app's `.wasm` is
+  the same bytes. Listen for nothing. No album loop.

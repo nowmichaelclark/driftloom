@@ -24,6 +24,7 @@ import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
 import { encodeSong } from '../js/share.js';
 import { VIBE_IDS } from '../js/vibes.js';
 import { CHOICES, CHANGE_COUNTS, changesIn, arcOf } from '../js/choices.js';
+import { canonical, parseCanonical } from './gen-golden-lib.mjs';
 
 // ------------------------------------------------------------ arguments
 
@@ -68,6 +69,13 @@ driftloom generation statistics
                                                       (default --n 400)
   --choices           the per-loop choices: loops by how many changes
                       they got, and by choice and option (default --n 10000)
+  --core [wasm]       draw the corpus from the Rust generator (queue item 80),
+                      through a build with its exports (default
+                      core/target/dlcore-generator.wasm, which
+                      tools/gen-core.sh wasm32-unknown-unknown makes): every
+                      figure from its tracks, and a failure unless each
+                      loop's figures equal the JavaScript's. With the report
+                      or --check.
   --write-baseline [file]  write the balance lock      (default ${BASELINE_DEFAULT})
   --check [file]      rerun the locked corpus against it; non-zero exit on a miss
   --help              this
@@ -214,6 +222,9 @@ function parseArgs(argv) {
       case '--choices':
         opts.choices = true;
         break;
+      case '--core':
+        opts.core = text('core/target/dlcore-generator.wasm');
+        break;
       case '--write-baseline':
         opts.writeBaseline = text(BASELINE_DEFAULT);
         break;
@@ -246,8 +257,7 @@ function fail(message) {
 
 // One record per loop. Scalars only, so a corpus of a hundred thousand
 // still fits in memory.
-function measure(spec) {
-  const pattern = render(spec);
+function measure(spec, pattern = render(spec)) {
   const spb = spec.stepsPerBar || STEPS_PER_BAR;
   const notes = pattern.tracks.melody.filter((e) => e.vel > 0);
 
@@ -442,8 +452,43 @@ function measure(spec) {
 function collect(opts) {
   const master = new Rng(opts.seed || 1);
   const records = [];
-  for (let i = 0; i < opts.n; i++) records.push(measure(newSpec(master.seed32())));
+  for (let i = 0; i < opts.n; i++) {
+    const seed = master.seed32();
+    records.push(opts.core ? measureCore(opts.core, seed) : measure(newSpec(seed)));
+  }
   return records;
+}
+
+// --core (queue item 80): the loop as the Rust generator makes it, read
+// back from its canonical texts (tools/gen-golden.mjs), measured the same
+// way; and the same loop measured from the JavaScript, which must give the
+// very same record, or the tool stops there.
+let coreGen = null;
+function measureCore(file, seed) {
+  if (!coreGen) {
+    if (!fs.existsSync(file)) fail(`${file} is missing: build it with  tools/gen-core.sh wasm32-unknown-unknown`);
+    const x = new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(file)), {}).exports;
+    const part = (i) => {
+      const len = x.dl_gen_part(i);
+      if (!len) fail(`the core wrote no text for part ${i}`);
+      return parseCanonical(new TextDecoder('ascii').decode(new Uint8Array(x.memory.buffer, x.dl_gen_text(), len)));
+    };
+    coreGen = { x, part };
+  }
+  const { x, part } = coreGen;
+  if (!x.dl_gen_load(seed >>> 0, 0)) fail(`the core could not load ${seed}`);
+  // The parts in the core's order (Part::ALL): spec, plan, form, the five
+  // layers, meta, choices.
+  const spec = newSpec(seed);
+  if (canonical(spec) !== canonical(part(0))) fail(`loop ${seed}: the core's spec is not the JavaScript's`);
+  const form = part(2);
+  const tracks = {};
+  ['drums', 'bass', 'chords', 'melody', 'texture'].forEach((layer, i) => { tracks[layer] = part(3 + i); });
+  const pattern = { tracks, meta: part(8), cycles: form.cycles, totalSteps: form.totalSteps };
+  const rec = measure(spec, pattern);
+  const js = measure(spec);
+  if (canonical(rec) !== canonical(js)) fail(`loop ${seed}: the figures from the core's tracks differ from the JavaScript's`);
+  return rec;
 }
 
 // ------------------------------------------------------------ summaries
@@ -810,7 +855,7 @@ function check(opts) {
     console.error(`stats: cannot read the baseline ${opts.check} -- ${err.message}`);
     process.exit(2);
   }
-  const { figures, summary } = lockedFigures(collect({ n: baseline.n, seed: baseline.seed }));
+  const { figures, summary } = lockedFigures(collect({ n: baseline.n, seed: baseline.seed, core: opts.core }));
 
   const out = [''];
   out.push('driftloom balance lock');

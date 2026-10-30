@@ -354,8 +354,9 @@ mod generator {
     // Single-threaded, as above.
     unsafe impl<const N: usize> Sync for Bytes<N> {}
     static INPUT: Bytes<{ data::VIBE_COUNT }> = Bytes(UnsafeCell::new([0; data::VIBE_COUNT]));
-    /// Room for the spec's text (about 600 bytes at most).
-    const TEXT_MAX: usize = 4096;
+    /// Room for a part's text: the spec's is about 600 bytes, a busy
+    /// loop's chords some 100 KB.
+    const TEXT_MAX: usize = 1 << 20;
     static TEXT: Bytes<TEXT_MAX> = Bytes(UnsafeCell::new([0; TEXT_MAX]));
 
     fn generator() -> &'static mut Generator {
@@ -411,7 +412,20 @@ mod generator {
         u32::try_from(text.len).unwrap_or(0)
     }
 
-    /// Where `dl_spec` writes.
+    /// Part `part`'s canonical text (`Part::ALL`'s order) at
+    /// `dl_gen_text`; returns its length (0 for no such part, or one too
+    /// long for the buffer).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_part(part: u32) -> u32 {
+        let Some(&p) = Part::ALL.get(part as usize) else { return 0 };
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        generator().write(p, &mut text);
+        if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
+    }
+
+    /// Where `dl_spec` and `dl_gen_part` write.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_gen_text() -> *const u8 {
         TEXT.0.get().cast()

@@ -98,6 +98,12 @@ jobs:
         run: node tools/baseline.mjs
       - name: The generation goldens, in Chromium
         run: node tools/gen-golden.mjs --check --chromium
+      # The balance lock's corpus from the Rust generator (queue item 80):
+      # every loop's figures from its tracks must equal the JavaScript's.
+      - name: The balance lock, on the Rust generator
+        run: |
+          tools/gen-core.sh wasm32-unknown-unknown
+          node tools/stats.mjs --check --core
 
   golden:
     name: golden renders (${{ matrix.target }})

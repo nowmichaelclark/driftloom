@@ -12,7 +12,12 @@
 //! drive, the profile mix, the feel, bars, tempo and gait, key and mode) and
 //! what `render` plans before any layer plays (`plan`: the development's
 //! sections, the harmony and its progression, the entry schedules and the
-//! gaps).
+//! gaps). Item 80: the layers (`layers`: the bass with its register and the
+//! pedal, the drums and wayfare's grooves, the texture; `melody`: motifs,
+//! cells, phrases and development) and the rest of `render` (`render`: the
+//! repairs, the gaps, the per-loop choices the pedal needs, the register
+//! work, the spellings, the long chords' octave, the slurs, strums,
+//! ornaments and the harmony line).
 //!
 //! **The data** (`data/*.txt`) is compiled in by `core/build.rs`, into
 //! read-only tables (`data`): the core reads nothing at run time and a host
@@ -34,13 +39,19 @@
 // / 2` in its own order), and a tolerance or a reordering would give
 // another loop.
 #![allow(clippy::float_cmp, clippy::neg_cmp_op_on_partial_ord, clippy::manual_midpoint)]
+// The port keeps the JavaScript's short names (r, c, e, spb), so the two
+// read side by side.
+#![allow(clippy::many_single_char_names)]
 
 pub mod canon;
 pub mod character;
 pub mod data;
 pub mod js;
+pub mod layers;
 pub mod list;
+pub mod melody;
 pub mod plan;
+pub mod render;
 pub mod rng;
 pub mod spec;
 pub mod theory;
@@ -81,11 +92,30 @@ pub enum Part {
     Spec,
     /// What render plans before the layers (`planOf`).
     Plan,
+    /// What render decides besides the layers' notes.
+    Form,
+    /// A layer's events, after render.
+    Layer(Layer),
+    /// Render's meta: the voices, bass style, kit, melody cell, texture.
+    Meta,
+    /// The per-loop choices (`drawChoices`, through render).
+    Choices,
 }
 
 impl Part {
     /// Every part the generator makes, in the file's order.
-    pub const ALL: [Part; 2] = [Part::Spec, Part::Plan];
+    pub const ALL: [Part; 10] = [
+        Part::Spec,
+        Part::Plan,
+        Part::Form,
+        Part::Layer(Layer::Drums),
+        Part::Layer(Layer::Bass),
+        Part::Layer(Layer::Chords),
+        Part::Layer(Layer::Melody),
+        Part::Layer(Layer::Texture),
+        Part::Meta,
+        Part::Choices,
+    ];
 
     /// The part's name in the file.
     #[must_use]
@@ -93,6 +123,10 @@ impl Part {
         match self {
             Part::Spec => "spec",
             Part::Plan => "plan",
+            Part::Form => "form",
+            Part::Layer(l) => l.name(),
+            Part::Meta => "meta",
+            Part::Choices => "choices",
         }
     }
 }
@@ -103,6 +137,7 @@ impl Part {
 pub struct Generator {
     spec: spec::Spec,
     plan: plan::Plan,
+    render: render::Render,
 }
 
 impl Generator {
@@ -110,7 +145,7 @@ impl Generator {
     /// in a static.
     #[must_use]
     pub const fn empty() -> Self {
-        Generator { spec: spec::Spec::EMPTY, plan: plan::Plan::new() }
+        Generator { spec: spec::Spec::EMPTY, plan: plan::Plan::new(), render: render::Render::new() }
     }
 
     /// An empty generator (`empty`).
@@ -124,8 +159,30 @@ impl Generator {
     pub fn load(&mut self, seed: u32, vibes: &[usize]) {
         let chosen = character::selection(vibes);
         self.spec = spec::new_spec(seed, &chosen);
-        let cx = plan::Cx::new(&self.spec);
+        let mut cx = plan::Cx::new(&self.spec);
+        // A loop that does not develop keeps the chords' octave today's
+        // chord lengths would take (`withTodaysChords`): rendered once that
+        // way first, for the chords' centre.
+        let today = if plan::development_of(cx.spec, cx.choir).is_none() {
+            cx.long_chords_off = true;
+            self.plan.make(&cx);
+            self.render.run(&cx, &self.plan);
+            cx.long_chords_off = false;
+            self.render.chord_centre()
+        } else {
+            None
+        };
         self.plan.make(&cx);
+        self.render.run(&cx, &self.plan);
+        if self.render.harmony.long_chords.is_some()
+            && let (Some(a), Some(b)) = (today, self.render.chord_centre())
+        {
+            let sh = js::round((a - b) / 12.0) * 12.0;
+            if sh != 0.0 {
+                #[allow(clippy::cast_possible_truncation)] // whole octaves
+                self.render.shift_chords(sh as i16);
+            }
+        }
     }
 
     /// The loop's spec.
@@ -137,9 +194,14 @@ impl Generator {
     /// Write a part's canonical text into `sink`.
     pub fn write<S: canon::Sink>(&self, part: Part, sink: &mut S) {
         let mut w = canon::Writer::new(sink);
+        let cx = plan::Cx::new(&self.spec);
         match part {
             Part::Spec => self.spec.write(&mut w),
             Part::Plan => self.plan.write(&mut w),
+            Part::Form => self.render.write_form(&mut w, &cx, &self.plan),
+            Part::Layer(l) => self.render.write_layer(&mut w, l),
+            Part::Meta => self.render.write_meta(&mut w, &cx, &self.plan),
+            Part::Choices => self.render.write_choices(&mut w),
         }
     }
 
@@ -155,7 +217,7 @@ impl Generator {
     /// the capacities are wrong.
     #[must_use]
     pub fn lost(&self) -> usize {
-        self.spec.mix.lost() + self.spec.feel_mix.lost() + self.plan.lost()
+        self.spec.mix.lost() + self.spec.feel_mix.lost() + self.plan.lost() + self.render.lost()
     }
 }
 

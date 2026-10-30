@@ -520,6 +520,68 @@ fn moods(out: &mut String, blocks: &[Block]) {
     out.push_str("];\n");
 }
 
+/// The choices' tables the generator reads so far (queue item 80: the draw,
+/// the eligibility tests' and the pedal's; item 81 adds the rest).
+fn choices(out: &mut String, blocks: &[Block]) {
+    let file = "data/choices.txt";
+    let find = |kind: &str, name: &str| {
+        let block = blocks.iter().find(|b| b.kind == kind && b.name == name).unwrap_or_else(|| panic!("{file} has no [{kind} {name}]"));
+        Reader { file, block }
+    };
+    let all = find("choices", "all");
+    assert!(all.rows("changes").is_some(), "{}: missing", all.at("changes"));
+    let _ = writeln!(out, "/// How many changes a loop gets, by weight.\npub static CHANGE_COUNTS: NumPool = {};", show_numpool(all.numpool("changes").unwrap_or_default()));
+    let _ = writeln!(out, "/// A choice's lean for one vibe is held between these.\npub const CHOICE_LEAN: [f64; 2] = {};", show_range(all.range("lean").expect("[choices all] lean")));
+    out.push_str("/// The choices, in the order the draw walks them.\npub static CHOICES: &[Choice] = &[\n");
+    for b in blocks.iter().filter(|b| b.kind == "choice") {
+        let r = Reader { file, block: b };
+        r.only(&["options", "weight", "vibes", "optionVibes.*"]);
+        let mut per = String::from("&[");
+        for e in b.entries.iter().filter(|e| e.key.starts_with("optionVibes.")) {
+            let _ = write!(per, "({}, {}),", quote(&e.key["optionVibes.".len()..]), show_pool(r.pool(&e.key).unwrap_or_default()));
+        }
+        per.push(']');
+        let _ = writeln!(
+            out,
+            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {per} }},",
+            quote(&b.name),
+            show_pool(r.pool("options").unwrap_or_else(|| panic!("{}: missing", r.at("options")))),
+            opt(r.num("weight"), f),
+            opt(r.pool("vibes"), show_pool)
+        );
+    }
+    out.push_str("];\n");
+    let pedal = find("setting", "pedal");
+    let mut per = String::from("&[");
+    for e in pedal.block.entries.iter().filter(|e| e.key.starts_with("neighborVibes.")) {
+        let n = number(&e.key["neighborVibes.".len()..], &pedal.at(&e.key));
+        let _ = write!(per, "({}, {}),", f(n), show_pool(pedal.pool(&e.key).unwrap_or_default()));
+    }
+    per.push(']');
+    let words = |r: &Reader, k: &str| {
+        let w = r.words(k).unwrap_or_else(|| panic!("{}: missing", r.at(k)));
+        format!("&[{}]", w.iter().map(|x| quote(x)).collect::<Vec<_>>().join(","))
+    };
+    let _ = writeln!(
+        out,
+        "/// pedalBass's settings (`[setting pedal]`).\npub static PEDAL: Pedal = Pedal {{ styles: {}, rhythms: {}, neighbors: {}, neighbor_vibes: {per}, share: {}, low: {}, high: {} }};",
+        words(&pedal, "styles"),
+        show_pool(pedal.pool("rhythms").expect("pedal rhythms")),
+        show_numpool(pedal.numpool("neighbors").expect("pedal neighbors")),
+        show_range(pedal.range("share").expect("pedal share")),
+        f(pedal.num("low").expect("pedal low")),
+        f(pedal.num("high").expect("pedal high"))
+    );
+    let pad = find("setting", "padsweep");
+    let _ = writeln!(out, "/// The chord voices padSweep sweeps.\npub static PADSWEEP_SUSTAINED: &[&str] = {};", words(&pad, "sustained"));
+    let late = find("setting", "latefloor");
+    let _ = writeln!(
+        out,
+        "/// lateFloor's test: something else plays within this many seconds.\npub const LATEFLOOR_FIRST: f64 = {};",
+        f(late.num("first").expect("latefloor first"))
+    );
+}
+
 fn voices(blocks: &[Block]) {
     let file = "data/voices.txt";
     let layers = blocks.iter().find(|b| b.kind == "voices" && b.name == "layers").expect("data/voices.txt has no [voices layers]");
@@ -541,6 +603,7 @@ fn main() {
     let _ = characters(&mut out, &read("characters"));
     vibes(&mut out, &read("vibes"));
     moods(&mut out, &read("moods"));
+    choices(&mut out, &read("choices"));
     voices(&read("voices"));
     let dest = PathBuf::from(env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("gen_data.rs");
     fs::write(dest, out).expect("can write the generated tables");

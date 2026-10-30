@@ -131,11 +131,35 @@ pub struct Mood {
     pub warmth: f64,
 }
 
+/// A per-loop choice (`[choice id]`, `js/choices.js`).
+#[derive(Clone, Copy, Debug)]
+pub struct Choice {
+    pub id: &'static str,
+    /// Today's first, then what it plays when picked.
+    pub options: Pool,
+    pub weight: Option<f64>,
+    pub vibes: Option<Table>,
+    /// The vibes that lean each option, by option.
+    pub option_vibes: &'static [(&'static str, Table)],
+}
+
+/// pedalBass's settings (`[setting pedal]`).
+#[derive(Clone, Copy, Debug)]
+pub struct Pedal {
+    pub styles: &'static [&'static str],
+    pub rhythms: Pool,
+    pub neighbors: NumPool,
+    pub neighbor_vibes: &'static [(f64, Table)],
+    pub share: [f64; 2],
+    pub low: f64,
+    pub high: f64,
+}
+
 // The tables, written by build.rs: every number by its bits, which are long
 // hex literals on purpose.
 #[allow(clippy::unreadable_literal)]
 mod tables {
-    use super::{Character, Degree, Gait, Mood, Progressions, Vibe, f};
+    use super::{Character, Choice, Degree, Gait, Mood, NumPool, Pedal, Progressions, Vibe, f};
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }
 pub use tables::*;
