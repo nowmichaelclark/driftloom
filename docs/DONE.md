@@ -93,3 +93,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   (`node tools/stats.mjs --check --core`). The app still plays the
   JavaScript, and its `.wasm` is the same bytes. Listen for nothing. No
   album loop.
+- #294, the Rust generator, 3: the choices, the load and the wander (item
+  81), preview URL: <https://6683c1c1-driftloom.nowmichaelclark.workers.dev>
+  (commit fd59ae7): the generator in the core now makes every decision the
+  JavaScript makes before scheduling: each choice's own draws (the arc, the
+  tuned kick and its level by ear, subDuck, lateFloor, the floor drop's
+  shapes, padSweep, the echo time, the bass's level), what the engine
+  decides at load (dubStab, the organ, the wash, the space and the rest),
+  and each wandered pass (drift, its floor drop, the kick swap). It equals
+  the JavaScript on all 3,060 generation-golden cases on all five targets,
+  the load and the eight passes included. The app still plays the
+  JavaScript, and its `.wasm` is the same bytes. Listen for nothing. No
+  album loop.
