@@ -36,6 +36,12 @@
 pub mod block;
 pub mod blocks;
 pub mod delay;
+// The generator (phase 2) is left out of the app's web build until the player
+// is in it (item 82): the web build compiles the crate as an rlib too, so code
+// it never calls can still shift the .wasm's bytes, and a generator or data
+// edit must not change what the app ships. The `generator` feature brings it
+// back for the checks' wasm build.
+#[cfg(any(not(feature = "web"), feature = "generator"))]
 pub mod generator;
 pub mod master;
 pub mod math;

@@ -198,3 +198,80 @@ export function lineFor(c) {
   const named = Object.entries(h).filter(([k]) => k !== 'passes').map(([k, v]) => `${k}=${v}`);
   return [`${c.set}:${c.index}`, c.seed >>> 0, c.vibes && c.vibes.length ? c.vibes.join(',') : '-', ...named, `passes=${h.passes.join(',')}`].join(' ');
 }
+
+// ------------------------------------------------------- reading it back
+
+/**
+ * A canonical text read back into a value (the inverse of `canonical`, for
+ * tools that read what the Rust generator made: `tools/stats.mjs --core`).
+ * An object's keys come back in the text's (sorted) order.
+ */
+export function parseCanonical(text) {
+  let i = 0;
+  const fail = (why) => { throw new Error(`canonical text, at ${i}: ${why}`); };
+  const word = () => {
+    const start = i;
+    while (i < text.length && /[A-Za-z0-9_.+-]/.test(text[i])) i++;
+    return text.slice(start, i);
+  };
+  const value = () => {
+    const c = text[i];
+    if (c === '{') {
+      i++;
+      const out = {};
+      if (text[i] === '}') { i++; return out; }
+      for (;;) {
+        const k = word();
+        if (text[i++] !== ':') fail('expected :');
+        out[k] = value();
+        if (text[i] === ',') { i++; continue; }
+        if (text[i++] !== '}') fail('expected }');
+        return out;
+      }
+    }
+    if (c === '[') {
+      i++;
+      const out = [];
+      if (text[i] === ']') { i++; return out; }
+      for (;;) {
+        out.push(value());
+        if (text[i] === ',') { i++; continue; }
+        if (text[i++] !== ']') fail('expected ]');
+        return out;
+      }
+    }
+    if (c === '"') {
+      let s = '';
+      i++;
+      while (text[i] !== '"') {
+        if (i >= text.length) fail('an unended string');
+        if (text[i] === '\\') i++;
+        s += text[i++];
+      }
+      i++;
+      return s;
+    }
+    const w = word();
+    switch (w) {
+      case 'null': return null;
+      case 'undef': return undefined;
+      case 'true': return true;
+      case 'false': return false;
+      case 'nan': return NaN;
+      case 'inf': return Infinity;
+      case '-inf': return -Infinity;
+      case '-0': return -0;
+      default:
+        if (/^x[0-9a-f]{16}$/.test(w)) {
+          U[LE ? 1 : 0] = parseInt(w.slice(1, 9), 16);
+          U[LE ? 0 : 1] = parseInt(w.slice(9), 16);
+          return F[0];
+        }
+        if (/^-?\d+$/.test(w)) return Number(w);
+        return fail(`not a value: ${w}`);
+    }
+  };
+  const v = value();
+  if (i !== text.length) fail('text after the value');
+  return v;
+}

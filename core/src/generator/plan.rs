@@ -55,6 +55,12 @@ pub struct ChordEvent {
     pub detune: Option<f64>,
     /// A nylon guitar's strum ('down' or 'up'), written by render.
     pub strum: Option<&'static str>,
+    /// In the chords layer: the velocity as generated (a repair puts it
+    /// back), and whether the event is still the harmony's own (the same
+    /// object in the JavaScript, so what render writes on it, a strum,
+    /// shows in the harmony too).
+    pub vel0: f64,
+    pub alias: bool,
 }
 
 /// A harmony: `genHarmony`'s return, or (with `sections`) a developing
@@ -80,8 +86,9 @@ const EMPTY_SLOT: Slot = Slot {
     bass_midi: 0.0,
     steps: None,
 };
-const EMPTY_EVENT: ChordEvent =
-    ChordEvent { step: 0.0, dur: 0.0, notes: List::filled(0), vel: 0.0, voice: "", vowel: None, detune: None, strum: None };
+/// An empty chord event.
+pub const EMPTY_EVENT: ChordEvent =
+    ChordEvent { step: 0.0, dur: 0.0, notes: List::filled(0), vel: 0.0, voice: "", vowel: None, detune: None, strum: None, vel0: 0.0, alias: false };
 
 impl Harmony {
     /// An empty harmony.
@@ -120,6 +127,18 @@ impl Default for Harmony {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// `slotAt(slots, step, cycleSteps)`.
+#[must_use]
+pub fn slot_at(slots: &[Slot], step: f64, cycle: f64) -> &Slot {
+    let q = if cycle == 0.0 { step } else { ((step % cycle) + cycle) % cycle };
+    for s in slots.iter().rev() {
+        if q >= s.start_step {
+            return s;
+        }
+    }
+    slots.first().unwrap_or(&EMPTY_SLOT)
 }
 
 /// A section of a developing loop.
@@ -607,7 +626,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                         voice: choir.map_or("keys", |ch| ch.voice),
                         vowel: choir.map(|_| vowel),
                         detune: choir.map(|ch| ch.keys_detune),
-                        strum: None,
+                        ..EMPTY_EVENT
                     });
                 }
             } else {
@@ -620,7 +639,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                     voice: choir.map_or(drawn, |ch| ch.voice),
                     vowel: Some(vowel),
                     detune: choir.map(|ch| ch.keys_detune),
-                    strum: None,
+                    ..EMPTY_EVENT
                 });
             }
         }

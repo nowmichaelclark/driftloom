@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { fnv1a64 } from './gen-golden-lib.mjs';
 import { VIBE_IDS } from '../js/vibes.js';
 
-const PARTS = ['spec', 'plan'];
+const PARTS = ['spec', 'plan', 'form', 'drums', 'bass', 'chords', 'melody', 'texture', 'meta', 'choices'];
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
