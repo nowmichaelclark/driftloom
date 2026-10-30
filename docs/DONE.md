@@ -55,3 +55,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   nothing. Tester: the app reports v128 (its `.wasm` has new bytes, so the
   service worker fetches it once). No album loop (nothing in the music
   changed).
+- #287, the generator's math on the core's own and the generation goldens
+  (item 77, v129), preview URL:
+  <https://8c88ca90-driftloom.nowmichaelclark.workers.dev> (commit 2d1bfdf):
+  pow, log, sin and the rest on the generator's paths now come from
+  `js/dlmath.js`, the core's own math in JavaScript, so a loop's decisions are
+  the same in every browser (Node and Chromium disagreed on 571 of 3,060
+  cases before); `core/golden/generation.hashes` holds what the generator
+  decides for 3,060 cases, and the Rust port is held to it. Nothing should
+  sound different: in Chromium no decision moved in 11,060 loops (only last
+  bits of a few values); in Node one loop (corpus seed 1, loop 894) moved its
+  energy one 1/255 step, same notes. Listen for nothing. No album loop.
