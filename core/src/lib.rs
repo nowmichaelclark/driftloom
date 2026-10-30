@@ -36,6 +36,7 @@
 pub mod block;
 pub mod blocks;
 pub mod delay;
+pub mod generator;
 pub mod master;
 pub mod math;
 pub mod mix;

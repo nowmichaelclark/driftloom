@@ -17,14 +17,19 @@
 //
 // The file. One case a line, after '#' comments:
 //
-//   SET:INDEX SEED VIBES spec=H form=H drums=H bass=H chords=H melody=H texture=H
-//     meta=H choices=H load=H passes=H1,...,H8
+//   SET:INDEX SEED VIBES spec=H plan=H form=H drums=H bass=H chords=H melody=H
+//     texture=H meta=H choices=H load=H passes=H1,...,H8
 //
 // SEED is the loop's seed (unsigned), VIBES the vibes asked for, in the
 // frozen order (`vibeSelection`), comma-separated, or '-' for none: the
 // loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
 // digits) of a canonical text (below) of:
 //   spec     the spec, as newSpec makes it;
+//   plan     what render plans before any layer plays (`planOf`, queue item
+//            79): the development's sections (null for a loop that does not
+//            develop), the harmony as drawn, before the register work moves
+//            it, and the entry schedules (null for none) and gaps as drawn,
+//            before the repairs;
 //   form     what `render` decides besides the layers' notes: form, gaps,
 //            silentBars, totalSteps, stepsPerBar, cycles, harmony (the
 //            progression's slots and events, its shape, longChords);

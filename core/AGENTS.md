@@ -18,6 +18,11 @@ core, and how to add a block, is `core/README.md`.
   `--blocks`, `--rates`, `--stereo`; CI runs every target).
   `node tools/rates.mjs`.
 - `node tools/stats.mjs --check` (the balance lock) when generation moves.
+- `tools/gen-core.sh [TARGET]`: the Rust generator (`src/generator/`, phase
+  2) against `golden/generation.hashes`, every case; CI runs it on every
+  target. A generator, vibe or data change made in the JavaScript is made
+  in the Rust too, in the same PR (the data is shared: `build.rs` compiles
+  `data/*.txt` in).
 
 ## Standing rules for core items
 

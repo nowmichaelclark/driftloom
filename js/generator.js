@@ -2624,6 +2624,18 @@ function developMelody(spec, harmony, dev) {
   return { events, voice: a.voice, motif: a.motif, cell: a.cell, centre: a.centre };
 }
 
+// What render plans before any layer plays (queue item 79): the
+// development's sections, the harmony as drawn (before the register work
+// and the long chords' octave move it), and the entry schedules and the
+// gaps as drawn (before the repairs). The generation goldens hash it as
+// `plan`, the first part the Rust generator (core/src/generator/) is held
+// to after the spec. Pure: render draws the very same.
+export function planOf(spec) {
+  const dev = developmentOf(spec);
+  const harmony = dev ? developHarmony(spec, dev) : genHarmony(layerSpec(spec, 'chords'));
+  return { development: dev, harmony, form: genForm(spec), gaps: genGaps(spec) };
+}
+
 export function render(spec) {
   const choir = choirOf(spec);
   const dev = developmentOf(spec);

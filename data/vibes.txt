@@ -3,9 +3,9 @@
 # Data only, and the brain's to edit (docs/DECISIONS.md, "The words and
 # vibes"); docs/VIBES.md keeps the reasoning and the history, and says how
 # a recipe works and how to edit one. Both generators read this file (the
-# JavaScript's js/vibes.js, the core's gen module); the format is in
-# js/data.js. test/data.test.mjs checks every key and every name in it and
-# fails on an unknown one.
+# JavaScript's js/vibes.js, and the core's, compiled in by core/build.rs);
+# the format is in js/data.js. test/data.test.mjs checks every key and every
+# name in it and fails on an unknown one.
 #
 # A vibe is a [vibe name] block; every key is optional (docs/VIBES.md, "How a
 # recipe works"):

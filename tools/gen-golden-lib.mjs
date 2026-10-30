@@ -3,7 +3,7 @@
 // browser JavaScript, so both run the very same code; the file format, the
 // canonical text and the cases are documented in tools/gen-golden.mjs.
 
-import { newSpec, vibeSelection, LAYERS } from '../js/generator.js';
+import { newSpec, planOf, vibeSelection, LAYERS } from '../js/generator.js';
 import { Engine } from '../js/engine.js';
 import { Rng } from '../js/rng.js';
 import { VIBE_IDS } from '../js/vibes.js';
@@ -135,11 +135,11 @@ const LOAD_FIELDS = ['glassScale', 'stab', 'organ', 'wash', 'arc', 'kick', 'subD
 
 /**
  * What one case decides, as plain values, in the file's order: { spec,
- * form, <each layer>, meta, choices, load, passes: [...] }.
+ * plan, form, <each layer>, meta, choices, load, passes: [...] }.
  */
 export function partsOf(c) {
   const spec = newSpec(c.seed, c.vibes);
-  const parts = { spec };
+  const parts = { spec, plan: planOf(spec) };
   // The engine renders the pattern itself, at load; nothing it decides
   // there may come from chance.
   const { synth, calls } = recorder();
@@ -172,7 +172,7 @@ export function partsOf(c) {
 }
 
 /**
- * One case's hashes, in the file's order: { spec, form, <each layer>, meta,
+ * One case's hashes, in the file's order: { spec, plan, form, <each layer>, meta,
  * choices, load, passes: [...] }; with `texts`, the canonical texts too.
  */
 export function hashCase(c, texts = false) {
