@@ -66,3 +66,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #277 are in
   sound different: in Chromium no decision moved in 11,060 loops (only last
   bits of a few values); in Node one loop (corpus seed 1, loop 894) moved its
   energy one 1/255 step, same notes. Listen for nothing. No album loop.
+- #289, the generation data as plain text, read by both (item 78, v130),
+  preview URL: <https://2200135e-driftloom.nowmichaelclark.workers.dev>
+  (commit 223262b): profiles, vibes, moods, the voice table and the choice
+  tables are now `data/*.txt` (format in `js/data.js`; `docs/VIBES.md` says
+  how to edit a vibe), fetched at start in the app and read from disk in
+  Node. Nothing should sound different: the generation goldens (3,060 cases,
+  Node and Chromium), the core baseline and the balance lock are unchanged.
+  Listen for nothing; if the app fails to start offline or on a first visit,
+  that is this. No album loop.
