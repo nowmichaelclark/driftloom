@@ -25,8 +25,9 @@
 //! in a block of its own (`Generator::step`): the spec, the plan, the render
 //! in five parts, what the engine decides at load, the tuned kick's fit in
 //! slices (`choices::KICK_SLICE`), the first pass; then the loop starts. So
-//! a load never spikes one block: its worst stage is about 0.12 ms on a
-//! laptop, against a block's 2.9 ms at 44.1 kHz. A host with no
+//! a load never spikes one block: its worst stage is about 0.14 ms natively
+//! (a block's deadline is 2.9 ms at 44.1 kHz), and on every target less
+//! than the loop's own worst audio block. A host with no
 //! deadline (an offline render, a loading screen, `dlrender --seed`) runs
 //! them all at once with `ready`, and the loop starts on the next block.
 //! Each pass's wandering is drawn a pass ahead, in a block where no step is

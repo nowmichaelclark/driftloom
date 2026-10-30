@@ -48,13 +48,17 @@ player.stop();                                 // pause; player.resume(0.0) goes
   switch is no longer needed for that; the crossfade at a musical moment is
   item 86.
 - **The browser**, with no audio thread: `player.ready(&mut *core)` makes the
-  loop at once (about 0.5 ms on a laptop, 11 ms at most, for a loop with a
-  tuned kick), then `render` as far ahead as the game wants, in chunks of any
+  loop at once (about 0.5 ms natively, 10 ms at most, for a loop with a tuned
+  kick), then `render` as far ahead as the game wants, in chunks of any
   size. Rendering ahead pass by pass properly is item 87.
-- **Costs** (this laptop, 44.1 kHz, a block of 128 frames): a block of the
-  player and the core together is at most about 0.42 ms natively (14% of the
-  block's 2.9 ms), nearly all of it the audio; making a loop adds at most
-  about 0.12 ms to a block, and is under half a percent of a minute's render.
+- **Costs** (measured on the cloud machine item 82 was built on, 44.1 kHz,
+  where a block of 128 frames has 2.9 ms): natively the worst block of the
+  player and the core together is 0.45 ms (16%), all of it the core's audio;
+  a load's worst stage adds 0.14 ms (5%), and making loops is 0.4% of a
+  minute's render. In wasm the worst block while a loop is made is 0.28 ms
+  (10%), audio included. On every target a load's worst stage costs less than
+  the loop's own worst audio block, so a load never makes the worst block;
+  on the Moto G Power the audio itself is what to watch.
 - **The C header**, `core/include/dlcore.h`, has the same calls for any other
   host (`dl_player_start`, `dl_player_load`, `dl_player_render`, ...);
   `core/examples/c/seed.c` renders a seed to a WAV through it alone.

@@ -246,10 +246,15 @@ render over before it starts, as `tools/measure.mjs` does, sums the same
 notes in another order (inaudibly: about 88 dB under the render).
 
 Nothing allocates (the generator's lists, two passes and the budget are
-fixed). Natively a block's work, the player's and the core's together, is
-at most about 0.4 ms at 44.1 kHz (14% of its 2.9 ms deadline), all of it
-audio; a load's worst stage adds about 0.12 ms, and making loops is under
-half a percent of a minute's render (`dlrender --seed N --costs`).
+fixed). What it costs (`dlrender --seed N --costs`, and
+`tools/player-wasm.mjs --costs` for the wasm), at 44.1 kHz, where a block's
+deadline is 2.9 ms: natively, the worst block is 0.45 ms (16%), all of it
+the core's audio; a load's worst stage is 0.14 ms (5%), a slice of the
+tuned kick's fit; making loops is 0.4% of a minute's render. In wasm (Node)
+the worst block while a loop is made is 0.28 ms (10%), its audio included.
+On every target, QEMU's included, a load's worst stage costs less than the
+same loop's worst audio block, so making a loop never makes a loop's worst
+block.
 
 ## The other checks
 
