@@ -274,13 +274,25 @@ pub struct BassLift {
     pub no_kick: f64,
 }
 
+/// What each voice costs the voice budget (`[voices costs]` in
+/// `data/voices.txt`; `VOICE_COST` in `js/synth.js`), which the player asks
+/// as the JavaScript synth does (queue item 82): a voice the table leaves
+/// out costs what each call says, `default` where it says nothing.
+#[derive(Clone, Copy, Debug)]
+pub struct VoiceCosts {
+    pub default: f64,
+    /// dubStab's: it yields, asking for room and holding none.
+    pub dubstab: f64,
+    pub cost: Table,
+}
+
 // The tables, written by build.rs: every number by its bits, which are long
 // hex literals on purpose.
 #[allow(clippy::unreadable_literal)]
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Progressions, SubDuck, Vibe, f,
+        Progressions, SubDuck, Vibe, VoiceCosts, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

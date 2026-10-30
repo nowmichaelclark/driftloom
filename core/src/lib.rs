@@ -48,6 +48,10 @@ pub mod math;
 pub mod mix;
 pub mod noise;
 pub mod param;
+// The player (queue item 82) stands on the generator, and is left out of the
+// app's web build with it.
+#[cfg(any(not(feature = "web"), feature = "generator"))]
+pub mod player;
 pub mod resample;
 pub mod rng;
 pub mod space;
@@ -718,6 +722,18 @@ impl Core {
     /// `Error::Layout` if `out` does not hold one slice for each channel of
     /// the layout, all the same length; nothing is rendered.
     pub fn render(&mut self, out: &mut [&mut [f32]]) -> Result<(), Error> {
+        self.render_with(out, |_| {})
+    }
+
+    /// `render`, calling `before` with the core before each block it renders:
+    /// what a player hands its notes over in (`player::Player::render`), so
+    /// each block's notes reach the core before the block, whatever the
+    /// host's block size.
+    ///
+    /// # Errors
+    ///
+    /// As `render`.
+    pub fn render_with<F: FnMut(&mut Core)>(&mut self, out: &mut [&mut [f32]], mut before: F) -> Result<(), Error> {
         let n = self.layout as usize;
         let frames = out.first().map_or(0, |o| o.len());
         if out.len() != n || out.iter().any(|o| o.len() != frames) {
@@ -726,6 +742,7 @@ impl Core {
         let mut done = 0;
         while done < frames {
             if self.unserved == 0 {
+                before(self);
                 let block = self.next;
                 self.process(block);
                 self.unserved = QUANTUM;

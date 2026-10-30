@@ -751,13 +751,25 @@ fn choices(out: &mut String, blocks: &[Block]) {
     );
 }
 
-fn voices(blocks: &[Block]) {
+fn voices(out: &mut String, blocks: &[Block]) {
     let file = "data/voices.txt";
     let layers = blocks.iter().find(|b| b.kind == "voices" && b.name == "layers").expect("data/voices.txt has no [voices layers]");
     let order = (Reader { file, block: layers }).words("order").expect("[voices layers] has no order");
     // The generator's layers are fixed in the core (`generator::Layer`); the file
     // must agree, in its order.
     assert_eq!(order, ["drums", "bass", "chords", "melody", "texture"], "{file}: the layers are not the core's (generator::Layer)");
+    // The voice budget's costs, which the player asks as the JavaScript synth
+    // does (queue item 82): the keys `js/synth.js` reads (`COSTS`).
+    let costs = blocks.iter().find(|b| b.kind == "voices" && b.name == "costs").expect("data/voices.txt has no [voices costs]");
+    let costs = Reader { file, block: costs };
+    costs.only(&["default", "dubstab", "cost"]);
+    let _ = writeln!(
+        out,
+        "/// The voice budget's costs (`[voices costs]`).\npub static VOICE_COSTS: VoiceCosts = VoiceCosts {{ default: {}, dubstab: {}, cost: {} }};",
+        costs.need_num("default"),
+        costs.need_num("dubstab"),
+        costs.need_table("cost")
+    );
 }
 
 fn main() {
@@ -773,7 +785,7 @@ fn main() {
     vibes(&mut out, &read("vibes"));
     moods(&mut out, &read("moods"));
     choices(&mut out, &read("choices"));
-    voices(&read("voices"));
+    voices(&mut out, &read("voices"));
     let dest = PathBuf::from(env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("gen_data.rs");
     fs::write(dest, out).expect("can write the generated tables");
     println!("cargo::rerun-if-changed=build.rs");
