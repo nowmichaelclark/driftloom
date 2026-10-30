@@ -17,7 +17,10 @@
 # do, which must change nothing (--flush). The stereo render (queue item 64)
 # has its own hash files and goes through the same steps (--stereo). And the
 # Rust generator (queue item 79 on) makes the generation goldens' hashes on
-# every target (tools/gen-core.sh).
+# every target (tools/gen-core.sh), and the core's player (queue item 82)
+# plays loops from their seeds to WAVs, the same samples on every target
+# (tools/seeds.sh): natively and in its .wasm the baseline's loops equal the
+# browser's renders, and a C host plays them through the C header alone.
 #
 # The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
 # the runner, installs that exact version and its wasm32 target on first
@@ -56,6 +59,7 @@ jobs:
         run: |
           rustup component add clippy
           cargo clippy --all-targets --locked -- -W clippy::pedantic -D warnings
+          cargo clippy --lib --locked --features capi -- -W clippy::pedantic -D warnings
       - name: Worklet tests
         run: node test/worklet.test.mjs
       - name: Core host tests
@@ -179,3 +183,21 @@ jobs:
       # leaves out).
       - name: The generation goldens, on the Rust generator
         run: tools/gen-core.sh ${{ matrix.target }}
+      # The player (queue item 82): the corpus's first 80 loops from their
+      # seeds, each to a WAV, against core/golden/seeds.hashes; under QEMU the
+      # first few, the same samples on every target.
+      - name: Loops from their seeds
+        # (The QEMU targets' flag is the expression's true branch: an empty
+        # string there would be falsy, and every target would get it.)
+        run: tools/seeds.sh ${{ (matrix.target != 'x86_64-unknown-linux-gnu' && matrix.target != 'wasm32-unknown-unknown') && '--first 3' || '' }} ${{ matrix.target }}
+      # The baseline's 40 loops, full and lite, mono and stereo, from their
+      # seeds: bit for bit the browser's renders (test/core-baseline.json's
+      # player part), natively and in js/dlplayer.wasm.
+      - name: The baseline's loops from their seeds, against the browser's
+        if: matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown'
+        run: tools/seeds.sh --browser ${{ matrix.target }}
+      # Promise 4: a tiny C program plays them through core/include/dlcore.h
+      # alone, and writes dlrender's WAV.
+      - name: Loops from their seeds, through the C header
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: tools/seeds.sh --c --first 8

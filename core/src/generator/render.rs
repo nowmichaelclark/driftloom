@@ -33,6 +33,9 @@ pub type Chords = List<ChordEvent, CHORD_EVENTS_MAX>;
 /// The most choices there can be.
 const CHOICES_MAX: usize = 16;
 
+/// How many parts `Render::run` is made of (`Render::part`).
+pub const PARTS: usize = 5;
+
 /// A loop rendered: `render(spec)`'s return, as far as the goldens hash it.
 pub struct Render {
     pub harmony: Harmony,
@@ -100,14 +103,37 @@ impl Render {
             + self.choices.lost()
     }
 
-    /// Render the loop of `cx` over `plan` (made with the same `cx`).
-    #[allow(clippy::too_many_lines)] // one function, as render is: its steps in order
+    /// Render the loop of `cx` over `plan` (made with the same `cx`): every
+    /// part of it, in order.
     pub fn run(&mut self, cx: &Cx, plan: &Plan) {
-        let spec = cx.spec;
-        let spb = cx.spb;
-        self.harmony = plan.harmony;
+        for part in 0..PARTS {
+            self.part(part, cx, plan);
+        }
+    }
+
+    /// Part `part` of `run` (0 to `PARTS` - 1, each after the one before):
+    /// the bass; the melody; the drums, the texture and the entry
+    /// schedules, their repairs and the gaps; the choices and the pedal; the
+    /// register work, the spellings, the slurs, the strums and the
+    /// ornaments. A load spread across audio blocks runs one a block (the
+    /// player, queue item 82).
+    #[allow(clippy::too_many_lines)] // render's steps, in order
+    pub fn part(&mut self, part: usize, cx: &Cx, plan: &Plan) {
         let bass_bars = layer_bars(cx, Layer::Bass);
-        self.bass_out = layers::gen_bass(cx, bass_bars, &self.harmony.slots, &mut self.bass);
+        match part {
+            0 => {
+                self.harmony = plan.harmony;
+                self.bass_out = layers::gen_bass(cx, bass_bars, &self.harmony.slots, &mut self.bass);
+            }
+            1 => self.melody_part(cx, plan),
+            2 => self.form_part(cx, plan),
+            3 => self.choices_part(cx, bass_bars),
+            _ => self.finish_part(cx),
+        }
+    }
+
+    fn melody_part(&mut self, cx: &Cx, plan: &Plan) {
+        let spec = cx.spec;
         self.depth = None;
         if let Some(dev) = &plan.development {
             let (out, depth) = melody::develop_melody(cx, &plan.sections, dev, &mut self.melody, &mut self.a_notes, &mut self.section_notes);
@@ -118,6 +144,10 @@ impl Render {
             self.melody_out =
                 melody::gen_melody(cx, layer_bars(cx, Layer::Melody), spec.layer_seed(Layer::Melody), &over, None, &mut self.melody);
         }
+    }
+
+    fn form_part(&mut self, cx: &Cx, plan: &Plan) {
+        let spb = cx.spb;
         self.drums_out = layers::gen_drums(cx, layer_bars(cx, Layer::Drums), &mut self.drums);
         self.texture_kind =
             layers::gen_texture(cx, layer_bars(cx, Layer::Texture), &self.harmony.slots, self.harmony.cycle_steps, &mut self.texture);
@@ -173,7 +203,10 @@ impl Render {
                 e.vel = 0.0;
             }
         }
+    }
 
+    fn choices_part(&mut self, cx: &Cx, bass_bars: f64) {
+        let spb = cx.spb;
         self.draw_choices(cx);
 
         self.pedal = None;
@@ -197,7 +230,11 @@ impl Render {
             }
             self.pedal = Some((out, n0));
         }
+    }
 
+    fn finish_part(&mut self, cx: &Cx) {
+        let spec = cx.spec;
+        let spb = cx.spb;
         self.separate_registers(cx);
         if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
             self.spell_over(cx);

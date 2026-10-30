@@ -17,9 +17,9 @@ use super::canon::{Sink, Writer};
 use super::choices;
 use super::data::FLOORDROP;
 use super::js;
-use super::layers::{self, BASS_MAX, DRUMS_MAX, DrumEvent};
-use super::melody::MELODY_MAX;
-use super::plan::{self, CHORD_EVENTS_MAX, Cx, Plan};
+use super::layers::{self, BASS_MAX, BassEvent, DRUMS_MAX, DrumEvent};
+use super::melody::{MELODY_MAX, MelodyEvent};
+use super::plan::{self, CHORD_EVENTS_MAX, ChordEvent, Cx, Plan};
 use super::render::{self, Render};
 use super::rng::Rng;
 use super::Layer;
@@ -108,9 +108,15 @@ impl Pass {
     /// `drift` at the default amount on the pass's own stream, and, in a
     /// loop with a tuned kick of the kind `kick`, the kick it plays.
     pub fn draw(&mut self, cx: &Cx, base: &Render, kick: Option<&'static str>, pass: u32) {
+        self.draw_by(cx, base, kick, pass, AMOUNT);
+    }
+
+    /// The same, wandering `amount` as far (the app's slider, 0 to 2.4;
+    /// `Engine.driftAmount`): what the player draws each pass by.
+    pub fn draw_by(&mut self, cx: &Cx, base: &Render, kick: Option<&'static str>, pass: u32, amount: f64) {
         let seed = cx.spec.seed;
         let mut rng = Rng::new((seed ^ DRIFT_SALT).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
-        self.drift(cx, base, &mut rng, AMOUNT);
+        self.drift(cx, base, &mut rng, amount);
         self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass));
         self.number = Some(pass);
     }
@@ -354,6 +360,55 @@ impl Pass {
         FloorDrop { kind: Some("single"), ..FloorDrop::single(start, span) }
     }
 
+    /// Drum hit `i` of the loop, `e`, as this pass plays it: its velocity
+    /// (0, silent this pass) and its instrument (a hat or a jingle opened).
+    /// What the sequencer plays (`player`), and what `write` writes, so the
+    /// goldens prove it.
+    #[must_use]
+    pub fn drum(&self, i: usize, e: &DrumEvent) -> (f64, &'static str) {
+        let m = self.drums.get(i).copied().unwrap_or(0);
+        let inst = if (m & OPEN) != 0 { if e.inst == "hat" { "ohat" } else { "ojingle" } } else { e.inst };
+        (if (m & SILENT) != 0 { 0.0 } else { e.vel }, inst)
+    }
+
+    /// The ghost hit this pass adds after the loop's own, if it adds one.
+    #[must_use]
+    pub fn ghost(&self) -> Option<&DrumEvent> {
+        self.ghost.as_ref()
+    }
+
+    /// Bass note `i` of the loop, `e`, as this pass plays it: its velocity
+    /// and its pitch (a passing tone).
+    #[must_use]
+    pub fn bass(&self, i: usize, e: &BassEvent) -> (f64, f64) {
+        let (m, midi) = self.bass.get(i).copied().unwrap_or((0, e.midi));
+        (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi)
+    }
+
+    /// Chord `i` of the loop, `e`, as this pass plays it: its velocity (0.4
+    /// of it played softly) and the note it adds when it opens up, its
+    /// first note's ninth above.
+    #[must_use]
+    pub fn chord(&self, i: usize, e: &ChordEvent) -> (f64, Option<i16>) {
+        let m = self.chords.get(i).copied().unwrap_or(0);
+        let mut vel = e.vel;
+        if (m & SOFT) != 0 {
+            vel *= 0.4;
+        }
+        if (m & SILENT) != 0 {
+            vel = 0.0;
+        }
+        (vel, if (m & OPEN) != 0 { e.notes.first().map(|&n| n + 14) } else { None })
+    }
+
+    /// Melody note `i` of the loop, `e`, as this pass plays it: its
+    /// velocity and its pitch (a neighbor, or an octave up).
+    #[must_use]
+    pub fn melody(&self, i: usize, e: &MelodyEvent) -> (f64, f64) {
+        let (m, midi) = self.melody.get(i).copied().unwrap_or((0, e.midi));
+        (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi)
+    }
+
     /// The pass's canonical text: the whole pattern it plays, less its spec
     /// (`render`'s, with the pass's tracks and floor drop), and the kick it
     /// plays in a loop with a tuned kick.
@@ -389,54 +444,33 @@ impl Pass {
         w.obj();
         w.key("bass");
         w.list();
-        for (&(m, midi), e) in self.bass.iter().zip(base.bass.iter()) {
-            let mut e = *e;
-            e.midi = midi;
-            if (m & SILENT) != 0 {
-                e.vel = 0.0;
-            }
-            render::write_bass(w, &e);
+        for (i, e) in base.bass.iter().enumerate() {
+            let (vel, midi) = self.bass(i, e);
+            render::write_bass(w, &BassEvent { midi, vel, ..*e });
         }
         w.end_list();
         w.key("chords");
         w.list();
-        for (&m, e) in self.chords.iter().zip(base.chords.iter()) {
-            let mut e = *e;
-            if (m & SOFT) != 0 {
-                e.vel *= 0.4;
-            }
-            if (m & SILENT) != 0 {
-                e.vel = 0.0;
-            }
-            let opened = if (m & OPEN) != 0 { e.notes.first().map(|&n| n + 14) } else { None };
-            plan::write_chord(w, &e, opened);
+        for (i, e) in base.chords.iter().enumerate() {
+            let (vel, opened) = self.chord(i, e);
+            plan::write_chord(w, &ChordEvent { vel, ..*e }, opened);
         }
         w.end_list();
         w.key("drums");
         w.list();
-        for (&m, e) in self.drums.iter().zip(base.drums.iter()) {
-            let mut e = *e;
-            if (m & OPEN) != 0 {
-                e.inst = if e.inst == "hat" { "ohat" } else { "ojingle" };
-            }
-            if (m & SILENT) != 0 {
-                e.vel = 0.0;
-            }
-            render::write_drum(w, &e);
+        for (i, e) in base.drums.iter().enumerate() {
+            let (vel, inst) = self.drum(i, e);
+            render::write_drum(w, &DrumEvent { inst, vel, ..*e });
         }
-        if let Some(g) = &self.ghost {
+        if let Some(g) = self.ghost() {
             render::write_drum(w, g);
         }
         w.end_list();
         w.key("melody");
         w.list();
-        for (&(m, midi), e) in self.melody.iter().zip(base.melody.iter()) {
-            let mut e = *e;
-            e.midi = midi;
-            if (m & SILENT) != 0 {
-                e.vel = 0.0;
-            }
-            render::write_melody(w, &e);
+        for (i, e) in base.melody.iter().enumerate() {
+            let (vel, midi) = self.melody(i, e);
+            render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
         }
         w.end_list();
         w.key("texture");
@@ -482,7 +516,7 @@ fn write_drop<S: Sink>(w: &mut Writer<S>, d: &FloorDrop) {
 /// the mode (`steps`, from `root`), so a wandering tune never leaves the
 /// mode it was written in; the note itself if none is within four
 /// semitones.
-fn neighbour_in_scale(midi: f64, root: f64, steps: &[f64], dir: f64) -> f64 {
+pub(crate) fn neighbour_in_scale(midi: f64, root: f64, steps: &[f64], dir: f64) -> f64 {
     for i in 1..=4 {
         let cand = midi + dir * f64::from(i);
         let pc = (((cand - root) % 12.0) + 12.0) % 12.0;

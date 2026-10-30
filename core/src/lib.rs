@@ -36,18 +36,23 @@
 pub mod block;
 pub mod blocks;
 pub mod delay;
-// The generator (phase 2) is left out of the app's web build until the player
-// is in it (item 82): the web build compiles the crate as an rlib too, so code
-// it never calls can still shift the .wasm's bytes, and a generator or data
-// edit must not change what the app ships. The `generator` feature brings it
-// back for the checks' wasm build.
-#[cfg(any(not(feature = "web"), feature = "generator"))]
+// The generator (phase 2) is left out of the app's web build until the app
+// plays the player (phase 3): the web build compiles the crate as an rlib too,
+// so code it never calls can still shift the .wasm's bytes, and a generator or
+// data edit must not change what the app ships. The `generator` feature brings
+// it back for the checks' wasm build, the `player` feature for the player's
+// (js/dlplayer.wasm, queue item 82).
+#[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
 pub mod generator;
 pub mod master;
 pub mod math;
 pub mod mix;
 pub mod noise;
 pub mod param;
+// The player (queue item 82) stands on the generator, and is left out of the
+// app's web build with it (the `player` feature builds js/dlplayer.wasm).
+#[cfg(any(not(feature = "web"), feature = "player"))]
+pub mod player;
 pub mod resample;
 pub mod rng;
 pub mod space;
@@ -56,6 +61,9 @@ pub mod wave;
 
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
+// The C face (`include/dlcore.h`), for a native C host's static library.
+#[cfg(all(not(target_arch = "wasm32"), feature = "capi"))]
+mod capi;
 
 use block::{Context, Event, Mods, Note, Sends, Signal, event};
 use block::event::Reach;
@@ -718,6 +726,18 @@ impl Core {
     /// `Error::Layout` if `out` does not hold one slice for each channel of
     /// the layout, all the same length; nothing is rendered.
     pub fn render(&mut self, out: &mut [&mut [f32]]) -> Result<(), Error> {
+        self.render_with(out, |_| {})
+    }
+
+    /// `render`, calling `before` with the core before each block it renders:
+    /// what a player hands its notes over in (`player::Player::render`), so
+    /// each block's notes reach the core before the block, whatever the
+    /// host's block size.
+    ///
+    /// # Errors
+    ///
+    /// As `render`.
+    pub fn render_with<F: FnMut(&mut Core)>(&mut self, out: &mut [&mut [f32]], mut before: F) -> Result<(), Error> {
         let n = self.layout as usize;
         let frames = out.first().map_or(0, |o| o.len());
         if out.len() != n || out.iter().any(|o| o.len() != frames) {
@@ -726,6 +746,7 @@ impl Core {
         let mut done = 0;
         while done < frames {
             if self.unserved == 0 {
+                before(self);
                 let block = self.next;
                 self.process(block);
                 self.unserved = QUANTUM;

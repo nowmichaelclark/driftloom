@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Fnv, num, readList, writeList, SIGNALS, STEREO_SIGNALS } from '../tools/golden-lib.mjs';
+import { Rng } from '../js/rng.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failures = 0;
@@ -88,8 +89,9 @@ console.log('\nThe committed goldens');
     }
   }
   check('each reads, writes back the same and is plain ASCII', all);
-  // (generation.hashes is the generator's, not a target's: tools/gen-golden.mjs.)
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && !f.startsWith('rates.') && f !== 'generation.hashes')) {
+  // (generation.hashes is the generator's, not a target's: tools/gen-golden.mjs;
+  // seeds.hashes the player's, below.)
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && !f.startsWith('rates.') && f !== 'generation.hashes' && f !== 'seeds.hashes')) {
     // A stereo file (queue item 64) has both sides of the output and the bus.
     const names = file.endsWith('.stereo.hashes') ? STEREO_SIGNALS : SIGNALS;
     const rows = fs.readFileSync(path.join(dir, file), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
@@ -115,6 +117,15 @@ console.log('\nThe committed goldens');
       && rows.every((r) => { const [, frames, ...hashes] = r.split(' '); return /^frames=\d+$/.test(frames) && hashes.length === signals.length && hashes.every((h, i) => new RegExp(`^${signals[i]}=[0-9a-f]{16}$`).test(h)); });
     check(`${file} has a well-formed line for every list at every rate rates.txt names`, ok);
   }
+}
+{
+  // The player's loops from their seeds (queue item 82, tools/seeds.sh): the
+  // corpus's first 80, a line each as dlrender --corpus 1:80 prints it, in
+  // order.
+  const master = new Rng(1);
+  const rows = fs.readFileSync(path.join(dir0(), 'seeds.hashes'), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
+  const ok = rows.length === 80 && rows.every((r, i) => new RegExp(`^${i} seed=${master.seed32()} name=\\S+ quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=[0-9a-f]{8} hash=[0-9a-f]{16}$`).test(r));
+  check('seeds.hashes has a well-formed line for each of the corpus\'s first 80 loops, in order', ok);
 }
 function dir0() { return path.join(ROOT, 'core', 'golden'); }
 

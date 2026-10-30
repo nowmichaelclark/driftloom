@@ -4,13 +4,14 @@
 
 import { midiToFreq } from './theory.js';
 import {
-  CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
+  CoreHost, PLAYER, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
   MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS, WASH_CHANNEL, WASH_SETTINGS, WASH_WEIGHT,
   SUB_DUCK_SETTINGS, PAD_SWEEP_SETTINGS,
 } from './core.js';
 import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
 import { blockOf, readBlock } from './data.js';
+import { cos, pow, sin } from './dlmath.js';
 
 // The channels in the core's order (core/src/lib.rs): its inputs, its
 // taps and its channel gains are numbered so.
@@ -260,24 +261,27 @@ const VOWEL_DRIFT_COST = 5;
 const FORMANT_TAME = 0.85;
 const FORMANT_TRIM_RANGE = [0.25, 1];
 
+// On the core's math (js/dlmath.js), not the platform's, so the player in the
+// core (queue item 82, core/src/player/formant.rs) works out the same trim
+// to the bit.
 function biquadPower(type, f, fc, q, gainDb, fs) {
   const w0 = (2 * Math.PI * fc) / fs;
-  const cw = Math.cos(w0);
+  const cw = cos(w0);
   let b0; let b1; let b2; let a0; let a1; let a2;
   if (type === 'peaking') {
-    const A = Math.pow(10, gainDb / 40);
-    const alpha = Math.sin(w0) / (2 * q);
+    const A = pow(10, gainDb / 40);
+    const alpha = sin(w0) / (2 * q);
     b0 = 1 + alpha * A; b1 = -2 * cw; b2 = 1 - alpha * A;
     a0 = 1 + alpha / A; a1 = -2 * cw; a2 = 1 - alpha / A;
   } else {
     // Web Audio's lowpass takes its Q in dB.
-    const alpha = Math.sin(w0) / (2 * Math.pow(10, q / 20));
+    const alpha = sin(w0) / (2 * pow(10, q / 20));
     b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = (1 - cw) / 2;
     a0 = 1 + alpha; a1 = -2 * cw; a2 = 1 - alpha;
   }
   const w = (2 * Math.PI * f) / fs;
-  const c1 = Math.cos(w); const s1 = Math.sin(w);
-  const c2 = Math.cos(2 * w); const s2 = Math.sin(2 * w);
+  const c1 = cos(w); const s1 = sin(w);
+  const c2 = cos(2 * w); const s2 = sin(2 * w);
   const nr = b0 + b1 * c1 + b2 * c2; const ni = -(b1 * s1 + b2 * s2);
   const dr = a0 + a1 * c1 + a2 * c2; const di = -(a1 * s1 + a2 * s2);
   return (nr * nr + ni * ni) / (dr * dr + di * di);
@@ -292,11 +296,12 @@ function formantEnergy(f0, formants, corner, humming, fs) {
     // A hum is a triangle (odd harmonics, 1/n^2); the others the glottal
     // wave (every harmonic, 1/n^2.5).
     if (humming && h % 2 === 0) continue;
-    const amp = humming ? 1 / (h * h) : 1 / Math.pow(h, 2.5);
+    const amp = humming ? 1 / (h * h) : 1 / pow(h, 2.5);
     const f = h * f0;
     let p = amp * amp * biquadPower('lowpass', f, corner, 0.7, 0, fs);
     for (const [hz, bw, gainDb] of formants) p *= biquadPower('peaking', f, hz, hz / bw, gainDb, fs);
-    const x = (f / 1681) ** 2;
+    const r = f / 1681;
+    const x = r * r;
     e += p * (1 + 2.51 * x) / (1 + x);
   }
   return e;
@@ -610,6 +615,12 @@ export class Synth {
     this.kill.gain.value = this._asked.killed ? 0 : 1;
   }
 
+  // Whether the core's player plays the notes (`?engine=player`, queue item
+  // 82): the engine then sends none, and hands the loop and the controls over.
+  get player() {
+    return PLAYER && !!this._coreMix();
+  }
+
   // The core, when it is the one mixing.
   _coreMix() {
     return this.core && !this.core.failed ? this.core : null;
@@ -702,6 +713,11 @@ export class Synth {
         : `rust (loading)  fallback: ${this.fallbacks}`;
     }
     if (c.failed) return `js (fallback: ${c.failed})  fallback: ${this.fallbacks}`;
+    if (PLAYER) {
+      const p = c.playerAt;
+      const at = p ? `  player: ${['idle', 'making a loop', 'its first pass', 'playing'][p.state] || p.state}, step ${p.step}` : '';
+      return `rust (the core's player, ?engine=player)  late: ${c.late}  dropped: ${c.dropped}${at}`;
+    }
     const late = c.late ? ` (stall ${c.lateStall}, inside the buffer ${c.lateBuffer}; left out ${c.missed})` : '';
     const dropped = c.dropped
       ? `  dropped: ${c.dropped} (${DROP_CAUSES.map((cause, i) => `${cause} ${c.droppedBy[i] || 0}`).join(', ')})` : '';
@@ -1270,6 +1286,8 @@ export class Synth {
   setVolume(v) {
     this.userVolume = v;
     this._applyGain();
+    // The core's player sets the master gain itself at each loop it starts.
+    if (this.player) this.core.playVolume(v);
   }
 
   // Per-character trim, kept separate from the user's volume so the two do
@@ -2008,7 +2026,7 @@ export class Synth {
     }
     const e = formantEnergy(midiToFreq(midi), formants, corner, humming, fs);
     const [lo, hi] = FORMANT_TRIM_RANGE;
-    const trim = Math.min(hi, Math.max(lo, Math.pow(cache.get(refId) / e, FORMANT_TAME / 2)));
+    const trim = Math.min(hi, Math.max(lo, pow(cache.get(refId) / e, FORMANT_TAME / 2)));
     cache.set(id, trim);
     return trim;
   }
@@ -2862,7 +2880,7 @@ export class Synth {
           const e0 = formantEnergy(f, formants, corner, humming, ctx.sampleRate);
           const e1 = formantEnergy(f, landed, corner, humming, ctx.sampleRate);
           // Where it lands, against the same median as where it starts.
-          trim = (trim + trim * Math.min(FORMANT_TRIM_RANGE[1], Math.max(FORMANT_TRIM_RANGE[0], Math.pow(e0 / e1, FORMANT_TAME / 2)))) / 2;
+          trim = (trim + trim * Math.min(FORMANT_TRIM_RANGE[1], Math.max(FORMANT_TRIM_RANGE[0], pow(e0 / e1, FORMANT_TAME / 2)))) / 2;
         }
 
         // On the Rust core: the vowel, where it drifts and the trim, as

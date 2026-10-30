@@ -40,6 +40,12 @@
 //             must be the same (queue item 44: the core's render is a
 //             function of the code alone). This fails on its own, whatever
 //             the stored baseline says.
+//   player    the same 40 loops played from their seeds, full and lite, mono
+//             and stereo, 45 s with the wander on, by the app's own engine
+//             handing its notes to the core as the core's player does
+//             (tools/player.mjs, queue item 82): a fingerprint of the output
+//             (each side in stereo). The player itself, natively and in
+//             js/dlplayer.wasm, is held to them (tools/seeds.sh --browser).
 //
 // The fingerprints are exact. The figures beside them are rounded
 // (loudness and level to 0.01 dB, the tone share to 0.1 point) so a diff is
@@ -59,6 +65,7 @@ const data = await import('../js/data.js');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FILE = path.join(ROOT, 'test', 'core-baseline.json');
 const MEASURE = path.join(ROOT, 'tools', 'measure.mjs');
+const PLAYER = path.join(ROOT, 'tools', 'player.mjs');
 
 const argv = process.argv.slice(2);
 if (argv.includes('--help') || argv.includes('-h')) {
@@ -67,7 +74,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
 }
 const update = argv.includes('--update');
 const onlyAt = argv.indexOf('--only');
-const PARTS = ['loops', 'voices', 'refusals', 'costs', 'stereo', 'repeat'];
+const PARTS = ['loops', 'voices', 'refusals', 'costs', 'stereo', 'repeat', 'player'];
 const only = onlyAt >= 0 ? argv[onlyAt + 1].split(',') : PARTS;
 for (const part of only) if (!PARTS.includes(part)) { console.error(`baseline: no part called '${part}'`); process.exit(2); }
 const passThrough = [];
@@ -214,6 +221,29 @@ function costs() {
   return { budgets, voices: table };
 }
 
+// ---------------------------------------------------------------- player
+
+// The 40 loops from their seeds, as the core's player plays them, in the
+// four ways: by name, as the loops part keys them.
+function player() {
+  const json = path.join(tmp, 'player.json');
+  const chrome = passThrough.indexOf('--chrome');
+  const args = ['--n', String(LOOPS), '--seed', String(SEED), '--json', json, ...(chrome >= 0 ? passThrough.slice(chrome, chrome + 2) : [])];
+  const run = spawnSync(process.execPath, [PLAYER, ...args], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  if (run.status !== 0 || !fs.existsSync(json)) {
+    console.error(`baseline: player.mjs ${args.join(' ')} failed (${run.status})\n${run.stdout}\n${run.stderr}`);
+    process.exit(1);
+  }
+  const out = { seconds: 45, wander: 1, full: {}, lite: {} };
+  const names = new Map();
+  for (const r of JSON.parse(fs.readFileSync(json, 'utf8')).sort((a, b) => a.index - b.index)) {
+    if (!names.has(r.seed)) names.set(r.seed, [...names.values()].includes(r.name) ? `${r.name}#${r.seed}` : r.name);
+    const row = (out[r.quality][names.get(r.seed)] ||= { seed: r.seed });
+    Object.assign(row, r.hashes);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- repeat
 
 // The loops rendered again with another Math.random: the same bits, or a draw
@@ -257,6 +287,7 @@ if (only.includes('repeat')) {
   log(`${LOOPS} loops again, with another Math.random`);
   now.repeat = repeat(now.loops?.full ?? loopsFor('full'));
 }
+if (only.includes('player')) { log(`${LOOPS} loops from their seeds, as the core's player plays them`); now.player = player(); }
 fs.rmSync(tmp, { recursive: true, force: true });
 
 // ------------------------------------------------------------ comparing

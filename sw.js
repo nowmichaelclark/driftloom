@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v131';
+const CACHE = 'driftloom-v132';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -63,7 +63,9 @@ const FILES = [
   './js/draw.js',
   './js/midi.js',
   './js/storage.js',
-  // The Rust core, the engine: so it plays offline too.
+  // The Rust core, the engine: so it plays offline too. (Not
+  // js/dlplayer.wasm, the core's player that ?engine=player plays for
+  // testing, queue item 82: 1.8 MB no listener needs yet.)
   './js/core.js',
   './js/worklet.js',
   './js/dlcore.wasm',

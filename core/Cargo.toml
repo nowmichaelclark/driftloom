@@ -38,6 +38,20 @@ web = []
 # (queue item 79). Not in the app's .wasm until the player is (item 82).
 generator = ["web"]
 
+# The player's WebAssembly exports (`src/wasm.rs`, `dl_play_*`; queue item
+# 82): the build tools/build-core.sh writes to js/dlplayer.wasm, which the app
+# plays with `?engine=player` for testing. The app's own js/dlcore.wasm stays
+# without it until phase 3.
+player = ["web"]
+
+# The C face (`src/capi.rs`, `include/dlcore.h`; promise 4, queue item 82): a
+# native static library with the player's calls and the library's panic
+# handler, built with `cargo rustc --release --lib --features capi
+# --crate-type staticlib` (CI's C host, `examples/c/seed.c`). Like `web`, only
+# that build turns it on: a program linking the library alongside `std` would
+# have two panic handlers.
+capi = []
+
 [profile.release]
 opt-level = 3
 lto = true

@@ -179,6 +179,40 @@ pub struct Generator {
     render: render::Render,
     settings: load::Load,
     pass: wander::Pass,
+    /// A load under way (`begin`, `step`): the stage it is at, its seed and
+    /// vibes, and what the stages pass on (today's chords' centre).
+    stage: Stage,
+    seed: u32,
+    chosen: [bool; data::VIBE_COUNT],
+    today: Option<f64>,
+    kick: choices::KickFit,
+}
+
+/// The stages of a load, in order (`Generator::step`): each a part of
+/// `load` that runs whole, so a host on an audio thread can spread a load
+/// across its blocks (the player, queue item 82; promise 1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Stage {
+    /// Nothing loaded, or loading.
+    Idle,
+    /// The spec (`newSpec`).
+    Spec,
+    /// A loop that does not develop is planned and rendered once on today's
+    /// chord lengths first, for its chords' centre (`withTodaysChords`).
+    PlanToday,
+    /// The render, a part a stage (`render::PARTS`).
+    RenderToday(usize),
+    /// The plan.
+    Plan,
+    /// The render, a part a stage (`render::PARTS`).
+    Render(usize),
+    /// What the engine decides at load, but the tuned kick's level.
+    Settings,
+    /// The tuned kick's level by ear, a slice a stage (`KickFit`): the
+    /// heaviest of a load's work, some ten milliseconds on a laptop.
+    Kick,
+    /// The loop is ready.
+    Done,
 }
 
 impl Generator {
@@ -192,6 +226,11 @@ impl Generator {
             render: render::Render::new(),
             settings: load::Load::EMPTY,
             pass: wander::Pass::new(),
+            stage: Stage::Idle,
+            seed: 0,
+            chosen: [false; data::VIBE_COUNT],
+            today: None,
+            kick: choices::KickFit::EMPTY,
         }
     }
 
@@ -203,36 +242,112 @@ impl Generator {
 
     /// Generate the loop of `seed`, with the vibes `vibes` (their numbers,
     /// `data::VIBES`; any order, as a listener's selection), and decide
-    /// what the engine decides loading it (`settings`).
+    /// what the engine decides loading it (`settings`): every stage of
+    /// `begin` and `step` at once.
     pub fn load(&mut self, seed: u32, vibes: &[usize]) {
-        let chosen = character::selection(vibes);
-        self.spec = spec::new_spec(seed, &chosen);
-        let mut cx = plan::Cx::new(&self.spec);
-        // A loop that does not develop keeps the chords' octave today's
-        // chord lengths would take (`withTodaysChords`): rendered once that
-        // way first, for the chords' centre.
-        let today = if plan::development_of(cx.spec, cx.choir).is_none() {
-            cx.long_chords_off = true;
-            self.plan.make(&cx);
-            self.render.run(&cx, &self.plan);
-            cx.long_chords_off = false;
-            self.render.chord_centre()
-        } else {
-            None
-        };
-        self.plan.make(&cx);
-        self.render.run(&cx, &self.plan);
-        if self.render.harmony.long_chords.is_some()
-            && let (Some(a), Some(b)) = (today, self.render.chord_centre())
-        {
-            let sh = js::round((a - b) / 12.0) * 12.0;
-            if sh != 0.0 {
-                #[allow(clippy::cast_possible_truncation)] // whole octaves
-                self.render.shift_chords(sh as i16);
+        self.begin(seed, vibes);
+        while !self.step() {}
+    }
+
+    /// Start loading the loop of `seed` with the vibes `vibes`, as `load`
+    /// does, a stage at a time: each `step` runs the next. What the loop was
+    /// before is gone once the first runs.
+    pub fn begin(&mut self, seed: u32, vibes: &[usize]) {
+        self.begin_with(seed, &character::selection(vibes));
+    }
+
+    /// `begin`, with the vibes as a selection: each vibe's number, chosen
+    /// or not (`character::selection`).
+    pub fn begin_with(&mut self, seed: u32, chosen: &[bool; data::VIBE_COUNT]) {
+        self.seed = seed;
+        self.chosen = *chosen;
+        self.today = None;
+        self.stage = Stage::Spec;
+    }
+
+    /// Run the next stage of the load `begin` started; true once the loop
+    /// is ready (and from then on, until the next `begin`).
+    pub fn step(&mut self) -> bool {
+        match self.stage {
+            Stage::Idle | Stage::Done => {}
+            Stage::Spec => {
+                self.spec = spec::new_spec(self.seed, &self.chosen);
+                let cx = plan::Cx::new(&self.spec);
+                self.stage = if plan::development_of(cx.spec, cx.choir).is_none() { Stage::PlanToday } else { Stage::Plan };
+            }
+            // A loop that does not develop keeps the chords' octave today's
+            // chord lengths would take (`withTodaysChords`): rendered once that
+            // way first, for the chords' centre.
+            Stage::PlanToday => {
+                let mut cx = plan::Cx::new(&self.spec);
+                cx.long_chords_off = true;
+                self.plan.make(&cx);
+                self.stage = Stage::RenderToday(0);
+            }
+            Stage::RenderToday(part) => {
+                let mut cx = plan::Cx::new(&self.spec);
+                cx.long_chords_off = true;
+                self.render.part(part, &cx, &self.plan);
+                if part + 1 < render::PARTS {
+                    self.stage = Stage::RenderToday(part + 1);
+                } else {
+                    self.today = self.render.chord_centre();
+                    self.stage = Stage::Plan;
+                }
+            }
+            Stage::Plan => {
+                self.plan.make(&plan::Cx::new(&self.spec));
+                self.stage = Stage::Render(0);
+            }
+            Stage::Render(part) => {
+                self.render.part(part, &plan::Cx::new(&self.spec), &self.plan);
+                if part + 1 < render::PARTS {
+                    self.stage = Stage::Render(part + 1);
+                    return false;
+                }
+                if self.render.harmony.long_chords.is_some()
+                    && let (Some(a), Some(b)) = (self.today, self.render.chord_centre())
+                {
+                    let sh = js::round((a - b) / 12.0) * 12.0;
+                    if sh != 0.0 {
+                        #[allow(clippy::cast_possible_truncation)] // whole octaves
+                        self.render.shift_chords(sh as i16);
+                    }
+                }
+                self.stage = Stage::Settings;
+            }
+            Stage::Settings => {
+                self.settings = load::Load::without_kick(&plan::Cx::new(&self.spec), &self.render);
+                self.pass.number = None;
+                self.stage = if load::Load::kick_kind(&self.render).is_some() {
+                    self.kick = choices::KickFit::new(self.spec.seed, self.spec.root);
+                    Stage::Kick
+                } else {
+                    Stage::Done
+                };
+            }
+            Stage::Kick => {
+                if self.kick.step(choices::KICK_SLICE) {
+                    let kick = self.kick.kick();
+                    self.settings.kick = load::Load::kick_kind(&self.render).map(|kind| load::Kick { kick, kind });
+                    self.stage = Stage::Done;
+                }
             }
         }
-        self.settings = load::Load::of(&plan::Cx::new(&self.spec), &self.render);
-        self.pass.number = None;
+        self.stage == Stage::Done
+    }
+
+    /// The stage the load is at.
+    #[must_use]
+    pub fn stage(&self) -> Stage {
+        self.stage
+    }
+
+    /// The loop as rendered (`render(spec)`): its layers' events, its form
+    /// and choices, what the player plays from.
+    #[must_use]
+    pub fn render(&self) -> &render::Render {
+        &self.render
     }
 
     /// The loop's spec.

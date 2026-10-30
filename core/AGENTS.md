@@ -8,8 +8,9 @@ core, and how to add a block, is `core/README.md`.
 
 ## Commands
 
-- `tools/build-core.sh` rebuilds `js/dlcore.wasm`; `--check` fails if the
-  committed file is not exactly what the source builds. Commit both.
+- `tools/build-core.sh` rebuilds `js/dlcore.wasm` and the player's
+  `js/dlplayer.wasm`; `--check` fails if either committed file is not
+  exactly what the source builds. Commit them with the source.
 - `cd core && cargo test --locked`
 - `node tools/baseline.mjs` (the core's renders against
   `test/core-baseline.json`; `--update` on purpose, saying what moved). It
@@ -23,6 +24,15 @@ core, and how to add a block, is `core/README.md`.
   target. A generator, vibe or data change made in the JavaScript is made
   in the Rust too, in the same PR (the data is shared: `build.rs` compiles
   `data/*.txt` in).
+- `tools/seeds.sh [TARGET]`: the player (`src/player/`, item 82) plays the
+  corpus's first 80 loops from their seeds to WAVs, against
+  `golden/seeds.hashes`; `--browser` holds the baseline's 40 loops to the
+  browser's renders (the baseline's `player` part), `--c` the C host
+  (`include/dlcore.h`). CI runs them. Until the app plays the player (phase
+  3), a change to what `js/engine.js` or `js/synth.js` does between the
+  generator's events and the core's notes is made in `src/player/` too, in
+  the same PR: the baseline's `player` part moves with the page, and
+  `--browser` fails until the player follows.
 
 ## Standing rules for core items
 
