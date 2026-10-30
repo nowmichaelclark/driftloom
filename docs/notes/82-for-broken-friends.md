@@ -25,7 +25,7 @@ use dlcore::player::{Player, Request};
 // its core today.
 let mut core = Box::new(Core::new());
 let mut player = Box::new(Player::new());
-player.start(&mut core, 48_000.0, 2, false)?;  // rate, channels (2: stereo), full mix (false: lite's, for phones)
+player.start(&mut core, 48_000.0, 2, false)?;  // rate, channels (2: stereo), the full mix (false: lite's, the game's on phones)
 
 // A friend's theme: its seed, and its vibes by name.
 let request = Request::new().with_vibe("peaceful").unwrap_or_default();

@@ -187,7 +187,9 @@ jobs:
       # seeds, each to a WAV, against core/golden/seeds.hashes; under QEMU the
       # first few, the same samples on every target.
       - name: Loops from their seeds
-        run: tools/seeds.sh ${{ (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown') && '' || '--first 3' }} ${{ matrix.target }}
+        # (The QEMU targets' flag is the expression's true branch: an empty
+        # string there would be falsy, and every target would get it.)
+        run: tools/seeds.sh ${{ (matrix.target != 'x86_64-unknown-linux-gnu' && matrix.target != 'wasm32-unknown-unknown') && '--first 3' || '' }} ${{ matrix.target }}
       # The baseline's 40 loops, full and lite, mono and stereo, from their
       # seeds: bit for bit the browser's renders (test/core-baseline.json's
       # player part), natively and in js/dlplayer.wasm.
