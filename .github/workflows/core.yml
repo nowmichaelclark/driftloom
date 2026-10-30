@@ -76,6 +76,10 @@ jobs:
       # and what the generator decides against its goldens (queue item 77).
       - name: The generator's math against the core's
         run: node test/dlmath.test.mjs
+      # The generation data, data/*.txt (queue item 78): every entry parses
+      # and every name it uses exists.
+      - name: The generation data
+        run: node test/data.test.mjs
       - name: The generation goldens, in Node
         run: node tools/gen-golden.mjs --check
       # Level, tone and what folds back at 22,050 to 192,000 Hz against 48 kHz

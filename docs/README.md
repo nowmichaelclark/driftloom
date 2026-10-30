@@ -29,7 +29,8 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `docs/CORE.md` | The core's charter: ten promises, each with its measure, and the phases. | brain, hands (core) |
 | `docs/PAINTER.md`, `design/` | What there is to paint; the design spec and the picks' brief. | Painter |
 | `docs/EARS.md`, `docs/ears/`, `tools/ears/` | What the ears sessions found and the yardsticks; their plan, reports, album cards and tools. `docs/ears/README.md` indexes the folder. | ears, brain |
-| `docs/MOODS.md`, `docs/VIBES.md` | The mood words, and the vibe recipes (the source is `js/vibes.js`). | brain |
+| `docs/MOODS.md`, `docs/VIBES.md` | The mood words, and the vibe recipes (the source is `data/vibes.txt`; `docs/VIBES.md` says how to edit one). | brain |
+| `data/` | The generation data as plain text, read by both generators: profiles, vibes, moods, the voice table and the choice tables. The format is in `js/data.js`'s header. | hands, brain (vibes) |
 | `docs/ALBUMS.md` | Listening albums out for Mikey. | brain |
 | `README.md`, `core/README.md`, `core/golden/README.md` | The public front page; how a host drives the core and how to add a block; the golden renders. | everyone; core developers |
 | `Mikey's Thoughts.md` | His. | Mikey |

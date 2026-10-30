@@ -3,9 +3,10 @@
 The app's word for what `docs/MOODS.md` calls mood words (Mikey,
 2026-10-11). A listener picks vibes on the Now Playing screen; every new
 loop leans toward them. This file holds the **recipes**: what each vibe
-leans on. The hands copy the block below into `js/vibes.js` once (queue
-item 38a); after that `js/vibes.js` is the source and this file keeps the
-reasoning and the history.
+leans on. The hands copied the block below into `js/vibes.js` once (queue
+item 38a); after that the recipes were the source, and since item 78 (v130)
+they are plain text, `data/vibes.txt`. This file keeps the reasoning, the
+history and "How to edit a vibe", below.
 
 ## How a recipe works (queue item 38a builds it)
 
@@ -34,10 +35,51 @@ it, toward their weighted mean target. A lean multiplies by
 vibe at full strength moves it all the way. Words bend a profile; the
 profile's own ranges still clamp the feel and tone.
 
+## How to edit a vibe (since item 78, v130)
+
+The recipes are `data/vibes.txt`, plain text with comments. Both generators
+read it (the app's JavaScript, and the Rust one in phase 2), so a vibe is
+edited in one place and never waits for the port. The format is described
+at the top of `js/data.js`; for a vibe, this is all of it:
+
+```
+# a comment, to the end of the line
+[vibe airy]                              # one block a vibe, named by its id
+feel = energy 0.25                       # a target: names and numbers
+tempo = 0.25                             # one number
+profiles = thaw 15.6, vapor 8, glade 2.2 # a lean: a name and a number, each
+melody = flute 9.9, sine 2.8,            # a long line goes on the next,
+    panflute 2.8                         # indented
+```
+
+- **Change a number or a name** in place. Keys are the ones "How a recipe
+  works" lists (`feel`, `tone`, `tempo`, `swing`, `profiles`, `modes`,
+  `melody`, `chords`, `bass`, `bassStyle`, `texture`, `six8`, `long`,
+  `drums`, `hats`, `rests`, `bigChords`). A key that is not one, a name
+  that does not exist (a profile, a mode, a voice), or a number that is not
+  one makes `node test/data.test.mjs` and `node test/generator.test.mjs`
+  fail, naming the file, the block and the key.
+- **Add a vibe** by adding a `[vibe name]` block and adding the name at
+  the **end** of `ids` in the `[order vibes]` block at the top. Never
+  reorder or remove a name there: share codes write a vibe by its place in
+  that list.
+- **Numbers** are written the way a number is: `0.05`, `9.9`, `2`. A value
+  that is a fraction of whole numbers may be written `1/3` (one division),
+  but a vibe seldom needs it.
+- Change `BUILD` in `js/main.js` and `CACHE` in `sw.js` to the next version
+  with it (a vibe is an app change).
+- **The generation goldens move with a vibe.** `node tools/gen-golden.mjs
+  --check` (CI runs it) holds every case that uses the vibe to the hashes in
+  `core/golden/generation.hashes` (item 77), so a tuning edit fails it
+  until the file is written again: `node tools/gen-golden.mjs`, committed
+  in the same PR, with the PR saying which cases moved (`--check` names
+  them). A session that can run Node does that; the brain, which cannot,
+  asks the hands to.
+
 ## As built (queue item 38a, v86)
 
-`js/vibes.js` is the source from v86 on; the block below is the copy it
-started from. Where the brief left a reading open, the hands took these
+`js/vibes.js` was the source from v86 on (`data/vibes.txt` is, from v130);
+the block below is the copy it started from. Where the brief left a reading open, the hands took these
 (the brain may change any of them):
 
 - **A lean multiplies only what a pool already holds.** `melody: { harp: 2 }`
@@ -230,7 +272,7 @@ tuning: the calm vibes still draw a kit in 20-35% of loops, and **foggy and
 misty draw the same profiles in the same shares** (dust 15%, vapor 11%,
 thaw 11%), which item 76b separates.
 
-**As built (queue item 76b, v125).** `js/vibes.js` holds 88; `VIBE_IDS`
+**As built (queue item 76b, v125).** `data/vibes.txt` holds 88 (then `js/vibes.js`); `VIBE_IDS`
 is rewritten in alphabetical order, so codes made before v125 may play
 other vibes or none (Mikey: no bloat for compatibility). What the hands
 moved from the drafts and from `main`, to meet the item's yardsticks:
@@ -347,7 +389,7 @@ vibes and fiddle most tunes, as with no vibes at all. A lean is applied as
 drafts' 1.5-3 to barely more than 1. So every `profiles` value was cubed
 and every `melody`, `chords`, `bass`, `bassStyle` and `texture` value
 raised to the 2.5th power (kept between 0.05 and 20); the targets, modes
-and the single-number leans are as drafted. `js/vibes.js` holds the
+and the single-number leans are as drafted. `data/vibes.txt` holds the
 numbers now; the block above is the first draft, kept for the record.
 After: each vibe on its own leads with its own profiles and voices --
 floating vapor and sine, frosty thaw and music box, cozy dust and rhodes,

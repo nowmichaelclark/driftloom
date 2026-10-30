@@ -19,7 +19,7 @@ that changes how it sounds.
 
 - **Brain** (a claude.ai chat in the Driftloom Project): plans, verifies,
   writes the queue, builds listening albums; does not write code, and
-  merges only docs-only changes (and `js/vibes.js`). Starts at
+  merges only docs-only changes (and `data/vibes.txt`, the vibes). Starts at
   `docs/BRAIN.md`, "Start here".
 - **Hands** (Claude Code): write code, open PRs, measure, merge, report.
   Start at `docs/QUEUE.md`: status, standing rules, the next item. A

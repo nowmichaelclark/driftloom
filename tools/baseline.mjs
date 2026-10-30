@@ -28,7 +28,7 @@
 //             a fingerprint of the notes
 //   refusals  what the voice budget turns away, per layer, over 100 loops,
 //             full and lite
-//   costs     VOICE_COST as synth.js states it (the figures themselves came
+//   costs     VOICE_COST as data/voices.txt states it (the figures themselves came
 //             from render timing, which no baseline can keep)
 //   stereo    the same 40 loops, full and lite, in the core's stereo render
 //             (queue item 64), each against its mono render: a fingerprint of
@@ -53,6 +53,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+const data = await import('../js/data.js');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FILE = path.join(ROOT, 'test', 'core-baseline.json');
@@ -201,10 +203,9 @@ function refusals() {
 
 function costs() {
   const source = fs.readFileSync(path.join(ROOT, 'js', 'synth.js'), 'utf8');
-  const start = source.indexOf('const VOICE_COST = {');
-  const end = source.indexOf('\n};', start);
-  if (start < 0 || end < 0) { console.error('baseline: VOICE_COST not found in js/synth.js'); process.exit(1); }
-  const table = new Function(`return ${source.slice(start + 'const VOICE_COST = '.length, end + 2)}`)();
+  // The voice table is data (queue item 78): data/voices.txt.
+  const { blockOf, readBlock } = data;
+  const table = readBlock(blockOf('voices', 'voices', 'costs'), { default: 'num', dubstab: 'num', cost: 'table' }, 'data/voices.txt').cost;
   const budgets = {};
   for (const name of ['MAX_BUDGET', 'LITE_BUDGET']) {
     const m = source.match(new RegExp(`const ${name} = (\\d+)`));

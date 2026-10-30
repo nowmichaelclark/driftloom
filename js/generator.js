@@ -13,15 +13,14 @@ import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
 import { drawChoices, dropShapeOf, FLOORDROP, PEDAL, pedalOf } from './choices.js';
 import { cos, log, pow, sin } from './dlmath.js';
+import { blockOf, readBlock } from './data.js';
 
-export const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
-export const LAYER_LABELS = {
-  drums: 'Drums',
-  bass: 'Bass',
-  chords: 'Keys',
-  melody: 'Melody',
-  texture: 'Air',
-};
+// The layers, in the order the generator draws and the app lists them, and
+// the label each shows: data/voices.txt (queue item 78). Share codes freeze
+// their own copy of the order (js/share.js), on purpose.
+const LAYER_DATA = readBlock(blockOf('voices', 'voices', 'layers'), { order: 'words', 'label.*': 'word' }, 'data/voices.txt');
+export const LAYERS = LAYER_DATA.order;
+export const LAYER_LABELS = LAYER_DATA.label;
 
 // Kept as the default and as the export other modules still import, but the
 // real value now lives on the spec: 16 is 4/4, 12 is 6/8 (or 3/4, when the
