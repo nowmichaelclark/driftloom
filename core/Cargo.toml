@@ -33,6 +33,11 @@ wide = []
 # module's panic handler. Only tools/build-core.sh turns it on.
 web = []
 
+# The generator's WebAssembly exports (`src/wasm.rs`, `dl_spec` and the
+# rest), for the build tools/gen-core.sh checks the generation goldens with
+# (queue item 79). Not in the app's .wasm until the player is (item 82).
+generator = ["web"]
+
 [profile.release]
 opt-level = 3
 lto = true

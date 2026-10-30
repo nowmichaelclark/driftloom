@@ -329,3 +329,91 @@ pub extern "C" fn dl_busy() -> u32 {
 const _: () = assert!(
     Taken::Late as u32 == 1 && Taken::Full as u32 == 2 && Taken::Missed as u32 == 4
 );
+
+// ------------------------------------------------------------ the generator
+
+/// The generator's exports (queue item 79), in a build with the
+/// `generator` feature only: not in the app's `.wasm` until the player is
+/// (item 82). `tools/gen-core.sh` builds one and checks the generation
+/// goldens through it in Node. A host writes the vibes it asks for at
+/// `dl_gen_input` (one byte a vibe, its number), loads a loop, and reads
+/// what the generator made: a part's hash, or the spec as text.
+#[cfg(feature = "generator")]
+mod generator {
+    use core::cell::UnsafeCell;
+
+    use crate::generator::canon::Text;
+    use crate::generator::{Generator, Part, data};
+
+    struct Global(UnsafeCell<Generator>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Global {}
+    static GENERATOR: Global = Global(UnsafeCell::new(Generator::empty()));
+
+    struct Bytes<const N: usize>(UnsafeCell<[u8; N]>);
+    // Single-threaded, as above.
+    unsafe impl<const N: usize> Sync for Bytes<N> {}
+    static INPUT: Bytes<{ data::VIBE_COUNT }> = Bytes(UnsafeCell::new([0; data::VIBE_COUNT]));
+    /// Room for the spec's text (about 600 bytes at most).
+    const TEXT_MAX: usize = 4096;
+    static TEXT: Bytes<TEXT_MAX> = Bytes(UnsafeCell::new([0; TEXT_MAX]));
+
+    fn generator() -> &'static mut Generator {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *GENERATOR.0.get() }
+    }
+
+    /// Where the host writes the vibes of the next `dl_gen_load`.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_input() -> *mut u8 {
+        INPUT.0.get().cast()
+    }
+
+    /// Generate the loop of `seed` with the first `vibes` bytes at
+    /// `dl_gen_input` as its vibes. 1 if it did; 0 if a vibe's number is
+    /// unknown (nothing is loaded then).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_load(seed: u32, vibes: u32) -> u32 {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let input = unsafe { &*INPUT.0.get() };
+        let mut picked = [0usize; data::VIBE_COUNT];
+        let n = (vibes as usize).min(input.len());
+        for (p, &b) in picked.iter_mut().zip(&input[..n]) {
+            if usize::from(b) >= data::VIBE_COUNT {
+                return 0;
+            }
+            *p = usize::from(b);
+        }
+        generator().load(seed, &picked[..n]);
+        1
+    }
+
+    /// The hash of part `part` (`Part::ALL`'s order) of the loop loaded.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_hash(part: u32) -> u64 {
+        Part::ALL.get(part as usize).map_or(0, |&p| generator().hash(p))
+    }
+
+    /// How many items the generator's lists dropped (0).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_lost() -> u32 {
+        u32::try_from(generator().lost()).unwrap_or(u32::MAX)
+    }
+
+    /// The loaded loop's spec as plain ASCII, its canonical text (the
+    /// goldens' `spec`), at `dl_gen_text`; returns its length.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_spec() -> u32 {
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        generator().write(Part::Spec, &mut text);
+        u32::try_from(text.len).unwrap_or(0)
+    }
+
+    /// Where `dl_spec` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_text() -> *const u8 {
+        TEXT.0.get().cast()
+    }
+}
