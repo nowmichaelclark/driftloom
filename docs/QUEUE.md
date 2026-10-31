@@ -625,6 +625,10 @@ sounds are queued after the core becomes the default, built in the core
 one at a time with the refusal and level checks (`docs/BRAIN.md`, State).
 Inspiration comes only from wholesome, comforting music.
 
+A sketch voice for a layer (archive/notes/83-sketch-voice.md): option 1, sketches
+stay channel sources until an ears session needs a voice's note-by-note play
+(brain, 2026-10-31).
+
 ## Known issues
 
 - **"Let the loop wander" repeats itself since item 44** (Mikey,

@@ -3232,6 +3232,6 @@ front of the sketch's own); the kit probes it with no stored render.
 (a choice forced, sketch build only) and `dlrender --sketch --force --set
 --pin --from --pick --choices`; `tools/clips.mjs` drives them from a job list
 to WAV and Opus with an index. **Not built:** a sketch voice
-(`docs/notes/83-sketch-voice.md`). Session 26's WAVs are not in the repo, so
+(`docs/archive/notes/83-sketch-voice.md`). Session 26's WAVs are not in the repo, so
 the clips were not compared with them; the one figure kept, undertow #45 with
 lateFloor forced, reproduces (the low end returns at 0:29-0:30).
