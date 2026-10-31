@@ -12,7 +12,7 @@
 //                       "glacial=0.7,bpm=70-85", as `dlrender --request`)
 //   ... --costs         what each block costs (the load spread across blocks,
 //                       as a real-time host plays it; each block's least time
-//                       over three runs), as `dlrender --costs` measures it
+//                       over three runs, or --runs N), as `dlrender --costs` measures it
 //
 // No browser: Node runs WebAssembly itself.
 
@@ -119,13 +119,13 @@ function render(seed) {
 }
 
 // Each block's time (the player's decide and the core's block together, as
-// the worklet calls them), its least over three runs, and what the player was
+// the worklet calls them), its least over `--runs` runs, and what the player was
 // doing: making the loop (1, 2) or playing it (3).
 function costs(seed) {
   const blocks = Math.ceil((way.seconds * way.rate) / QUANTUM);
   const best = new Float64Array(blocks).fill(Infinity);
   const states = new Uint8Array(blocks);
-  for (let run = 0; run < 3; run++) {
+  for (let run = 0; run < RUNS; run++) {
     const x = start(seed);
     for (let b = 0; b < blocks; b++) {
       states[b] = x.dl_play_state();
@@ -145,8 +145,11 @@ function costs(seed) {
 }
 
 const deadline = (QUANTUM / way.rate) * 1000;
+// How many runs each block's least time is taken over (`--runs`, 3 by
+// default): more steadies the worst block against the machine's noise.
+const RUNS = Math.max(1, Number(flag('--runs', 3)) || 3);
 const costing = argv.includes('--costs');
-if (costing) console.log(`# the deadline: a block of ${QUANTUM} frames at ${way.rate} Hz, ${(deadline * 1000).toFixed(0)} us; times are each block's least over 3 runs, the player's decide and the core's block together`);
+if (costing) console.log(`# the deadline: a block of ${QUANTUM} frames at ${way.rate} Hz, ${(deadline * 1000).toFixed(0)} us; times are each block's least over ${RUNS} runs, the player's decide and the core's block together`);
 let worst = 0; let worstLoad = 0;
 for (const [i, seed] of seeds) {
   try {
