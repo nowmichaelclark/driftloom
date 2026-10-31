@@ -33,6 +33,10 @@ pub type Chords = List<ChordEvent, CHORD_EVENTS_MAX>;
 /// The most choices there can be.
 const CHOICES_MAX: usize = 16;
 
+/// `Render::forced`'s mark for a choice nothing forces.
+#[cfg(feature = "sketch")]
+const NOT_FORCED: u8 = u8::MAX;
+
 /// How many parts `Render::run` is made of (`Render::part`).
 pub const PARTS: usize = 5;
 
@@ -49,6 +53,10 @@ pub struct Render {
     pub quiet: List<usize, MAX_BARS>,
     /// Each choice's option, in `CHOICES`' order.
     pub choices: List<&'static str, CHOICES_MAX>,
+    /// Choices a clip forces (`dlrender --force`, queue item 83): each
+    /// choice's option number, or `NOT_FORCED`. The sketch build only.
+    #[cfg(feature = "sketch")]
+    forced: [u8; CHOICES_MAX],
     pub bass_out: BassOut,
     pub pedal: Option<(PedalOut, f64)>,
     pub drums_out: DrumsOut,
@@ -76,6 +84,8 @@ impl Render {
             gaps: List::filled(Gap { start: 0.0, len: 0.0 }),
             quiet: List::filled(0),
             choices: List::filled(""),
+            #[cfg(feature = "sketch")]
+            forced: [NOT_FORCED; CHOICES_MAX],
             bass_out: BassOut { style: "", voice: "" },
             pedal: None,
             drums_out: DrumsOut { kit: "" },
@@ -405,6 +415,28 @@ impl Render {
         CHOICES.iter().position(|c| c.id == id).and_then(|i| self.choices.get(i).copied())
     }
 
+    /// Force the choice `id` to the option `option` in every loop made from
+    /// now on, whatever it drew and whether or not the loop is eligible for
+    /// it: a clip's lever (`dlrender --force lateFloor=on`, queue item 83),
+    /// as the brain's Session 26 patch did at the end of `drawChoices`.
+    /// `option` `None` lifts the force. An error naming what is wrong, in
+    /// plain ASCII, if the choice or the option does not exist. The sketch
+    /// build only: the item 85 request brings this to every build.
+    ///
+    /// # Errors
+    /// The choice or the option is not in the data.
+    #[cfg(feature = "sketch")]
+    pub fn force(&mut self, id: &str, option: Option<&str>) -> Result<(), &'static str> {
+        let i = CHOICES.iter().position(|c| c.id == id).ok_or("no such choice")?;
+        let Some(name) = option else {
+            self.forced[i] = NOT_FORCED;
+            return Ok(());
+        };
+        let o = CHOICES[i].options.iter().position(|o| o.0 == name).ok_or("no such option")?;
+        self.forced[i] = u8::try_from(o).map_err(|_| "no such option")?;
+        Ok(())
+    }
+
     /// `drawChoices(spec.seed, ctx, vibes)`.
     fn draw_choices(&mut self, cx: &Cx) {
         let spec = cx.spec;
@@ -443,6 +475,13 @@ impl Render {
                 *x = pick;
             }
             k += 1.0;
+        }
+        #[cfg(feature = "sketch")]
+        for (i, c) in CHOICES.iter().enumerate() {
+            let forced = self.forced.get(i).copied().unwrap_or(NOT_FORCED);
+            if let (Some(o), Some(x)) = (c.options.get(usize::from(forced)), self.choices.get_mut(i)) {
+                *x = o.0;
+            }
         }
     }
 

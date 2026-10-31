@@ -256,6 +256,20 @@ On every target, QEMU's included, a load's worst stage costs less than the
 same loop's worst audio block, so making a loop never makes a loop's worst
 block.
 
+## Sketches (queue item 83)
+
+`core/sketch/` is where an ears or brain session drops one block file and one
+line of data (`core/sketch/README.md`); the `sketch` feature builds it in as a
+channel's own block (`src/blocks/sketch.rs`), probed by the kit with no test
+written. The same feature carries the clips' levers: a choice forced
+(`Generator::force`), a named constant moved (`src/tuning.rs`), a setting
+pinned. `dlrender --seed|--corpus` takes them (`--sketch`, `--force`,
+`--set`, `--pin`, `--from`, `--pick`, `--choices`), and `tools/clips.mjs` drives
+them from a job list to WAV and Opus clips with an index of what each loop
+drew. The feature is never in the app's `.wasm`, the player's or the C
+library: with it off, every file that matters is the same bytes, and with it
+on and the sketch off, every loop renders bit for bit as before.
+
 ## The other checks
 
 - **`golden/`:** whole loops as the app plays them. Each must hash the same on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every block size and at other rates (`golden/README.md`).

@@ -47,6 +47,7 @@
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any error.
 
+mod clip;
 mod notelist;
 mod seed;
 
@@ -57,7 +58,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -110,8 +111,15 @@ fn run(args: Vec<String>) -> Result<(), String> {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
     }
     if !by_seed.seeds.is_empty() {
-        let b = by_seed;
-        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes };
+        let mut b = by_seed;
+        // `--pick I` keeps the corpus's loop I and renders nothing else.
+        if let Some(i) = b.pick {
+            b.seeds.retain(|(at, _)| *at == Some(i));
+            if b.seeds.is_empty() {
+                return Err(format!("--pick {i}: the corpus has no such loop"));
+            }
+        }
+        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes, clip: b.clip, choices: b.choices };
         if b.costs {
             return seed_costs(&b.seeds, &way);
         }
@@ -173,6 +181,9 @@ struct BySeed {
     seconds: Option<f64>,
     wander: Option<f64>,
     vibes: Vec<String>,
+    clip: clip::Clip,
+    pick: Option<usize>,
+    choices: bool,
 }
 
 impl BySeed {
@@ -180,6 +191,9 @@ impl BySeed {
     /// options: true if it was.
     fn take(&mut self, arg: &str, args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
         let number = |word: Option<String>| -> Result<f64, String> { word.ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE.to_string()) };
+        if self.clip.take(arg, args)? {
+            return Ok(true);
+        }
         match arg {
             "--seed" => {
                 for word in args.next().ok_or(USAGE)?.split(',') {
@@ -192,6 +206,8 @@ impl BySeed {
                 let (from, n) = (from.parse::<u32>().map_err(|_| USAGE)?, n.parse::<usize>().map_err(|_| USAGE)?);
                 self.seeds.extend(seed::corpus(from, n).into_iter().enumerate().map(|(i, s)| (Some(i), s)));
             }
+            "--pick" => self.pick = Some(args.next().ok_or(USAGE)?.parse::<usize>().map_err(|_| USAGE)?),
+            "--choices" => self.choices = true,
             "--calls" => self.calls_to = Some(args.next().ok_or(USAGE)?),
             "--costs" => self.costs = true,
             "--lite" => self.lite = true,

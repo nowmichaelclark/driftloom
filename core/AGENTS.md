@@ -34,6 +34,10 @@ core, and how to add a block, is `core/README.md`.
   the same PR: the baseline's `player` part moves with the page, and
   `--browser` fails until the player follows.
 
+- `cargo test --locked --features sketch` and `cargo clippy --all-targets
+  --features sketch`: the sketch folder (`core/sketch/`, item 83) as it stands,
+  kit-probed; CI runs them. `tools/clips.mjs` makes clips with it.
+
 ## Standing rules for core items
 
 In addition to the queue's rules; from the charter's promises 2 and 6, held

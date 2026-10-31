@@ -3185,3 +3185,53 @@ JavaScript. And the end of phase 2's port.
   the slowest target (promise 1); generation's share of a minute's render
   reported. No allocation after `Core::new`; memory in bytes.
 - A seed-to-WAV run of the corpus's first 80 loops in CI (hashes kept).
+
+## 83. Ears on the core: sketches before the JavaScript synth retires (done, 2026-10-31)
+
+**Why:** the ears sessions sketch new sounds as patches to the JavaScript
+synth (`tools/ears/sketches/`) and hear them in offline renders; that synth
+retires at the end of phase 3, and sketches in it already sound different
+from the core. They need a way to sketch on the core itself, cheaply, with
+no Rust beyond the sketch. And the brain needs clips the app can't make
+(choices forced, a constant moved), as Session 26 did by hand.
+
+**What:**
+- **Sketch blocks:** a folder (`core/sketch/`) where an ears or brain
+  session drops one block file (the kit's interface) and one line of data
+  naming where it plays (a channel's own block, a voice for a layer, a send),
+  built only with a `sketch` feature, never in the app's `.wasm`. The kit
+  probes it as any block (level, tone, cost) with no test written.
+- **`tools/clips.mjs`:** clips through the real engine on the core (from
+  Session 26's scratch renderer, `docs/archive/session26-clips.md`): corpus loops by seed or `profile #n`,
+  seconds, a window (`--from`), mono or stereo, wander on or off, **any
+  choice forced** (`--force lateFloor=on`; through the request once item
+  85 lands), any named setting pinned, a sketch block on, and a constant
+  moved for the A/B (`--set bass.LIFT_DB=3`, through a sketch-only table of
+  named constants), to WAV and Opus, with an index of what each loop drew.
+- `docs/ears/sessions.md` and `tools/ears/README.md` say how; the old JS
+  sketch path stays until phase 3 ends.
+
+**Yardsticks:** a demonstration sketch (a test-only block, one file and one
+line) heard in a clip and probed by the kit; the clips tool reproduces
+Session 26's forced clips sample for sample; the app's `.wasm` unchanged
+with the feature off (byte for byte).
+
+**Since item 82 (brain, 2026-10-31):** the clips may be rendered by the
+player (`dlrender --seed`, natively, no Chromium) rather than through the
+page's engine; that is the better base, since it is what phase 3 and the
+game play. Then Session 26's clips are reproduced within item 82's hand-over
+difference (all under -64 dBFS, most near -90; say the largest) rather than
+sample for sample, and the player's own clips are bit for bit run to run.
+Sketch blocks stay out of `js/dlplayer.wasm` too.
+
+**Built (hands, Sonnet 5.5):** `core/sketch/` (`block.rs`, `where.txt`,
+`README.md`) behind the `sketch` feature, registered as a channel's own block
+by `src/blocks/sketch.rs` (one fixed line in the registry, an `on` setting in
+front of the sketch's own); the kit probes it with no stored render.
+`src/tuning.rs` (named constants, `bass.LIFT_DB` first), `Generator::force`
+(a choice forced, sketch build only) and `dlrender --sketch --force --set
+--pin --from --pick --choices`; `tools/clips.mjs` drives them from a job list
+to WAV and Opus with an index. **Not built:** a sketch voice
+(`docs/notes/83-sketch-voice.md`). Session 26's WAVs are not in the repo, so
+the clips were not compared with them; the one figure kept, undertow #45 with
+lateFloor forced, reproduces (the low end returns at 0:29-0:30).

@@ -154,6 +154,7 @@ the brain and hands counter (Session 1, 2, ... in `docs/BRAIN.md`).
   written specs (a local sketch of the JavaScript synth is fine for
   rendering clips; it is never pushed as app code); the hands build them,
   from the queue, with the usual checks.
+- **Sketches on the core (item 83).** A sketch can now be a block on the core itself: one file and one line in `core/sketch/`, built only with the `sketch` feature, heard with `tools/clips.mjs` and probed by the kit (`core/sketch/README.md`). It still never goes in the app; the hands build the approved sound.
 - **The queue.** Findings go to the repo (`docs/ears/`); the brain writes queue items.
 
 ## Lessons from the first sessions

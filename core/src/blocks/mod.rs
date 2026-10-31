@@ -497,6 +497,7 @@ registry! {
         #[cfg(test)] swell::Swell = SWELL (swell::REST);
         #[cfg(test)] chorale::Chorale = CHORALE (chorale::REST);
         #[cfg(test)] duck::Duck = DUCK (duck::REST);
+        #[cfg(feature = "sketch")] sketch::Sketch = SKETCH (sketch::REST);
     }
     parts {
         osc::Oscillator;

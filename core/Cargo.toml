@@ -52,6 +52,14 @@ player = ["web"]
 # have two panic handlers.
 capi = []
 
+# Sketch blocks (queue item 83): `core/sketch/` holds one block file and one
+# line of data that an ears or brain session drops in, the registry plays it
+# (`src/blocks/sketch.rs`), and `dlrender --sketch` turns it on where the
+# data says. Also the clips' hooks: choices forced, and named constants moved
+# (`src/tuning.rs`). Never in the app's .wasm, the player's or the C header's
+# build: tools/build-core.sh --check holds that byte for byte.
+sketch = []
+
 [profile.release]
 opt-level = 3
 lto = true

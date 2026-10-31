@@ -51,6 +51,11 @@ jobs:
       - name: Core tests
         working-directory: core
         run: cargo test --locked
+      # The sketch folder as it stands (queue item 83): kit-probed, with the
+      # forcing and constants tests; never in the app's .wasm (the check above).
+      - name: Core tests, sketch build
+        working-directory: core
+        run: cargo test --locked --features sketch
       # Pedantic clippy holds at zero in every file (queue item 74); a lint
       # that would make the code worse is allowed where it occurs, with a
       # reason. The pinned toolchain is the profile without clippy.
@@ -60,6 +65,7 @@ jobs:
           rustup component add clippy
           cargo clippy --all-targets --locked -- -W clippy::pedantic -D warnings
           cargo clippy --lib --locked --features capi -- -W clippy::pedantic -D warnings
+          cargo clippy --all-targets --locked --features sketch -- -W clippy::pedantic -D warnings
       - name: Worklet tests
         run: node test/worklet.test.mjs
       - name: Core host tests

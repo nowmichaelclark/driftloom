@@ -57,6 +57,8 @@ pub mod resample;
 pub mod rng;
 pub mod space;
 pub mod timeline;
+#[cfg(feature = "sketch")]
+pub mod tuning;
 pub mod wave;
 
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
@@ -820,6 +822,12 @@ impl Core {
     /// number or is outside `BASS_LIFT_MAX` either way. Not reset by
     /// `clear` or `cancel`; `init` sets it to 0.
     pub fn bass_lift(&mut self, db: f64) -> bool {
+        // A clip's A/B moves the bass layer's level (`dlrender --set
+        // bass.LIFT_DB=3`): the sketch build's table says so (`tuning`). It
+        // moves the lift a loop with a kick gets, as the constant does, not
+        // the none a kickless loop sends.
+        #[cfg(feature = "sketch")]
+        let db = if db == 0.0 { db } else { tuning::get("bass.LIFT_DB", db) };
         if !(db.is_finite() && db.abs() <= BASS_LIFT_MAX) {
             return false;
         }

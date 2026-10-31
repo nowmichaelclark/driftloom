@@ -427,6 +427,13 @@ fn fft(re: &mut [f64], im: &mut [f64]) {
     }
 }
 
+/// Whether a row is the sketch slot's (`blocks::sketch`, queue item 83): a
+/// sketch is checked like any block but has no stored render, since it
+/// changes whenever its session does and the stored renders are the app's.
+fn is_sketch(name: &str) -> bool {
+    name.starts_with("sketch/")
+}
+
 /// Every block in the registry (or only the one named), through the kit.
 fn run(only: Option<&'static str>) -> Vec<Row> {
     std::thread::Builder::new()
@@ -464,7 +471,7 @@ fn every_block_passes_its_kit() {
                 let _ = writeln!(file, "{}", row.line());
             }
         }
-        for row in rows.iter().filter(|r| !kept.contains(&r.name.as_str())) {
+        for row in rows.iter().filter(|r| !kept.contains(&r.name.as_str()) && !is_sketch(&r.name)) {
             let _ = writeln!(file, "{}", row.line());
         }
         std::fs::write(STORED, file).expect("the stored renders are written");
@@ -489,6 +496,9 @@ fn every_block_passes_its_kit() {
         );
         for f in &row.faults {
             faults.push(format!("{}: {f}", row.name));
+        }
+        if is_sketch(&row.name) {
+            continue;
         }
         let line = row.line();
         let now = line.split_once(' ').map_or("", |(_, rest)| rest);
