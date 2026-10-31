@@ -146,6 +146,13 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'damp':
         if (core) core.dl_damp(m.channel, m.time);
         return;
+      // The voice budget taking room from a layer's oldest notes (queue
+      // item 85c; Core::steal).
+      case 'steal': {
+        const k = m.key;
+        if (core) core.dl_steal(m.channel, k.seed >>> 0, k.pass >>> 0, k.step >>> 0, k.ord >>> 0, m.from, m.to);
+        return;
+      }
       // The listener's Mono switch (queue item 66): Core::set_layout, which
       // fades while the core plays.
       case 'layout':

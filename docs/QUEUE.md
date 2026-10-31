@@ -13,7 +13,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 generator in Rust, proven on the generation goldens, and the player; checked
 by the brain's Session 28) and **83** (ears on the core: sketch blocks and
 `tools/clips.mjs`) and **84** (the chords' octave from the progression).
-**Next: item 85c, then 85b** (85a is #302). Item 75 is low priority. 37
+**Next: item 85b** (85a is #302, 85c #303). Item 75 is low priority. 37
 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 

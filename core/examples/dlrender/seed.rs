@@ -169,6 +169,10 @@ impl Host for Tracer<'_> {
         nums(self.lines, "lift", &[db]);
         self.core.bass_lift(db);
     }
+    fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
+        nums(self.lines, "steal", &[f64::from(channel), f64::from(key.seed), f64::from(key.pass), f64::from(key.step), f64::from(key.ord), from, to]);
+        self.core.steal(channel, key, from, to);
+    }
 }
 
 /// The seeds of the corpus `seed` draws (`Rng(seed).seed32()` a loop, as

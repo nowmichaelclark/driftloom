@@ -100,6 +100,10 @@ impl Host for Notes<'_> {
     fn bass_lift(&mut self, db: f64) {
         self.core.bass_lift(db);
     }
+    fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
+        self.notes.push(format!("steal {channel} {key:?} {} {}", from.to_bits(), to.to_bits()));
+        self.core.steal(channel, key, from, to);
+    }
 }
 
 /// The notes the player hands over in `frames` frames, the loop asked for
