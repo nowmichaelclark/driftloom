@@ -335,6 +335,37 @@ const LATE_LAYER_RESERVE = MAX_BUDGET - SOFT_BUDGET;
 // any of those values, because 90 is the smaller term there.
 const RESERVE_SHARE = 0.42;
 
+// Queue item 85c: the budget takes room from old notes, not new ones. A
+// note that doesn't fit lets go of its own layer's oldest voices still
+// holding the budget (from other steps: a chord never cuts its own tones),
+// one at a time until it fits, and is refused only if that can't make room.
+// Each voice let go falls to nothing over STEAL_FADE, ending as the new note
+// starts, so the budget never counts less than is playing. Measured first
+// (`measure.mjs --refusals`, "what holds the budget"): on lite a refused
+// melody note is held out by the melody's own earlier notes (72% of what is
+// held) and letting them go would fit it every time; the chords' 84%.
+//
+// On the core only: it lets a note go by its key (`Core::steal`), and the
+// JavaScript synth (the fallback) has no fade to give a voice built, so it
+// refuses as before. Lite only for now (`STEAL_QUALITIES`), conservative, and
+// both for Mikey's ears: the fade's length and whether full quality follows.
+const STEAL_FADE = 0.05;
+const STEAL_QUALITIES = { lite: true, full: false };
+
+// The layer a voice call plays for (the engine's layers), from the entry
+// point and its arguments, as measure.mjs's refusal count reads it; null for
+// the parts that play for no layer of their own (glass, a stab's notes).
+function layerOfCall(synth, name, args) {
+  switch (name) {
+    case 'drum': return 'drums';
+    case 'bass': return 'bass';
+    case 'pad': return 'chords';
+    case 'texture': return 'texture';
+    case 'voice': return args[5] === synth.channels.chords.gain ? 'chords' : 'melody';
+    default: return null;
+  }
+}
+
 // The struck bells, templebell and tubular, used to apply velocity twice:
 // once in the output envelope and again in every partial's gain (and the
 // bowl's strike), so their level went with velocity squared -- 11.7 LU
@@ -474,6 +505,10 @@ export class Synth {
     // numbered by how many have been, so a run is still the same every time.
     this.key = null;
     this._unkeyed = 0;
+    // The voice call being built and what the budget let go, by layer (queue
+    // item 85c; `_steal`).
+    this._group = null;
+    this.stolen = { drums: 0, bass: 0, chords: 0, melody: 0, texture: 0 };
     // The kicks' ducks handed to the core, the last second's (`cancelFrom`).
     this._ducks = [];
     // The loop's chapel organ settings (organSetup), or null.
@@ -1361,7 +1396,49 @@ export class Synth {
     // ceilings -- full is unchanged at 170, and lite gets 50.
     const reserve = Math.min(LATE_LAYER_RESERVE, Math.round(ceiling * RESERVE_SHARE));
     const cap = soft ? Math.max(40, ceiling - reserve) : ceiling;
-    if (spent + cost > cap) return false;
+    if (spent + cost > cap) return this._steal(time, cost, cap, spent);
+    return true;
+  }
+
+  // A note that doesn't fit takes room from its own layer's oldest voices
+  // (STEAL_FADE says why): the voice calls holding the budget for the asking
+  // call's layer, from other steps, started before `time`, oldest first (by
+  // their earliest hold's start; ties as the holds stand). They are let go one
+  // at a time until the note fits; if all of them would not make room,
+  // nothing is let go and the note is refused. Each one let go falls from
+  // STEAL_FADE before `time` (or its start, if later) to nothing at `time`,
+  // in every core channel its notes went to, lowest first, and its holds are
+  // let go. core/src/player/budget.rs does the same, in the same order.
+  _steal(time, cost, cap, spent) {
+    const g = this._group;
+    if (!g || !this.core || this.engine !== 'rust' || !STEAL_QUALITIES[this.quality]) return false;
+    const groups = [];
+    for (const r of this._releases) {
+      const h = r.group;
+      if (!h || h === g || h.layer !== g.layer || (h.key.pass === g.key.pass && h.key.step === g.key.step)) continue;
+      let e = groups.find((x) => x.group === h);
+      if (!e) {
+        e = { group: h, start: r.start, cost: 0 };
+        groups.push(e);
+      } else if (r.start < e.start) {
+        e.start = r.start;
+      }
+      e.cost += r.cost;
+    }
+    const older = groups.filter((e) => e.start < time).sort((a, b) => a.start - b.start);
+    let left = spent;
+    let n = 0;
+    while (n < older.length && left + cost > cap) left -= older[n++].cost;
+    if (left + cost > cap) return false;
+    const gone = new Set();
+    for (const e of older.slice(0, n)) {
+      const h = e.group;
+      const from = Math.max(e.start, time - STEAL_FADE);
+      for (const ch of h.channels.slice().sort((a, b) => a - b)) this.core.steal(ch, h.key, from, time);
+      gone.add(h);
+      this.stolen[h.layer]++;
+    }
+    this._releases = this._releases.filter((r) => !gone.has(r.group));
     return true;
   }
 
@@ -1392,7 +1469,9 @@ export class Synth {
     if (this._building) this._voiceEnd = Math.max(this._voiceEnd ?? 0, at);
     let i = this._releases.length;
     while (i > 0 && this._releases[i - 1].at > at) i--;
-    this._releases.splice(i, 0, { at, cost });
+    // Its start and its voice call's group (queue item 85c), for `_steal`.
+    const start = typeof dur === 'number' ? time : this.ctx.currentTime;
+    this._releases.splice(i, 0, { at, cost, start, group: this._group });
   }
 
   // A buffer source starts on the frame its start time rounds to (to 1/1024
@@ -1427,8 +1506,8 @@ export class Synth {
     const noisy = inst !== 'softkick' && inst !== 'rim';
     const channel = noisy ? this._coreNoiseChannel(out) : this._coreChannel(out);
     if (channel < 0) return false;
-    if (hat !== undefined) this.core.note(CORE_VOICES.hat, channel, time, 0, 0, v, hat);
-    else this.core.note(CORE_VOICES.drum, channel, time, 0, 0, v, kind);
+    if (hat !== undefined) this._toCore(CORE_VOICES.hat, channel, time, 0, 0, v, hat);
+    else this._toCore(CORE_VOICES.drum, channel, time, 0, 0, v, kind);
     this._release(time, DRUM_HOLD[inst], cost);
     return true;
   }
@@ -1453,7 +1532,7 @@ export class Synth {
     const k = kick.kick[kick.kind];
     const soft = inst === 'softkick';
     this.core.event(channel, EVENTS.choke, time);
-    this.core.note(CORE_VOICES.tunedkick, channel, time, 0, TUNED_KICK_RINGS, v, DRUM_KINDS[inst],
+    this._toCore(CORE_VOICES.tunedkick, channel, time, 0, TUNED_KICK_RINGS, v, DRUM_KINDS[inst],
       [kick.kick.hz, k.dbps, soft ? k.softLift : k.lift, soft ? k.softTail : k.tail]);
     this._release(time, DRUM_HOLD[inst], cost);
     return true;
@@ -1687,7 +1766,7 @@ export class Synth {
       const channel = pluck ? this._coreNoiseChannel(out) : this._coreChannel(out);
       if (channel >= 0) {
         const parts = (BASS_KINDS[voice] ?? 0) | (glide ? BASS_GLIDE : 0) | (chug ? BASS_CHUG : 0);
-        this.core.note(CORE_VOICES.bass, channel, time, midi, dur, vel, parts);
+        this._toCore(CORE_VOICES.bass, channel, time, midi, dur, vel, parts);
         this._release(time, hold, cost);
         return;
       }
@@ -1895,7 +1974,7 @@ export class Synth {
     for (const midi of notes) {
       if (!this._budget(time, true, cost)) return;
       if (core >= 0) {
-        this.core.note(CORE_VOICES.pad, core, time, midi, dur, vel, 0, [notes.length, NaN, NaN, NaN]);
+        this._toCore(CORE_VOICES.pad, core, time, midi, dur, vel, 0, [notes.length, NaN, NaN, NaN]);
         this._release(time, dur + 1.6, cost);
         continue;
       }
@@ -2051,17 +2130,25 @@ export class Synth {
       parts |= KALIMBA_BODY;
       this._release(time, 0.25, 3);
     }
-    if (parts) this.core.note(CORE_VOICES.kalimba, channel, time, midi, dur, vel, parts);
+    if (parts) this._toCore(CORE_VOICES.kalimba, channel, time, midi, dur, vel, parts);
     return true;
   }
 
   // A note for the core, once the budget has said yes: false when it cannot
   // take it (counted as a fallback), and the JavaScript voice plays it.
   // `extra` is the voice's own values (core/src/lib.rs).
+  // Every note handed to the core, through here: the voice call's group
+  // notes the channel (queue item 85c), so the budget can let it go there.
+  _toCore(voice, channel, ...rest) {
+    const g = this._group;
+    if (g && g.channels.indexOf(channel) < 0) g.channels.push(channel);
+    return this.core.note(voice, channel, ...rest);
+  }
+
   _coreNote(voice, dest, time, midi, dur, vel, extra, parts = 0) {
     const channel = this._coreChannel(dest);
     if (channel < 0) return false;
-    this.core.note(voice, channel, time, midi, dur, vel, parts, extra);
+    this._toCore(voice, channel, time, midi, dur, vel, parts, extra);
     return true;
   }
 
@@ -2279,7 +2366,7 @@ export class Synth {
   _coreFiddle(midi, time, dur, vel, dest, opts) {
     const channel = this._coreChannel(dest);
     if (channel < 0) return false;
-    this.core.note(CORE_VOICES.fiddle, channel, time, midi, dur, vel, 0, [opts.prev ?? NaN]);
+    this._toCore(CORE_VOICES.fiddle, channel, time, midi, dur, vel, 0, [opts.prev ?? NaN]);
     this._release(time, dur + 0.4, VOICE_COST.fiddle);
     return true;
   }
@@ -2324,7 +2411,7 @@ export class Synth {
         if (this.engine === 'rust') {
           const channel = this._coreNoiseChannel(dest);
           if (channel >= 0) {
-            this.core.note(breathy ? CORE_VOICES.flute : CORE_VOICES.ocarina, channel, time, midi, dur, vel, 0,
+            this._toCore(breathy ? CORE_VOICES.flute : CORE_VOICES.ocarina, channel, time, midi, dur, vel, 0,
               [opts.prev ?? NaN]);
             this._release(time, dur + 0.4, VOICE_COST[name]);
             return;
@@ -2501,7 +2588,7 @@ export class Synth {
         if (this.engine === 'rust') {
           const channel = this._coreNoiseChannel(dest);
           if (channel >= 0) {
-            this.core.note(CORE_VOICES.panflute, channel, time, midi, dur, vel, 0);
+            this._toCore(CORE_VOICES.panflute, channel, time, midi, dur, vel, 0);
             this._release(time, dur + 0.4, VOICE_COST.panflute);
             return;
           }
@@ -2663,7 +2750,7 @@ export class Synth {
         // bandpass's frequency, are the core's draws.
         const knockChannel = this.engine === 'rust' ? this._coreNoiseChannel(dest) : -1;
         if (knockChannel >= 0) {
-          this.core.note(CORE_VOICES.knock, knockChannel, time, midi, 0.05, vel, 0);
+          this._toCore(CORE_VOICES.knock, knockChannel, time, midi, 0.05, vel, 0);
         } else {
           const knock = this._noiseSource(time, 0.05);
           const bp = ctx.createBiquadFilter();
@@ -2892,7 +2979,7 @@ export class Synth {
           if (dur > SUNG_LONGEST) this.fallbacks++;
           if (channel >= 0) {
             const vowel = humming ? 0 : (SUNG_VOWELS[vowelKey] ?? 0);
-            this.core.note(CORE_VOICES[name], channel, time, midi, dur, vel, 0,
+            this._toCore(CORE_VOICES[name], channel, time, midi, dur, vel, 0,
               [vowel, targetId, trim, opts.detune || 0]);
             this._release(time, dur + 0.9, cost);
             return;
@@ -3068,7 +3155,7 @@ export class Synth {
         if (this.engine === 'rust') {
           const channel = this._coreNoiseChannel(dest);
           if (channel >= 0) {
-            this.core.note(CORE_VOICES.templebell, channel, time, midi, dur, vel, 0);
+            this._toCore(CORE_VOICES.templebell, channel, time, midi, dur, vel, 0);
             this._release(time, hold + 1.4, VOICE_COST.templebell);
             return;
           }
@@ -3175,7 +3262,7 @@ export class Synth {
         if (this.engine === 'rust' && !opts.glide) {
           const channel = this._coreChannel(dest);
           if (channel >= 0) {
-            this.core.note(whistle ? CORE_VOICES.whistle : CORE_VOICES.moog, channel, time, midi, dur, vel, 0,
+            this._toCore(whistle ? CORE_VOICES.whistle : CORE_VOICES.moog, channel, time, midi, dur, vel, 0,
               whistle ? [opts.prev ?? NaN] : []);
             this._release(time, dur + 0.5, VOICE_COST[name]);
             return;
@@ -3338,7 +3425,7 @@ export class Synth {
       if (this.engine === 'rust') {
         const channel = this._coreNoiseChannel(out);
         if (channel >= 0) {
-          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.drop);
+          this._toCore(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.drop);
           this._release(time, 0.15);
           return;
         }
@@ -3361,7 +3448,7 @@ export class Synth {
       if (this.engine === 'rust') {
         const channel = this._coreNoiseChannel(out);
         if (channel >= 0) {
-          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.wind,
+          this._toCore(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.wind,
             [NaN, opts.band || NaN]);
           this._release(time, dur + 1);
           return;
@@ -3398,7 +3485,7 @@ export class Synth {
       if (this.engine === 'rust') {
         const channel = this._coreNoiseChannel(out);
         if (channel >= 0) {
-          this.core.note(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.waves);
+          this._toCore(CORE_VOICES.texture, channel, time, 0, dur, vel, TEXTURE_KINDS.waves);
           this._release(time, dur + 0.1, VOICE_COST.waves);
           return;
         }
@@ -3444,10 +3531,17 @@ for (const name of VOICE_ENTRIES) {
     const built = [];
     this._building = built;
     this._voiceEnd = null;
+    // The voice call's group (queue item 85c): its key, its layer and the
+    // core channels its notes go to; every hold it makes points to it, so
+    // the budget can let the whole call go.
+    const layer = this.key ? layerOfCall(this, name, args) : null;
+    const k = this.key;
+    this._group = layer ? { key: { seed: k.seed, pass: k.pass, step: k.step, ord: k.ord }, layer, channels: [] } : null;
     try {
       return play.apply(this, args);
     } finally {
       this._building = null;
+      this._group = null;
       this._retire(built, this._voiceEnd);
     }
   };

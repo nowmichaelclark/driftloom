@@ -437,7 +437,9 @@ impl Sequencer {
                         _ => None::<Fall>,
                     },
                 });
+                synth.budget.begin(Some(Layer::Drums), key);
                 synth.drum(host, key, inst, at, vel, hit);
+                synth.budget.end();
                 if truthy(pump) && kicked {
                     Synth::duck(host, t + micro, pump * vel);
                 }
@@ -454,7 +456,9 @@ impl Sequencer {
                 if late.is_some_and(|l| abs < l.bass) {
                     continue;
                 }
+                synth.budget.begin(Some(Layer::Bass), key);
                 synth.bass(host, key, midi, t, e.dur * sd, vel, e.glide, e.voice, e.chug);
+                synth.budget.end();
             }
         }
         // An ensemble does not attack together: a choir's layers each slip,
@@ -475,7 +479,10 @@ impl Sequencer {
                 let dur = e.dur * sd;
                 let opts = Opts { vowel: e.vowel, detune: e.detune, ..Opts::default() };
                 if e.voice == "pad" {
-                    synth.pad(host, key_of(Layer::Chords), chord.notes(), t, dur, vel * CHORD_SPREAD, CHORDS);
+                    let k = key_of(Layer::Chords);
+                    synth.budget.begin(Some(Layer::Chords), k);
+                    synth.pad(host, k, chord.notes(), t, dur, vel * CHORD_SPREAD, CHORDS);
+                    synth.budget.end();
                     continue;
                 }
                 let notes = chord.notes();
@@ -491,14 +498,20 @@ impl Sequencer {
                         let string = if down { notes[k] } else { notes[n - 1 - k] };
                         let at = if n > 1 { span * js::num(k) / js::num(n - 1) } else { 0.0 };
                         let strummed = Opts { strum: true, ..opts };
-                        synth.voice(host, key_of(Layer::Chords), e.voice, f64::from(string), t + slip + at, dur, vel * spread * weight, CHORDS, &strummed);
+                        let k = key_of(Layer::Chords);
+                        synth.budget.begin(Some(Layer::Chords), k);
+                        synth.voice(host, k, e.voice, f64::from(string), t + slip + at, dur, vel * spread * weight, CHORDS, &strummed);
+                        synth.budget.end();
                     }
                     continue;
                 }
                 for (k, &n) in notes.iter().enumerate() {
                     // A few milliseconds apart, fingers rather than a switch.
                     let at = t + slip + js::num(k) * 0.011;
-                    synth.voice(host, key_of(Layer::Chords), e.voice, f64::from(n), at, dur, vel * spread, CHORDS, &opts);
+                    let k = key_of(Layer::Chords);
+                    synth.budget.begin(Some(Layer::Chords), k);
+                    synth.voice(host, k, e.voice, f64::from(n), at, dur, vel * spread, CHORDS, &opts);
+                    synth.budget.end();
                 }
             }
             if s.organ.is_some() {
@@ -528,18 +541,27 @@ impl Sequencer {
                 let dur = e.dur * sd;
                 let vowel = (!e.vowel.is_empty()).then_some(e.vowel);
                 let opts = Opts { vowel, detune: e.detune, prev: e.prev, ..Opts::default() };
-                synth.voice(host, key_of(Layer::Melody), e.voice, midi, t + slip, dur, vel, MELODY, &opts);
+                let k = key_of(Layer::Melody);
+                synth.budget.begin(Some(Layer::Melody), k);
+                synth.voice(host, k, e.voice, midi, t + slip, dur, vel, MELODY, &opts);
+                synth.budget.end();
                 // Asked for after the note, so where the budget is short it
                 // is the decoration that yields, never the tune.
                 let mode = e.steps.as_ref().map_or(lp.spec.steps(), |s| &s[..]);
                 let line = Opts { vowel, detune: e.detune, ..Opts::default() };
                 if let Some(under) = harmony_of(e.harm, midi, root, mode) {
-                    synth.voice(host, key_of(Layer::Melody), e.voice, under, t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
+                    let k = key_of(Layer::Melody);
+                    synth.budget.begin(Some(Layer::Melody), k);
+                    synth.voice(host, k, e.voice, under, t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
+                    synth.budget.end();
                 }
                 let (graces, n) = graces_of(e.orn, midi, root, mode);
                 for (k, &g) in graces.iter().take(n).enumerate() {
                     let at = t + slip - GRACE * js::num(n - k);
-                    synth.voice(host, key_of(Layer::Melody), e.voice, g, js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
+                    let k = key_of(Layer::Melody);
+                    synth.budget.begin(Some(Layer::Melody), k);
+                    synth.voice(host, k, e.voice, g, js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
+                    synth.budget.end();
                 }
             }
         }
@@ -549,7 +571,10 @@ impl Sequencer {
                 if e.step != s_at || !truthy(e.vel) {
                     continue;
                 }
-                synth.texture(host, key_of(Layer::Texture), e.kind, &e.notes, t, e.dur * sd, e.vel, e.band);
+                let k = key_of(Layer::Texture);
+                synth.budget.begin(Some(Layer::Texture), k);
+                synth.texture(host, k, e.kind, &e.notes, t, e.dur * sd, e.vel, e.band);
+                synth.budget.end();
             }
         }
     }

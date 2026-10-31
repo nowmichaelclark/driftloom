@@ -1986,10 +1986,31 @@ async function runOne(spec, quality, rate, engineName) {
 
   let layer = null;
   let noteFailed = false;
+  // What holds the budget at each refusal (queue item 85c): every hold is
+  // tagged with the layer whose entry point made it, and at a refusal the
+  // held cost is summed by layer; and the note is asked again with the
+  // asking layer's own holds set aside, to say whether letting them go
+  // would have made room (the most a steal from its own layer could do).
+  const held = {}; const ownFits = {}; const refusals = {};
+  for (const l of LAYERS) { held[l] = Object.fromEntries([...LAYERS, 'other'].map((k) => [k, 0])); ownFits[l] = 0; refusals[l] = 0; }
+  const realRelease = synth._release.bind(synth);
+  synth._release = (...a) => {
+    const out = realRelease(...a);
+    for (const r of synth._releases) if (r.layer === undefined) r.layer = layer || 'other';
+    return out;
+  };
   const realBudget = synth._budget.bind(synth);
   synth._budget = (...a) => {
     const ok = realBudget(...a);
     if (layer) { calls[layer]++; if (!ok) { callsRefused[layer]++; noteFailed = true; } }
+    if (layer && !ok) {
+      refusals[layer]++;
+      for (const r of synth._releases) held[layer][r.layer] += r.cost;
+      const all = synth._releases;
+      synth._releases = all.filter((r) => r.layer !== layer);
+      if (realBudget(...a)) ownFits[layer]++;
+      synth._releases = all;
+    }
     return ok;
   };
   // One "note" is one entry-point call. It counts as refused if any budget
@@ -2024,7 +2045,7 @@ async function runOne(spec, quality, rate, engineName) {
   }
   await settle(synth);
   await rendered(ctx, synth);
-  return { asked, refused, calls, callsRefused, seconds };
+  return { asked, refused, calls, callsRefused, seconds, held, ownFits, refusals, stolen: { ...(synth.stolen || {}) } };
 }
 
 window.refusalsOne = async (o) => {
@@ -2045,6 +2066,7 @@ window.refusalsCorpus = async (o) => {
     rows.push({
       name: spec.name, seed: spec.seed,
       asked: r.asked, refused: r.refused,
+      held: r.held, ownFits: r.ownFits, refusals: r.refusals, stolen: r.stolen,
       profile: leadOf(spec),
     });
   }
@@ -2100,6 +2122,24 @@ function reportRefusalsCorpus(rows, opts) {
     const xs = rows.map((r) => rate(r, l)).filter((x) => x != null);
     out.push(`    ${l.padEnd(9)} ${pc(mean(xs)).padStart(7)}   over ${xs.length} loops`);
   }
+  out.push('');
+  // Queue item 85c: who holds the budget when a layer is refused.
+  const HOLDERS = ['drums', 'bass', 'chords', 'melody', 'texture', 'other'];
+  out.push('  what holds the budget at each refusal (share of the held cost, by layer;');
+  out.push('  "own fits": refusals that letting the asking layer\'s own holds go would fix)');
+  out.push(`    asking     refusals  ${HOLDERS.map((h) => h.padStart(8)).join('')}   own fits`);
+  for (const l of ['drums', 'bass', 'chords', 'melody', 'texture']) {
+    const n = rows.reduce((a, r) => a + (r.refusals ? r.refusals[l] : 0), 0);
+    if (!n) continue;
+    const sums = HOLDERS.map((h) => rows.reduce((a, r) => a + (r.held ? r.held[l][h] : 0), 0));
+    const total = sums.reduce((a, b) => a + b, 0) || 1;
+    const fits = rows.reduce((a, r) => a + (r.ownFits ? r.ownFits[l] : 0), 0);
+    out.push(`    ${l.padEnd(9)} ${String(n).padStart(9)}  ${sums.map((x) => pc(x / total).padStart(8)).join('')}   ${pc(fits / n).padStart(8)}`);
+  }
+  out.push('');
+  // Queue item 85c: the voice calls the budget let go to make room.
+  const stolen = ['drums', 'bass', 'chords', 'melody', 'texture'].map((l) => `${l} ${rows.reduce((a, r) => a + ((r.stolen && r.stolen[l]) || 0), 0)}`);
+  out.push(`  voice calls let go for newer notes (85c): ${stolen.join(', ')}`);
   out.push('');
   out.push('  worst loops by melody refusal rate');
   const worst = rows.filter((r) => r.asked.melody)

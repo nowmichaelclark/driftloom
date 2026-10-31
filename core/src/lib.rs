@@ -368,6 +368,12 @@ struct Slot {
     /// which channel events it hears (`Core::event`).
     seq: u64,
     until: f64,
+    /// Where its note sits in its loop, as the host keyed it (`Core::key`):
+    /// what `Core::steal` finds it by, with its channel.
+    key: Key,
+    /// A steal's fade (queue item 85c), from and to a frame: the note falls
+    /// linearly to nothing between them and ends. (0, 0) for none.
+    fade: (u64, u64),
     voice: Held,
     /// Where a stereo render places it apart from its channel (queue item
     /// 65; `space`): `UNPLACED`, or the light kit's (`KIT`, `KIT_SOFT`) or
@@ -404,6 +410,8 @@ impl Slot {
             end: 0,
             seq: 0,
             until: 0.0,
+            key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
+            fade: (0, 0),
             voice: Held::FREE,
             place: UNPLACED,
         }
@@ -429,6 +437,10 @@ struct Waiting {
     /// due, to the notes sounding then, so a waiting note keeps none.
     heard: u8,
     events: [(f64, f64); event::ONCE],
+    /// Where its note sits in its loop, and a steal's fade, as `Slot` keeps
+    /// them: a steal reaches a note still waiting too.
+    key: Key,
+    fade: (u64, u64),
 }
 
 const NOTHING: Waiting = Waiting {
@@ -448,6 +460,8 @@ const NOTHING: Waiting = Waiting {
     seq: 0,
     heard: 0,
     events: [(0.0, 0.0); event::ONCE],
+    key: Key { seed: 0, pass: 0, step: 0, ord: 0 },
+    fade: (0, 0),
 };
 
 /// The core: the one thing a host holds. `const` and all
@@ -1171,10 +1185,45 @@ impl Core {
             seq: self.arrived,
             heard: 0,
             events: [(0.0, 0.0); event::ONCE],
+            key: self.key,
+            fade: (0, 0),
         };
         self.waiting += 1;
         self.arrived = self.arrived.wrapping_add(1);
         taken
+    }
+
+    /// Let a note go early (queue item 85c: the voice budget taking room
+    /// from a layer's oldest notes for a new one): every note in `channel`
+    /// the host keyed `key` (`Core::key`), sounding or still waiting, falls
+    /// linearly from its level at `from` to nothing at `to` (seconds on the
+    /// host's clock; a time already rendered is the next block's start, and
+    /// a fall with no time in it is given a block) and ends there. A note
+    /// already falling keeps the earlier end. Returns how many notes it
+    /// reached; nothing allocates.
+    pub fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) -> u32 {
+        if channel as usize >= CHANNELS || !from.is_finite() || !to.is_finite() {
+            return 0;
+        }
+        let a = frame_at(from, self.rate).max(self.next);
+        let b = frame_at(to, self.rate).max(a);
+        let b = if b > a { b } else { a + QUANTUM as u64 };
+        let mut n = 0;
+        let sooner = |fade: (u64, u64)| fade.1 <= fade.0 || b < fade.1;
+        for w in self.queue.iter_mut().take(self.waiting) {
+            if w.note.channel == channel && w.key == key && sooner(w.fade) {
+                w.fade = (a, b);
+                n += 1;
+            }
+        }
+        for slot in &mut self.slots {
+            if slot.busy && slot.channel == channel as usize && slot.key == key && sooner(slot.fade) {
+                slot.fade = (a, b);
+                slot.end = slot.end.min(b);
+                n += 1;
+            }
+        }
+        n
     }
 
     /// A new strum into `channel` at `time` (`damp()` in synth.js): a
@@ -1402,9 +1451,12 @@ impl Core {
         slot.place = place_of(&w.note);
         slot.seq = w.seq;
         slot.until = w.until;
+        slot.key = w.key;
+        slot.fade = w.fade;
         slot.begin = begin;
-        slot.end = end;
-        slot.busy = end > begin;
+        // A note stolen while it waited ends where its fade does.
+        slot.end = if w.fade.1 > w.fade.0 { end.min(w.fade.1) } else { end };
+        slot.busy = slot.end > begin;
         if !slot.busy {
             blocks::free(&slot.voice, &mut self.pools);
         }
@@ -1499,7 +1551,14 @@ impl Core {
             // What a placed note added to its channel, taken as the
             // difference, so the channel (the mid) is the mono render's.
             let before = if place == 0.0 { None } else { Some(*out) };
-            blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses, &mut self.sends, &mut sent);
+            if slot.fade.1 > slot.fade.0 && slot.fade.0 < end {
+                // A stolen note (`steal`): rendered apart, its fade applied,
+                // then added in. Every other note renders straight into its
+                // channel, as it always has.
+                render_fading(slot, &mut self.pools, block, &cx, out, buses, &mut self.sends, &mut sent);
+            } else {
+                blocks::render(&mut slot.voice, &mut self.pools, block, &cx, out, buses, &mut self.sends, &mut sent);
+            }
             if let (Some(before), Some(placed)) = (before, self.placed.get_mut(slot.channel)) {
                 // A note's place is the sign and size of the kit's or glass's;
                 // the weight is relative to the hats' (`space`), so it is
@@ -1606,6 +1665,56 @@ impl Default for Core {
     }
 }
 
+/// Render a stolen note's block (`Core::steal`): into buffers of its own,
+/// then each sample scaled by its fade (1 before it, falling linearly to 0
+/// at its end) and added where the note would have rendered.
+#[allow(clippy::too_many_arguments)]
+fn render_fading(
+    slot: &mut Slot,
+    pools: &mut Pools,
+    block: u64,
+    cx: &Context,
+    out: &mut Signal,
+    buses: &mut [Signal; own::COUNT],
+    sends: &mut Sends,
+    sent: &mut bool,
+) {
+    let mut own_out: Signal = [0.0; QUANTUM];
+    let mut own_buses: [Signal; own::COUNT] = [[0.0; QUANTUM]; own::COUNT];
+    let mut own_sends: Sends = [[0.0; QUANTUM]; 2];
+    let mut own_sent = false;
+    blocks::render(&mut slot.voice, pools, block, cx, &mut own_out, &mut own_buses, &mut own_sends, &mut own_sent);
+    let (a, b) = slot.fade;
+    // Frames, far below 2^53; the fade is a gain, a 32-bit float as every
+    // gain the mix holds.
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    let gain = |i: usize| -> f32 {
+        let f = block + i as u64;
+        if f < a {
+            1.0
+        } else if f >= b {
+            0.0
+        } else {
+            ((b - f) as f64 / (b - a) as f64) as f32
+        }
+    };
+    let add = |to: &mut Signal, from: &Signal| {
+        for (i, (o, &x)) in to.iter_mut().zip(from.iter()).enumerate() {
+            *o += x * gain(i);
+        }
+    };
+    add(out, &own_out);
+    for (bus, own_bus) in buses.iter_mut().zip(own_buses.iter()) {
+        add(bus, own_bus);
+    }
+    if own_sent {
+        block::open_sends(sends, sent);
+        for (send, own_send) in sends.iter_mut().zip(own_sends.iter()) {
+            add(send, own_send);
+        }
+    }
+}
+
 // Tests count with casts of values they have just bounded.
 #[cfg(test)]
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
@@ -1639,6 +1748,129 @@ mod tests {
             })
             .and_then(|t| t.join().map_err(|_| std::io::Error::other("panicked")))
             .expect("core")
+    }
+
+    // Queue item 85c: a note let go early sounds as it would have up to its
+    // fade's start, bit for bit; falls to nothing across the fade with no
+    // step larger than its own; is silent from its end, its voice let go;
+    // and a note not yet started when it is let go never sounds.
+    #[test]
+    fn a_stolen_note_fades_out_and_ends() {
+        let (mut whole, mut cut) = (boxed(), boxed());
+        let key = Key { seed: 7, pass: 0, step: 4, ord: 1 };
+        for core in [&mut whole, &mut cut] {
+            core.key(key);
+            core.note(KALIMBA, MELODY, 0.1, 69.0, 2.0, 0.8, STRIKE | BODY, NO);
+            core.key(Key { ord: 2, ..key });
+            core.note(KALIMBA, MELODY, 0.9, 72.0, 0.5, 0.8, STRIKE | BODY, NO);
+        }
+        assert_eq!(cut.steal(MELODY, key, 0.5, 0.55), 1, "the sounding note");
+        assert_eq!(cut.steal(MELODY, Key { ord: 9, ..key }, 0.5, 0.55), 0, "no such key");
+        let (from, to) = (frame_at(0.5, RATE) as usize, frame_at(0.55, RATE) as usize);
+        let mut biggest = 0.0f32;
+        let mut step = 0.0f32;
+        let mut last = 0.0f32;
+        for n in 0..(0.8 * RATE) as usize / QUANTUM {
+            let block = (n * QUANTUM) as u64;
+            let heard = whole.process(block)[MELODY as usize];
+            let kept = cut.process(block)[MELODY as usize];
+            for i in 0..QUANTUM {
+                let f = n * QUANTUM + i;
+                if f < from {
+                    assert_eq!(heard[i].to_bits(), kept[i].to_bits(), "frame {f}");
+                    biggest = biggest.max((heard[i] - last).abs());
+                } else if f < to {
+                    step = step.max((kept[i] - last).abs());
+                } else {
+                    assert_eq!(kept[i], 0.0, "frame {f}");
+                }
+                last = kept[i];
+            }
+        }
+        assert!(step <= biggest, "a step of {step} in the fade, the note's own up to {biggest}");
+        assert_eq!(cut.busy(), 1, "only the second note left, waiting");
+        // The second note, let go before it starts, never sounds.
+        assert_eq!(cut.steal(MELODY, Key { ord: 2, ..key }, 0.85, 0.88), 1);
+        for n in (0.8 * RATE) as usize / QUANTUM..(1.6 * RATE) as usize / QUANTUM {
+            let kept = cut.process((n * QUANTUM) as u64)[MELODY as usize];
+            assert!(kept.iter().all(|&v| v == 0.0));
+        }
+        assert_eq!(cut.busy(), 0);
+    }
+
+    /// Every voice's probes (the kit's), as `Core::note` would be handed
+    /// them.
+    struct EveryProbe(Vec<(&'static str, &'static str, Note, bool)>);
+
+    impl blocks::Visit for EveryProbe {
+        fn voice<V: block::Voice + Default>(&mut self, name: &'static str) {
+            for probe in V::PROBES {
+                self.0.push((name, probe.name, probe.settings, V::THROUGH.is_some()));
+            }
+        }
+        fn part<B: block::Block + Default>(&mut self, _: &'static str) {}
+    }
+
+    // Queue item 85c: every voice of the registry, at each of the kit's
+    // probes, let go at the budget's fade (0.05 s) while it sounds: bit for
+    // bit until the fade, no step from it on beyond the note's own (and what
+    // the fall itself adds, a 2,400th of its level a sample), and silent
+    // after it; a voice that plays through its channel's body hears the
+    // body ring on, as after any note of its.
+    #[test]
+    fn every_voice_let_go_falls_without_a_click() {
+        let mut probes = EveryProbe(Vec::new());
+        blocks::each(&mut probes);
+        assert!(probes.0.len() > 30, "{} probes", probes.0.len());
+        let (mut whole, mut cut) = (boxed(), boxed());
+        let key = Key { seed: 3, pass: 0, step: 0, ord: 0 };
+        let (from, to) = (0.3, 0.35);
+        let (a, b) = (frame_at(from, RATE) as usize, frame_at(to, RATE) as usize);
+        let mut checked = 0;
+        for (voice, probe, note, through) in &probes.0 {
+            // The kit's probes of a part no host note plays on a channel of
+            // its own.
+            if note.channel as usize >= CHANNELS {
+                continue;
+            }
+            checked += 1;
+            let mut loud = 0.0f32;
+            let mut own = 0.0f32;
+            let mut fall = 0.0f32;
+            for core in [&mut whole, &mut cut] {
+                core.init(RATE);
+                core.key(key);
+                let dur = if note.dur > 0.0 { 1.0 } else { 0.0 };
+                core.note(note.voice, note.channel, 0.05, note.midi, dur, note.vel, note.parts, note.extra);
+            }
+            cut.steal(note.channel, key, from, to);
+            let (mut was_whole, mut was_cut) = (0.0f32, 0.0f32);
+            for n in 0..(0.6 * RATE) as usize / QUANTUM {
+                let block = (n * QUANTUM) as u64;
+                let heard = whole.process(block)[note.channel as usize];
+                let kept = cut.process(block)[note.channel as usize];
+                for i in 0..QUANTUM {
+                    let f = n * QUANTUM + i;
+                    if f < b {
+                        own = own.max((heard[i] - was_whole).abs());
+                        loud = loud.max(heard[i].abs());
+                    }
+                    if f < a {
+                        assert_eq!(heard[i].to_bits(), kept[i].to_bits(), "{voice}/{probe} frame {f}");
+                    } else {
+                        fall = fall.max((kept[i] - was_cut).abs());
+                        if f >= b && !through {
+                            assert_eq!(kept[i], 0.0, "{voice}/{probe} frame {f}");
+                        }
+                    }
+                    was_whole = heard[i];
+                    was_cut = kept[i];
+                }
+            }
+            let allowed = own + loud / 2400.0 + 1e-7;
+            assert!(fall <= allowed, "{voice}/{probe}: a step of {fall} in the fall, the note's own {own}");
+        }
+        assert!(checked > 30, "{checked} probes checked");
     }
 
     #[test]

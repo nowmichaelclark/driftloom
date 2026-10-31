@@ -112,6 +112,14 @@ pub extern "C" fn dl_damp(channel: u32, time: f64) {
     core().damp(channel, time);
 }
 
+/// Let the notes of `channel` keyed (`seed`, `pass`, `step`, `ord`) go,
+/// falling to nothing from `from` to `to` (queue item 85c); see
+/// `Core::steal`. Returns how many it reached.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_steal(channel: u32, seed: u32, pass: u32, step: u32, ord: u32, from: f64, to: f64) -> u32 {
+    core().steal(channel, Key { seed, pass, step, ord }, from, to)
+}
+
 /// An event of `kind` into `channel` at `time`, with `value`; see
 /// `Core::event`. Returns 1 if it took.
 #[unsafe(no_mangle)]

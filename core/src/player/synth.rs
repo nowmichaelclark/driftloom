@@ -467,7 +467,9 @@ impl Synth {
 
     // -------------------------------------------------------------- notes
 
-    fn note<H: Host>(host: &mut H, key: Key, voice: u32, channel: u32, time: f64, midi: f64, dur: f64, vel: f64, parts: u32, x: [f64; EXTRA]) {
+    fn note<H: Host>(&mut self, host: &mut H, key: Key, voice: u32, channel: u32, time: f64, midi: f64, dur: f64, vel: f64, parts: u32, x: [f64; EXTRA]) {
+        // The voice call notes the channel (`_toCore`, queue item 85c).
+        self.budget.note_channel(channel);
         host.key(key);
         host.note(voice, channel, time, midi, dur, vel, parts, x);
     }
@@ -476,7 +478,7 @@ impl Synth {
     /// (`kick`) in a loop that plays one.
     pub fn drum<H: Host>(&mut self, host: &mut H, key: Key, inst: &str, time: f64, vel: f64, kick: Option<KickHit>) {
         let cost = cost_or(inst, 1.5);
-        if !self.budget.ask(time, false, cost) {
+        if !self.budget.ask(host, time, false, cost) {
             return;
         }
         let v = js::max(0.0, js::min(1.0, vel));
@@ -486,15 +488,15 @@ impl Synth {
             if let Some(f) = k.fall {
                 let soft = inst == "softkick";
                 let x = extra(&[k.hz, f.dbps, if soft { f.soft_lift } else { f.lift }, if soft { f.soft_tail } else { f.tail }]);
-                Self::note(host, key, TUNEDKICK, DRUMS_CHANNEL, time, 0.0, TUNED_KICK_RINGS, v, drum_kind(inst).unwrap_or(0), x);
+                self.note(host, key, TUNEDKICK, DRUMS_CHANNEL, time, 0.0, TUNED_KICK_RINGS, v, drum_kind(inst).unwrap_or(0), x);
                 self.budget.hold(time, drum_hold(inst), cost);
                 return;
             }
         }
         if let Some(hat) = hat_kind(inst) {
-            Self::note(host, key, HAT, DRUMS_CHANNEL, time, 0.0, 0.0, v, hat, NONE);
+            self.note(host, key, HAT, DRUMS_CHANNEL, time, 0.0, 0.0, v, hat, NONE);
         } else if let Some(kind) = drum_kind(inst) {
-            Self::note(host, key, DRUM, DRUMS_CHANNEL, time, 0.0, 0.0, v, kind, NONE);
+            self.note(host, key, DRUM, DRUMS_CHANNEL, time, 0.0, 0.0, v, kind, NONE);
         } else {
             return;
         }
@@ -505,7 +507,7 @@ impl Synth {
     #[allow(clippy::too_many_arguments)] // the bass note's own fields
     pub fn bass<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, dur: f64, vel: f64, glide: bool, voice: &str, chug: bool) {
         let cost = cost_or(voice, 8.0);
-        if !self.budget.ask(time, false, cost) {
+        if !self.budget.ask(host, time, false, cost) {
             return;
         }
         let exact = chug && voice != "fifths" && voice != "rhodesbass";
@@ -516,7 +518,7 @@ impl Synth {
             self.fm(host, key, midi, time, dur, vel * 0.8, &fm);
         } else {
             let parts = bass_kind(voice) | if glide { bass::GLIDE } else { 0 } | if chug { bass::CHUG } else { 0 };
-            Self::note(host, key, BASS, BASS_CHANNEL, time, midi, dur, vel, parts, NONE);
+            self.note(host, key, BASS, BASS_CHANNEL, time, midi, dur, vel, parts, NONE);
         }
         self.budget.hold(time, hold, cost);
     }
@@ -530,11 +532,11 @@ impl Synth {
             if !self.budget.room(time, cost + YIELD_MARGIN) {
                 return;
             }
-        } else if holds && !self.budget.ask(time, o.soft, cost) {
+        } else if holds && !self.budget.ask(host, time, o.soft, cost) {
             return;
         }
         let decay = o.decay.unwrap_or(dur);
-        Self::note(host, key, FM, o.channel, time, midi, dur, vel, 0, extra(&[o.ratio, o.index, o.attack, decay, o.detune]));
+        self.note(host, key, FM, o.channel, time, midi, dur, vel, 0, extra(&[o.ratio, o.index, o.attack, decay, o.detune]));
         if holds {
             self.budget.hold(time, dur + 1.2, cost);
         }
@@ -545,10 +547,10 @@ impl Synth {
     pub fn pad<H: Host>(&mut self, host: &mut H, key: Key, notes: &[i16], time: f64, dur: f64, vel: f64, channel: u32) {
         let cost = cost_or("pad", default_cost());
         for &midi in notes {
-            if !self.budget.ask(time, true, cost) {
+            if !self.budget.ask(host, time, true, cost) {
                 return;
             }
-            Self::note(host, key, PAD, channel, time, f64::from(midi), dur, vel, 0, extra(&[js::num(notes.len()), f64::NAN, f64::NAN, f64::NAN]));
+            self.note(host, key, PAD, channel, time, f64::from(midi), dur, vel, 0, extra(&[js::num(notes.len()), f64::NAN, f64::NAN, f64::NAN]));
             self.budget.hold(time, dur + 1.6, cost);
         }
     }
@@ -571,7 +573,7 @@ impl Synth {
             o.verb,
             o.level,
         ]);
-        Self::note(host, key, DUBSTAB, CHORDS, time, notes.first().copied().unwrap_or(0.0), dur, vel, 0, x);
+        self.note(host, key, DUBSTAB, CHORDS, time, notes.first().copied().unwrap_or(0.0), dur, vel, 0, x);
     }
 
     /// `texture(kind, notes, time, dur, vel, opts)`: the air layer.
@@ -580,10 +582,10 @@ impl Synth {
         match kind {
             "swell" => {
                 for &midi in notes {
-                    if !self.budget.ask(time, true, default_cost()) {
+                    if !self.budget.ask(host, time, true, default_cost()) {
                         return;
                     }
-                    Self::note(host, key, TEXTURE, ch, time, f64::from(midi), dur, vel, texture::SWELL, NONE);
+                    self.note(host, key, TEXTURE, ch, time, f64::from(midi), dur, vel, texture::SWELL, NONE);
                     self.budget.hold(time, dur + 0.2, default_cost());
                 }
             }
@@ -597,26 +599,26 @@ impl Synth {
                 self.fm(host, key, first, time, dur, vel, &fm);
             }
             "drop" => {
-                if !self.budget.ask(time, true, default_cost()) {
+                if !self.budget.ask(host, time, true, default_cost()) {
                     return;
                 }
-                Self::note(host, key, TEXTURE, ch, time, 0.0, dur, vel, texture::DROP, NONE);
+                self.note(host, key, TEXTURE, ch, time, 0.0, dur, vel, texture::DROP, NONE);
                 self.budget.hold(time, 0.15, default_cost());
             }
             "wind" => {
-                if !self.budget.ask(time, true, default_cost()) {
+                if !self.budget.ask(host, time, true, default_cost()) {
                     return;
                 }
                 let band = band.filter(|&b| b != 0.0 && !b.is_nan()).unwrap_or(f64::NAN);
-                Self::note(host, key, TEXTURE, ch, time, 0.0, dur, vel, texture::WIND, extra(&[f64::NAN, band]));
+                self.note(host, key, TEXTURE, ch, time, 0.0, dur, vel, texture::WIND, extra(&[f64::NAN, band]));
                 self.budget.hold(time, dur + 1.0, default_cost());
             }
             "waves" => {
                 let cost = cost_or("waves", default_cost());
-                if !self.budget.ask(time, true, cost) {
+                if !self.budget.ask(host, time, true, cost) {
                     return;
                 }
-                Self::note(host, key, TEXTURE, ch, time, 0.0, dur, vel, texture::WAVES, NONE);
+                self.note(host, key, TEXTURE, ch, time, 0.0, dur, vel, texture::WAVES, NONE);
                 self.budget.hold(time, dur + 0.1, cost);
             }
             _ => {}
@@ -627,10 +629,10 @@ impl Synth {
     /// `_budget`): `cost`, soft or not, the note, its hold.
     #[allow(clippy::too_many_arguments)] // the note's own fields
     fn held<H: Host>(&mut self, host: &mut H, key: Key, voice: u32, channel: u32, time: f64, midi: f64, dur: f64, vel: f64, soft: bool, cost: f64, tail: f64, x: [f64; EXTRA]) {
-        if !self.budget.ask(time, soft, cost) {
+        if !self.budget.ask(host, time, soft, cost) {
             return;
         }
-        Self::note(host, key, voice, channel, time, midi, dur, vel, 0, x);
+        self.note(host, key, voice, channel, time, midi, dur, vel, 0, x);
         self.budget.hold(time, tail, cost);
     }
 
@@ -684,10 +686,10 @@ impl Synth {
             "prepared" => {
                 let strike = Fm { ratio: 1.0, index: 200.0, decay: Some(0.1), attack: 0.002, cost: Some(15.0), ..Fm::into(channel) };
                 self.fm(host, key, midi, time, dur * 0.7, vel * 0.85, &fm(strike));
-                if !self.budget.ask(time, soft, 3.0) {
+                if !self.budget.ask(host, time, soft, 3.0) {
                     return;
                 }
-                Self::note(host, key, KNOCK, channel, time, midi, 0.05, vel, 0, NONE);
+                self.note(host, key, KNOCK, channel, time, midi, 0.05, vel, 0, NONE);
                 let detuned = Fm { ratio: 1.0, index: 90.0, decay: Some(0.08), detune: 9.0, cost: Some(7.0), ..Fm::into(channel) };
                 self.fm(host, key, midi, time + 0.004, dur * 0.45, vel * 0.2, &fm(detuned));
                 self.budget.hold(time, dur + 0.4, 3.0);
@@ -698,27 +700,27 @@ impl Synth {
             }
             "stab" => {
                 let holds = !opts.yields;
-                if holds && !self.budget.ask(time, soft, default_cost()) {
+                if holds && !self.budget.ask(host, time, soft, default_cost()) {
                     return;
                 }
                 let len = js::min(dur, 0.22);
-                Self::note(host, key, STAB, channel, time, midi, dur, vel, 0, NONE);
+                self.note(host, key, STAB, channel, time, midi, dur, vel, 0, NONE);
                 if holds {
                     self.budget.hold(time, len + 0.2, default_cost());
                 }
             }
             "kalimba" => {
                 let mut parts = 0;
-                if self.budget.ask(time, soft, 8.0) {
+                if self.budget.ask(host, time, soft, 8.0) {
                     parts |= kalimba::STRIKE;
                     self.budget.hold(time, js::min(dur, 1.1) + 1.2, 8.0);
                 }
-                if self.budget.ask(time, soft, 3.0) {
+                if self.budget.ask(host, time, soft, 3.0) {
                     parts |= kalimba::BODY;
                     self.budget.hold(time, 0.25, 3.0);
                 }
                 if parts != 0 {
-                    Self::note(host, key, KALIMBA, channel, time, midi, dur, vel, parts, NONE);
+                    self.note(host, key, KALIMBA, channel, time, midi, dur, vel, parts, NONE);
                 }
             }
             "marimba" => {
@@ -834,7 +836,7 @@ impl Synth {
             }
         }
         let cost = if choral { 34.0 } else if humming { 16.0 } else { 22.0 } + if target.is_some() { VOWEL_DRIFT_COST } else { 0.0 };
-        if !self.budget.ask(time, soft_of(channel), cost) {
+        if !self.budget.ask(host, time, soft_of(channel), cost) {
             return;
         }
         let corner = if humming { 1700.0 } else { 2600.0 };
@@ -852,7 +854,7 @@ impl Synth {
         let vowel = if humming { 0.0 } else { js::num(vowel_index.unwrap_or(0)) };
         let detune = opts.detune.filter(|&d| d != 0.0 && !d.is_nan()).unwrap_or(0.0);
         let voice = if humming { HUM } else if choral { CHOIR } else { VOWEL };
-        Self::note(host, key, voice, channel, time, midi, dur, vel, 0, extra(&[vowel, target_id, trim, detune]));
+        self.note(host, key, voice, channel, time, midi, dur, vel, 0, extra(&[vowel, target_id, trim, detune]));
         self.budget.hold(time, dur + 0.9, cost);
     }
 }

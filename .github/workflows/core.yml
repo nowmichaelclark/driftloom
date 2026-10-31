@@ -84,6 +84,8 @@ jobs:
         run: node test/draw.test.mjs
       - name: Next picks tests
         run: node test/picks.test.mjs
+      - name: Voice budget tests
+        run: node test/budget.test.mjs
       # The generator's math (js/dlmath.js) against the core's, bit for bit,
       # and what the generator decides against its goldens (queue item 77).
       - name: The generator's math against the core's

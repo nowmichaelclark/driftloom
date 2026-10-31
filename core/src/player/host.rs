@@ -29,6 +29,10 @@ pub trait Host {
     /// `Core::param`: the mix's and the master chain's parameters.
     fn param(&mut self, id: u32, op: u32, value: f64, time: f64, tau: f64);
     /// `Core::bass_lift`: the bass layer's level for the loop.
+    /// `Core::steal`: the notes of `channel` keyed `key` fall to nothing
+    /// from `from` to `to` and end (the voice budget taking room from a
+    /// layer's oldest notes, queue item 85c).
+    fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64);
     fn bass_lift(&mut self, db: f64);
 }
 
@@ -67,5 +71,9 @@ impl Host for Core {
 
     fn bass_lift(&mut self, db: f64) {
         Core::bass_lift(self, db);
+    }
+
+    fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
+        Core::steal(self, channel, key, from, to);
     }
 }

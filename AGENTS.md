@@ -60,7 +60,7 @@ that changes how it sounds.
   (ES modules don't load over `file://`).
 - Tests (Node 22; run the generator's three times, it uses random seeds):
   `node test/generator.test.mjs`, and `worklet`, `core-host`, `engine`,
-  `dials`, `fit`, `golden`, `draw`, `picks`, `dlmath`, each as
+  `dials`, `fit`, `golden`, `draw`, `picks`, `dlmath`, `budget`, each as
   `node test/<name>.test.mjs`.
 - Generation goldens (item 77): `node tools/gen-golden.mjs --check` (and
   `--chromium`); after a change meant to move what is generated, run it

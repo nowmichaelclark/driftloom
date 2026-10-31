@@ -403,6 +403,13 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'damp', channel, time });
   }
 
+  // Let the notes of `channel` keyed `key` (as the note calls carried it)
+  // go, falling to nothing from `from` to `to` (queue item 85c: the voice
+  // budget taking room from a layer's oldest notes; Core::steal).
+  steal(channel, key, from, to) {
+    this.node.port.postMessage({ type: 'steal', channel, key, from, to });
+  }
+
   // Setting number `setting` of `channel`'s own block number `block`
   // (CORE_OWN) to `value` at `time`, for the loop (Core::set, queue item
   // 46c).
