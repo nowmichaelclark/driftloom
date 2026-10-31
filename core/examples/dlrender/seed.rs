@@ -32,6 +32,12 @@ pub struct Way {
     pub layout: u32,
     pub wander: f64,
     pub vibes: Vec<String>,
+    /// The sketch build's levers (queue item 83, `--force`, `--set`,
+    /// `--sketch`, `--pin`; `clip.rs`): choices forced, named constants
+    /// moved, the sketch block's layer, settings pinned.
+    pub clip: crate::clip::Clip,
+    /// Add what the loop drew among its choices to the line (`choices=`).
+    pub choices: bool,
 }
 
 impl Way {
@@ -96,6 +102,8 @@ fn nums(out: &mut String, head: &str, xs: &[f64]) {
 struct Tracer<'a> {
     core: &'a mut Core,
     lines: &'a mut String,
+    /// Settings a clip pins: (block, setting, value), whatever the loop sets.
+    pins: &'a [(usize, usize, f64)],
 }
 
 impl Host for Tracer<'_> {
@@ -127,6 +135,7 @@ impl Host for Tracer<'_> {
         self.core.damp(channel, time);
     }
     fn set(&mut self, channel: u32, block: usize, setting: usize, value: f64, time: f64) {
+        let value = self.pins.iter().find(|p| p.0 == block && p.1 == setting).map_or(value, |p| p.2);
         nums(self.lines, "set", &[f64::from(channel), block as f64, setting as f64, value, time]);
         self.core.set(channel, block, setting, value, time);
     }
@@ -185,8 +194,9 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
         core.set_layout(2);
     }
     player.set_wander(way.wander);
+    way.clip.apply(&mut core, &mut player)?;
     {
-        let mut host = Tracer { core: &mut core, lines: &mut lines };
+        let mut host = Tracer { core: &mut core, lines: &mut lines, pins: &way.clip.pins };
         player.attach(&mut host, way.rate, way.full);
         player.load(seed, request);
         player.ready(&mut host);
@@ -201,7 +211,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
             let frame = core.next_frame();
             block.clear();
             let decided = {
-                let mut host = Tracer { core, lines: &mut block };
+                let mut host = Tracer { core, lines: &mut block, pins: &way.clip.pins };
                 player.decide(&mut host)
             };
             if matches!(decided, Work::Steps(_)) {
@@ -226,13 +236,30 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
     let mut h = Fnv::new();
     h.samples(&samples);
     let _ = write!(line, " hash={}", h.hex());
+    if way.choices {
+        // The options the loop drew other than today's, as the brain's
+        // Session 26 index listed them: `lateFloor`, or `kick:soft`.
+        let drawn: Vec<String> = dlcore::generator::data::CHOICES
+            .iter()
+            .filter_map(|c| {
+                let option = player.generator().render().choice(c.id)?;
+                (Some(option) != c.options.first().map(|o| o.0)).then(|| if option == "on" { c.id.to_string() } else { format!("{}:{option}", c.id) })
+            })
+            .collect();
+        let _ = write!(line, " choices={}", if drawn.is_empty() { "-".to_string() } else { drawn.join(",") });
+    }
     Ok(Rendered { line, samples, calls: calls.then_some(lines) })
 }
 
 /// The WAV of a render.
 #[must_use]
 pub fn wav_of(r: &Rendered, way: &Way) -> Vec<u8> {
-    if way.layout == 2 { wav_channels(&r.samples, way.rate, 2) } else { wav(&r.samples, way.rate) }
+    // `--from` trims the head of the clip: rendered from the start, written
+    // from there (as Session 26's renderer did), so a loop's state is the
+    // one it has by then.
+    let skip = ((way.clip.from * way.rate) as usize * way.layout as usize).min(r.samples.len());
+    let samples = &r.samples[skip..];
+    if way.layout == 2 { wav_channels(samples, way.rate, 2) } else { wav(samples, way.rate) }
 }
 
 /// What a loop costs to play from its seed, block by block (`--costs`): the

@@ -304,6 +304,16 @@ impl Player {
         &self.generator
     }
 
+    /// Force a choice in every loop made from now on (queue item 83's
+    /// clips): `Generator::force`. The sketch build only.
+    ///
+    /// # Errors
+    /// The choice or the option is not in the data.
+    #[cfg(feature = "sketch")]
+    pub fn force_choice(&mut self, id: &str, option: Option<&str>) -> Result<(), &'static str> {
+        self.generator.force(id, option)
+    }
+
     /// Where the sequencer is: the loop's step, its pass, and when the next
     /// step falls.
     #[must_use]

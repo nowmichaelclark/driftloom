@@ -627,6 +627,11 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
     }
 }
 
+/// The name of the sketch slot's first setting, `on` (`blocks::sketch`), by
+/// which `solo` knows it.
+#[cfg(feature = "sketch")]
+pub const SKETCH_ON: &str = "sketch.on";
+
 /// Play one block alone, as the test kit and `dlrender --block` do: start
 /// it with `settings`, then render it from frame 0, a block at a time, the
 /// way `play` says, and hand each block to `take`. A source plays until its
@@ -643,6 +648,12 @@ pub fn solo<B: Block>(
     mut take: impl FnMut(&[f32]),
 ) -> u64 {
     block.start(settings, cx);
+    // The sketch slot (queue item 83) starts off, to play only where a host
+    // turns it on; alone, it plays.
+    #[cfg(feature = "sketch")]
+    if B::SETTINGS.first().is_some_and(|s| s.name == SKETCH_ON) {
+        block.set(0, 1.0, 0.0, cx);
+    }
     let q = QUANTUM as u64;
     let seconds = |s: f64| (cx.rate * s) as u64;
     let blocks = if B::INPUT {

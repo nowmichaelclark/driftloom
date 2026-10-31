@@ -1,0 +1,3 @@
+# Where the sketch plays: one line, read by `dlrender --sketch` and by
+# tools/clips.mjs. The layer is melody, chords, bass, texture or drums.
+channel melody

@@ -337,6 +337,16 @@ impl Generator {
         self.stage == Stage::Done
     }
 
+    /// Force a choice for the loops made from now on
+    /// (`render::Render::force`; queue item 83): the sketch build only.
+    ///
+    /// # Errors
+    /// The choice or the option is not in the data.
+    #[cfg(feature = "sketch")]
+    pub fn force(&mut self, id: &str, option: Option<&str>) -> Result<(), &'static str> {
+        self.render.force(id, option)
+    }
+
     /// The stage the load is at.
     #[must_use]
     pub fn stage(&self) -> Stage {

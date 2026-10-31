@@ -11,7 +11,8 @@ builds from the Done list.
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2's port, items 77-82** (#287-#296: the
 generator in Rust, proven on the generation goldens, and the player; checked
-by the brain's Session 28). **Next: item 83.** Item 75 is low priority. 37
+by the brain's Session 28) and **83** (ears on the core: sketch blocks and
+`tools/clips.mjs`). **Next: item 84.** Item 75 is low priority. 37
 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -181,44 +182,6 @@ engine does. What that means for the items below:
   the music; `docs/archive/notes/82-hand-over.md`). Compare player renders with
   player renders, or the browser's reference made the same way
   (`tools/player.mjs`), not with the harness's.
-
-## 83. Ears on the core: sketches before the JavaScript synth retires
-
-**Why:** the ears sessions sketch new sounds as patches to the JavaScript
-synth (`tools/ears/sketches/`) and hear them in offline renders; that synth
-retires at the end of phase 3, and sketches in it already sound different
-from the core. They need a way to sketch on the core itself, cheaply, with
-no Rust beyond the sketch. And the brain needs clips the app can't make
-(choices forced, a constant moved), as Session 26 did by hand.
-
-**What:**
-- **Sketch blocks:** a folder (`core/sketch/`) where an ears or brain
-  session drops one block file (the kit's interface) and one line of data
-  naming where it plays (a channel's own block, a voice for a layer, a send),
-  built only with a `sketch` feature, never in the app's `.wasm`. The kit
-  probes it as any block (level, tone, cost) with no test written.
-- **`tools/clips.mjs`:** clips through the real engine on the core (from
-  Session 26's scratch renderer, `docs/archive/session26-clips.md`): corpus loops by seed or `profile #n`,
-  seconds, a window (`--from`), mono or stereo, wander on or off, **any
-  choice forced** (`--force lateFloor=on`; through the request once item
-  85 lands), any named setting pinned, a sketch block on, and a constant
-  moved for the A/B (`--set bass.LIFT_DB=3`, through a sketch-only table of
-  named constants), to WAV and Opus, with an index of what each loop drew.
-- `docs/ears/sessions.md` and `tools/ears/README.md` say how; the old JS
-  sketch path stays until phase 3 ends.
-
-**Yardsticks:** a demonstration sketch (a test-only block, one file and one
-line) heard in a clip and probed by the kit; the clips tool reproduces
-Session 26's forced clips sample for sample; the app's `.wasm` unchanged
-with the feature off (byte for byte).
-
-**Since item 82 (brain, 2026-10-31):** the clips may be rendered by the
-player (`dlrender --seed`, natively, no Chromium) rather than through the
-page's engine; that is the better base, since it is what phase 3 and the
-game play. Then Session 26's clips are reproduced within item 82's hand-over
-difference (all under -64 dBFS, most near -90; say the largest) rather than
-sample for sample, and the player's own clips are bit for bit run to run.
-Sketch blocks stay out of `js/dlplayer.wasm` too.
 
 ## 84. The chords' octave from the progression
 
