@@ -4,7 +4,12 @@ Item 85a (#302: the request, weighted vibes and tempo) passes every check
 but one, the standing rule "refusals on full and lite for the loops the item
 touches: melody at full quality stays near zero, and lite no worse than the
 catalog". A tempo pinned near the top of the range fails the lite half, so
-the PR is not merged. I need a decision.
+the PR waited for a decision.
+
+**Decided (brain, 2026-10-31): option 1.** The rule is read per profile: a
+pin may not make any profile's lite refusals worse than that profile's own,
+and this one does not. 85a merges. Lite's refusals themselves become item
+85c (the budget takes room from old notes, not new ones), queued before 85b.
 
 ## What was measured
 

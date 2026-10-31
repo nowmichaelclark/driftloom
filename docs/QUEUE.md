@@ -13,7 +13,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 generator in Rust, proven on the generation goldens, and the player; checked
 by the brain's Session 28) and **83** (ears on the core: sketch blocks and
 `tools/clips.mjs`) and **84** (the chords' octave from the progression).
-**Next: item 85.** Item 75 is low priority. 37
+**Next: item 85c, then 85b** (85a is #302). Item 75 is low priority. 37
 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -192,7 +192,10 @@ weighted vibes and the tempo, end to end (both generators, the player, the
 C header, wasm, `dlrender --request`, the app, share code format 5, 360
 request cases in the generation goldens). **85b** is the rest: the pins for
 the named settings, the theme, and share codes carrying the pins. 48's text
-stays until 85b merges.
+stays until 85b merges. **85c** (below) goes before 85b. The refusal rule for
+requested loops is read per profile (brain, 2026-10-31;
+`docs/notes/85-fast-pins-lite.md`): a pin may not make any profile's lite
+refusals worse than that profile's own.
 
 48's text (below, kept for reference until this item merges) is the brief,
 with these changes:
@@ -213,6 +216,36 @@ with these changes:
 **Yardsticks:** 48's, plus: a theme bent by a vibe keeps its key, its
 motif and its profile mix (measured: pitch classes, the melody's first
 cell, the profile's lead) unless a pin says otherwise.
+
+## 85c. The budget takes room from old notes, not new ones (lite first)
+
+**Hands:** Opus 5.5, high. Before 85b. From 85a's note (brain, 2026-10-31).
+
+**Why:** on lite the voice budget refuses 62% of chord notes and 37% of
+texture across the catalog (100 loops), and shatter-led loops lose 6.2% of
+their melody (74% of chords). An earlier finding
+(`docs/archive/engineering-notes.md`, "What is left, on lite") is that the
+melody is mostly refused by its own earlier notes still ringing. The budget
+turns the new note away while old tails finish, which is backward
+musically. Broken Friends plays lite on phones. Suspects, unproven:
+own-layer tails, chords' holds.
+
+**First:** tag each hold with its layer and report what holds the budget at
+each refusal, by layer, on lite and full.
+
+**What:** when a note doesn't fit, release the asking layer's oldest held
+notes (a short fade, its length a setting, the conservative choice "for
+Mikey's ears") until it fits, and refuse only if that can't make room. Same
+order of sums in `js/synth.js` and `core/src/player/`, so the player still
+equals the page.
+
+**Yardsticks:** per-layer refusals before and after on lite and full over
+100 loops, and shatter at a `bpm=180` pin (melody lite near zero, chords
+well below today's 62%); no clicks at a stolen note's fade (`--clicks`); the
+worst block's cost no higher than today on the slowest target; the core
+baseline updated on purpose; the player against the browser still bit for
+bit. Then a labeled album on lite for Mikey (before and after, a few loops
+each from shatter, a busy chords loop and a slow loop).
 
 ## 86. Changing loops at a musical moment, with a crossfade
 

@@ -92,3 +92,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   go in the phase's blind album. Watch: keys and melody now sit closer than 5
   semitones in a few more loops (the balance lock's "not a choir, under 5",
   2.34% to 3.73%); listen there for chords crowding the tune.
+- #302, the request: weighted vibes and tempo, pinned or a range (item 85a,
+  v134), preview URL: <https://c42f2cad-driftloom.nowmichaelclark.workers.dev>
+  (commit 0e7fece): one request read the same by both generators, the
+  player, the C header and the app (`glacial=0.7,misty=0.3,bpm=70-85` as
+  text); share code format 5 carries the tempo asked. Nothing asked changes
+  nothing: the 3,060 old goldens, the baseline and the balance lock are
+  unchanged, so listen for nothing in today's loops. The app has no tempo
+  picker yet, so a listener can't ask for one; the ears can (`dlrender --seed
+  N --request bpm=77`). For Mikey's ears when a picker exists: a range is
+  drawn across all of it, the mix leans toward profiles whose band holds the
+  tempo (a profile 6 bpm off keeps half its weight), and a gait profile with
+  no gait at the tempo plays its nearest. Lite's refusals at a fast pin are
+  shatter's own (item 85c).
