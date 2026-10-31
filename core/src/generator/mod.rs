@@ -334,7 +334,7 @@ impl Generator {
                 self.settings = load::Load::without_kick(&plan::Cx::new(&self.spec), &self.render);
                 self.pass.number = None;
                 self.stage = if load::Load::kick_kind(&self.render).is_some() {
-                    self.kick = choices::KickFit::new(self.spec.seed, self.spec.root);
+                    self.kick = choices::KickFit::new(self.spec.seed, self.spec.root, &self.spec.pins);
                     Stage::Kick
                 } else {
                     Stage::Done

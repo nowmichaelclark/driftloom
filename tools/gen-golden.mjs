@@ -23,7 +23,8 @@
 // SEED is the loop's seed (unsigned), VIBES the request (queue item 85) as
 // its text (`parseRequest`): the vibes asked for, in the frozen order
 // (`vibeSelection`), comma-separated, each with its weight or not
-// ("glacial=0.7"), and the tempo ("bpm=77", "bpm=70-85"); '-' for nothing.
+// ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85") and the pins
+// ("organ=on", "arc.period=240"; js/pins.js); '-' for nothing.
 // The loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
 // digits) of a canonical text (below) of:
 //   spec     the spec, as newSpec makes it;
@@ -82,7 +83,12 @@
 //   request:0-359   360 seeds from Rng(85), each with a request of the kind
 //                   its index picks (gen-golden-lib.mjs, `requestCase`):
 //                   tempo pinned, ranged, weighted vibes, six or seven vibes,
-//                   vibes with a pin, weights past 1 with a range.
+//                   vibes with a pin, weights past 1 with a range;
+//   pins:0-239      240 seeds from Rng(8502), each with pins of the kind its
+//                   index picks (gen-golden-lib.mjs, `pinCase`; queue item
+//                   85b): a choice, several choices, the arc's settings, the
+//                   kick's, subDuck's and lateFloor's, padSweep's, the echo's
+//                   and the space's, and pins with vibes and a tempo.
 //
 // Run it after any change to the generator, the vibes, the choices or the
 // engine's load. A change that is meant to move what is generated writes the

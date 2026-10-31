@@ -169,6 +169,11 @@ impl Host for Tracer<'_> {
         nums(self.lines, "lift", &[db]);
         self.core.bass_lift(db);
     }
+    #[allow(clippy::cast_precision_loss)] // a setting's number, under 32
+    fn space_range(&mut self, which: usize, lo: f64, hi: f64) {
+        nums(self.lines, "space", &[which as f64, lo, hi]);
+        self.core.space_range(which, lo, hi);
+    }
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
         nums(self.lines, "steal", &[f64::from(channel), f64::from(key.seed), f64::from(key.pass), f64::from(key.step), f64::from(key.ord), from, to]);
         self.core.steal(channel, key, from, to);

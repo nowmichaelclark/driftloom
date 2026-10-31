@@ -118,3 +118,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   now come in (toask-ha, hai-waim: their keys 3.6 LU up), and for long tails
   cut short on a slow loop (theith-yaing). For Mikey's ears: the fade's
   length, and whether full quality follows.
+- #304, the request's pins (item 85b, v136), preview URL:
+  <https://9e43ee20-driftloom.nowmichaelclark.workers.dev> (commit 204700f):
+  a request can fix any of item 54's choices (`organ=on`, `arc=today`), the
+  settings each draws by (`arc.period=240`, `kick.note=33`,
+  `lateFloor.order=kitFirst`), the echo's time (`echo.beats=1`) and the
+  space recipe's 32 (`space.room=0.8`), each held to what the loop could
+  draw; share code format 6 carries them. Nothing pinned changes nothing:
+  the 3,420 old goldens, the baseline and the balance lock are unchanged, so
+  listen for nothing in today's loops. The app has no pin picker; the ears
+  can (`tools/clips.mjs` and `dlrender --seed N --request organ=on`). For
+  Mikey's ears: a choice pinned on plays only where its eligibility rule
+  allows, and a pinned kick never swaps while the loop wanders. The theme is
+  item 85d.

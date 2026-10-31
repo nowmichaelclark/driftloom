@@ -226,6 +226,8 @@ pub struct Synth {
     wash_routed: bool,
     sub_duck: bool,
     pad_sweep: bool,
+    /// The space recipe's settings the last loop pinned (`_spacePinned`).
+    space_pinned: [bool; crate::space::n::COUNT],
     /// Each channel muted (`_asked.mutes`), in the core's channel order.
     pub mutes: [bool; 5],
     /// The listener's volume (`_gain`).
@@ -247,6 +249,7 @@ impl Synth {
             wash_routed: false,
             sub_duck: false,
             pad_sweep: false,
+            space_pinned: [false; crate::space::n::COUNT],
             mutes: [false; 5],
             volume: VOLUME,
             level: 1.0,
@@ -456,8 +459,22 @@ impl Synth {
     }
 
     /// `spaceSetup(o, time)`: what the core needs to place the loop in a
-    /// stereo render.
-    pub fn space_setup<H: Host>(host: &mut H, space: &crate::generator::load::Space, time: f64) {
+    /// stereo render. A request's space pins (queue item 85b) narrow the
+    /// recipe first (`Core::space_range`, read as the start arrives), and a
+    /// setting the last loop pinned and this one doesn't goes back to its
+    /// range.
+    pub fn space_setup<H: Host>(&mut self, host: &mut H, space: &crate::generator::load::Space, time: f64) {
+        for (i, s) in crate::space::SETTINGS.iter().enumerate() {
+            if self.space_pinned[i] && space.pins[i].is_none() {
+                host.space_range(i, s.lo, s.hi);
+            }
+        }
+        for (i, v) in space.pins.iter().enumerate() {
+            if let &Some(v) = v {
+                host.space_range(i, v, v);
+            }
+            self.space_pinned[i] = v.is_some();
+        }
         host.param(crate::SPACE_SEED, SET, f64::from(space.seed), time, 0.0);
         host.param(crate::SPACE_BUSY, SET, space.busy, time, 0.0);
         host.param(crate::SPACE_WET, SET, space.wet, time, 0.0);

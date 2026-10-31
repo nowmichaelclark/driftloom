@@ -10,14 +10,15 @@
 //!
 //! Each draws from the loop's seed on a stream of its own (a salt each, the
 //! sketch's), so no other draw moves and a loop replays the same way, and
-//! every number it draws by is `data/choices.txt`'s (`data`). The requests'
-//! pins (`pins` in the JavaScript) are phase 2's item 85: the engine asks
-//! for none, so none are here yet.
+//! every number it draws by is `data/choices.txt`'s (`data`). A request's
+//! pins (queue item 85b; `request::Pins`) overrule a drawn value once every
+//! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
 use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, Table};
 use super::js;
 use super::layers::DrumEvent;
+use super::request::Pins;
 use super::rng::Rng;
 use crate::math;
 
@@ -103,26 +104,40 @@ fn arc_draws(seed: u32, v: Option<&Vibes>) -> (f64, f64, &'static str, f64, Rng)
     (period, at, shape, floor, r)
 }
 
-/// `arcOf(seed, vibes)`: a loop's arc, drawn on its own stream. The period
-/// and the start are drawn first, as item 63 drew them, so a loop without
-/// vibes that draws the deep swing plays the swing it always did.
+/// `arcOf(seed, vibes, pins)`: a loop's arc, drawn on its own stream. The
+/// period and the start are drawn first, as item 63 drew them, so a loop
+/// without vibes that draws the deep swing plays the swing it always did.
+/// `p` may pin the shape (the start is then placed by the pinned shape),
+/// the period, the start and the floor.
 #[must_use]
-pub fn arc_of(seed: u32, v: Option<&Vibes>) -> Arc {
-    let (period, at, shape, floor, _) = arc_draws(seed, v);
+pub fn arc_of(seed: u32, v: Option<&Vibes>, p: &Pins) -> Arc {
+    let (period, at, drawn, floor, _) = arc_draws(seed, v);
+    let shape = p.word("arc.shape").unwrap_or(drawn);
     let dip = ARC.dip;
     let [a, b] = if shape == "deep" { ARC.from_deep } else { [dip / 2.0, 1.0 - dip / 2.0] };
-    Arc { shape, period, from: a + at * (b - a), floor, dip }
+    let from = a + at * (b - a);
+    Arc {
+        shape,
+        period: p.get("arc.period").unwrap_or(period),
+        from: p.get("arc.from").unwrap_or(from),
+        floor: p.get("arc.floor").unwrap_or(floor),
+        dip,
+    }
 }
 
 /// `arcPlays(seed, choices, vibes)`: whether a loop plays the arc. When it
 /// drew it among its choices (`chosen`), or, with glacial among its vibes,
 /// with the glacial chance times glacial's weight, drawn on the arc's own
 /// stream after `arc_of`'s draws (queue item 76b): not one of the loop's
-/// changes, so nothing else moves.
+/// changes, so nothing else moves. `pinned`: the request pinned the arc
+/// (queue item 85b); pinned to today, a glacial loop plays none either.
 #[must_use]
-pub fn arc_plays(seed: u32, chosen: bool, v: Option<&Vibes>) -> bool {
+pub fn arc_plays(seed: u32, chosen: bool, v: Option<&Vibes>, pinned: bool) -> bool {
     if chosen {
         return true;
+    }
+    if pinned {
+        return false;
     }
     let Some(w) = v.and_then(|v| v.list.iter().find(|&&(id, _)| data::VIBES[id].id == "glacial")).map(|x| x.1) else {
         return false;
@@ -454,15 +469,16 @@ impl KickFit {
 
     /// The tuned kick of a loop of `seed` in `root`: its draws, its note
     /// (the key's, between G1 and D2; D# to F# take their fifth), its fits
-    /// still to work out.
+    /// still to work out. `p` may pin the note and either fall.
     #[must_use]
-    pub fn new(seed: u32, root: f64) -> Self {
+    pub fn new(seed: u32, root: f64, p: &Pins) -> Self {
         let mut r = Rng::new(js::salted(seed, KICK_SALT, 1));
         let short_rate = r.range(KICK.short[0], KICK.short[1]);
         let long_rate = r.range(KICK.long[0], KICK.long[1]);
+        let (short_rate, long_rate) = (p.get("kick.short").unwrap_or(short_rate), p.get("kick.long").unwrap_or(long_rate));
         let pc = ((root % 12.0) + 12.0) % 12.0;
         let key = if (3.0..=6.0).contains(&pc) { (pc + 7.0) % 12.0 } else { pc };
-        let midi = 24.0 + key + if key < 7.0 { 12.0 } else { 0.0 };
+        let midi = p.get("kick.note").unwrap_or(24.0 + key + if key < 7.0 { 12.0 } else { 0.0 });
         let hz = 440.0 * math::pow(2.0, (midi - 69.0) / 12.0);
         KickFit { short_rate, long_rate, midi, hz, ..KickFit::EMPTY }
     }
@@ -532,12 +548,12 @@ impl KickFit {
     }
 }
 
-/// `kickOf(seed, root)`: a loop's tuned kick, drawn on its own stream: both
-/// falls' rates, its note, and each fall's level by ear, worked out as the
-/// sketch did at load (`KickFit`, run to the end at once).
+/// `kickOf(seed, root, pins)`: a loop's tuned kick, drawn on its own
+/// stream: both falls' rates, its note, and each fall's level by ear, worked
+/// out as the sketch did at load (`KickFit`, run to the end at once).
 #[must_use]
-pub fn kick_of(seed: u32, root: f64) -> TunedKick {
-    let mut fit = KickFit::new(seed, root);
+pub fn kick_of(seed: u32, root: f64, p: &Pins) -> TunedKick {
+    let mut fit = KickFit::new(seed, root, p);
     while !fit.step(usize::MAX) {}
     fit.kick()
 }
@@ -546,9 +562,11 @@ pub fn kick_of(seed: u32, root: f64) -> TunedKick {
 /// `pass`. Its own (`kind`) on the first pass and most others; now and
 /// then one of the other two, half and half, drawn from the pass alone
 /// (queue item 67), so any pass can be reached without the ones before it.
+/// `held`: the request pinned the kick (queue item 85b), and a pick holds
+/// through wandering, so it never swaps.
 #[must_use]
-pub fn kick_kind_of(seed: u32, kind: &'static str, pass: u32) -> &'static str {
-    if pass == 0 {
+pub fn kick_kind_of(seed: u32, kind: &'static str, pass: u32, held: bool) -> &'static str {
+    if pass == 0 || held {
         return kind;
     }
     let mut r = Rng::new((seed ^ KICK_SWAP_SALT).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
@@ -574,14 +592,14 @@ pub struct SubDuck {
 
 /// `subDuckOf(seed, bpm)`: drawn on its own stream, after the draw the
 /// sketch spent on whether the loop ducked; the recovery never longer
-/// than the setting's share of a beat.
+/// than the setting's share of a beat. `p` may pin either.
 #[must_use]
-pub fn sub_duck_of(seed: u32, bpm: f64) -> SubDuck {
+pub fn sub_duck_of(seed: u32, bpm: f64, p: &Pins) -> SubDuck {
     let mut r = Rng::new(js::salted(seed, SUBDUCK_SALT, 1));
     r.f();
     let depth = r.range(SUBDUCK.depth[0], SUBDUCK.depth[1]);
     let recover = js::min(r.range(SUBDUCK.recover[0], SUBDUCK.recover[1]), SUBDUCK.beat * 60.0 / bpm);
-    SubDuck { depth, recover }
+    SubDuck { depth: p.get("subDuck.depth").unwrap_or(depth), recover: p.get("subDuck.recover").unwrap_or(recover) }
 }
 
 const LATEFLOOR_SALT: u32 = 0x1a7e;
@@ -604,21 +622,24 @@ pub struct LateFloor {
 /// lean the gap's long end; the gap is drawn last (queue item 76d), so
 /// nothing before it moves, and the second arrival stays inside the loop's
 /// first pass when the first is (`loop_bars` its length in bars), else
-/// within one loop's length of the first.
+/// within one loop's length of the first. `p` may pin the order, the wait
+/// in seconds and the gap (still held inside the loop as above).
 #[must_use]
-pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop_bars: f64) -> LateFloor {
+pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop_bars: f64, p: &Pins) -> LateFloor {
     let mut r = Rng::new(js::salted(seed, LATEFLOOR_SALT, 1));
     r.f();
     let lean = lean_of(Some(LATEFLOOR.long_vibes), v);
     let u = r.f();
     let [lo, hi] = LATEFLOOR.seconds;
-    let secs = lo + math::pow(u, 1.0 / lean) * (hi - lo);
+    let secs = p.get("lateFloor.seconds").unwrap_or_else(|| lo + math::pow(u, 1.0 / lean) * (hi - lo));
     let order = r.weighted(LATEFLOOR.orders).unwrap_or("together");
+    let order = p.word("lateFloor.order").unwrap_or(order);
     let k = LATEFLOOR.round;
     let bars = js::max(k, js::round(secs / (spb * step_dur) / k) * k);
     let drawn = r
         .weighted_index(LATEFLOOR.gap.iter().map(|&(g, w)| if g >= LATEFLOOR.gap_long { w * lean } else { w }))
         .map_or(1.0, |i| LATEFLOOR.gap[i].0);
+    let drawn = p.get("lateFloor.gap").unwrap_or(drawn);
     let room = if bars < loop_bars { loop_bars - bars } else { loop_bars };
     let gap = js::max(1.0, js::min(js::min(drawn, LATEFLOOR.max_gap), room));
     LateFloor {
@@ -655,16 +676,21 @@ pub struct PadSweep {
 }
 
 /// `padSweepOf(seed)`: drawn on its own stream in the sketch's order,
-/// after the draw it spent on whether the loop swept.
+/// after the draw it spent on whether the loop swept. `p` may pin any.
 #[must_use]
-pub fn pad_sweep_of(seed: u32) -> PadSweep {
+pub fn pad_sweep_of(seed: u32, p: &Pins) -> PadSweep {
     let mut r = Rng::new(js::salted(seed, PADSWEEP_SALT, 1));
     r.f();
     let lo = r.range(PADSWEEP.lo[0], PADSWEEP.lo[1]);
     let oct = r.range(PADSWEEP.oct[0], PADSWEEP.oct[1]);
     let period = r.range(PADSWEEP.period[0], PADSWEEP.period[1]);
     let q = r.range(PADSWEEP.q[0], PADSWEEP.q[1]);
-    PadSweep { lo, oct, period, q }
+    PadSweep {
+        lo: p.get("padSweep.lo").unwrap_or(lo),
+        oct: p.get("padSweep.oct").unwrap_or(oct),
+        period: p.get("padSweep.period").unwrap_or(period),
+        q: p.get("padSweep.q").unwrap_or(q),
+    }
 }
 
 const ECHO_SALT: u32 = 0xec40;

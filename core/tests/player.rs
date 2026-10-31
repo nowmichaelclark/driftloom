@@ -12,6 +12,7 @@ use std::cell::Cell;
 use dlcore::block::Event;
 use dlcore::generator::Generator;
 use dlcore::generator::choices::{KICK_SLICE, KickFit, kick_of};
+use dlcore::generator::request::Pins;
 use dlcore::player::host::Host;
 use dlcore::player::{Player, Request, State};
 use dlcore::{Core, EXTRA, Key, Tap};
@@ -99,6 +100,10 @@ impl Host for Notes<'_> {
     }
     fn bass_lift(&mut self, db: f64) {
         self.core.bass_lift(db);
+    }
+    fn space_range(&mut self, which: usize, lo: f64, hi: f64) {
+        self.notes.push(format!("space {which} {} {}", lo.to_bits(), hi.to_bits()));
+        self.core.space_range(which, lo, hi);
     }
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
         self.notes.push(format!("steal {channel} {key:?} {} {}", from.to_bits(), to.to_bits()));
@@ -195,9 +200,9 @@ fn rendering_allocates_nothing() {
 #[test]
 fn the_kick_fits_alike_in_any_slices() {
     for (seed, root) in [(1, 0.0), (2_693_262_067, 5.0), (77, 11.0), (3_963_855_042, 3.0)] {
-        let whole = kick_of(seed, root);
+        let whole = kick_of(seed, root, &Pins::NONE);
         for budget in [1, 7, 333, KICK_SLICE] {
-            let mut fit = KickFit::new(seed, root);
+            let mut fit = KickFit::new(seed, root, &Pins::NONE);
             let mut slices = 0;
             while !fit.step(budget) {
                 slices += 1;

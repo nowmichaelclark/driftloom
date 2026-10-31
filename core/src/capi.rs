@@ -139,12 +139,15 @@ pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) 
 /// A refusal's line as C text (the request's `&'static str` lines,
 /// NUL-terminated): plain ASCII, static, never freed.
 fn line(refused: &'static str) -> *const c_char {
-    use crate::generator::request::{BAD_TEMPO, BAD_WEIGHT, NO_SUCH_VIBE, TEMPO_OUT};
+    use crate::generator::request::{BAD_SETTING, BAD_TEMPO, BAD_WEIGHT, NO_SUCH_SETTING, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT};
     let c: &'static CStr = match refused {
         NO_SUCH_VIBE => c"no such vibe",
         BAD_WEIGHT => c"a bad weight",
         BAD_TEMPO => c"a bad tempo",
         TEMPO_OUT => c"tempo must be 32 to 190 bpm",
+        NO_SUCH_SETTING => c"no such setting",
+        BAD_SETTING => c"a bad setting",
+        SETTING_OUT => c"a setting outside its range",
         _ => c"can't do that",
     };
     c.as_ptr()
@@ -194,6 +197,22 @@ pub unsafe extern "C" fn dl_player_weight(player: *mut Engine, id: *const c_char
 pub extern "C" fn dl_player_ask_tempo(player: *mut Engine, lo: f64, hi: f64) -> *const c_char {
     let Some(e) = engine(player) else { return line("") };
     match e.request.with_tempo(lo, hi) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Pin setting `number` at `value` for the next `dl_player_load` (queue
+/// item 85b; `Request::with_pin`, `request::Pins`: a word by its place in
+/// the pin's list). Null if it can be met; else the line saying why not,
+/// and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_pin(player: *mut Engine, number: u32, value: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_pin(number as usize, value) {
         Ok(r) => {
             e.request = r;
             ptr::null()

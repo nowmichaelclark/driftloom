@@ -288,7 +288,7 @@ impl Sequencer {
     /// wandering pass may draw (`_kickOn`, `kickKindOf`, by the pass's
     /// count).
     pub fn pass_begins(&mut self, lp: &Loop) {
-        self.kick_kind = lp.settings.kick.map(|k| if lp.pass.is_some() { choices::kick_kind_of(lp.spec.seed, k.kind, self.loop_count) } else { k.kind });
+        self.kick_kind = lp.settings.kick.map(|k| if lp.pass.is_some() { choices::kick_kind_of(lp.spec.seed, k.kind, self.loop_count, lp.spec.pins.get("tunedKick").is_some()) } else { k.kind });
     }
 
     /// `_advance`: the next step's time and place. True at the top of a
@@ -366,7 +366,7 @@ impl Sequencer {
             self.bass_lift_change = false;
         }
         if self.space_change {
-            Synth::space_setup(host, &s.space, time);
+            synth.space_setup(host, &s.space, time);
             self.space_change = false;
         }
         // At each bar line, whether the tails should still be ringing.

@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { Fnv } from './golden-lib.mjs';
 import { Rng } from '../js/rng.js';
+import { pinNumbers } from '../js/pins.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const QUANTUM = 128;
@@ -77,6 +78,7 @@ function start(seed) {
     if (!(w == null ? x.dl_play_vibe(i) : x.dl_play_weight(i, w))) throw new Error(`the core refused '${id}'`);
   }
   if (asked.tempo && !x.dl_play_ask_tempo(asked.tempo[0], asked.tempo[1])) throw new Error('the core refused the tempo');
+  for (const [i, v] of pinNumbers(asked.pins)) if (!x.dl_play_pin(i, v)) throw new Error(`the core refused pin ${i}`);
   for (const id of way.vibes) {
     const i = VIBE_IDS.indexOf(id);
     if (i < 0 || !x.dl_play_vibe(i)) throw new Error(`no vibe '${id}'`);

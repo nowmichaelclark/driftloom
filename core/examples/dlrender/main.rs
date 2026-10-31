@@ -29,7 +29,7 @@
 //!                                           list: one hash line a seed;
 //!                                           --request asks as the C
 //!                                           host's dl_player_ask does
-//!                                           ("glacial=0.7,bpm=70-85")
+//!                                           ("glacial=0.7,bpm=70-85,organ=on")
 //! cargo run --release --example dlrender -- --corpus SEED:N [the same]
 //!     [--wav DIR] [--calls DIR]             the first N loops of corpus SEED
 //!                                           (Rng(SEED).seed32() a loop), each

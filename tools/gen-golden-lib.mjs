@@ -8,6 +8,7 @@ import { Engine } from '../js/engine.js';
 import { Rng } from '../js/rng.js';
 import { VIBE_IDS } from '../js/vibes.js';
 import { kickKindOf } from '../js/choices.js';
+import { PINS } from '../js/pins.js';
 
 // The corpora (tools/gen-golden.mjs, "The cases").
 export const CORPUS_SEED = 1;
@@ -25,6 +26,10 @@ export const ALBUM_SEEDS = [['noan-nou', 4272732017]];
 // request of the kind its index picks (`requestCase`).
 export const REQUEST_SEED = 85;
 export const REQUEST_N = 360;
+// The pins (queue item 85b): seeds from their own stream, each with pins of
+// the kind its index picks (`pinCase`).
+export const PIN_SEED = 8502;
+export const PIN_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -114,7 +119,48 @@ export function cases(goldenCodes) {
     const seed = asked.seed32();
     out.push({ set: 'request', index: i, seed, vibes: null, request: requestCase(asked, i) });
   }
+  const pinned = new Rng(PIN_SEED);
+  for (let i = 0; i < PIN_N; i++) {
+    const seed = pinned.seed32();
+    out.push({ set: 'pins', index: i, seed, vibes: null, request: pinCase(pinned, i) });
+  }
   return out;
+}
+
+// A pin's value drawn from `r`: one of its words or values, or a number in
+// its range (a whole one where it takes only those), to three places so the
+// text reads back to the same number in both languages.
+function pinDraw(r, p) {
+  if (p.words) return p.words[Math.floor(r.f() * p.words.length)];
+  if (p.values) return String(p.values[Math.floor(r.f() * p.values.length)]);
+  const [lo, hi] = p.range;
+  if (p.whole) return String(lo + Math.floor(r.f() * (hi - lo + 1)));
+  return String(Math.min(hi, Math.max(lo, Math.round((lo + r.f() * (hi - lo)) * 1000) / 1000)));
+}
+
+// Pins, of the kind `i` picks, drawn from `r`: one choice at any of its
+// options (today's too), two to four choices, the arc on with its settings,
+// the tuned kick, subDuck and lateFloor with theirs, padSweep, the echo and
+// some of the space's, and a mix with vibes and a tempo.
+function pinCase(r, i) {
+  const byName = (n) => PINS.find((p) => p.name === n);
+  const pin = (n, v = null) => `${n}=${v ?? pinDraw(r, byName(n))}`;
+  const choices = PINS.filter((p) => !p.name.includes('.'));
+  const some = (list, n) => r.shuffle(list.slice()).slice(0, n);
+  const space = PINS.filter((p) => p.name.startsWith('space.'));
+  switch (i % 6) {
+    case 0: return pin(choices[Math.floor(r.f() * choices.length)].name);
+    case 1: return some(choices, 2 + (i % 3)).map((p) => pin(p.name)).join(',');
+    case 2: return [pin('arc', 'on'), ...some(['arc.shape', 'arc.period', 'arc.from', 'arc.floor'], 1 + (i % 4)).map((n) => pin(n))].join(',');
+    case 3: return [pin('tunedKick'), pin('subDuck', 'on'), pin('lateFloor', 'on'),
+      ...some(['kick.note', 'kick.short', 'kick.long', 'subDuck.depth', 'subDuck.recover', 'lateFloor.order', 'lateFloor.seconds', 'lateFloor.gap'], 2 + (i % 5)).map((n) => pin(n))].join(',');
+    case 4: return [pin('padSweep', 'on'), ...some(['padSweep.lo', 'padSweep.oct', 'padSweep.period', 'padSweep.q', 'echo.beats'], 1 + (i % 5)).map((n) => pin(n)),
+      ...some(space, 1 + (i % 4)).map((p) => pin(p.name))].join(',');
+    default: {
+      const vibes = vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, 1 + (i % 3)));
+      return [...vibes, `bpm=${60 + Math.floor(r.f() * 100)}`, ...some(choices, 1 + (i % 2)).map((p) => pin(p.name)), pin('echo.beats')].join(',');
+    }
+  }
 }
 
 // A request's text, of the kind `i` picks, drawn from `r`: a pinned tempo
@@ -195,7 +241,7 @@ export function partsOf(c) {
   for (let pass = 1; pass <= PASSES; pass++) {
     const w = engine._wander(pass);
     const { spec: _, ...rest } = w;
-    parts.passes.push(engine.kick ? { ...rest, kick: kickKindOf(spec.seed, engine.kick.kind, pass) } : rest);
+    parts.passes.push(engine.kick ? { ...rest, kick: kickKindOf(spec.seed, engine.kick.kind, pass, !!(spec.pins && spec.pins.tunedKick)) } : rest);
   }
   // In a browser the engine's clock holds a worker.
   engine.clock.dispose();

@@ -543,6 +543,19 @@ mod player {
         }
     }
 
+    /// Pin setting `number` at `value` for what the next `dl_play_load`
+    /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_pin(number: u32, value: f64) -> u32 {
+        match request().with_pin(number as usize, value) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
     /// Ask for the loop of `seed` with what was asked since the last load,
     /// its first step at `at` seconds on the core's clock, or as soon as it
     /// is made if that has passed (0: as soon as made). See `Player::load`.

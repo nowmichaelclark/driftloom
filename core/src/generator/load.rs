@@ -62,6 +62,9 @@ pub struct Space {
     pub busy: f64,
     pub wet: f64,
     pub light: bool,
+    /// The request's pins for the space recipe's settings (queue item 85b),
+    /// by `space::n`, each `None` where it isn't pinned.
+    pub pins: [Option<f64>; crate::space::n::COUNT],
 }
 
 /// The loop's tuned kick (queue item 67) and which of its kinds it plays
@@ -117,7 +120,7 @@ impl Load {
         pad_sweep: None,
         bass_lift: 0.0,
         late: None,
-        space: Space { seed: 0, busy: 0.0, wet: 0.0, light: false },
+        space: Space { seed: 0, busy: 0.0, wet: 0.0, light: false, pins: [None; crate::space::n::COUNT] },
         echo_beats: 0.75,
         pump: 0.0,
         level: 1.0,
@@ -131,7 +134,7 @@ impl Load {
     #[must_use]
     pub fn of(cx: &Cx, r: &Render) -> Self {
         let mut load = Self::without_kick(cx, r);
-        load.kick = Self::kick_kind(r).map(|kind| Kick { kick: choices::kick_of(cx.spec.seed, cx.spec.root), kind });
+        load.kick = Self::kick_kind(r).map(|kind| Kick { kick: choices::kick_of(cx.spec.seed, cx.spec.root, &cx.spec.pins), kind });
         load
     }
 
@@ -148,6 +151,8 @@ impl Load {
     pub fn without_kick(cx: &Cx, r: &Render) -> Self {
         let spec = cx.spec;
         let v = spec.vibes.as_ref();
+        // A request's pins (queue item 85b) fix any of the settings.
+        let p = &spec.pins;
         let on = |id: &str| r.choice(id) == Some("on");
         let spb = cx.spb;
         let total = spec.bars * spb;
@@ -160,20 +165,21 @@ impl Load {
             stab: on("dubStab").then(|| stab_of(spec.seed, busy)),
             organ: on("organ").then(|| organ_of(spec.seed, busy)),
             wash: on("wash").then(|| wash_of(spec.seed, spec.root)),
-            arc: choices::arc_plays(spec.seed, on("arc"), v).then(|| choices::arc_of(spec.seed, v)),
+            arc: choices::arc_plays(spec.seed, on("arc"), v, p.get("arc").is_some()).then(|| choices::arc_of(spec.seed, v, p)),
             kick,
-            sub_duck: on("subDuck").then(|| choices::sub_duck_of(spec.seed, spec.bpm)),
-            pad_sweep: on("padSweep").then(|| choices::pad_sweep_of(spec.seed)),
+            sub_duck: on("subDuck").then(|| choices::sub_duck_of(spec.seed, spec.bpm, p)),
+            pad_sweep: on("padSweep").then(|| choices::pad_sweep_of(spec.seed, p)),
             bass_lift: choices::bass_lift_of(&r.drums),
-            late: on("lateFloor").then(|| choices::late_floor_of(spec.seed, spb, 60.0 / spec.bpm / 4.0, v, js::round(total / spb))),
+            late: on("lateFloor").then(|| choices::late_floor_of(spec.seed, spb, 60.0 / spec.bpm / 4.0, v, js::round(total / spb), p)),
             space: Space {
                 seed: spec.seed,
                 busy,
                 // `spec.tone.space || 0`
                 wet: if space == 0.0 || space.is_nan() { 0.0 } else { space },
                 light: matches!(r.texture_kind, "bells" | "chime" | "drops"),
+                pins: core::array::from_fn(|i| p.space(i)),
             },
-            echo_beats: choices::echo_time_of(spec.seed, v),
+            echo_beats: p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v)),
             pump: cx.c.pump.unwrap_or(0.0),
             level: cx.c.level.unwrap_or(1.0),
             bpm: spec.bpm,
@@ -338,6 +344,16 @@ fn write_space<S: Sink>(w: &mut Writer<S>, s: &Space) {
     w.num(s.busy);
     w.key("light");
     w.bool(s.light);
+    if s.pins.iter().any(Option::is_some) {
+        w.key("pins");
+        w.list();
+        for (i, v) in s.pins.iter().enumerate() {
+            if let &Some(v) = v {
+                w.nums(&[js::num(i), v]);
+            }
+        }
+        w.end_list();
+    }
     w.key("seed");
     w.num(f64::from(s.seed));
     w.key("wet");

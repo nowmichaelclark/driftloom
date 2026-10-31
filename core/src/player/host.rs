@@ -34,6 +34,9 @@ pub trait Host {
     /// layer's oldest notes, queue item 85c).
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64);
     fn bass_lift(&mut self, db: f64);
+    /// `Core::space_range`: a space setting's range, from the next loop's
+    /// start (a request's space pins, queue item 85b).
+    fn space_range(&mut self, which: usize, lo: f64, hi: f64);
 }
 
 impl Host for Core {
@@ -75,5 +78,9 @@ impl Host for Core {
 
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
         Core::steal(self, channel, key, from, to);
+    }
+
+    fn space_range(&mut self, which: usize, lo: f64, hi: f64) {
+        Core::space_range(self, which, lo, hi);
     }
 }

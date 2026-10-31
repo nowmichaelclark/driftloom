@@ -52,6 +52,9 @@ pub struct Spec {
     /// The tempo asked (queue item 85), [low, high] bpm: kept, so `metre`
     /// finds the gait by it and a share code carries it.
     pub tempo: Option<[f64; 2]>,
+    /// The pins asked (queue item 85b), kept the same way: the choices'
+    /// draw and the load read them from here.
+    pub pins: request::Pins,
     /// Each layer's own cycle in steps, or `None` (null); `None` overall
     /// for a loop without cycles.
     pub cycles: Option<[Option<f64>; 5]>,
@@ -77,6 +80,7 @@ impl Spec {
         tone: [0.0; 3],
         vibes: None,
         tempo: None,
+        pins: request::Pins::NONE,
         cycles: None,
     };
 
@@ -155,6 +159,10 @@ impl Spec {
         w.end_obj();
         w.key("name");
         w.str(self.name.as_str());
+        if self.pins.any() {
+            w.key("pins");
+            self.pins.write(w);
+        }
         w.key("playFor");
         w.null();
         w.key("root");
@@ -495,6 +503,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         tone,
         vibes,
         tempo: t,
+        pins: *request.pins(),
         cycles,
     }
 }

@@ -23,8 +23,9 @@
 // options with today's first, and the vibes it leans toward or away from) and
 // its eligibility test to ELIGIBLE below. Nothing here goes in the share
 // code: the code's seed gives the draws, and "Let the loop wander" never
-// redraws them (item 67's kick swap is the one exception). Pins come with
-// phase 2's requests.
+// redraws them (item 67's kick swap is the one exception). A request's pins
+// (queue item 85b, js/pins.js) fix a choice or a setting; the code carries
+// those.
 
 import { Rng } from './rng.js';
 import { log10, pow, sqrt } from './dlmath.js';
@@ -270,8 +271,22 @@ function leanOf(table, vibes) {
 // The choices for a loop: every choice's option, `today` for those it did
 // not draw. `seed` is the loop's; `vibes` its vibes ({ vibes, strength }, or
 // null); `ctx` what the eligibility tests read. `list` is CHOICES unless a
-// test hands its own.
-export function drawChoices(seed, ctx, vibes = null, list = CHOICES) {
+// test hands its own. `pins` are the request's (queue item 85b, js/pins.js;
+// { id: option }), laid over the draws once they are all made, so no draw
+// moves: today's option always, another where the loop is eligible for it.
+export function drawChoices(seed, ctx, vibes = null, list = CHOICES, pins = null) {
+  const out = drawn(seed, ctx, vibes, list);
+  if (pins) {
+    for (const c of list) {
+      const o = pins[c.id];
+      if (o === undefined || !c.options.some(([x]) => x === o)) continue;
+      if (o === c.options[0][0] || c.eligible(ctx)) out[c.id] = o;
+    }
+  }
+  return out;
+}
+
+function drawn(seed, ctx, vibes, list) {
   const out = {};
   for (const c of list) out[c.id] = c.options[0][0];
   if (!list.length) return out;
@@ -331,8 +346,11 @@ function arcDraws(seed, vibes) {
 // glacial's weight, drawn on the arc's own stream after arcOf's draws. Not
 // one of the loop's changes, so its other choices and draws stay as they
 // are; a loop without glacial plays the arc exactly when its choices say.
-export function arcPlays(seed, choices, vibes = null) {
+// `pinned` is the arc's pin (queue item 85b), if any: pinned to today, a
+// glacial loop plays no arc either.
+export function arcPlays(seed, choices, vibes = null, pinned = undefined) {
   if (choices && choices.arc === 'on') return true;
+  if (pinned !== undefined) return false;
   const w = vibes && vibes.vibes.glacial;
   if (!w) return false;
   return arcDraws(seed, vibes).r.chance(ARC.glacialChance * w);
@@ -382,9 +400,10 @@ export function kickOf(seed, root, pins = {}) {
 // The kick a wandering loop plays on pass `pass`: the loop's own (`kind`) on
 // the first pass and most others; now and then (KICK.swap) one of the other
 // two, drawn from the pass alone, so any pass can be reached without playing
-// the ones before it.
-export function kickKindOf(seed, kind, pass) {
-  if (!pass) return kind;
+// the ones before it. `held`: the request pinned the kick (queue item 85b),
+// and a pick holds through wandering, so it never swaps.
+export function kickKindOf(seed, kind, pass, held = false) {
+  if (!pass || held) return kind;
   const r = new Rng((((seed ^ KICK_SWAP_SALT) >>> 0) + Math.imul(pass, 0x9e3779b1)) >>> 0 || 1);
   if (!r.chance(KICK.swap)) return kind;
   const others = ['today', 'short', 'long'].filter((k) => k !== kind);
