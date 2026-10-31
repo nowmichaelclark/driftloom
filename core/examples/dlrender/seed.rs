@@ -32,6 +32,9 @@ pub struct Way {
     pub layout: u32,
     pub wander: f64,
     pub vibes: Vec<String>,
+    /// The request as text (`--request`; `Request::parse`), the vibes of
+    /// `--vibes` added to it.
+    pub request: Option<String>,
     /// The sketch build's levers (queue item 83, `--force`, `--set`,
     /// `--sketch`, `--pin`; `clip.rs`): choices forced, named constants
     /// moved, the sketch block's layer, settings pinned.
@@ -41,11 +44,25 @@ pub struct Way {
 }
 
 impl Way {
+    /// What it asks the player for: `--request`'s text, with `--vibes`'s.
+    ///
+    /// # Errors
+    /// The request's line, where it cannot be met.
+    pub fn request(&self) -> Result<Request, String> {
+        let text = self.request.as_deref().unwrap_or("");
+        let mut request = Request::parse(text).map_err(|why| format!("--request {text}: {why}"))?;
+        for id in &self.vibes {
+            request = request.with_vibe(id).ok_or_else(|| format!("no vibe '{id}'"))?;
+        }
+        Ok(request)
+    }
+
     /// The line's description of it.
     fn describe(&self) -> String {
         let vibes = if self.vibes.is_empty() { String::new() } else { format!(" vibes={}", self.vibes.join(",")) };
+        let request = self.request.as_ref().map_or(String::new(), |r| format!(" request={r}"));
         format!(
-            "quality={} layout={} seconds={} rate={} wander={}{vibes}",
+            "quality={} layout={} seconds={} rate={} wander={}{vibes}{request}",
             if self.full { "full" } else { "lite" },
             if self.layout == 2 { "stereo" } else { "mono" },
             self.seconds,
@@ -166,10 +183,7 @@ pub fn corpus(seed: u32, n: usize) -> Vec<u32> {
 /// a core, the loop made at once (`Player::ready`), then rendered, its
 /// steps decided before each block.
 pub fn render_seed(seed: u32, way: &Way, calls: bool) -> Result<Rendered, String> {
-    let mut request = Request::new();
-    for id in &way.vibes {
-        request = request.with_vibe(id).ok_or_else(|| format!("no vibe '{id}'"))?;
-    }
+    let request = way.request()?;
     let frames = (way.seconds * way.rate).ceil() as usize;
     // A core and a player are megabytes each: built in a thread with room
     // for them on its stack, as the test host builds a core.
@@ -289,10 +303,7 @@ pub struct Costs {
 
 /// Time playing the loop of `seed` as `way` says, `runs` times.
 pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
-    let mut request = Request::new();
-    for id in &way.vibes {
-        request = request.with_vibe(id).ok_or_else(|| format!("no vibe '{id}'"))?;
-    }
+    let request = way.request()?;
     let blocks = (way.seconds * way.rate / dlcore::QUANTUM as f64).ceil() as usize;
     let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
     std::thread::scope(|scope| {

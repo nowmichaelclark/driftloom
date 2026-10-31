@@ -5,7 +5,7 @@
 // voicing or an out-of-range note does not throw, it just sounds wrong,
 // and often only on one seed in a thousand. So we check thousands.
 
-import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf } from '../js/generator.js';
+import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf, metreOf, readRequest, parseRequest, requestText, requestOf, RequestError, TEMPO_LIMIT } from '../js/generator.js';
 import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
@@ -1605,6 +1605,87 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
   }
   check('chord lengths, rests, tempo and the bass never move it', Object.values(moved).every((n) => n === 0), JSON.stringify(moved));
   check('it is a whole number of octaves, and both ways of using it happen', [...octaves].every((n) => n % 12 === 0) && octaves.size >= 2, [...octaves].join());
+}
+
+// The request (queue item 85): its forms and refusals, as the core reads
+// them (core/tests/request.rs walks the same), the tempo honored, weights,
+// and the code that carries it.
+{
+  const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null}'
+    && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
+  check('text, in the frozen order, weights and the tempo low first',
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85]}');
+  check('an object reads as its text does',
+    JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
+  check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
+  check('a list of names is a selection: names it does not know left out, as ever',
+    JSON.stringify(readRequest(['cozy', 'nope']).vibes) === '[["cozy",null]]');
+  const lines = [['nope', 'no such vibe'], ['glacial=x', 'a bad weight'], ['nope=x', 'no such vibe'], ['bpm=7a', 'a bad tempo'],
+    ['bpm=', 'a bad tempo'], ['bpm=300', 'tempo must be 32 to 190 bpm'], ['bpm=20-40', 'tempo must be 32 to 190 bpm']];
+  check('the refusals, each its plain line', lines.every(([t, line]) => refused(t) === line), lines.map(([t]) => refused(t)).join(' | '));
+  check('refusals in an object too', refused({ tempo: NaN }) === 'a bad tempo' && refused({ vibes: { cozy: -1 } }) === 'a bad weight'
+    && refused({ vibes: { nope: 1 } }) === 'no such vibe');
+  check('the core\'s tempos', TEMPO_LIMIT[0] === 32 && TEMPO_LIMIT[1] === 190 && readRequest({ tempo: 76.6 }).tempo.join() === '77,77');
+
+  const r = new Rng(85);
+  let pins = 0, ranged = 0, metres = 0, bad = '';
+  for (let i = 0; i < 300; i++) {
+    const seed = r.seed32();
+    const pin = 32 + Math.floor(r.f() * 159);
+    const p = newSpec(seed, { tempo: pin });
+    if (p.bpm === pin && p.tempo.join() === `${pin},${pin}`) pins++; else bad ||= `pin ${seed} ${pin} ${p.bpm}`;
+    const q = newSpec(seed, 'bpm=70-85');
+    if (Number.isInteger(q.bpm) && q.bpm >= 70 && q.bpm <= 85) ranged++; else bad ||= `range ${seed} ${q.bpm}`;
+    // The tempo control moves the loop's tempo, never its metre.
+    const m = metreOf(p);
+    p.bpm = p.bpm > 100 ? 60 : 160;
+    if (metreOf(p) === m) metres++; else bad ||= `metre ${seed}`;
+  }
+  check('a pinned tempo is the loop\'s, across the core\'s range (300 loops)', pins === 300, bad);
+  check('a ranged tempo stays inside, in whole bpm (300 loops)', ranged === 300, bad);
+  check('the metre a pin chose holds when the tempo control moves (300 loops)', metres === 300, bad);
+  check('a request without a tempo keeps no tempo in the spec', newSpec(5, ['cozy']).tempo === undefined && newSpec(5).tempo === undefined);
+
+  const shares = (v) => JSON.stringify(newSpec(9, { vibes: v }).vibes);
+  check('weights are shares, on the code\'s grid', shares({ glacial: 0.7, misty: 0.3 }) === JSON.stringify({ glacial: 179 / 255, misty: 77 / 255 }));
+  check('shares past 1 are scaled to 1, a vibe without one counts 1',
+    shares({ glacial: 2, misty: 2 }) === JSON.stringify({ glacial: 128 / 255, misty: 128 / 255 }) && shares({ glacial: true, misty: 1 }) === shares({ glacial: 1, misty: 1 }));
+  check('less than 1 is a lighter touch, and 0 leaves a vibe out',
+    shares({ glacial: 0.2 }) === JSON.stringify({ glacial: 51 / 255 }) && shares({ glacial: 0, misty: 0.5 }) === JSON.stringify({ misty: 128 / 255 })
+    && newSpec(9, { vibes: { glacial: 0 } }).vibes === undefined);
+  const seven = Object.fromEntries(['glacial', 'misty', 'peaceful', 'zany', 'hushed', 'restful', 'lively'].map((id, i) => [id, 0.1 * (i + 1)]));
+  const five = newSpec(9, { vibes: seven }).vibes;
+  check('past five, the five heaviest steer', Object.keys(five).length === 5 && !five.glacial && !five.misty);
+
+  let same = 0;
+  const w = new Rng(11);
+  for (let i = 0; i < 200; i++) {
+    const seed = w.seed32();
+    const sel = VIBE_IDS.filter((_, k) => (k * 7 + i) % 23 < 1 + (i % 5));
+    const a = newSpec(seed, sel.slice(0, 5));
+    const b = newSpec(seed, requestOf(a));
+    if (JSON.stringify(a) === JSON.stringify(b)) same++;
+  }
+  check('a loop\'s own weights, sent back, make it again (200 loops: the player\'s path)', same === 200, `${same}`);
+  const t = newSpec(4, { vibes: { cozy: 0.6 }, tempo: [90, 120] });
+  check('so do its weights and its tempo', JSON.stringify(newSpec(4, requestOf(t))) === JSON.stringify(t));
+
+  let codes = 0, firstBad = '';
+  for (let i = 0; i < 100; i++) {
+    const spec = newSpec(3000 + i, { vibes: i % 2 ? { cozy: 0.5 } : null, tempo: [40 + i, 60 + i] });
+    const code = encodeSong(spec);
+    const back = decodeSong(code);
+    if (JSON.stringify(back.tempo) === JSON.stringify(spec.tempo) && metreOf(back) === metreOf(spec)
+      && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks) && encodeSong(back) === code) codes++;
+    else firstBad ||= code;
+  }
+  check('a loop made from a request is made again from its code (100 loops)', codes === 100, firstBad);
+  check('a loop with a tempo asked is written as format 5, the others as before',
+    encodeSong(newSpec(5, { tempo: 80 })).slice(4, 6) === '0M' && encodeSong(newSpec(5, ['cozy'])).slice(4, 6) === '0G' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+  const mixed = decodeAlbum(encodeAlbum('Asked', [newSpec(8), newSpec(9, { tempo: 99 }), newSpec(10, ['merry'])]));
+  check('an album carries each track\'s tempo asked, or none',
+    mixed.specs[0].tempo === undefined && mixed.specs[1].tempo.join() === '99,99' && mixed.specs[2].tempo === undefined && !!mixed.specs[2].vibes);
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

@@ -6,8 +6,10 @@
 //
 //   node tools/player-wasm.mjs --corpus SEED:N | --seed N[,N...]
 //        [--seconds 45] [--rate 44100] [--lite] [--stereo] [--wander 1]
-//        [--vibes ID,...] [--wasm FILE]
+//        [--vibes ID,...] [--request TEXT] [--wasm FILE]
 //                       one line a loop, as `dlrender --seed` prints it
+//                       (--request: queue item 85's request as text,
+//                       "glacial=0.7,bpm=70-85", as `dlrender --request`)
 //   ... --costs         what each block costs (the load spread across blocks,
 //                       as a real-time host plays it; each block's least time
 //                       over three runs), as `dlrender --costs` measures it
@@ -39,10 +41,15 @@ const way = {
   layout: argv.includes('--stereo') ? 2 : 1,
   wander: Number(flag('--wander', 1)),
   vibes: flag('--vibes', '') ? flag('--vibes', '').split(',') : [],
+  request: flag('--request', null),
 };
 const wasm = path.resolve(flag('--wasm', path.join(ROOT, 'js', 'dlplayer.wasm')));
 const bytes = fs.readFileSync(wasm);
 const { VIBE_IDS } = await import('../js/vibes.js');
+const { parseRequest } = await import('../js/generator.js');
+// The request, read as the core reads it (`Request::parse`), handed over
+// call by call as the worklet hands it.
+const asked = parseRequest(way.request ?? '');
 
 const seeds = [];
 if (flag('--corpus', null)) {
@@ -65,6 +72,11 @@ function start(seed) {
   if (way.layout === 2) x.dl_layout(2);
   x.dl_play_wander(way.wander);
   x.dl_play_attach(way.full ? 1 : 0);
+  for (const [id, w] of asked.vibes || []) {
+    const i = VIBE_IDS.indexOf(id);
+    if (!(w == null ? x.dl_play_vibe(i) : x.dl_play_weight(i, w))) throw new Error(`the core refused '${id}'`);
+  }
+  if (asked.tempo && !x.dl_play_ask_tempo(asked.tempo[0], asked.tempo[1])) throw new Error('the core refused the tempo');
   for (const id of way.vibes) {
     const i = VIBE_IDS.indexOf(id);
     if (i < 0 || !x.dl_play_vibe(i)) throw new Error(`no vibe '${id}'`);
@@ -102,7 +114,8 @@ function render(seed) {
   h.samples(samples);
   const hashes = way.layout === 2 ? `left=${words32(lanes[0])} right=${words32(lanes[1])}` : `out=${words32(lanes[0])}`;
   const vibes = way.vibes.length ? ` vibes=${way.vibes.join(',')}` : '';
-  return `seed=${seed} name=${name} quality=${way.full ? 'full' : 'lite'} layout=${way.layout === 2 ? 'stereo' : 'mono'} seconds=${way.seconds} rate=${way.rate} wander=${way.wander}${vibes} frames=${frames} ${hashes} hash=${h.hex()}`;
+  const request = way.request != null ? ` request=${way.request}` : '';
+  return `seed=${seed} name=${name} quality=${way.full ? 'full' : 'lite'} layout=${way.layout === 2 ? 'stereo' : 'mono'} seconds=${way.seconds} rate=${way.rate} wander=${way.wander}${vibes}${request} frames=${frames} ${hashes} hash=${h.hex()}`;
 }
 
 // Each block's time (the player's decide and the core's block together, as

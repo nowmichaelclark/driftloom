@@ -116,7 +116,12 @@ if [ "$chost" = yes ]; then
   "$tmp/seed" "$s" --stereo --seconds 10 --wav "$tmp/c.wav" > /dev/null
   cargo run -q --release --locked --example dlrender -- --seed "$s" --stereo --seconds 10 --wav "$tmp/rust.wav" > /dev/null
   cmp "$tmp/c.wav" "$tmp/rust.wav"
-  echo "seeds: the C host, through dlcore.h alone: all $(wc -l < "$tmp/kept" | tr -d ' ') loops equal their hashes, and its WAV is dlrender's"
+  # A request (queue item 85), asked through dl_player_ask: the same WAV.
+  asked='glacial=0.7,misty=0.3,bpm=70-85'
+  "$tmp/seed" "$s" --request "$asked" --seconds 10 --wav "$tmp/c.wav" > /dev/null
+  cargo run -q --release --locked --example dlrender -- --seed "$s" --request "$asked" --seconds 10 --wav "$tmp/rust.wav" > /dev/null
+  cmp "$tmp/c.wav" "$tmp/rust.wav"
+  echo "seeds: the C host, through dlcore.h alone: all $(wc -l < "$tmp/kept" | tr -d ' ') loops equal their hashes, and its WAVs are dlrender's (one asked for $asked)"
   exit 0
 fi
 

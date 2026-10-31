@@ -202,7 +202,9 @@ class DriftloomCore extends AudioWorkletProcessor {
       // The core's player (queue item 82; CoreHost.playLoad and the rest).
       case 'playLoad':
         if (core && this.player) {
-          for (const i of m.vibes || []) core.dl_play_vibe(i);
+          // The request (queue item 85): each vibe with its weight, the tempo.
+          for (const [i, w] of m.vibes || []) core.dl_play_weight(i, w);
+          if (m.tempo) core.dl_play_ask_tempo(m.tempo[0], m.tempo[1]);
           core.dl_play_load(m.seed >>> 0, m.at || 0);
         }
         return;

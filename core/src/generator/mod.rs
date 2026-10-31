@@ -60,6 +60,7 @@ pub mod load;
 pub mod melody;
 pub mod plan;
 pub mod render;
+pub mod request;
 pub mod rng;
 pub mod spec;
 pub mod theory;
@@ -184,7 +185,7 @@ pub struct Generator {
     /// lengths).
     stage: Stage,
     seed: u32,
-    chosen: [bool; data::VIBE_COUNT],
+    request: request::Request,
     today: Option<f64>,
     kick: choices::KickFit,
 }
@@ -241,7 +242,7 @@ impl Generator {
             pass: wander::Pass::new(),
             stage: Stage::Idle,
             seed: 0,
-            chosen: [false; data::VIBE_COUNT],
+            request: request::Request::new(),
             today: None,
             kick: choices::KickFit::EMPTY,
         }
@@ -266,14 +267,24 @@ impl Generator {
     /// does, a stage at a time: each `step` runs the next. What the loop was
     /// before is gone once the first runs.
     pub fn begin(&mut self, seed: u32, vibes: &[usize]) {
-        self.begin_with(seed, &character::selection(vibes));
+        let mut request = request::Request::new();
+        for &i in vibes {
+            request = request.with(i);
+        }
+        self.begin_with(seed, &request);
     }
 
-    /// `begin`, with the vibes as a selection: each vibe's number, chosen
-    /// or not (`character::selection`).
-    pub fn begin_with(&mut self, seed: u32, chosen: &[bool; data::VIBE_COUNT]) {
+    /// Generate the loop of `seed` as `request` asks (queue item 85: the
+    /// vibes, with or without weights, and the tempo), every stage at once.
+    pub fn load_with(&mut self, seed: u32, request: &request::Request) {
+        self.begin_with(seed, request);
+        while !self.step() {}
+    }
+
+    /// `begin`, with a request (`request::Request`).
+    pub fn begin_with(&mut self, seed: u32, request: &request::Request) {
         self.seed = seed;
-        self.chosen = *chosen;
+        self.request = *request;
         self.today = None;
         self.stage = Stage::Spec;
     }
@@ -284,7 +295,7 @@ impl Generator {
         match self.stage {
             Stage::Idle | Stage::Done => {}
             Stage::Spec => {
-                self.spec = spec::new_spec(self.seed, &self.chosen);
+                self.spec = spec::new_spec(self.seed, &self.request);
                 self.stage = Stage::Plan;
             }
             Stage::Plan => {

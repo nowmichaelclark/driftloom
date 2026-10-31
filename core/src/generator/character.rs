@@ -5,6 +5,7 @@
 use super::data::{self, CHARACTERS, Character, Gait, NumPool, POOL_MAX, Pool, Progressions, Table, VIBES, Vibe};
 use super::js;
 use super::list::List;
+use super::request::Request;
 use super::rng::Rng;
 use crate::math;
 
@@ -47,12 +48,13 @@ pub fn selection(picked: &[usize]) -> [bool; data::VIBE_COUNT] {
     chosen
 }
 
-/// `drawVibes`: the loop's vibes from its seed and the selection, or none.
+/// `drawVibes`: the loop's vibes from its seed and the request's vibes, or
+/// none.
 #[must_use]
-pub fn draw_vibes(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Option<Vibes> {
+pub fn draw_vibes(seed: u32, request: &Request) -> Option<Vibes> {
     let mut ids = List::<usize, { data::VIBE_COUNT }>::filled(0);
-    for (i, &c) in chosen.iter().enumerate() {
-        if c {
+    for i in 0..data::VIBE_COUNT {
+        if request.vibe(i).is_some() {
             ids.push(i);
         }
     }
@@ -60,6 +62,9 @@ pub fn draw_vibes(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Option<Vibes>
         return None;
     }
     let mut r = Rng::new(js::salted(seed, VIBE_SALT, 19));
+    if request.weighted() {
+        return weighed_vibes(&mut r, request, &ids);
+    }
     let mut picked = List::<usize, VIBE_MAX>::filled(0);
     if ids.len() <= VIBE_MAX {
         for &i in ids.iter() {
@@ -89,6 +94,65 @@ pub fn draw_vibes(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Option<Vibes>
         list.push((id, w));
     }
     Some(Vibes { list, strength: q8(r.range(VIBE_STRENGTH[0], VIBE_STRENGTH[1])) })
+}
+
+/// Weights past 1 by more than a share code's rounding of five weights are
+/// scaled to 1 (`VIBE_ROUNDING`).
+const VIBE_ROUNDING: f64 = 3.0 / 255.0;
+
+/// `weighedVibes`: vibes with weights (`Request::with_weight` says what a
+/// weight means). The strength is drawn as for the same vibes unweighted,
+/// so a loop's own weights sent back make that loop again.
+fn weighed_vibes(r: &mut Rng, request: &Request, ids: &[usize]) -> Option<Vibes> {
+    let mut all = List::<(usize, f64), { data::VIBE_COUNT }>::filled((0, 0.0));
+    for &i in ids {
+        let w = request.vibe(i).flatten().unwrap_or(1.0);
+        if w > 0.0 {
+            all.push((i, w));
+        }
+    }
+    // The five heaviest, ties to the earlier, back in the frozen order.
+    let mut list = List::<(usize, f64), VIBE_MAX>::filled((0, 0.0));
+    if all.len() <= VIBE_MAX {
+        for &e in all.iter() {
+            list.push(e);
+        }
+    } else {
+        let mut taken = [false; data::VIBE_COUNT];
+        for _ in 0..VIBE_MAX {
+            let mut best: Option<(usize, f64)> = None;
+            for &(i, w) in all.iter() {
+                if !taken[i] && best.is_none_or(|b| w > b.1) {
+                    best = Some((i, w));
+                }
+            }
+            if let Some(b) = best {
+                taken[b.0] = true;
+            }
+        }
+        for &e in all.iter() {
+            if taken[e.0] {
+                list.push(e);
+            }
+        }
+    }
+    for _ in 0..list.len() {
+        r.f();
+    }
+    let strength = q8(r.range(VIBE_STRENGTH[0], VIBE_STRENGTH[1]));
+    let mut total = 0.0;
+    for e in list.iter() {
+        total += e.1;
+    }
+    let scale = if total > 1.0 + VIBE_ROUNDING { total } else { 1.0 };
+    let mut out = List::filled((0, 0.0));
+    for &(i, w) in list.iter() {
+        let share = q8(w / scale);
+        if share > 0.0 {
+            out.push((i, share));
+        }
+    }
+    (!out.is_empty()).then_some(Vibes { list: out, strength })
 }
 
 /// `vibePull`: a value moved part-way toward the weighted mean of the

@@ -343,6 +343,7 @@ mod generator {
     use core::cell::UnsafeCell;
 
     use crate::generator::canon::Text;
+    use crate::generator::request::Request;
     use crate::generator::{Generator, Part, data};
 
     struct Global(UnsafeCell<Generator>);
@@ -353,7 +354,9 @@ mod generator {
     struct Bytes<const N: usize>(UnsafeCell<[u8; N]>);
     // Single-threaded, as above.
     unsafe impl<const N: usize> Sync for Bytes<N> {}
-    static INPUT: Bytes<{ data::VIBE_COUNT }> = Bytes(UnsafeCell::new([0; data::VIBE_COUNT]));
+    /// Room for the vibes' numbers, or a request's text (`dl_gen_request`).
+    const INPUT_MAX: usize = 1024;
+    static INPUT: Bytes<INPUT_MAX> = Bytes(UnsafeCell::new([0; INPUT_MAX]));
     /// Room for a part's text: the spec's is about 600 bytes, the longest
     /// in the goldens (a wandered pass, the whole pattern) 74 KB.
     const TEXT_MAX: usize = 1 << 20;
@@ -387,6 +390,24 @@ mod generator {
         }
         generator().load(seed, &picked[..n]);
         1
+    }
+
+    /// Generate the loop of `seed` as the request whose text is the first
+    /// `length` bytes at `dl_gen_input` asks (`Request::parse`; the goldens'
+    /// second field). 1 if it did; 0 if the request cannot be met (nothing
+    /// is loaded then).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_request(seed: u32, length: u32) -> u32 {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let input = unsafe { &*INPUT.0.get() };
+        let bytes = &input[..(length as usize).min(input.len())];
+        match core::str::from_utf8(bytes).map(Request::parse) {
+            Ok(Ok(r)) => {
+                generator().load_with(seed, &r);
+                1
+            }
+            _ => 0,
+        }
     }
 
     /// The hash of part `part` (`Part::ALL`'s order) of the loop loaded.
@@ -488,7 +509,33 @@ mod player {
         u32::from(known)
     }
 
-    /// Ask for the loop of `seed` with the vibes added since the last load,
+    /// Add the vibe numbered `index` at `weight` to what the next
+    /// `dl_play_load` asks for (`Request::with_weight`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_weight(index: u32, weight: f64) -> u32 {
+        match request().with_weight(index as usize, weight) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// Ask the next `dl_play_load` for a tempo, `lo` to `hi` bpm
+    /// (`Request::with_tempo`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_ask_tempo(lo: f64, hi: f64) -> u32 {
+        match request().with_tempo(lo, hi) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// Ask for the loop of `seed` with what was asked since the last load,
     /// its first step at `at` seconds on the core's clock, or as soon as it
     /// is made if that has passed (0: as soon as made). See `Player::load`.
     #[unsafe(no_mangle)]

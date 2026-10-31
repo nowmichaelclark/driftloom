@@ -35,12 +35,17 @@ export const VOWEL_KEYS = ['a', 'e', 'o', 'u'];
 
 // ---------------------------------------------------------------- spec
 
-export function newSpec(seed = randomSeed(), selection = null) {
+// `request` is what the host asks for (`readRequest`: the vibes, the
+// tempo); a list of vibe names is a listener's selection, as it always was.
+export function newSpec(seed = randomSeed(), request = null) {
   const r = new Rng(seed);
+  const asked = readRequest(request);
   // The listener's vibes (queue item 38a), drawn from a stream of their own
   // so the loop's own draws below are the same ones either way. With none
   // selected nothing below changes at all: every hook is a no-op.
-  const v = drawVibes(seed, selection);
+  const v = drawVibes(seed, asked.vibes);
+  // A tempo asked (queue item 85), [low, high]; null leaves it to the seed.
+  const t = asked.tempo;
 
   // A loop's identity is a weight across profiles, not a choice between
   // them. Draw a few, give each an exponential weight and normalise: that
@@ -61,7 +66,8 @@ export function newSpec(seed = randomSeed(), selection = null) {
     // Floored well above zero so the quiet profiles stay genuinely
     // reachable: the point is to make adventure possible, not to trade one
     // narrow band of output for another.
-    return [k, wt * Math.max(0.28, 1 + drive * (mid - 0.45) * 2.5) * vibeLean(v, 'profiles', k)];
+    // A tempo asked leans the draw toward the profiles whose band holds it.
+    return [k, wt * Math.max(0.28, 1 + drive * (mid - 0.45) * 2.5) * vibeLean(v, 'profiles', k) * tempoLean(t, CHARACTERS[k].bpm)];
   });
   const howMany = r.weighted([[1, 2.2], [2, 4], [3, 2.6], [4, 1.2]]);
   const mix = {};
@@ -141,12 +147,18 @@ export function newSpec(seed = randomSeed(), selection = null) {
   // A profile with gaits draws tempo and metre together, from its own salted
   // stream so every other loop's draws stay where they were. The two draws
   // above and the tempo draw below are still made, and simply overruled.
-  const gait = gaitFor(seed, c);
+  const gait = gaitIn(seed, c, t);
   if (gait) stepsPerBar = gait.stepsPerBar;
   const tempoDraw = vibePull(v, (rec) => rec.tempo, r.f());
   const band = gait ? gait.bpm : c.bpm;
   const tempo = Math.round(band[0] + tempoDraw * (band[1] - band[0])
     + (feel.lift - 0.5) * 5 + (feel.energy - 0.5) * 10);
+  // A tempo asked is honored: drawn across the whole of it by the same draw
+  // (a vibe still leans it), each whole bpm alike. Not narrowed to the band's
+  // part of it, which piled the draws up at the range's ends; the profiles
+  // are leaned toward it instead. The feel's nudges are left out: the
+  // request says where the tempo goes.
+  const asks = t ? Math.min(t[1], Math.floor(t[0] + tempoDraw * (t[1] - t[0] + 1))) : null;
 
   const spec = {
     seed,
@@ -158,7 +170,7 @@ export function newSpec(seed = randomSeed(), selection = null) {
     mood: feel.lift, // kept so older code and saves still read something
     // Clamped to the range the tempo control can actually represent, so the
     // slider and the readout can never disagree.
-    bpm: gait
+    bpm: asks != null ? asks : gait
       ? Math.max(gait.bpm[0], Math.min(gait.bpm[1], tempo))
       : Math.max(32, Math.min(190, tempo)),
     root: r.int(0, 11),
@@ -194,6 +206,9 @@ export function newSpec(seed = randomSeed(), selection = null) {
     spec.vibes = v.vibes;
     spec.vibeStrength = v.strength;
   }
+  // The tempo asked, kept: `metreOf` finds the gait by it, and a share code
+  // carries it, so the loop is made again from its code.
+  if (t) spec.tempo = t.slice();
 
   if (c.polymeter) {
     const cycles = r.shuffle(POLY_CYCLES);
@@ -318,10 +333,13 @@ export function vibeSelection(selection) {
   return VIBE_IDS.filter((id) => set.has(id) && VIBES[id]);
 }
 
-function drawVibes(seed, selection) {
-  const chosen = vibeSelection(selection);
-  if (!chosen.length) return null;
+// The vibes a request asks for (`readRequest`): [id, weight] pairs in the
+// frozen order, the weight null where none was given.
+function drawVibes(seed, asked) {
+  if (!asked || !asked.length) return null;
   const r = new Rng(((seed ^ VIBE_SALT) >>> 0) || 19);
+  if (asked.some(([, w]) => w != null)) return weighedVibes(r, asked);
+  const chosen = asked.map(([id]) => id);
   const picked = chosen.length <= VIBE_MAX
     ? chosen
     : vibeSelection(r.shuffle(chosen).slice(0, VIBE_MAX));
@@ -336,6 +354,195 @@ function drawVibes(seed, selection) {
     vibes[id] = picked.length === 1 ? 1 : q8(VIBE_FLOOR + spare * (draws[i] / total));
   });
   return { vibes, strength: q8(r.range(VIBE_STRENGTH[0], VIBE_STRENGTH[1])) };
+}
+
+// Weights past 1 by more than a share code's rounding of five weights (each
+// on the 1/255 grid, so their sum may be off by 2.5/255) are scaled to 1.
+const VIBE_ROUNDING = 3 / 255;
+
+// Vibes with weights (queue item 85: a game steering by a friend's mood and
+// the time of day). Each weight is the share of the loop that vibe steers;
+// a vibe asked without one counts 1. Shares adding up to more than 1 are
+// scaled to add up to 1; less is a lighter touch, the loop steered that
+// much less. Past five, the five heaviest steer (ties to the earlier in the
+// frozen order). The strength is drawn as for the same vibes unweighted
+// (the Dirichlet draws are made, then overruled), so a loop's own weights
+// sent back as a request make that loop again.
+function weighedVibes(r, asked) {
+  let list = asked.map(([id, w]) => [id, w == null ? 1 : w]).filter(([, w]) => w > 0);
+  if (list.length > VIBE_MAX) {
+    const at = (id) => VIBE_IDS.indexOf(id);
+    list = list.slice().sort((a, b) => b[1] - a[1] || at(a[0]) - at(b[0])).slice(0, VIBE_MAX)
+      .sort((a, b) => at(a[0]) - at(b[0]));
+  }
+  for (let i = 0; i < list.length; i++) r.f();
+  const strength = q8(r.range(VIBE_STRENGTH[0], VIBE_STRENGTH[1]));
+  let total = 0;
+  for (const [, w] of list) total += w;
+  const scale = total > 1 + VIBE_ROUNDING ? total : 1;
+  const vibes = {};
+  for (const [id, w] of list) {
+    const share = q8(w / scale);
+    if (share > 0) vibes[id] = share;
+  }
+  return Object.keys(vibes).length ? { vibes, strength } : null;
+}
+
+// ------------------------------------------------------------- the request
+
+// Queue item 85 (promise 11): what a host asks of the next loop, beside its
+// seed. One shape for the app's picks, a developer's code and a game's
+// events, read the same way by the Rust generator (`core/src/generator/
+// request.rs`). For now: the vibes, with or without weights, and the tempo,
+// pinned or a range. Whatever is not asked is drawn from the seed as ever,
+// and a request of nothing is the loop the seed makes.
+//
+// It comes as:
+//   - nothing (null), or a list of vibe names (a listener's selection: names
+//     the app does not know are left out, as they always were);
+//   - text, as the goldens, `dlrender --request` and the C host write it:
+//     items split by commas, each a vibe ("glacial"), a vibe and its weight
+//     ("glacial=0.7"), or the tempo ("bpm=77", "bpm=70-85"); "" or "-" for
+//     nothing;
+//   - an object, { vibes, tempo }: vibes a list of names, { name: weight }
+//     or [name, weight] pairs (the read form, below), tempo a number or
+//     [low, high].
+// Text and objects are read strictly: a name the core does not have, a bad
+// weight or a tempo out of the core's range is refused (a RequestError, its
+// message the short plain ASCII line "can't do that" shows), never guessed.
+//
+// Read, it is { vibes, tempo }: vibes null or [id, weight] pairs in the
+// frozen order (the weight null where none was given), tempo null or
+// [low, high], whole bpm (equal when pinned).
+
+// The tempos the core plays, in bpm: what the share code's tempo byte holds.
+export const TEMPO_LIMIT = [32, 190];
+
+export class RequestError extends Error {}
+
+const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
+const BPM_TEXT = /^\d+$/;
+
+export function readRequest(input) {
+  const out = { vibes: null, tempo: null };
+  if (input == null) return out;
+  if (typeof input === 'string') return parseRequest(input);
+  if (Array.isArray(input)) return { vibes: lenientVibes(input), tempo: null };
+  if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
+  if (!('vibes' in input) && !('tempo' in input)) return { vibes: lenientVibes(Object.keys(input)), tempo: null };
+  const vibes = input.vibes;
+  if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
+    // The read form's own pairs, so a request read is read the same again.
+    const asked = new Map();
+    for (const [id, w] of vibes) asked.set(knownVibe(id), w == null ? null : weightOf(w));
+    out.vibes = framed(asked);
+  } else if (Array.isArray(vibes)) out.vibes = lenientVibes(vibes);
+  else if (vibes && typeof vibes === 'object') {
+    const asked = new Map();
+    for (const [id, w] of Object.entries(vibes)) asked.set(knownVibe(id), w == null || w === true ? null : weightOf(w));
+    out.vibes = framed(asked);
+  } else if (vibes != null) throw new RequestError('vibes are a list or names with weights');
+  if (input.tempo != null) {
+    const t = input.tempo;
+    out.tempo = Array.isArray(t) ? tempoOf(t[0], t.length > 1 ? t[1] : t[0]) : tempoOf(t, t);
+  }
+  return out;
+}
+
+export function parseRequest(text) {
+  const out = { vibes: null, tempo: null };
+  const t = String(text).trim();
+  if (t === '' || t === '-') return out;
+  const asked = new Map();
+  for (const item of t.split(',')) {
+    const eq = item.indexOf('=');
+    const name = eq < 0 ? item : item.slice(0, eq);
+    const value = eq < 0 ? null : item.slice(eq + 1);
+    if (name === 'bpm') {
+      if (value == null) throw new RequestError('a bad tempo');
+      const dash = value.indexOf('-');
+      const [lo, hi] = dash < 0 ? [value, value] : [value.slice(0, dash), value.slice(dash + 1)];
+      if (!BPM_TEXT.test(lo) || !BPM_TEXT.test(hi)) throw new RequestError('a bad tempo');
+      out.tempo = tempoOf(Number(lo), Number(hi));
+    } else {
+      const id = knownVibe(name);
+      if (value != null && !WEIGHT_TEXT.test(value)) throw new RequestError('a bad weight');
+      asked.set(id, value == null ? null : weightOf(Number(value)));
+    }
+  }
+  out.vibes = framed(asked);
+  return out;
+}
+
+// The request as text (`parseRequest` reads it back the same), or '-'.
+export function requestText(request) {
+  const r = readRequest(request);
+  const items = (r.vibes || []).map(([id, w]) => (w == null ? id : `${id}=${w}`));
+  if (r.tempo) items.push(`bpm=${r.tempo[0] === r.tempo[1] ? r.tempo[0] : `${r.tempo[0]}-${r.tempo[1]}`}`);
+  return items.length ? items.join(',') : '-';
+}
+
+// What makes a spec's loop again: its seed with this request (the player's
+// `?engine=player`, a share code's loop on the core). Its own vibes with the
+// weights it drew, and the tempo it was asked for.
+export function requestOf(spec) {
+  const v = vibesOf(spec);
+  return {
+    vibes: v ? Object.fromEntries(VIBE_IDS.filter((id) => v.vibes[id] > 0).map((id) => [id, v.vibes[id]])) : null,
+    tempo: spec && Array.isArray(spec.tempo) ? spec.tempo.slice() : null,
+  };
+}
+
+function lenientVibes(list) {
+  const chosen = vibeSelection(list);
+  return chosen.length ? chosen.map((id) => [id, null]) : null;
+}
+
+function knownVibe(id) {
+  if (!VIBES[id] || VIBE_IDS.indexOf(id) < 0) throw new RequestError('no such vibe');
+  return id;
+}
+
+function weightOf(w) {
+  if (typeof w !== 'number' || !Number.isFinite(w) || w < 0) throw new RequestError('a bad weight');
+  return w;
+}
+
+// Asked vibes in the frozen order; a vibe asked twice keeps the last.
+function framed(asked) {
+  const list = VIBE_IDS.filter((id) => asked.has(id)).map((id) => [id, asked.get(id)]);
+  return list.length ? list : null;
+}
+
+// A tempo, whole bpm, low first, inside the core's range or refused.
+function tempoOf(a, b) {
+  if (typeof a !== 'number' || typeof b !== 'number' || !Number.isFinite(a) || !Number.isFinite(b)) {
+    throw new RequestError('a bad tempo');
+  }
+  let lo = Math.round(a);
+  let hi = Math.round(b);
+  if (lo > hi) [lo, hi] = [hi, lo];
+  if (lo < TEMPO_LIMIT[0] || hi > TEMPO_LIMIT[1]) throw new RequestError('tempo must be 32 to 190 bpm');
+  return [lo, hi];
+}
+
+// How far a band [lo, hi] sits from a tempo asked [a, b], in bpm: 0 where
+// they overlap.
+function tempoGap([lo, hi], [a, b]) {
+  if (a > hi) return a - hi;
+  if (lo > b) return lo - b;
+  return 0;
+}
+
+// A profile whose tempo band misses the asked tempo by this many bpm keeps
+// half its weight in the mix's draw (when style is left to chance, queue
+// item 48: prefer the profiles that hold the tempo), a quarter at twice
+// this; never none, so no profile is ruled out. For Mikey's ears.
+const TEMPO_PREFER = 6;
+function tempoLean(t, band) {
+  if (!t) return 1;
+  const d = tempoGap(band, t) / TEMPO_PREFER;
+  return 1 / (1 + d * d);
 }
 
 // What a spec says it was steered by, or null. Unknown names (a recipe
@@ -657,13 +864,29 @@ function gaitFor(seed, c) {
   return new Rng(((seed ^ GAIT_SALT) >>> 0) || 1).weighted(c.gaits.map((g) => [g, g.weight]));
 }
 
+// The gait for a tempo asked, `t` ([low, high]; queue item 85): the seed's
+// own gait if its band meets the tempo; else one of the gaits that do, drawn
+// by weight on the gait's own stream; else the one nearest (the first, on a
+// tie), whose metre then plays at the tempo asked. It reads only the seed,
+// the character and the request, all in the spec, so `metreOf` finds the
+// same gait again.
+function gaitIn(seed, c, t) {
+  const own = gaitFor(seed, c);
+  if (!own || !t || tempoGap(own.bpm, t) === 0) return own;
+  const meet = c.gaits.filter((g) => tempoGap(g.bpm, t) === 0);
+  if (meet.length) return new Rng(((seed ^ GAIT_SALT) >>> 0) || 1).weighted(meet.map((g) => [g, g.weight]));
+  let best = c.gaits[0];
+  for (const g of c.gaits) if (tempoGap(g.bpm, t) < tempoGap(best.bpm, t)) best = g;
+  return best;
+}
+
 // How a bar is counted. The step count alone cannot say: twelve steps are
 // 6/8, unless the loop's gait reads them as 3/4, the waltz: three beats at
 // 0, 4 and 8. Each reading has its own name and its own tables.
 export function metreOf(spec) {
   const spb = spec.stepsPerBar || STEPS_PER_BAR;
   if (spb === 12) {
-    const gait = gaitFor(spec.seed, characterOf(spec));
+    const gait = gaitIn(spec.seed, characterOf(spec), Array.isArray(spec.tempo) ? spec.tempo : null);
     return gait && gait.metre === '3/4' ? '3/4' : '6/8';
   }
   return spb === 20 ? '5/4' : '4/4';

@@ -6,7 +6,8 @@
 //! `tools/gen-core.sh` runs the same on every target; this is the native
 //! test run, and the language rules the port leans on.
 
-use dlcore::generator::{Generator, Part, canon, data, js};
+use dlcore::generator::request::Request;
+use dlcore::generator::{Generator, Part, canon, js};
 
 #[test]
 fn every_case_makes_its_hashes() {
@@ -21,9 +22,8 @@ fn every_case() {
     for line in text.lines().filter(|l| !l.is_empty() && !l.starts_with('#')) {
         let fields: Vec<&str> = line.split(' ').collect();
         let seed: u32 = fields[1].parse().expect("a seed");
-        let vibes: Vec<usize> =
-            if fields[2] == "-" { Vec::new() } else { fields[2].split(',').map(|v| data::vibe_index(v).expect("a vibe")).collect() };
-        generator.load(seed, &vibes);
+        let request = Request::parse(fields[2]).expect("a request");
+        generator.load_with(seed, &request);
         for part in Part::ALL {
             let want = part.in_line(line).expect("the part's hash");
             assert_eq!(format!("{:016x}", generator.hash(part)), want, "{} {:?}", fields[0], part);
@@ -31,7 +31,7 @@ fn every_case() {
         assert_eq!(generator.lost(), 0, "{}: the lists ran out of room", fields[0]);
         cases += 1;
     }
-    assert_eq!(cases, 3060);
+    assert_eq!(cases, 3420);
 }
 
 #[test]

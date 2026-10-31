@@ -64,7 +64,27 @@ dl_player *dl_player_start(void *memory, size_t bytes, double rate, uint32_t cha
    the next load asks for. 1 if the core has it, else 0. */
 int dl_player_vibe(dl_player *player, const char *id);
 
-/* Ask for the loop of `seed`, with the vibes added since the last load. It
+/* The request (promise 11; queue item 85): what the next load asks for,
+   beside the seed. Each of these returns NULL if it can be met, or else a
+   short plain ASCII line saying why not ("tempo must be 32 to 190 bpm"),
+   static and never freed, and the request is left as it was.
+
+   Add the vibe called `id` at `weight`: the share of the loop it steers.
+   Shares adding up to more than 1 are scaled to 1, less is a lighter touch,
+   0 leaves it out; a vibe added with dl_player_vibe then counts 1. Past
+   five vibes the five heaviest steer. */
+const char *dl_player_weight(dl_player *player, const char *id, double weight);
+
+/* Ask for a tempo, `lo` to `hi` bpm (whole bpm; equal to pin it), from 32 to
+   190. The loop's tempo is drawn across it from the seed. */
+const char *dl_player_ask_tempo(dl_player *player, double lo, double hi);
+
+/* Ask for what `request` says, as text, in place of what was asked since the
+   last load: items split by commas, each a vibe ("glacial"), a vibe and its
+   weight ("glacial=0.7") or the tempo ("bpm=77", "bpm=70-85"). */
+const char *dl_player_ask(dl_player *player, const char *request);
+
+/* Ask for the loop of `seed`, with what was asked since the last load. It
    is made a stage a block over the blocks rendered next (so no block's work
    spikes), then starts; a loop playing stops being decided at once, and
    what it has handed over plays out. */

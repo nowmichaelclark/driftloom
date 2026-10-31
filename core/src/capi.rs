@@ -136,7 +136,95 @@ pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) 
     }
 }
 
-/// Ask for the loop of `seed`, with the vibes added since the last load
+/// A refusal's line as C text (the request's `&'static str` lines,
+/// NUL-terminated): plain ASCII, static, never freed.
+fn line(refused: &'static str) -> *const c_char {
+    use crate::generator::request::{BAD_TEMPO, BAD_WEIGHT, NO_SUCH_VIBE, TEMPO_OUT};
+    let c: &'static CStr = match refused {
+        NO_SUCH_VIBE => c"no such vibe",
+        BAD_WEIGHT => c"a bad weight",
+        BAD_TEMPO => c"a bad tempo",
+        TEMPO_OUT => c"tempo must be 32 to 190 bpm",
+        _ => c"can't do that",
+    };
+    c.as_ptr()
+}
+
+/// `text` as a string, if it is one (null, or not UTF-8, is not).
+///
+/// # Safety
+///
+/// `text` is a NUL-terminated string, or null.
+unsafe fn text<'a>(text: *const c_char) -> Option<&'a str> {
+    if text.is_null() {
+        return None;
+    }
+    // SAFETY: NUL-terminated (the caller's promise).
+    unsafe { CStr::from_ptr(text) }.to_str().ok()
+}
+
+/// Add the vibe called `id` at `weight` (the share of the loop it steers:
+/// `Request::with_weight`) to what the next `dl_player_load` asks for. Null
+/// if it can be met; else the line saying why not (static, plain ASCII),
+/// and the request is left as it was.
+///
+/// # Safety
+///
+/// `id` is a NUL-terminated string, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_weight(player: *mut Engine, id: *const c_char, weight: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise, passed on.
+    let Some(index) = unsafe { text(id) }.and_then(crate::generator::data::vibe_index) else {
+        return line(crate::generator::request::NO_SUCH_VIBE);
+    };
+    match e.request.with_weight(index, weight) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for a tempo: `lo` to `hi` bpm (equal to
+/// pin it; `Request::with_tempo`). Null if it can be met; else the line
+/// saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_ask_tempo(player: *mut Engine, lo: f64, hi: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_tempo(lo, hi) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for what `request` says, as text
+/// ("glacial=0.7,misty=0.3,bpm=70-85": `Request::parse`), in place of what
+/// was asked since the last load. Null if it can be met; else the line
+/// saying why not, and the request is left as it was.
+///
+/// # Safety
+///
+/// `request` is a NUL-terminated string, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_ask(player: *mut Engine, request: *const c_char) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise, passed on.
+    let Some(t) = (unsafe { text(request) }) else { return line("") };
+    match Request::parse(t) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask for the loop of `seed`, with what was asked since the last load
 /// (`Player::load`): it is made a stage a block over the blocks rendered
 /// next, and starts when made. A loop playing stops being decided now.
 #[unsafe(no_mangle)]

@@ -37,14 +37,25 @@ const DECODE_MAP = (() => {
 })();
 
 // The newest format this build reads and writes. Format 4 (queue item 38a)
-// appends a loop's vibes; a loop without vibes is still written as format 3,
-// so every code already in circulation, every saved album and every `/rank`
-// answer keeps the exact string it had.
-export const FORMAT = 4;
+// appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
+// for. Each is written only by a loop that needs it (a loop without vibes is
+// still format 3), so every code already in circulation, every saved album
+// and every `/rank` answer keeps the exact string it had.
+export const FORMAT = 5;
+const VIBES_FORMAT = 4;
 const PLAIN_FORMAT = 3;
 
 function hasVibes(spec) {
   return !!(spec && spec.vibes && Object.keys(spec.vibes).some((k) => VIBE_IDS.indexOf(k) >= 0));
+}
+
+function hasTempo(spec) {
+  return !!(spec && Array.isArray(spec.tempo) && spec.tempo.length === 2);
+}
+
+function formatOf(spec) {
+  if (hasTempo(spec)) return FORMAT;
+  return hasVibes(spec) ? VIBES_FORMAT : PLAIN_FORMAT;
 }
 
 // Frozen orderings. These must never be reordered or codes already written
@@ -175,6 +186,16 @@ function writeSpec(w, spec, version = FORMAT) {
     }
     if (ids.length) w.unit(spec.vibeStrength ?? 0.7);
   }
+  // Format 5: the tempo asked (a flag; then low and high, as the tempo byte
+  // is), so a loop made from a request is made again from its code.
+  if (version >= 5) {
+    if (hasTempo(spec)) {
+      const at = (x) => Math.max(32, Math.min(190, Math.round(x))) - 32;
+      w.u8(1).u8(at(spec.tempo[0])).u8(at(spec.tempo[1]));
+    } else {
+      w.u8(0);
+    }
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -251,6 +272,7 @@ function readSpec(r, version = FORMAT) {
       }
     }
   }
+  if (version >= 5 && r.u8()) spec.tempo = [r.u8() + 32, r.u8() + 32];
   return spec;
 }
 
@@ -329,7 +351,7 @@ export const ALBUM_PREFIX = 'DLA1-';
 
 export function encodeSong(spec) {
   const w = new Writer();
-  const version = hasVibes(spec) ? FORMAT : PLAIN_FORMAT;
+  const version = formatOf(spec);
   w.u8(version);
   writeSpec(w, spec, version);
   return wrap(SONG_PREFIX, Uint8Array.from(w.bytes));
@@ -345,7 +367,7 @@ export function decodeSong(code) {
 
 export function encodeAlbum(title, specs) {
   const w = new Writer();
-  const version = specs.some(hasVibes) ? FORMAT : PLAIN_FORMAT;
+  const version = Math.max(PLAIN_FORMAT, ...specs.map(formatOf));
   w.u8(version);
   w.str(title || 'Untitled', 40);
   w.u16(specs.length);

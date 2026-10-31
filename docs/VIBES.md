@@ -109,7 +109,13 @@ the block below is the copy it started from. Where the brief left a reading open
   that set the target, capped at 1, toward their weighted mean.
 - **Share codes:** a loop with vibes is written as format 4; a loop
   without is still written as format 3, so no code in circulation, no
-  saved album and no `/rank` answer changes its string.
+  saved album and no `/rank` answer changes its string. Format 5 (item 85)
+  adds the tempo a request asked for, written only by such loops.
+- **Weights** (item 85, the request): a game or a developer can give each
+  vibe a weight, the share of the loop it steers, in place of the drawn
+  ones; shares past 1 are scaled to 1, less is a lighter touch. The
+  strength is still drawn. `readRequest` in `js/generator.js` and
+  `core/src/generator/request.rs` say how.
 - **The tuning tool:** `node tools/stats.mjs --vibes a,b,c` (one
   selection against none) and `--vibe-each` (a line per vibe);
   `measure.mjs --vibe-mix` draws its corpus with 1, 3, 5 or 10 random

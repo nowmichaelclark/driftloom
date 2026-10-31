@@ -6,6 +6,7 @@ use super::character::{self, Char, Vibes, q8};
 use super::data::{self, CHARACTERS, MOODS};
 use super::js;
 use super::list::{List, Name};
+use super::request::{self, Request};
 use super::rng::{Rng, seed_name};
 use super::theory::{self, GLAD_FROM, SCALES};
 use super::{LAYERS, Layer};
@@ -48,6 +49,9 @@ pub struct Spec {
     /// warmth, space, wobble.
     pub tone: [f64; 3],
     pub vibes: Option<Vibes>,
+    /// The tempo asked (queue item 85), [low, high] bpm: kept, so `metre`
+    /// finds the gait by it and a share code carries it.
+    pub tempo: Option<[f64; 2]>,
     /// Each layer's own cycle in steps, or `None` (null); `None` overall
     /// for a loop without cycles.
     pub cycles: Option<[Option<f64>; 5]>,
@@ -72,6 +76,7 @@ impl Spec {
         layer_seeds: [0; 5],
         tone: [0.0; 3],
         vibes: None,
+        tempo: None,
         cycles: None,
     };
 
@@ -162,6 +167,10 @@ impl Spec {
         w.num(self.steps_per_bar);
         w.key("swing");
         w.num(self.swing);
+        if let Some(t) = &self.tempo {
+            w.key("tempo");
+            w.nums(t);
+        }
         w.key("tone");
         w.obj();
         w.key("space");
@@ -214,6 +223,37 @@ pub fn gait_for(seed: u32, c: &Char) -> Option<data::Gait> {
     let g = c.gaits.as_ref()?;
     let mut r = Rng::new(js::salted(seed, GAIT_SALT, 1));
     r.weighted_index(g.iter().map(|x| x.weight)).map(|i| g[i])
+}
+
+/// `gaitIn`: the gait for a tempo asked, `t`: the seed's own if its band
+/// meets the tempo; else one of those that do, drawn by weight on the
+/// gait's stream; else the nearest (the first on a tie), its metre then
+/// played at the tempo asked. It reads only what the spec keeps, so
+/// `Spec::metre` finds the same gait again.
+#[must_use]
+pub fn gait_in(seed: u32, c: &Char, t: Option<[f64; 2]>) -> Option<data::Gait> {
+    let own = gait_for(seed, c)?;
+    let Some(t) = t else { return Some(own) };
+    if request::tempo_gap(own.bpm, t) == 0.0 {
+        return Some(own);
+    }
+    let g = c.gaits.as_ref()?;
+    let mut meet: List<(data::Gait, f64), 4> = List::filled((own, 0.0));
+    for &x in g.iter() {
+        if request::tempo_gap(x.bpm, t) == 0.0 {
+            meet.push((x, x.weight));
+        }
+    }
+    if !meet.is_empty() {
+        return Rng::new(js::salted(seed, GAIT_SALT, 1)).weighted(&meet);
+    }
+    let mut best = g[0];
+    for &x in g.iter() {
+        if request::tempo_gap(x.bpm, t) < request::tempo_gap(best.bpm, t) {
+            best = x;
+        }
+    }
+    Some(best)
 }
 
 const POLY_CYCLES: [f64; 7] = [3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 11.0];
@@ -277,14 +317,14 @@ fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64,
     SCALES.iter().position(|s| s.id == chosen).unwrap_or(0)
 }
 
-/// `newSpec(seed, selection)`: `chosen` the vibes picked
-/// (`character::selection`).
+/// `newSpec(seed, request)`: the loop of `seed`, as `request` asks.
 #[must_use]
 #[allow(clippy::too_many_lines)] // one function, as newSpec is: its draws in order
-pub fn new_spec(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Spec {
+pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let mut r = Rng::new(seed);
-    let vibes = character::draw_vibes(seed, chosen);
+    let vibes = character::draw_vibes(seed, request);
     let v = vibes.as_ref();
+    let t = request.tempo();
 
     let drive = math::pow(r.f(), 0.82) * 1.8 - 0.5;
     let mut pool: List<(usize, f64), { data::CHARACTER_COUNT }> = List::filled((0, 0.0));
@@ -292,7 +332,11 @@ pub fn new_spec(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Spec {
         let fe = c.feel[1];
         let mid = (fe[0] + fe[1]) / 2.0;
         let wt = c.weight.unwrap_or(f64::NAN);
-        pool.push((i, wt * js::max(0.28, 1.0 + drive * (mid - 0.45) * 2.5) * character::lean_in(v, |x| x.profiles, c.id)));
+        let band = c.bpm.unwrap_or([f64::NAN, f64::NAN]);
+        pool.push((
+            i,
+            wt * js::max(0.28, 1.0 + drive * (mid - 0.45) * 2.5) * character::lean_in(v, |x| x.profiles, c.id) * request::tempo_lean(t, band),
+        ));
     }
     let how_many = r.weighted(&[(1, 2.2), (2, 4.0), (3, 2.6), (4, 1.2)]).unwrap_or(1);
     let mut mix: List<(usize, f64), MIX_MAX> = List::filled((0, 0.0));
@@ -374,7 +418,7 @@ pub fn new_spec(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Spec {
 
     let mut steps_per_bar = c.steps_per_bar.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
     let bars = c.bars.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
-    let gait = gait_for(seed, &c);
+    let gait = gait_in(seed, &c, t);
     if let Some(g) = gait {
         steps_per_bar = g.steps_per_bar;
     }
@@ -384,9 +428,12 @@ pub fn new_spec(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Spec {
         None => c.bpm.unwrap_or([f64::NAN, f64::NAN]),
     };
     let tempo = js::round(band[0] + tempo_draw * (band[1] - band[0]) + (feel.lift - 0.5) * 5.0 + (feel.energy - 0.5) * 10.0);
-    let bpm = match gait {
-        Some(g) => js::max(g.bpm[0], js::min(g.bpm[1], tempo)),
-        None => js::max(32.0, js::min(190.0, tempo)),
+    // A tempo asked is honored, drawn across the whole of it by the same
+    // draw (`newSpec` says why).
+    let bpm = match (t, gait) {
+        (Some(t), _) => js::min(t[1], js::floor(t[0] + tempo_draw * (t[1] - t[0] + 1.0))),
+        (None, Some(g)) => js::max(g.bpm[0], js::min(g.bpm[1], tempo)),
+        (None, None) => js::max(32.0, js::min(190.0, tempo)),
     };
     let root = r.int(0.0, 11.0);
     let scale = draw_scale(&mut r, seed, &c, &mix, feel.lift, v);
@@ -447,6 +494,7 @@ pub fn new_spec(seed: u32, chosen: &[bool; data::VIBE_COUNT]) -> Spec {
         layer_seeds,
         tone,
         vibes,
+        tempo: t,
         cycles,
     }
 }
@@ -480,7 +528,7 @@ impl Spec {
     #[must_use]
     pub fn metre(&self, c: &Char) -> Metre {
         if self.steps_per_bar == 12.0 {
-            match gait_for(self.seed, c) {
+            match gait_in(self.seed, c, self.tempo) {
                 Some(g) if g.metre == "3/4" => Metre::ThreeFour,
                 _ => Metre::SixEight,
             }

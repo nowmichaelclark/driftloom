@@ -7,22 +7,22 @@
 //
 // The five lines are moods, tempo and length (sharing a line), key, style
 // and voices. Moods are today's vibes (state.vibes). Length and tempo are
-// state.picks, saved in the prefs, and reach today's generator through
-// `applyPicks`, clamped to what it can play. Key, style and voices have no
-// picker yet and always read "any".
+// state.picks, saved in the prefs. The moods and the tempo reach the
+// generator as its request (`requestFor`, queue item 85); length still
+// reaches it through `applyPicks`, clamped to what it can play, until item
+// 88. Key, style and voices have no picker yet and always read "any".
 
 import { el } from './ui.js';
 import { log2, pow } from './dlmath.js';
+import { readRequest, RequestError } from './generator.js';
 
 export const MIN_BARS = 1;
 export const MAX_BARS = 32768;
 // The doubling slider: one stop per power of two, 1 to 32,768.
 const STOPS = 15;
-// Today's generator plays loops of 1 to 32 bars and tempos of 32 to 190
-// bpm. A longer length is played as passes of one loop; the core brings
-// the full range (docs/BRAIN.md, "Two tracks").
+// Today's generator plays loops of 1 to 32 bars. A longer length is played
+// as passes of one loop; item 88 brings the full range.
 const GEN_MAX_BARS = 32;
-const GEN_BPM = [32, 190];
 
 const NB = ' ';
 const LINES = [
@@ -78,21 +78,35 @@ export function lengthText(len) {
 // For screen readers: "70 to 85 bpm" rather than a dash.
 const spoken = (t) => t.replace('–', ' to ').replace(/ /g, ' ').replace('…', ', and more');
 
+// ---------------------------------------------------- the request
+
+// What the next loop is asked for (the generator's request): the moods and
+// the tempo picked. The same shape a game or a developer sends.
+export function requestFor(state) {
+  return { vibes: state.vibes.slice(), tempo: state.picks.tempo };
+}
+
+// The "can't do that" line for the picks (a short plain line, its look a
+// Painter question), or null when the request can be met.
+export function pickProblem(state) {
+  try {
+    readRequest(requestFor(state));
+    return null;
+  } catch (e) {
+    if (e instanceof RequestError) return e.message;
+    throw e;
+  }
+}
+
 // ---------------------------------------------------- today's generator
 
-// Bends a freshly drawn loop toward the picks, within what the generator
-// can play. Tempo is clamped into the picked range. A length of up to 32
+// Bends a freshly drawn loop toward the length picked, within what the
+// generator can play (the tempo is the request's now). A length of up to 32
 // bars is the loop's own length, played once; a longer one keeps the loop
 // as drawn and plays it enough times round to last that long. Endless and
 // "any" leave it looping until skipped, as today.
 export function applyPicks(spec, picks) {
   if (!spec || !picks) return spec;
-  const t = picks.tempo;
-  if (t) {
-    const lo = Math.max(GEN_BPM[0], Math.min(GEN_BPM[1], t[0]));
-    const hi = Math.max(lo, Math.min(GEN_BPM[1], t[1]));
-    spec.bpm = Math.max(lo, Math.min(hi, spec.bpm));
-  }
   const len = picks.length;
   if (typeof len === 'number') {
     if (len <= GEN_MAX_BARS) {
@@ -223,6 +237,14 @@ export function renderPanel() {
         b.append(length != null ? pill(lengthText(length), 'length') : pill('any length', 'length', { dashed: true }));
         b.setAttribute('aria-label', `Length: ${length != null ? spoken(lengthText(length)) : 'any'}`);
         vals.append(b);
+      }
+      const cant = pickProblem(state);
+      if (cant) {
+        const note = document.createElement('span');
+        note.className = 'pk-any pk-cant';
+        note.setAttribute('role', 'status');
+        note.textContent = `can't do that: ${cant}`;
+        vals.append(note);
       }
     } else {
       vals.append(plain(line.any));

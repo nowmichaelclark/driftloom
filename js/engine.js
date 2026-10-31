@@ -5,7 +5,7 @@
 // The actual note times are absolute Web Audio clock times, which are
 // sample-accurate. Standard two-clock pattern.
 
-import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf } from './generator.js';
+import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf } from './generator.js';
 import { Rng } from './rng.js';
 import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
@@ -541,15 +541,17 @@ export class Engine {
   }
 
   // The core's player (`?engine=player`): the loop of this spec's seed and
-  // vibes (the ones it drew, in VIBE_IDS' order: the loop a selection of five
-  // or fewer made), its first step where this engine's next falls. Picks,
-  // edits and re-rolls are this engine's; the player plays the seed's loop.
+  // request (`requestOf`: the vibes with the weights it drew, so the loop a
+  // selection of five or fewer made, and the tempo it was asked), its first
+  // step where this engine's next falls. Edits and re-rolls are this
+  // engine's; the player plays the seed's loop.
   _playerLoad() {
     const core = this.synth.core;
     if (!core || !this.spec) return;
-    const vibes = Object.keys(this.spec.vibes || {}).map((id) => VIBE_IDS.indexOf(id)).filter((i) => i >= 0).sort((a, b) => a - b);
+    const asked = requestOf(this.spec);
+    const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
     core.playWander(this.driftOn ? this.driftAmount : 0);
-    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime);
+    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo);
     this._playerControls();
     this._playerOn = true;
   }

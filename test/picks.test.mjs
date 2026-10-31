@@ -3,7 +3,7 @@
 // Run with:  node test/picks.test.mjs
 
 import { newSpec, render } from '../js/generator.js';
-import { applyPicks, cleanPicks, moodsText, tempoText, lengthText, clampBars } from '../js/picks.js';
+import { applyPicks, cleanPicks, moodsText, tempoText, lengthText, clampBars, requestFor, pickProblem } from '../js/picks.js';
 
 let failures = 0;
 function check(label, condition, detail = '') {
@@ -24,16 +24,17 @@ check('clean prefs', JSON.stringify(cleanPicks({ tempo: [85, 70], length: '16' }
 check('clean endless', cleanPicks({ length: 'endless' }).length === 'endless');
 check('clean nothing', JSON.stringify(cleanPicks(undefined)) === '{"tempo":null,"length":null}');
 
-console.log('\nToday\'s generator');
+console.log('\nThe request and today\'s generator');
 {
   let ok = true, bad = '';
   for (let s = 0; s < 60; s++) {
-    const spec = applyPicks(newSpec(9000 + s), { tempo: [70, 85], length: 16 });
-    if (spec.bpm < 70 || spec.bpm > 85 || spec.bars !== 16 || spec.playFor !== 1) { ok = false; bad = JSON.stringify([spec.bpm, spec.bars, spec.playFor]); }
+    const state = { vibes: ['cozy'], picks: { tempo: [70, 85], length: 16 } };
+    const spec = applyPicks(newSpec(9000 + s, requestFor(state)), state.picks);
+    if (spec.bpm < 70 || spec.bpm > 85 || spec.bars !== 16 || spec.playFor !== 1 || !spec.vibes.cozy) { ok = false; bad = JSON.stringify([spec.bpm, spec.bars, spec.playFor]); }
     const p = render(spec);
     if (p.totalSteps !== 16 * spec.stepsPerBar) { ok = false; bad = `steps ${p.totalSteps}`; }
   }
-  check('70–85 bpm, 16 bars: tempo in range, 16 bars played once', ok, bad);
+  check('70–85 bpm, 16 bars: tempo in range (the request), 16 bars played once', ok, bad);
 }
 {
   let ok = true, bad = '';
@@ -50,10 +51,15 @@ console.log('\nToday\'s generator');
   const b = applyPicks(newSpec(9200), { tempo: null, length: null });
   const c = applyPicks(newSpec(9200), { tempo: null, length: 'endless' });
   check('any and endless leave the loop as drawn', JSON.stringify(a) === JSON.stringify(b) && JSON.stringify(a) === JSON.stringify(c));
+  const d = applyPicks(newSpec(9200), { tempo: [70, 85], length: null });
+  check('applyPicks no longer bends the tempo: the request does', JSON.stringify(a) === JSON.stringify(d));
+  check('nothing picked asks for nothing', JSON.stringify(newSpec(9200, requestFor({ vibes: [], picks: { tempo: null, length: null } }))) === JSON.stringify(a));
 }
 {
-  const spec = applyPicks(newSpec(9300), { tempo: [10, 20], length: 1 });
-  check('a tempo below what it can play is clamped to 32', spec.bpm === 32);
+  const state = { vibes: ['cozy'], picks: { tempo: [10, 20], length: 1 } };
+  check('a tempo the core cannot play says so', pickProblem(state) === 'tempo must be 32 to 190 bpm');
+  check('a request it can meet says nothing', pickProblem({ vibes: ['cozy'], picks: { tempo: [70, 85], length: null } }) === null);
+  const spec = applyPicks(newSpec(9300), state.picks);
   check('one bar renders', render(spec).totalSteps === spec.stepsPerBar);
 }
 
