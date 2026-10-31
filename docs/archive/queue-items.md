@@ -93,6 +93,13 @@ queue is `docs/QUEUE.md`. The notes the hands left on these items are in
 - [76c. The bass level](#76c-the-bass-level-from-session-26s-album)
 - [76d. lateFloor: the second arrival drawn](#76d-latefloor-the-second-arrival-drawn-not-fixed)
 - [74. Clippy pedantic](#74-clippy-pedantic-in-the-files-46-left-before-item-79)
+- [Before 77 (phase 2)](#before-77-phase-2)
+- [77. Generation made exact, and its goldens](#77-generation-made-exact-and-its-goldens-javascript-no-sound-change)
+- [78. The generation data as plain text](#78-the-generation-data-as-plain-text-read-by-both)
+- [79. The Rust generator, 1](#79-the-rust-generator-1-the-spec-and-the-harmony)
+- [80. The Rust generator, 2](#80-the-rust-generator-2-the-layers)
+- [81. The Rust generator, 3](#81-the-rust-generator-3-the-choices-the-load-and-the-wander)
+- [82. The player](#82-the-player-a-loop-from-a-seed-in-the-core)
 
 ## Old status notes (until 2026-10-25)
 
@@ -3032,3 +3039,149 @@ refactor: goldens on every mode, baseline and `blocks.txt` unchanged
 byte for byte; costs within 1%; `cargo clippy --all-targets -- -W
 clippy::pedantic` reports zero, and CI gains that check so it stays
 zero.
+
+## Before 77 (phase 2)
+
+**The brain's check (Session 28, 2026-10-31), items 77-82 together:** passes.
+Run on `main` at v132 (d5b15e6), not taken from the reports: the JavaScript
+tests (the generator's three times) and `cargo test --locked --release` (153
+tests); the generation goldens in Node, 3,060 of 3,060; the balance lock;
+`tools/build-core.sh --check` for both modules. The player against the app's
+engine in Chromium on cases the hands never ran: see the log
+(`docs/archive/brain-log.md`). Item 82's note on when notes reach the core
+(`docs/archive/notes/82-hand-over.md`) answered in the queue's "For phase 3".
+
+Item 74 is done (#284): pedantic clippy is zero in `core/` and CI holds it
+there, so the generator lands clean. Item 75 (the reverb, rate-true) stays
+low priority, for any session with usage to spare after 82. **Vibes and
+generator changes from here on follow the phase's first rule** (one source
+of truth at a time, above): after item 78 the data is one file both
+generators read.
+
+## 77. Generation made exact, and its goldens (JavaScript, no sound change)
+
+**Why:** the port is proven note for note (above), which needs the
+JavaScript's decisions to be reproducible anywhere.
+
+**What:**
+- `js/dlmath.js`: the core's math (`core/src/math.rs`: pow, exp, log,
+  log2, log10, sin, cos, sqrt where used) mirrored in JavaScript, checked
+  bit for bit against the wasm's own over a million inputs per function
+  (export them from the core for the test if they aren't). The generator,
+  `js/choices.js`, `js/theory.js`, `js/characters.js`, `js/picks.js`,
+  `js/vibes.js` and the engine's load-time decisions (`stabOf`, `organOf`,
+  `washOf`, `spaceOf`, the echo time, the kick's level fit) use it; nothing
+  on those paths calls `Math.pow` and the rest. Say which loops move (a
+  last bit flipping a comparison); expected: a handful in 10,000. Core
+  baseline and balance lock updated on purpose if anything moves.
+- **The generation goldens:** `tools/gen-golden.mjs` writes, for each case,
+  one line: the seed, the vibes, and FNV-1a 64 hashes of (a) the spec, (b)
+  each layer's events after `render`, (c) the choices and every per-loop
+  draw the engine makes at load (arc, kick, subDuck, lateFloor, padSweep,
+  echo, space, wash, stab, organ), (d) each of the first eight wandered
+  passes' events (drift), in a canonical text form documented in the file.
+  Cases: 2,000 corpus seeds with no vibes, 1,000 with 1, 3 or 5 vibes, the
+  21 golden lists' seeds, and the album loops of `docs/DONE.md`. Kept in
+  `core/golden/generation.hashes`; CI checks the JavaScript against it.
+- No change to what anyone hears beyond the handful above.
+
+**Yardsticks:** the mirror equal to the core on every input tested; the
+generation goldens stable across three runs and across Node and Chromium;
+the list of loops that moved (with what moved) in the PR; tests three
+times.
+
+## 78. The generation data as plain text, read by both
+
+**Why:** promise 5 (profiles, vibes, moods and voices as data, a plain-ASCII
+text form people can read and edit) and the two-tracks rule: if the data is
+one file both generators read, vibe tuning never has to wait for the port.
+
+**What:**
+- One text format (propose it in the PR before converting: readable, plain
+  ASCII, comments allowed, no dependency to parse it in Rust or JavaScript),
+  and today's tables converted into it: the characters (profiles), vibes,
+  moods, the voice table (layers, costs, levels) and the choice tables of
+  `js/choices.js` (`ARC`, `KICK`, `SUBDUCK`, `LATEFLOOR`, `FLOORDROP`,
+  `PEDAL`, `PADSWEEP`, `ECHO`, the change counts).
+- The JavaScript reads it (fetched at start in the app, read from disk in
+  Node); the tables in code go. `js/vibes.js` stays the brain's to edit in
+  its new form (`AGENTS.md`'s rule moves with it).
+- A compact binary form for the core is item 79's business; this item
+  fixes the text.
+
+**Yardsticks:** generation goldens, core baseline and balance lock
+unchanged; a test that every entry parses and every name it uses exists;
+`docs/VIBES.md` says how to edit a vibe now.
+
+## 79. The Rust generator, 1: the spec and the harmony
+
+**What:** in `core/` (its own module tree, `gen/`), from the seed and the
+data: `newSpec` (the vibes' draw, drive, the profile mix, the feel, bars,
+tempo and gait, key and mode) and `render`'s harmony and form (progression,
+sections, rests, gaps, silent bars). The data compiled from item 78's text
+into the core (a build step that writes a Rust table, or a small binary the
+core reads at `Core::new`: say which and why). A host call returns the spec
+(`dl_spec`, plain ASCII, for tests and the app's Now Playing).
+
+**Yardsticks:** generation goldens (a) and the harmony part of (b) equal on
+every case and every target; no allocation after `Core::new`; memory in
+bytes reported.
+
+## 80. The Rust generator, 2: the layers
+
+**What:** the tracks: drums, bass (with item 56's register and item 71's
+pedal), chords (with longChords, and `separateRegisters` exactly as today:
+the octave fix is item 84, separate on purpose), melody (motifs, cells,
+development), texture, the choir. The voice choice per layer, the entry
+schedules, the repairs and gaps.
+
+**Yardsticks:** generation goldens (b) equal on every case and target;
+`stats.mjs`' corpus figures computed from the Rust tracks equal the
+JavaScript's (a tool that reads both).
+
+## 81. The Rust generator, 3: the choices, the load and the wander
+
+**What:** item 54's per-loop choices and every choice's own draws (the arc's
+shape, the kick, subDuck, lateFloor, the floor drop's shapes, the pedal,
+padSweep, echoTime), the per-loop decisions the engine makes at load (stab,
+organ, wash, space, kick level), and `drift` (each wandered pass, the floor
+drop, item 67's kick swap).
+
+**Yardsticks:** generation goldens (c) and (d) equal on every case and
+target. With this, every decision the JavaScript makes before scheduling has
+a Rust twin, proven.
+
+## 82. The player: a loop from a seed, in the core
+
+**Why:** Broken Friends' gate: a friend's theme, from a seed, with no
+JavaScript. And the end of phase 2's port.
+
+**What:**
+- The sequencer: what `Engine._scheduleStep`, `_organ`, `_glass`,
+  `_dubStab`, the floor drops and the late floor, and `Synth`'s note calls
+  do between events and the core's notes (timing, swing, articulation
+  values from `js/draw.js`'s streams, sends, choke, retune, damp, the
+  per-loop settings and routes), in the core, sample-accurate.
+- A host call to play a loop from a seed (and vibes): `Core::load(seed,
+  request)` then render; the loop wanders pass after pass as the app's does
+  with the wander on (the amount a setting). Mute per layer, tempo and
+  volume as the app has them.
+- `dlrender --seed N [--vibes ...] [--seconds S] [--stereo]` renders it
+  natively; the C header (promise 4) gets the calls.
+- The app does **not** switch to it yet (phase 3, item 53 and the rest);
+  `?engine=player` plays it in the app for testing.
+- Tell Broken Friends: a note in `docs/notes/82-for-broken-friends.md`
+  with the calls the game uses, what changed since the pin at f654fdb, and
+  the hashes to refresh.
+
+**Yardsticks:**
+- **The baseline's 40 loops, full and lite, mono and stereo, played from
+  their seeds natively, equal the browser's renders bit for bit** (the
+  same out hashes `tools/baseline.mjs` keeps), wander on, 45 s; where one
+  can't be (a float order in the page's timing), say exactly where and by
+  how much, and the brain decides.
+- The goldens: every target renders the same samples from a seed.
+- Cost: generating a loop spread so no block passes 25% of its deadline on
+  the slowest target (promise 1); generation's share of a minute's render
+  reported. No allocation after `Core::new`; memory in bytes.
+- A seed-to-WAV run of the corpus's first 80 loops in CI (hashes kept).

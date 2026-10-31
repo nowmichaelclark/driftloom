@@ -6,6 +6,58 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Session 28 (brain, Opus 5.5, 2026-10-31): phase 2's port checked, items
+77-82 (#287-#296); it passes.** What the brain ran itself on `main` at v132
+(d5b15e6), not taken from the reports:
+- **Tests:** the JavaScript suites (the generator's three times, and
+  `data`); `cargo test --locked --release` in `core/`, 153 tests, with
+  `tests/generation.rs` holding the Rust generator to all 3,060 cases and all
+  19 parts each (spec, plan, form, five layers, meta, choices, load, eight
+  passes) and `tests/player.rs`. The generation goldens in Node, 3,060 of
+  3,060; the balance lock, 22 of 22; `tools/build-core.sh --check`, both
+  modules (`js/dlcore.wasm` 248,648 bytes, `js/dlplayer.wasm` 1,799,552). CI on
+  #296's head green on all eight checks, PowerPC included (40 minutes), before
+  the self-merge.
+- **The goldens hash exact numbers:** the canonical text writes every
+  non-integer as its IEEE bits (`tools/gen-golden.mjs`), so "equal" means
+  equal to the last bit, not to a rounding.
+- **The player against the app's engine, on cases the hands never ran.** The
+  hands' 160 renders are the baseline's 40 loops (corpus seed 1); 38 of the 40
+  cross at least one pass boundary in 45 s (passes run 3 to 86 s), so the
+  wander is exercised. The brain ran `tools/player.mjs` (the app's Engine and
+  Synth in Chromium, handing notes over as the player does) against
+  `dlrender --corpus` natively on: **200 loops of the ears' corpus** (seed
+  20261009), full and lite, mono and stereo, 45 s: **800 of 800 equal**; **16
+  loops at 300 s** (corpus seed 777, from a few to about a hundred wandered passes each), all
+  four ways: **64 of 64 equal**; and **loops with vibes** (a scratch copy of
+  the tool passing vibes to `newSpec`; corpus seed 4242, 15 loops, 60 s, all
+  four ways, under glacial; lively, zany, groovy; peaceful, foggy; dreamy,
+  booming, sour, jazzy): **240 of 240 equal** (each set moves the hashes, so the vibes reached both sides).
+- **Found, and fixed in the docs:** since item 82 `js/dlplayer.wasm` compiles
+  `data/` in, so a vibe edit also has to rebuild it, or CI's
+  `build-core.sh --check` fails (the brain changed one number in
+  `data/vibes.txt` and the check failed on the player's module; `dlcore.wasm`
+  did not move). `docs/VIBES.md` and this file's vibe rule now say so; and
+  the brain's container runs Node, the pinned Rust and Chromium, so the
+  brain does both steps itself. Also stale and fixed: the next-picks
+  questions in `docs/DECISIONS.md` (answered 2026-10-14).
+- **Item 82's hand-over note** (the core sums its voices in an order that
+  depends on when notes were handed over; up-front renders differ from the
+  player's 77-105 dB under the music): no canonical order now; in phase 3 the
+  core baseline's older parts move onto player renders (the queue's "For
+  phase 3", with the player module's 1.8 MB and a phone check before the app
+  switches).
+- **Not checked by the brain:** the C header, the QEMU targets and the costs
+  (CI and the PR's figures); a real phone. The hands' cost figures meet
+  promise 1 on the cloud machine (a load's worst stage 4.7% of a block
+  natively, a block while a loop is made 9.6% in wasm).
+- **The queue:** items 77-82 and "Before 77" archived; a "Since item 82"
+  paragraph for 83-92 (generator changes made twice now; build on `Player`;
+  compare player renders with player renders); item 83's clips may be the
+  player's; item 86 changes loops on `Player::load`, not `Core`. Done lines
+  #277-#284 archived. `docs/BRAIN.md`'s old "Start here" moved below, whole.
+  Next: the hands take item 83; the brain checks after item 87.
+
 **Session 26 (brain, Opus 5.5, 2026-10-26): the sound batch checked, the
 albums, phase 2.** What the brain ran itself on `main` at v123 (a7eb64d), not
 taken from the reports:
@@ -704,6 +756,258 @@ Mikey heard both pilots the same evening: about half the guesses fit
 **vibes**, his top priority, with a sketch: queued as item 38 ahead of
 34-37 (37 on hold), and the brain drafted all 71 recipes in
 `docs/VIBES.md` (names checked against the generator's).
+
+## Start here before Session 28
+
+The bullets of `docs/BRAIN.md`, "Start here", as they stood on 2026-10-30,
+moved whole at Session 28's archive pass.
+
+- **Session 26 (brain, Opus 5.5, 2026-10-26): done; Mikey's verdicts
+  pending.** The sound batch (46b-73) checked: it passes (the log,
+  `docs/archive/brain-log.md`). Item 72's big baseline moves are the
+  reshuffle: shil-doask, reisk-foa and their-roask drew lateFloor at item 71
+  and not at 72, and every loop whose choices didn't change is bit for bit
+  unchanged. **The albums** (`docs/ALBUMS.md`, "Session 26"): three in-app
+  codes and four sets of clips on one private page whose verdicts save to its
+  database. **Read them back** with `ArtifactData` (`list`, collection
+  `verdicts`, the page's URL in `docs/ALBUMS.md`); each verdict becomes a
+  queue item ahead of 77 (tune and drop) or nothing (keep); the bass pick
+  sets `LIFT_DB`; the blind A/B's key is in `docs/ALBUMS.md`. **Phase 2
+  written** (items 77-92, #275), with Mikey's three decisions of the day:
+  phase 2 takes the sequencer, the port is proven note for note, glacial
+  (76b). **Next:** the hands take 76, 76b, 74, then 77. The brain's next
+  check: after item 82 (the player), or sooner if the verdicts call for one.
+  Done lines #241-#274 stay live until the verdicts are in, then go to the
+  archive.
+- **Since Session 26 (brain, 2026-10-29):** item 76 merged (#277, v124;
+  archived with its note). Mikey took the vibes to 88: queue item 76b now
+  holds glacial and twenty more, four dropped (`docs/VIBES.md`, "The vibes
+  to 88"; `docs/DECISIONS.md`). And no compatibility bloat for old codes.
+  **The album was heard the same day** (`docs/ALBUMS.md`): everything kept;
+  two tunes queued as 76c (the bass level) and 76d (lateFloor's second
+  arrival). Done lines #241-#274 archived.
+- **2026-10-30:** 76b, 76c, 76d and 74 merged (#280-#285, v125-v128) and
+  archived. **Next: phase 2 from item 77** (hands, Opus 5.5, high). The
+  brain's next check: after item 82, or sooner if a note comes in.
+- **Since 2026-10-26 (hands, docs restructure and item 76).** All three
+  groups of the sound batch are merged (items 54-73, #245-#272, v103-v123;
+  group (b) is items 64-66, group (c) 67-73), and the album loops in the
+  Done lines were re-checked against `main` after item 73 (#273). `main` is
+  at v123. **Item 76** is queued from Mikey's Moto Diagnostics (v116,
+  2026-10-25): the first loop after the app starts loses its first notes
+  (app track, Sonnet 5.5, high). The docs were split by role: this file
+  keeps the orientation and this "Start here"; the decisions are
+  `docs/DECISIONS.md`; the log, History, finished items, old notes and Done
+  lines are in `docs/archive/`; `docs/README.md` is the map. **For Session
+  26:** end the session with the archive pass (see "The docs stay small").
+- **The plan to phase 2 (Mikey, 2026-10-15).** He wants more
+  instruments, profiles and vibes before the Broken Friends step, with ears
+  sessions to find them. Timed so nothing is built twice:
+  - **Now, alongside everything:** ears sessions (records he loves ->
+    candidate sounds as offline clips; his verdicts, including on
+    dubStab, organ, wash and longChords). Vibes may be added until phase
+    2 starts (data in `data/vibes.txt`).
+  - **Session 22** (brain, Opus, 2026-10-18): **done.** Items 42-45
+    verified, 47's PR read; the control album "Phase 1 check" heard by
+    Mikey the same day: no difference. See the log
+    (`docs/archive/brain-log.md`); one known issue for phase 2
+    (wander across the slider's upper range should not repeat; `docs/QUEUE.md`,
+    "Known issues").
+  - **Session 23** (hands, Opus, high): item 46, the building-block
+    interface. **Done** (#238, v100).
+  - **Session 24** (brain, Opus 5.5, 2026-10-19): **done.** Item 46
+    checked by the brain (passes; phase 1 is done); **item 46b** queued
+    (modulation input, stereo signal shape, channel events and a
+    channel's own blocks; bit-identical); **the sound batch** written as
+    items 54-73, with item 74 (clippy) low priority; the wander note
+    carried into the charter's phase 2. See the log
+    (`docs/archive/brain-log.md`). As planned before it: write **the sound
+    batch** into the queue, three groups, from `docs/ears/`
+    (batch-4 and batch-5 and Mikey's verdicts):
+    (a) **instruments**: dubStab, longChords, wash, the chapel organ,
+    roundBass, glass, floorDrop, arc; built in the core on 46's
+    interface, core-only (the JavaScript-synth fallback substitutes an
+    existing voice), each measured for level, cost and tone against its
+    ears reference;
+    (b) **stereo in the core**: the approved stereo baseline, the mono
+    switch, the first space recipes (charter promise 9);
+    (c) **the mixing logic** (Ears 8, batch 5): tunedKick, lateFloor,
+    floorDrop shapes, pedalBass, subDuck, padSweep, echoTime, under
+    Mikey's rules (today's behavior stays one option in every choice;
+    seeded per-loop choices; most loops get one or two changes; subDuck
+    only with a kick and a sub; stagger and stutter only with a bass
+    line; drop style may follow the bar length; a wandering loop may
+    swap the kick at section boundaries with a crossfade or a wait).
+    **Where it lands (brain, 2026-10-18, answering Ears 8's question):**
+    the choices go in today's JavaScript generator, which is allowed
+    until phase 2 starts and then ported with everything else (they
+    become part of what the port must match); what they play (the tuned
+    kick and boom, the bass-only duck, the chord-layer sweep, the echo
+    time as a parameter) goes in the core only, after item 46, so
+    nothing collides with 46. One builder session for both halves.
+    Then phase 2's items (ordering 48-53 among them). The balance lock
+    is re-baselined on purpose, once per group, and says what moved.
+  - **Since Session 24 (2026-10-19 to 22), for the next brain:** 46b
+    split into 46b and 46c; items 54-63 merged (#245-#256, v103-v112),
+    so group (a) is done and the balance lock is re-baselined. Decided
+    on the way: glass follows its chord's velocity times chords a bar,
+    and rings only on chords of two or more notes (Mikey); a 0.4 dB rate
+    tolerance for golden lists holding a steady tone through the reverb,
+    with **item 75** (the reverb rate-true for steady tones, low
+    priority) and a rule to re-check every Done line's album loops at
+    the end of group (c) (brain). **The arc (Mikey, 2026-10-21):** a
+    loop of his sank under 700 Hz for most of a 3-minute swing and he
+    thought the instruments were gone; once he knew it returns he liked
+    it. So **item 63b**: two shapes drawn per loop, "deep" (today's,
+    about 1 in 3) and "dip" (mostly open, one gentle dip to 800 Hz-1.5
+    kHz, about 2 in 3), with vibe weights (calm and vast vibes lean deep
+    and long; bright and lively lean dip, short and rarer). **And Mikey
+    (2026-10-22):** the arc's variables (shape, period, floor, start,
+    how often) should become controls for listeners and game developers
+    eventually; for now the generator weights them. So 63b keeps them as
+    named, ranged settings (promise 9: every variable a named setting),
+    and phase 2's requests (promise 11) can pin them; sliders in the app
+    are his call later (a Painter design), game hosts reach them through
+    the host API (phases 4 and 7). **For Session 26:** a "glacial" vibe
+    (Mikey's idea: very slow and vast; the deep arc, the longest swings),
+    designed with him there. **Two accounts (Mikey, 2026-10-22):** this
+    Claude account ran low for the week, so the hands sessions (63b,
+    group b, group c) and Ears 9 may run on his other account. The repo
+    carries the state: only one brain edits these files at a time, and a
+    hands session that hits a taste call takes the conservative option,
+    writes it down "for Mikey's ears", and goes on (decisions batch up
+    for Session 26), unless the item says to stop.
+  - **Session 25-0** (hands, Opus 5.5, high): item 46b. **Done (#241,
+    v101, 2026-10-19)**: every yardstick met; the stereo shape is a second
+    signal beside the mono one, and the web `.wasm` rebuilt without the
+    stereo code is the same bytes, so mono pays nothing.
+  - **Item 46c** (brain, 2026-10-19, from 46b's notes): channel blocks
+    with per-loop settings and modulation, events that reach a held note
+    every time (the organ's retune), cross-channel signals (subDuck).
+    Items 61, 62, 63, 68 and 72 depend on it. Session 25a takes it first.
+  - **Session 25a / 25b / 25c** (hands, Opus 5.5, high): the three
+    groups in that order (a: items 54-63; b: 64-66; c: 67-73), one PR per
+    item; a new session per group (or when usage runs out), same brief.
+    Item 74 whenever a session has usage to spare (Sonnet is enough).
+  - **Session 26** (brain, Opus; **done 2026-10-26**, see the first bullet): check all three groups (the hands' notes
+    on items 55-73 are in `docs/archive/notes.md`; their Done lines in
+    `docs/DONE.md`); a labeled
+    album (keep / tune / drop) of the new sounds and mixing, and a blind
+    stereo-vs-mono A/B; **the bass level** (item 56, #248, Mikey chose
+    today's level for now, 2026-10-20): the same few loops with the bass
+    at today's level, +3 dB and +5.5 dB (the prototype's), labeled, his
+    pick sets the per-voice trims; in the same album, item 56's wander
+    no longer folding the bass's passing tones down; new vibes with Mikey, last before the port.
+    **Then write phase 2's items** (not written yet): the generator's
+    port, ordering 48-53 among them, with the chords' octave fix and the
+    wander's upper range that must not repeat (both in the charter's
+    phase 2 and in "Known issues"), and item 54's per-loop choices and
+    the batch's generator choices as part of what the port must match.
+  - **Open for Mikey (Session 24's taste calls, in the queue "for his
+    ears"):** the new parts (glass, dubStab, the organ, the wash, the
+    arc) count toward "most loops get one or two changes" (item 54: none
+    15%, one 45%, two 30%, three 10%), so each is in fewer loops than in
+    the ears' clips; the arc starts each loop bright, not closed (item
+    63). His answer moves a weight, not the design.
+  - **Ears cadence (brain's advice, 2026-10-18):** after Ears 9, pause
+    new piles until the batch is built and heard in the app. The
+    approved backlog is large, and sketches can sound different in the
+    app than as clips (the first ears session's lesson); hearing it in
+    the app first makes later syntheses sharper and saves tokens.
+    **Agreed by Mikey, 2026-10-18:** Ears 10 on wait until Session 26's
+    album has been heard.
+  - **Session 27** (hands): the first item of phase 2.
+  - **New profiles wait until phase 2 lands**, then go in as data
+    (before phase 3 and Broken Friends). Phase order in the charter unchanged.
+- **Next picks (2026-10-13):** Mikey chose the design
+  (`design/next-picks.md`, from Painter 5, PR #205); see "Next picks,
+  the design" under "The core". Painter 6 (app track) is building the
+  screens now. Real wiring queued as items 48-52 (phase 2) and 53
+  (phase 3), for the brain to order among phase 2's own items when it
+  writes them (Session 26, after the sound batch; moved from Session 24). **Waiting on Mikey:** the two open questions (the way in
+  during an album; setting only length or only tempo to "any"). **Next
+  Painter work:** the tempo, key and scale, style and voices pickers,
+  and the "can't do that" line; long-piece display (`docs/PAINTER.md`,
+  section 2) before item 53.
+- **Where it is:** `main` at v100 (2026-10-19; phase 1's items 42-47
+  merged and checked, Painter 6's next-picks screens). The Rust core plays by default (the
+  JavaScript synth is the fallback, `?engine=js`); Vibes are in the app
+  (items 38a-b, v86-87; recipes in `data/vibes.txt`, tuned once, v91); the
+  dials, the word fit and the word-album builder are tools (items 34-35);
+  cinder and shatter borrow bright modes when glad (item 36).
+- **Glitches on GrapheneOS phones (items 39-41, v89-v92):** the core now
+  gets notes 2-8 s ahead, planned from the phone's measured render-ahead;
+  late notes past 30 ms are dropped, not bunched; covers are drawn in a
+  Worker. **Open:** the Pixel 10a's 1.3-1.8 s main-thread stalls were never
+  reproduced; the tester's next Diagnostics (v92: `gpu`, render-ahead,
+  late and dropped by cause) will say whether anything is left. If it
+  calls for a fix, that comes before the core work.
+- **Item 45 stopped for decisions (#213, draft); decided by Mikey
+  2026-10-14** (written under item 45 in the queue): tone tolerance 1.5
+  points at 44.1/22.05 kHz; the noise made rate-true (baseline update);
+  192 kHz native-only; PowerPC CI runs plain goldens only. Items 42-44
+  merged (44 is #211).
+- **Emergency (2026-10-13): queue item 47**, glitches when minimized
+  or locked (Pixel 9, GrapheneOS, v92). All 10 late notes "inside the
+  buffer", none from stalls; render-ahead usually ~20 ms but 1.4 s at
+  worst. Brain's lead: Android deepens the output buffer in the
+  background and the planner only adapts after measuring. App track,
+  runs alongside the core track (outside `core/`). Hands: Opus 5.5, high.
+- **The core charter is approved (Session 18, 2026-10-13):
+  `docs/CORE.md`.** Phase 1 is queued: items 42-46 in `docs/QUEUE.md`.
+  Hands, by item: 42 Sonnet (Session 19), 43 Opus (20), 44-45 Sonnet
+  (21), 46 Opus (23), all high. **Brain checks, to save tokens, at
+  two points rather than every PR:** Session 22, after 45 (goldens
+  equal on all five targets, the moved draws' list and ranges, the
+  baseline, rates and block sizes; then the control album for Mikey);
+  Session 24, after 46 (phase review, then phase 2's items). Each a
+  new brain chat, Opus 5.5. Session 18 closed after this. Before phase 5: the block
+  catalogue for Mikey (charter, promise 5).
+- **Next: the core** -- a new brain chat. Read **"The core: aims and design"**
+  in `docs/DECISIONS.md` first: the number one priority, shoot for the moon,
+  embeddable anywhere (game engines, mods, any OS or device, iOS and
+  macOS kept easy), notes decided and played away from the page so the
+  website never glitches from screen work, instruments as Rust building
+  blocks plus data recipes, short plain-ASCII share codes, anything may
+  break. **Start by drafting the core charter for Mikey's approval**: what
+  the core promises, how each promise is measured, and the phases. The
+  platforms (F-Droid, itch.io, later Google Play) are later phases of
+  their own.
+- **Not brain-verified** (Mikey chose to save tokens): #164 and #166, and
+  items 38-41's PRs (the hands' reports are in them).
+- **From the ears, for the generator port (Ears 4, 2026-10-16; Mikey
+  asked that the brain hear of it): the chords' octave can flip.**
+  `separateRegisters` (`js/generator.js`) moves the keys down an octave
+  when the mean pitch of the *sounding* chord notes is within five
+  semitones of the melody's mean. That mean depends on which chord
+  events survive the form, rests and gaps, so a change that doesn't
+  touch the harmony can still push it across the line: holding chords
+  longer (the ears' longChords sketch) flipped the octave in 11 of 87
+  held loops (200 scanned), and Mikey heard those loops' chords as too
+  loud and rough (grove #47's pads jumped from 104 Hz to 208 Hz at the
+  bottom). Pins and requests (promise 11: length, tempo, voices) are
+  exactly that kind of change. **Wanted in phase 2, not after it:**
+  decide the octave from the progression itself (its chords and voicing
+  before form, rests and gaps) rather than from the events, so pinning or
+  varying anything else never moves it; and a corpus check that varies
+  one non-harmonic choice per loop and counts octave flips (0 expected).
+  Today's loops render as they always have (the flip needs a change to
+  happen); the fix itself will move the octave in the few loops where the
+  two ways of deciding disagree, which the phase's blind album covers; the ears' sketch fix and numbers: `docs/ears/batch-4.md`,
+  "Round 4", and `docs/EARS.md`. Written into the charter's phase 2.
+- **Waiting, not urgent:** item 37 (on hold; Vibes cover it); the
+  ears-approved sounds -- roundBass, glass, floorDrop, arc (2026-10-10);
+  **dubStab and longChords approved 2026-10-16** (as in Ears 4's round 4,
+  `tools/ears/sketches/ears4-sketch.patch`), and **stereo's baseline
+  approved** (the blend of room and ensemble, steady; moving stereo kept
+  for a later, experimental option); **the wash and the chapel organ
+  approved the same day** (Ears 4's rounds 5 and 7; every recipe, with
+  levels, costs and checks, in `docs/ears/batch-4.md`, the sketch in
+  `tools/ears/sketches/ears4-sketch.patch`; the organ belongs outside
+  the voice budget as fixed overhead, the stab is a budget probe that
+  holds nothing) -- under the charter they may become the first
+  instruments built as recipes; vibe tuning from the loops Mikey sends
+  (`data/vibes.txt`, the brain's to edit).
 
 ## History
 
