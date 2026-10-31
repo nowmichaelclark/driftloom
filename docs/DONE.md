@@ -105,3 +105,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   tempo (a profile 6 bpm off keeps half its weight), and a gait profile with
   no gait at the tempo plays its nearest. Lite's refusals at a fast pin are
   shatter's own (item 85c).
+- #303, the budget takes room from old notes, not new ones, on lite (item
+  85c, v135), preview URL: <https://6073ae0c-driftloom.nowmichaelclark.workers.dev>
+  (commit 9e61779): on lite, a note that doesn't fit lets its own layer's
+  oldest notes from other steps go, each falling to nothing over 0.05 s as
+  it starts (`Core::steal`), instead of being refused. Lite, 100 loops:
+  melody refusals 1.4% to 0% (none lose a note), chords 62% to 36%; shatter
+  asked for 180 bpm, melody 7.7% to 0%, chords 76% to 48%. Full quality and
+  the JavaScript fallback unchanged. Listen on lite (a phone, or the
+  Lite Room Album: <https://claude.ai/artifact/XwAWYWFdVi55KdGyccjjEW>, six
+  loops before and after) for the tune keeping its notes and chords that
+  now come in (toask-ha, hai-waim: their keys 3.6 LU up), and for long tails
+  cut short on a slow loop (theith-yaing). For Mikey's ears: the fade's
+  length, and whether full quality follows.
