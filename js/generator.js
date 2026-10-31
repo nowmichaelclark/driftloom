@@ -2206,15 +2206,23 @@ function genTexture(spec, harmony) {
 // `melody` used to be passed in for its drawn voice and is not any more:
 // the question is now about the loop, not about what the two layers
 // happened to draw.
-function separateRegisters(harmony, tracks, choir) {
-  const chords = tracks.chords.filter((e) => e.vel && e.notes && e.notes.length);
-  const sung = tracks.melody.filter((e) => e.vel);
-  if (!chords.length || !sung.length) return;
+//
+// Read from the progression, not from what sounds (queue item 84; Ears 4,
+// round 4). The octave was read from the sounding events, after the entry
+// schedules and the gaps, so any change that left the harmony alone could
+// flip it: held chords did in 11 of 87 loops, and the picks (items 85-91)
+// are that kind of change. It is now read from the chords' voicing as
+// today's chord lengths play it and the whole tune (spelled over its
+// chords), before form, rests and gaps, so a rest, a gap, a tempo, a bass
+// style or a muted layer cannot move it. One decision per loop.
+function chordsOctave(harmony, melodyEvents, spec, choir) {
+  const notes = [];
+  for (const sl of harmony.slots) for (const n of sl.notes) notes.push(n);
+  const sung = melodyEvents.filter((e) => e.vel && e.midi != null);
+  if (!notes.length || !sung.length) return 0;
 
   const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
-  const notes = [];
-  for (const e of chords) for (const n of e.notes) notes.push(n);
-  const melodyCentre = mean(sung.map((e) => e.midi));
+  const melodyCentre = mean(sung.map((e) => spelledMidi(e, harmony, spec)));
   const chordCentre = mean(notes);
 
   const same = !!choir;
@@ -2240,12 +2248,35 @@ function separateRegisters(harmony, tracks, choir) {
       ?? down.sort((a, b) => gap(b) - gap(a))[0]
       ?? 0;
   }
+  return shift;
+}
 
-  if (!shift) return;
-  // Every copy of a chord event, in the pattern and in the layer it was
-  // built from, so a bar the repair pass puts back later comes back in the
-  // octave the rest of the keys are in. Silenced copies share their notes
-  // array with the original and are left alone; they make no sound.
+// The octave the chords take, as the loop's `chordsOctave` reads it: the
+// progression as today's chord lengths play it and the tune over it (queue
+// item 84). A loop on today's lengths reads its own; a held one asks what
+// today's would be, which costs the harmony and the melody again, nothing
+// else.
+function registerShift(spec, choir, harmony, melody) {
+  const held = (h) => h && h.longChords && h.longChords !== 'asIs';
+  // A developing loop's sections each draw their own (they share a spec).
+  const anyHeld = harmony.sectionHarmony ? Object.values(harmony.sectionHarmony).some(held) : held(harmony);
+  if (!anyHeld) return chordsOctave(harmony, melody.events, spec, choir);
+  longChordsOff = true;
+  try {
+    const dev = developmentOf(spec);
+    const h = dev ? developHarmony(spec, dev) : genHarmony(layerSpec(spec, 'chords'));
+    const m = dev ? developMelody(spec, h, dev) : genMelody(layerSpec(spec, 'melody'), h);
+    return chordsOctave(h, m.events, spec, choir);
+  } finally {
+    longChordsOff = false;
+  }
+}
+
+// Every copy of a chord event, in the pattern and in the layer it was
+// built from, so a bar the repair pass puts back later comes back in the
+// octave the rest of the keys are in. Silenced copies share their notes
+// array with the original and are left alone; they make no sound.
+function shiftChords(harmony, tracks, shift) {
   const moved = new Set();
   for (const list of [harmony.events, tracks.chords]) {
     for (const e of list) {
@@ -2359,15 +2390,23 @@ function harmonize(events, spec, c) {
 // scale with it, so its graces, its harmony and any drift stay in it too.
 // A note on a tone the spelling leaves alone keeps its pitch.
 function spellOver(events, harmony, spec) {
-  const scale = SCALES[spec.scale].steps;
   for (const e of events) {
     if (e.midi == null) continue;
     const slot = slotAt(harmony.slots, e.step, harmony.cycleSteps);
     if (!slot.steps) continue;
-    const i = scale.indexOf((((e.midi - spec.root) % 12) + 12) % 12);
-    if (i >= 0) e.midi += ((slot.steps[i] - scale[i] + 18) % 12) - 6;
+    e.midi = spelledMidi(e, harmony, spec);
     e.steps = slot.steps;
   }
+}
+
+// The pitch spellOver gives a note: its own over a plain chord, moved to
+// the chord's scale over a spelled one.
+function spelledMidi(e, harmony, spec) {
+  const slot = slotAt(harmony.slots, e.step, harmony.cycleSteps);
+  if (!slot.steps) return e.midi;
+  const scale = SCALES[spec.scale].steps;
+  const i = scale.indexOf((((e.midi - spec.root) % 12) + 12) % 12);
+  return i >= 0 ? e.midi + ((slot.steps[i] - scale[i] + 18) % 12) - 6 : e.midi;
 }
 
 // The grace notes before a marked note, from the note as it stands.
@@ -2709,13 +2748,12 @@ export function render(spec) {
     tracks.bass = pedal.events.map((e) => (on.has(Math.floor(e.step / spb)) && !inGap(e.step) ? e : { ...e, vel: 0 }));
   }
 
-  // Kept until here, after the entry schedules and the gaps, because the
-  // question it answers is about what you hear. Deciding it on every event
-  // the generator produced gives the wrong answer once the bars of a
-  // melody sit in different octaves: silencing one bar then moves the
-  // sounding centroid by several semitones, and a separation that was
-  // correct on paper is wrong in the room.
-  separateRegisters(harmony, tracks, choir);
+  // The chords' octave is decided from the progression (queue item 84), so
+  // the entry schedules, the gaps and the other choices above cannot move it.
+  const chordShift = registerShift(spec, choir, harmony, melody);
+  if (chordShift) shiftChords(harmony, tracks, chordShift);
+  // For tools/octave.mjs; not enumerable, so no hash, copy or share code sees it.
+  Object.defineProperty(harmony, 'chordShift', { value: chordShift });
 
   // Over a spelled chord the lines take its scale. Octaves are settled by
   // now and a spelling only moves a pitch by a semitone, so it goes here,
@@ -2723,39 +2761,6 @@ export function render(spec) {
   if (harmony.slots.some((sl) => sl.steps)) {
     spellOver(tracks.melody, harmony, spec);
     spellOver(tracks.bass, harmony, spec);
-    // A spelling moves a note by a semitone, which can take a line that
-    // cleared the keys by a hair back under five semitones. Checked again
-    // on what is now played; a loop that still clears is left alone.
-    separateRegisters(harmony, tracks, choir);
-  }
-
-  // longChords keep the octave today's chords take (queue item 57; Ears 4,
-  // round 4). separateRegisters moves the keys an octave when their centre
-  // sits within five semitones of the tune's, and holding chords nudged
-  // that centre across the line in about one held loop in eight (grove #47:
-  // up an octave, into the range the ear is most sensitive to: the held
-  // chords Mikey heard as too loud). So the octave is read from what today's
-  // lengths would play, in every loop, as the sketch did: a loop on today's
-  // lengths still has its repeated pads tied, which can move the centre.
-  if (!longChordsOff && harmony.longChords) {
-    const today = withTodaysChords(spec);
-    const centre = (list) => {
-      const ns = list.filter((e) => e.vel && e.notes && e.notes.length).flatMap((e) => e.notes);
-      return ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : null;
-    };
-    const a = centre(today.tracks.chords);
-    const b = centre(tracks.chords);
-    const sh = a != null && b != null ? Math.round((a - b) / 12) * 12 : 0;
-    if (sh) {
-      const moved = new Set();
-      for (const list of [harmony.events, tracks.chords]) {
-        for (const e of list) {
-          if (!e.notes || moved.has(e)) continue;
-          moved.add(e);
-          e.notes = e.notes.map((n) => n + sh);
-        }
-      }
-    }
   }
 
   // After the register work, so the pitch written down is the pitch played.

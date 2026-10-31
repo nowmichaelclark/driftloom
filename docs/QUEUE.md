@@ -7,12 +7,13 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-10-31:** `main` is at v132. Done: items 0-36 and 38-47 (13
+**Status, 2026-10-31:** `main` is at v133. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2's port, items 77-82** (#287-#296: the
 generator in Rust, proven on the generation goldens, and the player; checked
 by the brain's Session 28) and **83** (ears on the core: sketch blocks and
-`tools/clips.mjs`). **Next: item 84.** Item 75 is low priority. 37
+`tools/clips.mjs`) and **84** (the chords' octave from the progression).
+**Next: item 85.** Item 75 is low priority. 37
 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -182,25 +183,6 @@ engine does. What that means for the items below:
   the music; `docs/archive/notes/82-hand-over.md`). Compare player renders with
   player renders, or the browser's reference made the same way
   (`tools/player.mjs`), not with the harness's.
-
-## 84. The chords' octave from the progression
-
-**Why:** Ears 4's finding (`docs/BRAIN.md`, "Start here"; the charter's
-phase 2): `separateRegisters` decides the chords' octave from the sounding
-events, so a change that doesn't touch the harmony can flip it (11 of 87
-loops when only the chord lengths changed), and pins (85-91) are exactly that
-kind of change. It goes in before the request.
-
-**What:** decide the octave from the progression and its voicing before
-form, rests and gaps, in Rust and JavaScript alike (the JavaScript still
-plays the app). The sketch fix and its numbers: `docs/ears/batch-4.md`,
-"Round 4", and `docs/EARS.md`.
-
-**Yardsticks:** a corpus check that varies one non-harmonic choice per loop
-(chord lengths, rests, tempo, the bass style, a muted layer) over 2,000
-loops and counts octave flips: 0. The loops whose octave moves today
-(the two ways disagree) listed with how many; generation goldens updated on
-purpose; the brain's blind album covers them.
 
 ## 85. The request: vibes and tempo (was 48)
 

@@ -63,6 +63,14 @@ pub struct Render {
     pub melody_out: MelodyOut,
     pub texture_kind: &'static str,
     pub depth: Option<Depth>,
+    /// The octave (in semitones) the chords take, decided from the
+    /// progression once the melody is drawn (`chordsOctave`, queue item
+    /// 84), and applied by the register work.
+    pub chord_shift: f64,
+    /// An octave decided elsewhere, on today's chord lengths (`Generator`
+    /// plans and draws those first for a loop with held chords); taken by
+    /// the next melody part in place of its own reading.
+    pub register_given: Option<f64>,
     // Working room: the pedal's notes, a developing loop's sections.
     pedal_notes: Bass,
     a_notes: Melody,
@@ -92,6 +100,8 @@ impl Render {
             melody_out: MelodyOut { voice: "", motif: List::filled(melody::NO_MOTIF), cell: None, centre: None },
             texture_kind: "",
             depth: None,
+            chord_shift: 0.0,
+            register_given: None,
             pedal_notes: List::filled(layers::NO_BASS),
             a_notes: List::filled(melody::NO_NOTE),
             section_notes: List::filled(melody::NO_NOTE),
@@ -154,6 +164,19 @@ impl Render {
             self.melody_out =
                 melody::gen_melody(cx, layer_bars(cx, Layer::Melody), spec.layer_seed(Layer::Melody), &over, None, &mut self.melody);
         }
+        // Read here, from the whole tune before form, rests and gaps touch it.
+        self.chord_shift = self.register_given.take().unwrap_or_else(|| self.chords_octave(cx));
+    }
+
+    /// The chords' octave the progression and the tune ask for, without
+    /// building the rest of the loop: the harmony of `plan` and the melody
+    /// over it (queue item 84). `Generator` uses it on today's chord
+    /// lengths, for a loop with held chords.
+    pub fn register_of(&mut self, cx: &Cx, plan: &Plan) -> f64 {
+        self.harmony = plan.harmony;
+        self.register_given = None;
+        self.melody_part(cx, plan);
+        self.chord_shift
     }
 
     fn form_part(&mut self, cx: &Cx, plan: &Plan) {
@@ -245,10 +268,12 @@ impl Render {
     fn finish_part(&mut self, cx: &Cx) {
         let spec = cx.spec;
         let spb = cx.spb;
-        self.separate_registers(cx);
+        if self.chord_shift != 0.0 {
+            #[allow(clippy::cast_possible_truncation)] // whole octaves
+            self.shift_chords(self.chord_shift as i16);
+        }
         if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
             self.spell_over(cx);
-            self.separate_registers(cx);
         }
 
         let cycle = spec.cycles.and_then(|c| c[Layer::Melody as usize]).filter(|&c| c != 0.0).unwrap_or(spec.bars * spb);
@@ -277,20 +302,6 @@ impl Render {
                 }
             }
         }
-    }
-
-    /// The chords' centre as heard (render's `centre`), or none.
-    #[must_use]
-    pub fn chord_centre(&self) -> Option<f64> {
-        let mut sum = 0.0;
-        let mut n = 0usize;
-        for e in self.chords.iter().filter(|e| e.vel != 0.0) {
-            for &x in e.notes.iter() {
-                sum += f64::from(x);
-                n += 1;
-            }
-        }
-        (n > 0).then(|| sum / js::num(n))
     }
 
     /// Move every chord, in the harmony and in the layer, by `shift`
@@ -539,13 +550,15 @@ impl Render {
         n / seconds
     }
 
-    /// `separateRegisters(harmony, tracks, choir)`.
-    fn separate_registers(&mut self, cx: &Cx) {
+    /// `chordsOctave(harmony, melodyEvents, spec, choir)`: how many
+    /// semitones the chords move, from the progression's voicing and the
+    /// whole tune (spelled over its chords), not from what sounds.
+    fn chords_octave(&self, cx: &Cx) -> f64 {
         let mut sum = 0.0;
         let mut n = 0usize;
         let (mut lowest, mut highest) = (f64::INFINITY, f64::NEG_INFINITY);
-        for e in self.chords.iter().filter(|e| e.vel != 0.0 && !e.notes.is_empty()) {
-            for &x in e.notes.iter() {
+        for sl in self.harmony.slots.iter() {
+            for &x in sl.notes.iter() {
                 let x = f64::from(x);
                 sum += x;
                 n += 1;
@@ -556,11 +569,11 @@ impl Render {
         let mut msum = 0.0;
         let mut mn = 0usize;
         for e in self.melody.iter().filter(|e| e.vel != 0.0) {
-            msum += e.midi;
+            msum += self.spelled_midi(cx, e.midi, e.step);
             mn += 1;
         }
         if n == 0 || mn == 0 {
-            return;
+            return 0.0;
         }
         let melody_centre = msum / js::num(mn);
         let chord_centre = sum / js::num(n);
@@ -586,9 +599,17 @@ impl Render {
                 down.first().copied().unwrap_or(0.0)
             };
         }
-        if shift != 0.0 {
-            #[allow(clippy::cast_possible_truncation)] // whole octaves
-            self.shift_chords(shift as i16);
+        shift
+    }
+
+    /// `spelledMidi`: the pitch `spellOver` gives a note.
+    fn spelled_midi(&self, cx: &Cx, midi: f64, step: f64) -> f64 {
+        let Some(st) = &self.harmony.slot_at(step).steps else { return midi };
+        let scale = cx.spec.steps();
+        let p = (((midi - cx.spec.root) % 12.0) + 12.0) % 12.0;
+        match scale.iter().position(|&x| x == p) {
+            Some(i) => midi + ((st[i] - scale[i] + 18.0) % 12.0) - 6.0,
+            None => midi,
         }
     }
 
