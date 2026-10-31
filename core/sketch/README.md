@@ -27,7 +27,7 @@ does.
 
 Not built yet: a sketch **voice** (a block a layer's notes play instead of its
 own voice, by number). The registry's `voices` list takes no `#[cfg]` yet;
-see `docs/notes/83-sketch-voice.md`. A sketch of a new instrument today is a
+see `docs/archive/notes/83-sketch-voice.md`. A sketch of a new instrument today is a
 channel source that follows the layer's events.
 
 ## Probe it
