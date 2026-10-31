@@ -69,3 +69,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   `?engine=player`: it should sound exactly as the app does (Play, Next,
   Pause, a mute, the tempo). Tester: Diagnostics there, `late: 0`. No album
   loop.
+- #298, ears on the core: sketch blocks and `tools/clips.mjs` (item 83, no
+  app change), merged as commit ac21fec (preview URL: the PR's Cloudflare
+  check): `core/sketch/` takes one block file and one line of data, built only
+  with the `sketch` feature, probed by the kit; `tools/clips.mjs` makes clips
+  from the core's player with choices forced, a constant moved (`bass.LIFT_DB`),
+  a setting pinned or the sketch on. The app still plays the JavaScript:
+  `js/dlcore.wasm` is the same bytes. Listen for nothing in the app. For the
+  ears sessions: try `docs/ears/sessions.md`'s new path with the demonstration
+  veil (`"sketch": true` on a corpus loop, melody lowpassed); undertow #45
+  with `lateFloor` forced brings the low end back at 0:29-0:30. A sketch voice
+  is not built (`docs/notes/83-sketch-voice.md`). No album loop.
