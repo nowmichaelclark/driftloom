@@ -180,12 +180,25 @@ pub struct Generator {
     settings: load::Load,
     pass: wander::Pass,
     /// A load under way (`begin`, `step`): the stage it is at, its seed and
-    /// vibes, and what the stages pass on (today's chords' centre).
+    /// vibes, and what the stages pass on (the octave read on today's chord
+    /// lengths).
     stage: Stage,
     seed: u32,
     chosen: [bool; data::VIBE_COUNT],
     today: Option<f64>,
     kick: choices::KickFit,
+}
+
+/// Whether the plan's chords last longer than today's (`longChords` not
+/// `asIs`), in the loop's harmony or, for a developing loop, in any section's.
+fn held_chords(plan: &plan::Plan) -> bool {
+    let held = |h: &plan::Harmony| h.long_chords.is_some_and(|k| k != "asIs");
+    if plan.development.is_some() {
+        let s = &plan.sections;
+        held(&s.a) || held(&s.b) || (s.has_v && held(&s.v)) || (s.has_r && held(&s.r))
+    } else {
+        held(&plan.harmony)
+    }
 }
 
 /// The stages of a load, in order (`Generator::step`): each a part of
@@ -197,13 +210,13 @@ pub enum Stage {
     Idle,
     /// The spec (`newSpec`).
     Spec,
-    /// A loop that does not develop is planned and rendered once on today's
-    /// chord lengths first, for its chords' centre (`withTodaysChords`).
-    PlanToday,
-    /// The render, a part a stage (`render::PARTS`).
-    RenderToday(usize),
     /// The plan.
     Plan,
+    /// A loop with held chords is planned again on today's chord lengths,
+    /// for the chords' octave (queue item 84).
+    PlanToday,
+    /// The harmony of that plan and the melody over it, for the same.
+    RenderToday,
     /// The render, a part a stage (`render::PARTS`).
     Render(usize),
     /// What the engine decides at load, but the tuned kick's level.
@@ -272,47 +285,37 @@ impl Generator {
             Stage::Idle | Stage::Done => {}
             Stage::Spec => {
                 self.spec = spec::new_spec(self.seed, &self.chosen);
-                let cx = plan::Cx::new(&self.spec);
-                self.stage = if plan::development_of(cx.spec, cx.choir).is_none() { Stage::PlanToday } else { Stage::Plan };
+                self.stage = Stage::Plan;
             }
-            // A loop that does not develop keeps the chords' octave today's
-            // chord lengths would take (`withTodaysChords`): rendered once that
-            // way first, for the chords' centre.
+            Stage::Plan => {
+                self.plan.make(&plan::Cx::new(&self.spec));
+                // The chords' octave is read from the progression as today's
+                // chord lengths play it, and the tune over it (`registerShift`):
+                // a loop with held chords asks for that first.
+                self.stage = if self.today.is_none() && held_chords(&self.plan) {
+                    Stage::PlanToday
+                } else {
+                    self.render.register_given = self.today;
+                    Stage::Render(0)
+                };
+            }
             Stage::PlanToday => {
                 let mut cx = plan::Cx::new(&self.spec);
                 cx.long_chords_off = true;
                 self.plan.make(&cx);
-                self.stage = Stage::RenderToday(0);
+                self.stage = Stage::RenderToday;
             }
-            Stage::RenderToday(part) => {
+            Stage::RenderToday => {
                 let mut cx = plan::Cx::new(&self.spec);
                 cx.long_chords_off = true;
-                self.render.part(part, &cx, &self.plan);
-                if part + 1 < render::PARTS {
-                    self.stage = Stage::RenderToday(part + 1);
-                } else {
-                    self.today = self.render.chord_centre();
-                    self.stage = Stage::Plan;
-                }
-            }
-            Stage::Plan => {
-                self.plan.make(&plan::Cx::new(&self.spec));
-                self.stage = Stage::Render(0);
+                self.today = Some(self.render.register_of(&cx, &self.plan));
+                self.stage = Stage::Plan;
             }
             Stage::Render(part) => {
                 self.render.part(part, &plan::Cx::new(&self.spec), &self.plan);
                 if part + 1 < render::PARTS {
                     self.stage = Stage::Render(part + 1);
                     return false;
-                }
-                if self.render.harmony.long_chords.is_some()
-                    && let (Some(a), Some(b)) = (self.today, self.render.chord_centre())
-                {
-                    let sh = js::round((a - b) / 12.0) * 12.0;
-                    if sh != 0.0 {
-                        #[allow(clippy::cast_possible_truncation)] // whole octaves
-                        self.render.shift_chords(sh as i16);
-                    }
                 }
                 self.stage = Stage::Settings;
             }

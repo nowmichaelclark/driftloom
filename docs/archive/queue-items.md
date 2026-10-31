@@ -3235,3 +3235,49 @@ to WAV and Opus with an index. **Not built:** a sketch voice
 (`docs/archive/notes/83-sketch-voice.md`). Session 26's WAVs are not in the repo, so
 the clips were not compared with them; the one figure kept, undertow #45 with
 lateFloor forced, reproduces (the low end returns at 0:29-0:30).
+
+## 84. The chords' octave from the progression (done, 2026-10-31)
+
+**Why:** Ears 4's finding (`docs/BRAIN.md`, "Start here"; the charter's
+phase 2): `separateRegisters` decides the chords' octave from the sounding
+events, so a change that doesn't touch the harmony can flip it (11 of 87
+loops when only the chord lengths changed), and pins (85-91) are exactly that
+kind of change. It goes in before the request.
+
+**What:** decide the octave from the progression and its voicing before
+form, rests and gaps, in Rust and JavaScript alike (the JavaScript still
+plays the app). The sketch fix and its numbers: `docs/ears/batch-4.md`,
+"Round 4", and `docs/EARS.md`.
+
+**Yardsticks:** a corpus check that varies one non-harmonic choice per loop
+(chord lengths, rests, tempo, the bass style, a muted layer) over 2,000
+loops and counts octave flips: 0. The loops whose octave moves today
+(the two ways disagree) listed with how many; generation goldens updated on
+purpose; the brain's blind album covers them.
+
+**Built (hands, Sonnet 5.5):** one decision per loop, `chordsOctave` in
+`js/generator.js` and `chords_octave` in `core/src/generator/render.rs`, read
+after the melody is drawn and before form, rests, gaps, choices and the
+pedal can touch anything: the pooled notes of the progression's slots (as
+today's chord lengths voice them) against the mean pitch of the whole tune,
+spelled over its chords (`spelledMidi`). A loop with held chords reads the
+harmony and melody again on today's lengths (the full `withTodaysChords`
+render, and the Rust generator's "render once on today's lengths first", are
+gone; the developing loops' sections count too, which they did not before).
+The two `separateRegisters` calls and the long-chords block collapse to one
+shift applied where the first call was. `tools/octave.mjs` is the corpus
+check; `test/generator.test.mjs` runs a small one.
+
+**Measured** (`node tools/octave.mjs`, 2,000 loops, corpus seed 1): chord
+lengths, rests (the chords' entry schedule off), tempo (a quarter faster) and
+the bass (drawn again) flip the octave in **0** loops. The old way flipped 22,
+44, 0 and 42. **88 of the 2,000 loops take another octave than before** (4.4%;
+`--against` lists them: 6, 25, 40, 48, 49, 66, 76, 92, 139, 148, 169, 214 ...),
+for the brain's blind album. Generation goldens rewritten on purpose: 144 of
+3,060 cases moved (88 corpus, 54 vibes, golden `06-undertow`, album 30); the
+Rust generator matches all 3,060 on x86_64 and wasm. `golden/seeds.hashes`:
+7 of the first 80 loops moved (it is the same loops' chords in another
+octave). The balance lock moved in one figure: "not a choir, under 5" (loops
+whose keys sit within five semitones of the sounding tune) 2.34% -> 3.73%,
+because the octave is no longer read from what sounds, so a tune that rests
+can leave the keys nearer; re-baselined at `--n 10000`. Nothing else moved.

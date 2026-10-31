@@ -1586,5 +1586,26 @@ console.log('\nechoTime (queue item 73)');
   check('every setting is named, with its range', ['beats', 'vibes'].every((k) => k in ECHO));
 }
 
+// ---------------------------------------------------------------------
+console.log('\nThe chords\' octave, from the progression (queue item 84; tools/octave.mjs)');
+{
+  const corpus = new Rng(4);
+  const moved = { lengths: 0, rests: 0, tempo: 0, bass: 0 };
+  const octaves = new Set();
+  for (let i = 0; i < 300; i++) {
+    const spec = newSpec(corpus.seed32());
+    const base = render(spec).harmony.chordShift;
+    octaves.add(base);
+    if (withTodaysChords(spec).harmony.chordShift !== base) moved.lengths++;
+    if (render({ ...spec, forceLayers: { chords: true } }).harmony.chordShift !== base) moved.rests++;
+    if (render({ ...spec, bpm: Math.round(spec.bpm * 1.25) }).harmony.chordShift !== base) moved.tempo++;
+    const other = rerollLayer(spec, 'bass');
+    other.layerSeeds.bass = (spec.layerSeeds.bass ^ 0x2545f491) >>> 0 || 1;
+    if (render(other).harmony.chordShift !== base) moved.bass++;
+  }
+  check('chord lengths, rests, tempo and the bass never move it', Object.values(moved).every((n) => n === 0), JSON.stringify(moved));
+  check('it is a whole number of octaves, and both ways of using it happen', [...octaves].every((n) => n % 12 === 0) && octaves.size >= 2, [...octaves].join());
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);
