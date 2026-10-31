@@ -99,5 +99,16 @@ console.log('\nA context faster than the core holds (queue item 45)');
   check(`the limit is the web build's, ${CORE_MAX_RATE} Hz`, CORE_MAX_RATE === 96000);
 }
 
+// The space recipe's settings as js/pins.js copies them (queue item 85b):
+// the core's, by number, name and range (core/src/space.rs, SETTINGS).
+{
+  const { SPACE_SETTINGS } = await import('../js/pins.js');
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../core/src/space.rs', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('pub const SETTINGS'), src.indexOf('];', src.indexOf('pub const SETTINGS')));
+  const core = [...body.matchAll(/s\("([a-z-]+)", (-?[\d.]+), (-?[\d.]+)\)/g)].map((m) => [m[1], Number(m[2]), Number(m[3])]);
+  check('the space settings js/pins.js copies are the core\'s', core.length === 32 && JSON.stringify(core) === JSON.stringify(SPACE_SETTINGS), JSON.stringify(core));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

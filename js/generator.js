@@ -12,6 +12,7 @@ import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
 import { drawChoices, dropShapeOf, FLOORDROP, PEDAL, pedalOf } from './choices.js';
+import { RequestError, isPinName, pinValue, readPins, framedPins, pinItems } from './pins.js';
 import { cos, log, pow, sin } from './dlmath.js';
 import { blockOf, readBlock } from './data.js';
 
@@ -209,6 +210,9 @@ export function newSpec(seed = randomSeed(), request = null) {
   // The tempo asked, kept: `metreOf` finds the gait by it, and a share code
   // carries it, so the loop is made again from its code.
   if (t) spec.tempo = t.slice();
+  // The pins asked (queue item 85b; js/pins.js), kept the same way: the
+  // choices' draw and the engine's load read them from here.
+  if (asked.pins) spec.pins = { ...asked.pins };
 
   if (c.polymeter) {
     const cycles = r.shuffle(POLY_CYCLES);
@@ -418,18 +422,18 @@ function weighedVibes(r, asked) {
 // The tempos the core plays, in bpm: what the share code's tempo byte holds.
 export const TEMPO_LIMIT = [32, 190];
 
-export class RequestError extends Error {}
+export { RequestError };
 
 const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null };
+  const out = { vibes: null, tempo: null, pins: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
-  if (Array.isArray(input)) return { vibes: lenientVibes(input), tempo: null };
+  if (Array.isArray(input)) return { vibes: lenientVibes(input), tempo: null, pins: null };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!('vibes' in input) && !('tempo' in input)) return { vibes: lenientVibes(Object.keys(input)), tempo: null };
+  if (!('vibes' in input) && !('tempo' in input) && !('pins' in input)) return { vibes: lenientVibes(Object.keys(input)), tempo: null, pins: null };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -446,14 +450,17 @@ export function readRequest(input) {
     const t = input.tempo;
     out.tempo = Array.isArray(t) ? tempoOf(t[0], t.length > 1 ? t[1] : t[0]) : tempoOf(t, t);
   }
+  // The pins (queue item 85b; js/pins.js), { name: value }.
+  out.pins = readPins(input.pins);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null };
+  const out = { vibes: null, tempo: null, pins: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
+  const pins = {};
   for (const item of t.split(',')) {
     const eq = item.indexOf('=');
     const name = eq < 0 ? item : item.slice(0, eq);
@@ -464,6 +471,10 @@ export function parseRequest(text) {
       const [lo, hi] = dash < 0 ? [value, value] : [value.slice(0, dash), value.slice(dash + 1)];
       if (!BPM_TEXT.test(lo) || !BPM_TEXT.test(hi)) throw new RequestError('a bad tempo');
       out.tempo = tempoOf(Number(lo), Number(hi));
+    } else if (isPinName(name)) {
+      // A pin (queue item 85b): a choice's id, or a dotted setting.
+      if (value == null) throw new RequestError('a bad setting');
+      pins[name] = pinValue(name, value);
     } else {
       const id = knownVibe(name);
       if (value != null && !WEIGHT_TEXT.test(value)) throw new RequestError('a bad weight');
@@ -471,6 +482,7 @@ export function parseRequest(text) {
     }
   }
   out.vibes = framed(asked);
+  out.pins = framedPins(pins);
   return out;
 }
 
@@ -479,6 +491,7 @@ export function requestText(request) {
   const r = readRequest(request);
   const items = (r.vibes || []).map(([id, w]) => (w == null ? id : `${id}=${w}`));
   if (r.tempo) items.push(`bpm=${r.tempo[0] === r.tempo[1] ? r.tempo[0] : `${r.tempo[0]}-${r.tempo[1]}`}`);
+  items.push(...pinItems(r.pins));
   return items.length ? items.join(',') : '-';
 }
 
@@ -490,6 +503,7 @@ export function requestOf(spec) {
   return {
     vibes: v ? Object.fromEntries(VIBE_IDS.filter((id) => v.vibes[id] > 0).map((id) => [id, v.vibes[id]])) : null,
     tempo: spec && Array.isArray(spec.tempo) ? spec.tempo.slice() : null,
+    pins: spec && spec.pins ? { ...spec.pins } : null,
   };
 }
 
@@ -2956,7 +2970,7 @@ export function render(spec) {
   // stream of its own, after the layers and their schedules, so each
   // choice's eligibility can ask what the loop plays; every other draw is
   // untouched, and with no choices listed nothing here changes a note.
-  const choices = drawChoices(spec.seed, { spec, tracks, harmony, bass, melody, drums, texture, choir }, vibesOf(spec));
+  const choices = drawChoices(spec.seed, { spec, tracks, harmony, bass, melody, drums, texture, choir }, vibesOf(spec), undefined, spec.pins);
 
   // pedalBass (queue item 71): the bass, drawn as it always was, gives way to
   // the pedal, which plays in the bars the loop's own bass plays in, after

@@ -236,12 +236,23 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   loop. A request that can't be met is refused as it is built, with a short
   plain line (`request::TEMPO_OUT` and the rest), never played as
   something else.
+- **The pins** (`request::Pins`, queue item 85b) fix the named settings: any
+  of item 54's choices to one of its options (`organ=on`, `tunedKick=long`,
+  `arc=today`), the settings each draws by (`arc.period=240`,
+  `kick.note=33`, `lateFloor.order=kitFirst`, `padSweep.q=0.9`), the echo's
+  time (`echo.beats=1`) and the space recipe's 32 (`space.room=0.8`), by
+  name in the text or by number (`with_pin`, `dl_player_pin`). Each is held
+  to what the loop could draw (`request::SETTING_OUT` past it). Every draw
+  is made as ever and the pin overrules one value, so nothing else moves; a
+  choice pinned on plays where its eligibility test allows, today's where
+  not; a setting pinned shapes its choice when the loop plays it, and does
+  not turn it on. `js/pins.js` is the table and says why.
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
   (`dl_player_start`, `dl_player_load`, `dl_player_render`, ...; the
-  request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo` and
-  `dl_player_ask`, each refusal its line): build the
+  request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
+  `dl_player_pin` and `dl_player_ask`, each refusal its line): build the
   library with `cargo rustc --release --lib --features capi --crate-type
   staticlib`; the host gives each player its memory. `examples/c/seed.c` is
   a whole C host, a seed to a WAV.

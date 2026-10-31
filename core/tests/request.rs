@@ -42,6 +42,7 @@ impl Host for Onsets {
     fn route(&mut self, _: u32, _: usize, _: usize, _: Option<Tap>, _: f64) {}
     fn param(&mut self, _: u32, _: u32, _: f64, _: f64, _: f64) {}
     fn bass_lift(&mut self, _: f64) {}
+    fn space_range(&mut self, _: usize, _: f64, _: f64) {}
     fn steal(&mut self, _: u32, _: Key, _: f64, _: f64) {}
 }
 

@@ -11,6 +11,8 @@ import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
 import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/moods.js';
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
+import { PINS, SPACE_SETTINGS, isPinName, pinNumbers } from '../js/pins.js';
+import { partsOf } from '../tools/gen-golden-lib.mjs';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { CHARACTERS } from '../js/characters.js';
 import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf, BASS_LIFT, bassLiftOf } from '../js/choices.js';
@@ -1612,10 +1614,10 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
 // and the code that carries it.
 {
   const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
-  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null}'
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"pins":null}'
     && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
   check('text, in the frozen order, weights and the tempo low first',
-    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85]}');
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"pins":null}');
   check('an object reads as its text does',
     JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
   check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
@@ -1686,6 +1688,86 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
   const mixed = decodeAlbum(encodeAlbum('Asked', [newSpec(8), newSpec(9, { tempo: 99 }), newSpec(10, ['merry'])]));
   check('an album carries each track\'s tempo asked, or none',
     mixed.specs[0].tempo === undefined && mixed.specs[1].tempo.join() === '99,99' && mixed.specs[2].tempo === undefined && !!mixed.specs[2].vibes);
+}
+
+// The pins (queue item 85b; js/pins.js): their names and refusals, as the
+// core reads them (core/tests/request.rs walks the same); a pin overrules
+// one value and moves nothing else; each honored where the loop can play it;
+// and the code that carries them.
+{
+  const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
+  const names = PINS.map((p) => p.name);
+  check('pins: 11 choices, 17 settings and the space recipe\'s 32, each named once',
+    names.length === CHOICES.length + 17 + 32 && new Set(names).size === names.length && SPACE_SETTINGS.length === 32);
+  check('pins: no vibe is named as a pin is', VIBE_IDS.every((id) => !isPinName(id)) && CHOICES.every((c) => isPinName(c.id)));
+  check('pins: as text, in the table\'s order after the vibes and the tempo',
+    requestText('space.room=0.8,organ=on,cozy,arc.period=240,bpm=80,tunedKick=long') === 'cozy,bpm=80,organ=on,tunedKick=long,arc.period=240,space.room=0.8');
+  check('pins: an object reads as its text does',
+    JSON.stringify(readRequest({ pins: { 'arc.shape': 'deep', organ: 'on', 'echo.beats': 1 } })) === JSON.stringify(parseRequest('arc.shape=deep,organ=on,echo.beats=1')));
+  const lines = [['organ', 'a bad setting'], ['organ=maybe', 'a bad setting'], ['arc.nope=1', 'no such setting'], ['arc.period=10', 'a setting outside its range'],
+    ['kick.note=33.5', 'a setting outside its range'], ['echo.beats=0.8', 'a setting outside its range'], ['space.room=x', 'a bad setting'],
+    ['lateFloor.order=late', 'a bad setting'], ['lateFloor.gap=9', 'a setting outside its range'], ['space.ceiling-busy=-7', null], ['echo.beats=0.6666666666666666', null]];
+  check('pins: the refusals, each its plain line', lines.every(([t, line]) => refused(t) === line), lines.map(([t]) => refused(t)).join(' | '));
+  check('pins: a word goes to the core by its place', JSON.stringify(pinNumbers(parseRequest('tunedKick=long,arc.shape=dip,kick.note=33').pins)) === '[[5,2],[16,1],[20,33]]');
+
+  // A choice pinned: drawn as ever, then overruled, and only where the
+  // loop is eligible; nothing else in the loop moves.
+  const r = new Rng(851);
+  let still = 0, honored = 0, eligibleOnly = 0, todays = 0, n = 0, bad = '';
+  for (let i = 0; i < 120; i++) {
+    const seed = r.seed32();
+    const plain = render(newSpec(seed));
+    const pinned = render(newSpec(seed, 'organ=on,glass=today,arc=today'));
+    const { choices: a, ...ra } = plain;
+    const { choices: b, ...rb } = pinned;
+    if (JSON.stringify(ra.tracks) === JSON.stringify(rb.tracks)
+      && CHOICES.every((c) => ['organ', 'glass', 'arc'].includes(c.id) || a[c.id] === b[c.id])) still++;
+    else bad ||= `moved ${seed}`;
+    const chords = plain.tracks.chords.some((e) => e.vel && e.notes && e.notes.length);
+    if (b.organ === (chords ? 'on' : 'today')) eligibleOnly++; else bad ||= `organ ${seed}`;
+    if (b.glass === 'today' && b.arc === 'today') todays++;
+    n++;
+  }
+  check('pins: a choice pinned moves nothing else in the loop (120 loops)', still === n, bad);
+  check('pins: pinned on, a choice plays where the loop is eligible, today\'s where not', eligibleOnly === n, bad);
+  check('pins: pinned to today, a choice is today\'s whatever the loop drew', todays === n);
+
+  // The settings, at load (the engine's draws, as the goldens hash them).
+  let arcs = 0, kicks = 0, echoes = 0, spaces = 0, glacial = 0, held = 0, m = 0;
+  bad = '';
+  for (let i = 0; i < 40; i++) {
+    const seed = r.seed32();
+    const asked = 'arc=on,arc.shape=deep,arc.period=240,tunedKick=long,kick.note=33,kick.long=60,echo.beats=1,space.room=0.8,lateFloor.gap=3';
+    const parts = partsOf({ seed, request: asked });
+    const L = parts.load;
+    if (L.arc && L.arc.shape === 'deep' && L.arc.period === 240) arcs++; else bad ||= `arc ${seed}`;
+    const kick = parts.drums.some((e) => e.vel && (e.inst === 'kick' || e.inst === 'softkick'));
+    if (kick ? L.kick && L.kick.kind === 'long' && L.kick.kick.midi === 33 && L.kick.kick.long.dbps === 60 : !L.kick) kicks++; else bad ||= `kick ${seed}`;
+    if (!kick || parts.passes.every((p) => p.kick === 'long')) held++; else bad ||= `swap ${seed}`;
+    if (L.echoBeats === 1) echoes++;
+    if (JSON.stringify(L.space.pins) === '[[2,0.8]]') spaces++;
+    if (!partsOf({ seed, request: 'glacial=1,arc=today' }).load.arc) glacial++;
+    m++;
+  }
+  check('pins: the arc\'s settings, the kick\'s, the echo\'s and the space\'s reach the load (40 loops)', arcs === m && kicks === m && echoes === m && spaces === m, bad);
+  check('pins: a pinned kick holds through wandering', held === m, bad);
+  check('pins: the arc pinned to today keeps a glacial loop\'s away too', glacial === m);
+
+  // The code carries them.
+  let codes = 0;
+  bad = '';
+  for (let i = 0; i < 60; i++) {
+    const spec = newSpec(4000 + i, `${i % 2 ? 'cozy,' : ''}organ=on,arc.period=${100 + i},space.kit=0.1,echo.beats=0.6666666666666666`);
+    const code = encodeSong(spec);
+    const back = decodeSong(code);
+    if (JSON.stringify(back.pins) === JSON.stringify(spec.pins) && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks)
+      && JSON.stringify(render(back).choices) === JSON.stringify(render(spec).choices) && encodeSong(back) === code && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
+    else bad ||= code;
+  }
+  check('pins: a loop made with pins is made again from its code (60 loops)', codes === 60, bad);
+  check('pins: a loop with pins is format 6, the others as before',
+    encodeSong(newSpec(5, 'organ=on')).slice(4, 6) === '0R' && encodeSong(newSpec(5, { tempo: 80 })).slice(4, 6) === '0M' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+  check('pins: a request without pins keeps none in the spec', newSpec(5, 'cozy,bpm=80').pins === undefined);
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

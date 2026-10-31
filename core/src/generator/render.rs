@@ -448,7 +448,7 @@ impl Render {
         Ok(())
     }
 
-    /// `drawChoices(spec.seed, ctx, vibes)`.
+    /// `drawChoices(spec.seed, ctx, vibes, CHOICES, spec.pins)`.
     fn draw_choices(&mut self, cx: &Cx) {
         let spec = cx.spec;
         let v = spec.vibes.as_ref();
@@ -486,6 +486,18 @@ impl Render {
                 *x = pick;
             }
             k += 1.0;
+        }
+        // The request's pins (queue item 85b), laid over the draws once they
+        // are all made: today's option always, another where the loop is
+        // eligible for it.
+        for (i, c) in CHOICES.iter().enumerate() {
+            let Some(o) = spec.pins.choice(i) else { continue };
+            if let Some(&(name, _)) = c.options.get(o)
+                && (o == 0 || self.eligible(cx, c.id))
+                && let Some(x) = self.choices.get_mut(i)
+            {
+                *x = name;
+            }
         }
         #[cfg(feature = "sketch")]
         for (i, c) in CHOICES.iter().enumerate() {

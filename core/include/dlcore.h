@@ -79,9 +79,21 @@ const char *dl_player_weight(dl_player *player, const char *id, double weight);
    190. The loop's tempo is drawn across it from the seed. */
 const char *dl_player_ask_tempo(dl_player *player, double lo, double hi);
 
+/* Pin a named setting (queue item 85b) by its number: the choices from 0
+   in data/choices.txt's order, then the settings from 16 (arc.shape,
+   arc.period, arc.from, arc.floor, kick.note, kick.short, kick.long,
+   subDuck.depth, subDuck.recover, lateFloor.order, lateFloor.seconds,
+   lateFloor.gap, padSweep.lo, padSweep.oct, padSweep.period, padSweep.q,
+   echo.beats), then the space recipe's from 48 (core/src/space.rs). A word
+   (a choice's option, an arc's shape, lateFloor's order) is its place in
+   its list. Each is held to what the loop could draw ("a setting outside
+   its range"). */
+const char *dl_player_pin(dl_player *player, uint32_t number, double value);
+
 /* Ask for what `request` says, as text, in place of what was asked since the
    last load: items split by commas, each a vibe ("glacial"), a vibe and its
-   weight ("glacial=0.7") or the tempo ("bpm=77", "bpm=70-85"). */
+   weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85") or a pin
+   ("organ=on", "tunedKick=long", "arc.period=240", "space.room=0.8"). */
 const char *dl_player_ask(dl_player *player, const char *request);
 
 /* Ask for the loop of `seed`, with what was asked since the last load. It

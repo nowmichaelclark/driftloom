@@ -117,7 +117,8 @@ impl Pass {
         let seed = cx.spec.seed;
         let mut rng = Rng::new((seed ^ DRIFT_SALT).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
         self.drift(cx, base, &mut rng, amount);
-        self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass));
+        let held = cx.spec.pins.get("tunedKick").is_some();
+        self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass, held));
         self.number = Some(pass);
     }
 

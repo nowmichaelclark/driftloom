@@ -26,6 +26,7 @@ import { CHARACTERS, resolveKey } from './characters.js';
 import { codeForMood, moodForCode } from './moods.js';
 import { seedName } from './rng.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
+import { framedPins, pinItems, pinValue } from './pins.js';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const DECODE_MAP = (() => {
@@ -38,10 +39,12 @@ const DECODE_MAP = (() => {
 
 // The newest format this build reads and writes. Format 4 (queue item 38a)
 // appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
-// for. Each is written only by a loop that needs it (a loop without vibes is
-// still format 3), so every code already in circulation, every saved album
-// and every `/rank` answer keeps the exact string it had.
-export const FORMAT = 5;
+// for; format 6 (queue item 85b) the pins it was asked for. Each is written
+// only by a loop that needs it (a loop without vibes is still format 3), so
+// every code already in circulation, every saved album and every `/rank`
+// answer keeps the exact string it had.
+export const FORMAT = 6;
+const TEMPO_FORMAT = 5;
 const VIBES_FORMAT = 4;
 const PLAIN_FORMAT = 3;
 
@@ -53,8 +56,13 @@ function hasTempo(spec) {
   return !!(spec && Array.isArray(spec.tempo) && spec.tempo.length === 2);
 }
 
+function hasPins(spec) {
+  return !!(spec && spec.pins && Object.keys(spec.pins).length);
+}
+
 function formatOf(spec) {
-  if (hasTempo(spec)) return FORMAT;
+  if (hasPins(spec)) return FORMAT;
+  if (hasTempo(spec)) return TEMPO_FORMAT;
   return hasVibes(spec) ? VIBES_FORMAT : PLAIN_FORMAT;
 }
 
@@ -196,6 +204,14 @@ function writeSpec(w, spec, version = FORMAT) {
       w.u8(0);
     }
   }
+  // Format 6: the pins asked, as the request writes them ("organ=on,
+  // arc.period=240"; js/pins.js), two bytes of length first: names, not
+  // numbers, so a pin added later never moves one already written.
+  if (version >= 6) {
+    const text = new TextEncoder().encode(pinItems(spec.pins).join(','));
+    w.u16(text.length);
+    for (const b of text) w.u8(b);
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -273,6 +289,24 @@ function readSpec(r, version = FORMAT) {
     }
   }
   if (version >= 5 && r.u8()) spec.tempo = [r.u8() + 32, r.u8() + 32];
+  if (version >= 6) {
+    const n = r.u16();
+    const text = new TextDecoder().decode(r.b.slice(r.i, r.i + n));
+    r.i += n;
+    // A pin this build doesn't know, or can't take, is left out, as an
+    // unknown vibe is.
+    const pins = {};
+    for (const item of text ? text.split(',') : []) {
+      const eq = item.indexOf('=');
+      try {
+        pins[item.slice(0, eq)] = pinValue(item.slice(0, eq), item.slice(eq + 1));
+      } catch {
+        // left out
+      }
+    }
+    const framed = framedPins(pins);
+    if (framed) spec.pins = framed;
+  }
   return spec;
 }
 

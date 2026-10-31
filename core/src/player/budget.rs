@@ -350,6 +350,7 @@ mod tests {
         fn route(&mut self, _: u32, _: usize, _: usize, _: Option<Tap>, _: f64) {}
         fn param(&mut self, _: u32, _: u32, _: f64, _: f64, _: f64) {}
         fn bass_lift(&mut self, _: f64) {}
+        fn space_range(&mut self, _: usize, _: f64, _: f64) {}
         fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
             self.0.push((channel, key, from, to));
         }

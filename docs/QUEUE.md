@@ -13,7 +13,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 generator in Rust, proven on the generation goldens, and the player; checked
 by the brain's Session 28) and **83** (ears on the core: sketch blocks and
 `tools/clips.mjs`) and **84** (the chords' octave from the progression).
-**Next: item 85b** (85a is #302, 85c #303). Item 75 is low priority. 37
+**Next: item 85d**, the theme (85a is #302, 85c #303, 85b the pins). Item 75 is low priority. 37
 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -190,12 +190,22 @@ engine does. What that means for the items below:
 **Split (hands, 2026-10-31):** **85a** built the request's shape, the
 weighted vibes and the tempo, end to end (both generators, the player, the
 C header, wasm, `dlrender --request`, the app, share code format 5, 360
-request cases in the generation goldens). **85b** is the rest: the pins for
-the named settings, the theme, and share codes carrying the pins. 48's text
-stays until 85b merges. **85c** (below) goes before 85b. The refusal rule for
-requested loops is read per profile (brain, 2026-10-31;
-`docs/notes/85-fast-pins-lite.md`): a pin may not make any profile's lite
-refusals worse than that profile's own.
+request cases in the generation goldens). **85c** (#303) went next.
+**85b** built the pins for the named settings and share codes carrying them
+(`js/pins.js`, `request::Pins`; format 6; 240 `pins` cases in the goldens).
+**85d** is the rest: the **theme** (below, "Steering"), with its yardstick.
+48's text stays until 85d merges. The refusal rule for requested loops is
+read per profile (brain, 2026-10-31; `docs/notes/85-fast-pins-lite.md`): a
+pin may not make any profile's lite refusals worse than that profile's own.
+
+**85d, the theme (hands, from 85b):** a request carries a theme (a seed, or a
+share code) whose loop it bends: the loop made is the theme's seed with the
+request's vibes, keeping the theme's key, its melody's first cell and its
+profile mix unless a pin says otherwise. Built in both generators (the
+goldens hold them together), `Request` and its text form, the hosts, and
+the share code (a new format, written only by a loop that has a theme).
+The key already holds under vibes (the root is drawn at the same place);
+the mix and the motif are the work.
 
 48's text (below, kept for reference until this item merges) is the brief,
 with these changes:

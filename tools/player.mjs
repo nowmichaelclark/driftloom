@@ -10,6 +10,8 @@
 //   --seconds S      how long each render is                    (default 45)
 //   --rate HZ        the sample rate                       (default 44100)
 //   --wander A       how far each loop wanders, 0 for off        (default 1)
+//   --request TEXT   what each loop is asked for, as the request's text
+//                    (`dlrender --request`; queue item 85b)
 //   --quality Q      full, lite, or both                      (default both)
 //   --layout L       mono, stereo, or both                    (default both)
 //   --json FILE      write every row as JSON
@@ -73,6 +75,7 @@ const opts = {
   seconds: Number(flag('--seconds', 45)),
   rate: Number(flag('--rate', 44100)),
   wander: Number(flag('--wander', 1)),
+  request: flag('--request', null),
   qualities: { full: ['full'], lite: ['lite'], both: ['full', 'lite'] }[flag('--quality', 'both')],
   layouts: { mono: [1], stereo: [2], both: [1, 2] }[flag('--layout', 'both')],
   json: flag('--json', null),
@@ -165,15 +168,17 @@ CoreHost.prototype.bassLift = function (db) {
   if (lines) lines.push('lift ' + nums([db]));
   return was.bassLift.apply(this, arguments);
 };
-for (const name of ['cancel', 'spaceRange']) {
-  CoreHost.prototype[name] = function () {
-    throw new Error('the synth called ' + name + ' in a player render');
-  };
-}
+CoreHost.prototype.spaceRange = function (which, lo, hi) {
+  if (lines) lines.push('space ' + nums([which, lo, hi]));
+  return was.spaceRange.apply(this, arguments);
+};
+CoreHost.prototype.cancel = function () {
+  throw new Error('the synth called cancel in a player render');
+};
 
 // One loop, one way: what it plays, as the player hands it over (or, with
 // \`upfront\`, every note handed over before the render starts).
-async function play({ seed, seconds, rate, quality, layout, wander, calls, upfront = false, keep = false }) {
+async function play({ seed, request = null, seconds, rate, quality, layout, wander, calls, upfront = false, keep = false }) {
   const frames = Math.ceil(seconds * rate);
   const ctx = new OfflineAudioContext(2, frames, rate);
   const core = await loadCore(ctx);
@@ -193,7 +198,7 @@ async function play({ seed, seconds, rate, quality, layout, wander, calls, upfro
     engine.driftOn = wander > 0;
     if (wander > 0) engine.driftAmount = wander;
     Math.random = () => { throw new Error('Math.random in the sound path'); };
-    engine.load(newSpec(seed));
+    engine.load(newSpec(seed, request));
     engine.playing = true;
     engine.nextStepTime = 0.05;
   } finally {
@@ -364,7 +369,7 @@ const jobs = [];
 for (const i of picked) {
   for (const quality of opts.qualities) {
     for (const layout of opts.layouts) {
-      jobs.push({ index: i, seed: seeds[i], seconds: opts.seconds, rate: opts.rate, quality, layout, wander: opts.wander, calls: !!opts.calls, upfront: opts.upfront });
+      jobs.push({ index: i, seed: seeds[i], request: opts.request, seconds: opts.seconds, rate: opts.rate, quality, layout, wander: opts.wander, calls: !!opts.calls, upfront: opts.upfront });
     }
   }
 }

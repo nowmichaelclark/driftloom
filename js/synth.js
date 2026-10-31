@@ -10,6 +10,7 @@ import {
   SUB_DUCK_SETTINGS, PAD_SWEEP_SETTINGS,
 } from './core.js';
 import { draw, HOST_DRIFT, HOST_DRIFT_TO } from './draw.js';
+import { SPACE_SETTINGS } from './pins.js';
 import { blockOf, readBlock } from './data.js';
 import { cos, pow, sin } from './dlmath.js';
 
@@ -2316,9 +2317,20 @@ export class Synth {
   // and wet it is and whether its texture is light; the core draws the
   // widths and placements from it and takes them from `time` in a stereo
   // render. The JavaScript synth (the fallback) is mono: it has no space.
+  //
+  // A request's space pins (queue item 85b; `o.pins`, [setting, value]
+  // pairs) narrow the recipe first (Core::space_range, which the core reads
+  // as the start arrives), and a setting a loop before pinned and this one
+  // doesn't goes back to its range.
   spaceSetup(o, time) {
     const core = this._coreMix();
     if (!core || !o) return;
+    const pinned = new Map(o.pins || []);
+    for (const i of this._spacePinned || []) {
+      if (!pinned.has(i)) core.spaceRange(i, SPACE_SETTINGS[i][1], SPACE_SETTINGS[i][2]);
+    }
+    for (const [i, v] of pinned) core.spaceRange(i, v, v);
+    this._spacePinned = [...pinned.keys()];
     core.param(MIX.spaceSeed, SET, o.seed, time);
     core.param(MIX.spaceBusy, SET, o.busy, time);
     core.param(MIX.spaceWet, SET, o.wet, time);

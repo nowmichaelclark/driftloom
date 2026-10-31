@@ -12,6 +12,7 @@ import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
 import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf, bassLiftOf } from './choices.js';
 import { VIBE_IDS } from './vibes.js';
+import { choicePin, pinsFor, pinNumbers, spacePins } from './pins.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
@@ -258,13 +259,18 @@ function washOf(spec) {
 // mono one has no use for it.
 const LIGHT_TEXTURES = ['bells', 'chime', 'drops'];
 
+// A request's space pins (queue item 85b) ride along as `pins`, [setting
+// number, value] pairs, only when there are some.
 function spaceOf(spec, rendered) {
-  return {
+  const out = {
     seed: spec.seed >>> 0,
     busy: notesPerSecond(spec, rendered.tracks),
     wet: (spec.tone && spec.tone.space) || 0,
     light: LIGHT_TEXTURES.includes(rendered.meta && rendered.meta.textureKind),
   };
+  const pins = spacePins(spec);
+  if (pins.length) out.pins = pins;
+  return out;
 }
 
 // glass (queue item 59): how often a chord's first beat rings out, the
@@ -476,22 +482,24 @@ export class Engine {
     // And the arc (queue items 63 and 63b): its shape, period, start and
     // floor, drawn from the loop's seed and vibes (js/choices.js, ARC); a
     // glacial loop may play it outside its choices (item 76b, `arcPlays`).
-    const arc = arcPlays(spec.seed, this.base.choices, vibesOf(spec)) ? arcOf(spec.seed, vibesOf(spec)) : null;
+    // A request's pins (queue item 85b, js/pins.js) fix any of its settings.
+    const arc = arcPlays(spec.seed, this.base.choices, vibesOf(spec), choicePin(spec, 'arc')) ? arcOf(spec.seed, vibesOf(spec), pinsFor(spec, 'arc')) : null;
     const held = keepPosition && JSON.stringify(arc) === JSON.stringify(this.arc);
     this.arcChange = !held && !!(arc || this.arc);
     this.arc = arc;
     // And the tuned kick (queue item 67): its note, falls and levels, worked
     // out here, at load, as the sketch did.
     const tuned = this.base.choices && this.base.choices.tunedKick;
-    this.kick = tuned && tuned !== 'today' ? { kick: kickOf(spec.seed, spec.root), kind: tuned } : null;
+    const kp = pinsFor(spec, 'kick');
+    this.kick = tuned && tuned !== 'today' ? { kick: kickOf(spec.seed, spec.root, { midi: kp.note, short: kp.short, long: kp.long }), kind: tuned } : null;
     // And subDuck (queue item 68), the wash's way: its depth and recovery,
     // from the new loop's first step decided.
-    const duck = this.base.choices && this.base.choices.subDuck === 'on' ? subDuckOf(spec.seed, spec.bpm) : null;
+    const duck = this.base.choices && this.base.choices.subDuck === 'on' ? subDuckOf(spec.seed, spec.bpm, pinsFor(spec, 'subDuck')) : null;
     const stays = keepPosition && JSON.stringify(duck) === JSON.stringify(this.subDuck);
     this.subDuckChange = !stays && !!(duck || this.subDuck);
     this.subDuck = duck;
     // And padSweep (queue item 72), the same way.
-    const sweep = this.base.choices && this.base.choices.padSweep === 'on' ? padSweepOf(spec.seed) : null;
+    const sweep = this.base.choices && this.base.choices.padSweep === 'on' ? padSweepOf(spec.seed, pinsFor(spec, 'padSweep')) : null;
     const swept = keepPosition && JSON.stringify(sweep) === JSON.stringify(this.padSweep);
     this.padSweepChange = !swept && !!(sweep || this.padSweep);
     this.padSweep = sweep;
@@ -507,7 +515,7 @@ export class Engine {
     if (!keepPosition) {
       const late = !resume && this.base.choices && this.base.choices.lateFloor === 'on';
       const spb = this.base.stepsPerBar || 16;
-      this.late = late ? lateFloorOf(spec.seed, spb, 60 / spec.bpm / 4, {}, vibesOf(spec), Math.round(this.base.totalSteps / spb)) : null;
+      this.late = late ? lateFloorOf(spec.seed, spb, 60 / spec.bpm / 4, pinsFor(spec, 'lateFloor'), vibesOf(spec), Math.round(this.base.totalSteps / spb)) : null;
     }
     // And its space (queue item 65).
     const space = spaceOf(spec, this.base);
@@ -520,7 +528,7 @@ export class Engine {
     this.pumpAmount = character.pump ?? 0;
     // The echo's time, drawn per loop (queue item 73; today's dotted eighth
     // for 45% of loops).
-    this.echoBeats = echoTimeOf(spec.seed, vibesOf(spec));
+    this.echoBeats = pinsFor(spec, 'echo').beats ?? echoTimeOf(spec.seed, vibesOf(spec));
     this.synth.setEchoTime((60 / spec.bpm) * this.echoBeats);
     for (const [layer, muted] of Object.entries(spec.mutes || {})) {
       this.synth.setMute(layer, muted);
@@ -551,7 +559,7 @@ export class Engine {
     const asked = requestOf(this.spec);
     const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
     core.playWander(this.driftOn ? this.driftAmount : 0);
-    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo);
+    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins));
     this._playerControls();
     this._playerOn = true;
   }
@@ -1037,7 +1045,7 @@ export class Engine {
   // The tuned kick a pass plays (queue item 67): the loop's own, but a
   // wandering pass may swap it at its top (`kickKindOf`).
   _kickOn(p, pass) {
-    const kind = p === this.base ? this.kick.kind : kickKindOf(this.spec.seed, this.kick.kind, pass);
+    const kind = p === this.base ? this.kick.kind : kickKindOf(this.spec.seed, this.kick.kind, pass, choicePin(this.spec, 'tunedKick') !== undefined);
     return kind === this.kick.kind ? this.kick : { kick: this.kick.kick, kind };
   }
 
