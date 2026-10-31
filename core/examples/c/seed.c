@@ -48,9 +48,9 @@ int main(int argc, char **argv) {
   double seconds = 45, rate = 44100, wander = 1;
   uint32_t channels = 1;
   int full = 1;
-  const char *wav = NULL, *vibes = NULL;
+  const char *wav = NULL, *vibes = NULL, *request = NULL;
   if (argc < 2) {
-    fprintf(stderr, "usage: seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--vibes ID,...] [--wav OUT.wav]\n");
+    fprintf(stderr, "usage: seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--vibes ID,...] [--request TEXT] [--wav OUT.wav]\n");
     return 2;
   }
   uint32_t seed = (uint32_t)strtoul(argv[1], NULL, 10);
@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
     else if (i + 1 < argc && !strcmp(argv[i], "--rate")) rate = atof(argv[++i]);
     else if (i + 1 < argc && !strcmp(argv[i], "--wander")) wander = atof(argv[++i]);
     else if (i + 1 < argc && !strcmp(argv[i], "--vibes")) vibes = argv[++i];
+    else if (i + 1 < argc && !strcmp(argv[i], "--request")) request = argv[++i];
     else if (i + 1 < argc && !strcmp(argv[i], "--wav")) wav = argv[++i];
     else {
       fprintf(stderr, "seed: no such option: %s\n", argv[i]);
@@ -78,6 +79,15 @@ int main(int argc, char **argv) {
     return 1;
   }
   dl_player_wander(p, wander);
+  /* The request as text ("glacial=0.7,bpm=70-85"); the vibes of --vibes are
+     added to it. */
+  if (request) {
+    const char *why = dl_player_ask(p, request);
+    if (why) {
+      fprintf(stderr, "seed: can't do that: %s\n", why);
+      return 1;
+    }
+  }
   if (vibes) {
     char ids[256];
     snprintf(ids, sizeof ids, "%s", vibes);

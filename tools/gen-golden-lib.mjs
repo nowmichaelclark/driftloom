@@ -21,6 +21,10 @@ export const ALBUM_SEED = 20261009;
 // seed 20261009 (the ears' corpus), and noan-nou is the baseline's seed.
 export const ALBUM_PICKS = [0, 4, 5, 6, 7, 8, 10, 12, 18, 21, 23, 25, 30, 31, 32, 33, 37, 38, 42, 45, 47, 49, 51, 52, 56, 57, 58, 59, 63, 65, 66, 67, 68, 69, 71, 77, 79, 82];
 export const ALBUM_SEEDS = [['noan-nou', 4272732017]];
+// The requests (queue item 85): seeds from their own stream, each with a
+// request of the kind its index picks (`requestCase`).
+export const REQUEST_SEED = 85;
+export const REQUEST_N = 360;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -105,7 +109,34 @@ export function cases(goldenCodes) {
   const seeds = Array.from({ length: Math.max(...ALBUM_PICKS) + 1 }, () => album.seed32());
   for (const n of ALBUM_PICKS) out.push({ set: 'album', index: n, seed: seeds[n], vibes: null });
   for (const [name, seed] of ALBUM_SEEDS) out.push({ set: 'album', index: name, seed, vibes: null });
+  const asked = new Rng(REQUEST_SEED);
+  for (let i = 0; i < REQUEST_N; i++) {
+    const seed = asked.seed32();
+    out.push({ set: 'request', index: i, seed, vibes: null, request: requestCase(asked, i) });
+  }
   return out;
+}
+
+// A request's text, of the kind `i` picks, drawn from `r`: a pinned tempo
+// (anywhere the core plays), a range, weighted vibes (one to three), six or
+// seven vibes some weighted (the five heaviest steer), unweighted vibes with
+// a pin, and weights past 1 (scaled) with a range.
+function requestCase(r, i) {
+  const bpm = () => 32 + Math.floor(r.f() * 159);
+  const range = () => {
+    const lo = 32 + Math.floor(r.f() * 139);
+    return `bpm=${lo}-${Math.min(190, lo + Math.floor(r.f() * 41))}`;
+  };
+  const weight = (most) => String(Math.floor(r.f() * most * 100) / 100);
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  switch (i % 6) {
+    case 0: return `bpm=${bpm()}`;
+    case 1: return range();
+    case 2: return vibes(1 + (i % 3)).map((id) => `${id}=${weight(1)}`).join(',');
+    case 3: return vibes(6 + (i % 2)).map((id, k) => (k % 3 ? `${id}=${weight(1)}` : id)).join(',');
+    case 4: return [...vibes(1 + (i % 5)), `bpm=${bpm()}`].join(',');
+    default: return [...vibes(2 + (i % 3)).map((id) => `${id}=${weight(2)}`), range()].join(',');
+  }
 }
 
 // ------------------------------------------------------------ one case
@@ -138,7 +169,7 @@ const LOAD_FIELDS = ['glassScale', 'stab', 'organ', 'wash', 'arc', 'kick', 'subD
  * plan, form, <each layer>, meta, choices, load, passes: [...] }.
  */
 export function partsOf(c) {
-  const spec = newSpec(c.seed, c.vibes);
+  const spec = newSpec(c.seed, c.request ?? c.vibes);
   const parts = { spec, plan: planOf(spec) };
   // The engine renders the pattern itself, at load; nothing it decides
   // there may come from chance.
@@ -196,7 +227,8 @@ export function hashCase(c, texts = false) {
 export function lineFor(c) {
   const h = hashCase(c);
   const named = Object.entries(h).filter(([k]) => k !== 'passes').map(([k, v]) => `${k}=${v}`);
-  return [`${c.set}:${c.index}`, c.seed >>> 0, c.vibes && c.vibes.length ? c.vibes.join(',') : '-', ...named, `passes=${h.passes.join(',')}`].join(' ');
+  const asked = c.request ?? (c.vibes && c.vibes.length ? c.vibes.join(',') : '-');
+  return [`${c.set}:${c.index}`, c.seed >>> 0, asked, ...named, `passes=${h.passes.join(',')}`].join(' ');
 }
 
 // ------------------------------------------------------- reading it back

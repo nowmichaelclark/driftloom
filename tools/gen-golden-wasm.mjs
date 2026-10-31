@@ -15,7 +15,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fnv1a64 } from './gen-golden-lib.mjs';
-import { VIBE_IDS } from '../js/vibes.js';
 
 const PARTS = ['spec', 'plan', 'form', 'drums', 'bass', 'chords', 'melody', 'texture', 'meta', 'choices', 'load', ...Array.from({ length: 8 }, (_, i) => `pass ${i + 1}`)];
 
@@ -40,9 +39,10 @@ for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
   const [name, seed, vibes, ...fields] = line.split(' ');
   const want = Object.fromEntries(fields.map((f) => f.split('=')));
   want.passes.split(',').forEach((h, i) => { want[`pass ${i + 1}`] = h; });
-  const ids = vibes === '-' ? [] : vibes.split(',').map((v) => VIBE_IDS.indexOf(v));
-  new Uint8Array(x.memory.buffer, x.dl_gen_input(), ids.length).set(ids);
-  if (!x.dl_gen_load(Number(seed) >>> 0, ids.length)) throw new Error(`${name}: the core refused its vibes`);
+  // The request, as its text (queue item 85; `Request::parse`).
+  const asked = new TextEncoder().encode(vibes);
+  new Uint8Array(x.memory.buffer, x.dl_gen_input(), asked.length).set(asked);
+  if (!x.dl_gen_request(Number(seed) >>> 0, asked.length)) throw new Error(`${name}: the core refused its request`);
   cases++;
   const moved = [];
   PARTS.forEach((part, i) => {

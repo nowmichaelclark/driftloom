@@ -27,8 +27,10 @@ let mut core = Box::new(Core::new());
 let mut player = Box::new(Player::new());
 player.start(&mut core, 48_000.0, 2, false)?;  // rate, channels (2: stereo), the full mix (false: lite's, the game's on phones)
 
-// A friend's theme: its seed, and its vibes by name.
-let request = Request::new().with_vibe("peaceful").unwrap_or_default();
+// A friend's theme: its seed, and its vibes by name; since item 85 with
+// weights (the friend's mood, the time of day) and a tempo, as text or
+// built call by call. A refusal is a short plain line, never a panic.
+let request = Request::parse("peaceful=0.7,restful=0.3,bpm=70-80").unwrap_or_default();
 player.load(friend_seed, &request);            // made over the next blocks, then it starts
 
 // The audio thread, every callback, any number of frames:

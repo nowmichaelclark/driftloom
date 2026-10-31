@@ -5,15 +5,18 @@
 //! cargo run --release --example dlgen -- --check golden/generation.hashes
 //!     every case of the file, generated here: fails on any part that
 //!     differs from its hash (every part, the load and the eight passes too)
-//! cargo run --release --example dlgen -- --show SEED [VIBE,...] [PART]
+//! cargo run --release --example dlgen -- --show SEED [REQUEST] [PART]
 //!     a loop's canonical texts, to diff against
-//!     `node tools/gen-golden.mjs --show CASE`
+//!     `node tools/gen-golden.mjs --show CASE`; REQUEST as the file's
+//!     second field writes it (`Request::parse`: "glacial,misty",
+//!     "glacial=0.7,bpm=70-85", or - for none)
 //! ```
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any difference.
 
 use std::process::ExitCode;
 
+use dlcore::generator::request::Request;
 use dlcore::generator::{self, Part};
 
 fn main() -> ExitCode {
@@ -21,7 +24,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("--check") => args.get(1).ok_or_else(|| "--check needs a file".to_string()).and_then(|f| check(f)),
         Some("--show") => show(&args[1..]),
-        _ => Err("usage: dlgen --check FILE | --show SEED [VIBE,...] [PART]".to_string()),
+        _ => Err("usage: dlgen --check FILE | --show SEED [REQUEST] [PART]".to_string()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -32,11 +35,8 @@ fn main() -> ExitCode {
     }
 }
 
-fn vibes(word: &str) -> Result<Vec<usize>, String> {
-    if word == "-" {
-        return Ok(Vec::new());
-    }
-    word.split(',').map(|id| generator::data::vibe_index(id).ok_or_else(|| format!("no vibe '{id}'"))).collect()
+fn request(word: &str) -> Result<Request, String> {
+    Request::parse(word).map_err(|why| format!("'{word}': {why}"))
 }
 
 fn check(file: &str) -> Result<(), String> {
@@ -52,9 +52,9 @@ fn check(file: &str) -> Result<(), String> {
         let fields: Vec<&str> = line.split(' ').collect();
         let [name, seed, vibe_word, ..] = fields[..] else { return Err(format!("a bad line: {line}")) };
         let seed: u32 = seed.parse().map_err(|_| format!("a bad seed: {line}"))?;
-        let picked = vibes(vibe_word)?;
+        let asked = request(vibe_word)?;
         let t0 = std::time::Instant::now();
-        generator.load(seed, &picked);
+        generator.load_with(seed, &asked);
         let took = t0.elapsed();
         spent += took;
         if took > worst.0 {
@@ -96,10 +96,10 @@ fn check(file: &str) -> Result<(), String> {
 
 fn show(args: &[String]) -> Result<(), String> {
     let seed: u32 = args.first().ok_or("--show needs a seed")?.parse().map_err(|_| "a bad seed")?;
-    let picked = args.get(1).map_or(Ok(Vec::new()), |w| vibes(w))?;
+    let asked = args.get(1).map_or(Ok(Request::new()), |w| request(w))?;
     let only = args.get(2);
     let mut generator = Box::new(generator::Generator::new());
-    generator.load(seed, &picked);
+    generator.load_with(seed, &asked);
     for part in Part::ALL {
         if only.is_some_and(|o| o != part.name()) {
             continue;

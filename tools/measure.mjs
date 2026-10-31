@@ -100,6 +100,9 @@ driftloom offline audio measurement
                     --refusals
   --vibes <a,b>     draw every loop with this vibe selection (queue item
                     76b), for the loudness report and --refusals
+  --request <text>  draw every loop with this request (queue item 85, as
+                    text: "glacial=0.7,bpm=70-85"), for the loudness report
+                    and --refusals
   --profile <id>    keep only loops that profile leads, drawing from the
                     same corpus until --n of them are in
   --engine <e>      'rust' or 'js': which synth plays. 'rust' is the Rust
@@ -289,6 +292,10 @@ function parseArgs(argv) {
       }
       case '--vibe-mix':
         opts.vibeMix = true;
+        break;
+      case '--request':
+        // Queue item 85: every loop of the corpus asked for this, as text.
+        opts.vibeMix = { request: String(value()) };
         break;
       case '--vibes':
         opts.vibeMix = String(value()).split(',').map((v) => v.trim()).filter(Boolean);
@@ -635,7 +642,8 @@ function drawCorpus(seed, n, profile, vibeMix = false, moods = null) {
   const specs = [];
   // Capped, so a profile that never leads cannot spin forever.
   for (let tries = 0; specs.length < n && tries < n * 1000; tries++) {
-    const spec = newSpec(master.seed32(), Array.isArray(vibeMix) ? vibeMix : vibeMix ? vibeMixFor(seed, tries) : null);
+    const asked = vibeMix && vibeMix.request != null ? vibeMix.request : null;
+    const spec = newSpec(master.seed32(), asked ?? (Array.isArray(vibeMix) ? vibeMix : vibeMix ? vibeMixFor(seed, tries) : null));
     if (moods && !moods.includes(topMood(spec))) continue;
     if (!profile || leadOf(spec) === profile) specs.push(spec);
   }
@@ -643,7 +651,8 @@ function drawCorpus(seed, n, profile, vibeMix = false, moods = null) {
 }
 `;
 const ledBy = (opts) => (opts.profile ? `, loops led by ${opts.profile}` : '')
-  + (Array.isArray(opts.vibeMix) ? `, with the vibes ${opts.vibeMix.join(', ')}` : opts.vibeMix ? ', with 1, 3, 5 or 10 random vibes' : '')
+  + (opts.vibeMix && opts.vibeMix.request != null ? `, asked for ${opts.vibeMix.request}`
+    : Array.isArray(opts.vibeMix) ? `, with the vibes ${opts.vibeMix.join(', ')}` : opts.vibeMix ? ', with 1, 3, 5 or 10 random vibes' : '')
   + (opts.moods ? `, top mood ${opts.moods.join(' or ')}` : '');
 
 const PAGE = `<!doctype html><meta charset="utf-8"><title>measure</title>

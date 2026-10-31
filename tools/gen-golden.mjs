@@ -20,9 +20,11 @@
 //   SET:INDEX SEED VIBES spec=H plan=H form=H drums=H bass=H chords=H melody=H
 //     texture=H meta=H choices=H load=H passes=H1,...,H8
 //
-// SEED is the loop's seed (unsigned), VIBES the vibes asked for, in the
-// frozen order (`vibeSelection`), comma-separated, or '-' for none: the
-// loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
+// SEED is the loop's seed (unsigned), VIBES the request (queue item 85) as
+// its text (`parseRequest`): the vibes asked for, in the frozen order
+// (`vibeSelection`), comma-separated, each with its weight or not
+// ("glacial=0.7"), and the tempo ("bpm=77", "bpm=70-85"); '-' for nothing.
+// The loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
 // digits) of a canonical text (below) of:
 //   spec     the spec, as newSpec makes it;
 //   plan     what render plans before any layer plays (`planOf`, queue item
@@ -76,7 +78,11 @@
 //                   vibes (their codes keep older specs: the case is the seed,
 //                   generated today);
 //   album:N         the album loops of docs/DONE.md: "dust #7" is loop 7 of
-//                   corpus seed 20261009, the ears' corpus; and noan-nou.
+//                   corpus seed 20261009, the ears' corpus; and noan-nou;
+//   request:0-359   360 seeds from Rng(85), each with a request of the kind
+//                   its index picks (gen-golden-lib.mjs, `requestCase`):
+//                   tempo pinned, ranged, weighted vibes, six or seven vibes,
+//                   vibes with a pin, weights past 1 with a range.
 //
 // Run it after any change to the generator, the vibes, the choices or the
 // engine's load. A change that is meant to move what is generated writes the

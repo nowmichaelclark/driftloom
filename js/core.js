@@ -436,8 +436,10 @@ export class CoreHost {
   // has passed); stops, going on where it stood with its next step at `at`;
   // and takes the controls: how far it wanders, a layer muted (by its index
   // in LAYERS), the tempo and the volume.
-  playLoad(seed, vibes, at) {
-    this.node.port.postMessage({ type: 'playLoad', seed, vibes, at });
+  // `vibes` [[index, weight], ...], `tempo` null or [low, high]: the
+  // request (generator.js, `requestOf`).
+  playLoad(seed, vibes, at, tempo = null) {
+    this.node.port.postMessage({ type: 'playLoad', seed, vibes, at, tempo });
   }
 
   playStop() {

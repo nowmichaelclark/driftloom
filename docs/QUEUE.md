@@ -174,7 +174,8 @@ engine does. What that means for the items below:
   (`tools/build-core.sh`; `js/dlplayer.wasm` compiles the data in), both in
   the same PR, or CI fails.
 - **Build on the player:** 85-92 extend `Player` and its `Request`
-  (`Request::new().with_vibe(...)` is today's whole request), and reach the C
+  (since 85a: vibes with weights and the tempo; `core/src/generator/
+  request.rs`), and reach the C
   header and `dlrender --seed` with them.
 - **The player's renders are the reference.** It hands notes to the core
   before each block, everything due within `player::LOOKAHEAD`; the measure
@@ -185,6 +186,13 @@ engine does. What that means for the items below:
   (`tools/player.mjs`), not with the harness's.
 
 ## 85. The request: vibes and tempo (was 48)
+
+**Split (hands, 2026-10-31):** **85a** built the request's shape, the
+weighted vibes and the tempo, end to end (both generators, the player, the
+C header, wasm, `dlrender --request`, the app, share code format 5, 360
+request cases in the generation goldens). **85b** is the rest: the pins for
+the named settings, the theme, and share codes carrying the pins. 48's text
+stays until 85b merges.
 
 48's text (below, kept for reference until this item merges) is the brief,
 with these changes:

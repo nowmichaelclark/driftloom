@@ -226,10 +226,22 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   `LOOKAHEAD` (0.25 s) and hands its notes over (`decide`; `render` calls it
   for a host, `Core::render_with`). Each pass's wandering is drawn a pass
   ahead, in a block where no step is decided.
+- **The request** (`Request`, promise 11; queue item 85) is what the load
+  asks for beside the seed: vibes, by name or number, with a weight each
+  (`with_weight`: the share of the loop it steers) or without (`with`, as a
+  listener picks them), and the tempo (`with_tempo(lo, hi)`, equal to pin
+  it, 32 to 190 bpm). `Request::parse("glacial=0.7,misty=0.3,bpm=70-85")`
+  reads it as text, as `dlrender --request` and `dl_player_ask` do. What it
+  leaves out is drawn from the seed; a request of nothing is the seed's own
+  loop. A request that can't be met is refused as it is built, with a short
+  plain line (`request::TEMPO_OUT` and the rest), never played as
+  something else.
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
-  (`dl_player_start`, `dl_player_load`, `dl_player_render`, ...): build the
+  (`dl_player_start`, `dl_player_load`, `dl_player_render`, ...; the
+  request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo` and
+  `dl_player_ask`, each refusal its line): build the
   library with `cargo rustc --release --lib --features capi --crate-type
   staticlib`; the host gives each player its memory. `examples/c/seed.c` is
   a whole C host, a seed to a WAV.

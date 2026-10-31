@@ -1,4 +1,4 @@
-import { newSpec as drawSpec, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
+import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
 import { ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import { Engine } from './engine.js';
@@ -9,7 +9,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v133';
+const BUILD = 'v134';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -1142,8 +1142,17 @@ function advancePlaylist(step) {
 // Next at the end of the history (also a loop ending, and the N key), Play
 // before any loop exists, and the first loop when the app opens. Not the
 // loop playing, an album's tracks, a saved loop, history or a re-roll.
+// The picks are its request (queue item 85); one the generator cannot meet
+// (the panel says so) is left out, the moods kept.
 function newSpec() {
-  return picks.applyPicks(drawSpec(undefined, state.vibes), state.picks);
+  let spec;
+  try {
+    spec = drawSpec(undefined, picks.requestFor(state));
+  } catch (e) {
+    if (!(e instanceof RequestError)) throw e;
+    spec = drawSpec(undefined, state.vibes);
+  }
+  return picks.applyPicks(spec, state.picks);
 }
 
 function togglePlay() {

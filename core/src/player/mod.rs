@@ -14,7 +14,7 @@
 //! part), bit for bit.
 //!
 //! **How a host plays one.** It starts a core for the player (`start`),
-//! asks for a loop (`load`: a seed, and a `Request`, the vibes for now) and
+//! asks for a loop (`load`: a seed, and a `Request`: the vibes, the tempo) and
 //! renders (`render`, any number of frames a call). Before each block the
 //! core renders, the player decides every step due within `LOOKAHEAD` and
 //! hands its notes over (`decide`, which a host driving `Core::process`
@@ -54,7 +54,6 @@ pub mod host;
 pub mod sequencer;
 pub mod synth;
 
-use crate::generator::data::{self, VIBE_COUNT};
 use crate::generator::plan::Cx;
 use crate::generator::wander::{AMOUNT, Pass};
 use crate::generator::{Generator, Layer};
@@ -76,42 +75,10 @@ pub const LOOKAHEAD: f64 = 0.25;
 /// seconds (the measure harness's 0.05).
 pub const START: f64 = 0.05;
 
-/// What a host asks for, beside the seed (promise 11's request; queue item
-/// 85 on grows it): for now, the vibes, as a listener picks them.
-#[derive(Clone, Copy)]
-pub struct Request {
-    vibes: [bool; VIBE_COUNT],
-}
-
-impl Request {
-    /// Nothing asked for: the loop the seed makes.
-    #[must_use]
-    pub const fn new() -> Self {
-        Request { vibes: [false; VIBE_COUNT] }
-    }
-
-    /// The same, with the vibe numbered `index` (`generator::data::VIBES`).
-    #[must_use]
-    pub fn with(mut self, index: usize) -> Self {
-        if let Some(v) = self.vibes.get_mut(index) {
-            *v = true;
-        }
-        self
-    }
-
-    /// The same, with the vibe called `id` ("glacial", as `data/vibes.txt`
-    /// names it); `None` for a vibe the core does not have.
-    #[must_use]
-    pub fn with_vibe(self, id: &str) -> Option<Self> {
-        data::vibe_index(id).map(|i| self.with(i))
-    }
-}
-
-impl Default for Request {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+/// What a host asks for, beside the seed (promise 11's request, queue item
+/// 85: the vibes with or without weights, and the tempo): the generator's
+/// own, `generator::request::Request`, which says how to build one.
+pub use crate::generator::request::Request;
 
 /// Where the player is.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -253,7 +220,7 @@ impl Player {
     /// if not, or for `at` 0.
     pub fn load_at(&mut self, seed: u32, request: &Request, at: f64) {
         self.was_playing = self.state == State::Playing || self.was_playing;
-        self.generator.begin_with(seed, &request.vibes);
+        self.generator.begin_with(seed, request);
         self.state = State::Loading;
         self.start_at = if at.is_finite() { at } else { 0.0 };
         self.resume_at = None;
