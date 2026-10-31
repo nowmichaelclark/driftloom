@@ -298,6 +298,12 @@ the player against the browser, costs, the phone figures), and the
 charter's blind album: the old generator against the new on the same seeds,
 with the octave's movers in it. Then phase 3.
 
+**From item 84 (brain, 2026-10-31):** the album also takes a few loops whose
+keys and melody now sound under 5 semitones apart (the balance lock's "not a
+choir, under 5" rose from 2.34% to 3.73% when the octave stopped being read
+from what sounds). If Mikey hears them crowd the tune, the fix is a wider
+margin in the progression's decision, not a return to reading the events.
+
 ## For phase 3 (from item 82; brain, Session 28)
 
 - **When notes reach the core** (`docs/archive/notes/82-hand-over.md`): the

@@ -81,3 +81,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   veil (`"sketch": true` on a corpus loop, melody lowpassed); undertow #45
   with `lateFloor` forced brings the low end back at 0:29-0:30. A sketch voice
   is not built (`docs/archive/notes/83-sketch-voice.md`). No album loop.
+- #300, the chords' octave from the progression (item 84, v133), preview URL:
+  <https://09c939e1-driftloom.nowmichaelclark.workers.dev> (commit 583f5a0):
+  the chords' octave is one decision per loop, read from the progression and
+  the whole tune before form, rests and gaps, in both generators, so changing
+  chord lengths, rests, tempo or the bass never moves it (0 flips in 2,000
+  loops each; the old way flipped up to 44). 88 of 2,000 loops (4.4%) take
+  another octave today, reisk-foa among them (corpus seed 1, loop 6). Listen
+  for those loops' chords an octave away from before and nothing else; they
+  go in the phase's blind album. Watch: keys and melody now sit closer than 5
+  semitones in a few more loops (the balance lock's "not a choir, under 5",
+  2.34% to 3.73%); listen there for chords crowding the tune.
