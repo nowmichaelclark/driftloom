@@ -4,6 +4,24 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Lite Room Album" (item 85c, hands, 2026-10-31, on v135) -- out
+
+Labeled, not blind: six loops on the lite mix, each before (today's lite,
+`main`) and after (85c: the budget lets a layer's oldest notes go, over a
+0.05 s fade, instead of refusing the new one). Page:
+<https://claude.ai/artifact/XwAWYWFdVi55KdGyccjjEW> (private to its owner;
+keep / tune / drop and a note per loop, saved in its database, collection
+`verdicts`, one document per loop). Rendered by `dlrender`, stereo, 40 s,
+the wander on.
+
+- Busy chords: toask-ha (tide, 96 bpm), hai-waim (glade, 89).
+- Slow: theith-yaing (thaw, 53): listen for long tails cut short.
+- Shatter: meil-sheir (145), voung-kuing (148), neir-luin asked for
+  `bpm=180`; before, lite lost 36-58% of their tunes, after none.
+
+For Mikey's ears: the fade's length, and whether full quality should do
+the same (today it refuses as before).
+
 ## Session 26 (2026-10-26, on v123): the sound batch -- heard 2026-10-29
 
 **Heard (Mikey, 2026-10-29), every verdict from the page's database:**
