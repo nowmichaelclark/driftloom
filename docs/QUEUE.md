@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave) and **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29). **Next: item 86, then 85e** (the steal at full quality), then 87. Item
+#304, 85d #305; checked by the brain's Session 29). **Next: item 86, then 85e** (the steal at full quality) **and 85f** (a theme's rest kept), then 87. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -259,6 +259,33 @@ player against the browser bit for bit; the JavaScript fallback's own checks
 (`--engine js`, `--refusals`, `--clicks`, `--endings`) if its code is touched.
 Then a short labeled album at full for Mikey (a busy chords loop, a slow
 bell or pad loop where long tails are the point, shatter), before and after.
+
+## 85f. A theme's rest is kept, choir or not
+
+**Hands:** Sonnet 5.5, high. After 85e, before 87 (Mikey, 2026-11-01:
+"keep a friend's loop tuneless if it has none"; `docs/DECISIONS.md`).
+
+**Why:** item 85d keeps a theme's tune, "or its rest". But a choir never
+takes the rest, so when a theme's own loop has no melody (about 8% of loops)
+and the vibes asked bring a choir, the bent loop's choir sings a figure of
+its own: a friend with no tune suddenly has one. The brain found it in 2 of
+600 random theme requests (e.g. theme 3570153259, do-vom, no melody, asked
+with `booming=0.31,cheeky=0.26,experimental` from seed 2428270433: dail-vu,
+a vowel choir, 87 notes).
+
+**What:** in both generators (`genMelody` in `js/generator.js` and its port
+in `core/src/generator/`), a theme with no figure gives no melody, choir or
+not; every draw is still made, so nothing else moves. Say what the choir's
+other parts do in such a loop (the keys' detune it shares with the melody):
+the conservative choice is that the loop simply isn't a choir loop, "for
+Mikey's ears".
+
+**Yardsticks:** the generation goldens: only `theme` cases may move, and only
+those whose theme rests and whose loop drew a choir (say which and how many,
+and that every other case is unchanged); the brain's two cases above now have
+no melody; nothing asked changes nothing (the 3,060 corpus cases, the
+baseline and the balance lock unchanged); the Rust and JavaScript generators
+equal on all cases.
 
 ## 87. Rendering ahead, for the browser
 
