@@ -131,3 +131,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   Mikey's ears: a choice pinned on plays only where its eligibility rule
   allows, and a pinned kick never swaps while the loop wanders. The theme is
   item 85d.
+- #305, the theme (item 85d, v137), preview URL:
+  <https://c7afce29-driftloom.nowmichaelclark.workers.dev> (commit 5ea90e3):
+  `theme=SEED` in a request bends that seed's loop, keeping its profile mix,
+  key and mode, metre and tune (the melody's figure and rhythmic cell) while
+  the vibes, the tempo, the pins and the load's own seed bend the rest; a
+  friend keeps its tune as the day changes. Nothing asked changes nothing
+  (3,660 old goldens, the baseline and the balance lock unchanged), and the
+  app has no theme picker, so listen for nothing in today's loops. The ears
+  can: `dlrender --seed 4272732017 --request theme=4272732017` is noan-nou
+  itself, and with `,cozy` or `,glacial,bpm=60` added the same tune in the
+  same key, bent (`tools/clips.mjs` takes the same request). For Mikey's
+  ears: a tempo asked plays in the theme's metre, and the theme's melody
+  stays itself while its phrasing, register and voice follow the mood.
