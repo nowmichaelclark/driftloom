@@ -7,15 +7,13 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-10-31:** `main` is at v133. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-01:** `main` is at v137. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
-(54-73), 74 and 76-76d, and **phase 2's port, items 77-82** (#287-#296: the
-generator in Rust, proven on the generation goldens, and the player; checked
-by the brain's Session 28) and **83** (ears on the core: sketch blocks and
-`tools/clips.mjs`) and **84** (the chords' octave from the progression).
-Item 85 is done in four parts (85a #302, 85c #303, 85b #304, 85d the
-theme). **Next: item 86.** Item 75 is low priority. 37
-stays on hold. A new Claude Code session starts here: read the standing
+(54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
+(#287-#296; checked by the brain's Session 28), **83** (ears on the core),
+**84** (the chords' octave) and **85** (the request: 85a #302, 85c #303, 85b
+#304, 85d #305; checked by the brain's Session 29). **Next: item 86, then 85e** (the steal at full quality), then 87. Item
+75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
@@ -37,7 +35,10 @@ tracks").
   shop. Every new profile: its `level` solved so its loops land on the
   catalog median (`measure.mjs --profile <id>`).
 - **Refusals** on full and lite for the loops the item touches: melody at
-  full quality stays near zero, and lite no worse than the catalog.
+  full quality stays near zero, and lite no worse than the catalog. For a
+  requested loop the rule is read per profile: a request may not make any
+  profile's lite refusals worse than that profile's own (brain, 2026-10-31;
+  `docs/archive/notes/85-fast-pins-lite.md`).
 - **The core baseline (item 32):** run `node tools/baseline.mjs`. It renders
   a fixed set on the core (40 loops full and lite, every voice, the
   refusals, the costs) and fails on any difference from
@@ -186,79 +187,6 @@ engine does. What that means for the items below:
   player renders, or the browser's reference made the same way
   (`tools/player.mjs`), not with the harness's.
 
-## 85. The request: vibes and tempo (was 48)
-
-**Split (hands, 2026-10-31):** **85a** built the request's shape, the
-weighted vibes and the tempo, end to end (both generators, the player, the
-C header, wasm, `dlrender --request`, the app, share code format 5, 360
-request cases in the generation goldens). **85c** (#303) went next.
-**85b** built the pins for the named settings and share codes carrying them
-(`js/pins.js`, `request::Pins`; format 6; 240 `pins` cases in the goldens).
-**85d** built the **theme** (below, "Steering"), with its yardstick. Item 85
-is done; 48's text and these notes are for the brain's archive pass. The refusal rule for requested loops is
-read per profile (brain, 2026-10-31; `docs/notes/85-fast-pins-lite.md`): a
-pin may not make any profile's lite refusals worse than that profile's own.
-
-**85d, the theme (hands):** `theme=SEED` in a request bends that seed's
-loop. The loop made keeps the theme's profile mix, its key and mode, its
-metre (a tempo asked plays in it) and its tune (the melody's figure and
-rhythmic cell, or its rest); the vibes, the tempo, the pins and the load's
-own seed bend the rest. The theme's own seed with nothing else asked is the
-theme's loop. Both generators, `Request`, the hosts (`dl_player_theme`),
-share code format 7, 240 `theme` cases in the goldens. A theme is a seed,
-not yet a share code: a code is a spec, which the core does not read (for
-the brain, if a game needs one).
-
-48's text (below, kept for reference until this item merges) is the brief,
-with these changes:
-- Built in the Rust generator, and in the JavaScript one while it still
-  plays the app; the request is one shape both read (the app sends the same
-  thing to either).
-- **Pins for every named setting already built:** the arc (`ARC`), the kick,
-  subDuck, lateFloor, padSweep, the echo time, the space recipes (item 65's
-  32), and any of item 54's choices on or off. These are the game's and the
-  ears' levers (item 83's `--force` moves onto them).
-- **Steering, as a game asks it:** a request carries the vibes with weights
-  (a friend's mood, the time of day: the game maps its state to vibes; the
-  core never knows what a friend is), and a **theme**: a seed or a code
-  whose loop the request bends rather than replaces (a friend keeps its
-  theme as the day changes).
-- Share codes carry the pins (the long code until phase 6).
-
-**Yardsticks:** 48's, plus: a theme bent by a vibe keeps its key, its
-motif and its profile mix (measured: pitch classes, the melody's first
-cell, the profile's lead) unless a pin says otherwise.
-
-## 85c. The budget takes room from old notes, not new ones (lite first)
-
-**Hands:** Opus 5.5, high. Before 85b. From 85a's note (brain, 2026-10-31).
-
-**Why:** on lite the voice budget refuses 62% of chord notes and 37% of
-texture across the catalog (100 loops), and shatter-led loops lose 6.2% of
-their melody (74% of chords). An earlier finding
-(`docs/archive/engineering-notes.md`, "What is left, on lite") is that the
-melody is mostly refused by its own earlier notes still ringing. The budget
-turns the new note away while old tails finish, which is backward
-musically. Broken Friends plays lite on phones. Suspects, unproven:
-own-layer tails, chords' holds.
-
-**First:** tag each hold with its layer and report what holds the budget at
-each refusal, by layer, on lite and full.
-
-**What:** when a note doesn't fit, release the asking layer's oldest held
-notes (a short fade, its length a setting, the conservative choice "for
-Mikey's ears") until it fits, and refuse only if that can't make room. Same
-order of sums in `js/synth.js` and `core/src/player/`, so the player still
-equals the page.
-
-**Yardsticks:** per-layer refusals before and after on lite and full over
-100 loops, and shatter at a `bpm=180` pin (melody lite near zero, chords
-well below today's 62%); no clicks at a stolen note's fade (`--clicks`); the
-worst block's cost no higher than today on the slowest target; the core
-baseline updated on purpose; the player against the browser still bit for
-bit. Then a labeled album on lite for Mikey (before and after, a few loops
-each from shatter, a busy chords loop and a slow loop).
-
 ## 86. Changing loops at a musical moment, with a crossfade
 
 **Why:** Broken Friends' music changes at moments, not on a timer (its
@@ -292,6 +220,45 @@ second core (the new loop made a stage a block, the old one's notes playing
 out, then the new one starts). This item adds the moment and the crossfade to
 it: `Player::change(request, at)` (or `load` gaining `at`), not a call on
 `Core`.
+
+## 85e. The budget takes room from old notes at full quality too
+
+**Hands:** Opus 5.5, high. After 86, before 87 (brain, 2026-11-01; Mikey
+heard 85c's lite album, "it sounded great for lite mode", and asked for the
+same at full quality: `docs/DECISIONS.md`, 2026-11-01).
+
+**Why:** at full quality the core still turns away 986 of 5,056 chord notes
+(19.5%) over the baseline's 100 loops, melody 13 and texture 59: a new chord
+loses notes while the old one's tails finish. Letting old notes go is how
+synths and samplers handle a full pool; refusing the new note is the odd
+choice. Full quality's room is larger, so the notes let go there are mostly
+ones already ending, which makes the order of what goes first matter more.
+
+**What:**
+- `STEAL_FULL` on (and `_steal` in `js/synth.js` the same), so full quality
+  takes room from old notes as lite does.
+- **What goes first, in both qualities:** a call whose notes are all past
+  their end (in the budget's `TAIL`, already releasing) before one still
+  held, oldest first within each. That is the field's usual order (JUCE's
+  `findVoiceToSteal`, FluidSynth's: released voices before held ones). If it
+  changes lite's renders, say how much and in which loops; lite was heard and
+  liked, so lite stays as 85c built it if the change there is more than
+  small, and the order applies at full only ("for Mikey's ears").
+- **Never let go** of the held instruments (the organ, the wash, padSweep's
+  bed, the drone): say whether any of them sits in the budget today, and
+  exempt it if so.
+- `STEAL_FADE` stays 0.05 s, ending as the new note starts.
+
+**Yardsticks:** per-layer refusals at full over the baseline's 100 loops
+before and after (chords well under today's 19.5%, melody 0), and shatter at
+a `bpm=180` pin at full; lite unchanged, or the change said and measured;
+no clicks at a let-go note's fade (the sample step at the fade no larger
+than the loop's own, full and lite); the worst block's cost no higher than
+today on the slowest target; the core baseline updated on purpose; the
+player against the browser bit for bit; the JavaScript fallback's own checks
+(`--engine js`, `--refusals`, `--clicks`, `--endings`) if its code is touched.
+Then a short labeled album at full for Mikey (a busy chords loop, a slow
+bell or pad loop where long tails are the point, shatter), before and after.
 
 ## 87. Rendering ahead, for the browser
 
@@ -384,7 +351,7 @@ margin in the progression's decision, not a return to reading the events.
 
 **Folded (brain, Session 26):** 48 is item 85, 49 is 88, 50-52 are 89-91, built on
 phase 2's request; 53 stays in phase 3. Their texts stay here as those items' briefs
-until they merge.
+until they merge (48's, done as item 85, is in `docs/archive/queue-items.md`).
 
 
 **Read first:** `design/next-picks.md` (the design Mikey chose on
@@ -439,41 +406,6 @@ Hands: chosen at the phase review. The brain's suggestion: 48 and 49
 Opus 5.5, high (the request's shape; sectioned generation); 50-52
 Sonnet 5.5, high (clear specs on 48's pattern); 53 Opus 5.5, high
 (playback, phase 3).
-
-## 48. The request, end to end, with tempo (phase 2)
-
-**Why:** promise 11. One request for everyone: the app's panel, a
-developer's code and a game's events build the same thing. Tempo is
-the simplest pick to prove it with.
-
-**What:**
-- The Rust generator takes a **request**: for each choice, pinned,
-  ranged or chance. Start with vibes (as today's selection) and tempo;
-  leave room for the rest without building them (48's design is what
-  49-52 follow, so keep it small and documented).
-- **Tempo:** pinned ("77 bpm") or a range ("70-85 bpm", the design's
-  example). A range draws from the seed inside it. Profiles with gaits
-  draw tempo and meter together today: a pinned or ranged tempo picks
-  the gait that fits and bends the tempo inside it. When style is left
-  to chance, prefer profiles whose band holds the tempo; when style is
-  pinned too and its band doesn't, play the profile at the asked tempo
-  (conservative: honor the pin; "for Mikey's ears"). The core's limit
-  is the core's to set; the app's picker range is the Painter's.
-- The app builds the request from the panel and sends it with each new
-  loop; today's vibes selection becomes part of it. Remove Painter 6's
-  clamped tempo plumbing.
-- Share codes: a loop made from a request reproduces from its code.
-  (Short codes that carry only the pins are phase 6.)
-- The "can't do that" line, for whatever request truly can't be met.
-
-**Yardsticks:**
-- Nothing picked: goldens, baseline and balance lock unchanged.
-- Pinned tempo: measured bpm within 0.5 of the pin on every target,
-  across 200 seeds and every profile.
-- Ranged tempo: every loop inside the range; over 500 seeds, the draws
-  cover the range (no clumping at one end; report the spread).
-- Same request and seed, same samples on every target.
-- A test that walks the request's choices (it grows with 49-52).
 
 ## 49. Length, up to 32,768 bars and Endless (phase 2)
 

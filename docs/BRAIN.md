@@ -216,6 +216,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 | Rust, all voices (10, core on, phone) | "it sounded great!" |
 | Phase 1 check (blind A/B, 9, v92 vs v99) | "everything sounds the same on both versions"; no difference he could hear |
 | Session 26 (the sound batch, 3 albums + clips, v123) | every new sound and mixing idea kept; bass +3 dB with a kick, today's without; lateFloor's second arrival should vary; stereo vs mono: "same" on 5 of 6 (and the null), stereo "just barely" nicer on the sixth |
+| Lite Room Album (item 85c, 6 loops before and after, lite) | "it sounded great for lite mode"; the steal goes to full quality too (item 85e) |
 
 ## Methods that proved themselves
 
@@ -274,26 +275,29 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-10-31
+## State -- 2026-11-01
 
 ### Start here (for the next brain)
 
-- **Session 28 (brain, Opus 5.5, 2026-10-31): phase 2's port checked
-  (items 77-82, #287-#296); it passes.** The generator in Rust makes every
-  decision the JavaScript makes (the 3,060 generation goldens, all five
-  targets) and the player plays a loop from a seed as the app's engine does,
-  bit for bit when both hand notes over the same way. What the brain ran and
-  found: the log (`docs/archive/brain-log.md`). Items 77-82 and the note
-  `82-hand-over.md` archived (answered in the queue's "For phase 3": no
-  canonical note order now). `main` at v132. **Next: the hands take 83, then
-  84-92 in order** (models by item in the queue's phase 2 intro). **The
-  brain's next check: after item 87** (the game's four needs met: a seed,
-  steering, a change at a moment, rendering ahead), or sooner if a note
-  comes in; then the phase's end after 92 (the queue says what it holds).
+- **Session 29 (brain, Opus 5.5, 2026-11-01): phase 2 checked through item
+  85 (83, 84, 85a-d, #298-#305); it passes.** `main` at v137 (82770b0). What
+  the brain ran: the log (`docs/archive/brain-log.md`). Item 85 (with 85c and
+  48's brief) and the note `85-fast-pins-lite.md` archived; its refusal
+  reading is now a standing rule. **Next: the hands take 86, then 85e (the
+  steal at full quality), then 87.** **The
+  brain's next check: after item 87**, as planned (the game's four needs);
+  then the phase's end after 92.
+- **Answered by Mikey, 2026-11-01:** the Lite Room Album "sounded great
+  for lite mode", and the steal goes to full quality too: **item 85e**,
+  queued after 86 (the hands were already on 86). Still open, explained to
+  him in chat: a theme whose own melody rests, bent by vibes that bring a
+  choir, sings a tune of its own (2 of the brain's 600 theme cases,
+  `docs/archive/brain-log.md`): keep that, or let the theme's rest win.
 - **Broken Friends:** `docs/notes/82-for-broken-friends.md` is for the game's
   next session (repin the core from f654fdb, the calls, the hashes to
   refresh). It stays in `docs/notes/` until the game's session has used it;
-  nothing for the brain to answer.
+  nothing for the brain to answer. As of 2026-11-01 the game still pins
+  f654fdb, and Mikey is not concerned (the game is early; it updates later).
 - **Vibe edits since item 82** move the generation goldens and
   `js/dlplayer.wasm` too: `docs/VIBES.md`, "How to edit a vibe". This
   container runs Node, the pinned Rust (`rustup` installs it from
@@ -314,7 +318,8 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   75 (the reverb, rate-true) for a session with usage to spare; item 37 on
   hold.
 - Older "Start here" bullets (Sessions 18-26 and the plan to phase 2), as
-  they stood: `docs/archive/brain-log.md`, "Start here before Session 28".
+  they stood: `docs/archive/brain-log.md`, "Start here before Session 28";
+  Session 28's own bullet is its log entry.
 
 ### The log
 
