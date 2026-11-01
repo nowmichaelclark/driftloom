@@ -51,6 +51,10 @@ const GLASS_CHORD_VEL: f64 = 0.5;
 const GLASS_ORD: u32 = 256;
 const STAB_ORD: u32 = 256;
 
+/// How long the last loop's organ takes to let go at a new loop's first
+/// step, in seconds (`organOff(time, 0.15)` in the engine's setups).
+pub const ORGAN_FALL: f64 = 0.15;
+
 /// The most notes a chord plays: the largest chord, its ninth, and the
 /// ninth a wandering pass opens it up with.
 const CHORD_NOTES: usize = 8;
@@ -199,6 +203,10 @@ pub struct Sequencer {
     had_arc: bool,
     had_sub_duck: bool,
     had_pad_sweep: bool,
+    /// How long the last loop's organ takes to let go at this one's first
+    /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
+    /// 86).
+    organ_fall: f64,
     /// The loop's: glass on, a choir's ensemble, and the tuned kick's kind
     /// this pass plays.
     glass: bool,
@@ -231,6 +239,7 @@ impl Sequencer {
             had_arc: false,
             had_sub_duck: false,
             had_pad_sweep: false,
+            organ_fall: ORGAN_FALL,
             glass: false,
             choir: false,
             kick_kind: None,
@@ -252,6 +261,15 @@ impl Sequencer {
     /// its place, nor a loop resumed): what it decides, the calls it makes
     /// to the synth at `now`, and the setups its first step sends.
     pub fn load<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, now: f64) {
+        self.load_at(host, synth, lp, now, now, ORGAN_FALL);
+    }
+
+    /// `load`, for a loop that starts at a moment (queue item 86): its tone,
+    /// level and echo glide in at `at` (its first step) rather than `now`,
+    /// the mutes are sent again at `now` (as they stand), and the last
+    /// loop's organ lets go over `organ_fall` seconds at the first step.
+    pub fn load_at<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, now: f64, at: f64, organ_fall: f64) {
+        self.organ_fall = organ_fall;
         let s = lp.settings;
         let on = |id: &str| lp.base.choice(id) == Some("on");
         self.organ_change = s.organ.is_some() || self.had_organ;
@@ -269,9 +287,9 @@ impl Sequencer {
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
-        synth.set_tone(host, lp.spec.tone, now);
-        synth.set_level(host, s.level, now);
-        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats, now);
+        synth.set_tone(host, lp.spec.tone, at);
+        synth.set_level(host, s.level, at);
+        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats, at);
         // spec.mutes, in its order: drums, bass, chords, melody, texture.
         for layer in LAYERS {
             synth.set_mute(host, channel_of(layer) as usize, self.mutes[layer as usize], now);
@@ -340,7 +358,7 @@ impl Sequencer {
 
         // A new loop's setups, from its first step decided.
         if self.organ_change {
-            Synth::organ_off(host, time, 0.15);
+            Synth::organ_off(host, time, self.organ_fall);
             synth.organ_setup(host, s.organ.as_ref(), time);
             self.organ_change = false;
             self.hold = NO_HOLD;

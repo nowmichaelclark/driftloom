@@ -13,6 +13,11 @@
 //   ... --costs         what each block costs (the load spread across blocks,
 //                       as a real-time host plays it; each block's least time
 //                       over three runs, or --runs N), as `dlrender --costs` measures it
+//   ... --changes N     what changes of loop cost (queue item 86): corpus loop
+//                       pairs from --corpus SEED:2N, each played, then changed
+//                       at a moment (the five kinds in turn, `dl_play_change`,
+//                       crossfade --crossfade S, default 1), its blocks timed
+//                       from the change asked to the crossfade's end
 //
 // No browser: Node runs WebAssembly itself.
 
@@ -147,6 +152,45 @@ function costs(seed) {
   return { worst, worstLoad, load, all, seconds: (blocks * QUANTUM) / way.rate };
 }
 
+// A change of loop, timed (`--changes`): the loop of `old` playing, the
+// change to `nu` asked at `ask` seconds at `moment` (0 to 4), each block's
+// least time over the runs from the change asked until the crossfade is over.
+function changeCosts(i, old, nu, moment, fade) {
+  const ask = 2 + (i % 10) * 0.5;
+  const askBlock = Math.floor((ask * way.rate) / QUANTUM);
+  const best = [];
+  let blocksTimed = 0;
+  for (let run = 0; run < RUNS; run++) {
+    const x = start(old);
+    x.dl_play_ready();
+    let b = 0; let made = false; let left = -1; let k = 0;
+    for (;;) {
+      if (b === askBlock) {
+        if (!x.dl_play_change(nu, moment, fade)) throw new Error('the core refused the change');
+      }
+      const t0 = performance.now();
+      x.dl_play_process(b * QUANTUM);
+      const t = performance.now() - t0;
+      if (b >= askBlock) {
+        if (best[k] == null || t < best[k]) best[k] = t;
+        k++;
+        const state = x.dl_play_state();
+        if (state === 1 || state === 2) made = true;
+        if (made && state === 3 && left < 0) {
+          // The new loop's first step, then the crossfade and a little more.
+          const first = x.dl_play_time();
+          left = Math.ceil(((Math.max(0, first - (b * QUANTUM) / way.rate) + fade + 0.25) * way.rate) / QUANTUM);
+        }
+        if (left >= 0 && left-- === 0) break;
+        if (k > (200 * way.rate) / QUANTUM) throw new Error('the change never happened');
+      }
+      b++;
+    }
+    blocksTimed = k;
+  }
+  return { worst: Math.max(...best.slice(0, blocksTimed)), blocks: blocksTimed };
+}
+
 const deadline = (QUANTUM / way.rate) * 1000;
 // How many runs each block's least time is taken over (`--runs`, 3 by
 // default): more steadies the worst block against the machine's noise.
@@ -154,6 +198,21 @@ const RUNS = Math.max(1, Number(flag('--runs', 3)) || 3);
 const costing = argv.includes('--costs');
 if (costing) console.log(`# the deadline: a block of ${QUANTUM} frames at ${way.rate} Hz, ${(deadline * 1000).toFixed(0)} us; times are each block's least over ${RUNS} runs, the player's decide and the core's block together`);
 let worst = 0; let worstLoad = 0;
+if (flag('--changes', null)) {
+  const n = Number(flag('--changes', null));
+  const fade = Number(flag('--crossfade', 1));
+  const names = ['now', 'beat', 'bar', 'phrase', 'pass'];
+  if (seeds.length < 2 * n) throw new Error(`--changes ${n} needs --corpus SEED:${2 * n}`);
+  console.log(`# the deadline: a block of ${QUANTUM} frames at ${way.rate} Hz, ${(deadline * 1000).toFixed(0)} us; each block's least over ${RUNS} runs, from the change asked to the crossfade's end`);
+  for (let i = 0; i < n; i++) {
+    const [old, nu] = [seeds[2 * i][1], seeds[2 * i + 1][1]];
+    const c = changeCosts(i, old, nu, i % 5, fade);
+    worst = Math.max(worst, c.worst);
+    console.log(`change=${i} old=${old} new=${nu} moment=${names[i % 5]} blocks=${c.blocks} worst block ${(c.worst * 1000).toFixed(0)} us (${((100 * c.worst) / deadline).toFixed(1)}%)`);
+  }
+  console.log(`worst block while changing ${(worst * 1000).toFixed(0)} us (${((100 * worst) / deadline).toFixed(1)}% of the deadline)`);
+  process.exit(0);
+}
 for (const [i, seed] of seeds) {
   try {
     if (costing) {

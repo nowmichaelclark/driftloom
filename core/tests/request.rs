@@ -44,6 +44,7 @@ impl Host for Onsets {
     fn bass_lift(&mut self, _: f64) {}
     fn space_range(&mut self, _: usize, _: f64, _: f64) {}
     fn steal(&mut self, _: u32, _: Key, _: f64, _: f64) {}
+    fn fade_all(&mut self, _: f64, _: f64) {}
 }
 
 /// The tempo the player plays the loop of `seed` at, as `request` asks,

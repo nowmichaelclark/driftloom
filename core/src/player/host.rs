@@ -28,11 +28,15 @@ pub trait Host {
     fn route(&mut self, channel: u32, block: usize, setting: usize, from: Option<Tap>, time: f64);
     /// `Core::param`: the mix's and the master chain's parameters.
     fn param(&mut self, id: u32, op: u32, value: f64, time: f64, tau: f64);
-    /// `Core::bass_lift`: the bass layer's level for the loop.
     /// `Core::steal`: the notes of `channel` keyed `key` fall to nothing
     /// from `from` to `to` and end (the voice budget taking room from a
     /// layer's oldest notes, queue item 85c).
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64);
+    /// `Core::fade_all`: every note sounding or waiting falls to nothing
+    /// from `from` to `to` and ends (a loop handing over by a crossfade,
+    /// queue item 86).
+    fn fade_all(&mut self, from: f64, to: f64);
+    /// `Core::bass_lift`: the bass layer's level for the loop.
     fn bass_lift(&mut self, db: f64);
     /// `Core::space_range`: a space setting's range, from the next loop's
     /// start (a request's space pins, queue item 85b).
@@ -78,6 +82,10 @@ impl Host for Core {
 
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
         Core::steal(self, channel, key, from, to);
+    }
+
+    fn fade_all(&mut self, from: f64, to: f64) {
+        Core::fade_all(self, from, to);
     }
 
     fn space_range(&mut self, which: usize, lo: f64, hi: f64) {

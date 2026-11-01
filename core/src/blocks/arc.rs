@@ -188,10 +188,16 @@ impl Arc {
 
     /// The cutoff and the feedback's lift at `t`: the swing's, gliding from
     /// the last one's for `GLIDE` seconds after it starts (geometric for the
-    /// cutoff, straight for the feedback).
+    /// cutoff, straight for the feedback), and the last one's before it
+    /// starts (queue item 86: a swing is taken in the block it starts in, and
+    /// read before its start there it jumped the cutoff for a block, open
+    /// for an arc's end, which rang).
     fn at(&self, t: f64) -> (f64, f64) {
         let (f, lift) = self.now.at(t, self.rate);
         let into = t - self.now.start;
+        if into < 0.0 && self.was != self.now {
+            return self.was.at(t, self.rate);
+        }
         if into >= GLIDE || into < 0.0 || self.was == self.now {
             return (f, lift);
         }
@@ -236,23 +242,26 @@ impl Arc {
     }
 
     /// Filter `signal`, the block from `block`, in place: nothing at all with
-    /// no arc.
+    /// no arc. With none the filter still runs, open, on the signal, which it
+    /// leaves as it is (queue item 86): so an arc that starts while the music
+    /// plays (a loop with one after a loop without) takes over from a filter
+    /// already in step with it, not from rest, which stepped the output.
+    /// Before any music its state is all zeros, as it always was.
     pub fn process(&mut self, block: u64, signal: &mut Signal) {
         self.advance(block);
         let (start, end) = self.ends(block);
-        if !self.active(start) {
-            return;
-        }
         let (f, _) = self.at(f64::midpoint(start, end));
         self.filter.set(Kind::Lowpass, f as f32, Q, 0.0, self.rate as f32);
-        for x in signal.iter_mut() {
-            *x = self.filter.step(*x);
+        if self.active(start) {
+            for x in signal.iter_mut() {
+                *x = self.filter.step(*x);
+            }
+        } else {
+            for &x in signal.iter() {
+                self.filter.step(x);
+            }
         }
         self.filter.flush();
-        // Glided out and rung down: no filter from here on.
-        if self.now.period <= 0.0 && end >= self.now.start + GLIDE {
-            self.filter.reset();
-        }
     }
 }
 

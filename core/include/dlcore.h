@@ -45,6 +45,13 @@ typedef struct dl_player dl_player;
 /* The layers, for dl_player_mute. */
 enum { DL_DRUMS = 0, DL_BASS = 1, DL_CHORDS = 2, DL_MELODY = 3, DL_TEXTURE = 4 };
 
+/* The moments a change waits for, for dl_player_change (queue item 86): as
+   soon as the next loop is made, or the loop playing's next beat, bar line,
+   phrase (four bars) or pass. And the crossfade's length by default, in
+   seconds. */
+enum { DL_NOW = 0, DL_BEAT = 1, DL_BAR = 2, DL_PHRASE = 3, DL_PASS = 4 };
+#define DL_CROSSFADE 1.0
+
 /* Where a player is, from dl_player_state. */
 enum { DL_IDLE = 0, DL_LOADING = 1, DL_WANDERING = 2, DL_PLAYING = 3 };
 
@@ -109,6 +116,22 @@ const char *dl_player_ask(dl_player *player, const char *request);
    spikes), then starts; a loop playing stops being decided at once, and
    what it has handed over plays out. */
 void dl_player_load(dl_player *player, uint32_t seed);
+
+/* Change to the loop of `seed`, with what was asked since the last load, at
+   `moment` of the loop playing (DL_NOW to DL_PASS): the next loop is made in
+   the blocks before the moment and takes its first step on it, and the old
+   one's notes fall to nothing over `crossfade` seconds from there
+   (DL_CROSSFADE), or ring out for a negative one. No reset, no second core.
+   A moment nearer than the loop takes to make is passed for the next of its
+   kind. Several changes may wait, one for each kind of moment, a later one
+   in place of an earlier for the same kind or boundary; each starts at its
+   own. With nothing playing it is a load. 1 if asked, 0 for no such moment. */
+int dl_player_change(dl_player *player, uint32_t seed, uint32_t moment, double crossfade);
+
+/* When the next change waiting starts its loop, in seconds on the core's
+   clock (frames rendered over the rate); -1 if none is worked out yet (it
+   is once the next block is rendered). */
+double dl_player_next_change(dl_player *player);
 
 /* Make what is left of the loop asked for, now: for a host with no deadline
    (an offline render, a loading screen). It starts on the next block. */

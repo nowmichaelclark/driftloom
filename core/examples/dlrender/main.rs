@@ -34,6 +34,12 @@
 //!     [--wav DIR] [--calls DIR]             the first N loops of corpus SEED
 //!                                           (Rng(SEED).seed32() a loop), each
 //!                                           to DIR/I-NAME.wav with --wav
+//! cargo run --release --example dlrender -- --changes N [--from-corpus 1]
+//!     [--moment KIND] [--crossfade S | --ring] [--each] [--runs N]
+//!                                           changes of loop at a moment
+//!                                           (queue item 86, `change.rs`):
+//!                                           on the moment, no click, the
+//!                                           new loop as itself, the cost
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! cargo run --release --example dlrender -- --block NAME/PROBE [--rate HZ] [--wav OUT.wav]
 //!                                           one building block alone, as the
@@ -50,6 +56,7 @@
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any error.
 
+mod change;
 mod clip;
 mod notelist;
 mod seed;
@@ -61,7 +68,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -79,9 +86,10 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let (mut compare, mut lists, mut block) = (false, Vec::new(), None);
     let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
     let mut by_seed = BySeed::default();
+    let mut changes = Changes::default();
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
-        if by_seed.take(&arg, &mut args)? {
+        if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? {
             continue;
         }
         match arg.as_str() {
@@ -112,6 +120,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
     }
     if let Some(name) = block {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
+    }
+    if let Some(n) = changes.n {
+        return changes.run(n, rate, &by_seed);
     }
     if !by_seed.seeds.is_empty() {
         let mut b = by_seed;
@@ -171,6 +182,64 @@ fn run(args: Vec<String>) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// The options of `--changes N` (queue item 86, `change.rs`): the corpus its
+/// loops come from, the handover, the kind of moment, a line each, and how
+/// many runs a change's costs are the least of.
+#[derive(Default)]
+struct Changes {
+    n: Option<usize>,
+    corpus: Option<u32>,
+    crossfade: Option<f64>,
+    ring: bool,
+    moment: Option<dlcore::player::Moment>,
+    each: bool,
+    runs: Option<usize>,
+    pick: Option<usize>,
+    wav: Option<String>,
+}
+
+impl Changes {
+    /// `--changes N` (`change::run`), with the rate, quality and wander the
+    /// seed options give.
+    fn run(self, n: usize, rate: Option<f64>, by_seed: &BySeed) -> Result<(), String> {
+        let way = change::Way {
+            changes: n,
+            corpus: self.corpus.unwrap_or(1),
+            rate: rate.unwrap_or(44_100.0),
+            full: !by_seed.lite,
+            wander: by_seed.wander.unwrap_or(1.0),
+            handover: change::handover(self.crossfade, self.ring),
+            moment: self.moment,
+            each: self.each,
+            runs: self.runs.unwrap_or(1),
+            pick: self.pick,
+            wav: self.wav,
+        };
+        change::run(&way)
+    }
+
+    fn take(&mut self, arg: &str, args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
+        let mut word = || args.next().ok_or_else(|| format!("{arg} needs a value"));
+        match arg {
+            "--changes" => self.n = Some(word()?.parse().map_err(|_| "--changes N: a count")?),
+            "--from-corpus" => self.corpus = Some(word()?.parse().map_err(|_| "--from-corpus SEED: a seed")?),
+            "--crossfade" => self.crossfade = Some(word()?.parse().map_err(|_| "--crossfade S: seconds")?),
+            "--ring" => self.ring = true,
+            "--each" => self.each = true,
+            "--runs" => self.runs = Some(word()?.parse().map_err(|_| "--runs N: a count")?),
+            "--change" => self.pick = Some(word()?.parse().map_err(|_| "--change I: a change's number")?),
+            "--wav-to" => self.wav = Some(word()?),
+            "--moment" => {
+                let w = word()?;
+                let m = dlcore::player::Moment::ALL.iter().copied().find(|m| format!("{m:?}").eq_ignore_ascii_case(&w));
+                self.moment = Some(m.ok_or_else(|| format!("--moment {w}: now, beat, bar, phrase or pass"))?);
+            }
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
 }
 
 /// The options of a loop from its seed (queue item 82): the seeds (each
