@@ -13,7 +13,8 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 generator in Rust, proven on the generation goldens, and the player; checked
 by the brain's Session 28) and **83** (ears on the core: sketch blocks and
 `tools/clips.mjs`) and **84** (the chords' octave from the progression).
-**Next: item 85d**, the theme (85a is #302, 85c #303, 85b the pins). Item 75 is low priority. 37
+Item 85 is done in four parts (85a #302, 85c #303, 85b #304, 85d the
+theme). **Next: item 86.** Item 75 is low priority. 37
 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -193,19 +194,20 @@ C header, wasm, `dlrender --request`, the app, share code format 5, 360
 request cases in the generation goldens). **85c** (#303) went next.
 **85b** built the pins for the named settings and share codes carrying them
 (`js/pins.js`, `request::Pins`; format 6; 240 `pins` cases in the goldens).
-**85d** is the rest: the **theme** (below, "Steering"), with its yardstick.
-48's text stays until 85d merges. The refusal rule for requested loops is
+**85d** built the **theme** (below, "Steering"), with its yardstick. Item 85
+is done; 48's text and these notes are for the brain's archive pass. The refusal rule for requested loops is
 read per profile (brain, 2026-10-31; `docs/notes/85-fast-pins-lite.md`): a
 pin may not make any profile's lite refusals worse than that profile's own.
 
-**85d, the theme (hands, from 85b):** a request carries a theme (a seed, or a
-share code) whose loop it bends: the loop made is the theme's seed with the
-request's vibes, keeping the theme's key, its melody's first cell and its
-profile mix unless a pin says otherwise. Built in both generators (the
-goldens hold them together), `Request` and its text form, the hosts, and
-the share code (a new format, written only by a loop that has a theme).
-The key already holds under vibes (the root is drawn at the same place);
-the mix and the motif are the work.
+**85d, the theme (hands):** `theme=SEED` in a request bends that seed's
+loop. The loop made keeps the theme's profile mix, its key and mode, its
+metre (a tempo asked plays in it) and its tune (the melody's figure and
+rhythmic cell, or its rest); the vibes, the tempo, the pins and the load's
+own seed bend the rest. The theme's own seed with nothing else asked is the
+theme's loop. Both generators, `Request`, the hosts (`dl_player_theme`),
+share code format 7, 240 `theme` cases in the goldens. A theme is a seed,
+not yet a share code: a code is a spec, which the core does not read (for
+the brain, if a game needs one).
 
 48's text (below, kept for reference until this item merges) is the brief,
 with these changes:

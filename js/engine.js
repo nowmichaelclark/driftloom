@@ -559,7 +559,7 @@ export class Engine {
     const asked = requestOf(this.spec);
     const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
     core.playWander(this.driftOn ? this.driftAmount : 0);
-    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins));
+    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme);
     this._playerControls();
     this._playerOn = true;
   }

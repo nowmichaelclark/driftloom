@@ -139,7 +139,7 @@ pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) 
 /// A refusal's line as C text (the request's `&'static str` lines,
 /// NUL-terminated): plain ASCII, static, never freed.
 fn line(refused: &'static str) -> *const c_char {
-    use crate::generator::request::{BAD_SETTING, BAD_TEMPO, BAD_WEIGHT, NO_SUCH_SETTING, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT};
+    use crate::generator::request::{BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_SETTING, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT};
     let c: &'static CStr = match refused {
         NO_SUCH_VIBE => c"no such vibe",
         BAD_WEIGHT => c"a bad weight",
@@ -148,6 +148,7 @@ fn line(refused: &'static str) -> *const c_char {
         NO_SUCH_SETTING => c"no such setting",
         BAD_SETTING => c"a bad setting",
         SETTING_OUT => c"a setting outside its range",
+        BAD_THEME => c"a bad theme",
         _ => c"can't do that",
     };
     c.as_ptr()
@@ -218,6 +219,16 @@ pub extern "C" fn dl_player_pin(player: *mut Engine, number: u32, value: f64) ->
             ptr::null()
         }
         Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` to bend the loop of `seed` (queue item
+/// 85d; `Request::with_theme`): the loop made keeps that loop's profile mix,
+/// key and mode, metre and tune. Any seed is a theme.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_theme(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.request = e.request.with_theme(seed);
     }
 }
 

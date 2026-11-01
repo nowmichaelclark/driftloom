@@ -1614,10 +1614,10 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
 // and the code that carries it.
 {
   const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
-  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"pins":null}'
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null}'
     && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
   check('text, in the frozen order, weights and the tempo low first',
-    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"pins":null}');
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null}');
   check('an object reads as its text does',
     JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
   check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
@@ -1768,6 +1768,65 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
   check('pins: a loop with pins is format 6, the others as before',
     encodeSong(newSpec(5, 'organ=on')).slice(4, 6) === '0R' && encodeSong(newSpec(5, { tempo: 80 })).slice(4, 6) === '0M' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
   check('pins: a request without pins keeps none in the spec', newSpec(5, 'cozy,bpm=80').pins === undefined);
+}
+
+// The theme (queue item 85d): a seed whose loop the request bends. Its key
+// and mode, its profile mix, its metre and its tune hold; the vibes and the
+// load's own seed bend the rest. Measured in the render: the tune's cell, and
+// the melody's pitch classes inside the theme's mode.
+{
+  const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
+  const lines = [['theme', 'a bad theme'], ['theme=x', 'a bad theme'], ['theme=4294967296', 'a bad theme'], ['theme=-1', 'a bad theme'], ['theme=4294967295', null]];
+  check('theme: the refusals, each its plain line', lines.every(([t, line]) => refused(t) === line), lines.map(([t]) => refused(t)).join(' | '));
+  check('theme: as text, after the tempo and before the pins', requestText('organ=on,theme=12,cozy,bpm=80') === 'cozy,bpm=80,theme=12,organ=on'
+    && readRequest({ theme: 12 }).theme === 12 && refused({ theme: 1.5 }) === 'a bad theme');
+  let plain = 0;
+  const r = new Rng(855);
+  for (let i = 0; i < 60; i++) {
+    const seed = r.seed32();
+    const a = newSpec(seed);
+    const { theme, ...b } = newSpec(seed, { theme: seed });
+    if (theme === seed && JSON.stringify(b) === JSON.stringify(a) && JSON.stringify(render(b).tracks) === JSON.stringify(render(a).tracks)) plain++;
+  }
+  check('theme: a seed\'s own theme, nothing else asked, is its own loop (60 loops)', plain === 60);
+  const leadKey = (spec) => Object.entries(spec.mix).sort((a, b) => b[1] - a[1])[0][0];
+  let held = 0, cells = 0, moved = 0, tempos = 0, inMode = 0, notes = 0, n = 0;
+  let bad = '';
+  for (let i = 0; i < 200; i++) {
+    const T = r.seed32();
+    const seed = i % 2 ? T : r.seed32();
+    const asked = r.shuffle(VIBE_IDS.slice()).slice(0, 1 + (i % 3)).join(',');
+    const th = newSpec(T);
+    const b = newSpec(seed, `${asked},theme=${T}`);
+    if (b.root === th.root && b.scale === th.scale && JSON.stringify(b.mix) === JSON.stringify(th.mix)
+      && leadKey(b) === leadKey(th) && b.stepsPerBar === th.stepsPerBar && metreOf(b) === metreOf(th)) held++;
+    else bad ||= `${seed} ${T} ${asked}`;
+    const rb = render(b);
+    if (rb.meta.melodyCell === render(th).meta.melodyCell) cells++; else bad ||= `cell ${seed} ${T} ${asked}`;
+    if (JSON.stringify(newSpec(T, asked).mix) !== JSON.stringify(th.mix)) moved++;
+    if (b.bpm !== th.bpm) tempos++;
+    const pcs = new Set(SCALES[th.scale].steps.map((x) => (x + th.root) % 12));
+    for (const e of rb.tracks.melody) if (e.vel) { notes++; if (pcs.has(((e.midi % 12) + 12) % 12)) inMode++; }
+    n++;
+  }
+  check('theme: bent by vibes, on its seed or another, it keeps its key, mode, mix and metre (200 loops)', held === n, bad);
+  check('theme: and its tune\'s cell, measured in the render', cells === n, bad);
+  check('theme: the melody\'s pitch classes stay in the theme\'s mode (99% of notes)', inMode / notes >= 0.99, `${inMode} of ${notes}`);
+  check('theme: without it, the same vibes move the mix (most loops), and with it the tempo still moves',
+    moved > n / 2 && tempos > n / 2, `${moved} ${tempos}`);
+  const t = newSpec(7, 'theme=99,cozy,bpm=150');
+  check('theme: a tempo asked is played in the theme\'s metre', t.bpm === 150 && metreOf(t) === metreOf(newSpec(99)) && t.stepsPerBar === newSpec(99).stepsPerBar);
+  let codes = 0;
+  for (let i = 0; i < 40; i++) {
+    const spec = newSpec(5000 + i, `${i % 2 ? 'cozy,' : ''}theme=${77 + i}${i % 3 ? ',organ=on' : ''}`);
+    const code = encodeSong(spec);
+    const back = decodeSong(code);
+    if (back.theme === spec.theme && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks) && encodeSong(back) === code
+      && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
+  }
+  check('theme: a loop with a theme is made again from its code (40 loops)', codes === 40);
+  check('theme: a loop with a theme is format 7, the others as before', encodeSong(newSpec(5, 'theme=9')).slice(4, 6) === '0W'
+    && encodeSong(newSpec(5, 'organ=on')).slice(4, 6) === '0R' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

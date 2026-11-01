@@ -543,6 +543,13 @@ mod player {
         }
     }
 
+    /// Bend the loop of `seed` in what the next `dl_play_load` asks for
+    /// (`Request::with_theme`; queue item 85d).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_theme(seed: u32) {
+        *request() = request().with_theme(seed);
+    }
+
     /// Pin setting `number` at `value` for what the next `dl_play_load`
     /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
     #[unsafe(no_mangle)]

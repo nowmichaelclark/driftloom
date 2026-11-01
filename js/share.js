@@ -39,11 +39,13 @@ const DECODE_MAP = (() => {
 
 // The newest format this build reads and writes. Format 4 (queue item 38a)
 // appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
-// for; format 6 (queue item 85b) the pins it was asked for. Each is written
-// only by a loop that needs it (a loop without vibes is still format 3), so
-// every code already in circulation, every saved album and every `/rank`
-// answer keeps the exact string it had.
-export const FORMAT = 6;
+// for; format 6 (queue item 85b) the pins it was asked for; format 7 (queue
+// item 85d) the theme it bends. Each is written only by a loop that needs it
+// (a loop without vibes is still format 3), so every code already in
+// circulation, every saved album and every `/rank` answer keeps the exact
+// string it had.
+export const FORMAT = 7;
+const PINS_FORMAT = 6;
 const TEMPO_FORMAT = 5;
 const VIBES_FORMAT = 4;
 const PLAIN_FORMAT = 3;
@@ -60,8 +62,13 @@ function hasPins(spec) {
   return !!(spec && spec.pins && Object.keys(spec.pins).length);
 }
 
+function hasTheme(spec) {
+  return !!(spec && spec.theme != null);
+}
+
 function formatOf(spec) {
-  if (hasPins(spec)) return FORMAT;
+  if (hasTheme(spec)) return FORMAT;
+  if (hasPins(spec)) return PINS_FORMAT;
   if (hasTempo(spec)) return TEMPO_FORMAT;
   return hasVibes(spec) ? VIBES_FORMAT : PLAIN_FORMAT;
 }
@@ -212,6 +219,11 @@ function writeSpec(w, spec, version = FORMAT) {
     w.u16(text.length);
     for (const b of text) w.u8(b);
   }
+  // Format 7: the theme (a flag, then its seed).
+  if (version >= 7) {
+    if (hasTheme(spec)) w.u8(1).u32(spec.theme >>> 0);
+    else w.u8(0);
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -307,6 +319,7 @@ function readSpec(r, version = FORMAT) {
     const framed = framedPins(pins);
     if (framed) spec.pins = framed;
   }
+  if (version >= 7 && r.u8()) spec.theme = r.u32();
   return spec;
 }
 

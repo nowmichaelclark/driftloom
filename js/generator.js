@@ -47,6 +47,12 @@ export function newSpec(seed = randomSeed(), request = null) {
   const v = drawVibes(seed, asked.vibes);
   // A tempo asked (queue item 85), [low, high]; null leaves it to the seed.
   const t = asked.tempo;
+  // A theme asked (queue item 85d): the seed whose loop this one bends. Its
+  // own loop, nothing asked, gives what the theme holds: the profile mix,
+  // the key and mode, the metre and (in genMelody) the tune. Every draw
+  // below is still made, so nothing else moves.
+  const theme = asked.theme;
+  const held = theme == null ? null : newSpec(theme);
 
   // A loop's identity is a weight across profiles, not a choice between
   // them. Draw a few, give each an exponential weight and normalise: that
@@ -83,6 +89,10 @@ export function newSpec(seed = randomSeed(), request = null) {
   }
   const total = Object.values(mix).reduce((a, b) => a + b, 0);
   for (const k of Object.keys(mix)) mix[k] = q8(mix[k] / total);
+  if (held) {
+    for (const k of Object.keys(mix)) delete mix[k];
+    Object.assign(mix, held.mix);
+  }
 
   const c = vibedCharacter(blendMix(mix), v);
 
@@ -148,8 +158,11 @@ export function newSpec(seed = randomSeed(), request = null) {
   // A profile with gaits draws tempo and metre together, from its own salted
   // stream so every other loop's draws stay where they were. The two draws
   // above and the tempo draw below are still made, and simply overruled.
-  const gait = gaitIn(seed, c, t);
+  // A theme keeps its own gait and metre: a tempo asked is then played in
+  // it, as a gait profile with no gait at that tempo plays its nearest.
+  const gait = held ? themeGait(theme, mix) : gaitIn(seed, c, t);
   if (gait) stepsPerBar = gait.stepsPerBar;
+  if (held) stepsPerBar = held.stepsPerBar;
   const tempoDraw = vibePull(v, (rec) => rec.tempo, r.f());
   const band = gait ? gait.bpm : c.bpm;
   const tempo = Math.round(band[0] + tempoDraw * (band[1] - band[0])
@@ -213,6 +226,14 @@ export function newSpec(seed = randomSeed(), request = null) {
   // The pins asked (queue item 85b; js/pins.js), kept the same way: the
   // choices' draw and the engine's load read them from here.
   if (asked.pins) spec.pins = { ...asked.pins };
+  // The theme (queue item 85d): its key and mode, drawn over (the draws above
+  // were still made), and its seed, kept, so `metreOf` and `genMelody` find
+  // its gait and its tune again and a share code carries it.
+  if (held) {
+    spec.root = held.root;
+    spec.scale = held.scale;
+    spec.theme = theme;
+  }
 
   if (c.polymeter) {
     const cycles = r.shuffle(POLY_CYCLES);
@@ -397,27 +418,29 @@ function weighedVibes(r, asked) {
 // Queue item 85 (promise 11): what a host asks of the next loop, beside its
 // seed. One shape for the app's picks, a developer's code and a game's
 // events, read the same way by the Rust generator (`core/src/generator/
-// request.rs`). For now: the vibes, with or without weights, and the tempo,
-// pinned or a range. Whatever is not asked is drawn from the seed as ever,
-// and a request of nothing is the loop the seed makes.
+// request.rs`): the vibes, with or without weights, the tempo, pinned or a
+// range, the theme (queue item 85d: a seed whose loop this one bends) and
+// the pins (queue item 85b, js/pins.js). Whatever is not asked is drawn from
+// the seed as ever, and a request of nothing is the loop the seed makes.
 //
 // It comes as:
 //   - nothing (null), or a list of vibe names (a listener's selection: names
 //     the app does not know are left out, as they always were);
 //   - text, as the goldens, `dlrender --request` and the C host write it:
 //     items split by commas, each a vibe ("glacial"), a vibe and its weight
-//     ("glacial=0.7"), or the tempo ("bpm=77", "bpm=70-85"); "" or "-" for
-//     nothing;
-//   - an object, { vibes, tempo }: vibes a list of names, { name: weight }
-//     or [name, weight] pairs (the read form, below), tempo a number or
-//     [low, high].
+//     ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
+//     ("theme=1234") or a pin ("organ=on"); "" or "-" for nothing;
+//   - an object, { vibes, tempo, theme, pins }: vibes a list of names,
+//     { name: weight } or [name, weight] pairs (the read form, below), tempo
+//     a number or [low, high], theme a seed, pins { name: value }.
 // Text and objects are read strictly: a name the core does not have, a bad
 // weight or a tempo out of the core's range is refused (a RequestError, its
 // message the short plain ASCII line "can't do that" shows), never guessed.
 //
-// Read, it is { vibes, tempo }: vibes null or [id, weight] pairs in the
-// frozen order (the weight null where none was given), tempo null or
-// [low, high], whole bpm (equal when pinned).
+// Read, it is { vibes, tempo, theme, pins }: vibes null or [id, weight] pairs
+// in the frozen order (the weight null where none was given), tempo null or
+// [low, high], whole bpm (equal when pinned), theme null or a seed, pins
+// null or { name: value } in the pins' order.
 
 // The tempos the core plays, in bpm: what the share code's tempo byte holds.
 export const TEMPO_LIMIT = [32, 190];
@@ -428,12 +451,12 @@ const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null, pins: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
-  if (Array.isArray(input)) return { vibes: lenientVibes(input), tempo: null, pins: null };
+  if (Array.isArray(input)) return { vibes: lenientVibes(input), tempo: null, theme: null, pins: null };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!('vibes' in input) && !('tempo' in input) && !('pins' in input)) return { vibes: lenientVibes(Object.keys(input)), tempo: null, pins: null };
+  if (!['vibes', 'tempo', 'theme', 'pins'].some((k) => k in input)) return { vibes: lenientVibes(Object.keys(input)), tempo: null, theme: null, pins: null };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -450,13 +473,15 @@ export function readRequest(input) {
     const t = input.tempo;
     out.tempo = Array.isArray(t) ? tempoOf(t[0], t.length > 1 ? t[1] : t[0]) : tempoOf(t, t);
   }
+  // The theme (queue item 85d): a seed.
+  if (input.theme != null) out.theme = themeOf(input.theme);
   // The pins (queue item 85b; js/pins.js), { name: value }.
   out.pins = readPins(input.pins);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null, pins: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
@@ -471,6 +496,9 @@ export function parseRequest(text) {
       const [lo, hi] = dash < 0 ? [value, value] : [value.slice(0, dash), value.slice(dash + 1)];
       if (!BPM_TEXT.test(lo) || !BPM_TEXT.test(hi)) throw new RequestError('a bad tempo');
       out.tempo = tempoOf(Number(lo), Number(hi));
+    } else if (name === 'theme') {
+      if (value == null || !BPM_TEXT.test(value)) throw new RequestError('a bad theme');
+      out.theme = themeOf(Number(value));
     } else if (isPinName(name)) {
       // A pin (queue item 85b): a choice's id, or a dotted setting.
       if (value == null) throw new RequestError('a bad setting');
@@ -491,6 +519,7 @@ export function requestText(request) {
   const r = readRequest(request);
   const items = (r.vibes || []).map(([id, w]) => (w == null ? id : `${id}=${w}`));
   if (r.tempo) items.push(`bpm=${r.tempo[0] === r.tempo[1] ? r.tempo[0] : `${r.tempo[0]}-${r.tempo[1]}`}`);
+  if (r.theme != null) items.push(`theme=${r.theme}`);
   items.push(...pinItems(r.pins));
   return items.length ? items.join(',') : '-';
 }
@@ -503,6 +532,7 @@ export function requestOf(spec) {
   return {
     vibes: v ? Object.fromEntries(VIBE_IDS.filter((id) => v.vibes[id] > 0).map((id) => [id, v.vibes[id]])) : null,
     tempo: spec && Array.isArray(spec.tempo) ? spec.tempo.slice() : null,
+    theme: spec && spec.theme != null ? spec.theme : null,
     pins: spec && spec.pins ? { ...spec.pins } : null,
   };
 }
@@ -526,6 +556,12 @@ function weightOf(w) {
 function framed(asked) {
   const list = VIBE_IDS.filter((id) => asked.has(id)).map((id) => [id, asked.get(id)]);
   return list.length ? list : null;
+}
+
+// A theme: a seed, a whole number from 0 to 2^32 - 1, or refused.
+function themeOf(x) {
+  if (typeof x !== 'number' || !Number.isInteger(x) || x < 0 || x > 0xffffffff) throw new RequestError('a bad theme');
+  return x;
 }
 
 // A tempo, whole bpm, low first, inside the core's range or refused.
@@ -894,13 +930,20 @@ function gaitIn(seed, c, t) {
   return best;
 }
 
+// A theme's gait (queue item 85d): the one its own loop plays, from the
+// theme's seed and the mix it holds, whatever the vibes lean.
+function themeGait(theme, mix) {
+  return gaitFor(theme, blendMix(mix));
+}
+
 // How a bar is counted. The step count alone cannot say: twelve steps are
 // 6/8, unless the loop's gait reads them as 3/4, the waltz: three beats at
 // 0, 4 and 8. Each reading has its own name and its own tables.
 export function metreOf(spec) {
   const spb = spec.stepsPerBar || STEPS_PER_BAR;
   if (spb === 12) {
-    const gait = gaitIn(spec.seed, characterOf(spec), Array.isArray(spec.tempo) ? spec.tempo : null);
+    const gait = spec.theme != null ? themeGait(spec.theme, spec.mix)
+      : gaitIn(spec.seed, characterOf(spec), Array.isArray(spec.tempo) ? spec.tempo : null);
     return gait && gait.metre === '3/4' ? '3/4' : '6/8';
   }
   return spb === 20 ? '5/4' : '4/4';
@@ -1659,36 +1702,12 @@ function drawCell(r, spb, metre, energy, lift) {
   ]));
 }
 
-// `dev`, when given, is a section of a developing loop (see `develop`): the
-// figure, voice and register are handed in rather than drawn, so the
-// section states or answers another section's motif. Every draw below is
-// still made either way; without `dev` nothing here changes.
-function genMelody(spec, harmony, dev = null) {
-  const r = new Rng(spec.layerSeeds.melody);
-  const c = characterOf(spec);
-  const spb = spec.stepsPerBar || STEPS_PER_BAR;
-  const scale = SCALES[spec.scale].steps;
-  const total = spec.bars * spb;
-  const drawnVoice = r.weighted(c.melodyVoices);
-  const choir = choirOf(spec);
-  const voice = dev ? dev.voice : choir ? choir.voice : drawnVoice;
-  const lf = feelForLayer(spec, 'melody');
+// The tune's figure (genMelody's motif): one rhythmic cell and the walk
+// over it, then which notes the figure leaves out, drawn with `r` as
+// genMelody draws them, so a theme's tune (queue item 85d) is drawn the
+// same way as the loop's own.
+function figureDraws(r, spec, lf, spb, scale) {
   const mood = lf.lift;
-  // Drawn either way, so the stream does not move; a choir loop simply
-  // never takes the rest. A doubling with nothing to double is not one.
-  const silent = r.chance(0.08);
-  if (!dev && !forced(spec, 'melody') && !choir && silent) return { events: [], voice, motif: [], cell: null };
-
-  // --- the motif ------------------------------------------------------
-  //
-  // One rhythmic cell per motif. The cell fixes where the notes fall and
-  // how long they last; the walk below decides what pitch each one is. Two
-  // loops drawing the same cell are still two different tunes, and the same
-  // tune under two cells is two different pieces of music, which is the
-  // whole reason rhythm is drawn separately from pitch.
-  const driven = lf.energy > 0.6;
-  const pointillist = c.pointillist || 0;
-  const waltz = metreOf(spec) === '3/4';
   const rhythm = drawCell(r, spb, metreOf(spec), lf.energy, mood);
 
   const motif = [];
@@ -1759,8 +1778,58 @@ function genMelody(spec, harmony, dev = null) {
   // figure, and the figure is the same figure every time it is played.
   const omit = Math.max(0, 0.2 - lf.energy * 0.15);
   const kept = motif.filter(() => !r.chance(omit));
+  return { rhythm, motif, kept };
+}
+
+// A theme's tune (queue item 85d): its own loop's figure and rhythmic cell,
+// drawn as genMelody draws them; no figure where its melody rests.
+function themeTune(theme) {
+  const spec = newSpec(theme);
+  const r = new Rng(spec.layerSeeds.melody);
+  r.weighted(characterOf(spec).melodyVoices);
+  const lf = feelForLayer(spec, 'melody');
+  if (r.chance(0.08) && !choirOf(spec)) return { figure: null, cell: null };
+  const { rhythm, motif, kept } = figureDraws(r, spec, lf, spec.stepsPerBar || STEPS_PER_BAR, SCALES[spec.scale].steps);
+  return { figure: kept.length >= Math.min(2, motif.length) ? kept : motif, cell: rhythm.id };
+}
+
+// `dev`, when given, is a section of a developing loop (see `develop`): the
+// figure, voice and register are handed in rather than drawn, so the
+// section states or answers another section's motif. Every draw below is
+// still made either way; without `dev` nothing here changes.
+function genMelody(spec, harmony, dev = null) {
+  const r = new Rng(spec.layerSeeds.melody);
+  const c = characterOf(spec);
+  const spb = spec.stepsPerBar || STEPS_PER_BAR;
+  const scale = SCALES[spec.scale].steps;
+  const total = spec.bars * spb;
+  const drawnVoice = r.weighted(c.melodyVoices);
+  const choir = choirOf(spec);
+  const voice = dev ? dev.voice : choir ? choir.voice : drawnVoice;
+  const lf = feelForLayer(spec, 'melody');
+  // Drawn either way, so the stream does not move; a choir loop simply
+  // never takes the rest. A doubling with nothing to double is not one.
+  const silent = r.chance(0.08);
+  // A theme's tune (queue item 85d): whether there is one, and its figure,
+  // held in place of this loop's own (whose draws are still made).
+  const tune = !dev && spec.theme != null ? themeTune(spec.theme) : null;
+  if (!dev && !forced(spec, 'melody') && !choir && (tune ? !tune.figure : silent)) return { events: [], voice, motif: [], cell: null };
+
+  // --- the motif ------------------------------------------------------
+  //
+  // One rhythmic cell per motif. The cell fixes where the notes fall and
+  // how long they last; the walk below decides what pitch each one is. Two
+  // loops drawing the same cell are still two different tunes, and the same
+  // tune under two cells is two different pieces of music, which is the
+  // whole reason rhythm is drawn separately from pitch.
+  const driven = lf.energy > 0.6;
+  const pointillist = c.pointillist || 0;
+  const waltz = metreOf(spec) === '3/4';
+  const { rhythm, motif, kept } = figureDraws(r, spec, lf, spb, scale);
   const figure = dev ? dev.figure.map((x) => ({ ...x }))
-    : kept.length >= Math.min(2, motif.length) ? kept : motif;
+    : tune && tune.figure ? tune.figure.map((x) => ({ ...x }))
+      : kept.length >= Math.min(2, motif.length) ? kept : motif;
+  const cell = tune && tune.figure ? tune.cell : rhythm.id;
 
   // --- how the motif is developed --------------------------------------
   //
@@ -2052,7 +2121,7 @@ function genMelody(spec, harmony, dev = null) {
     }
   }
 
-  return { events, voice, motif: figure, cell: rhythm.id, centre: lineCentre };
+  return { events, voice, motif: figure, cell, centre: lineCentre };
 }
 
 // -------------------------------------------------------------- drums

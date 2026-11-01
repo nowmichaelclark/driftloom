@@ -6,6 +6,7 @@ use super::character::{self, Char, Vibes, q8};
 use super::data::{self, CHARACTERS, MOODS};
 use super::js;
 use super::list::{List, Name};
+use super::melody::{self, Figure};
 use super::request::{self, Request};
 use super::rng::{Rng, seed_name};
 use super::theory::{self, GLAD_FROM, SCALES};
@@ -55,6 +56,14 @@ pub struct Spec {
     /// The pins asked (queue item 85b), kept the same way: the choices'
     /// draw and the load read them from here.
     pub pins: request::Pins,
+    /// The theme asked (queue item 85d): the seed whose loop this one bends,
+    /// kept, so `metre` finds its gait again and a share code carries it.
+    pub theme: Option<u32>,
+    /// The theme's tune (`themeTune`, worked out once here, not written):
+    /// `None` without a theme, `Some(None)` where the theme's melody rests,
+    /// else its figure and rhythmic cell, which the melody plays in place of
+    /// its own.
+    pub tune: Option<Option<(Figure, &'static str)>>,
     /// Each layer's own cycle in steps, or `None` (null); `None` overall
     /// for a loop without cycles.
     pub cycles: Option<[Option<f64>; 5]>,
@@ -81,6 +90,8 @@ impl Spec {
         vibes: None,
         tempo: None,
         pins: request::Pins::NONE,
+        theme: None,
+        tune: None,
         cycles: None,
     };
 
@@ -178,6 +189,10 @@ impl Spec {
         if let Some(t) = &self.tempo {
             w.key("tempo");
             w.nums(t);
+        }
+        if let Some(t) = self.theme {
+            w.key("theme");
+            w.num(f64::from(t));
         }
         w.key("tone");
         w.obj();
@@ -333,6 +348,10 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let vibes = character::draw_vibes(seed, request);
     let v = vibes.as_ref();
     let t = request.tempo();
+    // A theme asked (queue item 85d): its own loop, nothing asked, gives what
+    // it holds (the mix, the key and mode, the metre, the tune). Every draw
+    // below is still made, so nothing else moves.
+    let held = request.theme().map(|th| new_spec(th, &Request::new()));
 
     let drive = math::pow(r.f(), 0.82) * 1.8 - 0.5;
     let mut pool: List<(usize, f64), { data::CHARACTER_COUNT }> = List::filled((0, 0.0));
@@ -365,6 +384,9 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     }
     for e in mix.iter_mut() {
         e.1 = q8(e.1 / total);
+    }
+    if let Some(h) = &held {
+        mix = h.mix;
     }
 
     let c = character::character_of(&mix, v);
@@ -426,9 +448,16 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
 
     let mut steps_per_bar = c.steps_per_bar.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
     let bars = c.bars.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
-    let gait = gait_in(seed, &c, t);
+    // A theme keeps its own gait and metre; a tempo asked then plays in it.
+    let gait = match (request.theme(), &held) {
+        (Some(th), Some(_)) => theme_gait(th, &mix),
+        _ => gait_in(seed, &c, t),
+    };
     if let Some(g) = gait {
         steps_per_bar = g.steps_per_bar;
+    }
+    if let Some(h) = &held {
+        steps_per_bar = h.steps_per_bar;
     }
     let tempo_draw = character::pull(v, |rec| rec.tempo, r.f());
     let band = match gait {
@@ -445,6 +474,8 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     };
     let root = r.int(0.0, 11.0);
     let scale = draw_scale(&mut r, seed, &c, &mix, feel.lift, v);
+    // The theme's key and mode, over the draws.
+    let (root, scale) = held.as_ref().map_or((root, scale), |h| (h.root, h.scale));
     let swing_band = c.swing.unwrap_or([f64::NAN, f64::NAN]);
     let swing_draw = character::pull(v, |rec| rec.swing, r.f());
     let swing = swing_band[0] + swing_draw * (swing_band[1] - swing_band[0]);
@@ -504,8 +535,16 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         vibes,
         tempo: t,
         pins: *request.pins(),
+        theme: request.theme(),
+        tune: held.as_ref().map(melody::theme_tune),
         cycles,
     }
+}
+
+/// `themeGait(theme, mix)`: a theme's gait (queue item 85d), the one its own
+/// loop plays, from its seed and the mix it holds, whatever the vibes lean.
+fn theme_gait(theme: u32, mix: &[(usize, f64)]) -> Option<data::Gait> {
+    gait_for(theme, &character::character_of(mix, None))
 }
 
 /// How a bar is counted (`metreOf`): twelve steps are 6/8, or 3/4 when the
@@ -537,7 +576,11 @@ impl Spec {
     #[must_use]
     pub fn metre(&self, c: &Char) -> Metre {
         if self.steps_per_bar == 12.0 {
-            match gait_in(self.seed, c, self.tempo) {
+            let gait = match self.theme {
+                Some(th) => theme_gait(th, &self.mix),
+                None => gait_in(self.seed, c, self.tempo),
+            };
+            match gait {
                 Some(g) if g.metre == "3/4" => Metre::ThreeFour,
                 _ => Metre::SixEight,
             }

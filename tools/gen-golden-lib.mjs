@@ -30,6 +30,10 @@ export const REQUEST_N = 360;
 // the kind its index picks (`pinCase`).
 export const PIN_SEED = 8502;
 export const PIN_N = 240;
+// The themes (queue item 85d): seeds from their own stream, each with a
+// theme of the kind its index picks (`themeCase`).
+export const THEME_SEED = 8504;
+export const THEME_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -124,7 +128,33 @@ export function cases(goldenCodes) {
     const seed = pinned.seed32();
     out.push({ set: 'pins', index: i, seed, vibes: null, request: pinCase(pinned, i) });
   }
+  const themed = new Rng(THEME_SEED);
+  for (let i = 0; i < THEME_N; i++) {
+    const seed = themed.seed32();
+    out.push({ set: 'theme', index: i, seed, vibes: null, request: themeCase(themed, i, seed) });
+  }
   return out;
+}
+
+// A theme, of the kind `i` picks, drawn from `r`: the loop's own seed alone,
+// its own with vibes, another seed with weighted vibes, its own with a
+// tempo pinned, another with vibes and a range, and its own with vibes and
+// pins.
+function themeCase(r, i, seed) {
+  const other = () => r.seed32();
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  const weight = () => String(Math.floor(r.f() * 100) / 100);
+  switch (i % 6) {
+    case 0: return `theme=${seed}`;
+    case 1: return [...vibes(1 + (i % 3)), `theme=${seed}`].join(',');
+    case 2: return [...vibes(1 + (i % 4)).map((id) => `${id}=${weight()}`), `theme=${other()}`].join(',');
+    case 3: return `bpm=${32 + Math.floor(r.f() * 159)},theme=${seed}`;
+    case 4: {
+      const lo = 40 + Math.floor(r.f() * 120);
+      return [...vibes(2), `bpm=${lo}-${lo + 20}`, `theme=${other()}`].join(',');
+    }
+    default: return [...vibes(1 + (i % 2)), `theme=${seed}`, 'organ=on', 'echo.beats=1'].join(',');
+  }
 }
 
 // A pin's value drawn from `r`: one of its words or values, or a number in
