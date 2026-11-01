@@ -84,6 +84,7 @@ impl Host for Ranges {
         self.ranges.push((which, lo, hi));
     }
     fn steal(&mut self, _: u32, _: Key, _: f64, _: f64) {}
+    fn fade_all(&mut self, _: f64, _: f64) {}
 }
 
 /// The space ranges the player sends playing the loop of `seed` as

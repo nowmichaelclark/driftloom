@@ -1226,6 +1226,39 @@ impl Core {
         n
     }
 
+    /// Let every note go (queue item 86: a loop handing over to the next by
+    /// a crossfade): every note sounding or still waiting, in every channel,
+    /// falls linearly from its level at `from` to nothing at `to` and ends
+    /// there, as `steal` lets one go (a time already rendered is the next
+    /// block's start, a fall with no time in it is given a block, and a note
+    /// already falling keeps the earlier end). The host calls it before it
+    /// hands over the next loop's notes, so they are untouched. Returns how
+    /// many notes it reached; nothing allocates.
+    pub fn fade_all(&mut self, from: f64, to: f64) -> u32 {
+        if !from.is_finite() || !to.is_finite() {
+            return 0;
+        }
+        let a = frame_at(from, self.rate).max(self.next);
+        let b = frame_at(to, self.rate).max(a);
+        let b = if b > a { b } else { a + QUANTUM as u64 };
+        let mut n = 0;
+        let sooner = |fade: (u64, u64)| fade.1 <= fade.0 || b < fade.1;
+        for w in self.queue.iter_mut().take(self.waiting) {
+            if sooner(w.fade) {
+                w.fade = (a, b);
+                n += 1;
+            }
+        }
+        for slot in &mut self.slots {
+            if slot.busy && sooner(slot.fade) {
+                slot.fade = (a, b);
+                slot.end = slot.end.min(b);
+                n += 1;
+            }
+        }
+        n
+    }
+
     /// A new strum into `channel` at `time` (`damp()` in synth.js): a
     /// `DAMP` event (`event`), which the strummed nylon strings of the strum
     /// before it hear. The web host's call, kept as it was.

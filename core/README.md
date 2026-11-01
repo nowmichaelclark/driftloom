@@ -222,6 +222,24 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   `load_at` starts it at a time on the core's clock instead (the page's
   cursor keeps in step that way), and `ready` makes it at once for a host
   with no deadline (an offline render, `dlrender --seed`).
+- **`change(seed, request, moment, handover)`** (queue item 86,
+  `player/change.rs`) changes loops at a musical moment of the loop playing:
+  `Moment::Now` (as soon as made, `load`'s moment), or its next `Beat`
+  (six steps in 6/8, else four), `Bar`, `Phrase` (a four-bar line from the
+  pass's start, two where four doesn't divide the loop) or `Pass`. The old
+  loop hands over by `Handover::Crossfade(seconds)` (its notes fall to
+  nothing from the boundary, `Core::fade_all`, its organ letting go over the
+  same; `CROSSFADE`, 1 s, by default) or `RingOut`. No reset, no second core:
+  a change waits until its boundary is `lead()` away (the lookahead and 160
+  blocks, the longest load with room), the old loop decides its steps up to
+  the boundary then, and the new loop is made in the blocks before it and
+  takes its first step on it, its tone, level and echo gliding in there. A
+  nearer boundary is passed for the next of its kind. Changes wait one for
+  each kind of moment, a later one in place of an earlier for the same kind
+  or boundary; `next_change()` says when the next starts. A change's loop
+  plays its own first pass (a load's wanders at the pass count the last loop
+  reached, the page's way). `dlrender --changes N` makes N across the corpus
+  and measures each join; `tools/player-wasm.mjs --changes N` times them.
 - **Before each block** the player decides every step due within
   `LOOKAHEAD` (0.25 s) and hands its notes over (`decide`; `render` calls it
   for a host, `Core::render_with`). Each pass's wandering is drawn a pass
@@ -256,7 +274,8 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
-  (`dl_player_start`, `dl_player_load`, `dl_player_render`, ...; the
+  (`dl_player_start`, `dl_player_load`, `dl_player_change` and
+  `dl_player_next_change`, `dl_player_render`, ...; the
   request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
   `dl_player_theme`, `dl_player_pin` and `dl_player_ask`, each refusal its
   line): build the

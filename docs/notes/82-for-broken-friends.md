@@ -47,11 +47,29 @@ player.set_volume(&mut *core, 0.85);
 player.stop();                                 // pause; player.resume(0.0) goes on
 ```
 
-- **A change of loop** is another `load`: the new loop is made a stage a block
-  (a few blocks, up to about a hundred), the old one's notes play out, and the
-  new one starts. No core reset, so the second core the game keeps for a
-  switch is no longer needed for that; the crossfade at a musical moment is
-  item 86.
+- **A change of loop at a musical moment** (item 86) replaces the second
+  core the game keeps for a switch. Drop the second core and its player, and
+  on a game event (a new room, a friend made well, a mood, surgery) call
+  `change` on the one player:
+
+  ```rust
+  use dlcore::player::{Handover, Moment};
+
+  // The friend's theme in its new mood, on the next bar line, the old loop
+  // crossfading out over a second from there (Handover::RingOut lets its
+  // notes ring instead; Moment::Now, Beat, Phrase and Pass are the others).
+  let mood = Request::parse("restful=0.8,dreamy=0.2").unwrap_or_default().with_theme(friend_seed);
+  player.change(friend_seed, &mood, Moment::Bar, Handover::Crossfade(1.0));
+  let when = player.next_change();  // the boundary, on the core's clock, from the next block on
+  ```
+
+  The new loop is made in the blocks before the boundary (no block past 17%
+  of its deadline in wasm while it happens) and takes its first step on it;
+  a boundary nearer than about 0.7 s at 48 kHz (`player.lead()`) is passed
+  for the next of its kind. Several events may wait, one for each kind of
+  moment, the latest for a boundary winning; each starts at its own. `load`
+  still changes at once, as before. In C: `dl_player_change(p, seed,
+  DL_BAR, DL_CROSSFADE)` and `dl_player_next_change(p)`.
 - **The browser**, with no audio thread: `player.ready(&mut *core)` makes the
   loop at once (about 0.5 ms natively, 10 ms at most, for a loop with a tuned
   kick), then `render` as far ahead as the game wants, in chunks of any

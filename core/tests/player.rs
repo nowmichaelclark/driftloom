@@ -109,6 +109,10 @@ impl Host for Notes<'_> {
         self.notes.push(format!("steal {channel} {key:?} {} {}", from.to_bits(), to.to_bits()));
         self.core.steal(channel, key, from, to);
     }
+    fn fade_all(&mut self, from: f64, to: f64) {
+        self.notes.push(format!("fade {} {}", from.to_bits(), to.to_bits()));
+        self.core.fade_all(from, to);
+    }
 }
 
 /// The notes the player hands over in `frames` frames, the loop asked for

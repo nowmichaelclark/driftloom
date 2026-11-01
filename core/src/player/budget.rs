@@ -282,6 +282,21 @@ impl Budget {
         true
     }
 
+    /// Every hold over by `time` at the latest (queue item 86): the notes a
+    /// loop handed over before a crossfade let go of the budget at the
+    /// boundary, so the next loop's notes are not refused for room the old
+    /// ones only fade in. The
+    /// holds stay in order of their ends (each end only comes down to
+    /// `time`, which keeps them sorted).
+    pub fn end_by(&mut self, time: f64) {
+        for k in 0..self.len {
+            let i = self.slot(k);
+            if self.at[i] > time {
+                self.at[i] = time;
+            }
+        }
+    }
+
     /// `_room(time, cost)`: whether `cost` fits under the full ceiling at
     /// `time`, for a part that yields. It only reads: it lets nothing go.
     #[must_use]
@@ -354,6 +369,7 @@ mod tests {
         fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64) {
             self.0.push((channel, key, from, to));
         }
+        fn fade_all(&mut self, _: f64, _: f64) {}
     }
 
     #[test]

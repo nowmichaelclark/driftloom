@@ -477,7 +477,7 @@ mod player {
 
     use super::core;
     use crate::generator::Layer;
-    use crate::player::{Player, Request, State};
+    use crate::player::{Handover, Moment, Player, Request, State};
 
     struct Global(UnsafeCell<Player>);
     // Single-threaded, as the core's own global.
@@ -570,6 +570,28 @@ mod player {
     pub extern "C" fn dl_play_load(seed: u32, at: f64) {
         player().load_at(seed, request(), at);
         *request() = Request::new();
+    }
+
+    /// Change to the loop of `seed` with what was asked since the last load,
+    /// at `moment` of the loop playing (0 now, 1 the next beat, 2 bar, 3
+    /// phrase, 4 pass: `Moment::ALL`), the old loop crossfading over
+    /// `crossfade` seconds, or ringing out for a negative one (queue item
+    /// 86, `Player::change`). 0 for a moment there is no such number for
+    /// (nothing changes), else 1.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_change(seed: u32, moment: u32, crossfade: f64) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+        player().change(seed, request(), m, handover);
+        *request() = Request::new();
+        1
+    }
+
+    /// When the next change waiting starts its loop, in seconds on the
+    /// core's clock (`Player::next_change`); -1 if none is worked out yet.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_next_change() -> f64 {
+        player().next_change().unwrap_or(-1.0)
     }
 
     /// Make what is left of the loop asked for, now (`Player::ready`): for a

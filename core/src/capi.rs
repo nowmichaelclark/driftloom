@@ -18,7 +18,7 @@ use core::ptr;
 
 use crate::Core;
 use crate::generator::{LAYERS, Layer};
-use crate::player::{Player, Request, State};
+use crate::player::{Handover, Moment, Player, Request, State};
 
 /// What the C library does if the core panics: nothing reachable from these
 /// calls can (`lib.rs`), but a `no_std` library must say. It aborts, as C
@@ -263,6 +263,31 @@ pub extern "C" fn dl_player_load(player: *mut Engine, seed: u32) {
         e.player.load(seed, &e.request);
         e.request = Request::new();
     }
+}
+
+/// Change to the loop of `seed`, with what was asked since the last load,
+/// at `moment` of the loop playing (`DL_NOW`, `DL_BEAT`, `DL_BAR`,
+/// `DL_PHRASE`, `DL_PASS`), the old loop crossfading over `crossfade`
+/// seconds (`DL_CROSSFADE` the default), or ringing out for a negative one
+/// (queue item 86, `Player::change`): no reset, no second core. Several
+/// changes may wait, one a kind of moment, the latest for a boundary
+/// winning. 1 if it was asked, 0 for a moment with no such number.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_change(player: *mut Engine, seed: u32, moment: u32, crossfade: f64) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+    e.player.change(seed, &e.request, m, handover);
+    e.request = Request::new();
+    1
+}
+
+/// When the next change waiting starts its loop, in seconds on the core's
+/// clock (`Player::next_change`; a host lining up a picture with it); -1
+/// if none is worked out yet (it is by the next block rendered).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_next_change(player: *mut Engine) -> f64 {
+    engine(player).and_then(|e| e.player.next_change()).unwrap_or(-1.0)
 }
 
 /// Make what is left of the loop asked for, now (`Player::ready`): for a

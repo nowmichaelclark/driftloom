@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave) and **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29). **Next: item 86, then 85e** (the steal at full quality) **and 85f** (a theme's rest kept), then 87. Item
+#304, 85d #305; checked by the brain's Session 29) and **86** (#308, a change of loop at a musical moment). **Next: 85e** (the steal at full quality), **then 85f** (a theme's rest kept), then 87. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -214,6 +214,15 @@ step at the join no larger than the loops' own), the new loop's samples
 after the crossfade equal the same loop loaded alone (from the boundary
 on, given the same start state of the held instruments: say what differs);
 the game's two-core switch can go (the note for Broken Friends says how).
+
+**Built (hands, 2026-11-01):** `Player::change(seed, request, moment,
+handover)` (`core/src/player/change.rs`; `dl_player_change`,
+`dl_play_change`), on one core with no reset: the next loop is made in the
+blocks before the boundary and takes its first step on it. Every yardstick
+holds but the join's step as written; the note says what was measured, the
+two arc clicks fixed on the way, and the decision. `dlrender --changes N`
+and `tools/player-wasm.mjs --changes N` measure; `core/README.md` says how
+it works.
 
 **Since item 82:** `Player::load` already changes loops with no reset and no
 second core (the new loop made a stage a block, the old one's notes playing

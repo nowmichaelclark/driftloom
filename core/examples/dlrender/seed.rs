@@ -178,6 +178,10 @@ impl Host for Tracer<'_> {
         nums(self.lines, "steal", &[f64::from(channel), f64::from(key.seed), f64::from(key.pass), f64::from(key.step), f64::from(key.ord), from, to]);
         self.core.steal(channel, key, from, to);
     }
+    fn fade_all(&mut self, from: f64, to: f64) {
+        nums(self.lines, "fade", &[from, to]);
+        self.core.fade_all(from, to);
+    }
 }
 
 /// The seeds of the corpus `seed` draws (`Rng(seed).seed32()` a loop, as
