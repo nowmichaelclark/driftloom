@@ -284,15 +284,13 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   the brain ran: the log (`docs/archive/brain-log.md`). Item 85 (with 85c and
   48's brief) and the note `85-fast-pins-lite.md` archived; its refusal
   reading is now a standing rule. **Next: the hands take 86, then 85e (the
-  steal at full quality), then 87.** **The
+  steal at full quality) and 85f (a theme's rest), then 87.** **The
   brain's next check: after item 87**, as planned (the game's four needs);
   then the phase's end after 92.
 - **Answered by Mikey, 2026-11-01:** the Lite Room Album "sounded great
-  for lite mode", and the steal goes to full quality too: **item 85e**,
-  queued after 86 (the hands were already on 86). Still open, explained to
-  him in chat: a theme whose own melody rests, bent by vibes that bring a
-  choir, sings a tune of its own (2 of the brain's 600 theme cases,
-  `docs/archive/brain-log.md`): keep that, or let the theme's rest win.
+  for lite mode", and the steal goes to full quality too, both refinements
+  in: **item 85e**. A theme with no melody stays tuneless, choir or not:
+  **item 85f**. Both queued after 86 (the hands were already on 86).
 - **Broken Friends:** `docs/notes/82-for-broken-friends.md` is for the game's
   next session (repin the core from f654fdb, the calls, the hashes to
   refresh). It stays in `docs/notes/` until the game's session has used it;
