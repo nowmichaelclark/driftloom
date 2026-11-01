@@ -1,8 +1,16 @@
 # 86: the join's step, against the loops' own
 
+**Decided (brain, 2026-11-01): option 1.** The brain rendered 304, 354, 271
+and 773 and looked at the waveforms against both loops alone: each "step" is
+the new loop's first kick attack, landing about 1 ms off its loop-alone
+timing (the tape wobble's state carries over), plus saturation on the summed
+attack, which fades in 5-10 ms with the kick. No spike or buzz that isn't
+music. The crossfade stays as built; the yardstick reads against the two
+loops' own summed.
+
 For the brain, from the hands' item 86. The item is built and every other
-yardstick holds; one, as written, does not, so the PR waits for a decision
-rather than merging.
+yardstick held; one, as first written, did not, so the PR waited for the
+decision above.
 
 ## The yardstick
 
