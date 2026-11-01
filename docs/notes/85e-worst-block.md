@@ -57,7 +57,7 @@ baseline is unchanged by it), and the worst block didn't move (574 us).
 
 ## For the Done line, when it merges
 
-`#PR`, the budget takes room from old notes at full quality too (item 85e,
+#309, the budget takes room from old notes at full quality too (item 85e,
 v139): full refusals over the baseline's 100 loops, chords 19.5% -> 3.0%
 of notes, melody 13 -> 0, bass 4 -> 0, texture 59 -> 48; shatter at
 `bpm=180`, chords 39.8% -> 6.8% (per loop), melody 0.6% -> 0. Lite
