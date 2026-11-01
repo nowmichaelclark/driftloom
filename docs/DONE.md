@@ -144,3 +144,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   same key, bent (`tools/clips.mjs` takes the same request). For Mikey's
   ears: a tempo asked plays in the theme's metre, and the theme's melody
   stays itself while its phrasing, register and voice follow the mood.
+- #308, changing loops at a musical moment (item 86, v138), preview URL:
+  <https://9a61df58-driftloom.nowmichaelclark.workers.dev> (commit 3c5ddd4):
+  `Player::change` starts the next loop on the playing loop's next beat,
+  bar, phrase or pass (or now), on one core, the old loop crossfading out
+  over 1 s or ringing out; Broken Friends' two-core switch can go. The app
+  doesn't call it yet, so listen for one thing in today's app: at a Next
+  where either loop has the arc, no click and no one-block jump of the
+  master's lowpass (both fixed in `blocks/arc.rs`; a loop alone renders as
+  before). The ears can: `dlrender --changes 1000 --change 7 --wav-to DIR`
+  (a bar change, the theme bent) and `--change 13` (a phrase), each writing
+  the change, the new loop alone and the old one alone. For Mikey's ears:
+  the crossfade's 1 s, and the new loop at its own level on the boundary
+  (no fade in).
