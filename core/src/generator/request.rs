@@ -4,10 +4,12 @@
 //!
 //! One shape for everyone: the app's picks, a developer's code and a game's
 //! events build the same request, and whatever it leaves out is drawn from
-//! the seed as ever (a request of nothing is the loop the seed makes). For
-//! now it holds the vibes, with or without weights (a game steers by a
-//! friend's mood and the time of day; the core never knows what a friend
-//! is), and the tempo, pinned or a range. Items 86 to 91 grow it.
+//! the seed as ever (a request of nothing is the loop the seed makes). It
+//! holds the vibes, with or without weights (a game steers by a friend's
+//! mood and the time of day; the core never knows what a friend is), the
+//! tempo, pinned or a range, a theme (a seed whose loop this one bends: a
+//! friend keeps its tune as the day changes) and the pins (`Pins`). Items
+//! 86 to 91 grow it.
 //!
 //! **Bends, never breaks.** A request is checked as it is built: a vibe the
 //! core does not have, a bad weight or a tempo outside `TEMPO_LIMIT` is
@@ -15,9 +17,9 @@
 //! shows), so a request the generator is handed can always be met.
 //!
 //! **As text** (`parse`): items split by commas, each a vibe (`glacial`),
-//! a vibe and its weight (`glacial=0.7`) or the tempo (`bpm=77`,
-//! `bpm=70-85`), or a pin (`organ=on`, `arc.period=240`; `Pins`); empty or
-//! `-` for nothing. The generation goldens, `dlrender --request` and the
+//! a vibe and its weight (`glacial=0.7`), the tempo (`bpm=77`,
+//! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
+//! `arc.period=240`; `Pins`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 
 use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
@@ -34,6 +36,9 @@ pub const NO_SUCH_VIBE: &str = "no such vibe";
 pub const BAD_WEIGHT: &str = "a bad weight";
 /// The line for a tempo that is not a number.
 pub const BAD_TEMPO: &str = "a bad tempo";
+/// The line for a theme that is not a seed (a whole number from 0 to
+/// 4294967295).
+pub const BAD_THEME: &str = "a bad theme";
 /// The line for a tempo outside `TEMPO_LIMIT`.
 pub const TEMPO_OUT: &str = "tempo must be 32 to 190 bpm";
 
@@ -48,6 +53,8 @@ pub struct Request {
     weights: [f64; VIBE_COUNT],
     /// The tempo asked, [low, high] in whole bpm (equal when pinned).
     tempo: Option<[f64; 2]>,
+    /// The theme (queue item 85d): the seed whose loop this one bends.
+    theme: Option<u32>,
     /// The named settings fixed (queue item 85b).
     pins: Pins,
 }
@@ -56,7 +63,7 @@ impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, pins: Pins::NONE }
+        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -73,6 +80,23 @@ impl Request {
     #[must_use]
     pub fn pins(&self) -> &Pins {
         &self.pins
+    }
+
+    /// The same, bending the loop of `seed` (queue item 85d): the loop made
+    /// keeps that loop's profile mix, its key and mode, its metre and its
+    /// tune, and the vibes, the tempo, the pins and the load's own seed bend
+    /// the rest. The load's seed the theme's own and nothing else asked is
+    /// the theme's loop.
+    #[must_use]
+    pub fn with_theme(mut self, seed: u32) -> Self {
+        self.theme = Some(seed);
+        self
+    }
+
+    /// The theme asked.
+    #[must_use]
+    pub fn theme(&self) -> Option<u32> {
+        self.theme
     }
 
     /// The same, with the vibe numbered `index` (`data::VIBES`) asked
@@ -161,6 +185,11 @@ impl Request {
                 let (lo, hi) = value.split_once('-').unwrap_or((value, value));
                 let (Some(lo), Some(hi)) = (whole(lo), whole(hi)) else { return Err(BAD_TEMPO) };
                 out = out.with_tempo(lo, hi)?;
+            } else if name == "theme" {
+                let seed = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_THEME)?;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
+                let seed = seed as u32;
+                out = out.with_theme(seed);
             } else if is_pin_name(name) {
                 let value = value.ok_or(BAD_SETTING)?;
                 out.pins = out.pins.with_text(name, value)?;

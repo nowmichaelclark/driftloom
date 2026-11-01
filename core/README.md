@@ -236,6 +236,12 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   loop. A request that can't be met is refused as it is built, with a short
   plain line (`request::TEMPO_OUT` and the rest), never played as
   something else.
+- **The theme** (`Request::with_theme`, queue item 85d; `theme=1234` as
+  text, `dl_player_theme`) bends another seed's loop: the loop made keeps
+  that loop's profile mix, key and mode, metre and tune (the melody's figure
+  and rhythmic cell), and the vibes, the tempo, the pins and the load's own
+  seed bend the rest. A friend's theme is its seed, loaded with itself as
+  the theme and the day's vibes: the same tune in the same key, a new mood.
 - **The pins** (`request::Pins`, queue item 85b) fix the named settings: any
   of item 54's choices to one of its options (`organ=on`, `tunedKick=long`,
   `arc=today`), the settings each draws by (`arc.period=240`,
@@ -252,7 +258,8 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
   (`dl_player_start`, `dl_player_load`, `dl_player_render`, ...; the
   request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
-  `dl_player_pin` and `dl_player_ask`, each refusal its line): build the
+  `dl_player_theme`, `dl_player_pin` and `dl_player_ask`, each refusal its
+  line): build the
   library with `cargo rustc --release --lib --features capi --crate-type
   staticlib`; the host gives each player its memory. `examples/c/seed.c` is
   a whole C host, a seed to a WAV.

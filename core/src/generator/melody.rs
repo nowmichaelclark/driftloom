@@ -7,7 +7,7 @@ use super::js;
 use super::list::List;
 use super::plan::{B_SALT, ChordEvent, Cx, Development, RETURN_SALT, Sections, Slot, VARY_SALT, VOWEL_KEYS, slot_at};
 use super::rng::Rng;
-use super::spec::Metre;
+use super::spec::{Feel, Metre, Spec};
 use super::theory::scale_pitch;
 use super::Layer;
 use crate::math;
@@ -329,34 +329,15 @@ fn pc(x: f64) -> f64 {
     ((x % 12.0) + 12.0) % 12.0
 }
 
-/// `genMelody(sectionSpec(spec, bars, { melody }), over, dev)`, its notes
-/// into `out`.
-#[allow(clippy::too_many_lines, clippy::many_single_char_names)] // one function, as genMelody is: its draws in order
-pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Handed>, out: &mut Melody) -> MelodyOut {
-    let spec = cx.spec;
-    let c = &cx.c;
-    let mut r = Rng::new(seed);
+/// `figureDraws(r, spec, lf, spb, scale)`: the tune's figure, one rhythmic
+/// cell and the walk over it, then which notes it leaves out, drawn with `r`
+/// as `gen_melody` draws them, so a theme's tune (queue item 85d) is drawn
+/// the same way as a loop's own.
+fn figure_draws(r: &mut Rng, cx: &Cx, lf: Feel) -> (Cell, Figure, Figure) {
     let spb = cx.spb;
-    let scale = spec.steps();
-    let total = bars * spb;
-    let drawn_voice = c.melody_voices.as_ref().and_then(|p| r.weighted(p)).unwrap_or("");
-    let choir = cx.choir;
-    let voice = match (dev, choir) {
-        (Some(d), _) => d.voice,
-        (None, Some(ch)) => ch.voice,
-        (None, None) => drawn_voice,
-    };
-    let lf = spec.feel_for(Layer::Melody);
+    let scale = cx.spec.steps();
     let mood = lf.lift;
-    let silent = r.chance(0.08);
-    out.clear();
-    if dev.is_none() && choir.is_none() && silent {
-        return MelodyOut { voice, motif: List::filled(NO_MOTIF), cell: None, centre: None };
-    }
-    let driven = lf.energy > 0.6;
-    let pointillist = c.pointillist.unwrap_or(0.0);
-    let waltz = cx.metre == Metre::ThreeFour;
-    let rhythm = draw_cell(&mut r, spb, cx.metre, lf.energy, mood);
+    let rhythm = draw_cell(r, spb, cx.metre, lf.energy, mood);
 
     let mut motif: Figure = List::filled(NO_MOTIF);
     let mut deg = 0.0;
@@ -394,11 +375,65 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
             kept.push(*x);
         }
     }
-    let figure = match dev {
-        Some(d) => d.figure,
-        None if kept.len() >= motif.len().min(2) => kept,
-        None => motif,
+    (rhythm, motif, kept)
+}
+
+/// `themeTune(theme)`: a theme's tune (queue item 85d), its own loop's
+/// figure and rhythmic cell, drawn as `gen_melody` draws them; `None` where
+/// its melody rests.
+#[must_use]
+pub fn theme_tune(theme: &Spec) -> Option<(Figure, &'static str)> {
+    let cx = Cx::new(theme);
+    let mut r = Rng::new(theme.layer_seed(Layer::Melody));
+    if let Some(p) = cx.c.melody_voices.as_ref() {
+        r.weighted(p);
+    }
+    let lf = theme.feel_for(Layer::Melody);
+    if r.chance(0.08) && cx.choir.is_none() {
+        return None;
+    }
+    let (rhythm, motif, kept) = figure_draws(&mut r, &cx, lf);
+    Some((if kept.len() >= motif.len().min(2) { kept } else { motif }, rhythm.id))
+}
+
+/// `genMelody(sectionSpec(spec, bars, { melody }), over, dev)`, its notes
+/// into `out`.
+#[allow(clippy::too_many_lines, clippy::many_single_char_names)] // one function, as genMelody is: its draws in order
+pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Handed>, out: &mut Melody) -> MelodyOut {
+    let spec = cx.spec;
+    let c = &cx.c;
+    let mut r = Rng::new(seed);
+    let spb = cx.spb;
+    let scale = spec.steps();
+    let total = bars * spb;
+    let drawn_voice = c.melody_voices.as_ref().and_then(|p| r.weighted(p)).unwrap_or("");
+    let choir = cx.choir;
+    let voice = match (dev, choir) {
+        (Some(d), _) => d.voice,
+        (None, Some(ch)) => ch.voice,
+        (None, None) => drawn_voice,
     };
+    let lf = spec.feel_for(Layer::Melody);
+    let silent = r.chance(0.08);
+    // A theme's tune (queue item 85d): whether there is one, and its figure,
+    // held in place of this loop's own (whose draws are still made).
+    let tune = if dev.is_none() { spec.tune } else { None };
+    out.clear();
+    if dev.is_none() && choir.is_none() && tune.map_or(silent, |t| t.is_none()) {
+        return MelodyOut { voice, motif: List::filled(NO_MOTIF), cell: None, centre: None };
+    }
+    let driven = lf.energy > 0.6;
+    let pointillist = c.pointillist.unwrap_or(0.0);
+    let waltz = cx.metre == Metre::ThreeFour;
+    let (rhythm, motif, kept) = figure_draws(&mut r, cx, lf);
+    let held = tune.flatten();
+    let figure = match (dev, held) {
+        (Some(d), _) => d.figure,
+        (None, Some((f, _))) => f,
+        (None, None) if kept.len() >= motif.len().min(2) => kept,
+        (None, None) => motif,
+    };
+    let cell = held.map_or(rhythm.id, |(_, id)| id);
 
     let bars_per_phrase = if bars >= 8.0 {
         if r.chance(0.45) { 4.0 } else { 2.0 }
@@ -594,7 +629,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
             i = j;
         }
     }
-    MelodyOut { voice, motif: figure, cell: Some(rhythm.id), centre: line_centre }
+    MelodyOut { voice, motif: figure, cell: Some(cell), centre: line_centre }
 }
 
 /// How B's figure answers A's (`answerFigure`'s `how`).

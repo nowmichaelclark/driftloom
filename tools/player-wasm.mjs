@@ -79,6 +79,7 @@ function start(seed) {
   }
   if (asked.tempo && !x.dl_play_ask_tempo(asked.tempo[0], asked.tempo[1])) throw new Error('the core refused the tempo');
   for (const [i, v] of pinNumbers(asked.pins)) if (!x.dl_play_pin(i, v)) throw new Error(`the core refused pin ${i}`);
+  if (asked.theme != null) x.dl_play_theme(asked.theme >>> 0);
   for (const id of way.vibes) {
     const i = VIBE_IDS.indexOf(id);
     if (i < 0 || !x.dl_play_vibe(i)) throw new Error(`no vibe '${id}'`);

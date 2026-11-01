@@ -90,10 +90,18 @@ const char *dl_player_ask_tempo(dl_player *player, double lo, double hi);
    its range"). */
 const char *dl_player_pin(dl_player *player, uint32_t number, double value);
 
+/* Bend the loop of `seed` (queue item 85d): the loop the next load makes
+   keeps that loop's profile mix, key and mode, metre and tune, and the vibes,
+   the tempo, the pins and the load's own seed bend the rest. Load the
+   theme's own seed with nothing else asked and it is the theme's loop: a
+   friend keeps its tune as the day changes. */
+void dl_player_theme(dl_player *player, uint32_t seed);
+
 /* Ask for what `request` says, as text, in place of what was asked since the
    last load: items split by commas, each a vibe ("glacial"), a vibe and its
-   weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85") or a pin
-   ("organ=on", "tunedKick=long", "arc.period=240", "space.room=0.8"). */
+   weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
+   ("theme=1234") or a pin ("organ=on", "tunedKick=long", "arc.period=240",
+   "space.room=0.8"). */
 const char *dl_player_ask(dl_player *player, const char *request);
 
 /* Ask for the loop of `seed`, with what was asked since the last load. It
