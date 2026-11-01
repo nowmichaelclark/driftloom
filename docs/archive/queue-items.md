@@ -3281,3 +3281,111 @@ octave). The balance lock moved in one figure: "not a choir, under 5" (loops
 whose keys sit within five semitones of the sounding tune) 2.34% -> 3.73%,
 because the octave is no longer read from what sounds, so a tune that rests
 can leave the keys nearer; re-baselined at `--n 10000`. Nothing else moved.
+
+## 48. The request, end to end, with tempo (folded into item 85; archived 2026-11-01)
+
+**Why:** promise 11. One request for everyone: the app's panel, a
+developer's code and a game's events build the same thing. Tempo is
+the simplest pick to prove it with.
+
+**What:**
+- The Rust generator takes a **request**: for each choice, pinned,
+  ranged or chance. Start with vibes (as today's selection) and tempo;
+  leave room for the rest without building them (48's design is what
+  49-52 follow, so keep it small and documented).
+- **Tempo:** pinned ("77 bpm") or a range ("70-85 bpm", the design's
+  example). A range draws from the seed inside it. Profiles with gaits
+  draw tempo and meter together today: a pinned or ranged tempo picks
+  the gait that fits and bends the tempo inside it. When style is left
+  to chance, prefer profiles whose band holds the tempo; when style is
+  pinned too and its band doesn't, play the profile at the asked tempo
+  (conservative: honor the pin; "for Mikey's ears"). The core's limit
+  is the core's to set; the app's picker range is the Painter's.
+- The app builds the request from the panel and sends it with each new
+  loop; today's vibes selection becomes part of it. Remove Painter 6's
+  clamped tempo plumbing.
+- Share codes: a loop made from a request reproduces from its code.
+  (Short codes that carry only the pins are phase 6.)
+- The "can't do that" line, for whatever request truly can't be met.
+
+**Yardsticks:**
+- Nothing picked: goldens, baseline and balance lock unchanged.
+- Pinned tempo: measured bpm within 0.5 of the pin on every target,
+  across 200 seeds and every profile.
+- Ranged tempo: every loop inside the range; over 500 seeds, the draws
+  cover the range (no clumping at one end; report the spread).
+- Same request and seed, same samples on every target.
+- A test that walks the request's choices (it grows with 49-52).
+
+## 85. The request: vibes and tempo (was 48) (done, 2026-10-31; 85a #302, 85c #303, 85b #304, 85d #305)
+
+**Split (hands, 2026-10-31):** **85a** built the request's shape, the
+weighted vibes and the tempo, end to end (both generators, the player, the
+C header, wasm, `dlrender --request`, the app, share code format 5, 360
+request cases in the generation goldens). **85c** (#303) went next.
+**85b** built the pins for the named settings and share codes carrying them
+(`js/pins.js`, `request::Pins`; format 6; 240 `pins` cases in the goldens).
+**85d** built the **theme** (below, "Steering"), with its yardstick. Item 85
+is done; 48's text and these notes are for the brain's archive pass. The refusal rule for requested loops is
+read per profile (brain, 2026-10-31; `docs/notes/85-fast-pins-lite.md`): a
+pin may not make any profile's lite refusals worse than that profile's own.
+
+**85d, the theme (hands):** `theme=SEED` in a request bends that seed's
+loop. The loop made keeps the theme's profile mix, its key and mode, its
+metre (a tempo asked plays in it) and its tune (the melody's figure and
+rhythmic cell, or its rest); the vibes, the tempo, the pins and the load's
+own seed bend the rest. The theme's own seed with nothing else asked is the
+theme's loop. Both generators, `Request`, the hosts (`dl_player_theme`),
+share code format 7, 240 `theme` cases in the goldens. A theme is a seed,
+not yet a share code: a code is a spec, which the core does not read (for
+the brain, if a game needs one).
+
+48's text (below, kept for reference until this item merges) is the brief,
+with these changes:
+- Built in the Rust generator, and in the JavaScript one while it still
+  plays the app; the request is one shape both read (the app sends the same
+  thing to either).
+- **Pins for every named setting already built:** the arc (`ARC`), the kick,
+  subDuck, lateFloor, padSweep, the echo time, the space recipes (item 65's
+  32), and any of item 54's choices on or off. These are the game's and the
+  ears' levers (item 83's `--force` moves onto them).
+- **Steering, as a game asks it:** a request carries the vibes with weights
+  (a friend's mood, the time of day: the game maps its state to vibes; the
+  core never knows what a friend is), and a **theme**: a seed or a code
+  whose loop the request bends rather than replaces (a friend keeps its
+  theme as the day changes).
+- Share codes carry the pins (the long code until phase 6).
+
+**Yardsticks:** 48's, plus: a theme bent by a vibe keeps its key, its
+motif and its profile mix (measured: pitch classes, the melody's first
+cell, the profile's lead) unless a pin says otherwise.
+
+## 85c. The budget takes room from old notes, not new ones (lite first) (done, 2026-10-31, #303)
+
+**Hands:** Opus 5.5, high. Before 85b. From 85a's note (brain, 2026-10-31).
+
+**Why:** on lite the voice budget refuses 62% of chord notes and 37% of
+texture across the catalog (100 loops), and shatter-led loops lose 6.2% of
+their melody (74% of chords). An earlier finding
+(`docs/archive/engineering-notes.md`, "What is left, on lite") is that the
+melody is mostly refused by its own earlier notes still ringing. The budget
+turns the new note away while old tails finish, which is backward
+musically. Broken Friends plays lite on phones. Suspects, unproven:
+own-layer tails, chords' holds.
+
+**First:** tag each hold with its layer and report what holds the budget at
+each refusal, by layer, on lite and full.
+
+**What:** when a note doesn't fit, release the asking layer's oldest held
+notes (a short fade, its length a setting, the conservative choice "for
+Mikey's ears") until it fits, and refuse only if that can't make room. Same
+order of sums in `js/synth.js` and `core/src/player/`, so the player still
+equals the page.
+
+**Yardsticks:** per-layer refusals before and after on lite and full over
+100 loops, and shatter at a `bpm=180` pin (melody lite near zero, chords
+well below today's 62%); no clicks at a stolen note's fade (`--clicks`); the
+worst block's cost no higher than today on the slowest target; the core
+baseline updated on purpose; the player against the browser still bit for
+bit. Then a labeled album on lite for Mikey (before and after, a few loops
+each from shatter, a busy chords loop and a slow loop).

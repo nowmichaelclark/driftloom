@@ -6,6 +6,54 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Session 29 (brain, Opus 5.5, 2026-11-01): phase 2 checked through item
+85 (83, 84, 85a, 85c, 85b, 85d; #298-#305); it passes.** What the brain ran
+itself on `main` at v137 (82770b0), not taken from the reports:
+- **Tests:** the JavaScript suites (the generator's three times, and the
+  other eleven); `cargo test --locked --release` in `core/`, 167 tests (153 at
+  Session 28), `tests/generation.rs` holding the Rust generator to all 3,900
+  cases. The generation goldens in Node, 3,900 of 3,900; the balance lock, 22
+  of 22; `tools/build-core.sh --check`, both modules (`js/dlcore.wasm`
+  251,338 bytes, `js/dlplayer.wasm` 1,906,940); the core baseline, "Nothing
+  moved" (player 322 figures).
+- **Nothing asked changes nothing, case by case:** the goldens file diffed at
+  each merge. 83: 0 of 3,060 moved. 84: 144 moved (88 corpus, 54 vibes, the
+  golden and album sets), and only their form, chords and passes; drums,
+  bass, melody, texture, spec, choices and load equal. 85a: +360 request
+  cases, 0 old moved; 85c: 0 moved; 85b: +240, 0 moved; 85d: +240, 0 moved.
+- **The theme and the tempo, on cases the hands never ran**
+  (`newSpec(S, vibes[,bpm],theme=T)`, 600 random, seed 20261101): the theme's
+  profile mix, key and mode and metre held 600 of 600; the melody's cell 597
+  of 600; a tempo asked landed in its range 296 of 296; the theme's own seed
+  with nothing else is the theme's loop, 120 of 120; nothing asked equals no
+  request, 600 of 600. The three cells that differ are choir edges: a theme
+  whose melody rests (its 8%), bent by vibes that bring a choir, gets a choir
+  singing a figure of its own (a choir never takes the rest). For Mikey: keep,
+  or hum the theme's chords. The first four notes' shape differs in about 8%,
+  the phrasing following the mood, as built.
+- **The player against the browser, with requests:** `tools/player.mjs`
+  against `dlrender --corpus` natively, corpus seed 20261101, 12 loops, 45 s,
+  all four ways, on five requests (`glacial=0.7,misty=0.3,bpm=70-85`;
+  `theme=4272732017,cozy,bpm=60`; `bpm=180`;
+  `dreamy=0.4,jazzy,organ=on,echo.beats=1,space.room=0.8`;
+  `theme=11749833,booming,arc.period=240,lateFloor.order=kitFirst`): 240 of
+  240 equal, no fallbacks or late notes.
+- **85c's steal, for clicks:** the same loops on lite stereo before 85c
+  (0e7fece) and after, natively (catalog 10, `bpm=180` 10, `bpm=40` 4, 40 s):
+  the largest second difference over RMS never rose (every loop equal or a
+  little lower), so no fade clicks there. The baseline's own refusals moved
+  at 85c on lite only: chords 3,092 to 1,292 of 5,056 (61% to 26%), melody 49
+  to 0, bass 10 to 0, texture 133 to 136; full quality unchanged (chords 986,
+  19.5%).
+- **Not checked by the brain:** costs, the C header, the QEMU targets (CI and
+  the PRs' figures); a phone. CI on #305's head green after two red runs
+  (pedantic clippy in the theme test, fixed); the core workflow now takes
+  about 80 minutes a PR (40 at Session 28).
+- **Docs:** items 85 and 85c and 48's brief archived; the note
+  `85-fast-pins-lite.md` archived, its reading of the refusal rule moved into
+  the queue's standing rules. Broken Friends still pins f654fdb; suggested one
+  repin after 87. Next: the hands take 86; the brain checks after 87.
+
 **Session 28 (brain, Opus 5.5, 2026-10-31): phase 2's port checked, items
 77-82 (#287-#296); it passes.** What the brain ran itself on `main` at v132
 (d5b15e6), not taken from the reports:

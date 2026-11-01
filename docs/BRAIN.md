@@ -274,26 +274,30 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-10-31
+## State -- 2026-11-01
 
 ### Start here (for the next brain)
 
-- **Session 28 (brain, Opus 5.5, 2026-10-31): phase 2's port checked
-  (items 77-82, #287-#296); it passes.** The generator in Rust makes every
-  decision the JavaScript makes (the 3,060 generation goldens, all five
-  targets) and the player plays a loop from a seed as the app's engine does,
-  bit for bit when both hand notes over the same way. What the brain ran and
-  found: the log (`docs/archive/brain-log.md`). Items 77-82 and the note
-  `82-hand-over.md` archived (answered in the queue's "For phase 3": no
-  canonical note order now). `main` at v132. **Next: the hands take 83, then
-  84-92 in order** (models by item in the queue's phase 2 intro). **The
-  brain's next check: after item 87** (the game's four needs met: a seed,
-  steering, a change at a moment, rendering ahead), or sooner if a note
-  comes in; then the phase's end after 92 (the queue says what it holds).
+- **Session 29 (brain, Opus 5.5, 2026-11-01): phase 2 checked through item
+  85 (83, 84, 85a-d, #298-#305); it passes.** `main` at v137 (82770b0). What
+  the brain ran: the log (`docs/archive/brain-log.md`). Item 85 (with 85c and
+  48's brief) and the note `85-fast-pins-lite.md` archived; its refusal
+  reading is now a standing rule. **Next: the hands take 86, then 87.** **The
+  brain's next check: after item 87**, as planned (the game's four needs);
+  then the phase's end after 92.
+- **Open, for Mikey (asked 2026-11-01):** the Lite Room Album (#303's Done
+  line) not yet heard as far as the brain knows: the steal's 0.05 s fade,
+  and **whether full quality steals too** (at full quality the core still
+  refuses 986 of 5,056 chord notes, 19.5%, over the baseline's 100 loops;
+  lite now 1,292, 25.6%). And a small theme edge: a theme whose own melody
+  rests, bent by vibes that bring a choir, sings a tune of its own (2 of the
+  brain's 600 theme cases, `docs/archive/brain-log.md`).
 - **Broken Friends:** `docs/notes/82-for-broken-friends.md` is for the game's
   next session (repin the core from f654fdb, the calls, the hashes to
   refresh). It stays in `docs/notes/` until the game's session has used it;
-  nothing for the brain to answer.
+  nothing for the brain to answer. As of 2026-11-01 the game still pins
+  f654fdb; the brain's suggestion is one repin after item 87 (the change at a
+  moment and rendering ahead both land then), not one now and one later.
 - **Vibe edits since item 82** move the generation goldens and
   `js/dlplayer.wasm` too: `docs/VIBES.md`, "How to edit a vibe". This
   container runs Node, the pinned Rust (`rustup` installs it from
@@ -314,7 +318,8 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   75 (the reverb, rate-true) for a session with usage to spare; item 37 on
   hold.
 - Older "Start here" bullets (Sessions 18-26 and the plan to phase 2), as
-  they stood: `docs/archive/brain-log.md`, "Start here before Session 28".
+  they stood: `docs/archive/brain-log.md`, "Start here before Session 28";
+  Session 28's own bullet is its log entry.
 
 ### The log
 
