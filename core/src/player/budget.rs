@@ -478,14 +478,64 @@ mod tests {
         assert!(!b.ask(&mut host, 1.5, false, 90.0));
         b.end();
         assert_eq!(host.0, Vec::new());
-        // At full quality it refuses as before.
+        // At full quality it takes room too (queue item 85e).
         let mut full = Budget::new();
         full.reset(false);
         full.begin(Some(Layer::Melody), at(0, 0));
+        full.note_channel(3);
         full.hold(0.0, 4.0, 250.0);
         full.end();
         full.begin(Some(Layer::Melody), at(4, 0));
-        assert!(!full.ask(&mut host, 1.0, false, 30.0));
+        assert!(full.ask(&mut host, 1.0, false, 30.0));
+        assert_eq!(host.0, vec![(3, at(0, 0), 0.95, 1.0)]);
+    }
+
+    #[test]
+    fn lets_released_calls_go_before_held_ones_and_never_a_kept_one() {
+        let mut host = Steals::default();
+        let at = |step, ord| Key { seed: 1, pass: 0, step, ord };
+        let mut b = Budget::new();
+        b.reset(true);
+        // The oldest call still held at 1 s (its note to 4 s), then a call
+        // whose note ended at 0.95 s (in its tail, releasing), then a kept
+        // call (a drone's note), each 60 of lite's 140.
+        b.begin(Some(Layer::Bass), at(0, 0));
+        b.note_channel(2);
+        b.hold(0.0, 4.0, 60.0);
+        b.end();
+        b.begin(Some(Layer::Bass), at(1, 0));
+        b.note_channel(2);
+        b.hold(0.5, 0.45, 60.0);
+        b.end();
+        // A note of 30 at 1 s needs one let go: the released one, though it
+        // is the younger.
+        b.begin(Some(Layer::Bass), at(4, 0));
+        assert!(b.ask(&mut host, 1.0, false, 30.0));
+        b.end();
+        assert_eq!(host.0, vec![(2, at(1, 0), 0.95, 1.0)]);
+        // A kept call is never let go: with only it and the held one to take
+        // from, the held one goes.
+        host.0.clear();
+        let mut k = Budget::new();
+        k.reset(true);
+        k.begin(Some(Layer::Bass), at(0, 0));
+        k.keep();
+        k.note_channel(2);
+        k.hold(0.0, 4.0, 60.0);
+        k.end();
+        k.begin(Some(Layer::Bass), at(1, 0));
+        k.note_channel(2);
+        k.hold(0.5, 4.0, 60.0);
+        k.end();
+        k.begin(Some(Layer::Bass), at(4, 0));
+        assert!(k.ask(&mut host, 1.0, false, 30.0));
+        k.end();
+        assert_eq!(host.0, vec![(2, at(1, 0), 0.95, 1.0)]);
+        // And with only the kept one, the note is refused.
+        host.0.clear();
+        k.begin(Some(Layer::Bass), at(8, 0));
+        assert!(!k.ask(&mut host, 1.5, false, 90.0));
+        k.end();
         assert_eq!(host.0, Vec::new());
     }
 }

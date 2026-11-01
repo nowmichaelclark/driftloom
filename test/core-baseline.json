@@ -50,20 +50,20 @@
     "seed": 2265367787,
     "profile": "tide",
     "seconds": 20,
-    "out": "dad8b713",
+    "out": "a6501015",
     "layers": {
-     "drums": "9c76aac2",
-     "bass": "8f83d9eb",
-     "chords": "cbf950b6",
-     "melody": "58f8b026",
+     "drums": "2057f3ce",
+     "bass": "d49d6527",
+     "chords": "51ad5899",
+     "melody": "1b5342ab",
      "texture": "cea7ddc8"
     },
-    "lufs": -23.71,
-    "peakDb": -3.02,
+    "lufs": -23.42,
+    "peakDb": -2.72,
     "layerLufs": {
      "drums": -22.35,
      "bass": -29.35,
-     "chords": -33.63,
+     "chords": -31.97,
      "melody": -33.95,
      "texture": -42
     }
@@ -72,64 +72,64 @@
     "seed": 4213581821,
     "profile": "thaw",
     "seconds": 20,
-    "out": "3a98dfe4",
+    "out": "956ce494",
     "layers": {
      "drums": "c3f9ea05",
      "bass": "637c5989",
-     "chords": "4b4d9703",
-     "melody": "fb3368de",
-     "texture": "98fb2971"
+     "chords": "a3ce6ad0",
+     "melody": "898e4f27",
+     "texture": "50a9ba3c"
     },
-    "lufs": -28.59,
-    "peakDb": -12.57,
+    "lufs": -28.47,
+    "peakDb": -12.31,
     "layerLufs": {
      "drums": null,
      "bass": -28.11,
-     "chords": -43.65,
+     "chords": -42.26,
      "melody": -32.38,
-     "texture": -29.25
+     "texture": -29.69
     }
    },
    "hai-waim": {
     "seed": 4159151403,
     "profile": "glade",
     "seconds": 20,
-    "out": "2f9c7780",
+    "out": "41fdc477",
     "layers": {
      "drums": "554dddb7",
      "bass": "a1794b66",
-     "chords": "7a15c000",
-     "melody": "01f82826",
-     "texture": "e1823d20"
+     "chords": "e9ce1bc9",
+     "melody": "02e81f9a",
+     "texture": "7eeafc19"
     },
-    "lufs": -25.04,
+    "lufs": -24.92,
     "peakDb": -3.07,
     "layerLufs": {
      "drums": -23.24,
      "bass": -27.17,
-     "chords": -31.11,
+     "chords": -30.74,
      "melody": -33.14,
-     "texture": -65.66
+     "texture": -64.86
     }
    },
    "kor-thu": {
     "seed": 1207330352,
     "profile": "bloom",
     "seconds": 20,
-    "out": "3b1ae004",
+    "out": "e555f743",
     "layers": {
-     "drums": "418e766a",
-     "bass": "5b4e143e",
-     "chords": "3ab90068",
-     "melody": "dfc59a27",
+     "drums": "f2eccc94",
+     "bass": "f0ce6de1",
+     "chords": "bd0cbc46",
+     "melody": "cdfa68f6",
      "texture": "50db5ac4"
     },
-    "lufs": -24.72,
+    "lufs": -24.69,
     "peakDb": -4.17,
     "layerLufs": {
      "drums": -21.84,
      "bass": -29.39,
-     "chords": -38.53,
+     "chords": -37.59,
      "melody": -34.37,
      "texture": -65.99
     }
@@ -138,20 +138,20 @@
     "seed": 2632122864,
     "profile": "glade",
     "seconds": 20,
-    "out": "4183081b",
+    "out": "e4954dd5",
     "layers": {
-     "drums": "f654fb00",
-     "bass": "25347ef2",
-     "chords": "daaf239a",
-     "melody": "c6b025ee",
+     "drums": "b772de51",
+     "bass": "9f57e29d",
+     "chords": "bc803760",
+     "melody": "ec66fabf",
      "texture": "b31db72c"
     },
-    "lufs": -21.83,
+    "lufs": -21.79,
     "peakDb": -3.09,
     "layerLufs": {
      "drums": -21.6,
      "bass": -28.91,
-     "chords": -33.93,
+     "chords": -33.57,
      "melody": -33.96,
      "texture": -37.76
     }
@@ -160,20 +160,20 @@
     "seed": 3095568220,
     "profile": "thaw",
     "seconds": 70,
-    "out": "98a340d0",
+    "out": "3245a65e",
     "layers": {
      "drums": "aa2cb6a5",
-     "bass": "2636f9d1",
-     "chords": "61166c12",
-     "melody": "00dc4025",
+     "bass": "44ddcb79",
+     "chords": "d4b53670",
+     "melody": "36f97f5f",
      "texture": "97e9eb5f"
     },
-    "lufs": -30.12,
-    "peakDb": -13.17,
+    "lufs": -30.06,
+    "peakDb": -13.28,
     "layerLufs": {
      "drums": null,
      "bass": -30.35,
-     "chords": -37.68,
+     "chords": -36.24,
      "melody": -31,
      "texture": -34.4
     }
@@ -182,20 +182,20 @@
     "seed": 1828783984,
     "profile": "thaw",
     "seconds": 32.5,
-    "out": "16e3f568",
+    "out": "341b732c",
     "layers": {
      "drums": "f1cd1287",
      "bass": "243812a9",
-     "chords": "b0ae62dc",
-     "melody": "be069991",
-     "texture": "b78f4af8"
+     "chords": "dcec4413",
+     "melody": "05d6e96e",
+     "texture": "0c475feb"
     },
-    "lufs": -31.1,
+    "lufs": -31.02,
     "peakDb": -15.01,
     "layerLufs": {
      "drums": null,
      "bass": -32.32,
-     "chords": -39.53,
+     "chords": -38.69,
      "melody": -34.15,
      "texture": -31.4
     }
@@ -204,15 +204,15 @@
     "seed": 4272732017,
     "profile": "wayfare",
     "seconds": 20,
-    "out": "411fe8a7",
+    "out": "d71e86a2",
     "layers": {
      "drums": "69952501",
-     "bass": "9e51ab78",
-     "chords": "09e6b19c",
-     "melody": "ebc8d1c6",
+     "bass": "6a7345f1",
+     "chords": "679498cb",
+     "melody": "68ff0faf",
      "texture": "17f58668"
     },
-    "lufs": -24.17,
+    "lufs": -24.18,
     "peakDb": -5.85,
     "layerLufs": {
      "drums": -22.76,
@@ -270,20 +270,20 @@
     "seed": 596715197,
     "profile": "tide",
     "seconds": 20,
-    "out": "bd3bc3f4",
+    "out": "0093590e",
     "layers": {
-     "drums": "93c49668",
-     "bass": "76db6162",
-     "chords": "ef714e26",
-     "melody": "5f56a8ac",
+     "drums": "37882c5b",
+     "bass": "5069c4bb",
+     "chords": "868caf8a",
+     "melody": "1e25c130",
      "texture": "0ffc5605"
     },
-    "lufs": -19.92,
-    "peakDb": -2.9,
+    "lufs": -19.9,
+    "peakDb": -3.07,
     "layerLufs": {
      "drums": -21.23,
      "bass": -24.62,
-     "chords": -32.92,
+     "chords": -31.53,
      "melody": -34.63,
      "texture": -36.89
     }
@@ -314,20 +314,20 @@
     "seed": 1063107040,
     "profile": "wayfare",
     "seconds": 20,
-    "out": "4dbf0797",
+    "out": "0bb1c191",
     "layers": {
-     "drums": "a6da61e3",
-     "bass": "adcb023e",
-     "chords": "e592b17d",
-     "melody": "d9215ac3",
+     "drums": "69caa9af",
+     "bass": "1435c59c",
+     "chords": "b205e620",
+     "melody": "e5a37c60",
      "texture": "8413533f"
     },
-    "lufs": -23.31,
+    "lufs": -23.23,
     "peakDb": -4.43,
     "layerLufs": {
      "drums": -23.44,
      "bass": -28.66,
-     "chords": -35.75,
+     "chords": -34.73,
      "melody": -36.63,
      "texture": -41.73
     }
@@ -336,42 +336,42 @@
     "seed": 663542962,
     "profile": "glade",
     "seconds": 20,
-    "out": "a4934d26",
+    "out": "769115a2",
     "layers": {
-     "drums": "0564c83d",
-     "bass": "5def8abb",
-     "chords": "49a431df",
-     "melody": "1977693d",
-     "texture": "f3427c77"
+     "drums": "452f3698",
+     "bass": "5ed9df68",
+     "chords": "58dcf94e",
+     "melody": "8b826762",
+     "texture": "a4df83c7"
     },
-    "lufs": -23.05,
+    "lufs": -22.94,
     "peakDb": -2.67,
     "layerLufs": {
      "drums": -22.08,
      "bass": -29.02,
-     "chords": -36.31,
+     "chords": -35.07,
      "melody": -33.07,
-     "texture": -66.31
+     "texture": -65.73
     }
    },
    "sang-hoth": {
     "seed": 2100857034,
     "profile": "haven",
     "seconds": 70,
-    "out": "b172fd3c",
+    "out": "2724c8bb",
     "layers": {
-     "drums": "829aca74",
-     "bass": "d6f09579",
-     "chords": "89574774",
-     "melody": "8abe1bd6",
+     "drums": "cb4c86e8",
+     "bass": "5dc05fa6",
+     "chords": "4abae79f",
+     "melody": "e7d54127",
      "texture": "c842b677"
     },
-    "lufs": -24.68,
+    "lufs": -24.61,
     "peakDb": -2.74,
     "layerLufs": {
      "drums": -21.9,
      "bass": -30.99,
-     "chords": -35.92,
+     "chords": -35.36,
      "melody": -30.99,
      "texture": -42.61
     }
@@ -380,20 +380,20 @@
     "seed": 289351446,
     "profile": "halcyon",
     "seconds": 20,
-    "out": "c26b88b1",
+    "out": "c417c636",
     "layers": {
      "drums": "b98a68bd",
-     "bass": "73afea3b",
-     "chords": "a7c9de9e",
-     "melody": "5a1e0a07",
-     "texture": "38a5cd2c"
+     "bass": "4ba1c753",
+     "chords": "b542c13b",
+     "melody": "900e8d2f",
+     "texture": "3d8ad2bd"
     },
-    "lufs": -26.3,
+    "lufs": -26.29,
     "peakDb": -4.31,
     "layerLufs": {
      "drums": -23.57,
      "bass": -28.02,
-     "chords": -39.54,
+     "chords": -37.31,
      "melody": -30.44,
      "texture": -33.61
     }
@@ -402,20 +402,20 @@
     "seed": 1694877057,
     "profile": "glade",
     "seconds": 20,
-    "out": "33d0a8f1",
+    "out": "99e5c008",
     "layers": {
-     "drums": "dd640acc",
+     "drums": "68836b36",
      "bass": "25e86086",
-     "chords": "329a832f",
-     "melody": "d80b6c8d",
+     "chords": "8f709c7c",
+     "melody": "b71626d7",
      "texture": "c3f9ea05"
     },
-    "lufs": -24.13,
+    "lufs": -24.1,
     "peakDb": -3.29,
     "layerLufs": {
      "drums": -21.62,
      "bass": -28.98,
-     "chords": -37.57,
+     "chords": -36.79,
      "melody": -33.62,
      "texture": null
     }
@@ -424,20 +424,20 @@
     "seed": 3294703884,
     "profile": "hollow",
     "seconds": 29.1,
-    "out": "1410e0cd",
+    "out": "faebf9f1",
     "layers": {
      "drums": "4cc9087d",
      "bass": "4cc9087d",
-     "chords": "41b1c1da",
+     "chords": "8dc25f4c",
      "melody": "6771b97f",
      "texture": "fd82d646"
     },
-    "lufs": -37.16,
-    "peakDb": -20.9,
+    "lufs": -36.73,
+    "peakDb": -20.43,
     "layerLufs": {
      "drums": null,
      "bass": null,
-     "chords": -38.26,
+     "chords": -37.32,
      "melody": -37.86,
      "texture": -43.69
     }
@@ -468,20 +468,20 @@
     "seed": 819795777,
     "profile": "glade",
     "seconds": 20,
-    "out": "813aa7d8",
+    "out": "682e68de",
     "layers": {
      "drums": "c80826fc",
      "bass": "33e47299",
-     "chords": "6cc30078",
-     "melody": "18f7d08f",
+     "chords": "cc4e7c88",
+     "melody": "723b9eb2",
      "texture": "e0cdd06e"
     },
-    "lufs": -21.88,
+    "lufs": -21.84,
     "peakDb": -2.95,
     "layerLufs": {
      "drums": -21.4,
      "bass": -25.34,
-     "chords": -34.33,
+     "chords": -33.79,
      "melody": -35.99,
      "texture": -66.84
     }
@@ -490,20 +490,20 @@
     "seed": 183522707,
     "profile": "tide",
     "seconds": 20,
-    "out": "f17e56c8",
+    "out": "920697fe",
     "layers": {
-     "drums": "7d2fc3ca",
-     "bass": "e4e98c44",
-     "chords": "5af16482",
-     "melody": "487e17f0",
+     "drums": "2eaf176f",
+     "bass": "bbf80c51",
+     "chords": "3c3661a3",
+     "melody": "68037255",
      "texture": "02f17259"
     },
-    "lufs": -21.8,
+    "lufs": -21.78,
     "peakDb": -3.36,
     "layerLufs": {
      "drums": -20.64,
      "bass": -30.28,
-     "chords": -36.26,
+     "chords": -35.5,
      "melody": -34.1,
      "texture": -44.93
     }
@@ -512,22 +512,22 @@
     "seed": 1835591523,
     "profile": "hollow",
     "seconds": 20,
-    "out": "e52718cc",
+    "out": "19d05d04",
     "layers": {
      "drums": "c3f9ea05",
      "bass": "5dd18d51",
-     "chords": "e5b1a4cf",
+     "chords": "4f5c8a0d",
      "melody": "2e8a099e",
-     "texture": "21c4b4d2"
+     "texture": "71b22e1a"
     },
-    "lufs": -30.53,
+    "lufs": -30.43,
     "peakDb": -18.12,
     "layerLufs": {
      "drums": null,
      "bass": -29.85,
-     "chords": -40.4,
+     "chords": -37.84,
      "melody": -35.41,
-     "texture": -65.74
+     "texture": -65.72
     }
    },
    "brou-fun": {
@@ -556,20 +556,20 @@
     "seed": 3430322586,
     "profile": "wayfare",
     "seconds": 20,
-    "out": "0633d7c4",
+    "out": "8aff5599",
     "layers": {
      "drums": "c3f9ea05",
-     "bass": "6d5ac9fd",
-     "chords": "23240bab",
-     "melody": "1a4cd00f",
+     "bass": "3bd1efd5",
+     "chords": "5f8072e3",
+     "melody": "f4b7cda5",
      "texture": "b682b50b"
     },
-    "lufs": -28.03,
+    "lufs": -27.87,
     "peakDb": -11.71,
     "layerLufs": {
      "drums": null,
      "bass": -26.54,
-     "chords": -34.61,
+     "chords": -34.07,
      "melody": -34.36,
      "texture": -36.35
     }
@@ -578,20 +578,20 @@
     "seed": 1266456452,
     "profile": "shatter",
     "seconds": 30,
-    "out": "7ac37818",
+    "out": "b215ce47",
     "layers": {
      "drums": "1175de25",
-     "bass": "138df306",
-     "chords": "871ba887",
+     "bass": "eff8b187",
+     "chords": "ed237d03",
      "melody": "1175de25",
-     "texture": "8cf6504c"
+     "texture": "fde409d1"
     },
-    "lufs": -28.48,
-    "peakDb": -11.65,
+    "lufs": -28.33,
+    "peakDb": -11.01,
     "layerLufs": {
      "drums": null,
      "bass": -34.08,
-     "chords": -40.35,
+     "chords": -37.86,
      "melody": null,
      "texture": -29.56
     }
@@ -600,20 +600,20 @@
     "seed": 882486014,
     "profile": "hollow",
     "seconds": 20,
-    "out": "06fbc765",
+    "out": "21d13920",
     "layers": {
      "drums": "a2d85e6d",
      "bass": "bbc6970e",
-     "chords": "fc12352c",
+     "chords": "5d1201fe",
      "melody": "989cc97e",
      "texture": "c3f9ea05"
     },
-    "lufs": -23.85,
+    "lufs": -23.8,
     "peakDb": -4.08,
     "layerLufs": {
      "drums": -23.02,
      "bass": -27.22,
-     "chords": -35.78,
+     "chords": -35.08,
      "melody": -33.61,
      "texture": null
     }
@@ -666,86 +666,86 @@
     "seed": 3257487196,
     "profile": "undertow",
     "seconds": 20,
-    "out": "8b1c070b",
+    "out": "7b6f9925",
     "layers": {
-     "drums": "176e3d17",
-     "bass": "a28e6ed5",
-     "chords": "e588cf0a",
-     "melody": "11118d41",
-     "texture": "f78e86a2"
+     "drums": "8a9836ac",
+     "bass": "36caa044",
+     "chords": "b5672c22",
+     "melody": "fe09b584",
+     "texture": "43b86a1d"
     },
-    "lufs": -22.68,
+    "lufs": -22.65,
     "peakDb": -4.16,
     "layerLufs": {
      "drums": -21.49,
      "bass": -27.07,
-     "chords": -38.56,
+     "chords": -36.84,
      "melody": -31.79,
-     "texture": -67.57
+     "texture": -65.96
     }
    },
    "voth-rur": {
     "seed": 828129958,
     "profile": "vapor",
     "seconds": 20,
-    "out": "ef781f25",
+    "out": "86bb6e91",
     "layers": {
      "drums": "c3f9ea05",
-     "bass": "a1de3456",
-     "chords": "49f9d644",
+     "bass": "af7097a1",
+     "chords": "276bba59",
      "melody": "cb522147",
-     "texture": "7c533997"
+     "texture": "d6085ece"
     },
-    "lufs": -26.22,
+    "lufs": -26.1,
     "peakDb": -11.55,
     "layerLufs": {
      "drums": null,
      "bass": -26.08,
-     "chords": -39.9,
+     "chords": -38.47,
      "melody": -33.27,
-     "texture": -36.78
+     "texture": -35.48
     }
    },
    "broul-fuisk": {
     "seed": 3096446930,
     "profile": "undertow",
     "seconds": 20,
-    "out": "a394ef2e",
+    "out": "b20c3bcc",
     "layers": {
      "drums": "a175fe40",
-     "bass": "29786bb3",
-     "chords": "09392c1a",
+     "bass": "7ff66abb",
+     "chords": "2ddd711d",
      "melody": "7b28b3bc",
-     "texture": "f6bfbb3d"
+     "texture": "7418843f"
     },
-    "lufs": -22.04,
+    "lufs": -21.71,
     "peakDb": -3.56,
     "layerLufs": {
      "drums": -21.89,
      "bass": -31.04,
-     "chords": -31.96,
+     "chords": -30.68,
      "melody": -29.09,
-     "texture": -35.69
+     "texture": -34.24
     }
    },
    "taing-doan": {
     "seed": 1950499338,
     "profile": "clockwork",
     "seconds": 20,
-    "out": "6b55fbe8",
+    "out": "71830c17",
     "layers": {
      "drums": "c3f9ea05",
      "bass": "f644a23b",
-     "chords": "597830d7",
-     "melody": "2bdb0c95",
+     "chords": "e7537563",
+     "melody": "6f1e6a71",
      "texture": "c3f9ea05"
     },
-    "lufs": -27.69,
-    "peakDb": -13.36,
+    "lufs": -27.61,
+    "peakDb": -13.12,
     "layerLufs": {
      "drums": null,
      "bass": -30.31,
-     "chords": -43.46,
+     "chords": -41.42,
      "melody": -33.16,
      "texture": null
     }
@@ -754,42 +754,42 @@
     "seed": 3308902181,
     "profile": "grove",
     "seconds": 20,
-    "out": "606b82fe",
+    "out": "01adba47",
     "layers": {
      "drums": "c3f9ea05",
-     "bass": "e0c8265c",
-     "chords": "e8fb6ec1",
+     "bass": "93fcdb9d",
+     "chords": "0dbd2f62",
      "melody": "c3f9ea05",
-     "texture": "a2bd54b3"
+     "texture": "785d7da8"
     },
-    "lufs": -28.13,
-    "peakDb": -13.25,
+    "lufs": -27.93,
+    "peakDb": -13.11,
     "layerLufs": {
      "drums": null,
      "bass": -29.27,
-     "chords": -39.22,
+     "chords": -39.18,
      "melody": null,
-     "texture": -34.79
+     "texture": -34.23
     }
    },
    "koth-loar": {
     "seed": 4271491011,
     "profile": "hollow",
     "seconds": 20,
-    "out": "b60e2414",
+    "out": "ba1696b3",
     "layers": {
      "drums": "c3f9ea05",
      "bass": "ab771110",
-     "chords": "6191b4af",
-     "melody": "93c801b8",
-     "texture": "569ac280"
+     "chords": "13bfb68d",
+     "melody": "49568017",
+     "texture": "d78685b8"
     },
-    "lufs": -30.19,
-    "peakDb": -15.24,
+    "lufs": -30.2,
+    "peakDb": -15.27,
     "layerLufs": {
      "drums": null,
      "bass": -30.55,
-     "chords": -47.13,
+     "chords": -46.34,
      "melody": -31.67,
      "texture": -37.22
     }
@@ -798,86 +798,86 @@
     "seed": 1027928796,
     "profile": "bloom",
     "seconds": 20,
-    "out": "94576335",
+    "out": "3002c4e8",
     "layers": {
      "drums": "c3f9ea05",
-     "bass": "173d7efc",
-     "chords": "32f3ab47",
-     "melody": "330f8872",
-     "texture": "f388bfef"
+     "bass": "c0afca44",
+     "chords": "7761198e",
+     "melody": "9b531496",
+     "texture": "ab36c6f2"
     },
-    "lufs": -29.29,
-    "peakDb": -17.1,
+    "lufs": -28.88,
+    "peakDb": -17.07,
     "layerLufs": {
      "drums": null,
      "bass": -28.88,
-     "chords": -41.07,
+     "chords": -40.61,
      "melody": -36.63,
-     "texture": -35.41
+     "texture": -35.32
     }
    },
    "vei-koan": {
     "seed": 3251295801,
     "profile": "tide",
     "seconds": 20,
-    "out": "fa508f04",
+    "out": "a8c8d395",
     "layers": {
      "drums": "c3f9ea05",
-     "bass": "683ac0f6",
-     "chords": "46ca45fd",
-     "melody": "5430d303",
-     "texture": "384b2740"
+     "bass": "e048547a",
+     "chords": "2655ef0f",
+     "melody": "957a9182",
+     "texture": "df98b1bf"
     },
-    "lufs": -25.1,
-    "peakDb": -8.58,
+    "lufs": -24.13,
+    "peakDb": -8.54,
     "layerLufs": {
      "drums": null,
-     "bass": -29.9,
-     "chords": -38.82,
-     "melody": -28.19,
-     "texture": -44.21
+     "bass": -29.62,
+     "chords": -39.39,
+     "melody": -27.09,
+     "texture": -43.92
     }
    },
    "vin-ten": {
     "seed": 658293683,
     "profile": "hollow",
     "seconds": 34.3,
-    "out": "b0be1482",
+    "out": "8c606e67",
     "layers": {
      "drums": "b1a012c5",
      "bass": "c738ba45",
-     "chords": "28e4a408",
-     "melody": "141d11d1",
-     "texture": "a50d9ad7"
+     "chords": "5d234f33",
+     "melody": "3e2c410f",
+     "texture": "a502c12e"
     },
-    "lufs": -26.97,
-    "peakDb": -11.15,
+    "lufs": -26.85,
+    "peakDb": -10.57,
     "layerLufs": {
      "drums": null,
      "bass": -29.99,
      "chords": -40.24,
      "melody": -30.88,
-     "texture": -34.86
+     "texture": -34
     }
    },
    "leisk-tom": {
     "seed": 1388698732,
     "profile": "tide",
     "seconds": 20,
-    "out": "a99bcd6b",
+    "out": "0ff3eff8",
     "layers": {
-     "drums": "09e468c0",
-     "bass": "68c071df",
-     "chords": "0dff3a8b",
+     "drums": "2edec064",
+     "bass": "f28b74e9",
+     "chords": "74e0d094",
      "melody": "c3f9ea05",
      "texture": "c3f9ea05"
     },
     "lufs": -21.67,
-    "peakDb": -3.92,
+    "peakDb": -3.89,
     "layerLufs": {
      "drums": -21.38,
      "bass": -27.09,
-     "chords": -40.48,
+     "chords": -38.24,
      "melody": null,
      "texture": null
     }
@@ -2149,13 +2149,13 @@
    },
    "refused": {
     "drums": 0,
-    "bass": 4,
-    "chords": 986,
-    "melody": 13,
-    "texture": 59
+    "bass": 0,
+    "chords": 151,
+    "melody": 0,
+    "texture": 48
    },
-   "meanMelodyRefusal": 0.0031,
-   "loopsLosingMelody": 2
+   "meanMelodyRefusal": 0,
+   "loopsLosingMelody": 0
   },
   "lite": {
    "loops": 100,
@@ -2261,67 +2261,67 @@
     "sideMidDb": -22.25
    },
    "toask-ha": {
-    "left": "a487cbb2",
-    "right": "0c39364d",
+    "left": "72a72d57",
+    "right": "af4e78d6",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -82.76,
-    "sideMidDb": -23.51
+    "foldResidDb": -79.71,
+    "sideMidDb": -22.64
    },
    "theith-yaing": {
-    "left": "db618a42",
-    "right": "9a9e2c6d",
+    "left": "df20c5b2",
+    "right": "0efa97ab",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -74.27,
-    "sideMidDb": -15.64
+    "foldResidDb": -74.28,
+    "sideMidDb": -15.24
    },
    "hai-waim": {
-    "left": "2a521dac",
-    "right": "510dbe27",
+    "left": "a66ae81c",
+    "right": "d3841ce2",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -80.91,
-    "sideMidDb": -21.2
+    "foldResidDb": -80.08,
+    "sideMidDb": -20.99
    },
    "kor-thu": {
-    "left": "c5c3caca",
-    "right": "b517e91f",
+    "left": "07160b25",
+    "right": "bb09fef5",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -81.84,
-    "sideMidDb": -25.97
+    "foldResidDb": -80.89,
+    "sideMidDb": -24.54
    },
    "reisk-foa": {
-    "left": "5f8d88cd",
-    "right": "8916532e",
+    "left": "8560e9e4",
+    "right": "d7d970c0",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -76.21,
-    "sideMidDb": -22.19
+    "foldResidDb": -75.92,
+    "sideMidDb": -21.87
    },
    "dith-shuisk": {
-    "left": "2379d753",
-    "right": "c673e5d9",
+    "left": "6f42163d",
+    "right": "8dc62d30",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.66,
-    "sideMidDb": -26.25
+    "foldResidDb": -84.61,
+    "sideMidDb": -25.98
    },
    "neir-luin": {
-    "left": "01da869c",
-    "right": "b599c10b",
+    "left": "d4367603",
+    "right": "2cdecbec",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.54,
-    "sideMidDb": -22.33
+    "foldResidDb": -84.11,
+    "sideMidDb": -22.3
    },
    "noan-nou": {
-    "left": "0c7480af",
-    "right": "7035d9d9",
+    "left": "a1d78b86",
+    "right": "f6d454a2",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -76.93,
+    "foldResidDb": -76.98,
     "sideMidDb": -20.48
    },
    "mul-voa": {
@@ -2341,12 +2341,12 @@
     "sideMidDb": -28.27
    },
    "broa-naisk": {
-    "left": "ca915a0a",
-    "right": "fbc3cf42",
+    "left": "86f4e7b2",
+    "right": "5e6efef2",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -69.8,
-    "sideMidDb": -19.35
+    "foldResidDb": -67.72,
+    "sideMidDb": -18.09
    },
    "shoar-brol": {
     "left": "bdf866b8",
@@ -2357,52 +2357,52 @@
     "sideMidDb": -10.25
    },
    "foang-shou": {
-    "left": "290f68dc",
-    "right": "917ff9cc",
+    "left": "535e0f31",
+    "right": "d2438a32",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -82.78,
-    "sideMidDb": -26.39
+    "foldResidDb": -81.47,
+    "sideMidDb": -23.7
    },
    "rei-saisk": {
-    "left": "9bc29893",
-    "right": "358809e5",
+    "left": "66102955",
+    "right": "5a282fae",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -76.99,
-    "sideMidDb": -20.51
+    "foldResidDb": -74.23,
+    "sideMidDb": -19.14
    },
    "sang-hoth": {
-    "left": "b7ff3265",
-    "right": "6644e4b5",
+    "left": "0a408ce8",
+    "right": "8a7ced07",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -81.5,
-    "sideMidDb": -23.95
+    "foldResidDb": -80.86,
+    "sideMidDb": -23.19
    },
    "ri-houng": {
-    "left": "cc1aeab3",
-    "right": "49236295",
+    "left": "0383966e",
+    "right": "1feaea0a",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -78.34,
-    "sideMidDb": -21.61
+    "foldResidDb": -77.8,
+    "sideMidDb": -20.56
    },
    "koun-nuing": {
-    "left": "be6d1d1f",
-    "right": "b1f171b3",
+    "left": "ee76f280",
+    "right": "16d5a1c0",
+    "monoOnEachSide": false,
+    "foldLU": 0,
+    "foldResidDb": -84.11,
+    "sideMidDb": -34.04
+   },
+   "loung-rang": {
+    "left": "b7146b33",
+    "right": "b824bd3a",
     "monoOnEachSide": false,
     "foldLU": 0,
     "foldResidDb": -84.29,
-    "sideMidDb": -34.92
-   },
-   "loung-rang": {
-    "left": "bcf3ebda",
-    "right": "189fca98",
-    "monoOnEachSide": false,
-    "foldLU": 0,
-    "foldResidDb": -84.75,
-    "sideMidDb": -24.74
+    "sideMidDb": -23.93
    },
    "duin-sar": {
     "left": "8c5cdcae",
@@ -2413,28 +2413,28 @@
     "sideMidDb": -30.36
    },
    "loum-seng": {
-    "left": "90b627e8",
-    "right": "3755472d",
+    "left": "dfebef74",
+    "right": "6cbe7d6b",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -80.62,
-    "sideMidDb": -22.71
+    "foldResidDb": -79.93,
+    "sideMidDb": -22.21
    },
    "han-vaing": {
-    "left": "ed7bd326",
-    "right": "e80a2849",
+    "left": "a32835f5",
+    "right": "28b3e3ad",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -82.15,
-    "sideMidDb": -28.62
+    "foldResidDb": -80.28,
+    "sideMidDb": -26.5
    },
    "their-roask": {
-    "left": "e529d6c0",
-    "right": "eb5ecd4d",
+    "left": "aed53394",
+    "right": "cab969e6",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.62,
-    "sideMidDb": -39.16
+    "foldResidDb": -85.05,
+    "sideMidDb": -37.68
    },
    "brou-fun": {
     "left": "e2e3a7f7",
@@ -2445,28 +2445,28 @@
     "sideMidDb": -25.85
    },
    "va-gloung": {
-    "left": "7cfedd40",
-    "right": "6873e8f9",
+    "left": "7a580f7b",
+    "right": "68a38db8",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -78.92,
-    "sideMidDb": -15.87
+    "foldResidDb": -78.2,
+    "sideMidDb": -15.71
    },
    "tei-har": {
-    "left": "0990ddc1",
-    "right": "7bacaa35",
+    "left": "1b8e47a1",
+    "right": "09781056",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -70.58,
-    "sideMidDb": -12.86
+    "foldResidDb": -69.98,
+    "sideMidDb": -12.83
    },
    "war-bri": {
-    "left": "efbe237a",
-    "right": "d668afd1",
+    "left": "8ae14fc8",
+    "right": "d801b60d",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -77.33,
-    "sideMidDb": -21.08
+    "foldResidDb": -76.03,
+    "sideMidDb": -20.74
    },
    "woung-shain": {
     "left": "5b1b7462",
@@ -2485,84 +2485,84 @@
     "sideMidDb": -28.01
    },
    "dum-futh": {
-    "left": "540dcdf4",
-    "right": "ae5ee4d0",
+    "left": "64b61d4b",
+    "right": "ca489952",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.81,
-    "sideMidDb": -32.36
+    "foldResidDb": -84.03,
+    "sideMidDb": -30.72
    },
    "voth-rur": {
-    "left": "d41c2ca3",
-    "right": "d22ca6fc",
+    "left": "5f02ada9",
+    "right": "e518c32f",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -79.9,
-    "sideMidDb": -19.76
+    "foldResidDb": -77.42,
+    "sideMidDb": -18.03
    },
    "broul-fuisk": {
-    "left": "5142338c",
-    "right": "e903fb25",
+    "left": "f8962f95",
+    "right": "5a021c9b",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -69.76,
-    "sideMidDb": -18.17
+    "foldResidDb": -65.75,
+    "sideMidDb": -16.06
    },
    "taing-doan": {
-    "left": "bc398b2a",
-    "right": "e5e20794",
+    "left": "1cd99acb",
+    "right": "414f4ce8",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.56,
-    "sideMidDb": -27.47
+    "foldResidDb": -84.53,
+    "sideMidDb": -25.63
    },
    "brum-nosk": {
-    "left": "26778c4d",
-    "right": "88e46feb",
+    "left": "25850383",
+    "right": "99a50073",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -82.65,
-    "sideMidDb": -21.76
+    "foldResidDb": -82.55,
+    "sideMidDb": -21.51
    },
    "koth-loar": {
-    "left": "bc0d7dc5",
-    "right": "d788b236",
+    "left": "8571f7b0",
+    "right": "f60fe8af",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.18,
-    "sideMidDb": -23.61
+    "foldResidDb": -84.3,
+    "sideMidDb": -23.58
    },
    "shaisk-sha": {
-    "left": "0d46b5e8",
-    "right": "3a86fbc3",
+    "left": "df1599b9",
+    "right": "ab6dca49",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -76.46,
-    "sideMidDb": -17.2
+    "foldResidDb": -74.49,
+    "sideMidDb": -15.35
    },
    "vei-koan": {
-    "left": "422058db",
-    "right": "7e366be1",
+    "left": "de767f7e",
+    "right": "ebe728a6",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.34,
-    "sideMidDb": -29.3
+    "foldResidDb": -84.62,
+    "sideMidDb": -29.75
    },
    "vin-ten": {
-    "left": "13aa1558",
-    "right": "cdd7e530",
+    "left": "bb6db73a",
+    "right": "57f2c27c",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -81.55,
-    "sideMidDb": -21.76
+    "foldResidDb": -80.12,
+    "sideMidDb": -21.14
    },
    "leisk-tom": {
-    "left": "eef94cc3",
-    "right": "a8ba29b2",
+    "left": "553b971c",
+    "right": "50fd0902",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -83.86,
-    "sideMidDb": -32.17
+    "foldResidDb": -83.56,
+    "sideMidDb": -29.6
    }
   },
   "lite": {
@@ -2900,63 +2900,63 @@
    },
    "yui-deng": {
     "seed": 11749833,
-    "out": "aa96a374",
-    "left": "039f1dea",
-    "right": "83cdef1a"
+    "out": "d65c834f",
+    "left": "5d80c088",
+    "right": "de67e770"
    },
    "toask-ha": {
     "seed": 2265367787,
-    "out": "7afebe59",
-    "left": "259e9417",
-    "right": "41b626df"
+    "out": "165439f6",
+    "left": "ac5e4258",
+    "right": "2cb8c9db"
    },
    "theith-yaing": {
     "seed": 4213581821,
-    "out": "f99c6424",
-    "left": "e331a15c",
-    "right": "98629c0b"
+    "out": "242a3931",
+    "left": "0df7ac03",
+    "right": "709addd7"
    },
    "hai-waim": {
     "seed": 4159151403,
-    "out": "7f2bf2e4",
-    "left": "eb452dd4",
-    "right": "a9c54393"
+    "out": "f7b5c43c",
+    "left": "f2852d51",
+    "right": "5fa8e97b"
    },
    "kor-thu": {
     "seed": 1207330352,
-    "out": "df22c690",
-    "left": "f163a4ed",
-    "right": "100d6f27"
+    "out": "7b62d015",
+    "left": "d13b8d7f",
+    "right": "c2b55b87"
    },
    "reisk-foa": {
     "seed": 2632122864,
-    "out": "4fd8f3c1",
-    "left": "503499bd",
-    "right": "08f7e1ba"
+    "out": "8b7f03d9",
+    "left": "21812417",
+    "right": "028b4559"
    },
    "dith-shuisk": {
     "seed": 3095568220,
-    "out": "ad3b0983",
-    "left": "2a131981",
-    "right": "19737e36"
+    "out": "f9bcfde5",
+    "left": "353ccddc",
+    "right": "67ac5e5d"
    },
    "neir-luin": {
     "seed": 1828783984,
-    "out": "cb1eca42",
-    "left": "83d3bfb8",
-    "right": "16d6abb6"
+    "out": "f61675ec",
+    "left": "c1d1ed8e",
+    "right": "9140efa4"
    },
    "noan-nou": {
     "seed": 4272732017,
-    "out": "5896d2b7",
-    "left": "45f97389",
-    "right": "a6ee7178"
+    "out": "2ef141cf",
+    "left": "d8c36acf",
+    "right": "17bf2caa"
    },
    "mul-voa": {
     "seed": 1955374602,
-    "out": "701f7bbd",
-    "left": "0b0f9156",
-    "right": "14353a17"
+    "out": "8e14b069",
+    "left": "d202a06e",
+    "right": "0f9d500a"
    },
    "shil-doask": {
     "seed": 2099329838,
@@ -2966,51 +2966,51 @@
    },
    "broa-naisk": {
     "seed": 596715197,
-    "out": "d37cd507",
-    "left": "a3644f8e",
-    "right": "871c5d71"
+    "out": "cc5a0c69",
+    "left": "67b1149d",
+    "right": "17886e8d"
    },
    "shoar-brol": {
     "seed": 1734070562,
-    "out": "edab42d5",
-    "left": "4900c061",
-    "right": "b367c997"
+    "out": "1f08ed6a",
+    "left": "bc4ccd82",
+    "right": "66cec260"
    },
    "foang-shou": {
     "seed": 1063107040,
-    "out": "15921d78",
-    "left": "73d8d4b0",
-    "right": "2a48bae4"
+    "out": "e3baf028",
+    "left": "6c32b857",
+    "right": "45ac5105"
    },
    "rei-saisk": {
     "seed": 663542962,
-    "out": "228f9888",
-    "left": "ff82655b",
-    "right": "d52ccfa6"
+    "out": "05966f1a",
+    "left": "a018c95f",
+    "right": "0a633968"
    },
    "sang-hoth": {
     "seed": 2100857034,
-    "out": "7cf1fe11",
-    "left": "e8d870dd",
-    "right": "e0dab721"
+    "out": "b3363abb",
+    "left": "bb14c3ed",
+    "right": "956919e5"
    },
    "ri-houng": {
     "seed": 289351446,
-    "out": "e9856997",
-    "left": "1a08a6ec",
-    "right": "8fe406fd"
+    "out": "b1995231",
+    "left": "bb4dcf02",
+    "right": "ee0f4ef1"
    },
    "koun-nuing": {
     "seed": 1694877057,
-    "out": "2c3e35b5",
-    "left": "ecf86887",
-    "right": "0ee440d3"
+    "out": "0e4a0532",
+    "left": "79c0d51a",
+    "right": "428f6dcd"
    },
    "loung-rang": {
     "seed": 3294703884,
-    "out": "82290084",
-    "left": "7f7c26b4",
-    "right": "7368510e"
+    "out": "96e18d6d",
+    "left": "2db5c40e",
+    "right": "55e437c7"
    },
    "duin-sar": {
     "seed": 1227766539,
@@ -3020,21 +3020,21 @@
    },
    "loum-seng": {
     "seed": 819795777,
-    "out": "fefa14bb",
-    "left": "8a284282",
-    "right": "99574863"
+    "out": "fdb7b142",
+    "left": "9302539a",
+    "right": "f19226e4"
    },
    "han-vaing": {
     "seed": 183522707,
-    "out": "9febe81f",
-    "left": "c9480b6d",
-    "right": "a2adaecb"
+    "out": "1e402a02",
+    "left": "1486edb1",
+    "right": "8b8e9460"
    },
    "their-roask": {
     "seed": 1835591523,
-    "out": "db12f4dc",
-    "left": "9c8dd9a4",
-    "right": "eec3a7a2"
+    "out": "643778d6",
+    "left": "2af1d3a1",
+    "right": "18d9cbca"
    },
    "brou-fun": {
     "seed": 2535673501,
@@ -3044,21 +3044,21 @@
    },
    "va-gloung": {
     "seed": 3430322586,
-    "out": "d279901b",
-    "left": "24882fd0",
-    "right": "718842ec"
+    "out": "c7256494",
+    "left": "7bb2e5ac",
+    "right": "aea49538"
    },
    "tei-har": {
     "seed": 1266456452,
-    "out": "007fb2a2",
-    "left": "9326356f",
-    "right": "91c53033"
+    "out": "22214386",
+    "left": "e8fde823",
+    "right": "e142bf02"
    },
    "war-bri": {
     "seed": 882486014,
-    "out": "80823217",
-    "left": "28694318",
-    "right": "ed461f8d"
+    "out": "25857c14",
+    "left": "b05c2979",
+    "right": "d6093793"
    },
    "woung-shain": {
     "seed": 2826645300,
@@ -3074,63 +3074,63 @@
    },
    "dum-futh": {
     "seed": 3257487196,
-    "out": "483de764",
-    "left": "6360663f",
-    "right": "16e9cc47"
+    "out": "1ac74a55",
+    "left": "c50502ec",
+    "right": "bdcee8e7"
    },
    "voth-rur": {
     "seed": 828129958,
-    "out": "157e513e",
-    "left": "c207fe6c",
-    "right": "49fbe233"
+    "out": "5ebfa3b4",
+    "left": "36a04090",
+    "right": "b91be324"
    },
    "broul-fuisk": {
     "seed": 3096446930,
-    "out": "b6b090e3",
-    "left": "6418d11f",
-    "right": "762ed9f1"
+    "out": "178e946a",
+    "left": "eb1a35ec",
+    "right": "867ccf93"
    },
    "taing-doan": {
     "seed": 1950499338,
-    "out": "7e85147c",
-    "left": "4c38b123",
-    "right": "6d1334e7"
+    "out": "2431b37a",
+    "left": "501bfaf2",
+    "right": "b53b88d9"
    },
    "brum-nosk": {
     "seed": 3308902181,
-    "out": "14eb805a",
-    "left": "a580986a",
-    "right": "04af1068"
+    "out": "8a12f006",
+    "left": "f97720c8",
+    "right": "da812764"
    },
    "koth-loar": {
     "seed": 4271491011,
-    "out": "7848c736",
-    "left": "cbdeedd0",
-    "right": "ee3f8b93"
+    "out": "e864667b",
+    "left": "e8d39813",
+    "right": "29fc406a"
    },
    "shaisk-sha": {
     "seed": 1027928796,
-    "out": "4672d1ce",
-    "left": "97874db2",
-    "right": "3a237b0b"
+    "out": "20478509",
+    "left": "f6f9db5d",
+    "right": "01852508"
    },
    "vei-koan": {
     "seed": 3251295801,
-    "out": "361c8320",
-    "left": "22cd0d49",
-    "right": "ec31d8c9"
+    "out": "9a9104d0",
+    "left": "63e27474",
+    "right": "352c5f76"
    },
    "vin-ten": {
     "seed": 658293683,
-    "out": "66be8afc",
-    "left": "62a7b1bb",
-    "right": "f64217b7"
+    "out": "579ce745",
+    "left": "96a526c4",
+    "right": "98bfa13a"
    },
    "leisk-tom": {
     "seed": 1388698732,
-    "out": "8bc199c7",
-    "left": "5c2b479e",
-    "right": "75400584"
+    "out": "dd697dc1",
+    "left": "35b32cfc",
+    "right": "2d55e747"
    }
   },
   "lite": {
