@@ -72,7 +72,7 @@ own in 200 changes; I have not looked at why.
 
 ## For the Done line, when it merges
 
-`#PR`: Item 86, a change of loop at a musical moment (`Player::change`; the
+#308: Item 86, a change of loop at a musical moment (`Player::change`; the
 app is unchanged but for the arc: at a Next where either loop has the arc
 there is no click or one-block jump). For the ears: `dlrender --changes 1000
 --change 7 --wav-to DIR` (a bar change, theme bent) and `--change 13` (a
