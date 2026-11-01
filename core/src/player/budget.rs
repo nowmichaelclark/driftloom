@@ -39,9 +39,16 @@ const TAIL: f64 = 0.12;
 /// seconds, ending as the new note starts (`STEAL_FADE`; for Mikey's ears).
 pub const STEAL_FADE: f64 = 0.05;
 /// Whether the budget takes room from old notes on lite, and at full
-/// quality (`STEAL_QUALITIES`): lite only for now, for Mikey's ears.
+/// quality (`STEAL_QUALITIES`): both since queue item 85e (Mikey heard
+/// lite's and asked for the same at full).
 pub const STEAL_LITE: bool = true;
-pub const STEAL_FULL: bool = false;
+pub const STEAL_FULL: bool = true;
+/// Whether the calls already past their end go before the ones still held,
+/// on lite and at full (`RELEASED_FIRST`, queue item 85e): the field's order
+/// (a sampler lets a releasing voice go before a held one), oldest first
+/// within each.
+pub const RELEASED_FIRST_LITE: bool = true;
+pub const RELEASED_FIRST_FULL: bool = true;
 
 /// The most notes held at once. The JavaScript's list has no end; the
 /// ceiling keeps it short (260 units, the cheapest note 0.3), and a hold
@@ -49,24 +56,29 @@ pub const STEAL_FULL: bool = false;
 pub const HOLDS: usize = 1024;
 
 /// A voice call that holds the budget (`_group` in synth.js): its number,
-/// its layer, its key and the core channels its notes went to (a bit each).
+/// its layer, its key, the core channels its notes went to (a bit each),
+/// and whether it is never let go (`keep`: a held instrument's note).
 #[derive(Clone, Copy)]
 struct Group {
     id: u32,
     layer: Layer,
     key: Key,
     channels: u16,
+    kept: bool,
 }
 
 const NO_KEY: Key = Key { seed: 0, pass: 0, step: 0, ord: 0 };
-const NO_GROUP: Group = Group { id: 0, layer: Layer::Drums, key: NO_KEY, channels: 0 };
+const NO_GROUP: Group = Group { id: 0, layer: Layer::Drums, key: NO_KEY, channels: 0, kept: false };
 
-/// A voice call among those the budget could let go (`_steal`'s entries).
+/// A voice call among those the budget could let go (`_steal`'s entries):
+/// its earliest hold's start, its cost, and whether every note of it is past
+/// its end (in its `TAIL`, releasing).
 #[derive(Clone, Copy)]
 struct Older {
     group: Group,
     start: f64,
     cost: f64,
+    released: bool,
 }
 
 /// The notes holding the budget, earliest end first: a ring of their ends,
@@ -110,7 +122,7 @@ impl Budget {
             current: None,
             calls: 0,
             stolen: [0; 5],
-            older: [Older { group: NO_GROUP, start: 0.0, cost: 0.0 }; HOLDS],
+            older: [Older { group: NO_GROUP, start: 0.0, cost: 0.0, released: false }; HOLDS],
         }
     }
 
@@ -129,7 +141,17 @@ impl Budget {
     /// can let them go together. `None` for a part that plays for no layer.
     pub fn begin(&mut self, layer: Option<Layer>, key: Key) {
         self.calls = self.calls.wrapping_add(1);
-        self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0 });
+        self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0, kept: false });
+    }
+
+    /// The voice call being made is never let go for a newer note (queue
+    /// item 85e): a held instrument's, the drone's (`keep` in synth.js).
+    /// The organ, the wash and padSweep's bed are the channels' own blocks
+    /// and hold no budget.
+    pub fn keep(&mut self) {
+        if let Some(g) = self.current.as_mut() {
+            g.kept = true;
+        }
     }
 
     /// The voice call is over.
@@ -198,7 +220,9 @@ impl Budget {
 
     /// `_steal(time, cost, cap, spent)`: the voice calls holding the budget
     /// for the asking call's layer, from other steps, started before `time`,
-    /// oldest first (ties as the holds stand), let go one at a time until
+    /// and not kept (`keep`), the released ones first (`RELEASED_FIRST`),
+    /// oldest first within each (ties as the holds stand), let go one at a
+    /// time until
     /// the note fits; none if all of them would not make room. Each falls
     /// from `STEAL_FADE` before `time` (or its start, if later) to nothing
     /// at `time` in every channel its notes went to, lowest first.
@@ -211,22 +235,26 @@ impl Budget {
         for k in 0..self.len {
             let i = self.slot(k);
             let Some(h) = self.group[i] else { continue };
-            if h.id == g.id || h.layer != g.layer || (h.key.pass == g.key.pass && h.key.step == g.key.step) {
+            if h.kept || h.id == g.id || h.layer != g.layer || (h.key.pass == g.key.pass && h.key.step == g.key.step) {
                 continue;
             }
+            let released = self.at[i] - TAIL <= time;
             if let Some(e) = self.older[..n].iter_mut().find(|e| e.group.id == h.id) {
                 if self.start[i] < e.start {
                     e.start = self.start[i];
                 }
                 e.group.channels |= h.channels;
                 e.cost += self.cost[i];
+                e.released = e.released && released;
             } else {
-                self.older[n] = Older { group: h, start: self.start[i], cost: 0.0 + self.cost[i] };
+                self.older[n] = Older { group: h, start: self.start[i], cost: 0.0 + self.cost[i], released };
                 n += 1;
             }
         }
-        // Those started before the note, oldest first: an insertion sort,
-        // which keeps ties as they stood (the JavaScript's stable sort).
+        let released_first = if self.lite { RELEASED_FIRST_LITE } else { RELEASED_FIRST_FULL };
+        // Those started before the note, oldest first (the released ones
+        // before the held, `RELEASED_FIRST`): an insertion sort, which keeps
+        // ties as they stood (the JavaScript's stable sort).
         let mut m = 0;
         for j in 0..n {
             if self.older[j].start < time {
@@ -237,7 +265,7 @@ impl Budget {
         for j in 1..m {
             let e = self.older[j];
             let mut k = j;
-            while k > 0 && self.older[k - 1].start - e.start > 0.0 {
+            while k > 0 && after(&self.older[k - 1], &e, released_first) {
                 self.older[k] = self.older[k - 1];
                 k -= 1;
             }
@@ -335,6 +363,15 @@ impl Budget {
         self.group[to] = self.current;
         self.len += 1;
     }
+}
+
+/// Whether `a` goes after `b` among the calls to let go: held after
+/// released (with `released_first`), then later after earlier.
+fn after(a: &Older, b: &Older, released_first: bool) -> bool {
+    if released_first && a.released != b.released {
+        return b.released;
+    }
+    a.start - b.start > 0.0
 }
 
 impl Default for Budget {

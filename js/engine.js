@@ -1312,11 +1312,21 @@ export class Engine {
     }
     if (!mutes.bass) {
       const s = at('bass');
+      // A drone's notes are a held instrument's: the budget never lets them
+      // go for a newer note (queue item 85e; the synth's `keep`).
+      const drone = !!(p.meta && p.meta.bassStyle === 'drone');
       for (const e of p.tracks.bass) {
         if (e.step !== s || !e.vel) continue;
         const key = keyOf('bass');
         if (this.late && abs < this.late.bass) continue;
-        this._play(t, () => this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug), key);
+        this._play(t, () => {
+          this.synth.keep = drone;
+          try {
+            this.synth.bass(e.midi, t, e.dur * sd, e.vel, e.glide, e.voice, e.chug);
+          } finally {
+            this.synth.keep = false;
+          }
+        }, key);
       }
     }
     // An ensemble does not attack together. The composer's detune keeps

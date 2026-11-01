@@ -29,7 +29,10 @@
 //!                                           list: one hash line a seed;
 //!                                           --request asks as the C
 //!                                           host's dl_player_ask does
-//!                                           ("glacial=0.7,bpm=70-85,organ=on")
+//!                                           ("glacial=0.7,bpm=70-85,organ=on");
+//!                                           --fades measures the voice
+//!                                           budget's let-go fades against
+//!                                           the loop's own steps (85e)
 //! cargo run --release --example dlrender -- --corpus SEED:N [the same]
 //!     [--wav DIR] [--calls DIR]             the first N loops of corpus SEED
 //!                                           (Rng(SEED).seed32() a loop), each
@@ -58,6 +61,7 @@
 
 mod change;
 mod clip;
+mod fades;
 mod notelist;
 mod seed;
 
@@ -68,7 +72,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -136,6 +140,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
         let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices };
         if b.costs {
             return seed_costs(&b.seeds, &way);
+        }
+        if b.fades {
+            return fades::run(&b.seeds, &way);
         }
         return seed_renders(&b.seeds, &way, wav_to.as_deref(), b.calls_to.as_deref());
     }
@@ -249,6 +256,7 @@ struct BySeed {
     seeds: Vec<(Option<usize>, u32)>,
     calls_to: Option<String>,
     costs: bool,
+    fades: bool,
     lite: bool,
     seconds: Option<f64>,
     wander: Option<f64>,
@@ -283,6 +291,7 @@ impl BySeed {
             "--choices" => self.choices = true,
             "--calls" => self.calls_to = Some(args.next().ok_or(USAGE)?),
             "--costs" => self.costs = true,
+            "--fades" => self.fades = true,
             "--lite" => self.lite = true,
             "--seconds" => self.seconds = Some(number(args.next())?),
             "--wander" => self.wander = Some(number(args.next())?),

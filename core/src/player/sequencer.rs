@@ -465,6 +465,10 @@ impl Sequencer {
         }
         if !mutes[Layer::Bass as usize] {
             let s_at = at(Layer::Bass);
+            // A drone's notes are a held instrument's: never let go for a
+            // newer note (queue item 85e; `meta.bassStyle`, the pedal's
+            // when it has one).
+            let drone = lp.base.bass_out.style == "drone" && lp.base.pedal.is_none();
             for (i, e) in lp.base.bass.iter().enumerate() {
                 let (vel, midi) = lp.pass.map_or((e.vel, e.midi), |p| p.bass(i, e));
                 if e.step != s_at || !truthy(vel) {
@@ -475,6 +479,9 @@ impl Sequencer {
                     continue;
                 }
                 synth.budget.begin(Some(Layer::Bass), key);
+                if drone {
+                    synth.budget.keep();
+                }
                 synth.bass(host, key, midi, t, e.dur * sd, vel, e.glide, e.voice, e.chug);
                 synth.budget.end();
             }
