@@ -12,7 +12,8 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29) and **86** (#308, a change of loop at a musical moment). **Next: 85e** (the steal at full quality), **then 85f** (a theme's rest kept), then 87. Item
+#304, 85d #305; checked by the brain's Session 29) and **86** (#308, a change of loop at a musical moment). **Next: 85e** (built, its PR waiting on one yardstick:
+`docs/notes/85e-worst-block.md`), **then 85f** (a theme's rest kept), then 87. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -260,6 +261,15 @@ ones already ending, which makes the order of what goes first matter more.
   bed, the drone): say whether any of them sits in the budget today, and
   exempt it if so.
 - `STEAL_FADE` stays 0.05 s, ending as the new note starts.
+
+**Built (hands, 2026-11-01):** `STEAL_FULL` on, released calls before held
+ones in both qualities (`RELEASED_FIRST`), a drone's notes kept (`keep`: the
+one held instrument in the budget; the organ, the wash and padSweep's bed are
+channel blocks). Lite's renders are unchanged, bit for bit. Full refusals
+(100 loops): chords 986 -> 151 of 5,056, melody 13 -> 0. Every yardstick holds
+but the worst block's cost, 6% up on the busiest loop: the note says why and
+what to decide. `dlrender --fades` measures the fades; the Full Room Album
+(`docs/ALBUMS.md`) is out.
 
 **Yardsticks:** per-layer refusals at full over the baseline's 100 loops
 before and after (chords well under today's 19.5%, melody 0), and shatter at

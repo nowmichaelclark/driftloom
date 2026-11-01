@@ -23,7 +23,7 @@ use crate::seed::Way;
 /// 5 ms after one, and outside them.
 pub struct Fades {
     pub name: String,
-    pub fades: usize,
+    pub count: usize,
     /// The largest step inside a fade over its channel's own outside them,
     /// in the channel where that is furthest; and the same for the 5 ms
     /// after a fade.
@@ -161,7 +161,7 @@ pub fn measure(seed: u32, way: &Way) -> Result<Fades, String> {
                     }
                 }
                 let name = player.generator().spec().name.as_str().to_string();
-                Ok(Fades { name, fades: fades.len(), ratio, at_ratio, channel, attack })
+                Ok(Fades { name, count: fades.len(), ratio, at_ratio, channel, attack })
             })
             .map_err(|e| format!("could not start the render thread: {e}"))?
             .join()
@@ -177,8 +177,8 @@ pub fn run(seeds: &[(Option<usize>, u32)], way: &Way) -> Result<(), String> {
     for &(index, s) in seeds {
         let f = measure(s, way)?;
         loops += 1;
-        all += f.fades;
-        if f.fades > 0 {
+        all += f.count;
+        if f.count > 0 {
             with += 1;
             worst = worst.max(f.ratio);
             worst_at = worst_at.max(f.at_ratio);
@@ -189,7 +189,7 @@ pub fn run(seeds: &[(Option<usize>, u32)], way: &Way) -> Result<(), String> {
         if f.ratio > 1.0 && !f.attack {
             unexplained += 1;
         }
-        println!("{i}seed={s} name={} fades={} ratio={:.2} channel={} attack={} at_ratio={:.2}", f.name, f.fades, f.ratio, f.channel, f.attack, f.at_ratio);
+        println!("{i}seed={s} name={} fades={} ratio={:.2} channel={} attack={} at_ratio={:.2}", f.name, f.count, f.ratio, f.channel, f.attack, f.at_ratio);
     }
     println!(
         "loops={loops} quality={} seconds={}: {all} fades in {with} loops; a fade's step over its channel's own in {over} (worst {worst:.2}x; {unexplained} of them not a note's attack); the 5 ms after one, as the new note starts, in {over_at} (worst {worst_at:.2}x)",

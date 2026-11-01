@@ -25,8 +25,8 @@ function budget(quality) {
 }
 
 const at = (step, ord) => ({ seed: 1, pass: 0, step, ord });
-const call = (s, layer, key, channels, fn) => {
-  s._group = { key, layer, channels };
+const call = (s, layer, key, channels, fn, kept = false) => {
+  s._group = { key, layer, channels, kept };
   try { return fn(); } finally { s._group = null; }
 };
 
@@ -51,7 +51,31 @@ console.log('\nTaking room from old notes (lite)');
 {
   const { s, steals } = budget('full');
   call(s, 'melody', at(0, 0), [3], () => s._release(0.0, 4.0, 250));
-  check('at full quality it refuses as before', !call(s, 'melody', at(4, 0), [], () => s._budget(1.0, false, 30)) && steals.length === 0);
+  check('at full quality it takes room too (queue item 85e)', call(s, 'melody', at(4, 0), [], () => s._budget(1.0, false, 30))
+    && JSON.stringify(steals) === JSON.stringify([[3, at(0, 0), 0.95, 1.0]]), JSON.stringify(steals));
+}
+
+console.log('\nWhat goes first, and what never goes (queue item 85e)');
+{
+  // The oldest call still held at 1 s (its note to 4 s), then one whose note
+  // ended at 0.95 s (in its tail, releasing), 60 each on lite's 140.
+  const { s, steals } = budget('lite');
+  call(s, 'bass', at(0, 0), [2], () => s._release(0.0, 4.0, 60));
+  call(s, 'bass', at(1, 0), [2], () => s._release(0.5, 0.45, 60));
+  const ok = call(s, 'bass', at(4, 0), [], () => s._budget(1.0, false, 30));
+  check('a released call goes before a held one, though it is the younger',
+    ok && JSON.stringify(steals) === JSON.stringify([[2, at(1, 0), 0.95, 1.0]]), JSON.stringify(steals));
+}
+{
+  const { s, steals } = budget('lite');
+  call(s, 'bass', at(0, 0), [2], () => s._release(0.0, 4.0, 60), true);
+  call(s, 'bass', at(1, 0), [2], () => s._release(0.5, 4.0, 60));
+  const ok = call(s, 'bass', at(4, 0), [], () => s._budget(1.0, false, 30));
+  check('a kept call (a drone\'s note) is never let go: the other goes',
+    ok && JSON.stringify(steals) === JSON.stringify([[2, at(1, 0), 0.95, 1.0]]), JSON.stringify(steals));
+  steals.length = 0;
+  check('and with only the kept one to take from, the note is refused',
+    !call(s, 'bass', at(8, 0), [], () => s._budget(1.5, false, 90)) && steals.length === 0, JSON.stringify(steals));
 }
 {
   const { s, steals } = budget('lite');

@@ -129,22 +129,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
         return changes.run(n, rate, &by_seed);
     }
     if !by_seed.seeds.is_empty() {
-        let mut b = by_seed;
-        // `--pick I` keeps the corpus's loop I and renders nothing else.
-        if let Some(i) = b.pick {
-            b.seeds.retain(|(at, _)| *at == Some(i));
-            if b.seeds.is_empty() {
-                return Err(format!("--pick {i}: the corpus has no such loop"));
-            }
-        }
-        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices };
-        if b.costs {
-            return seed_costs(&b.seeds, &way);
-        }
-        if b.fades {
-            return fades::run(&b.seeds, &way);
-        }
-        return seed_renders(&b.seeds, &way, wav_to.as_deref(), b.calls_to.as_deref());
+        return by_seed.run(rate, layout, wav_to.as_deref());
     }
     if lists.is_empty() || (wav_to.is_some() && lists.len() != 1) {
         return Err(USAGE.to_string());
@@ -249,14 +234,22 @@ impl Changes {
     }
 }
 
+/// What `--seed` measures in place of rendering: each block's cost, or the
+/// voice budget's let-go fades (queue item 85e).
+#[derive(Clone, Copy)]
+enum Measure {
+    Costs,
+    Fades,
+}
+
 /// The options of a loop from its seed (queue item 82): the seeds (each
 /// with its place in a corpus, if from one), and how to play them.
 #[derive(Default)]
 struct BySeed {
     seeds: Vec<(Option<usize>, u32)>,
     calls_to: Option<String>,
-    costs: bool,
-    fades: bool,
+    /// `--costs` or `--fades` in place of the renders.
+    measure: Option<Measure>,
     lite: bool,
     seconds: Option<f64>,
     wander: Option<f64>,
@@ -268,6 +261,26 @@ struct BySeed {
 }
 
 impl BySeed {
+    /// `--seed` and `--corpus` (`seed.rs`): the loops rendered, or their
+    /// costs or fades measured.
+    fn run(self, rate: Option<f64>, layout: u32, wav_to: Option<&str>) -> Result<(), String> {
+        let mut b = self;
+        // `--pick I` keeps the corpus's loop I and renders nothing else.
+        if let Some(i) = b.pick {
+            b.seeds.retain(|(at, _)| *at == Some(i));
+            if b.seeds.is_empty() {
+                return Err(format!("--pick {i}: the corpus has no such loop"));
+            }
+        }
+        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices };
+        match b.measure {
+            Some(Measure::Costs) => return seed_costs(&b.seeds, &way),
+            Some(Measure::Fades) => return fades::run(&b.seeds, &way),
+            None => {}
+        }
+        seed_renders(&b.seeds, &way, wav_to, b.calls_to.as_deref())
+    }
+
     /// Take `arg` (and its value, from `args`) if it is one of these
     /// options: true if it was.
     fn take(&mut self, arg: &str, args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
@@ -290,8 +303,8 @@ impl BySeed {
             "--pick" => self.pick = Some(args.next().ok_or(USAGE)?.parse::<usize>().map_err(|_| USAGE)?),
             "--choices" => self.choices = true,
             "--calls" => self.calls_to = Some(args.next().ok_or(USAGE)?),
-            "--costs" => self.costs = true,
-            "--fades" => self.fades = true,
+            "--costs" => self.measure = Some(Measure::Costs),
+            "--fades" => self.measure = Some(Measure::Fades),
             "--lite" => self.lite = true,
             "--seconds" => self.seconds = Some(number(args.next())?),
             "--wander" => self.wander = Some(number(args.next())?),
