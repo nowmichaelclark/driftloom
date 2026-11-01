@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave) and **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29). **Next: item 86.** Item
+#304, 85d #305; checked by the brain's Session 29). **Next: item 86, then 85e** (the steal at full quality), then 87. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -220,6 +220,45 @@ second core (the new loop made a stage a block, the old one's notes playing
 out, then the new one starts). This item adds the moment and the crossfade to
 it: `Player::change(request, at)` (or `load` gaining `at`), not a call on
 `Core`.
+
+## 85e. The budget takes room from old notes at full quality too
+
+**Hands:** Opus 5.5, high. After 86, before 87 (brain, 2026-11-01; Mikey
+heard 85c's lite album, "it sounded great for lite mode", and asked for the
+same at full quality: `docs/DECISIONS.md`, 2026-11-01).
+
+**Why:** at full quality the core still turns away 986 of 5,056 chord notes
+(19.5%) over the baseline's 100 loops, melody 13 and texture 59: a new chord
+loses notes while the old one's tails finish. Letting old notes go is how
+synths and samplers handle a full pool; refusing the new note is the odd
+choice. Full quality's room is larger, so the notes let go there are mostly
+ones already ending, which makes the order of what goes first matter more.
+
+**What:**
+- `STEAL_FULL` on (and `_steal` in `js/synth.js` the same), so full quality
+  takes room from old notes as lite does.
+- **What goes first, in both qualities:** a call whose notes are all past
+  their end (in the budget's `TAIL`, already releasing) before one still
+  held, oldest first within each. That is the field's usual order (JUCE's
+  `findVoiceToSteal`, FluidSynth's: released voices before held ones). If it
+  changes lite's renders, say how much and in which loops; lite was heard and
+  liked, so lite stays as 85c built it if the change there is more than
+  small, and the order applies at full only ("for Mikey's ears").
+- **Never let go** of the held instruments (the organ, the wash, padSweep's
+  bed, the drone): say whether any of them sits in the budget today, and
+  exempt it if so.
+- `STEAL_FADE` stays 0.05 s, ending as the new note starts.
+
+**Yardsticks:** per-layer refusals at full over the baseline's 100 loops
+before and after (chords well under today's 19.5%, melody 0), and shatter at
+a `bpm=180` pin at full; lite unchanged, or the change said and measured;
+no clicks at a let-go note's fade (the sample step at the fade no larger
+than the loop's own, full and lite); the worst block's cost no higher than
+today on the slowest target; the core baseline updated on purpose; the
+player against the browser bit for bit; the JavaScript fallback's own checks
+(`--engine js`, `--refusals`, `--clicks`, `--endings`) if its code is touched.
+Then a short labeled album at full for Mikey (a busy chords loop, a slow
+bell or pad loop where long tails are the point, shatter), before and after.
 
 ## 87. Rendering ahead, for the browser
 

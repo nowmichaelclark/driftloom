@@ -52,7 +52,9 @@ itself on `main` at v137 (82770b0), not taken from the reports:
 - **Docs:** items 85 and 85c and 48's brief archived; the note
   `85-fast-pins-lite.md` archived, its reading of the refusal rule moved into
   the queue's standing rules. Broken Friends still pins f654fdb; suggested one
-  repin after 87. Next: the hands take 86; the brain checks after 87.
+  repin after 87 (Mikey: later; the game is early). Mikey heard the Lite Room
+  Album ("great for lite mode") and asked for the steal at full quality too:
+  item 85e, after 86. Next: the hands take 86; the brain checks after 87.
 
 **Session 28 (brain, Opus 5.5, 2026-10-31): phase 2's port checked, items
 77-82 (#287-#296); it passes.** What the brain ran itself on `main` at v132
