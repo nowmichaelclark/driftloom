@@ -42,7 +42,7 @@ def load(folder, name):
     paths = glob.glob(os.path.join(folder, name + ".wav"))
     if not paths:
         return None, None
-    x, sr = sf.read(paths[0])
+    x, sr = sf.read(paths[0], dtype="float32")  # Ears 10: float64 ran out of memory on a 17-minute track
     return (x.mean(1) if x.ndim > 1 else x), sr
 
 
@@ -59,7 +59,7 @@ def band_shares(x, sr):
 
 
 def lines(x, sr, lo=20, hi=200, n=6):
-    spec = np.abs(np.fft.rfft(x * np.hanning(len(x))))
+    spec = np.abs(np.fft.rfft(x * np.hanning(len(x)).astype(np.float32)))
     f = np.fft.rfftfreq(len(x), 1 / sr)
     m = (f >= lo) & (f <= hi)
     fm, sm = f[m], spec[m]

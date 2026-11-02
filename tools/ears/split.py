@@ -16,6 +16,9 @@ Writes OUT_DIR/{drums,bass,other,vocals}.wav (44.1 kHz stereo) and
 OUT_DIR/split.json with the mode used and the time taken, so a card says
 which separator its stems came from.
 
+Long tracks (Ears 10): over CHUNK_S + 60 s, Demucs runs on CHUNK_S pieces that
+overlap by OVERLAP_S and are crossfaded, to keep memory near a 10-minute track.
+
 Fallback (hpss), described honestly: percussive part -> "drums" (this
 includes any transient, not only drums); harmonic part below 200 Hz ->
 "bass"; harmonic part above 200 Hz -> "other"; "vocals" is left silent
@@ -30,7 +33,61 @@ import soundfile as sf
 from cardlib import decode
 
 
+CHUNK_S, OVERLAP_S = 600, 10   # Ears 10: Demucs holds a whole track's stems in memory
+
+
+def _duration(src):
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", src],
+                         capture_output=True, text=True).stdout.strip()
+    return float(out) if out else 0.0
+
+
+def demucs_split_chunked(src, out_dir, total):
+    """Tracks over CHUNK_S + 60 s: Demucs on CHUNK_S pieces that overlap by OVERLAP_S, crossfaded
+    linearly over the overlap. Memory stays near a 10-minute track's (Ears 10: by an estimate, a 28.6-minute track
+    would need about 5 GB in one piece). Returns (seconds taken, audio seconds, pieces)."""
+    tmp = tempfile.mkdtemp(prefix="demucs_")
+    step = CHUNK_S - OVERLAP_S
+    starts = [s for s in np.arange(0, total, step) if s == 0 or s + OVERLAP_S < total]
+    wavs = []
+    for i, s in enumerate(starts):
+        w = os.path.join(tmp, f"p{i:02d}.wav")
+        subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", str(s), "-t", str(CHUNK_S), "-i", src,
+                        "-ar", "44100", "-ac", "2", w], check=True)
+        wavs.append(w)
+    t0 = time.time()
+    subprocess.run([sys.executable, "-m", "demucs", "-n", "htdemucs", "-d", "cpu",
+                    "-o", os.path.join(tmp, "out")] + wavs, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    took = time.time() - t0
+    os.makedirs(out_dir, exist_ok=True)
+    ov = int(OVERLAP_S * 44100)
+    ramp = np.linspace(0, 1, ov, dtype=np.float32)[:, None]
+    n = 0
+    for st in ("drums", "bass", "other", "vocals"):
+        n = 0
+        with sf.SoundFile(os.path.join(out_dir, st + ".wav"), "w", 44100, 2, "PCM_16") as fo:
+            tail = None
+            for i in range(len(wavs)):
+                x, _ = sf.read(os.path.join(tmp, "out", "htdemucs", f"p{i:02d}", st + ".wav"), dtype="float32")
+                if tail is not None:
+                    k = min(ov, len(x), len(tail))
+                    x[:k] = tail[:k] * (1 - ramp[:k]) + x[:k] * ramp[:k]
+                last = i == len(wavs) - 1
+                body = x if last else x[:-ov]
+                tail = None if last else x[-ov:]
+                fo.write(body)
+                n += len(body)
+    shutil.rmtree(tmp, ignore_errors=True)
+    return took, n / 44100, len(wavs)
+
+
 def demucs_split(src, out_dir, seconds=None):
+    if not seconds:
+        total = _duration(src)
+        if total > CHUNK_S + 60:
+            took, dur, pieces = demucs_split_chunked(src, out_dir, total)
+            return took, dur, pieces
     tmp = tempfile.mkdtemp(prefix="demucs_")
     wav = os.path.join(tmp, "in.wav")
     cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", src, "-ar", "44100", "-ac", "2"]
@@ -48,7 +105,7 @@ def demucs_split(src, out_dir, seconds=None):
         shutil.move(os.path.join(src_dir, s + ".wav"), os.path.join(out_dir, s + ".wav"))
     n = sf.info(os.path.join(out_dir, "drums.wav")).frames
     shutil.rmtree(tmp, ignore_errors=True)
-    return took, n / 44100
+    return took, n / 44100, 1
 
 
 MDX_MODELS = {"drums": "Drums", "bass": "Bass", "other": "Other", "vocals": "Vocals"}
@@ -120,12 +177,14 @@ def hpss_split(src, out_dir, seconds=None):
 
 
 def split(src, out_dir, mode="auto", seconds=None, skip_vocals=False):
-    used, note = None, ""
+    used, note, pieces = None, "", 1
     if mode in ("auto", "demucs"):
         try:
             import demucs  # noqa: F401
-            took, dur = demucs_split(src, out_dir, seconds)
+            took, dur, pieces = demucs_split(src, out_dir, seconds)
             used = "demucs-htdemucs"
+            if pieces > 1:
+                note = f"demucs in {pieces} pieces of {CHUNK_S} s, {OVERLAP_S} s crossfades"
         except Exception as e:  # install or weights missing, or it crashed
             if mode == "demucs":
                 raise
