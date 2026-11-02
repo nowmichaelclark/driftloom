@@ -356,8 +356,10 @@ to its own speed) are new, with `dl_play_render` and the C header's
 ahead.rs`). `tools/ahead.mjs` sweeps chunk sizes against straight through,
 checks the estimate and times render speed in Node and Chromium; CI's
 `emscripten` job holds that build to wasm32's goldens and runs the C host
-built with emcc. `speed.html` (Diagnostics links it) is the phone's test;
-the PR waits for Mikey's figures (`docs/notes/87-phone-figures.md`).
+built with emcc. `speed.html` (Diagnostics links it) is the phone's test.
+**Stopped at the yardstick:** the Moto G Power's worst block at full is
+27.9% in stereo (theith-yaing; the rest of the four under 21.5%, lite 17.1%
+at worst). The decision is in `docs/notes/87-phone-figures.md`.
 
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 
