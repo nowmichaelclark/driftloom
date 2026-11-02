@@ -184,3 +184,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   theme=3570153259,booming=0.31,cheeky=0.26,experimental`. For Mikey's ears:
   whether a friend with no tune should still get the choir's keys (today it
   doesn't).
+- #311, rendering ahead, for the browser (item 87, v141), preview URL:
+  <https://21a0568f-driftloom.nowmichaelclark.workers.dev> (commit a575532):
+  nothing to listen for (nothing that plays changed: the baseline, goldens
+  and seeds unchanged). New: rendering ahead in chunks, the same samples as
+  straight through (`Player::pass_frames`, `estimate`; the C header's
+  `dl_player_pass_frames`, `dl_player_estimate`), an Emscripten build held
+  to wasm32's goldens in CI, and the speed test, `speed.html` (Diagnostics,
+  "Speed test"). Mikey's figures: the Moto G Power at full 27.9% of the
+  deadline at worst (theith-yaing, stereo), lite 17.1%, rendering ahead lite
+  stereo 10.5-16.4x real time; the Lenovo tablet at full 89-132%, lite
+  47-76%, 2.0-3.1x. Decided: accepted, with promise 1's and 2's measures in
+  `docs/CORE.md` (`docs/notes/87-phone-figures.md`).

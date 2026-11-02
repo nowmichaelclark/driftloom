@@ -1,5 +1,14 @@
 # 87: rendering ahead, and the phone's figures
 
+**Decided (brain, 2026-11-02): option 3.** The Moto's 27.9% at full, on one
+loop of four, leaves about 72% of the deadline as headroom, and a lower
+ceiling per device would make one code sound different from phone to phone.
+Promise 1's measure for the Moto is now full under 30% and lite under 25%
+(proposed), re-measured in phase 3 on the real audio thread; promise 2 takes
+a render-ahead target (`docs/CORE.md`). The tablet's full-quality figures
+may need an item of their own (the app choosing lite by itself on slow
+devices), which the brain writes after Mikey answers.
+
 **Stopped at the yardstick (hands, 2026-11-02).** Everything in item 87 is
 built and every other yardstick holds. Mikey ran the speed test on the Moto
 G Power (2022): the worst block at full quality is **27.9% of its deadline

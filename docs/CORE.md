@@ -49,6 +49,10 @@ work cannot reach them.
 - *Measure:* the core's worst block, not its average: no block's work
   above **25% of its deadline** on the slowest tester phone (*proposed*).
   Generating a new loop is spread across blocks so it never spikes one.
+  **The Moto G Power (2022)** (brain, 2026-11-02, from item 87): the worst
+  block **under 30% at full quality and under 25% on lite** (*proposed*;
+  measured 27.9% and 17.1% with `speed.html`, the busiest four loops), and
+  re-measured in phase 3 on the real audio thread.
 
 ### 2. Light: battery and speed
 
@@ -60,6 +64,11 @@ while playing (true today for the synth; extended to the generator).
   54-95 ms/s): target **under half of today's core** (*proposed*).
 - *Measure:* the whole engine's memory, fixed and reported in bytes;
   the `.wasm` size (159 KB today) kept under a stated budget.
+- *Measure:* rendering ahead (item 87; a host with no audio thread, as
+  Broken Friends' web build): lite stereo **at least 4x real time on the
+  Moto G Power (2022)** (measured 10.5-16.4x) and **at least 2x on the
+  weakest device we support** (Mikey's Lenovo tablet: 2.0-3.1x)
+  (*proposed*; `speed.html`, the busiest four loops).
 
 ### 3. Deterministic: a code is a recipe
 
