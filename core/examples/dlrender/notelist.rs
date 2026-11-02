@@ -317,6 +317,29 @@ pub fn render(list: &List, keep: Option<usize>) -> Result<Rendered, String> {
     render_on(list, keep, false)
 }
 
+/// Run `f` on a thread with `stack` bytes of stack: a core and a player are
+/// megabytes each, and a build without optimizations makes them on the
+/// stack before boxing them. Emscripten's build has no threads (queue item
+/// 87: Broken Friends' web build links none), so there `f` runs here, on the
+/// stack the link gives it (`core/.cargo/config.toml`).
+///
+/// # Errors
+///
+/// `f`'s, or a line saying the thread could not start or panicked.
+pub fn roomy<T: Send>(stack: usize, f: impl FnOnce() -> Result<T, String> + Send) -> Result<T, String> {
+    if cfg!(target_os = "emscripten") {
+        return f();
+    }
+    std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .stack_size(stack)
+            .spawn_scoped(scope, f)
+            .map_err(|e| format!("could not start the render thread: {e}"))?
+            .join()
+            .map_err(|_| "the render thread panicked".to_string())?
+    })
+}
+
 /// `render`, with the processor set to flush subnormal numbers to zero
 /// (inputs and results), as Chromium sets its audio threads. The core never
 /// makes a subnormal number (`dlcore::math`, "Subnormal numbers"), so this
@@ -331,7 +354,7 @@ fn render_on(list: &List, keep: Option<usize>, flushing: bool) -> Result<Rendere
     // can hold it (a debug build copies it a few times on the way), and
     // lives on the heap.
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
-    crate::roomy(stack, || {
+    roomy(stack, || {
                 if flushing {
                     flush_subnormals()?;
                 }
@@ -522,7 +545,7 @@ impl Blocks {
 /// and `right`) of the same list rendered any other way.
 pub fn render_blocks(list: &List, blocks: Blocks) -> Result<Vec<String>, String> {
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
-    crate::roomy(stack, || {
+    roomy(stack, || {
                 let mut core = Box::new(Core::new());
                 load(&mut core, list)?;
                 let sides = list.layout as usize;
