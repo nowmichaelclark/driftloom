@@ -22,6 +22,7 @@ Its self-test reads a 120 s swell, a 240 s filter swing and an A-B-A form correc
 | Album | Tracks (deep pass) | Machine time | Status |
 |---|---|---|---|
 | Kankyo Ongaku (compilation, 1980 to 1990) | 23 (4) | 1,120 s | done |
+| Kyle Jameson, View From Above | 12 (4), cut from one 73:40 file | 1,515 s | done |
 
 ---
 
@@ -120,3 +121,113 @@ Numbers: Park, no beat, 15 settled chords a minute, 1% of energy above 2 kHz, wi
 - Registers under 100 Hz on pads read below the stems' strongest lines: read them as an octave or more too low.
 - Keys: three of the four margins are under 0.02 (guesses).
 - The long-form readings come from a new tool checked only on test signals; listen at the timestamps.
+
+---
+
+## Kyle Jameson, View From Above (remaster)
+
+Ears 10, 2026-11-02. The album came as one continuous 73:40 file, so I cut it into its 12 tracks at the timestamps in the folder's track list (`audio/`, scratch only). Every track got the mix-level pass. Four got the deep pass: 02 Skywriting (typical, 5:59), and the three least like the rest, 04 The Dreams Remain The Same (6:07), 11 Your Amber Eyes (4:48) and 07 Uncharted Spaces (6:55). `longform.py` ran on those four, on 12 In Ascent / Breaking Barriers (9:02, mix level only) and on the whole hour as one piece. Stems by Demucs htdemucs.
+
+Machine time: 1,515 s (25.3 min) for 23.8 minutes of deep-pass audio:
+
+- pick 159 s (12 tracks);
+- Demucs 854 s (218, 218, 171 and 248 s; 0.60 times the audio length);
+- measuring and the stem check 456 s;
+- long form 46 s, the whole hour included.
+
+Ears 9's formula (1.1 x 1,429 s + 12 x 12) says 1,716 s, so this ran 12% under it.
+
+### Stem check (read first)
+- **02 Skywriting**: drums 52%, bass 27%, other 21%, vocals 0.0%. A real beat: the drum grid's beat is 0.731 s (82.1 BPM, strength 0.71), and the meter tool's 123 BPM is 1.5 times that; I use the grid. The bass stem's strongest lines are 49 to 58 Hz and 98 to 110 Hz: a real sub.
+- **04 The Dreams Remain The Same**: drums 6%, bass 7%, other 87%. A light pulse: the grid's 0.267 s (224.7 BPM), and the meter tool's 112 is half of it.
+- **11 Your Amber Eyes**: drums 1%, bass 29%, other 69%. No drum grid. The pulse here (the album's strongest at mix level, 0.91) is the bass itself, so the drum entries and pumping lines are void.
+- **07 Uncharted Spaces**: drums 20%, bass 14%, other 62%, vocals 3% (bleed). The meter tool's 77 BPM agrees with the grid's 76.0 BPM (0.789 s).
+- **The low end leans left on the master.** Under 120 Hz the left channel is 2 to 7.5 dB louder than the right on 9 of the 12 tracks; above 500 Hz the balance stays within ±2.4 dB. So the stems' pans (bass -0.71 on Skywriting; drums -0.44 and bass -0.55 on Uncharted) are the record's, not the separator's.
+
+### The hook
+- A steady, soft pulse on every track (mix-level pulse median 0.71, the lowest 0.51) under slow open chords, with the energy low and round: 59% below 120 Hz, a centroid of 324 Hz and 1.8% above 2 kHz. Long tails (-2.8 dB a second). Every one of the 12 tracks travels (drift ratio 1.10 to 1.49, median 1.19).
+- **[JUDGMENT]** One line a listener would say. **Guess:** a calm, warm glide over a soft heartbeat, like slow flight over open land.
+
+### Sounds
+
+**S1. Swelling wide pad (Uncharted Spaces): other-1, 500 notes, 66%**
+- In synth terms: attack 269 ms (58 to 768), falls 8 dB/s, harmonic share 0.70, brightness at the start 480 Hz. Wide: correlation 0.16, the mix -1 to -3 dB in every band. Level -3.3 dB.
+- Register about C2 (66 Hz, matching the other stem's strongest line at 65 Hz). It wobbles 16 cents at 3.8 Hz.
+- Weak group (silhouette 0.17): one texture.
+- Hear it at 6:28.9, 6:29.7, 6:28.8.
+- Building blocks: **[JUDGMENT]** **Guess:** moogpad or softpad, low and wide; exists.
+
+**S2. Soft held pad (The Dreams Remain The Same): other-1, 372 notes, 63%**
+- In synth terms: attack 201 ms, falls 9 dB/s, wide (correlation 0.14), level -2.7 dB; the mix is wide in every band, the sub included (-2 dB, correlation 0.18).
+- Hear it at 1:51.4 (A2, 0.88 s), 1:58.1, 1:27.8 (A#2, 1.22 s).
+- Building blocks: **[JUDGMENT]** **Guess:** pad; exists.
+
+**S3. Repeating round bass that is the beat (Your Amber Eyes): bass-1, 460 notes, 34%**
+- In synth terms: around F2 (87 Hz; 73 to 124), harmonic, attack 110 ms, falls 26 dB/s, mono (correlation 0.97), level -6.1 dB.
+- It plays 1.49 notes a second with 78% repeats (F 39%, E 20%, D 18%). The drums stem is empty, so this repeating bass carries the pulse (0.91).
+- Hear it at the start; for the other-1 keys above it (attack 112 ms, 15 dB/s, wide, correlation 0.09), 2:23.8 and 3:42.0.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass with bassStyle pulse, the beat with no drums at all; the drumless pulse is the idea.
+
+**S4. Low triplet pulse (Skywriting): drums-1, 367 notes, 27%**
+- In synth terms: very short low hits (50 Hz, falling 601 dB/s, attack at the tool's floor), level -2.8 dB, leaning left (-0.17).
+- **Kick line (kick_check):** 881 low hits at a median of 60 Hz (A1 16%, G#1 10%), falling 182 dB/s, every 0.250 s: a third of the 0.731 s grid beat, so a triplet pulse, not a four-on-the-floor kick. The bass stays within 7 dB of its top around each hit (-4.7 dB at the hit, lowest -6.9 dB at 210 ms): no duck, the bass plays through.
+- The draft's pumping line (4.9 dB at 215 ms) is the same reading as a floor.
+- Building blocks: **[JUDGMENT]** **Guess:** a soft, tuned low tick on a triplet grid; tunedKick's short kind is the nearest.
+
+**S5. Half-wide mid pad (Skywriting): other-1, 499 notes, 29%**
+- In synth terms: register about 111 Hz (A2; the other stem's strongest line is 111 Hz), attack 170 ms, falls 13 dB/s, correlation 0.39, level -6.6 dB.
+- Hear it at 3:33.9 (A2), 4:09.6 (E2, 0.75 s, just before the floor drop), 3:49.4 (D3).
+- **[JUDGMENT]** **Guess:** softpad; exists.
+
+**S6. Low tom every second (Uncharted Spaces and The Dreams Remain The Same)**
+- **Kick lines:** Uncharted has 243 low hits at a median of 86 Hz (G#2 14%), falling 66 dB/s, every 0.98 s. That is not the 0.789 s grid beat (1.25 times it), so listen for whether it sits on the grid. Dreams has 113 hits at 65 Hz (B1 20%, C2 16%) every 1.0 s. On both the bass stays within 2.5 and 4 dB: no duck.
+- The draft's 33 Hz register for Uncharted's drums-1 is under the 40 Hz floor: read the kick line instead.
+- **[JUDGMENT]** **Guess:** a soft low tom; waits behind tunedKick.
+
+### Techniques
+- **T1. An hour as a journey of rooms.** Across the whole album as one piece (`longform.py`, 10 s windows):
+  - each track is its own room, 4 to 9 minutes long, with its own home pitch class (F for minutes 1 to 6, G for 7 to 9, E for 10 to 13, D for 21 to 26, F# for 28 to 32, D for 33 to 39, E for 55 to 59, and so on);
+  - the joins are dips of 5 to 20 dB, under a minute long, at 6, 12, 20, 26, 32, 39, 46, 54, 59 and 63 to 64 minutes: short fades, not hard cuts and not seamless blends;
+  - only 49% of windows come back to material 2 minutes old, the farthest point from the opening is at 63:50, and the end does not come home.
+  - **[JUDGMENT]** **Guess:** for Endless, this is the other model from Kankyo's Original BGM: change the room (key, pad, pulse) every 4 to 9 minutes through a short dip, rather than circling one home.
+- **T2. Brightness breaths of 2 to 3 minutes inside a track.** Skywriting's brightness swells at 1:40 and 3:50 (0.3 to 0.4 octave, 130 s apart); Uncharted at 3:00 and 5:20 (0.4 and 0.9 octave, 140 s); In Ascent at 3:50 and 7:00 (190 s). The level stays within 2.6 to 4.2 dB on Skywriting and Dreams. The mix-level arc is a median of only 2.8 dB.
+  - **[JUDGMENT]** **Guess:** padSweep's 12 to 28 s period is far faster; this is an arc-like breath of 130 to 190 s and 0.3 to 0.9 octave.
+- **T3. One floor drop, a slow tape-like bass wobble, two builds.**
+  - Skywriting drops the drums and bass from 4:10.5 to 4:20.5 (the stems say 4:11.8 for 3.2 s and 4:14.8 for 6.2 s), with the pad going on.
+  - The bass wobbles 18 to 19 cents at 1.1 Hz on Dreams and Uncharted (a floor: the tool reads low), and Uncharted's bass speed moves up to 7 cents in 4 s.
+  - Builds: Uncharted 0:20 to 0:44, Your Amber Eyes 4:19 to 4:41.
+  - No echo is claimed: Dreams' 264 ms drum echo is the 0.267 s grid pulse.
+  - **[JUDGMENT]** **Guess:** floorDrop exists; the bass wobble could be a small drift on roundBass.
+
+### Theory
+- **Th1. Open fifths and sus chords, slow.** Skywriting: Asus2, D5, C5, A#sus2 (15 settled changes a minute; 35 by the fast counter; 59% on a beat against 62% chance). Dreams: C5, G5, Csus2, Gsus2 (14 settled). Uncharted: F5, Fmin7, C5 (11 settled). The mix-level count is a median of 8.8 a minute.
+  - **[JUDGMENT]** **Guess:** like Kankyo's Park, a lean to fifths and sus2 in calm vibes, here under a beat.
+- **Th2. Your Amber Eyes, the one sure key.** F lydian (margin 0.049, reliable): Fmaj7 37% of the time, Dmaj7 11%, Cmaj7 6%. 65% of its chord changes land on a beat against 39% chance, the strongest lock in the pile so far. The bass repeats F, E, D. The other keys are guesses: Skywriting A aeolian (0.017), Dreams G ionian (0.005), Uncharted C aeolian (0.007).
+  - **[JUDGMENT]** **Guess:** lydian with a major-seventh tonic chord is a ready mode for dreamy and floating.
+- **Th3. Bass.** Skywriting moves by roots (1.18 notes a second; fourths and fifths 26%, octaves 19%). Uncharted holds C 53% (81% repeats). Dreams G 36% (72% repeats). The meter tool reports 3 beats a bar on Your Amber Eyes and Uncharted, but with many unrelated periods (irregular timing), so no meter claim.
+
+### Space
+- **Wide all the way down, and leaning left below 120 Hz.** Dreams is wide in every band (sub -2 dB, correlation 0.18; mids -0 to -3 dB). Uncharted's sub is -3 dB (0.34) and Your Amber Eyes' -5 dB (0.52). Skywriting is the most centered low end (-9 dB, 0.90), and it is narrower in the air band (-8 dB) than in the mids (-3 dB).
+- Over the hour the width holds between -3.9 and -0.6 dB (10th to 90th percentile).
+- Mono loss of the main stem is 2.3 to 2.8 dB (the other stem); Skywriting's main stem, the drums, loses 0.5 dB.
+- **[JUDGMENT]** **Guess:** take the steady, wide pads above 200 Hz; leave the wide sub and the left lean, both against stereo's guards (bass and kick centered).
+
+### Vibes
+Numbers: Skywriting 82 BPM (grid), 15 settled chords a minute, 2% above 2 kHz, width -6 dB; Dreams 112 or 225 BPM (a light pulse), 14, 1%, -1 dB; Your Amber Eyes 78 BPM (the bass), 15, 2%, -2 dB; Uncharted 76 BPM, 11, 2%, -2 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): dreamy, floating, soaring, cruising, mellow, warm, velvety, steady, swaying, chill, hazy. Lean away (x0.2 to x0.5): zany, goofy, spicy, sour, tart, jazzy. Never 0. **Guess:** calm with a pulse, between chill and dreamy.
+
+### Wholesome take
+- Take the soft pulse (a triplet tick, a low tom every second, or the bass alone), the slow fifth-and-sus chords, the lydian colour, the 2 to 3 minute brightness breaths, and the hour of rooms joined by short dips. Leave the left-leaning, wide low end. The sub share (59% under 120 Hz) is above Driftloom's low-end yardstick (drum loops under about 35% at 60 to 120 Hz), so take the weight at a lower level. **[JUDGMENT]** **Guess:** all of it is wholesome; the low end needs taming.
+
+### For later
+- Across The Heartland (7:06): the most chord changes (23.1 a minute against a median of 8.8), a 1.3 octave sweep. **[JUDGMENT]** **Guess:** the busiest track; listen.
+- In Ascent / Breaking Barriers (9:02): the last and longest. A 9.6 dB swell peaking at 3:30, a 1.5 octave brightness range, and the end coming back near its opening. Its tuning is -36 cents against the album's +17. **[JUDGMENT]** **Guess:** a build-and-return; worth a deep pass with the synthesis.
+- Ocean Bleu (4:21): the darkest (centroid 169 Hz) and loudest (-11.7 LUFS). **[JUDGMENT]** **Guess:** a sub-heavy one to leave or tame.
+- Groups left over: Skywriting bass-1 and bass-2 (F#1 and G2, leaning left); Your Amber Eyes other-2 (77 notes, bell-like C3, 9 dB/s); Dreams other-2 (34 Hz: under 40 Hz and half the other stem's 66.5 Hz line, so a subharmonic misread) and bass-1 (24 notes, G1, a 5 dB/s swell); Uncharted bass-2 (G1, 4 dB/s) and vocals-1 (214 notes at G4; bleed or a pad, a listen decides). **[JUDGMENT]** **Guess:** wait.
+
+### Reliability notes for this card
+- Your Amber Eyes' drum numbers are void (1% stem); its pulse is the bass. Dreams' grid is a light pulse (drums 6%).
+- Uncharted's low tom doesn't sit on the grid beat by a simple ratio (1.25 times): listen.
+- Pans below 120 Hz are the master's lean, not the separator's.
+- Three of four keys are guesses. Registers under 40 Hz are misreads. Wobble depths are floors.
+- The whole-hour long form runs across track joins, so its swells at a 6-minute spacing are the tracks themselves.
