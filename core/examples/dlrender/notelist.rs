@@ -331,20 +331,13 @@ fn render_on(list: &List, keep: Option<usize>, flushing: bool) -> Result<Rendere
     // can hold it (a debug build copies it a few times on the way), and
     // lives on the heap.
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || {
+    crate::roomy(stack, || {
                 if flushing {
                     flush_subnormals()?;
                 }
                 let mut core = Box::new(Core::new());
                 play(&mut core, list, keep)
             })
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })
 }
 
 /// Turn on flush-to-zero and denormals-are-zero for this thread: MXCSR's
@@ -529,10 +522,7 @@ impl Blocks {
 /// and `right`) of the same list rendered any other way.
 pub fn render_blocks(list: &List, blocks: Blocks) -> Result<Vec<String>, String> {
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || {
+    crate::roomy(stack, || {
                 let mut core = Box::new(Core::new());
                 load(&mut core, list)?;
                 let sides = list.layout as usize;
@@ -561,10 +551,6 @@ pub fn render_blocks(list: &List, blocks: Blocks) -> Result<Vec<String>, String>
                 }
                 Ok(hash.iter().map(Fnv::hex).collect())
             })
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })
 }
 
 /// The hash line for a render: the list's name, its length and each

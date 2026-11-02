@@ -312,10 +312,7 @@ pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
     let request = way.request()?;
     let blocks = (way.seconds * way.rate / dlcore::QUANTUM as f64).ceil() as usize;
     let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || {
+    crate::roomy(stack, || {
                 let mut best: Vec<(f64, f64, Work)> = vec![(f64::INFINITY, f64::INFINITY, Work::None); blocks];
                 let mut stages: Vec<Option<dlcore::generator::Stage>> = vec![None; blocks];
                 let mut core = Box::new(Core::new());
@@ -379,8 +376,4 @@ pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
                 }
                 Ok(c)
             })
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })
 }

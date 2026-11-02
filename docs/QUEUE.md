@@ -348,6 +348,17 @@ under promise 1's 25% (brain, 2026-11-02, from 85e): if it's over, say by how
 much and stop with a note (the fix would be a lower full ceiling there, for
 Mikey's ears).
 
+**Built (hands, 2026-11-02):** `Player::render` already carried on where
+the last call stopped; `pass_frames` (a pass at a time; `Core::served`) and
+`estimate` (a chunk's cost from the units the voices held, scaled by a host
+to its own speed) are new, with `dl_play_render` and the C header's
+`dl_player_pass_frames` and `dl_player_estimate` (`core/src/player/
+ahead.rs`). `tools/ahead.mjs` sweeps chunk sizes against straight through,
+checks the estimate and times render speed in Node and Chromium; CI's
+`emscripten` job holds that build to wasm32's goldens and runs the C host
+built with emcc. `speed.html` (Diagnostics links it) is the phone's test;
+the PR waits for Mikey's figures (`docs/notes/87-phone-figures.md`).
+
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 
 49's text (below) is the brief, built on 82's player and 87's chunks. Plus:
