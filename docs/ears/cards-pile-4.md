@@ -1,6 +1,6 @@
 # Ears cards, pile 4
 
-Ears 10 (run on Opus 5.5; the prompt was written for Sonnet 5.5, medium), 2026-11-02. Ambient and digital haze. The cards come from `tools/ears/album.py` (run with `python3 -P`) and are checked against the limits in `docs/EARS.md`. Lines marked **[JUDGMENT]** are for the synthesis; each carries a short first guess marked **Guess**. Vibe names come only from `data/vibes.txt`.
+Ears 10 (run on Opus 5.5; the prompt was written for Sonnet 5.5, medium), 2026-11-02; the last two cards in Ears 10b, 2026-11-03. Ambient and digital haze. The cards come from `tools/ears/album.py` (run with `python3 -P`) and are checked against the limits in `docs/EARS.md`. Lines marked **[JUDGMENT]** are for the synthesis; each carries a short first guess marked **Guess**. Vibe names come only from `data/vibes.txt`.
 
 **Stems are Demucs htdemucs** on every card; there was no MDX-Net fallback. I checked the separator with `split.py --mode demucs` on a 20 s clip before the first album (0.58 times real time). Two tool changes, both needed for long tracks on a 7.6 GB machine (`tools/ears/README.md`):
 
@@ -25,10 +25,17 @@ Its self-test reads a 120 s swell, a 240 s filter swing and an A-B-A form correc
 | Kankyo Ongaku (compilation, 1980 to 1990) | 23 (4) | 1,120 s | done |
 | Kyle Jameson, View From Above | 12 (4), cut from one 73:40 file | 1,515 s | done |
 | Windows 96, Enchanted Instrumentals and Whispers | 12 (4) | 908 s | done |
-| 2814, Birth of a New Day | 9 (3 picked) | picks only, 169 s | Ears 10b |
-| Solar Fields, Mirror's Edge | 10 (3 picked) | picks only, 169 s | Ears 10b |
+| 2814, Birth of a New Day | 9, one a bonus (3) | 2,212 s | done (Ears 10b) |
+| Solar Fields, Mirror's Edge | 10 (3) | 1,491 s | done (Ears 10b) |
 
-**Machine time:** 8,393 s (2.3 hours) for the four cards, against 7,961 s by Ears 9's formula (5% over, all of it Structures from Silence; the other three ran 11 to 15% under). The session's other machine work, about 900 s, was the 10b picks, the separator tests and the long-form self-tests. A first picker run was killed for memory at 20:29 and hung idle for 24 minutes before I found it; that is wall time, not machine time. By the 2.5-hour rule, 2814 (about 1,980 s by the formula) and Mirror's Edge (about 1,470 s) are left for **Ears 10b**.
+**Machine time:** 8,393 s (2.3 hours) for the four cards, against 7,961 s by Ears 9's formula (5% over, all of it Structures from Silence; the other three ran 11 to 15% under). The session's other machine work, about 900 s, was the 10b picks, the separator tests and the long-form self-tests. A first picker run was killed for memory at 20:29 and hung idle for 24 minutes before I found it; that is wall time, not machine time. By the 2.5-hour rule, 2814 (about 1,980 s by the formula) and Mirror's Edge (about 1,470 s) were left for **Ears 10b**.
+
+**Ears 10b** (2026-11-03, Opus 5.5) wrote those two cards, reusing Ears 10's picks from the cache. Machine time: 3,365 s this session, or 3,703 s with the two picks, against 3,442 s by the formula (8% over; 2814 12% over, Mirror's Edge 2% over). Each album.py stage ran in its own process; nothing was killed for memory. Four small scratch scripts, kept in the raw archive and not in `tools/ears/`, answer this pair's questions:
+
+- `moments.py`: how a track changes at its stem entries, exits and drops (how long each change takes, where it lands on the kick grid);
+- `beatfit.py`: the beat fitted to the kicks, and the moments' spacing in beats;
+- `monoloss.py`: the mix's left-right correlation and mono loss by band;
+- `lrbal.py`: the master's left-right balance by band.
 
 ---
 
@@ -441,3 +448,215 @@ Numbers: Lead 92 BPM, 13 settled chords a minute, 1.4% above 2 kHz, width -8.6 d
 - Venus Aire's meter and swing numbers are void (tool at 3/4 of the grid). Wasting Time's kicks are three quarters of its grid beat: listen.
 - The bass stems' pans are the separator's. Two of four keys are guesses.
 - Kick pitch at 90 to 116 Hz is above the sub range, so it is reliable to a few Hz.
+
+---
+
+## 2814, Birth of a New Day (2015)
+
+Ears 10b, 2026-11-03. The folder holds 9 tracks, 73.0 minutes; `uploads.md` lists 8 and 67:25. Without the last track, 09 余波 (aftermath, 5:35), the folder is exactly 67:25, so 09 is a bonus track. It stays in the mix-level numbers below (1 of 9) but was not picked for the deep pass. It is also unlike the rest in one clear way (see Space). Three tracks got the deep pass:
+
+- 01 恢复 (recovery; typical, 5:51);
+- the two least like the rest: 08 新しい日の誕生 (the title track, 13:04) and 05 悲哀 (sorrow, 9:24).
+
+`longform.py` ran on those three and on the other tracks of 8 minutes or more, 03 新宿ゴールデン街 (Shinjuku Golden Gai, 8:52) and 07 テレパシー (telepathy, 10:08). Stems by Demucs htdemucs, the title track in two 10-minute pieces, crossfaded.
+
+Machine time: 2,212 s (36.9 min) for 28.3 minutes of deep-pass audio:
+
+- pick 169 s (9 tracks, run in Ears 10 and reused from its cache);
+- Demucs 1,093 s (257, 493 and 342 s; 0.64 times the audio length);
+- measuring, the stem check and the long form 950 s.
+
+Ears 9's formula (1.1 x 1,699 s + 12 x 9) says 1,977 s, so this ran 12% over it. Events, theory and space on the 13-minute title track took 370 s of it. No stage was killed for memory.
+
+### Stem check (read first)
+- **01 恢复**: drums 33%, bass 16%, other 50%, vocals 0.7% (bleed). The drums stem is 99.5% below 120 Hz: it holds a sub boom, not a kit (S4). The drum repeats fall every 0.337 s out to 2.04 s (a 178 BPM grid); the meter tool's 88 BPM is half of that. The boom itself comes only every 1.03 s. The low end is on only 38% of the time, so floor drops are not counted.
+- **08, the title track**: drums 2.0% (none of it below 120 Hz), bass 6.6%, other 88%, vocals 3.7% (bleed). There is no kit, so the meter tool's 132 BPM and the chord-on-beat share mean nothing here. The bass is a real line (A1, 55 Hz, the bass stem's strongest).
+- **05 悲哀**: drums 23%, bass 26%, other 39%, **vocals 11.5%**: a voice-like texture (S6); a listen decides whether a voice is in it. The card's "26.5 BPM" grid is a bar: the strongest drum repeat is 2.264 s, four beats of 0.566 s. That is 106 BPM, matching the meter tool and the kick spacing (0.580 s).
+- **Two subharmonic misreads.** 01's other-1 group reads 70 Hz, half of the other stem's line at 139 Hz; the stem's strongest peaks are 176 and 528 Hz (F3 and C5). 05's other-1 reads 51 Hz, a third of the stem's strongest line at 152.5 Hz (D#3). Both groups are given below at their real registers. The title track's other-1 at 56 Hz (A1) is a real line but not the body of the pad, which sits at 130 to 440 Hz (C3, E3, G3, C4, E4, A4).
+- **Tuning is off on most tracks**: -38 to +25 cents (median -20). The deep-pass tracks read +14 (01), +2 (08) and -33 (05). On 05, a third of a semitone flat, each note's weight splits over two neighbors (G and G#, D and D# both show), so its key and chord names are a guess.
+
+### The hook
+- Slow, very wide, dark haze over a held root. Every track but the bonus has stereo channels that are nearly unrelated, or partly opposite, above 120 Hz (correlation -0.76 to +0.29), while the sub stays centered. The top is very dark (1.5% of the energy in 2 to 5 kHz, 0.1% above 5 kHz). The level is moderate (-13.5 LUFS median). The harmony is slow (1.2 chord changes a minute median): the title track spends 81% of 13 minutes on one chord. The floor comes late (1:28 to 1:30 on the first and title tracks), and each long track is a long fade-in, a level plateau and a fade-out.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a city at night through a rainy window, slowed down and far away.
+
+### Sounds
+
+**S1. One-chord wide pad (the title track): other-1, 435 notes, 57%**
+- In synth terms: an A minor 7 voiced from C3 to A4 (the stem's peaks at 262, 330 and 441 Hz within 0.6 dB of each other, with 131, 164 and 199 Hz under them; the group's A1 is the lowest line, 5 dB down). Soft attack (149 ms), very slow fall (6 dB/s), partials 46 cents off whole multiples. Left and right nearly unrelated (correlation 0.09), 2.8 dB under the mix. The other stem holds 88% of the track's power.
+- Weak timing data in the group (most notes are 0.1 to 0.4 s slices of one long sound).
+- Hear it at 7:03.2, 11:09.0, 11:09.3.
+- Building blocks: **[JUDGMENT]** **Guess:** a softpad or analogpad held on one min7 chord for minutes, spread very wide; exists, except the width (see Space).
+
+**S2. Falling pad (01 恢复): other-1, 314 notes, 35%**
+- In synth terms: real register F3 to D#5 (the other stem's peaks at 176, 351, 528, 557 and 628 Hz; the group's 70 Hz is a misread). A slow swell (229 ms), falls 12 dB/s, partials 57 cents off, decorrelated (0.12). Chords Fmin7 36%, A#min 28%, C#maj7 16%. Its top line falls more than it rises (45% of phrases fall) and moves in thirds (28%) and fourths or fifths (32%).
+- Weak group (silhouette 0.19): one blend.
+- Hear it at 0:47.6 (3.36 s), 1:20.9 (4.4 s), 4:55.5 (2.05 s).
+- Building blocks: **[JUDGMENT]** **Guess:** softpad or moogpad with a slow attack; exists.
+
+**S3. A bell-like bass with vibrato (05 悲哀): bass-1, 205 notes, 28%**
+- In synth terms: G#2 (104 Hz, the bass stem's strongest line), quick attack (15 ms), falls 26 dB/s, vibrato about 20 cents at 3.0 Hz, partials 92 cents off whole multiples (bell- or metal-like), mono (0.96), 5.9 dB under the mix. A pedal: G# 95% of the time, 84% repeats.
+- Hear it at 1:17.1, 2:40.9, 7:30.7.
+- Building blocks: **[JUDGMENT]** **Guess:** pluckbass with a slow vibrato, or a tubular-like tone in the bass register; partly new.
+
+**S4. A slow sub boom (01 恢复): drums-1, 172 notes, 24%**
+- In synth terms: D#1 to F1 (39 Hz; under 40 Hz, so good to about a semitone), soft attack (121 ms), falls 57 dB/s, harmonic share 1.00 (a pure low tone), mono.
+- **Kick line (kick_check):** 64 booms on D#1 (78% of hits, 39 Hz), falling 50 dB/s, every 1.03 s. The bass stem is loudest at the boom and 17 dB down 155 ms later, a bass struck with the boom (or the boom's tail in that stem). The card's pumping (kick every 0.55 s) fits neither the boom nor the grid: not claimed.
+- A drum echo at 604 ms (2 later repeats) is not a multiple of the 0.337 s grid; it may be a real delay on the boom. A listen at 1:31.6 and 1:48.0 decides.
+- Hear it at 1:31.6 (0.82 s), 1:32.8, 1:48.0.
+- Building blocks: **[JUDGMENT]** **Guess:** tunedKick's long boom kind, on a scale note, every two beats or slower; exists.
+
+**S5. Kicks and an off-beat bass (05 悲哀)**
+- **Kick line (kick_check):** 587 kicks, a median of 60 Hz spread wide (37 to 121 Hz), falling 115 dB/s, every 0.580 s (about the 0.566 s beat). The bass is at its lowest 70 ms after each kick (-13.6 dB) and at its top at 305 ms, about half a beat later: a bass that plays off the beat, taking turns with the kick.
+- Building blocks: **[JUDGMENT]** **Guess:** subDuck at full depth, or a bassStyle that plays the off-beats; exists.
+
+**S6. A wide, breathy, voice-like texture (05 悲哀): vocals-1, 206 notes**
+- In synth terms: median pitch about C#4 (274 Hz; 112 to 558), mostly noise (harmonic share 0.20), dark (brightness about 650 Hz), swelling in over about 230 ms, phrases of about 0.8 s, 9 dB under the mix. Left and right partly opposite (correlation -0.51). The vocals stem holds 11.5% of the power, 97% of it between 500 Hz and 2 kHz. On the title track the same stem holds 3.7%, which is bleed.
+- Building blocks: **[JUDGMENT]** **Guess:** a wordless, breathy vowel pad around C#4, synthesized and never a sample, kept low; the choir or vowel family, with a width that stays mono-safe.
+
+### Techniques
+- **T1. A very late floor.** 01's boom and bass enter together at 1:29.5, after 90 s of pad alone. The title track's bass first enters at 1:28.5, and the summed low end stays 15 dB down until 1:48.5. On 05 the drums enter at 0:07.0 and the bass at 0:40.0.
+  - **[JUDGMENT]** **Guess:** lateFloor at 40 to 90 s, three times its present range (8 to 30 s); for Mikey's ears.
+- **T2. A gated floor (01 恢复).** Between 2:24 and 4:19, the summed low end drops out for 2 to 4 s, 15 times: about every 5.5 s, and every 2.5 to 3 s from 4:08. From 4:24.5 it is off for most of the rest. **[JUDGMENT]** **Guess:** a slow on-off gate on the low end; listen at 2:24 to 2:52 to tell it from the boom's own spacing.
+- **T3. Long fades around a level plateau.** The level by minute rises 5 to 14 dB over the first one to four minutes, holds within about 2 to 4 dB, and fades out in the last one or two:
+  - 03: from -27.8 dB to -14.6 to -17.0 dB from 1:00 to 8:00;
+  - 07: -16 to -17.3 dB from 2:00 to 8:00;
+  - the title track: from -31.1 dB to about -18 dB by 4:00, held to 11:00, then out over 2 minutes.
+  - On the title track the brightness falls as the level comes up (1,488 Hz in the first minute, 550 Hz by the fifth), and so does the width (from +5.9 dB, partly opposite, to +0.2 dB). The long-form "swells" (10 to 16 dB) are these fades, not swells inside the music. No track's level has a period, and none ends near its opening (returns 0.26 to 0.68; drift ratio 1.14 to 2.31, above 1 on all 9).
+  - **[JUDGMENT]** **Guess:** a fade-in of 1 to 4 minutes, darkening as it fills in, then a long, steady middle; the arc is the envelope, not the swells.
+- **T4. Slow brightness moves.** Mix-level sweeps of 0.7 octave or more: 2.2 a minute on 01 (up to 3.0 octaves), 2.5 on the title track, 1.8 on 05. On 03, a 240 s brightness cycle (autocorrelation 0.48), the only period found on this album. **[JUDGMENT]** **Guess:** a slow filter; 03 is the one to hear for a cycle.
+
+### Theory
+- **Th1. One chord, or three, over a pedal.** The title track: Amin7 81%, Cmaj7 9%, Emin7 5% over an A pedal (93%); 3 settled chords a minute (A dorian by the key tool, margin 0.000, a guess). 01: Fmin7, A#min, C#maj7 over C# (66%) and F (23%) roots; C# lydian, margin 0.026, reliable; 6 settled a minute. 05: G#min7 29%, C#sus2 25%, G#maj7 12% over a G# pedal (95%); key a guess (tuning -33 cents).
+  - **[JUDGMENT]** **Guess:** min7 chords held for 10 s to minutes over one root; a "one chord" option, where the chord barely changes for a whole loop.
+- **Th2. Top lines.** 01's falls (45% of phrases) in thirds and fourths. 05's arches (53%). The title track's moves are flat or wavy (41%) in a 9-semitone range. Read by ear first.
+
+### Space
+- **The widest record in the pile, and not mono-safe.** By band, the mix's correlation and the loss when left and right are summed (8 of 9 tracks):
+  - below 120 Hz: correlation 0.31 to 1.00 (median 0.89), loss 0.0 to 1.8 dB;
+  - 120 to 500 Hz: -0.11 to +0.29, loss 1.9 to 3.5 dB;
+  - above 500 Hz: -0.76 to +0.03, loss 2.9 to 9.1 dB.
+  - The title track loses 9.1 dB in 2 to 5 kHz and 8.5 dB above 5 kHz (correlation -0.76 and -0.73). 06 loses 6.1 dB in 2 to 5 kHz and 05 5.8 dB in 500 Hz to 2 kHz.
+  - Width medians are -0.2 dB (0 = unrelated channels); over time (2 s windows) -1/+1/+4 dB on the title track.
+- **The bonus track is the exception.** 09 余波 is correlated in every band (+0.51 to +0.97; it loses 0.4 to 1.2 dB), with a width of -9.4 dB: a different mix from the rest.
+- By part: the drums and bass are centered (-11 to -25 dB, mono loss 0.0 to 0.3 dB), except the title track's thin drums stem (+4 dB). The other stem is 0 to +2 dB (mono loss 2.9 to 3.9 dB) and the vocals stem on 05 +6 dB (6.7 dB).
+- The master is balanced left to right: within 1.4 dB in every band on all 9, except 03's 120 to 500 Hz (2.7 dB right).
+- **[JUDGMENT]** **Guess:** take a very wide pad over a mono floor, but keep its correlation above 0 so that mono loses no more than about 3 dB. Today's stereo tests found stereo and mono the same on 5 of 6; this record is the opposite case, so a mono check by ear belongs with any wide-pad sketch.
+
+### Vibes
+Numbers: 01 88 BPM (178 grid, boom every 1.03 s), 6 settled chords a minute, 1.1% above 2 kHz, width -3.3 dB; the title track: no beat, 3, 3.8%, 0.0 dB; 05 106 BPM, 11, 2.7%, -0.2 dB. The card's "15% above 2 kHz" for the title track is wrong: the direct spectrum and the stem bands both give 3.8 to 3.9%.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): misty, rainy, foggy, hazy, dreamy, moonlit, dusky, floating, wistful, reflective, spacious, mysterious, velvety. Lean away (x0.2 to x0.5): crisp, bright, sunny, bouncy, plucky, zesty, merry, goofy. Never 0. **Guess:** rainy and misty's reference record.
+
+### Wholesome take
+- Take the calm night glow: the held min7 chords over a pedal, the very late floor, the long fade-in that darkens as it fills, the slow boom, and a breathy wordless vowel texture rebuilt as a synth. Leave the width that cancels in mono, and keep the sorrow of the titles as a gentle wistfulness. **[JUDGMENT]** **Guess:** wholesome; keep the stereo mono-safe.
+
+### For later
+- 07 テレパシー (10:08): nearly beatless (pulse 0.13), 0.2 chord changes a minute, the biggest fade-in (from -29.5 dB to a plateau at -16 to -17), the widest loudness range (LRA 14.0). **[JUDGMENT]** **Guess:** a deep pass would make it a drone reference.
+- 03 新宿ゴールデン街 (8:52): the only brightness period (240 s), the most chord changes (6.8 a minute), narrower (-6.2 dB), tuning -30 cents. **[JUDGMENT]** **Guess:** listen for a slow filter cycle.
+- 02 遠くの愛好家 (6:18): the quietest (-21.7 LUFS), nearly beatless (0.11). 06 真実の恋 (7:12): the most out of tune (-38 cents), the steadiest pulse (0.78). 04 ふわっと (6:36): 5.2 chord changes a minute. **[JUDGMENT]** **Guess:** wait.
+- 09 余波, the bonus (5:35): correlated stereo, the flattest (LRA 3.0), the least repetitive (0.37), tuning +25 cents. **[JUDGMENT]** **Guess:** wait; a different session or mix.
+- Groups left over: 01 other-2 (F3, bell-like, slow swell), 01 bass-1 and bass-2 (C#2 and E1, fast falling); 05 other-2 (G#2, bell-like) and drums-1 (a mid snap, 129 dB/s). **[JUDGMENT]** **Guess:** wait.
+
+### Reliability notes for this card
+- Two pad registers were corrected from misreads (S2 and the 05 pad). The title track's chord comes from the stem's peaks, not the group.
+- 05's key and chord names are guesses (tuning -33 cents). The title track has no beat, so its meter and chord-on-beat numbers are void.
+- 01's pumping is void (its kick finder fits neither the boom nor the grid). The 604 ms echo is a maybe.
+- The mono losses are measured on the mix itself (`monoloss.py`), not on stems.
+
+---
+
+## Solar Fields, Mirror's Edge (Original Videogame Score) (2009)
+
+Ears 10b, 2026-11-03. 10 tracks, 70.2 minutes, all at mix level. Three got the deep pass: 06 New Eden (typical, 7:52), and the two least like the rest, 01 Introduction (5:34) and 02 Edge Flight (6:56). `longform.py` ran on the three; no track is 8 minutes long. Stems by Demucs htdemucs.
+
+Machine time: 1,491 s (24.9 min) for 20.4 minutes of deep-pass audio:
+
+- pick 169 s (10 tracks, run in Ears 10 and reused from its cache);
+- Demucs 590 s (310, 218 and 262 s; 0.48 times the audio length);
+- measuring, the stem check and the long form 732 s.
+
+Ears 9's formula (1.1 x 1,223 s + 12 x 10) says 1,465 s, so this ran 2% over it. The extra checks below (kicks, moments, the master's balance) took about 3 minutes more.
+
+### Stem check (read first)
+- **06 New Eden**: drums 26%, bass 60%, other 14%, vocals 0.4% (bleed). The drum grid's beat is 0.395 s (151.9 BPM). The kicks fit a 149.7 BPM grid (lock 0.59), and the strongest drum repeat is 1.60 s, a bar of four. The meter tool's 75 BPM is half: the music is felt at 75, the kit runs at 150.
+- **01 Introduction**: drums 23%, bass 51%, other 24%, vocals 1.4% (bleed). The card's "26.8 BPM" grid is a bar, not a beat: the strongest drum repeat is 2.24 s, four beats of 0.56 s. The meter tool's 107 BPM and the kick spacing (0.560 s) agree with it, so the beat is 106.8 BPM. The low end is off for the first 40.5 s.
+- **02 Edge Flight**: drums 43%, bass 20%, other 35%, vocals 1.9% (bleed). The card's 80.8 BPM is the first strong drum repeat (0.743 s), which is an off-beat hit in a broken pattern. The strongest repeat is 1.683 s, four beats of 0.42 s (142 BPM). The meter tool's 71 BPM is half of that. I use 71/142; the swing and chord-on-beat numbers lean on the meter, so read them as weak here.
+- No subharmonic misreads. New Eden's bass group at 39 Hz (D#1) sits on a real line in the bass stem (38.7 Hz, 1.4 dB under the strongest at 77.5 Hz). Introduction's bass group at 62 Hz is the bass stem's strongest line (62.2 Hz).
+- **The master leans right**, a little: 0.3 to 1.6 dB, in every band, on 9 of 10 tracks. On Introduction, 500 Hz to 2 kHz is 2.8 dB right, so the other stem's +0.16 to +0.29 pan on that track is in the mix, not the separator's. Pirandello Kruger is the one track that leans left (120 to 500 Hz, -2.0 dB).
+
+### The hook
+- A sub pedal under clean, slowly moving pads, with a kit that comes and goes in whole phrases. Loud (-10.6 LUFS median) and dark: 67% of the energy below 120 Hz, 2.3% in 2 to 5 kHz, 0.7% above 5 kHz. Perfectly in tune (tuning +0.5 cents median, wobble 4.1 cents: digital, no tape). Slow harmony at mix level (1.9 chord changes a minute median), over a bass that holds one note (New Eden D# 96% of the time, Edge Flight A# 68%).
+- **[JUDGMENT]** One line a listener would say. **Guess:** cold, clean city air; a deep hum underneath, and a beat that switches on and off like lights.
+
+### Sounds
+
+**S1. Sub pedal (New Eden): bass-1, 131 notes, 27%**
+- In synth terms: D#1 (39 Hz) with its octave (77.5 Hz, the bass stem's strongest line), harmonic share 0.99, slow swell (attack 255 ms), falls only 3 dB/s, mono (correlation 1.00), 2.4 dB under the mix. The bass stem holds 60% of the track's power. Bass behavior: pedal, D# 96%, 75% repeats, 13% octave moves.
+- Hear it at 0:00.0 (6.05 s), 6:24.2 (2.09 s), 6:27.1 (1.74 s).
+- Building blocks: **[JUDGMENT]** **Guess:** sub with bassStyle held, on the key's root, with the octave above; exists. Pitch under 40 Hz is good to about a semitone.
+
+**S2. Glassy mid pads (Edge Flight and New Eden): other-1, 415 and 298 notes, 38% and 16%**
+- In synth terms: Edge Flight about A#2 (113 Hz; the clearest notes are on E2), New Eden about D#2 (78 Hz, the other stem's line at 77.9 Hz). Soft attacks (116 and 124 ms), falls 25 and 14 dB/s. Partials are 31 to 42 cents off whole multiples: not pure, a little bell- or glass-like. The stereo is half-correlated (0.33 and 0.43).
+- Weak groups (silhouette 0.22 to 0.24): one blend each.
+- Hear Edge Flight at 4:36.7 (E2, 4.15 s), 4:46.1, 4:47.3; New Eden at 5:25.4, 4:58.7, 5:00.5.
+- Building blocks: **[JUDGMENT]** **Guess:** softpad or analogpad with a slightly inharmonic top; the "glass" is in the partials and the width, not in the treble (only 2 to 6% of the energy above 2 kHz).
+
+**S3. Right-leaning swell pad (Introduction): other-1, 391 notes, 34%**
+- In synth terms: about C#3 (139 Hz; 92 to 309), slow swell (attack 202 ms; 41 to 769), falls 15 dB/s, pan +0.16 (real: the master is 2.8 dB right in that band), correlation 0.48, 5.8 dB under the mix.
+- Hear it at 5:19.0 (C#3, 1.89 s), 5:18.8, 5:18.5.
+- Building blocks: **[JUDGMENT]** **Guess:** softpad or moogpad, swelling; exists.
+
+**S4. Slow bass with a little vibrato (Introduction): bass-1, 75 notes, 19%**
+- In synth terms: B1 (62 Hz), harmonic share 0.99, attack 428 ms (a swell, not a pluck), falls 8 dB/s, vibrato about 9 cents at 3.0 Hz, mono. The roots walk B (41%), D# (29%), C# (22%), 0.95 notes a second with 72% repeats.
+- Hear it at 0:48.9 (B1, 6.79 s), 1:26.0, 4:16.5 (D#2).
+- Building blocks: **[JUDGMENT]** **Guess:** sub or round bass with a slow attack and a light vibrato; bassStyle held moving between three roots.
+
+**S5. Kicks (all three)**
+- **Kick lines (kick_check):**
+  - New Eden: 518 kicks, a median of 72 Hz (about D2; 50 to 120), falling 98 dB/s, every 0.400 s (the 150 BPM beat). The bass plays through (within 2.2 dB).
+  - Introduction: 302 kicks, a median of 41 Hz (D1, 35% of hits; under 60 Hz, so good to about a semitone, and some of it may be the sub in the drums stem), soft (86 dB/s), every 0.560 s (the beat). The bass plays through (within 0.8 dB).
+  - Edge Flight: 292 kicks, a median of 69 Hz spread wide (30 to 123 Hz), short (250 dB/s), every 0.530 s, which does not fit the 0.42 s beat: a broken pattern (the drum repeats are 0.743, 0.848 and 1.683 s). The bass is 8.3 dB down at the kick and back at its top by 145 ms, but tied to a kick spacing that misses the beat: not claimed.
+- Building blocks: **[JUDGMENT]** **Guess:** tunedKick, short, on the root or the fifth; Edge Flight's broken pattern is a drum-pattern question for later.
+
+### Techniques
+
+- **T1. The moments: how the score changes.** The core now changes loops at a beat, bar, phrase or pass, with a crossfade, for Broken Friends. I measured every stem entry and exit, floor drop and strong section boundary on the three tracks (`moments.py`, `beatfit.py`, in the raw archive). For each one I measured how long the change takes (10% to 90% of the amplitude step) and where it lands on the kick grid:
+  - **Introduction changes on the phrase line.** Its eight big moments sit 64, 128, 32, 32, 96, 8 and 128 beats apart, at 106.8 BPM (measured 63.7, 127.4, 32.5, 33.3, 94.4, 8.0 and 127.8; the two farthest, 1.3 and 1.6 beats off, meet at the kit's entry at 3:05.1, which lands one beat after the phrase line; 3:58.1 is a fade's steepest point). That is whole 8-bar phrases of 32 beats (18 s), plus one 2-bar return. The bass enters at 0:40.8 and the kit at 1:16.6. Both stop at 2:28.1. The bass comes back alone at 2:46.4, and the kit and bass return at 3:05.1 to 3:06.8. The bass fades out at 3:58.1 and is back 8 beats later (4:02.6), and the kit stops at 5:14.4.
+  - **New Eden too, at first.** The drums cut in at 0:51.2 and the pad leaves at 1:16.8 and returns at 1:29.6: 64 and 32 beats apart at 149.7 BPM (8 and 4 bars at the 150 beat, 4 and 2 at the felt 75). The bass leaves at 3:24.8, near beat 512 (16 x 32). The big re-entry at 5:28.7 (drums and bass together, +10.5 dB) and the bass's return at 6:19.9 are 128 beats apart. Not every gap is a whole phrase (287.6 and 295.3 beats).
+  - **Edge Flight does not.** Its gaps (106, 40, 268, 42, 172, 138, 126 beats) fit no bar, and the kick grid locks only weakly (0.23). Its changes are fades instead: the drums fade in or out over 1 to 6 s, 13 times.
+  - **In sharp, out slow.** On Introduction and New Eden the drums cut out in 0.05 to 0.75 s, on a kick (within 0.15 beat at 2:28.1, 5:14.4 and 4:07.4). The bass fades out over 3.4 to 6 s, eight times across the three tracks. It comes back fast: 7 of its 13 entries take 0.3 s or less, on the beat (Introduction 0:40.8 and 4:02.6; New Eden 5:28.7 and 6:19.9). Edge Flight's big drop-in at 4:51.6 is the same: drums and bass back together in 0.05 s, +5.6 dB.
+  - **[JUDGMENT]** **Guess:** for Broken Friends, layer changes at a phrase (8 bars here), with the kit and bass cutting in on the downbeat and the bass leaving by a 4 s fade. A crossfade suits the pads; the kit should not crossfade in. A listen at 2:28 and 4:02 on Introduction shows both moves.
+- **T2. Floor drops, often and long.** New Eden 1.41 a minute (the longest 18.0 s at 4:47.2), Introduction 1.20 (19.0 s at 0:21.8, 18.0 s at 2:28.8), Edge Flight 1.45 (24.0 s at 4:27.5). The low end is off for Introduction's first 40.5 s.
+  - **[JUDGMENT]** **Guess:** floorDrop and lateFloor exist; these are long drops, whole phrases with no floor.
+- **T3. The pads always moving.** Brightness sweeps of 0.7 octave or more at mix level: 27 on New Eden (3.4 a minute, the first 2.8 octaves up from 0:08 to 0:23.5), 27 on Edge Flight (3.9 a minute), 16 on Introduction (2.9). The album's median sweep range is 1.6 octaves; Jacknife's is 3.0.
+  - **[JUDGMENT]** **Guess:** a slow filter on the pads, moving every 15 to 20 s; the opening sweep is a filter arc.
+- **T4. No echo or pump claimed.** Edge Flight's drum "echo" at 743 ms is its own pattern's repeat (0.743 s). New Eden's 803 ms is two beats, with no later repeat. New Eden's 2.3 dB bass pump (kick every 0.38 s) is close to its 0.40 s beat but small. Edge Flight's 5.3 dB is tied to a kick finder that misses the beat. Neither is claimed.
+- **T5. Long form: travel, no return.** Each track has two level swells at most (Introduction at 2:00 and 3:50, 5.6 and 6.4 dB; New Eden at 2:50 and 6:20, 5.5 and 6.3 dB, 210 s apart; Edge Flight one at 2:10, 4.3 dB), and no period. Sections at the minute scale: Introduction 1:10, 2:20, 3:20; New Eden 1:00, 2:00, 5:30, 6:40; Edge Flight 3:30, 5:40. Returns: 0.46 New Eden, 0.38 Introduction, 0.03 Edge Flight. No track ends near its opening. Drift ratio 1.45 to 1.82, above 1 on all 10.
+  - **[JUDGMENT]** **Guess:** a score that moves on, scene by scene; a loop machine takes the phrase-scale layering, not the travel.
+
+### Theory
+- **Th1. Pedal and slow chords.** New Eden: D#5 42%, C#sus2 22%, D#maj7 16% over the D# pedal (D# phrygian, margin 0.003, a guess; fits D# pentatonic), 5 settled chords a minute. Introduction: D#5, D#min7, Bmaj7, C#5 (B lydian, 0.012, a guess; the weights C#, D#, A#, F#, F fit it), 17 settled a minute. That count is high for its sound, so read it as pad movement. Edge Flight: Esus2 21%, A#sus2 13%, E5 13%, A#5 12% (A# locrian, 0.011, a guess), 6 settled a minute.
+  - **[JUDGMENT]** **Guess:** open fifths and sus2 chords over one held root; Edge Flight's two sus chords a tritone apart (E and A#) are the cold color. Chord names on dense music are a guess.
+- **Th2. Top lines in fourths and fifths.** 28% of New Eden's moves are fourths or fifths, and 35% of Edge Flight's. Introduction's leaps (34%) in short arching phrases of about 7 notes (38% arches). From the other stem: read by ear first.
+
+### Space
+- **The width is in the middle.** New Eden: sub -21 dB (mono), 120 to 500 Hz -9, 500 Hz to 2 kHz -2, 2 to 5 kHz -9, above 5 kHz -12. Introduction: -14, -7, -4, -2, -8. Edge Flight: -9, -5, -3, -6, -9. Unlike Windows 96, the width does not keep rising with pitch: it peaks between 500 Hz and 5 kHz and closes again in the air band.
+- By part: the drums are narrow (-16 to -25 dB, mono loss 0.0 to 0.1 dB); the bass is mono on New Eden (-25 dB) and half wide on Edge Flight (-8 dB). The other stem is wide (-2 to -4 dB, mono loss 1.5 to 2.1 dB). Over time (2 s windows), -13/-5/-1 dB on New Eden. Album width median -9.25 dB; Heat is the narrowest (-13.5).
+- **[JUDGMENT]** **Guess:** a space reference for a wide middle over a mono floor; the pads carry all the width.
+
+### Vibes
+Numbers: New Eden 150 BPM (felt 75), 5 settled chords a minute, 2% above 2 kHz, width -9.7 dB; Introduction 107 BPM, 17, 4%, -8.0 dB; Edge Flight 142 BPM (felt 71), 6, 6%, -6.7 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): cool, frosty, spacious, pulsing, steady, hypnotic, mysterious, cosmic, soaring, booming, glacial. Lean away (x0.2 to x0.5): cozy, warm, sunny, merry, goofy, bubbly, jazzy, heartwarming. Never 0. **Guess:** the reference record for cool with a pulse.
+
+### Wholesome take
+- Take the sub pedal at a gentler level, the clean in-tune pads with the width in the middle, the open fifths and sus chords, and the phrase-line layering: the kit cutting in on the downbeat and the bass fading out. Leave the tension cues (Edge Flight's broken kit, the tritone pair) for moments that need them. **[JUDGMENT]** **Guess:** wholesome; the low end is heavy (67% under 120 Hz), so tame it.
+
+### For later
+- 04 Heat (7:01): the narrowest (-13.5 dB), the biggest arc (14.8 dB) and the widest loudness range (LRA 15.3). **[JUDGMENT]** **Guess:** listen for a long build.
+- 03 Jacknife (6:25): the darkest (centroid 137 Hz) and the biggest sweep (3.0 octaves). **[JUDGMENT]** **Guess:** listen for a filter opening; a deep pass would test T3.
+- 10 Shard (7:17): the most chord changes (8.5 a minute). 09 Kate (7:13): the steadiest pulse (0.88). 07 Pirandello Kruger (7:09): the loudest (-9.3 LUFS), the only one leaning left. **[JUDGMENT]** **Guess:** wait.
+- Groups left over: New Eden bass-2 (D#2, a held swell) and other-2 (D#3); Introduction bass-2 (D#1) and other-2 (D#4, leaning right); Edge Flight bass-1 (A#1, quick, 51 dB/s) and drums-2 (a high tick). **[JUDGMENT]** **Guess:** wait.
+
+### Reliability notes for this card
+- The beat level is set from the drum repeats and the kicks; the meter tool is at half on New Eden and Edge Flight. Edge Flight's grid locks weakly, so its bar positions are not claimed.
+- The moments' times are the steepest change within 2 s of each stem edge, in 50 ms frames. The beat is fitted to the kicks over the whole track; the lock is 0.59 on New Eden but weak on Introduction (0.18) and Edge Flight (0.23). So Introduction's phrase reading rests on its gaps coming out as whole multiples of 8 beats, not on the lock. A fade's landing is its steepest point, so fades are not given a beat.
+- The vocals stem is bleed on all three (0.4 to 1.9%): its entries are not read as moments.

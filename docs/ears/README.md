@@ -18,7 +18,7 @@ hands are in `docs/EARS.md`.
 | `cards-pile-1.md` | Pile 1 album cards (Ears 5): Aphex Twin 1992-94 and Polygon Window. |
 | `cards-pile-2.md` | Pile 2 album cards (Ears 6 and 7): the Aphex EPs and aliases. |
 | `cards-pile-3.md` | Pile 3 album cards (Ears 9): Aphex Twin 1996-2001. |
-| `cards-pile-4.md` | Pile 4 album cards (Ears 10): ambient and digital haze, with long-form readings (`tools/ears/longform.py`). |
+| `cards-pile-4.md` | Pile 4 album cards (Ears 10 and 10b), all six: ambient and digital haze, with long-form readings (`tools/ears/longform.py`) and how a game score changes at its moments (Mirror's Edge). |
 | `batch-5.md` | The first synthesis (Ears 8): ten candidates ranked from the 16 cards, seven sketched and rendered, all seven approved (2026-10-18), with Mikey's note on how they go in. |
 | `prompt-ears-*.md` | The opening message for a coming ears session, to paste. |
 | `prototypes.md` | The first sketches (Ears 1; the app branch they lived on went wrong, so ideas only). |
