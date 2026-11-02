@@ -3,7 +3,7 @@
 // browser JavaScript, so both run the very same code; the file format, the
 // canonical text and the cases are documented in tools/gen-golden.mjs.
 
-import { newSpec, planOf, vibeSelection, LAYERS } from '../js/generator.js';
+import { newSpec, planOf, vibeSelection, choirOf, themeRests, LAYERS } from '../js/generator.js';
 import { Engine } from '../js/engine.js';
 import { Rng } from '../js/rng.js';
 import { VIBE_IDS } from '../js/vibes.js';
@@ -34,6 +34,12 @@ export const PIN_N = 240;
 // theme of the kind its index picks (`themeCase`).
 export const THEME_SEED = 8504;
 export const THEME_N = 240;
+// A theme's rest, choir or not (queue item 85f): themes whose own loop rests,
+// each bent onto a seed whose loop draws a choir, from their own stream, the
+// brain's case first (`restCases`).
+export const REST_SEED = 8506;
+export const REST_N = 24;
+export const REST_FIRST = [2428270433, 'theme=3570153259,booming=0.31,cheeky=0.26,experimental'];
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -132,6 +138,31 @@ export function cases(goldenCodes) {
   for (let i = 0; i < THEME_N; i++) {
     const seed = themed.seed32();
     out.push({ set: 'theme', index: i, seed, vibes: null, request: themeCase(themed, i, seed) });
+  }
+  restCases().forEach(([seed, request], i) => out.push({ set: 'rest', index: i, seed, vibes: null, request }));
+  return out;
+}
+
+// The rest cases (queue item 85f): the brain's, then resting themes on choir
+// seeds, the theme alone, with vibes, with weighted vibes, with a tempo.
+function restCases() {
+  const r = new Rng(REST_SEED);
+  const next = (wanted) => {
+    for (;;) {
+      const s = r.seed32();
+      if (wanted(s)) return s;
+    }
+  };
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  const out = [REST_FIRST];
+  for (let i = 1; i < REST_N; i++) {
+    const theme = next((s) => themeRests({ theme: s }));
+    const seed = next((s) => !!choirOf(newSpec(s)));
+    const parts = [`theme=${theme}`];
+    if (i % 4 === 1) parts.unshift(...vibes(1 + (i % 3)));
+    if (i % 4 === 2) parts.unshift(...vibes(2).map((id) => `${id}=${Math.floor(r.f() * 100) / 100}`));
+    if (i % 4 === 3) parts.unshift(`bpm=${40 + Math.floor(r.f() * 120)}`);
+    out.push([seed, parts.join(',')]);
   }
   return out;
 }

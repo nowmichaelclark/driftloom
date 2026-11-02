@@ -591,9 +591,15 @@ impl Spec {
         }
     }
 
-    /// `choirOf(spec)`.
+    /// `choirOf(spec)`. None for a loop whose theme rests (queue item 85f):
+    /// a friend with no tune keeps none, so its bent loop is not a choir
+    /// loop at all; the choir's draws are a stream of their own, so nothing
+    /// else moves.
     #[must_use]
     pub fn choir(&self) -> Option<Choir> {
+        if matches!(self.tune, Some(None)) {
+            return None;
+        }
         let mut r = Rng::new(js::salted(self.seed, CHOIR_SALT, 17));
         if !r.chance(CHOIR_RATE) {
             return None;

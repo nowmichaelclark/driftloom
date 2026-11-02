@@ -93,7 +93,11 @@
 //   theme:0-239     240 seeds from Rng(8504), each with a theme of the kind
 //                   its index picks (gen-golden-lib.mjs, `themeCase`; queue
 //                   item 85d): the loop's own seed alone, with vibes, with a
-//                   tempo, with pins, and another seed with vibes.
+//                   tempo, with pins, and another seed with vibes;
+//   rest:0-23       24 themes whose own loop rests, each on a seed whose loop
+//                   draws a choir (gen-golden-lib.mjs, `restCases`; queue
+//                   item 85f): the brain's case first, then from Rng(8506),
+//                   alone, with vibes, weighted vibes or a tempo.
 //
 // Run it after any change to the generator, the vibes, the choices or the
 // engine's load. A change that is meant to move what is generated writes the

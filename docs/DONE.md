@@ -170,3 +170,17 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, six loops before and
   after. The worst block at full rises 6% on the busiest loop (decided:
   `docs/notes/85e-worst-block.md`); item 87 checks it on the Moto G Power.
+- #310, a theme's rest is kept, choir or not (item 85f, v140), preview URL:
+  <https://84b65ca7-driftloom.nowmichaelclark.workers.dev> (commit 2e2ff25):
+  a theme whose own loop has no tune keeps its rest when it is bent, even on
+  a seed that draws a choir; such a loop simply isn't a choir loop (its keys
+  play the voice they drew, and it may develop as other loops of its length
+  can). The brain's case, 2428270433 bent onto theme 3570153259 with
+  `booming=0.31,cheeky=0.26,experimental` (dail-vu), had a vowel choir
+  singing 87 notes; now no melody, its keys on pad. Nothing asked changes
+  nothing: the corpus goldens, the baseline and the balance lock unchanged,
+  and the app has no theme picker, so listen for nothing in today's loops.
+  The ears can: `dlrender --seed 2428270433 --request
+  theme=3570153259,booming=0.31,cheeky=0.26,experimental`. For Mikey's ears:
+  whether a friend with no tune should still get the choir's keys (today it
+  doesn't).

@@ -5,7 +5,7 @@
 // voicing or an out-of-range note does not throw, it just sounds wrong,
 // and often only on one seed in a thousand. So we check thousands.
 
-import { newSpec, render, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf, metreOf, readRequest, parseRequest, requestText, requestOf, RequestError, TEMPO_LIMIT } from '../js/generator.js';
+import { newSpec, render, choirOf, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf, metreOf, readRequest, parseRequest, requestText, requestOf, RequestError, TEMPO_LIMIT } from '../js/generator.js';
 import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
 import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
@@ -1825,6 +1825,17 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
       && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
   }
   check('theme: a loop with a theme is made again from its code (40 loops)', codes === 40);
+  {
+    // Queue item 85f, the brain's case: a theme with no tune keeps its rest,
+    // choir or not. Seed 2428270433 alone is a vowel choir; bent onto theme
+    // 3570153259, whose own loop rests, its choir once sang 87 notes.
+    const alone = newSpec(2428270433);
+    const bent = newSpec(2428270433, 'theme=3570153259,booming=0.31,cheeky=0.26,experimental');
+    const r = render(bent);
+    check('theme: a theme that rests keeps its rest, choir or not',
+      !!choirOf(alone) && !render(newSpec(3570153259)).tracks.melody.length
+      && !choirOf(bent) && r.tracks.melody.length === 0 && r.tracks.chords.every((e) => e.voice !== 'vowel'));
+  }
   check('theme: a loop with a theme is format 7, the others as before', encodeSong(newSpec(5, 'theme=9')).slice(4, 6) === '0W'
     && encodeSong(newSpec(5, 'organ=on')).slice(4, 6) === '0R' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
 }
