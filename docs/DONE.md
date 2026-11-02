@@ -196,3 +196,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   stereo 10.5-16.4x real time; the Lenovo tablet at full 89-132%, lite
   47-76%, 2.0-3.1x. Decided: accepted, with promise 1's and 2's measures in
   `docs/CORE.md` (`docs/archive/notes/87-phone-figures.md`).
+- #313, lighter on processor chosen by the app on slow devices (item 87b,
+  v142), preview URL: <https://43bdf88c-driftloom.nowmichaelclark.workers.dev>
+  (commit 5e1248d): nothing to listen for in a loop (no sound changed, in
+  either quality). On a device that can't keep up at full (the busiest
+  quarter-second over 20 s of playing past half its deadline), the app turns
+  "lighter on processor" on by itself at the next pass: the music fades out
+  over half a second and the loop starts again from its top, a breath later,
+  on lite. Diagnostics: `lite: true, auto (busiest 63% at full)`. The
+  listener's own choice is never changed. For Mikey: on the tablet, that
+  breath at the switch (for his ears), and that the Moto stays on full.
