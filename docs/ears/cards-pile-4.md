@@ -25,6 +25,10 @@ Its self-test reads a 120 s swell, a 240 s filter swing and an A-B-A form correc
 | Kankyo Ongaku (compilation, 1980 to 1990) | 23 (4) | 1,120 s | done |
 | Kyle Jameson, View From Above | 12 (4), cut from one 73:40 file | 1,515 s | done |
 | Windows 96, Enchanted Instrumentals and Whispers | 12 (4) | 908 s | done |
+| 2814, Birth of a New Day | 9 (3 picked) | picks only, 169 s | Ears 10b |
+| Solar Fields, Mirror's Edge | 10 (3 picked) | picks only, 169 s | Ears 10b |
+
+**Machine time:** 8,393 s (2.3 hours) for the four cards, against 7,961 s by Ears 9's formula (5% over, all of it Structures from Silence; the other three ran 11 to 15% under). The session's other machine work, about 900 s, was the 10b picks, the separator tests and the long-form self-tests. A first picker run was killed for memory at 20:29 and hung idle for 24 minutes before I found it; that is wall time, not machine time. By the 2.5-hour rule, 2814 (about 1,980 s by the formula) and Mirror's Edge (about 1,470 s) are left for **Ears 10b**.
 
 ---
 
@@ -90,11 +94,11 @@ Ears 9's formula (1.1 x 3,528 s + 12 x 3) says 3,917 s, so this ran 24% over it.
   - **[JUDGMENT]** **Guess:** an option for the longest pad release Driftloom allows, in glacial and still.
 - **T3. Slow pitch drift.** The bass's speed moves up to 24 cents in 4 s on Reflections; the title track's other stem 26 cents. Wobbles of 6 to 16 cents at 1.2 to 3.6 Hz throughout (floors: the tool reads low). The title track's other stem pans over a range of 0.68, cycling every 16 s: slower than the 3 to 4 s window artifact, so possibly a real slow drift; a listen decides.
   - **[JUDGMENT]** **Guess:** analog drift on held pads, a small slow pitch wander; take it with the detune pair of S1.
-- The deep pass also lists 90 to 270 "brightness sweeps" of 0.7 to 2 octaves per track, lasting 5 to 17 s. On pads with no onsets these are the drone's colour changing, not filter moves; the 140 s breath above is the reliable reading.
+- The deep pass also lists 90 to 270 "brightness sweeps" of 0.7 to 2 octaves per track, lasting 5 to 17 s. On pads with no onsets these are the drone's color changing, not filter moves; the 140 s breath above is the reliable reading.
 
 ### Theory
 - **Th1. One home per track.**
-  - Structures from Silence, C lydian (margin 0.030, on the 9 to 19 minute window): C 52% of the time and Amin7 24%, two colours of one pitch set. 9 settled changes a minute (the old counter 3), median chord 4.2 s; the strongest pitch class stays E.
+  - Structures from Silence, C lydian (margin 0.030, on the 9 to 19 minute window): C 52% of the time and Amin7 24%, two colors of one pitch set. 9 settled changes a minute (the old counter 3), median chord 4.2 s; the strongest pitch class stays E.
   - Quiet Friend, C# dorian (0.038): C#5 44%, C#sus2 13%, C#min7 12%, over a C# pedal (71%, 85% repeats). 8 settled changes a minute.
   - Reflections, F# mixolydian by the tool (0.010, a guess); the spectrum's strongest notes are B, D#, E, F# and G#, and the long-form home is B: read it as a B-centered set. Chords B 21%, G#min 18%, Bsus2 13%.
   - **[JUDGMENT]** **Guess:** a draw of one chord, or two that share most notes, held for the whole piece, in glacial; lydian and dorian as the modes.
@@ -243,7 +247,7 @@ Ears 9's formula (1.1 x 1,429 s + 12 x 12) says 1,716 s, so this ran 12% under i
 - **04 The Dreams Remain The Same**: drums 6%, bass 7%, other 87%. A light pulse: the grid's 0.267 s (224.7 BPM), and the meter tool's 112 is half of it.
 - **11 Your Amber Eyes**: drums 1%, bass 29%, other 69%. No drum grid. The pulse here (the album's strongest at mix level, 0.91) is the bass itself, so the drum entries and pumping lines are void.
 - **07 Uncharted Spaces**: drums 20%, bass 14%, other 62%, vocals 3% (bleed). The meter tool's 77 BPM agrees with the grid's 76.0 BPM (0.789 s).
-- **The low end leans left on the master.** Under 120 Hz the left channel is 2 to 7.5 dB louder than the right on 9 of the 12 tracks; above 500 Hz the balance stays within ±2.4 dB. So the stems' pans (bass -0.71 on Skywriting; drums -0.44 and bass -0.55 on Uncharted) are the record's, not the separator's.
+- **The low end leans left on the master.** Under 120 Hz the left channel is 2.1 to 7.5 dB louder than the right on 8 of the 12 tracks, and 1.7 dB on two more; above 500 Hz the balance stays within ±2.4 dB. So the stems' pans (bass -0.71 on Skywriting; drums -0.44 and bass -0.55 on Uncharted) are the record's, not the separator's.
 
 ### The hook
 - A steady, soft pulse on every track (mix-level pulse median 0.71, the lowest 0.51) under slow open chords, with the energy low and round: 59% below 120 Hz, a centroid of 324 Hz and 1.8% above 2 kHz. Long tails (-2.8 dB a second). Every one of the 12 tracks travels (drift ratio 1.10 to 1.49, median 1.19).
@@ -318,7 +322,7 @@ Numbers: Skywriting 82 BPM (grid), 15 settled chords a minute, 2% above 2 kHz, w
 - **[JUDGMENT]** Lean toward (x1.5 to x3): dreamy, floating, soaring, cruising, mellow, warm, velvety, steady, swaying, chill, hazy. Lean away (x0.2 to x0.5): zany, goofy, spicy, sour, tart, jazzy. Never 0. **Guess:** calm with a pulse, between chill and dreamy.
 
 ### Wholesome take
-- Take the soft pulse (a triplet tick, a low tom every second, or the bass alone), the slow fifth-and-sus chords, the lydian colour, the 2 to 3 minute brightness breaths, and the hour of rooms joined by short dips. Leave the left-leaning, wide low end. The sub share (59% under 120 Hz) is above Driftloom's low-end yardstick (drum loops under about 35% at 60 to 120 Hz), so take the weight at a lower level. **[JUDGMENT]** **Guess:** all of it is wholesome; the low end needs taming.
+- Take the soft pulse (a triplet tick, a low tom every second, or the bass alone), the slow fifth-and-sus chords, the lydian color, the 2 to 3 minute brightness breaths, and the hour of rooms joined by short dips. Leave the left-leaning, wide low end. The sub share (59% under 120 Hz) is above Driftloom's low-end yardstick (drum loops under about 35% at 60 to 120 Hz), so take the weight at a lower level. **[JUDGMENT]** **Guess:** all of it is wholesome; the low end needs taming.
 
 ### For later
 - Across The Heartland (7:06): the most chord changes (23.1 a minute against a median of 8.8), a 1.3 octave sweep. **[JUDGMENT]** **Guess:** the busiest track; listen.

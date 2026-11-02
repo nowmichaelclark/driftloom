@@ -1,8 +1,8 @@
 # Ears plan: every album on the list
 
 Ears 2 (Opus 5.5), 2026-10-15; updated in Ears 3 (tools and costs), Ears 5
-(costs, pile 1 done), Ears 6 and 7 (pile 2) and Ears 8 (the first synthesis,
-the labels shifted for pile 3). How the ears sessions get a few sounds,
+(costs, pile 1 done), Ears 6 and 7 (pile 2), Ears 8 (the first synthesis,
+the labels shifted for pile 3), Ears 9 (pile 3) and Ears 10 (pile 4, the pause over). How the ears sessions get a few sounds,
 techniques and ideas from every album on Mikey's list. Read
 `docs/ears/sessions.md` first. Results go in this folder, in the repo:
 `docs/ears/batch-N.md` (verdicts) and `docs/ears/cards-*.md` (album cards).
@@ -234,6 +234,8 @@ depended on that, so re-measure if the workspace changes. Pile 2 (both halves,
 11 albums carded) took 8.3 hours of machine time in all (21,391 s with
 MDX-Net + 8,312 s with Demucs = 29,703 s).
 
+**Fifth check (Ears 10, pile 4, long ambient tracks), with Demucs.** Demucs ran 0.60 to 0.65 times the audio length. The three albums of 2.5 to 7-minute tracks came in 11 to 15% under Ears 7's formula (picking 6 to 13 s a track). *Structures from Silence* (tracks of 13, 17 and 29 minutes) ran 24% over it: the measuring stages grow faster than the audio (space took 791 s on the 28-minute track, 0.46 times its length, against 0.02 to 0.17 on the 4 to 17-minute tracks), and memory became the limit on Mikey's 7.6 GB computer. Demucs needs about 3 GB for a 10-minute piece (hence the split pieces), `check_stems.py` about 6 GB for a 13-minute track, and theory and the stem check were killed on the 17 and 28-minute tracks, so they ran on 10-minute windows. For tracks over 15 minutes, plan on about 1.4 s per second of audio plus a stage-by-stage run, and on Radigue-length pieces (pile 13) a windowed theory and stem check from the start.
+
 **Twins (Ears 7).** `twins.py` on every new picker row, the first half's rows
 and `data.csv` (Aphex): none. Near misses that are not twins: *Analogue
 Bubblebath 5* track 04 and *Bradley's Robot* B2 share a drum grid (97.6 BPM, the
@@ -262,7 +264,9 @@ them is a hands session.
 | Ears 7 | **Done 2026-10-18** (PR to merge): pile 2 second half, five cards (*Bradley's Beat*, *Bradley's Robot*, *Analogue Bubblebath 3* (= *3.1*), *Analogue Bubblebath 5*, Caustic Window *Compilation*), `docs/ears/cards-pile-2.md`; Demucs stems; costs checked a fourth time; raw files in `docs/ears/raw/pile-2-second-half-raw.tar.gz` | Sonnet 5.5 | medium |
 | Ears 8 | **Done 2026-10-18** (PR #234 to merge): the first synthesis. Ten candidates ranked from the 16 cards, six sketched (`tools/ears/sketches/ears8-sketch.patch`, on top of Ears 4's) and rendered as clips in `~/ears8/clips/`; Mikey approved all seven and the sampler (2026-10-18, `docs/ears/batch-5.md`, with his note on how they go in). New tools: `low_guard.py`, `kick_check.py` | Opus 5.5 | high |
 | Ears 9 | **Done 2026-10-25** (PR to merge): pile 3, seven Aphex Twin cards in `docs/ears/cards-pile-3.md` (*Richard D. James Album*, *Girl/Boy*, *Come to Daddy*, *51/13* (non-twin tracks), *Windowlicker*, *2 Remixes by AFX*, *Drukqs*); Demucs stems (weights downloaded, no fallback); raw files in `docs/ears/raw/pile-3-raw.tar.gz`. Machine time 7,002 s (1.95 hours) against the 1.9 hours planned: 882, 192, 1,856, 1,100, 1,241, 772 and 959 s per album, 14% under Ears 7's formula in total (8,158 s). **Twins found:** Girl/Boy 01 (NLS mix) = *Richard D. James Album* 09 (one deep pass, on the earlier card); 51/13 *On* and *73-Yips* = pile 1's *On* tracks (found only after the deep pass, 5.4 minutes of Demucs wasted); 51/13 *Donkey Rhubarb* probably = pile 2's; seven 51/13 tracks repeat pile 2; 14 Drukqs piano tracks = Ears 1's rows. **Lesson:** `twins.py` cannot see pile 1 (no archive), so compare by hand against the pile 1 card numbers and allow 20 s of length difference. **Open for the synthesis:** the grid tool reads exactly 0.360 s (166.7 BPM) on six tracks and 0.372 s on two more, each time with the meter tool at two thirds of it; this may be an artifact (see the Drukqs card). No swing case at the grid's eighth turned up (five leans at the sixteenth: Yellow Calx, Contour Regard, Mummy Mix, On, Crowsmangegus; the tool's 0.67 triplets on about eight tracks are the 3:2 grid pulse), so the triplet-shuffle lead in `batch-5.md` gets nothing from this pile | Sonnet 5.5 | medium |
-| Ears 10, 11, 12 | **Paused (Mikey, 2026-10-18)** until the sound batch is built and heard in the app (`docs/BRAIN.md`, Session 26). Piles 4–6 | Sonnet 5.5 | medium |
+| Ears 10 | **Done 2026-11-02** (PR to merge): pile 4, four cards in `docs/ears/cards-pile-4.md` (*Structures from Silence*, *Kankyo Ongaku*, *View From Above*, *Enchanted Instrumentals and Whispers*), with long-form readings from a new tool, `tools/ears/longform.py`. Demucs stems, no fallback; `split.py` now splits tracks over 11 minutes in 10-minute pieces. Machine time 8,393 s for the four (4,850, 1,120, 1,515 and 908 s), 5% over the formula (7,961 s): Roach ran 24% over (memory kills and the measuring stages on a 28-minute track), the other three 11 to 15% under. Plus about 900 s of picks for 10b, separator tests and the tool's self-tests. Raw files in `docs/ears/raw/pile-4-raw.tar.gz`. **Twins:** none (no pile 4 track pairs with any earlier pile or `data.csv`; pile 1 shares no artist) | Opus 5.5 (prompt for Sonnet 5.5) | medium |
+| Ears 10b | Pile 4's other two: 2814 *Birth of a New Day* and Solar Fields *Mirror's Edge*, left over by the 2.5-hour rule. About 3,400 s by the formula (2814 9 tracks, 3 deep-pass picks, 28.3 min; Mirror's Edge 10 tracks, 3 picks, 20.4 min; the picks are in the raw archive, rerun them, about 340 s). The 2814 folder has 9 tracks and 73 minutes against `uploads.md`'s 8 and 67:25: check for a bonus track. Mirror's Edge: note how the score changes at moments (loop changes at a beat, bar, phrase or pass for Broken Friends) | Sonnet 5.5 | medium |
+| Ears 11, 12 | **Unpaused (Mikey heard the sound batch in the app on 2026-10-29 and kept every new sound).** Piles 5 and 6. Ears 11 (pile 5, electronica) can start once Mikey uploads pile 5 | Sonnet 5.5 | medium |
 | Ears 13 | Second synthesis (piles 3–6, plus Mikey's verdicts on batch 5) | Opus 5.5 | high |
 | Ears 14, 15, 16 | Piles 7–9 | Sonnet 5.5 | medium |
 | Ears 17 | Third synthesis | Opus 5.5 | high |
@@ -389,8 +393,8 @@ near-duplicates). Piles 1–9 need uploading (Mikey's checklist: `docs/ears/uplo
 **Piles 13–18 (Mikey's second list, 2026-10-19).** 29 records named; two
 were on the list already (*Sowiesoso*, pile 10; *Structures From
 Silence*, pile 4), so 27 new, about 100 in all. They go after pile 12 by
-default, under the same pause (no new piles until the sound batch is
-heard in the app). Any order works: Mikey may move them ahead of piles
+default. (The pause on new piles ended on 2026-10-29, when Mikey heard
+the sound batch in the app and kept every new sound.) Any order works: Mikey may move them ahead of piles
 10–12 (cards for records already measured at mix level), which would
 bring new ears to the list sooner. Piles 16–18 hold some sharper
 records (dub, glitch, live electronics, prepared guitar): fair game for
