@@ -169,7 +169,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   for long tails let go on a slow loop (theith-yaing): the Full Room Album,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, six loops before and
   after. The worst block at full rises 6% on the busiest loop (decided:
-  `docs/notes/85e-worst-block.md`); item 87 checks it on the Moto G Power.
+  `docs/archive/notes/85e-worst-block.md`); item 87 checks it on the Moto G Power.
 - #310, a theme's rest is kept, choir or not (item 85f, v140), preview URL:
   <https://84b65ca7-driftloom.nowmichaelclark.workers.dev> (commit 2e2ff25):
   a theme whose own loop has no tune keeps its rest when it is bent, even on
@@ -195,4 +195,4 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   deadline at worst (theith-yaing, stereo), lite 17.1%, rendering ahead lite
   stereo 10.5-16.4x real time; the Lenovo tablet at full 89-132%, lite
   47-76%, 2.0-3.1x. Decided: accepted, with promise 1's and 2's measures in
-  `docs/CORE.md` (`docs/notes/87-phone-figures.md`).
+  `docs/CORE.md` (`docs/archive/notes/87-phone-figures.md`).

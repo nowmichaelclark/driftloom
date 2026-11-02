@@ -6,6 +6,47 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Session 29, continued (brain, Opus 5.5, 2026-11-02): items 86, 85e, 85f
+and 87 checked (#308-#311); they pass, one small case queued (86b).** On
+`main` at v141 (3cd2fb1), not taken from the reports:
+- **Tests:** the JavaScript suites (the generator's three times); `cargo test
+  --locked --release`, 182 tests (167 before 86), `tests/ahead.rs` (chunks of
+  any size equal a straight render) and `tests/change.rs` among them; the
+  generation goldens, 3,924 of 3,924 (the 24 `rest` cases new at 85f); the
+  balance lock, 22 of 22; `build-core.sh --check` (251,524 and 1,925,632
+  bytes); the core baseline, "Nothing moved".
+- **85f:** dail-vu now has no melody and is not a choir loop; the brain's 600
+  random theme requests now hold the melody's cell 600 of 600 (597 before).
+- **86, on corpora the hands never ran** (`dlrender --changes`): corpus
+  20261101, 300 at full: 1 missed its moment (change 270, a `now` asked
+  while the next pass was being made, landing 0.2 of a step off the grid; a
+  clean join): queued as **86b**. Joins over the two loops' summed step: 1
+  of 300 (1.01x); lite, 150: 0 missed, 1 over (1.01x); corpus 777 ring-out,
+  150: 0 missed, none over (0.38x). After the crossfade, 7 of 300 stay over
+  -40 dB at 3 s against the loop alone: three are the organ handing over to
+  the organ (the hands' explanation), and the brain opened the fourth
+  (change 133, an organ and arc loop into one with the wash): a steady
+  difference 15 dB under the music at 90-250 Hz, uncorrelated with the old
+  loop, so the held instruments' phase carrying over, not the old loop
+  sounding on. The timing figures here are noise (a two-core container also
+  running the baseline: "4,920%"); the hands' and the phone's are the ones
+  that count.
+- **Decisions this stretch:** #308 option 1 (the join's step read against
+  the two loops summed; the four worst opened: the new kick's attack about a
+  millisecond off its loop-alone timing, tape wow carrying over, and
+  saturation on the summed attack, no spike); #309 option 1 (the worst
+  block's rise is the notes now playing, under the unchanged 260 ceiling);
+  #311 option 3 (the Moto at full, 27.9%, accepted; promise 1 for it at full
+  now 30%, lite 25%; promise 2's render-ahead 4x on the Moto, 2x on the
+  weakest supported device).
+- **Mikey (2026-11-02):** the app may choose lite by itself on slow devices
+  (87b written); his tablet plays without a stutter at full in practice (the
+  app's `latencyHint: 'playback'` buffer, and the test's worker likely on a
+  slow core), and is about the lowest device he expects to support; SIMD and
+  a native Android app's own audio noted in the queue's "Later".
+- **Docs:** items 86, 85e, 85f and 87 archived, their notes (85e, 86, 87)
+  moved to `docs/archive/notes/`; 87b and 86b queued.
+
 **Session 29 (brain, Opus 5.5, 2026-11-01): phase 2 checked through item
 85 (83, 84, 85a, 85c, 85b, 85d; #298-#305); it passes.** What the brain ran
 itself on `main` at v137 (82770b0), not taken from the reports:

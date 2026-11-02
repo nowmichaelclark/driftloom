@@ -7,12 +7,12 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-02:** `main` is at v140. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-02:** `main` is at v141. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead). **Next: 88, once the brain says** (the tablet's figures at full may need an item first: the app choosing lite by itself on slow devices). Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29. **Next: 87b** (the app picks lite by itself on slow devices), **then 86b** (a small timing case of 86's), **then 88.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -187,180 +187,88 @@ engine does. What that means for the items below:
   player renders, or the browser's reference made the same way
   (`tools/player.mjs`), not with the harness's.
 
-## 86. Changing loops at a musical moment, with a crossfade
+## 87b. The app picks "lighter on processor" by itself on slow devices
 
-**Why:** Broken Friends' music changes at moments, not on a timer (its
-decision 0038: a new room, a friend made well, a mood, surgery). Today a new
-note list resets a core (about 15 ms on a laptop, more on a phone), too slow
-for the audio thread, so the game keeps two cores and switches. The app's
-Next would use the same (phase 3).
+**Hands:** Opus 5.5, high. Before 88 (Mikey, 2026-11-02: yes, the app may
+switch to lite by itself on slow devices, the listener can still switch it
+back; `docs/DECISIONS.md`).
 
-**What:**
-- `Core::change(request, at)`: the next loop starts at a boundary the host
-  names (now, the next beat, the next bar, the end of the phrase, the end
-  of the pass), and the old one hands over by a **crossfade** (its
-  length a setting, default the conservative choice, "for Mikey's ears")
-  or by letting its notes ring out, no reset and no second core. Held
-  instruments (the organ, the wash, padSweep, the arc) hand over as item
-  72's padSweep does across a load (glide, never jump).
-- An **event** is a request attached to a moment (promise 11: "when the sun
-  rises"); several may wait, the latest for a boundary wins.
-- The cost of a change spread across blocks: no block over 25% of its
-  deadline on the slowest target while a change happens.
-
-**Yardsticks:** a change costs no allocation and no block past the
-budget; across 1,000 changes at every boundary kind no click (the sample
-step at the join no larger than the two loops' own summed (brain,
-2026-11-01: a crossfade sums two loops; the four worst at 1.02-1.43x are
-the master's chain on the sum, not clicks)), the new loop's samples
-after the crossfade equal the same loop loaded alone (from the boundary
-on, given the same start state of the held instruments: say what differs);
-the game's two-core switch can go (the note for Broken Friends says how).
-
-**Built (hands, 2026-11-01):** `Player::change(seed, request, moment,
-handover)` (`core/src/player/change.rs`; `dl_player_change`,
-`dl_play_change`), on one core with no reset: the next loop is made in the
-blocks before the boundary and takes its first step on it. The note
-(`docs/notes/86-join-steps.md`) says what was measured and the two arc clicks
-fixed on the way; the join's step is read against the two loops' own summed
-(brain, 2026-11-01, option 1). `dlrender --changes N`
-and `tools/player-wasm.mjs --changes N` measure; `core/README.md` says how
-it works.
-
-**Since item 82:** `Player::load` already changes loops with no reset and no
-second core (the new loop made a stage a block, the old one's notes playing
-out, then the new one starts). This item adds the moment and the crossfade to
-it: `Player::change(request, at)` (or `load` gaining `at`), not a call on
-`Core`.
-
-## 85e. The budget takes room from old notes at full quality too
-
-**Hands:** Opus 5.5, high. After 86, before 87 (brain, 2026-11-01; Mikey
-heard 85c's lite album, "it sounded great for lite mode", and asked for the
-same at full quality: `docs/DECISIONS.md`, 2026-11-01).
-
-**Why:** at full quality the core still turns away 986 of 5,056 chord notes
-(19.5%) over the baseline's 100 loops, melody 13 and texture 59: a new chord
-loses notes while the old one's tails finish. Letting old notes go is how
-synths and samplers handle a full pool; refusing the new note is the odd
-choice. Full quality's room is larger, so the notes let go there are mostly
-ones already ending, which makes the order of what goes first matter more.
+**Why:** item 87's speed test on Mikey's older Lenovo tablet (8 cores, 4 GB)
+put the worst block at full quality at 89-132% of its deadline, and lite at
+47-76% (`docs/archive/notes/87-phone-figures.md`). It plays without a stutter
+for him today, as far as he hears, thanks to the app's large output buffer
+(`latencyHint: 'playback'`) and because the test ran in a worker, which a
+phone may put on a slow core, where the worklet gets a fast one at a higher
+priority. So the worker's figures are pessimistic, and the decision should
+read the real audio thread. Today the app guesses instead: lite when the
+device has 4 cores or fewer (`js/main.js`, `prefs.lite ?? cores <= 4`), so
+an 8-core tablet starts on full.
 
 **What:**
-- `STEAL_FULL` on (and `_steal` in `js/synth.js` the same), so full quality
-  takes room from old notes as lite does.
-- **What goes first, in both qualities:** a call whose notes are all past
-  their end (in the budget's `TAIL`, already releasing) before one still
-  held, oldest first within each. That is the field's usual order (JUCE's
-  `findVoiceToSteal`, FluidSynth's: released voices before held ones). If it
-  changes lite's renders, say how much and in which loops; lite was heard and
-  liked, so lite stays as 85c built it if the change there is more than
-  small, and the order applies at full only ("for Mikey's ears").
-- **Never let go** of the held instruments (the organ, the wash, padSweep's
-  bed, the drone): say whether any of them sits in the budget today, and
-  exempt it if so.
-- `STEAL_FADE` stays 0.05 s, ending as the new note starts.
+- **Measure where it plays:** the worklet times its blocks on the audio
+  thread (it already reports rendering cost, item 66) and keeps the busiest
+  blocks over a sliding window, plus the late notes it already counts by
+  cause (a stall of the page is not the device's speed: count only what the
+  render's own cost explains).
+- **The rule** (first values the conservative choice, "for Mikey's ears", both
+  named settings): on full, if the busiest blocks over the last 20 s pass
+  **50%** of the deadline (a high percentile, not one block), or the render
+  falls behind once for its own cost, switch to lite. From the measured
+  ratio of lite to full on the Moto (about 0.6), the app may also move a
+  device it started on lite by guess up to full, once, when lite's busiest
+  blocks stay under **15%** for a minute; never back and forth (once moved,
+  the auto choice holds until the listener chooses).
+- **The listener's choice always wins:** switching "lighter on processor"
+  by hand stores it as theirs, and the app never changes it again. The auto
+  choice is stored apart from theirs, per device, and remembered.
+- **The switch glides, never cuts:** today the lite switch rebuilds the
+  audio (`buildAudio()`). For the automatic one, wait for the next loop or
+  the next pass, and hand over as a loop change does (a short fade), or say
+  why it can't yet; in phase 3 it moves onto `Player::change`. A switch for
+  falling behind may go at the next bar.
+- **Say so, quietly:** Diagnostics shows the choice and why
+  (`lite: auto (busiest 63% at full)`), and the switch's line on the
+  Advanced page shows that it was set automatically, in words the Painter
+  docs allow; no pop-up.
+- The 4-core guess stays only as the first guess before anything is
+  measured.
 
-**Built (hands, 2026-11-01):** `STEAL_FULL` on, released calls before held
-ones in both qualities (`RELEASED_FIRST`), a drone's notes kept (`keep`: the
-one held instrument in the budget; the organ, the wash and padSweep's bed are
-channel blocks). Lite's renders are unchanged, bit for bit. Full refusals
-(100 loops): chords 986 -> 151 of 5,056, melody 13 -> 0. The worst block at full
-rises 6% on the busiest loop, the notes that now play (decided, option 1:
-the note). `dlrender --fades` measures the fades; the Full Room Album
-(`docs/ALBUMS.md`) is out.
+**Yardsticks:** under `tools/perf.mjs`'s CPU throttle, a throttle that puts
+full's busiest blocks over the line switches to lite within the window, with
+no click and no late note at the switch (rendered and measured); with no
+throttle, full stays full over ten minutes and many loops; a listener's
+choice is never overridden (both ways); the choice survives a reload; the
+rule can't flap (a throttle near the line, an hour: at most one change); no
+sound changes in either quality (the core baseline and the goldens
+unchanged); the cost of the measuring itself under 1% of a block. Then Mikey
+on his devices: the Moto stays on full, the tablet moves to lite, and
+Diagnostics says why on each.
 
-**Yardsticks:** per-layer refusals at full over the baseline's 100 loops
-before and after (chords well under today's 19.5%, melody 0), and shatter at
-a `bpm=180` pin at full; lite unchanged, or the change said and measured;
-no clicks at a let-go note's fade (the sample step at the fade no larger
-than the loop's own, full and lite); the steal's own cost no higher than
-today (the notes it lets play may cost what the ceiling allows; brain,
-2026-11-02, `docs/notes/85e-worst-block.md`); the core baseline updated on purpose; the
-player against the browser bit for bit; the JavaScript fallback's own checks
-(`--engine js`, `--refusals`, `--clicks`, `--endings`) if its code is touched.
-Then a short labeled album at full for Mikey (a busy chords loop, a slow
-bell or pad loop where long tails are the point, shatter), before and after.
+## 86b. A "now" change asked while the next pass is being made
 
-## 85f. A theme's rest is kept, choir or not
+**Hands:** Sonnet 5.5, high. After 87b, before 88. Small (brain, Session 29,
+2026-11-02).
 
-**Hands:** Sonnet 5.5, high. After 85e, before 87 (Mikey, 2026-11-01:
-"keep a friend's loop tuneless if it has none"; `docs/DECISIONS.md`).
+**Why:** the brain's own run of item 86's harness on another corpus
+(`dlrender --changes 300 --from-corpus 20261101`) found one change that
+missed its moment, where the hands' 1,000 on corpus 1 found none: change
+270, `Now`, old loop shoung-roun (180 bpm, 2 bars, a pass about 2.7 s),
+asked at 2.28 s, while the player was making the old loop's next pass; the
+new loop began at 2.601 s, 31.2 of the old loop's steps from its start, off
+its step grid. The join was clean (0.049 against the loops' own 0.065).
+Suspect, unproven: `Player::change`'s branch for a change asked while a loop
+is being made (`making`), which starts the new loop where the pass being
+made would have started, or a time taken before the old loop's swing or its
+tempo is applied.
 
-**Why:** item 85d keeps a theme's tune, "or its rest". But a choir never
-takes the rest, so when a theme's own loop has no melody (about 8% of loops)
-and the vibes asked bring a choir, the bent loop's choir sings a figure of
-its own: a friend with no tune suddenly has one. The brain found it in 2 of
-600 random theme requests (e.g. theme 3570153259, do-vom, no melody, asked
-with `booming=0.31,cheeky=0.26,experimental` from seed 2428270433: dail-vu,
-a vowel choir, 87 notes).
+**What:** find the cause by rendering; a `now` change lands on the old
+loop's next step from any state, as the other 299 did, or the item says why
+it can't and the harness's check says what it holds instead. Add the case to
+`core/tests/change.rs`.
 
-**What:** in both generators (`genMelody` in `js/generator.js` and its port
-in `core/src/generator/`), a theme with no figure gives no melody, choir or
-not; every draw is still made, so nothing else moves. Say what the choir's
-other parts do in such a loop (the keys' detune it shares with the melody):
-the conservative choice is that the loop simply isn't a choir loop, "for
-Mikey's ears".
-
-**Built (hands, 2026-11-02):** `choirOf` (and `Spec::choir`) says no choir
-for a loop whose theme rests, so its melody rests and its keys play the voice
-they drew; the choir's draws are a stream of their own, so nothing else
-moves. Such a loop may now develop, as a non-choir loop of its length can
-(5 of the 24 new cases do); its melody still rests. No existing golden case
-moved (none of the 240 `theme` cases has a resting theme on a choir seed), so
-24 `rest` cases join the goldens (the brain's first; 3,924 in all), and
-without the Rust change exactly those 24 fail.
-
-**Yardsticks:** the generation goldens: only `theme` cases may move, and only
-those whose theme rests and whose loop drew a choir (say which and how many,
-and that every other case is unchanged); the brain's two cases above now have
-no melody; nothing asked changes nothing (the 3,060 corpus cases, the
-baseline and the balance lock unchanged); the Rust and JavaScript generators
-equal on all cases.
-
-## 87. Rendering ahead, for the browser
-
-**Why:** Godot's web build has no audio thread; music fed frame by frame
-crackled on Mikey's phone, so the game renders a loop whole and plays it as
-one sound. With wandering and endless loops it needs passes rendered ahead,
-quickly, on a phone's browser: the Moto G Power (2022) and weaker, on the
-lite mix.
-
-**What:**
-- Render ahead in chunks a host asks for (a pass, or N seconds), resumable:
-  the next chunk continues exactly where the last stopped (wander, endless,
-  a change waiting at a boundary), the same samples as rendering straight
-  through.
-- A host can ask how long a chunk will take to render (the core's own
-  estimate from the loop's voices) and spread it across frames.
-- **The Moto G Power (2022) joins promise 2's measured devices**, with the
-  speed target the brain proposes once measured (the game needs a pass
-  rendered well inside its playing time, lite, stereo 1.2-1.4 times mono).
-- An Emscripten build of the core in CI (Broken Friends' web build links it
-  with panic=abort), rendering the goldens to the same hashes.
-
-**Yardsticks:** chunked equals straight through, sample for sample, over
-every chunk size from 128 frames to a pass; render speed on the web host
-(wasm in Node and in headless Chromium) reported per loop, lite and full,
-mono and stereo, as times real time; the Emscripten goldens equal; the
-worst block at **full quality**, mono and stereo, on the Moto G Power (2022)
-under promise 1's 25% (brain, 2026-11-02, from 85e): if it's over, say by how
-much and stop with a note (the fix would be a lower full ceiling there, for
-Mikey's ears).
-
-**Built (hands, 2026-11-02):** `Player::render` already carried on where
-the last call stopped; `pass_frames` (a pass at a time; `Core::served`) and
-`estimate` (a chunk's cost from the units the voices held, scaled by a host
-to its own speed) are new, with `dl_play_render` and the C header's
-`dl_player_pass_frames` and `dl_player_estimate` (`core/src/player/
-ahead.rs`). `tools/ahead.mjs` sweeps chunk sizes against straight through,
-checks the estimate and times render speed in Node and Chromium; CI's
-`emscripten` job holds that build to wasm32's goldens and runs the C host
-built with emcc. `speed.html` (Diagnostics links it) is the phone's test.
-The Moto G Power's worst block at full is 27.9% in stereo (theith-yaing;
-the rest of the four under 21.5%, lite 17.1% at worst): **decided (brain,
-2026-11-02): option 3**, accepted, with promise 1's and 2's measures for it
-in `docs/CORE.md` (`docs/notes/87-phone-figures.md`).
+**Yardsticks:** the brain's run above with 0 missed; corpus 1's 1,000, full,
+lite, ring-out and 48 kHz still 0 missed; the core baseline and every golden
+unchanged.
 
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 
@@ -673,6 +581,14 @@ more nuance in them later. Not now. New instruments are welcome again
 sounds are queued after the core becomes the default, built in the core
 one at a time with the refusal and level checks (`docs/BRAIN.md`, State).
 Inspiration comes only from wholesome, comforting music.
+
+SIMD in the core (brain, 2026-11-02): four samples at once in the voices,
+filters and mix, in wasm (SIMD128) and natively (NEON, SSE2), for promise 2
+and the weaker phones (87's tablet). Bit-identity holds only with the same
+operations in the same order per lane (no fused multiply-add, no reordered
+sums), proven on the goldens on every target; worth an item once phase 3
+is done, or sooner if a phone needs it. A native Android app's own audio
+(AAudio through Oboe, a fast core, a high priority) is its platform phase's.
 
 A sketch voice for a layer (archive/notes/83-sketch-voice.md): option 1, sketches
 stay channel sources until an ears session needs a voice's note-by-note play
