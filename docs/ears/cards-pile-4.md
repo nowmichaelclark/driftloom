@@ -21,15 +21,115 @@ Its self-test reads a 120 s swell, a 240 s filter swing and an A-B-A form correc
 
 | Album | Tracks (deep pass) | Machine time | Status |
 |---|---|---|---|
+| Steve Roach, Structures from Silence (1984) | 3 (3) | about 4,850 s | done |
 | Kankyo Ongaku (compilation, 1980 to 1990) | 23 (4) | 1,120 s | done |
 | Kyle Jameson, View From Above | 12 (4), cut from one 73:40 file | 1,515 s | done |
 | Windows 96, Enchanted Instrumentals and Whispers | 12 (4) | 908 s | done |
 
 ---
 
+## Steve Roach, Structures from Silence (1984)
+
+Ears 10, 2026-11-02. Three tracks, 58.8 minutes, all given the deep pass (EP rule): 01 Reflections in Suspension (16:48), 02 Quiet Friend (13:23) and 03 Structures from Silence (28:38). `longform.py` ran on all three. Stems by Demucs htdemucs: 01 in two 10-minute pieces, 03 in three, crossfaded.
+
+**Two measures ran on a 10-minute window, for memory:** the stem check on 01 (3:00 to 13:00), and the stem check and theory on 03 (9:00 to 19:00). Both full-length runs were killed for lack of memory. Every other stage ran on the whole track.
+
+Machine time: about 4,850 s (81 min) for 58.8 minutes of audio:
+
+- pick 298 s;
+- Demucs 2,282 s (704, 499 and 1,079 s; 0.65 times the audio length);
+- measuring about 2,270 s, of which about 260 s went to the three runs killed for memory, and 791 s to the space stage on the 28-minute track alone.
+
+Ears 9's formula (1.1 x 3,528 s + 12 x 3) says 3,917 s, so this ran 24% over it. On tracks this long the measuring stages grow faster than the audio.
+
+### Stem check (read first)
+- **01 Reflections in Suspension** (window): drums 0%, bass 21%, other 74%, vocals 4.5% (bleed: the vocals stem plays 47% of the time, but the record has no voice; it is the pad's upper partials). No beat: meter, swing and pumping lines are void.
+- **02 Quiet Friend**: drums 0%, bass 3.2% (thin: bass notes are guesses), other 97%. No beat.
+- **03 Structures from Silence** (window): other 100%. Drums and bass are empty, so every beat number is void. Its other stem gave only 6 note events: the music is one continuous swelling drone with no onsets, so its sound is described below from its spectrum, not from note groups. The draft's two drums groups sit 40 and 59 dB under the mix: noise in an empty stem, left out.
+- No drum track on the record, so no kick check.
+
+### The hook
+- Very slow, very wide, very still. Notes barely decay (mix-level tails -0.5 to -0.6 dB a second, the longest in any pile so far; Kankyo -2.9). It is quiet (-23 to -27 LUFS) and dark (centroid 324 to 368 Hz; at most 1.1% of the energy above 2 kHz). The channels are almost unrelated (width about 0 dB in every band of the title track). The harmony holds one home for a whole track (E on top for all 28 minutes of the title track).
+- **[JUDGMENT]** One line a listener would say. **Guess:** a vast, slowly breathing chord that seems to have always been there; the album the glacial vibe is about.
+
+### Sounds
+
+**S1. The breathing drone (Structures from Silence), from the spectrum (Welch, 1 Hz bins, 9:00 to 19:00)**
+- The strongest partials fall into two layers about 18 cents apart:
+  - one at A440 tuning: G2 98 Hz, G3 196 Hz, G4 392 Hz, A4 440 Hz;
+  - one 16 to 20 cents sharp: C2 66 Hz, E3 166 Hz, E4 333 Hz, F#4 374 Hz, D4 297 Hz, G4 396 Hz, A4 444 Hz.
+- Where the layers share a note, they beat about 4 times a second (392 and 396 Hz, 440 and 444 Hz). The pitch set is C, D, E, F#, G, A (C lydian, the theory tool's reading too).
+- The mix's other stem wobbles 16 cents at 1.8 Hz and drifts up to 26 cents in 4 s.
+- Building blocks: **[JUDGMENT]** **Guess:** two detuned pad layers holding a lydian set, with no attacks at all, only level and brightness moving. softpad or moogpad doubled about 18 cents apart is the nearest; the missing piece is a pad that never re-articulates.
+
+**S2. Slow-swell pad (Reflections in Suspension): other-1, 500 notes, 73%**
+- In synth terms: harmonic share 0.72, attack 417 ms (93 to 1,908), falls 5 dB/s, brightness at the start 483 Hz and opening by 0.14 octave over the note. Fully decorrelated (correlation -0.03), level -4.3 dB. Register about 93 Hz (F#2), with the spectrum's strongest lines at 47 to 53 Hz and 94 to 125 Hz, all 20 to 35 cents sharp (the track's tuning reads +18 cents).
+- Weak group (silhouette 0.17): one texture.
+- Hear it at 5:11.8 (E2, 2.98 s), 11:16.6, 5:19.6.
+- Building blocks: **[JUDGMENT]** **Guess:** softpad with a 0.5 to 2 s attack; exists, and longChords' whole-loop chord suits it.
+
+**S3. Held sub tone (Reflections in Suspension): bass-1, 241 notes, 18%**
+- In synth terms: about F#1 to G#1 (47 to 53 Hz; F# 47% and G# 36% of the time), purely harmonic (share 1.00, partials 4 cents off), falling only 1 dB/s, held for 2.7 to 6.6 s. Level -7.8 dB. Its pan leans +0.17, inside the track's +18 cent tuning; the mix's sub is -4 dB wide (correlation 0.55).
+- Under 60 Hz pitch is good to a semitone only.
+- Hear it at 2:05.0 (6.64 s), 2:56.4 (3.2 s), 5:58.1.
+- Building blocks: **[JUDGMENT]** **Guess:** sub with bassStyle held; exists.
+
+**S4. Soft pad with a low swell under it (Quiet Friend): other-1 and other-2, 290 and 89 notes**
+- In synth terms: other-1 is about G#2 (103 Hz), attack 278 ms, falls 9 dB/s, correlation 0.45. other-2 is a low swell (attack 418 ms, falling only 4 dB/s, harmonic 0.84) that reads 35 Hz (C#1). The spectrum's strongest line is 69 Hz (C#2), so read it as about C#2.
+- The other stem wobbles 15 cents at 3.6 Hz.
+- Hear it at 9:06.9, 9:02.0, 8:58.7; the swell at 9:41.6, 10:07.5.
+- Building blocks: **[JUDGMENT]** **Guess:** pad over a held C# pedal (the bass holds C# 71%); exists.
+
+### Techniques
+- **T1. Three long forms (`longform.py`, a line a minute).**
+  - **Reflections in Suspension (16.7 min), an arch.** A 4-minute fade in (-62 to -27 dB), a plateau from minute 4 to 12 (-26 to -30 dB) over a B home, then a 4-minute fade out that also darkens (centroid about 450 to 250 Hz). Brightness swells twice (5:20 and 9:50, 0.66 and 0.52 octave). Minute-scale boundaries at 1:20, 8:10 and 14:50.
+  - **Quiet Friend (13.3 min), a recession.** A 2.5-minute fade in, a plateau to about 8:00, then a second part 6 to 12 dB quieter and narrower (width 0 to -4.8 dB) for the last 5 minutes. Boundaries at 1:00, 8:50, 12:10.
+  - **Structures from Silence (28.5 min), a held breath.** No real fade in (-32 dB in the first minute). The level stays within 6.5 dB (10th to 90th percentile) for 27 minutes, with five swells of 3 to 7 dB at 3:50, 6:40, 11:00, 20:10 and 22:40 (about 215 s apart). Brightness breathes ten times, every 140 to 150 s (autocorrelation 0.68 at 140 s, the clearest period in the pile), by 0.3 to 0.8 octave. The home pitch class is E in every minute. 94% of windows return to material at least 2 minutes old, and the end comes back near the opening. A fade only in the last 1.5 minutes.
+  - **[JUDGMENT]** **Guess:** for glacial and Endless, the title track is the model: one home held for half an hour, a brightness breath every 2 to 2.5 minutes and a level swell every 3 to 4 minutes, nothing else. Glacial's deep arc (5 to 8 minutes) is slower and deeper; the record suggests a shallower, faster breath on top of it.
+- **T2. Notes that do not end.** Mix-level tails of -0.5 to -0.6 dB a second: a note would take about a minute to fall 30 dB. No echo is found (no notes ring alone). The pads cross-fade into each other rather than decaying into a room. The arc at mix level is 6.7 to 12 dB, mostly the fades in and out.
+  - **[JUDGMENT]** **Guess:** an option for the longest pad release Driftloom allows, in glacial and still.
+- **T3. Slow pitch drift.** The bass's speed moves up to 24 cents in 4 s on Reflections; the title track's other stem 26 cents. Wobbles of 6 to 16 cents at 1.2 to 3.6 Hz throughout (floors: the tool reads low). The title track's other stem pans over a range of 0.68, cycling every 16 s: slower than the 3 to 4 s window artifact, so possibly a real slow drift; a listen decides.
+  - **[JUDGMENT]** **Guess:** analog drift on held pads, a small slow pitch wander; take it with the detune pair of S1.
+- The deep pass also lists 90 to 270 "brightness sweeps" of 0.7 to 2 octaves per track, lasting 5 to 17 s. On pads with no onsets these are the drone's colour changing, not filter moves; the 140 s breath above is the reliable reading.
+
+### Theory
+- **Th1. One home per track.**
+  - Structures from Silence, C lydian (margin 0.030, on the 9 to 19 minute window): C 52% of the time and Amin7 24%, two colours of one pitch set. 9 settled changes a minute (the old counter 3), median chord 4.2 s; the strongest pitch class stays E.
+  - Quiet Friend, C# dorian (0.038): C#5 44%, C#sus2 13%, C#min7 12%, over a C# pedal (71%, 85% repeats). 8 settled changes a minute.
+  - Reflections, F# mixolydian by the tool (0.010, a guess); the spectrum's strongest notes are B, D#, E, F# and G#, and the long-form home is B: read it as a B-centered set. Chords B 21%, G#min 18%, Bsus2 13%.
+  - **[JUDGMENT]** **Guess:** a draw of one chord, or two that share most notes, held for the whole piece, in glacial; lydian and dorian as the modes.
+- **Th2. Lines are swells, not tunes.** The top-line tool finds 1,500 to 2,000 "notes" per track. On these drones they are partials moving inside the pad, not a melody, so no top-line claim. Thirds and fourths dominate the intervals (27% and 21 to 30%).
+
+### Space
+- **As wide as two channels can be.** Structures from Silence: about 0 dB in every band, the sub included (+1 dB, correlation -0.10), mono loss 3.2 dB. Reflections: 0 dB from 120 Hz to 2 kHz (correlation -0.02), -3 dB above, sub -4 dB (0.55). Quiet Friend: sub -8 dB (0.79), the mids 0 dB.
+- Over time the width barely moves: -1/0/+1 dB (10th/50th/90th percentile of 2 s windows) on 01 and 03. In the last 5 minutes of Quiet Friend it narrows to -4.8 dB.
+- Folded to mono, a fully decorrelated mix loses 3 dB and can comb; Driftloom's fold guard allows 0.5 LU.
+- **[JUDGMENT]** **Guess:** a reference for the widest end of a calm space recipe above 200 Hz, never for the sub. The record would fail the fold guard and the centered low end as it is.
+
+### Vibes
+Numbers: Reflections, no beat, 11 settled chords a minute (5 by the old counter), 1.1% above 2 kHz, width -1 dB; Quiet Friend, 8 settled (3), 0.0%, -2 dB; Structures from Silence, 9 settled (3), 0.1%, 0 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): glacial, still, meditative, spacious, serene, droning, hushed, reverent, cosmic, floating, restful. Lean away (x0.2 to x0.5): bouncy, plucky, skipping, zesty, lively, groovy, enthusiastic. Never 0. **Guess:** glacial's reference record.
+
+### Wholesome take
+- Take the held home, the slow breath of brightness and level, the detuned drone pair, the near-endless releases and the steady image, and the arch and recession forms for long pieces. Leave the decorrelated sub and the full 3 dB mono loss. **[JUDGMENT]** **Guess:** wholesome and calm through and through; the risk is only stillness becoming dull without the breath.
+
+### For later
+- Reflections bass-2 (45 notes, D#2, 7 dB/s) and bass-3 (16 notes, a bell-like G#1 with a quick attack); its vocals groups are pad partials, not a voice. **[JUDGMENT]** **Guess:** wait.
+- The title track's 16 s pan cycle on the other stem (range 0.68). **[JUDGMENT]** **Guess:** listen; if real, a slow auto-pan reference for the later moving-stereo session.
+- Full-length theory and stem check on 01 and 03 need a machine with more memory, or a theory tool that streams. **[JUDGMENT]** **Guess:** not needed; the windows agree with the long-form homes.
+
+### Reliability notes for this card
+- No beat anywhere: every meter, swing, on-beat and pumping number is void.
+- The title track has no note groups; its sound comes from the spectrum.
+- The stem check on 01 and 03, and theory on 03, cover a 10-minute window each.
+- Top lines are partials, not melodies. Registers under 60 Hz are good to a semitone.
+- The long-form readings come from a new tool checked only on test signals.
+
+---
+
 ## Various artists, Kankyo Ongaku: Japanese Ambient, Environmental and New Age Music 1980-1990 (2019 compilation)
 
-Ears 10, 2026-11-02. The folder holds 23 tracks, 114.4 minutes; the brief counted 25, so two may be missing from the upload. The files carry no artist tags, so this card names tracks only. Every track got the mix-level pass (picker). Four got the deep pass: 07 Park (typical, 4:06), and the three least like the rest, 14 Apple Star (6:01), 06 Variation III (3:36) and 22 Umi no Sunatsubu (1:12). `longform.py` ran on those four and on 23 Original BGM (15:55, the only long track, mix level only). Stems by Demucs htdemucs.
+Ears 10, 2026-11-02. The folder holds 23 tracks, 114.4 minutes. `uploads.md` lists 25 tracks and 1:54:11, so the length matches and nothing looks missing; only the count differs (perhaps two tracks are joined in this edition). The files carry no artist tags, so this card names tracks only. Every track got the mix-level pass (picker). Four got the deep pass: 07 Park (typical, 4:06), and the three least like the rest, 14 Apple Star (6:01), 06 Variation III (3:36) and 22 Umi no Sunatsubu (1:12). `longform.py` ran on those four and on 23 Original BGM (15:55, the only long track, mix level only). Stems by Demucs htdemucs.
 
 Machine time: 1,120 s (18.7 min) for 14.9 minutes of deep-pass audio:
 
