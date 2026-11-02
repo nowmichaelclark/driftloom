@@ -215,6 +215,21 @@ the brain and hands counter (Session 1, 2, ... in `docs/BRAIN.md`).
   too high until checked against the stem checks.
 - Rendering on Mikey's computer (7.6 GB): eight renders with stems at once ran
   out of memory; three at a time is safe (`tools/ears/README.md`).
+- **Long tracks (Ears 10, pile 4):** on Mikey's computer (7.6 GB), Demucs on a
+  10-minute piece peaks near 3 GB, `check_stems.py` in float64 ran out of
+  memory on a 17-minute track, and one picker worker was killed while Firefox
+  held the RAM (the pool then hung with no error: check `journalctl -k` for
+  an OOM kill when a stage stalls at a few % CPU). `split.py` now cuts tracks
+  over 11 minutes into 10-minute pieces; run a long album one stage per
+  process (`--stages split`, then `events`, ...), so memory is freed between
+  stages. Demucs is not repeatable from run to run (-10 to -23 dB of
+  difference per stem), so two splits of the same track differ that much.
+- **Long form needs minutes, not seconds (Ears 10).** The deep pass's
+  sections and sweeps are at the scale of seconds; on beatless ambient its
+  "sweeps" are mostly notes changing register. `tools/ears/longform.py` reads
+  the mix in 10 s windows: swells, sections, returns and travel over 10 to
+  70 minutes. A continuous album (Kyle Jameson) can be read whole as well as
+  cut into tracks.
 - Read each tool's output on real music against its own rule before
   trusting it. Ears 3's floor drops listed "1.0 s" drops under a "2 s"
   rule: the edges sat half a second inside the true ones. Test signals
