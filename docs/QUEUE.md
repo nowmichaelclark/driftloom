@@ -244,6 +244,25 @@ unchanged); the cost of the measuring itself under 1% of a block. Then Mikey
 on his devices: the Moto stays on full, the tablet moves to lite, and
 Diagnostics says why on each.
 
+**Built (hands, 2026-11-02):** the worklet measures how busy its audio
+thread is a quarter-second at a time (Chromium's worklet has no
+`performance.now()`, so a block's time is whole milliseconds, exact on average
+over a window), and `js/quality.js` holds the reports to the rule: on full,
+the busiest quarter-second over 20 s of playing past 50%, or one taking longer
+than the audio it made, moves to lite; lite from the four-core guess, under
+15% for a minute, moves to full; once moved, never again; the listener's
+choice is never touched (`prefs.lite`, the app's own `prefs.liteAuto`). The
+switch waits for the next pass (a bar, for a render falling behind): the old
+quality fades out over 0.5 s to it and is let go, then the new one takes the
+loop from its top, a breath later. Not a crossfade: building the new worklet
+compiles the core on the audio thread the old one plays on, and two cores at
+once is what a slow device can least afford (for Mikey's ears).
+Diagnostics: `lite: true, auto (busiest 63% at full)` and the busiest figures;
+the switch's line says when the app chose. `tools/switch.mjs` renders the
+switch offline (the join's step against the loop's own, late notes);
+`tools/autolite.mjs` runs the app live with `?burn=` (a slower audio thread:
+`perf.mjs`'s CPU throttle slows only the page's).
+
 ## 86b. A "now" change asked while the next pass is being made
 
 **Hands:** Sonnet 5.5, high. After 87b, before 88. Small (brain, Session 29,

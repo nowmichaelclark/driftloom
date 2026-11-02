@@ -88,6 +88,10 @@ jobs:
         run: node test/picks.test.mjs
       - name: Voice budget tests
         run: node test/budget.test.mjs
+      # Lighter on processor chosen by the app on slow devices (queue item
+      # 87b): the rule, the measurements and the hand-off.
+      - name: Lighter on processor, chosen by the app
+        run: node test/quality.test.mjs
       # The generator's math (js/dlmath.js) against the core's, bit for bit,
       # and what the generator decides against its goldens (queue item 77).
       - name: The generator's math against the core's

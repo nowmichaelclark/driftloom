@@ -268,7 +268,7 @@ const NO_KEY = { seed: 0, pass: 0, step: 0, ord: 0 };
 // switch never rebuilds it. With `taps` (the measure harness) it carries
 // as many as the layout, as it always has.
 export class CoreHost {
-  constructor(ctx, core, dests, { quality = 'full', taps = false, key = null, layout = 1 } = {}) {
+  constructor(ctx, core, dests, { quality = 'full', taps = false, key = null, layout = 1, burn = 0 } = {}) {
     this.ctx = ctx;
     this.dests = dests;
     this.taps = taps;
@@ -312,6 +312,9 @@ export class CoreHost {
     // What rendering has cost (queue item 66), mono then stereo, as the
     // worklet last said: milliseconds spent, seconds of audio made.
     this.cost = { ms: [0, 0], seconds: [0, 0] };
+    // Called with each report of how busy the audio thread was (queue item
+    // 87b): { max, behind, windows, seconds } since the last.
+    this.onbusy = null;
     this._pings = new Map();
     this._ping = 0;
     // With `?engine=player`, where the core's player was as of the last
@@ -326,7 +329,7 @@ export class CoreHost {
       channelCount: 1,
       channelCountMode: 'explicit',
       // Copied, not moved: the page keeps its copy for the next synth.
-      processorOptions: { bytes: core.bytes, quality, layout: this.layout, player: PLAYER },
+      processorOptions: { bytes: core.bytes, quality, layout: this.layout, player: PLAYER, burn },
     });
     this.node.port.onmessage = (e) => this._receive(e.data);
     // The processor threw while playing (a trap in the core, say): the node
@@ -514,6 +517,7 @@ export class CoreHost {
     if (m.type === 'cost') {
       this.cost = { ms: m.ms, seconds: m.seconds };
       if (m.player) this.playerAt = m.player;
+      if (m.busy && this.onbusy) this.onbusy(m.busy);
     }
     if (m.type === 'pong') {
       if (m.player) this.playerAt = m.player;
