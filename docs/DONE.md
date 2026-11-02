@@ -206,3 +206,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   on lite. Diagnostics: `lite: true, auto (busiest 63% at full)`. The
   listener's own choice is never changed. For Mikey: on the tablet, that
   breath at the switch (for his ears), and that the Moto stays on full.
+- #315, a `now` change made later than the old loop decided ahead still
+  lands on its grid (item 86b, v143), preview URL:
+  <https://ea25aa34-driftloom.nowmichaelclark.workers.dev> (commit 7c0c48b):
+  nothing to listen for in the app (the core's player only, which the app
+  plays with `?engine=player`; the baseline, goldens and seeds unchanged). A
+  change to a loop whose tuned kick takes longer to fit than the old loop
+  had decided ahead started a fraction of a step off its beat; now it starts
+  on the old loop's next step still to come. The brain's 300 changes on
+  corpus 20261101 and corpus 1's 1,000 (full, lite, ring-out, 48 kHz): 0
+  missed.
