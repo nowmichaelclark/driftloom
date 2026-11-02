@@ -35,7 +35,7 @@
 <body>
 <main>
   <h1>Speed test</h1>
-  <p>Plays Driftloom's busiest loops silently at full and lite quality, mono and stereo, and times every block. Tap Measure, keep the screen on and this tab open (about 10 minutes on a slow phone), then tap Copy and send the text back.</p>
+  <p>Plays Driftloom's busiest loops silently at full and lite quality, mono and stereo, and times every block. Tap Measure, keep the screen on and this tab open (10 to 15 minutes on a slow phone), then tap Copy and send the text back.</p>
   <div class="keys">
     <button id="go" type="button" class="go">Measure</button>
     <button id="copy" type="button">Copy</button>
@@ -59,8 +59,9 @@ const say = (t) => { lines.push(t); show(); };
 
 // The plan: vei-koan at full first (the yardstick: its worst block under
 // 25% of the deadline, mono and stereo), then lite, then the other three
-// loops all four ways. Shorter and fewer runs where the figure is less
-// decisive, so the whole test fits in minutes on a slow phone.
+// loops all four ways. Three runs at full quality (the yardstick's; a block
+// the phone paused in during one run is read from the others), two on lite,
+// and shorter loops after the first, so the test fits in minutes.
 function plan() {
   const pick = q.get('loops') ? LOOPS.filter((l) => q.get('loops').split(',').includes(l.name)) : LOOPS;
   const seconds = q.get('seconds') ? Number(q.get('seconds')) : null;
@@ -70,7 +71,7 @@ function plan() {
     for (const way of WAYS) {
       const first = loop === LOOPS[0];
       const s = seconds ?? (first ? (way.full ? 45 : 30) : 20);
-      const r = runs ?? (first && way.full ? 3 : 2);
+      const r = runs ?? (way.full ? 3 : 2);
       p.push({ loop, way, seconds: s, runs: r });
     }
   }

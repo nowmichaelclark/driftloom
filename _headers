@@ -2,6 +2,10 @@
 # this file and do not serve it). The speed test (queue item 87) runs
 # cross-origin isolated, so the phone's clock times each block to a few
 # microseconds rather than a tenth of a millisecond; nothing else changes.
+# The site serves speed.html at /speed (it redirects the one to the other).
+/speed
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
 /speed.html
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
