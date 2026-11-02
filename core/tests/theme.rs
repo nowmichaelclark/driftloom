@@ -3,8 +3,8 @@
 //! nothing else asked making the theme's loop, and a theme bent by vibes,
 //! on its own seed or another, keeping its key and mode, its profile mix,
 //! its metre and its tune (the melody's figure and rhythmic cell, as the
-//! generator plays them; a theme whose melody rests has none to hold, and a
-//! choir loop then sings its own). test/generator.test.mjs measures the same in the
+//! generator plays them; a theme whose melody rests keeps its rest, choir or
+//! not: queue item 85f). test/generator.test.mjs measures the same in the
 //! JavaScript's render; the generation goldens' `theme` cases hold the two
 //! together.
 
@@ -69,11 +69,7 @@ fn held() {
         assert_eq!(held.metre(&held.character()), own.metre(&own.character()), "theme {theme_seed} on {seed}: the metre");
         let (ma, mb) = (&theme.render().melody_out, &bent.render().melody_out);
         // A theme whose melody rests has no tune to hold: the loop rests too,
-        // unless it is one of the rare choir loops, which always sing their
-        // own.
-        if ma.cell.is_none() && held.choir().is_some() {
-            continue;
-        }
+        // choir or not (queue item 85f).
         assert_eq!(mb.cell, ma.cell, "theme {theme_seed} on {seed}: the cell");
         assert_eq!(mb.motif.len(), ma.motif.len(), "theme {theme_seed} on {seed}: the figure");
         for (x, y) in mb.motif.iter().zip(ma.motif.iter()) {
@@ -84,4 +80,26 @@ fn held() {
         }
     }
     assert!(moved > 100, "the vibes still move the tempo: {moved} of 200");
+}
+
+#[test]
+fn a_theme_that_rests_keeps_its_rest_choir_or_not() {
+    std::thread::Builder::new().stack_size(64 << 20).spawn(rests).expect("a thread").join().expect("rests");
+}
+
+/// The brain's case (queue item 85f): theme 3570153259, whose own loop has no
+/// tune, bent from seed 2428270433, whose own loop is a vowel choir. Before
+/// 85f its choir sang 87 notes of a tune of its own; now it isn't a choir
+/// loop and the melody rests.
+fn rests() {
+    let mut g = Box::new(Generator::new());
+    g.load_with(2_428_270_433, &Request::new());
+    assert!(g.spec().choir().is_some(), "the seed alone is a choir loop");
+    g.load_with(3_570_153_259, &Request::new());
+    assert!(g.render().melody.is_empty(), "the theme's own loop rests");
+    let request = Request::parse("theme=3570153259,booming=0.31,cheeky=0.26,experimental").expect("a request");
+    g.load_with(2_428_270_433, &request);
+    assert!(g.spec().choir().is_none(), "the bent loop is not a choir loop");
+    assert!(g.render().melody.is_empty(), "and its melody rests");
+    assert!(g.render().chords.iter().all(|e| e.voice != "vowel"), "its keys play the voice they drew");
 }

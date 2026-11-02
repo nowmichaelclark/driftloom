@@ -31,7 +31,7 @@ fn every_case() {
         assert_eq!(generator.lost(), 0, "{}: the lists ran out of room", fields[0]);
         cases += 1;
     }
-    assert_eq!(cases, 3900);
+    assert_eq!(cases, 3924);
 }
 
 #[test]

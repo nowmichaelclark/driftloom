@@ -774,6 +774,11 @@ const CHOIR_VOICES = [['vowel', 3], ['hum', 2]];
 
 export function choirOf(spec) {
   if (!spec || spec.seed == null) return null;
+  // A theme that rests (queue item 85f): a friend with no tune keeps none,
+  // so its bent loop is not a choir loop at all (its keys play the voice
+  // they drew, and the melody rests). The choir's draws below are a stream
+  // of their own, so nothing else moves.
+  if (themeRests(spec)) return null;
   const r = new Rng(((spec.seed ^ CHOIR_SALT) >>> 0) || 17);
   if (!r.chance(CHOIR_RATE)) return null;
   // A standing few cents between the two layers.
@@ -1781,6 +1786,20 @@ function figureDraws(r, spec, lf, spb, scale) {
   return { rhythm, motif, kept };
 }
 
+// Whether `spec` bends a theme whose own loop rests (queue item 85f). The
+// theme's tune is a pure function of its seed, so the answer is kept by seed.
+const RESTS = new Map();
+export function themeRests(spec) {
+  if (spec.theme == null) return false;
+  let rests = RESTS.get(spec.theme);
+  if (rests === undefined) {
+    rests = !themeTune(spec.theme).figure;
+    if (RESTS.size > 256) RESTS.clear();
+    RESTS.set(spec.theme, rests);
+  }
+  return rests;
+}
+
 // A theme's tune (queue item 85d): its own loop's figure and rhythmic cell,
 // drawn as genMelody draws them; no figure where its melody rests.
 function themeTune(theme) {
@@ -1808,7 +1827,9 @@ function genMelody(spec, harmony, dev = null) {
   const voice = dev ? dev.voice : choir ? choir.voice : drawnVoice;
   const lf = feelForLayer(spec, 'melody');
   // Drawn either way, so the stream does not move; a choir loop simply
-  // never takes the rest. A doubling with nothing to double is not one.
+  // never takes the rest. A doubling with nothing to double is not one. A
+  // theme's rest is kept, choir or not (queue item 85f): `choirOf` says no
+  // choir for a loop whose theme rests.
   const silent = r.chance(0.08);
   // A theme's tune (queue item 85d): whether there is one, and its figure,
   // held in place of this loop's own (whose draws are still made).

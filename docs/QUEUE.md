@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment) and **85e** (#309, the steal at full quality). **Next: 85f** (a theme's rest kept), then 87. Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment) and **85e** (#309, the steal at full quality). **Next: 85f** (a theme's rest kept; built, its PR open), then 87. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -301,6 +301,15 @@ not; every draw is still made, so nothing else moves. Say what the choir's
 other parts do in such a loop (the keys' detune it shares with the melody):
 the conservative choice is that the loop simply isn't a choir loop, "for
 Mikey's ears".
+
+**Built (hands, 2026-11-02):** `choirOf` (and `Spec::choir`) says no choir
+for a loop whose theme rests, so its melody rests and its keys play the voice
+they drew; the choir's draws are a stream of their own, so nothing else
+moves. Such a loop may now develop, as a non-choir loop of its length can
+(5 of the 24 new cases do); its melody still rests. No existing golden case
+moved (none of the 240 `theme` cases has a resting theme on a choir seed), so
+24 `rest` cases join the goldens (the brain's first; 3,924 in all), and
+without the Rust change exactly those 24 fail.
 
 **Yardsticks:** the generation goldens: only `theme` cases may move, and only
 those whose theme rests and whose loop drew a choir (say which and how many,
