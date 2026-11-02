@@ -234,7 +234,10 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   blocks, the longest load with room), the old loop decides its steps up to
   the boundary then, and the new loop is made in the blocks before it and
   takes its first step on it, its tone, level and echo gliding in there. A
-  nearer boundary is passed for the next of its kind. Changes wait one for
+  nearer boundary is passed for the next of its kind. A `Now` change (or a
+  load while playing) starts on the old loop's next step, or, if the new loop
+  took longer to make than the old had decided ahead, on the first of its
+  steps still to come (queue item 86b). Changes wait one for
   each kind of moment, a later one in place of an earlier for the same kind
   or boundary; `next_change()` says when the next starts. A change's loop
   plays its own first pass (a load's wanders at the pass count the last loop

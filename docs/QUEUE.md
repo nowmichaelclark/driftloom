@@ -7,12 +7,12 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-02:** `main` is at v142. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-02:** `main` is at v143. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices). **Next: 86b** (a small timing case of 86's), **then 88.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) and **86b** (#315, a late `now` change on the grid). **Next: 88.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -288,6 +288,16 @@ it can't and the harness's check says what it holds instead. Add the case to
 **Yardsticks:** the brain's run above with 0 missed; corpus 1's 1,000, full,
 lite, ring-out and 48 kHz still 0 missed; the core baseline and every golden
 unchanged.
+
+**Built (hands, 2026-11-02):** not the `making` branch: the new loop took
+longer to make than the old one had decided ahead. Change 270's new loop
+has a tuned kick, whose fit takes 94 blocks here (0.27 s, past the 0.25 s
+lookahead), so when it was made (2.5513 s) the old loop's next step (2.5500
+s) had passed by 1.3 ms, and `begin` fell back to "now plus `START`", off
+the grid. Now it takes the first of the old loop's steps still to come
+(2.633 s, step 31). Only a load that outlasts the lookahead changes (from
+playing: a `now` change, or `load`); `core/tests/change.rs` asks it across
+2.20-2.36 s, and fails without the fix.
 
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 
