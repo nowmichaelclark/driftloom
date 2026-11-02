@@ -201,14 +201,7 @@ pub fn render_seed(seed: u32, way: &Way, calls: bool) -> Result<Rendered, String
     // A core and a player are megabytes each: built in a thread with room
     // for them on its stack, as the test host builds a core.
     let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || render_on(seed, way, &request, frames, calls))
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })
+    crate::notelist::roomy(stack, || render_on(seed, way, &request, frames, calls))
 }
 
 fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool) -> Result<Rendered, String> {
@@ -319,10 +312,7 @@ pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
     let request = way.request()?;
     let blocks = (way.seconds * way.rate / dlcore::QUANTUM as f64).ceil() as usize;
     let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || {
+    crate::notelist::roomy(stack, || {
                 let mut best: Vec<(f64, f64, Work)> = vec![(f64::INFINITY, f64::INFINITY, Work::None); blocks];
                 let mut stages: Vec<Option<dlcore::generator::Stage>> = vec![None; blocks];
                 let mut core = Box::new(Core::new());
@@ -386,8 +376,4 @@ pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
                 }
                 Ok(c)
             })
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })
 }

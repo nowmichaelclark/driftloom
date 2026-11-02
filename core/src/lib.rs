@@ -63,8 +63,10 @@ pub mod wave;
 
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
-// The C face (`include/dlcore.h`), for a native C host's static library.
-#[cfg(all(not(target_arch = "wasm32"), feature = "capi"))]
+// The C face (`include/dlcore.h`), for a native C host's static library,
+// and Emscripten's (queue item 87: a web build that links the core as C,
+// Broken Friends' Godot export).
+#[cfg(all(any(not(target_arch = "wasm32"), target_os = "emscripten"), feature = "capi"))]
 mod capi;
 
 use block::{Context, Event, Mods, Note, Sends, Signal, event};
@@ -802,6 +804,15 @@ impl Core {
     #[must_use]
     pub fn next_frame(&self) -> u64 {
         self.next
+    }
+
+    /// The frames `render` has handed the host so far: `next_frame`, less
+    /// what of the last block it has yet to give (queue item 87). Where a
+    /// host rendering ahead in chunks stands: its next chunk starts here,
+    /// whatever sizes the chunks before it were.
+    #[must_use]
+    pub fn served(&self) -> u64 {
+        self.next - self.unserved as u64
     }
 
     /// The mix as the synth builds it on lite quality (three combs, not

@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality) and **85f** (#310, a theme's rest kept). **Next: 87.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead). **Next: 88, once the brain says** (the tablet's figures at full may need an item first: the app choosing lite by itself on slow devices). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -347,6 +347,20 @@ worst block at **full quality**, mono and stereo, on the Moto G Power (2022)
 under promise 1's 25% (brain, 2026-11-02, from 85e): if it's over, say by how
 much and stop with a note (the fix would be a lower full ceiling there, for
 Mikey's ears).
+
+**Built (hands, 2026-11-02):** `Player::render` already carried on where
+the last call stopped; `pass_frames` (a pass at a time; `Core::served`) and
+`estimate` (a chunk's cost from the units the voices held, scaled by a host
+to its own speed) are new, with `dl_play_render` and the C header's
+`dl_player_pass_frames` and `dl_player_estimate` (`core/src/player/
+ahead.rs`). `tools/ahead.mjs` sweeps chunk sizes against straight through,
+checks the estimate and times render speed in Node and Chromium; CI's
+`emscripten` job holds that build to wasm32's goldens and runs the C host
+built with emcc. `speed.html` (Diagnostics links it) is the phone's test.
+The Moto G Power's worst block at full is 27.9% in stereo (theith-yaing;
+the rest of the four under 21.5%, lite 17.1% at worst): **decided (brain,
+2026-11-02): option 3**, accepted, with promise 1's and 2's measures for it
+in `docs/CORE.md` (`docs/notes/87-phone-figures.md`).
 
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 

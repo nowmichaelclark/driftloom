@@ -4,12 +4,15 @@
  *
  *     cc -O2 -std=c11 -Iinclude examples/c/seed.c target/release/libdlcore.a -o seed
  *     ./seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite]
- *                 [--wander A] [--vibes ID,...] [--wav OUT.wav]
+ *                 [--wander A] [--vibes ID,...] [--wav OUT.wav] [--ahead]
  *
  * It prints the line dlrender prints: the loop's name, how it was played and
  * the hashes of its samples (FNV-1a over the float words, a channel each, and
  * over their bytes, interleaved), and writes the WAV dlrender writes (32-bit
- * float, from a little-endian host). */
+ * float, from a little-endian host). With --ahead it renders as a host with
+ * no audio thread does (queue item 87): a pass at a time, each in one call
+ * (dl_player_pass_frames), its cost estimated first (dl_player_estimate,
+ * written to stderr); the line and the WAV are the same. */
 
 #include <math.h>
 #include <stdint.h>
@@ -48,15 +51,17 @@ int main(int argc, char **argv) {
   double seconds = 45, rate = 44100, wander = 1;
   uint32_t channels = 1;
   int full = 1;
+  int ahead = 0;
   const char *wav = NULL, *vibes = NULL, *request = NULL;
   if (argc < 2) {
-    fprintf(stderr, "usage: seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--vibes ID,...] [--request TEXT] [--wav OUT.wav]\n");
+    fprintf(stderr, "usage: seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--vibes ID,...] [--request TEXT] [--wav OUT.wav] [--ahead]\n");
     return 2;
   }
   uint32_t seed = (uint32_t)strtoul(argv[1], NULL, 10);
   for (int i = 2; i < argc; i++) {
     if (!strcmp(argv[i], "--stereo")) channels = 2;
     else if (!strcmp(argv[i], "--lite")) full = 0;
+    else if (!strcmp(argv[i], "--ahead")) ahead = 1;
     else if (i + 1 < argc && !strcmp(argv[i], "--seconds")) seconds = atof(argv[++i]);
     else if (i + 1 < argc && !strcmp(argv[i], "--rate")) rate = atof(argv[++i]);
     else if (i + 1 < argc && !strcmp(argv[i], "--wander")) wander = atof(argv[++i]);
@@ -123,12 +128,40 @@ int main(int argc, char **argv) {
     fwrite("data", 1, 4, f);
     put32(f, data);
   }
-  static float left[CHUNK], right[CHUNK], both[2 * CHUNK];
+  static float small[2][CHUNK], small_both[2 * CHUNK];
+  float *left = small[0], *right = small[1], *both = small_both;
+  size_t room = CHUNK;
   float *out[2] = { left, right };
+  double estimated = 0;
+  int chunks = 0;
   uint32_t h[2] = { 0x811c9dc5u, 0x811c9dc5u };
   uint64_t all = 0xcbf29ce484222325ull;
-  for (size_t done = 0; done < frames; done += CHUNK) {
-    size_t n = frames - done < CHUNK ? frames - done : CHUNK;
+  for (size_t done = 0, n = 0; done < frames; done += n) {
+    n = frames - done < CHUNK ? frames - done : CHUNK;
+    if (ahead) {
+      /* The pass playing, whole, in one call: buffers as big as a pass. */
+      int64_t pass = dl_player_pass_frames(p);
+      n = pass > 0 && (size_t)pass < frames - done ? (size_t)pass : frames - done;
+      if (n > room) {
+        room = n;
+        if (left != small[0]) {
+          free(left);
+          free(right);
+          free(both);
+        }
+        left = malloc(room * sizeof(float));
+        right = malloc(room * sizeof(float));
+        both = malloc(2 * room * sizeof(float));
+        if (!left || !right || !both) {
+          fprintf(stderr, "seed: no memory for a pass\n");
+          return 1;
+        }
+        out[0] = left;
+        out[1] = right;
+      }
+      estimated += dl_player_estimate(p, n);
+      chunks++;
+    }
     if (dl_player_render(p, out, n) != 0) {
       fprintf(stderr, "seed: the render failed\n");
       return 1;
@@ -146,6 +179,7 @@ int main(int argc, char **argv) {
     if (f) fwrite(channels == 2 ? both : left, 4 * channels, n, f);
   }
   if (f) fclose(f);
+  if (ahead) fprintf(stderr, "seed: rendered ahead in %d chunks, estimated %.0f ms on the reference host\n", chunks, estimated / 1000);
   if (dl_player_trouble(p)) {
     fprintf(stderr, "seed: the core could not play %u notes as asked\n", dl_player_trouble(p));
     return 1;

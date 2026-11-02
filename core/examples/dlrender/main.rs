@@ -496,20 +496,13 @@ fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String>
         }
     }
     let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
-    let (samples, channels) = std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || {
+    let (samples, channels) = notelist::roomy(stack, || {
                 let mut core = Box::new(Core::new());
                 core.start(rate, 1).map_err(|e| e.message().to_string())?;
                 let mut find = Find { name, cx: core.context(), out: None };
                 each(&mut find);
                 find.out.ok_or_else(|| format!("no block and probe called {name} (see core/golden/blocks.txt)"))
-            })
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })?;
+            })?;
     let mut hash = Fnv::new();
     hash.samples(&samples);
     println!("{name} {}", hash.hex());

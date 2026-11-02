@@ -13,10 +13,12 @@
 #                                       browser's: test/core-baseline.json's `player`
 #                                       part, which tools/baseline.mjs renders in
 #                                       Chromium with the app's own engine
-#   tools/seeds.sh --c [--first N]      the C host (core/examples/c/seed.c, built
+#   tools/seeds.sh --c [--first N] [wasm32-unknown-emscripten]
+#                                       the C host (core/examples/c/seed.c, built
 #                                       against core/include/dlcore.h alone) against
 #                                       the same hashes, and its WAV against
-#                                       dlrender's, byte for byte
+#                                       dlrender's, byte for byte; for Emscripten
+#                                       (queue item 87) built with emcc, run in Node
 #
 # Each loop plays 45 s at 44.1 kHz, full quality, mono, wandering as the app's
 # does (amount 1): dlrender --corpus 1:80, its lines kept as it prints them
@@ -99,8 +101,19 @@ if [ "$chost" = yes ]; then
   # The C host, built against the header alone: its line for each loop is
   # dlrender's, and its WAV is dlrender's, byte for byte.
   cd "$root/core"
-  cargo rustc -q --release --locked --lib --features capi --crate-type staticlib
-  cc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/seed.c target/release/libdlcore.a -lm -o "$tmp/seed"
+  if [ "$target" = wasm32-unknown-emscripten ]; then
+    # Emscripten (queue item 87): the library as Broken Friends' web build
+    # links it, panic=abort and no threads, the host built with emcc and run
+    # in Node with the machine's files.
+    cargo rustc -q --release --locked --lib --features capi --crate-type staticlib --target "$target"
+    emcc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/seed.c "target/$target/release/libdlcore.a" \
+      -sNODERAWFS=1 -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1 -o "$tmp/seed.js"
+    printf '#!/bin/sh\nexec node "%s" "$@"\n' "$tmp/seed.js" > "$tmp/seed"
+    chmod +x "$tmp/seed"
+  else
+    cargo rustc -q --release --locked --lib --features capi --crate-type staticlib
+    cc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/seed.c target/release/libdlcore.a -lm -o "$tmp/seed"
+  fi
   grep -v '^#' "$kept" | head -n "$first" > "$tmp/kept"
   : > "$tmp/lines"
   while read -r index line; do
@@ -110,6 +123,19 @@ if [ "$chost" = yes ]; then
   if ! cmp -s "$tmp/lines" "$tmp/kept"; then
     echo "seeds: the C host's renders differ from the kept hashes:" >&2
     diff "$tmp/kept" "$tmp/lines" | sed 's/^/  /' >&2
+    exit 1
+  fi
+  # Rendered ahead, a pass at a time in one call each (queue item 87): the
+  # same lines.
+  head -n 2 "$tmp/kept" > "$tmp/kept2"
+  : > "$tmp/ahead"
+  while read -r index line; do
+    s=$(printf '%s\n' "$line" | sed 's/^seed=\([0-9]*\) .*/\1/')
+    printf '%s %s\n' "$index" "$("$tmp/seed" "$s" --ahead)" >> "$tmp/ahead"
+  done < "$tmp/kept2"
+  if ! cmp -s "$tmp/ahead" "$tmp/kept2"; then
+    echo "seeds: the C host's renders a pass at a time differ from straight through:" >&2
+    diff "$tmp/kept2" "$tmp/ahead" | sed 's/^/  /' >&2
     exit 1
   fi
   s=$(head -n 1 "$tmp/kept" | sed 's/^[0-9]* seed=\([0-9]*\) .*/\1/')
@@ -126,7 +152,7 @@ if [ "$chost" = yes ]; then
   "$tmp/seed" "$s" --request "$pinned" --stereo --seconds 10 --wav "$tmp/c.wav" > /dev/null
   cargo run -q --release --locked --example dlrender -- --seed "$s" --request "$pinned" --stereo --seconds 10 --wav "$tmp/rust.wav" > /dev/null
   cmp "$tmp/c.wav" "$tmp/rust.wav"
-  echo "seeds: the C host, through dlcore.h alone: all $(wc -l < "$tmp/kept" | tr -d ' ') loops equal their hashes, and its WAVs are dlrender's (one asked for $asked, one for $pinned)"
+  echo "seeds: the C host ($target), through dlcore.h alone: all $(wc -l < "$tmp/kept" | tr -d ' ') loops equal their hashes, and its WAVs are dlrender's (one asked for $asked, one for $pinned), and rendered a pass at a time they are the same"
   exit 0
 fi
 

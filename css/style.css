@@ -1810,6 +1810,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .keys2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .keys3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .keys3 .vkey { padding: 4px 4px; }
+.speed-link { color: inherit; text-decoration: underline; }
 .setrow { display: flex; align-items: center; gap: 12px; }
 .setrow-text { flex: 1; min-width: 0; }
 .setrow-name {
