@@ -201,14 +201,7 @@ pub fn render_seed(seed: u32, way: &Way, calls: bool) -> Result<Rendered, String
     // A core and a player are megabytes each: built in a thread with room
     // for them on its stack, as the test host builds a core.
     let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .stack_size(stack)
-            .spawn_scoped(scope, || render_on(seed, way, &request, frames, calls))
-            .map_err(|e| format!("could not start the render thread: {e}"))?
-            .join()
-            .map_err(|_| "the render thread panicked".to_string())?
-    })
+    crate::roomy(stack, || render_on(seed, way, &request, frames, calls))
 }
 
 fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool) -> Result<Rendered, String> {

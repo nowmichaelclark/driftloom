@@ -331,6 +331,22 @@ pub unsafe extern "C" fn dl_player_render(player: *mut Engine, out: *const *mut 
     }
 }
 
+/// The frames from the last rendered to the end of the pass playing
+/// (`Player::pass_frames`; queue item 87): the chunk a host rendering a pass
+/// at a time asks for next. -1 while no loop plays.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_pass_frames(player: *mut Engine) -> i64 {
+    engine(player).and_then(|e| e.player.pass_frames(&e.core)).and_then(|n| i64::try_from(n).ok()).unwrap_or(-1)
+}
+
+/// How long the next `frames` frames will take to render, in microseconds
+/// on the reference host (`Player::estimate`; queue item 87): a host scales
+/// it by its own speed, timed on a chunk. -1 for a null player.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_estimate(player: *mut Engine, frames: u64) -> f64 {
+    engine(player).map_or(-1.0, |e| e.player.estimate(&e.core, frames))
+}
+
 /// Stop deciding (a pause): the loop stays loaded, and what was handed over
 /// plays out.
 #[unsafe(no_mangle)]

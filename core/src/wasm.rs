@@ -624,6 +624,57 @@ mod player {
         super::dl_process(block)
     }
 
+    /// Render the next `frames` frames (at most 4,096, or 2,048 a side in
+    /// stereo) the way a host rendering ahead does (`Player::render`; queue
+    /// item 87): any number a call, each call carrying on where the last
+    /// stopped. Where they are, as `dl_render` says; 0 if the core would not
+    /// render. Never mixed with `dl_play_process`, which owns the block clock.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_render(frames: u32) -> *const f32 {
+        // SAFETY: single-threaded, and nothing else holds the scratch.
+        let scratch = unsafe { &mut *super::SCRATCH.0.get() };
+        let core = core();
+        let stereo = core.layout() == 2;
+        let frames = (frames as usize).min(if stereo { super::RENDER_MAX / 2 } else { super::RENDER_MAX });
+        let (left, rest) = scratch.split_at_mut(frames);
+        let result = if stereo {
+            let Some(right) = rest.get_mut(..frames) else {
+                return core::ptr::null();
+            };
+            player().render(core, &mut [left, right])
+        } else {
+            player().render(core, &mut [left])
+        };
+        match result {
+            Ok(()) => scratch.as_ptr(),
+            Err(_) => core::ptr::null(),
+        }
+    }
+
+    /// The frames to the end of the pass playing (`Player::pass_frames`);
+    /// -1 while no loop plays.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // frames, far below 2^53
+    pub extern "C" fn dl_play_pass_frames() -> f64 {
+        player().pass_frames(core()).map_or(-1.0, |n| n as f64)
+    }
+
+    /// The mean cost units the loop's voices hold (`Player::units`); -1 for
+    /// none measured yet.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_units() -> f64 {
+        player().units().unwrap_or(-1.0)
+    }
+
+    /// How long the next `frames` frames will take to render, in
+    /// microseconds on the reference host (`Player::estimate`).
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a count of frames
+    pub extern "C" fn dl_play_estimate(frames: f64) -> f64 {
+        let n = if frames > 0.0 { frames as u64 } else { 0 };
+        player().estimate(core(), n)
+    }
+
     /// How far each pass wanders (`Player::set_wander`).
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_wander(amount: f64) {

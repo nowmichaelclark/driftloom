@@ -53,6 +53,7 @@
     clippy::too_many_arguments
 )]
 
+pub mod ahead;
 pub mod budget;
 pub mod change;
 pub mod formant;
@@ -130,6 +131,9 @@ pub enum Work {
 }
 
 /// A loop from a seed, on a core (the module's doc says how).
+// Its flags are each a state of its own (a pass drawn, a loop that played, a
+// lead-in, the quality), not one state spelled in bools.
+#[allow(clippy::struct_excessive_bools)]
 pub struct Player {
     generator: Generator,
     /// The pass playing and the next, drawn a pass ahead (with the wander on).
@@ -162,6 +166,18 @@ pub struct Player {
     asked_by: Asked,
     /// The loop playing's beat, in steps (4, or 6 in 6/8).
     beat: f64,
+    /// The full mix or lite's, as started (`attach`).
+    full: bool,
+    /// The work the voices asked for, a pass at a time (queue item 87,
+    /// `units`): the budget's `held` when the pass being decided began, and
+    /// its first step's time; and the mean cost units the voices held over
+    /// the last whole pass decided (negative: none yet).
+    pass_held: f64,
+    pass_from: f64,
+    units: f64,
+    /// Whether the loop playing began after a lead-in (`START`, a load with
+    /// nothing playing): its first pass, for `pass_frames`, takes it in.
+    lead_in: bool,
 }
 
 impl Player {
@@ -192,6 +208,11 @@ impl Player {
             handover: Handover::RingOut,
             asked_by: Asked::Load,
             beat: 4.0,
+            full: false,
+            pass_held: 0.0,
+            pass_from: 0.0,
+            units: -1.0,
+            lead_in: false,
         }
     }
 
@@ -235,6 +256,8 @@ impl Player {
         self.pending = [None; 4];
         self.handover = Handover::RingOut;
         self.asked_by = Asked::Load;
+        self.full = full;
+        self.units = -1.0;
         let now = self.now(host);
         self.synth.start(host, rate, !full, now);
     }
@@ -451,6 +474,7 @@ impl Player {
         } else {
             now + START
         };
+        self.lead_in = start == now + START;
         // A loop handing over by a crossfade (queue item 86): its organ lets
         // go over the fade, and everything it handed over falls from the new
         // loop's first step, before the new loop hands over a note.
@@ -479,6 +503,10 @@ impl Player {
             self.synth.budget.end_by(start);
         }
         self.seq.next_step_time = start;
+        // A new loop's work is its own: nothing measured yet.
+        self.pass_held = self.synth.budget.held();
+        self.pass_from = start;
+        self.units = -1.0;
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.pass_begins(&lp);
         self.next_drawn = false;
@@ -593,9 +621,24 @@ impl Player {
     fn step_once<H: Host>(&mut self, host: &mut H, now: f64, last: u64) {
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.schedule_step(host, &mut self.synth, &lp, now);
-        if self.seq.advance(&lp) && self.seq.abs_step != last {
-            self.next_pass();
+        if self.seq.advance(&lp) {
+            self.pass_measured();
+            if self.seq.abs_step != last {
+                self.next_pass();
+            }
         }
+    }
+
+    /// A pass decided to its end: the mean cost units its voices held over
+    /// it, for `units`, and the next pass measured from here.
+    fn pass_measured(&mut self) {
+        let held = self.synth.budget.held();
+        let span = self.seq.next_step_time - self.pass_from;
+        if span > 0.0 {
+            self.units = (held - self.pass_held) / span;
+        }
+        self.pass_held = held;
+        self.pass_from = self.seq.next_step_time;
     }
 
     /// Before the block the core renders next: a stage of a load, if one is

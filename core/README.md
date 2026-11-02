@@ -240,6 +240,22 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   plays its own first pass (a load's wanders at the pass count the last loop
   reached, the page's way). `dlrender --changes N` makes N across the corpus
   and measures each join; `tools/player-wasm.mjs --changes N` times them.
+- **Rendering ahead** (queue item 87, `player/ahead.rs`), for a host with no
+  audio thread (Godot's web build): `render` any number of frames a call,
+  and each call carries on exactly where the last stopped, the same samples
+  as straight through (wandering, endless, a change waiting at a boundary).
+  `pass_frames(&core)` is the chunk to the end of the pass playing (the
+  first takes the lead-in with it); `Core::served` is where the host stands.
+  `estimate(&core, frames)` is how long a chunk will take, in microseconds
+  on the reference host (wasm in Node on the hands' machine), from the
+  units the loop's voices held over the last pass (`units`; the budget's
+  costs times how long each held); a host scales it by what its last chunk
+  took against its estimate. `tools/ahead.mjs` sweeps chunk sizes
+  (`--sweep`), checks the estimate (`--estimate`) and times render speed per
+  loop in Node and Chromium; `speed.html` does it on a phone. The C header
+  has `dl_player_pass_frames` and `dl_player_estimate`; `seed.c --ahead`
+  renders a pass a call. The Emscripten build (`wasm32-unknown-emscripten`,
+  CI's `emscripten` job) makes wasm32's golden hashes.
 - **Before each block** the player decides every step due within
   `LOOKAHEAD` (0.25 s) and hands its notes over (`decide`; `render` calls it
   for a host, `Core::render_with`). Each pass's wandering is drawn a pass

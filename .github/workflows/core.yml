@@ -21,6 +21,8 @@
 # plays loops from their seeds to WAVs, the same samples on every target
 # (tools/seeds.sh): natively and in its .wasm the baseline's loops equal the
 # browser's renders, and a C host plays them through the C header alone.
+# The third job, `emscripten`, builds the core as a web game links it
+# (queue item 87) and holds it to the same hashes.
 #
 # The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
 # the runner, installs that exact version and its wasm32 target on first
@@ -110,6 +112,12 @@ jobs:
         run: node tools/baseline.mjs
       - name: The generation goldens, in Chromium
         run: node tools/gen-golden.mjs --check --chromium
+      # Rendering ahead (queue item 87): the player in js/dlplayer.wasm
+      # rendered in chunks of every size from 128 to 256 frames and rising
+      # sizes up to a pass, and a pass at a time, against straight through,
+      # sample for sample; with the wander and with a change waiting.
+      - name: Rendering ahead, chunked against straight through
+        run: node tools/ahead.mjs --sweep
       # The balance lock's corpus from the Rust generator (queue item 80):
       # every loop's figures from its tracks must equal the JavaScript's.
       - name: The balance lock, on the Rust generator
@@ -209,3 +217,37 @@ jobs:
       - name: Loops from their seeds, through the C header
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: tools/seeds.sh --c --first 8
+
+  # Emscripten (queue item 87): the core as Broken Friends' web build links
+  # it (Godot's web export, panic=abort, no threads), held to the same
+  # golden hashes as wasm32 (--strict), mono and stereo; the player's loops
+  # from their seeds; and the C host built with emcc against the header
+  # alone, straight through and a pass at a time. Programs run in Node
+  # (core/.cargo/config.toml).
+  emscripten:
+    name: golden renders (wasm32-unknown-emscripten)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Pinned, as the Rust toolchain is.
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.10
+      - name: The target's standard library
+        working-directory: core
+        run: |
+          cargo --version
+          emcc --version
+          rustup target add wasm32-unknown-emscripten
+      - name: Render the golden note lists
+        run: tools/golden.sh --strict wasm32-unknown-emscripten
+      - name: Stereo, the golden note lists
+        run: tools/golden.sh --stereo --strict wasm32-unknown-emscripten
+      - name: Loops from their seeds
+        run: tools/seeds.sh --first 8 wasm32-unknown-emscripten
+      - name: Loops from their seeds, through the C header, built with emcc
+        run: tools/seeds.sh --c --first 8 wasm32-unknown-emscripten

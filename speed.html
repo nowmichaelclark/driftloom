@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08060c">
+<title>Driftloom speed test</title>
+<!--
+  The speed test (queue item 87): the figures promise 1 and item 87 ask of
+  a phone. It plays the busiest loops on the core's player (js/dlplayer.wasm)
+  at full quality and lite, mono and stereo, in a worker (js/speed-worker.js,
+  js/speed.js), and reports each one's worst block as a % of its deadline
+  and how fast it renders ahead, as text to copy back. Not part of the app:
+  it is not in the service worker's offline set and never touches the
+  library. Diagnostics links to it.
+  `?loops=vei-koan&seconds=5&runs=1&auto` is how tools/ahead.mjs drives it in
+  headless Chromium.
+-->
+<style>
+  :root { --bg: #08060c; --fg: #ece8f4; --dim: #9a93ab; --line: #2a2533; --key: #1a1622; --hi: #c9b6ff; --bad: #ff9a8a; --good: #9fe0b0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  p { margin: 0 0 12px; color: var(--dim); }
+  .keys { display: flex; gap: 10px; margin: 16px 0; }
+  button { flex: 1; min-height: 52px; border: 1px solid var(--line); border-radius: 12px; background: var(--key); color: var(--fg); font: 600 16px system-ui, sans-serif; }
+  button:disabled { opacity: 0.45; }
+  button.go { background: var(--hi); color: #120e1a; border-color: var(--hi); }
+  #status { color: var(--hi); min-height: 1.5em; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #110e17; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; min-height: 6em; }
+  #verdict.over { color: var(--bad); } #verdict.under { color: var(--good); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Speed test</h1>
+  <p>Plays Driftloom's busiest loops silently at full and lite quality, mono and stereo, and times every block. Tap Measure, keep the screen on and this tab open (about 10 minutes on a slow phone), then tap Copy and send the text back.</p>
+  <div class="keys">
+    <button id="go" type="button" class="go">Measure</button>
+    <button id="copy" type="button">Copy</button>
+  </div>
+  <div id="status">Ready.</div>
+  <p id="verdict"></p>
+  <pre id="out" aria-label="Speed test report"></pre>
+</main>
+<script type="module">
+import { LOOPS, WAYS, wayName } from './js/speed.js';
+
+const q = new URLSearchParams(location.search);
+const out = document.getElementById('out');
+const status = document.getElementById('status');
+const verdict = document.getElementById('verdict');
+const go = document.getElementById('go');
+const copy = document.getElementById('copy');
+const lines = [];
+const show = () => { out.textContent = lines.join('\n'); };
+const say = (t) => { lines.push(t); show(); };
+
+// The plan: vei-koan at full first (the yardstick: its worst block under
+// 25% of the deadline, mono and stereo), then lite, then the other three
+// loops all four ways. Shorter and fewer runs where the figure is less
+// decisive, so the whole test fits in minutes on a slow phone.
+function plan() {
+  const pick = q.get('loops') ? LOOPS.filter((l) => q.get('loops').split(',').includes(l.name)) : LOOPS;
+  const seconds = q.get('seconds') ? Number(q.get('seconds')) : null;
+  const runs = q.get('runs') ? Number(q.get('runs')) : null;
+  const p = [];
+  for (const loop of pick) {
+    for (const way of WAYS) {
+      const first = loop === LOOPS[0];
+      const s = seconds ?? (first ? (way.full ? 45 : 30) : 20);
+      const r = runs ?? (first && way.full ? 3 : 2);
+      p.push({ loop, way, seconds: s, runs: r });
+    }
+  }
+  return p;
+}
+
+// The rate the phone's audio runs at (its blocks' deadline), read from an
+// audio context made for that and closed again; 48 kHz if none.
+async function deviceRate() {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    const ctx = new C();
+    const rate = ctx.sampleRate;
+    await ctx.close();
+    return rate || 48000;
+  } catch { return 48000; }
+}
+
+async function build() {
+  try {
+    const text = await (await fetch('./sw.js', { cache: 'no-store' })).text();
+    return (text.match(/const CACHE = '([^']+)'/) || [])[1] || '?';
+  } catch { return '?'; }
+}
+
+let wake = null;
+async function run() {
+  go.disabled = true;
+  lines.length = 0;
+  verdict.textContent = '';
+  verdict.className = '';
+  try { wake = await navigator.wakeLock?.request('screen'); } catch { wake = null; }
+  const rate = Number(q.get('rate')) || await deviceRate();
+  const bytes = await (await fetch('./js/dlplayer.wasm', { cache: 'no-store' })).arrayBuffer();
+  say(`Driftloom speed test (item 87), ${await build()}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`);
+  say(`device: ${navigator.userAgent}`);
+  say(`cores ${navigator.hardwareConcurrency || '?'}, memory ${navigator.deviceMemory || '?'} GB, rate ${rate} Hz (deadline ${(128 / rate * 1e6).toFixed(0)} us a block), isolated ${self.crossOriginIsolated ? 'yes' : 'no'}`);
+  const p = plan();
+  const worker = new Worker(new URL('./js/speed-worker.js', import.meta.url), { type: 'module' });
+  const t0 = performance.now();
+  const results = [];
+  await new Promise((resolve) => {
+    worker.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'tick') say(`clock step ${m.us.toFixed(0)} us`);
+      else if (m.type === 'warm') status.textContent = 'Warming up...';
+      else if (m.type === 'start') {
+        const spent = (performance.now() - t0) / 1000;
+        const left = m.i ? Math.round((spent / m.i) * (m.n - m.i) / 60) : null;
+        status.textContent = `Measuring ${m.i + 1} of ${m.n}: ${m.loop.name}, ${wayName(m.way)}${left != null ? `, about ${left} min left` : ''}`;
+      } else if (m.type === 'result') { results.push(m); say(m.text); }
+      else if (m.type === 'error') { say(`error: ${m.message}`); resolve(); }
+      else if (m.type === 'done') resolve();
+    };
+    worker.onerror = (e) => { say(`error: ${e.message || 'the worker failed'}`); resolve(); };
+    worker.postMessage({ bytes, rate, plan: p });
+  });
+  worker.terminate();
+  // The summary: the yardstick (full, mono and stereo, under 25%), and lite
+  // stereo against mono for rendering ahead.
+  const full = results.filter((m) => m.way.full);
+  if (full.length) {
+    const worst = full.reduce((a, m) => (m.r.pct > a.r.pct ? m : a));
+    const over = worst.r.pct > 25;
+    verdict.textContent = `Worst block at full quality: ${worst.r.pct.toFixed(1)}% of its deadline (${worst.loop.name}, ${wayName(worst.way)}); the yardstick is under 25%.`;
+    verdict.className = over ? 'over' : 'under';
+    say(`summary: worst block at full ${worst.r.pct.toFixed(1)}% (${worst.loop.name}, ${wayName(worst.way)}), ${over ? 'OVER' : 'under'} 25%`);
+  }
+  for (const loop of LOOPS) {
+    const lm = results.find((m) => m.loop.name === loop.name && !m.way.full && !m.way.stereo);
+    const ls = results.find((m) => m.loop.name === loop.name && !m.way.full && m.way.stereo);
+    if (lm && ls) say(`summary: ${loop.name} lite ahead ${ls.r.speed.toFixed(1)}x stereo, ${lm.r.speed.toFixed(1)}x mono (stereo costs ${(lm.r.speed / ls.r.speed).toFixed(2)}x mono)`);
+  }
+  say(`took ${((performance.now() - t0) / 60000).toFixed(1)} min`);
+  status.textContent = 'Done. Tap Copy and send the text back.';
+  document.title = 'Driftloom speed test: done';
+  try { await wake?.release(); } catch { /* the screen may sleep again */ }
+  go.disabled = false;
+}
+
+go.addEventListener('click', run);
+copy.addEventListener('click', async () => {
+  const text = out.textContent;
+  try { await navigator.clipboard.writeText(text); status.textContent = 'Copied.'; }
+  catch {
+    const r = document.createRange(); r.selectNodeContents(out);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    status.textContent = 'Selected: copy it with the menu.';
+  }
+});
+if (q.has('auto')) run();
+</script>
+</body>
+</html>

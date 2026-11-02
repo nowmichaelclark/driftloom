@@ -101,6 +101,9 @@ pub struct Budget {
     stolen: [u32; 5],
     /// `_steal`'s working list: the calls it could let go.
     older: [Older; HOLDS],
+    /// Every hold's cost times how long it holds, summed since the start
+    /// (`held`; queue item 87): the work the voices asked for.
+    held: f64,
 }
 
 impl Budget {
@@ -123,6 +126,7 @@ impl Budget {
             calls: 0,
             stolen: [0; 5],
             older: [Older { group: NO_GROUP, start: 0.0, cost: 0.0, released: false }; HOLDS],
+            held: 0.0,
         }
     }
 
@@ -186,6 +190,17 @@ impl Budget {
     #[must_use]
     pub fn full(&self) -> u32 {
         self.full
+    }
+
+    /// The cost units held times the seconds they were held, summed over
+    /// every note that played since the start (queue item 87): a hold of
+    /// `cost` from `time` to its end adds `cost` times that span, when it
+    /// is made. The player reads it a pass at a time for its estimate of
+    /// what a chunk costs to render (`Player::units`). A note let go early
+    /// still counts its whole span: an estimate, not a meter.
+    #[must_use]
+    pub fn held(&self) -> f64 {
+        self.held
     }
 
     fn slot(&self, k: usize) -> usize {
@@ -357,6 +372,7 @@ impl Budget {
             i -= 1;
         }
         let to = self.slot(i);
+        self.held += cost * (at - time);
         self.at[to] = at;
         self.cost[to] = cost;
         self.start[to] = time;

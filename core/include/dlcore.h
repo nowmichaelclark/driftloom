@@ -142,6 +142,20 @@ void dl_player_ready(dl_player *player);
    same whatever the split. 0, or -1 for a null player or channel. */
 int dl_player_render(dl_player *player, float *const *out, size_t frames);
 
+/* Rendering ahead (a host with no audio thread, as a web build): render in
+   chunks of any size with dl_player_render; each carries on exactly where
+   the last stopped, the same samples as straight through. The frames from
+   the last rendered to the end of the pass playing, the chunk for a pass at
+   a time; -1 while no loop plays (dl_player_ready makes one at once). */
+int64_t dl_player_pass_frames(dl_player *player);
+
+/* How long rendering the next `frames` frames will take, from the loop's
+   voices, in microseconds on the reference host (WebAssembly in Node on the
+   machine the core is measured on). Scale it to this device: time a chunk,
+   divide by its estimate, multiply the next estimate by that. -1 for a null
+   player. */
+double dl_player_estimate(dl_player *player, uint64_t frames);
+
 /* Pause: stop deciding steps; the loop stays loaded. And go on from where it
    stood, on the next block. */
 void dl_player_stop(dl_player *player);

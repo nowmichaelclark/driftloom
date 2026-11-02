@@ -74,6 +74,29 @@ use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render
 
 const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
+/// Run `f` on a thread with `stack` bytes of stack: a core and a player are
+/// megabytes each, and a build without optimizations makes them on the
+/// stack before boxing them. Emscripten's build has no threads (queue item
+/// 87: Broken Friends' web build links none), so there `f` runs here, on the
+/// stack the link gives it (`core/.cargo/config.toml`).
+///
+/// # Errors
+///
+/// `f`'s, or a line saying the thread could not start or panicked.
+pub fn roomy<T: Send>(stack: usize, f: impl FnOnce() -> Result<T, String> + Send) -> Result<T, String> {
+    if cfg!(target_os = "emscripten") {
+        return f();
+    }
+    std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .stack_size(stack)
+            .spawn_scoped(scope, f)
+            .map_err(|e| format!("could not start the render thread: {e}"))?
+            .join()
+            .map_err(|_| "the render thread panicked".to_string())?
+    })
+}
+
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
         Ok(()) => ExitCode::SUCCESS,
