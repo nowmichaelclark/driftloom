@@ -471,8 +471,13 @@ export class Synth {
   // `taps` gives the core's node an output per channel, as it goes into the
   // mix (the measure harness reads them). `onCoreError(message)` hears it
   // if the core turns out not to run, at any time.
-  constructor(ctx, quality = 'full', { engine = 'js', core = null, taps = false, coreError = null, onCoreError = null, layout = 1 } = {}) {
+  constructor(ctx, quality = 'full', { engine = 'js', core = null, taps = false, coreError = null, onCoreError = null, layout = 1, burn = 0 } = {}) {
     this.onCoreError = onCoreError;
+    // How busy the core's audio thread is (queue item 87b): called with each
+    // of its reports ({ max, behind, windows, seconds }); and a test's slow
+    // device, microseconds added to each of its blocks (`?burn=`).
+    this.onBusy = null;
+    this._burn = burn;
     this._building = null;
     this._voiceEnd = null;
     // Finished-to-be voices, earliest end first: { end, nodes }.
@@ -547,12 +552,13 @@ export class Synth {
     try {
       this.core = new CoreHost(this._raw, core,
         CORE_CHANNELS.map((name) => this.channels[name].gain),
-        { quality: this.quality, taps: this._taps, key: () => this._noteKey(), layout: this.layout });
+        { quality: this.quality, taps: this._taps, key: () => this._noteKey(), layout: this.layout, burn: this._burn });
     } catch (err) {
       // No worklet node here: everything stays in JS, counted as fallbacks.
       this.coreFailed(err);
       return;
     }
+    this.core.onbusy = (busy) => { if (this.onBusy) this.onBusy(busy); };
     this.core.onfail = () => {
       this._mixInJs();
       // The app keeps this answer for the session: a later synth (the
@@ -1292,6 +1298,24 @@ export class Synth {
         this._sweep();
         if (!this._retiring.length) { clearInterval(this._sweeper); this._sweeper = null; }
       }, 1000);
+    }
+  }
+
+  // The whole output falls to nothing from `from` to `to` and stays there
+  // (queue item 87b: the quality switch hands over at a boundary, the old
+  // synth fading out before it). Like `silence`, over a fade of its own.
+  fadeOut(from, to) {
+    this._asked.killed = true;
+    const core = this._coreMix();
+    if (core) {
+      core.param(MIX.kill, HOLD, 0, from);
+      core.param(MIX.kill, LINEAR, 0, to);
+    }
+    if (!core || this._ringOut) {
+      const g = this.kill.gain;
+      g.cancelScheduledValues(from);
+      g.setValueAtTime(g.value, from);
+      g.linearRampToValueAtTime(0, to);
     }
   }
 

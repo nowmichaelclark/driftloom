@@ -59,6 +59,15 @@ const LANES = 2;
 // add up to the time spent over many blocks (each call's start falls
 // anywhere within its millisecond).
 const COST_EVERY = 2;
+// How busy the audio thread is (queue item 87b): the time process() took
+// over each quarter-second of audio, as a share of that quarter-second (the
+// mean block's cost against its deadline). The worklet's clock is whole
+// milliseconds in Chromium (no performance.now() in an AudioWorklet), too
+// coarse for one block of 2.7 ms but exact on average over a window's
+// hundred-odd blocks. Each cost report carries the busiest window since the
+// last, and how many windows took longer than the audio they made (the
+// render falling behind for its own cost).
+const BUSY_WINDOW = 0.25;
 const clock = typeof globalThis.performance?.now === 'function' ? () => globalThis.performance.now() : () => Date.now();
 
 class DriftloomCore extends AudioWorkletProcessor {
@@ -83,6 +92,32 @@ class DriftloomCore extends AudioWorkletProcessor {
     // milliseconds spent, and seconds of audio made.
     this.cost = { ms: [0, 0], seconds: [0, 0] };
     this.costAt = 0;
+    // The window being counted, and since the last report: the busiest
+    // window's share, the windows over their whole time, and how many.
+    this.busy = { ms: 0, frames: 0, max: 0, behind: 0, windows: 0 };
+    // A test's slow device (queue item 87b, `?burn=` in the page): this
+    // many microseconds of plain arithmetic added to every block, inside the
+    // timed render, so the measuring and the rule see an audio thread that
+    // much slower. The count of operations follows the clock as it goes
+    // (every 64 blocks, the time they took against the time asked), since
+    // the browser's compiler speeds the loop up as it runs.
+    this.burnUs = Number(options.processorOptions && options.processorOptions.burn) || 0;
+    this.burn = 0;
+    this.burnMs = 0;
+    this.burnBlocks = 0;
+    this.sink = 1;
+    if (this.burnUs > 0) {
+      // A first count from ten milliseconds of it, as the node starts.
+      let n = 0;
+      let x = 1;
+      const t0 = clock();
+      while (clock() - t0 < 10) {
+        for (let i = 0; i < 1000; i++) x = x * 1.0000001 + 1e-9;
+        n += 1000;
+      }
+      this.sink = x;
+      this.burn = Math.max(1, Math.round((this.burnUs * n) / ((clock() - t0) * 1000)));
+    }
     try {
       const module = new WebAssembly.Module(options.processorOptions.bytes);
       this.core = new WebAssembly.Instance(module, {}).exports;
@@ -297,12 +332,44 @@ class DriftloomCore extends AudioWorkletProcessor {
     const i = lanes === 2 ? 1 : 0;
     this.cost.ms[i] += ms;
     this.cost.seconds[i] += QUANTUM / sampleRate;
+    const b = this.busy;
+    b.ms += ms;
+    b.frames += QUANTUM;
+    if (b.frames >= BUSY_WINDOW * sampleRate) {
+      const share = b.ms / ((b.frames / sampleRate) * 1000);
+      if (share > b.max) b.max = share;
+      if (share >= 1) b.behind++;
+      b.windows++;
+      b.ms = 0;
+      b.frames = 0;
+    }
     if (block < this.costAt) return;
     this.costAt = block + Math.round(COST_EVERY * sampleRate);
     const core = this.core;
     // And, with the core's player (queue item 82), where it is.
     const player = core && this.player ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null;
-    this.port.postMessage({ type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice(), player });
+    const busy = { max: b.max, behind: b.behind, windows: b.windows, seconds: b.windows * BUSY_WINDOW };
+    b.max = 0;
+    b.behind = 0;
+    b.windows = 0;
+    this.port.postMessage({ type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice(), player, busy });
+  }
+
+  // The test's slow device (`burn`): arithmetic the optimizer can't drop,
+  // its count kept to the time asked.
+  burnFor() {
+    const t0 = clock();
+    let x = this.sink;
+    for (let i = 0; i < this.burn; i++) x = x * 1.0000001 + 1e-9;
+    this.sink = x;
+    this.burnMs += clock() - t0;
+    if (++this.burnBlocks >= 64) {
+      const took = (this.burnMs * 1000) / this.burnBlocks;
+      const scale = took > 0 ? this.burnUs / took : 2;
+      this.burn = Math.max(1, Math.round(this.burn * Math.min(1.5, Math.max(0.67, scale))));
+      this.burnMs = 0;
+      this.burnBlocks = 0;
+    }
   }
 
   process(inputs, outputs) {
@@ -346,6 +413,7 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.arrivalReport(block);
     const began = clock();
     const at = this.player ? core.dl_play_process(block) : core.dl_process(block);
+    if (this.burn) this.burnFor();
     // Each of the output's channels from a lane the core rendered: the
     // mono render in every one, or left and right.
     const lanes = core.dl_lanes();

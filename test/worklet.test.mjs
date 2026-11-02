@@ -286,5 +286,29 @@ console.log('\nThe Mono switch (queue item 66)');
   check('the worklet reports what each layout cost', cost && cost.seconds[0] > 0.5 && cost.seconds[1] > 0.5 && cost.ms.every((x) => x >= 0), JSON.stringify(cost));
 }
 
+console.log('\nHow busy the audio thread is (queue item 87b)');
+{
+  // Eight seconds of an idle core, as is and with a test's slow device
+  // (`burn`: microseconds of work added to every block).
+  const run = (burn) => {
+    const processor = new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', burn } });
+    for (let b = 0; b * QUANTUM < 8.1 * RATE; b++) {
+      globalThis.currentFrame = b * QUANTUM;
+      processor.process(Array.from({ length: 5 }, () => []), [[new Float32Array(QUANTUM), new Float32Array(QUANTUM)]]);
+    }
+    // The first report goes with the first block, before a window has closed.
+    return processor.sent.filter((m) => m.type === 'cost' && m.busy && m.busy.windows).map((m) => m.busy);
+  };
+  const idle = run(0);
+  const slow = run(1500);
+  const deadline = (QUANTUM / RATE) * 1e6;
+  check('each cost report says how busy, a quarter-second at a time', idle.length >= 2 && idle.every((b) => b.windows >= 7 && b.windows <= 8 && b.seconds === b.windows * 0.25 && b.max >= 0 && b.max < 1), JSON.stringify(idle));
+  check('an idle core is far from the line', idle.every((b) => b.max < 0.3 && b.behind === 0), JSON.stringify(idle));
+  const want = 1500 / deadline;
+  // Its count settles as it runs: the last report.
+  const last = slow[slow.length - 1];
+  check(`a slow device reads as one (burn 1500 us: about ${Math.round(want * 100)}% of a block)`, last && last.max > want * 0.7 && last.max < want * 1.5 + 0.1, JSON.stringify(slow));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

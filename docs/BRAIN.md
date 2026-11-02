@@ -275,22 +275,25 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-01
+## State -- 2026-11-02
 
 ### Start here (for the next brain)
 
-- **Session 29 (brain, Opus 5.5, 2026-11-01): phase 2 checked through item
-  85 (83, 84, 85a-d, #298-#305); it passes.** `main` at v137 (82770b0). What
-  the brain ran: the log (`docs/archive/brain-log.md`). Item 85 (with 85c and
-  48's brief) and the note `85-fast-pins-lite.md` archived; its refusal
-  reading is now a standing rule. **Next: the hands take 86, then 85e (the
-  steal at full quality) and 85f (a theme's rest), then 87.** **The
-  brain's next check: after item 87**, as planned (the game's four needs);
-  then the phase's end after 92.
-- **Answered by Mikey, 2026-11-01:** the Lite Room Album "sounded great
-  for lite mode", and the steal goes to full quality too, both refinements
-  in: **item 85e**. A theme with no melody stays tuneless, choir or not:
-  **item 85f**. Both queued after 86 (the hands were already on 86).
+- **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-02): phase 2 checked
+  through item 87** (83-85d, then 86, 85e, 85f and 87, #298-#311); it passes,
+  with one small case for the hands (86b). `main` at v141 (3cd2fb1). What
+  the brain ran: the log (`docs/archive/brain-log.md`). Mikey's answers this
+  session: the steal at full (85e), a theme's rest kept (85f), the app may
+  choose lite by itself on slow devices (87b). **Next: the hands take 87b,
+  then 86b, then 88-92.** **The brain's next check: the phase's end, after
+  92** (the queue says what it holds), or sooner if a note comes in.
+- **Waiting on Mikey's ears, not urgent:** the Full Room Album (85e,
+  <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
+  account); 86's 1 s crossfade and "a phrase is 4 bars" (clips on request,
+  else in phase 3); 87b's switch on his Moto and tablet once built.
+- **Ears:** Ears 10 (pile 4, uploaded 2026-11-02) runs on Mikey's second
+  account; its prompt lifts the pause in `docs/ears/plan.md` itself, so the
+  brain leaves that file alone while it runs. Pile 5 next.
 - **Broken Friends:** `docs/notes/82-for-broken-friends.md` is for the game's
   next session (repin the core from f654fdb, the calls, the hashes to
   refresh). It stays in `docs/notes/` until the game's session has used it;

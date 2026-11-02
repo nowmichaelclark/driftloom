@@ -1,6 +1,7 @@
 import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
+import { ENGINE, PLAYER, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
+import * as quality from './quality.js';
 import { Engine } from './engine.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -9,7 +10,13 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v141';
+const BUILD = 'v142';
+
+// A test's slow device (queue item 87b): `?burn=1200` adds that many
+// microseconds of work to every block the core renders, so the measuring and
+// the rule that picks "lighter on processor" can be tried on a fast machine
+// (tools/perf.mjs --burn). Nothing else reads it.
+const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -91,6 +98,14 @@ const state = {
   passCount: 0,
   frameHandle: null,
   lite: false,
+  // Lighter on processor chosen by the app (queue item 87b, js/quality.js):
+  // what the worklet says about how busy the audio thread is, whether the
+  // loop played through the last report, whether the first guess (four
+  // cores or fewer) started it on lite, and the switch under way, if one is.
+  busy: new quality.Busy(),
+  busyPlaying: false,
+  liteGuess: false,
+  switching: null,
   // The Mono switch (queue item 66): the listener's, kept in the prefs and
   // never in a share code or a backup. Off plays the stereo render.
   mono: false,
@@ -150,47 +165,65 @@ function ensureAudio() {
   if (!state.synth) buildAudio();
 }
 
-function buildAudio() {
-  const wasPlaying = state.engine ? state.engine.playing : false;
-  if (state.engine) state.engine.stop();
-  // Tear the previous graph down before replacing it, or each rebuild
-  // leaves a whole synth wired to the speakers and another keepalive
-  // element in the DOM.
-  if (state.media) state.media.dispose();
-  if (state.synth) state.synth.dispose();
+// A synth, its media bridge and an engine on it, at the quality the app is
+// on, wired to the app's controls: what buildAudio installs, and what a
+// quality switch builds beside the one playing (queue item 87b).
+function makeAudio() {
   // A core that has failed (loading, or while playing) stays failed for the
   // session: the new synth is not handed it, and says why.
-  state.synth = new Synth(state.ctx, state.lite ? 'lite' : 'full', {
+  const synth = new Synth(state.ctx, state.lite ? 'lite' : 'full', {
     engine: ENGINE,
     layout: state.mono ? 1 : 2,
     core: state.coreError ? null : state.core,
     coreError: state.coreError,
     onCoreError: (message) => { state.coreError = message; },
+    burn: BURN,
   });
+  synth.onBusy = (busy) => onBusy(synth, busy);
   // Route the mix through a media element so the phone gives us lock-screen
   // controls and stops treating us as an idle tab.
-  state.media = new MediaBridge(state.ctx);
-  state.media.onchange = awayEvent;
-  state.media.attach(state.synth.output);
-  state.media.setHandlers({
+  const media = new MediaBridge(state.ctx);
+  media.onchange = awayEvent;
+  media.attach(synth.output);
+  media.setHandlers({
     onPlay: () => { if (!state.engine.playing) togglePlay(); },
     onPause: () => { if (state.engine.playing) togglePlay(); },
     onNext: () => goForward(),
     onPrev: () => goBack(),
   });
-  state.engine = new Engine(state.ctx, state.synth);
-  state.engine.onStep = onStep;
-  state.engine.onLoop = onLoop;
-  state.engine.onTrackEnd = onTrackEnd;
+  const engine = new Engine(state.ctx, synth);
+  engine.onStep = onStep;
+  engine.onLoop = onLoop;
+  engine.onTrackEnd = onTrackEnd;
   // The worst render-ahead this device has seen (queue item 47), planned
   // from while hidden.
-  state.engine.deviceAhead = Number(store.getPrefs().renderAheadWorst) || 0;
-  state.engine.setFrozen(pageFrozen);
-  state.engine.visualOffset = (parseInt(ui.el('playheadSync').value, 10) || 0) / 1000;
+  engine.deviceAhead = Number(store.getPrefs().renderAheadWorst) || 0;
+  engine.setFrozen(pageFrozen);
+  engine.visualOffset = (parseInt(ui.el('playheadSync').value, 10) || 0) / 1000;
   const wander = parseFloat(ui.el('driftAmount').value);
-  state.engine.driftOn = wander > 0;
-  state.engine.driftAmount = wander > 0 ? wander : 1;
-  state.synth.setVolume(parseFloat(ui.el('volume').value));
+  engine.driftOn = wander > 0;
+  engine.driftAmount = wander > 0 ? wander : 1;
+  synth.setVolume(parseFloat(ui.el('volume').value));
+  return { synth, media, engine };
+}
+
+// Let an old synth, its bridge and its engine go.
+function dropAudio({ synth, media, engine }) {
+  if (engine) engine.stop();
+  // Tear the graph down, or each rebuild leaves a whole synth wired to the
+  // speakers and another keepalive element in the DOM.
+  if (media) media.dispose();
+  if (synth) synth.dispose();
+}
+
+function buildAudio() {
+  const wasPlaying = state.engine ? state.engine.playing : false;
+  // A quality switch under way is overtaken: the old synth (the one
+  // playing) goes now, at the quality already chosen.
+  state.switching = null;
+  dropAudio({ synth: state.synth, media: state.media, engine: state.engine });
+  ({ synth: state.synth, media: state.media, engine: state.engine } = makeAudio());
+  state.busy.reset();
   if (state.spec) {
     // The same loop, resumed under the new engine (queue item 69: its
     // late floor doesn't wait again).
@@ -205,6 +238,74 @@ function buildAudio() {
       if (!state.frameHandle) state.frameHandle = requestAnimationFrame(frameLoop);
     }
   }
+}
+
+// ------------------------------------------------- lighter on processor
+
+// A report from the worklet of how busy the audio thread was (queue item
+// 87b): kept while the loop played through it, and held to the rule.
+function onBusy(synth, report) {
+  if (synth !== state.synth || state.switching) return;
+  const playing = !!(state.engine && state.engine.playing);
+  state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000);
+  state.busyPlaying = playing;
+  // The app's own engine on the core only: the JavaScript synth has no
+  // worklet to measure, and the core's player is for testing.
+  if (PLAYER || !synth.core || synth.core.failed) return;
+  const prefs = store.getPrefs();
+  const d = quality.decide({ quality: synth.quality, yours: prefs.lite, auto: prefs.liteAuto, guess: state.liteGuess, busy: state.busy });
+  if (d) autoQuality(d);
+}
+
+// The app moves to lite (or, once, up to full): kept as its own choice,
+// apart from the listener's, and heard at the next pass (or bar): the old
+// quality fades out to it, and the new one takes the loop from its top
+// (`quality.handOff` says why it is built only then).
+function autoQuality({ lite, why, at }) {
+  store.setPrefs({ liteAuto: { lite, why, at: new Date().toISOString() } });
+  state.lite = lite;
+  setLiteSwitch(lite);
+  showLiteSource();
+  awayEvent(`lighter on processor: ${lite ? 'on' : 'off'} by itself (${why})`);
+  const engine = state.engine;
+  if (!engine || !engine.playing || !state.spec) {
+    // Nothing playing: the next synth is simply built at the new quality.
+    if (state.synth) buildAudio();
+    return;
+  }
+  const now = state.ctx.currentTime;
+  const base = engine.live || engine.base;
+  const unit = at === 'bar' ? (state.spec.stepsPerBar || 16) : base.totalSteps;
+  const when = quality.boundary(engine, unit, now + quality.PREP + quality.FADE);
+  if (when === null) {
+    buildAudio();
+    return;
+  }
+  const old = { synth: state.synth, media: state.media, engine };
+  quality.handOff(old, when);
+  const alarm = quality.alarm(state.ctx, when, () => {
+    if (!state.switching || state.switching.old !== old) return;
+    state.switching = null;
+    // buildAudio lets the old one go and starts the loop again, from its
+    // top, on the new quality.
+    buildAudio();
+  });
+  state.switching = { old, alarm, at: when };
+}
+
+// The switch's line on the Advanced page, and Diagnostics: who chose.
+function liteSource() {
+  const prefs = store.getPrefs();
+  return quality.source({ yours: prefs.lite, auto: prefs.liteAuto, cores: navigator.hardwareConcurrency || '?' });
+}
+
+function showLiteSource() {
+  const prefs = store.getPrefs();
+  const hint = ui.el('liteAuto');
+  if (!hint) return;
+  const auto = (prefs.lite === undefined || prefs.lite === null) && prefs.liteAuto;
+  hint.hidden = !auto;
+  if (auto) hint.textContent = prefs.liteAuto.lite ? 'Turned on by itself: this device was working hard at full quality.' : 'Turned off by itself: this device has room to spare.';
 }
 
 // -------------------------------------------------------------- history
@@ -1517,7 +1618,9 @@ function wire() {
   ui.el('liteMode').addEventListener('click', () => {
     state.lite = !state.lite;
     setLiteSwitch(state.lite);
+    // The listener's choice: kept as theirs, and never changed by the app.
     store.setPrefs({ lite: state.lite });
+    showLiteSource();
     if (state.synth) buildAudio();
   });
 
@@ -1546,7 +1649,15 @@ function wire() {
     lines.push(`sw: ${swState}${swEvents.length ? ` (${swEvents.join('; ')})` : ''}`);
     const gpu = gpuReport();
     lines.push(`gpu: ${gpu.renderer}  accelerated: ${gpu.accelerated}`);
-    lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}`);
+    lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}, ${liteSource()}`);
+    // How busy the audio thread has been (queue item 87b): the busiest
+    // quarter-second over the rule's spans, while the loop played.
+    {
+      const b20 = state.busy.busiest(quality.OVER_FOR);
+      const b60 = state.busy.busiest(quality.UNDER_FOR);
+      const p = (x) => (x === null ? 'not yet' : `${Math.round(x * 100)}%`);
+      lines.push(`busiest: ${p(b20)} over ${quality.OVER_FOR} s, ${p(b60)} over ${quality.UNDER_FOR} s (${state.synth ? state.synth.quality : '?'}; switches to lite past ${Math.round(quality.OVER * 100)}%)`);
+    }
     // Which synth plays the voices: the Rust core (with the notes that
     // arrived late and the ones that fell back to JS), or JS and why.
     lines.push(`engine: ${state.synth ? state.synth.engineReport() : ENGINE === 'js' ? 'js (asked)' : state.coreError ? `js (fallback: ${state.coreError})` : 'rust (loading)'}`);
@@ -1695,8 +1806,12 @@ function wire() {
   state.vibes = vibeSelection(prefs.vibes);
   state.picks = picks.cleanPicks(prefs.picks);
   updateVibesKey();
-  state.lite = prefs.lite ?? cores <= 4;
+  // The listener's choice; else the app's own, if it has moved (queue item
+  // 87b); else the first guess, from the cores.
+  state.liteGuess = (prefs.lite === undefined || prefs.lite === null) && !prefs.liteAuto && cores <= 4;
+  state.lite = prefs.lite ?? (prefs.liteAuto ? prefs.liteAuto.lite : cores <= 4);
   setLiteSwitch(state.lite);
+  showLiteSource();
   state.mono = prefs.mono === true;
   setSwitch('monoMode', state.mono);
   // Drift was a switch plus an amount; the amount was never kept, so an old

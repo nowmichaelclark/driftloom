@@ -321,6 +321,9 @@ export class Engine {
     this.onStep = null;
     this.onLoop = null;
     this.onTrackEnd = null;
+    // No step at or after this time is decided (queue item 87b: an engine
+    // handing over to another at a boundary). Infinity: no end.
+    this.until = Infinity;
     // Dropout counters. A stutter you cannot measure is a stutter you
     // cannot fix, and this runs on a phone that is not in front of me.
     this.lateTicks = 0;
@@ -791,13 +794,16 @@ export class Engine {
     this._decide('change');
   }
 
-  start() {
+  // `at`: the first step's time on the context's clock, if it is not too
+  // soon (queue item 87b: an engine taking over from another at a boundary
+  // starts on it); otherwise as soon as it can.
+  start(at = 0) {
     if (this.playing || !this.spec) return;
     this.playing = true;
     this.decided = [];
     this.floor = -Infinity;
     this.synth.unsilence();
-    this.nextStepTime = this._soonest(0.08);
+    this.nextStepTime = Math.max(this._soonest(0.08), at || 0);
     this._playerOn = false;
     if (this.player) this._playerStart();
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
@@ -1016,7 +1022,7 @@ export class Engine {
     while (old < this.decided.length && this.decided[old].time < now - 1) old++;
     if (old) this.decided.splice(0, old);
     let guard = 0;
-    while (this.nextStepTime < horizon && guard++ < 256) {
+    while (this.nextStepTime < horizon && this.nextStepTime < this.until && guard++ < 256) {
       if (keep) {
         this.decided.push({
           time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount,
