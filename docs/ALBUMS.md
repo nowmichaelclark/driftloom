@@ -4,6 +4,22 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Full Room Album" (item 85e, hands, 2026-11-01, on v139) -- out
+
+Labeled, not blind: six loops at full quality, each before (`main`, v138)
+and after (85e: full quality lets a layer's old notes go as lite does, the
+ones already releasing first). Page:
+<https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of> (private to its owner;
+keep / tune / drop and a note per loop, saved in its database, collection
+`verdicts`, one document per loop). Rendered by `dlrender`, stereo, 40 s,
+the wander on.
+
+- Busy chords: their-roask (hollow), ri-houng (halcyon): chords about 2.5 LU
+  up where they now come in.
+- Slow: theith-yaing (thaw, 53 bpm; 124 notes let go), dith-shuisk (thaw):
+  listen for long tails let go.
+- Shatter: tei-har (213 let go), neir-luin asked for 180 bpm.
+
 ## "Lite Room Album" (item 85c, hands, 2026-10-31, on v135) -- out
 
 Labeled, not blind: six loops on the lite mix, each before (today's lite,

@@ -348,10 +348,19 @@ const RESERVE_SHARE = 0.42;
 //
 // On the core only: it lets a note go by its key (`Core::steal`), and the
 // JavaScript synth (the fallback) has no fade to give a voice built, so it
-// refuses as before. Lite only for now (`STEAL_QUALITIES`), conservative, and
-// both for Mikey's ears: the fade's length and whether full quality follows.
+// refuses as before. Lite first (85c); full quality too since queue item 85e
+// (Mikey heard lite's and asked for the same at full).
+//
+// What goes first (queue item 85e, `RELEASED_FIRST`): a call whose notes are
+// all past their end (in the 0.12 s a hold outlasts its note, releasing)
+// before one still held, oldest first within each: the field's usual order
+// (a sampler lets a releasing voice go before a held one). A held
+// instrument's call is never let go (`keep`: the drone's notes; the organ,
+// the wash and padSweep's bed are the channels' own blocks and hold no
+// budget).
 const STEAL_FADE = 0.05;
-const STEAL_QUALITIES = { lite: true, full: false };
+const STEAL_QUALITIES = { lite: true, full: true };
+const RELEASED_FIRST = { lite: true, full: true };
 
 // The layer a voice call plays for (the engine's layers), from the entry
 // point and its arguments, as measure.mjs's refusal count reads it; null for
@@ -499,6 +508,10 @@ export class Synth {
     // What the mix was last asked for, to hand from one mix to the other:
     // and whether the output was last silenced (`silence`).
     this._asked = { tone: null, echo: null, mutes: {}, killed: false };
+    // Whether the voice call being made is a held instrument's, never let
+    // go for a newer note (queue item 85e): the engine sets it for a
+    // drone's bass notes.
+    this.keep = false;
     // Where the note being played sits in its loop (queue item 44): the
     // engine sets `{ seed, pass, step, ord }` before each note it plays, and
     // every draw the core makes for the note comes from it (core/src/rng.rs).
@@ -1403,7 +1416,8 @@ export class Synth {
 
   // A note that doesn't fit takes room from its own layer's oldest voices
   // (STEAL_FADE says why): the voice calls holding the budget for the asking
-  // call's layer, from other steps, started before `time`, oldest first (by
+  // call's layer, from other steps, started before `time`, not kept, the
+  // released ones first (RELEASED_FIRST), oldest first within each (by
   // their earliest hold's start; ties as the holds stand). They are let go one
   // at a time until the note fits; if all of them would not make room,
   // nothing is let go and the note is refused. Each one let go falls from
@@ -1416,17 +1430,21 @@ export class Synth {
     const groups = [];
     for (const r of this._releases) {
       const h = r.group;
-      if (!h || h === g || h.layer !== g.layer || (h.key.pass === g.key.pass && h.key.step === g.key.step)) continue;
+      if (!h || h.kept || h === g || h.layer !== g.layer || (h.key.pass === g.key.pass && h.key.step === g.key.step)) continue;
+      const released = r.at - 0.12 <= time;
       let e = groups.find((x) => x.group === h);
       if (!e) {
-        e = { group: h, start: r.start, cost: 0 };
+        e = { group: h, start: r.start, cost: 0, released };
         groups.push(e);
-      } else if (r.start < e.start) {
-        e.start = r.start;
+      } else {
+        if (r.start < e.start) e.start = r.start;
+        e.released = e.released && released;
       }
       e.cost += r.cost;
     }
-    const older = groups.filter((e) => e.start < time).sort((a, b) => a.start - b.start);
+    const first = RELEASED_FIRST[this.quality];
+    const older = groups.filter((e) => e.start < time)
+      .sort((a, b) => (first && a.released !== b.released ? (a.released ? -1 : 1) : a.start - b.start));
     let left = spent;
     let n = 0;
     while (n < older.length && left + cost > cap) left -= older[n++].cost;
@@ -3548,7 +3566,7 @@ for (const name of VOICE_ENTRIES) {
     // the budget can let the whole call go.
     const layer = this.key ? layerOfCall(this, name, args) : null;
     const k = this.key;
-    this._group = layer ? { key: { seed: k.seed, pass: k.pass, step: k.step, ord: k.ord }, layer, channels: [] } : null;
+    this._group = layer ? { key: { seed: k.seed, pass: k.pass, step: k.step, ord: k.ord }, layer, channels: [], kept: !!this.keep } : null;
     try {
       return play.apply(this, args);
     } finally {

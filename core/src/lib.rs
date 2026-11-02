@@ -1712,11 +1712,13 @@ fn render_fading(
     sends: &mut Sends,
     sent: &mut bool,
 ) {
+    // One buffer for the note's sound, added where it plays through: the
+    // channel's signal or the one bus (`blocks::through`), not a buffer for
+    // every bus (queue item 85e: full quality lets notes go too).
     let mut own_out: Signal = [0.0; QUANTUM];
-    let mut own_buses: [Signal; own::COUNT] = [[0.0; QUANTUM]; own::COUNT];
     let mut own_sends: Sends = [[0.0; QUANTUM]; 2];
     let mut own_sent = false;
-    blocks::render(&mut slot.voice, pools, block, cx, &mut own_out, &mut own_buses, &mut own_sends, &mut own_sent);
+    blocks::render_to(&mut slot.voice, pools, block, cx, &mut own_out, &mut own_sends, &mut own_sent);
     let (a, b) = slot.fade;
     // Frames, far below 2^53; the fade is a gain, a 32-bit float as every
     // gain the mix holds.
@@ -1736,10 +1738,11 @@ fn render_fading(
             *o += x * gain(i);
         }
     };
-    add(out, &own_out);
-    for (bus, own_bus) in buses.iter_mut().zip(own_buses.iter()) {
-        add(bus, own_bus);
-    }
+    let to = match blocks::through(&slot.voice).and_then(|n| buses.get_mut(n)) {
+        Some(bus) => bus,
+        None => out,
+    };
+    add(to, &own_out);
     if own_sent {
         block::open_sends(sends, sent);
         for (send, own_send) in sends.iter_mut().zip(own_sends.iter()) {

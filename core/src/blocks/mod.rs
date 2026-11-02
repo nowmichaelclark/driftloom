@@ -429,6 +429,46 @@ macro_rules! registry {
             }
         }
 
+        /// The bus of the channel's own block the voice in `held` plays
+        /// through (`Voice::THROUGH`), or none for the channel's signal.
+        pub(crate) fn through(held: &Held) -> Option<usize> {
+            match held {
+                $( Held::$vt(_) => <$vm::$vt as Voice>::THROUGH, )*
+                $( Held::$pt(_) => <$pm::$pt as Voice>::THROUGH, )*
+            }
+        }
+
+        /// `render`, the voice's sound into `to` whatever it plays through
+        /// (`through` says where it belongs): a note the core fades renders
+        /// into a buffer of its own this way, one buffer, not one a bus
+        /// (queue item 85e).
+        #[allow(clippy::too_many_arguments)]
+        pub(crate) fn render_to(
+            held: &mut Held,
+            pools: &mut Pools,
+            block: u64,
+            cx: &Context,
+            to: &mut Signal,
+            sends: &mut Sends,
+            sent: &mut bool,
+        ) {
+            match held {
+                $( Held::$vt(v) => {
+                    if <$vm::$vt as Voice>::SENDS {
+                        crate::block::open_sends(sends, sent);
+                        v.render_sends(block, cx, to, sends);
+                    } else {
+                        v.render(block, cx, to);
+                    }
+                } )*
+                $( Held::$pt(i) => {
+                    if let Some(v) = pools.$pm.voices.get_mut(*i) {
+                        v.render(block, cx, to);
+                    }
+                } )*
+            }
+        }
+
         /// Hand the voice in `held` a channel event (`Block::event`).
         pub(crate) fn event(held: &mut Held, pools: &mut Pools, event: &Event) {
             match held {

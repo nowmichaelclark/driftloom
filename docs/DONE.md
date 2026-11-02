@@ -157,3 +157,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   the change, the new loop alone and the old one alone. For Mikey's ears:
   the crossfade's 1 s, and the new loop at its own level on the boundary
   (no fade in).
+- #309, the budget takes room from old notes at full quality too (item 85e,
+  v139), preview URL: <https://9ec9c54e-driftloom.nowmichaelclark.workers.dev>
+  (commit 9a9638d): at full quality a note that doesn't fit lets its layer's
+  old notes go, as lite has since 85c, the ones already releasing first (in
+  both qualities); a drone's notes are never let go. Full, the baseline's 100
+  loops: chords refused 19.5% -> 3.0% of notes, melody 13 -> 0, bass 4 -> 0;
+  shatter at `bpm=180`, chords 39.8% -> 6.8% (per loop), melody 0.6% -> 0.
+  Lite unchanged, bit for bit. Listen at full (the app on a laptop) for
+  chords that now come in (their-roask, ri-houng: keys about 2.5 LU up) and
+  for long tails let go on a slow loop (theith-yaing): the Full Room Album,
+  <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, six loops before and
+  after. The worst block at full rises 6% on the busiest loop (decided:
+  `docs/notes/85e-worst-block.md`); item 87 checks it on the Moto G Power.
