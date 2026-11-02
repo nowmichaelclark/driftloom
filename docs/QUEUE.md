@@ -12,8 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29) and **86** (#308, a change of loop at a musical moment). **Next: 85e** (built, its PR waiting on one yardstick:
-`docs/notes/85e-worst-block.md`), **then 85f** (a theme's rest kept), then 87. Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment) and **85e** (#309, the steal at full quality). **Next: 85f** (a theme's rest kept), then 87. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -266,17 +265,18 @@ ones already ending, which makes the order of what goes first matter more.
 ones in both qualities (`RELEASED_FIRST`), a drone's notes kept (`keep`: the
 one held instrument in the budget; the organ, the wash and padSweep's bed are
 channel blocks). Lite's renders are unchanged, bit for bit. Full refusals
-(100 loops): chords 986 -> 151 of 5,056, melody 13 -> 0. Every yardstick holds
-but the worst block's cost, 6% up on the busiest loop: the note says why and
-what to decide. `dlrender --fades` measures the fades; the Full Room Album
+(100 loops): chords 986 -> 151 of 5,056, melody 13 -> 0. The worst block at full
+rises 6% on the busiest loop, the notes that now play (decided, option 1:
+the note). `dlrender --fades` measures the fades; the Full Room Album
 (`docs/ALBUMS.md`) is out.
 
 **Yardsticks:** per-layer refusals at full over the baseline's 100 loops
 before and after (chords well under today's 19.5%, melody 0), and shatter at
 a `bpm=180` pin at full; lite unchanged, or the change said and measured;
 no clicks at a let-go note's fade (the sample step at the fade no larger
-than the loop's own, full and lite); the worst block's cost no higher than
-today on the slowest target; the core baseline updated on purpose; the
+than the loop's own, full and lite); the steal's own cost no higher than
+today (the notes it lets play may cost what the ceiling allows; brain,
+2026-11-02, `docs/notes/85e-worst-block.md`); the core baseline updated on purpose; the
 player against the browser bit for bit; the JavaScript fallback's own checks
 (`--engine js`, `--refusals`, `--clicks`, `--endings`) if its code is touched.
 Then a short labeled album at full for Mikey (a busy chords loop, a slow
@@ -333,7 +333,11 @@ lite mix.
 **Yardsticks:** chunked equals straight through, sample for sample, over
 every chunk size from 128 frames to a pass; render speed on the web host
 (wasm in Node and in headless Chromium) reported per loop, lite and full,
-mono and stereo, as times real time; the Emscripten goldens equal.
+mono and stereo, as times real time; the Emscripten goldens equal; the
+worst block at **full quality**, mono and stereo, on the Moto G Power (2022)
+under promise 1's 25% (brain, 2026-11-02, from 85e): if it's over, say by how
+much and stop with a note (the fix would be a lower full ceiling there, for
+Mikey's ears).
 
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 

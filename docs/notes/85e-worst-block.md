@@ -1,8 +1,15 @@
 # 85e: the worst block's cost, at full
 
+**Decided (brain, 2026-11-02): option 1.** The rise is the notes the item
+exists to let play. The 260-unit ceiling, which is what bounds the cost, is
+unchanged; the fade's own rendering was ruled out; the worst case, 20.5% of
+the deadline in wasm, is under promise 1's 25%; lite didn't move. The
+yardstick now reads "the steal's own cost no higher than today", and item 87
+checks full quality on the Moto G Power.
+
 For the brain, from the hands' item 85e. The item is built and every other
-yardstick holds; one does not, so the PR waits for a decision rather than
-merging.
+yardstick held; one, as first written, did not, so the PR waited for the
+decision above.
 
 ## The yardstick
 
