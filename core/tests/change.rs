@@ -199,6 +199,33 @@ fn a_change_lands_on_its_moment() {
 }
 
 #[test]
+fn now_lands_on_the_old_loops_grid_however_long_the_loop_takes_to_make() {
+    // Queue item 86b: the brain's change 270 on corpus 20261101, shoung-roun
+    // (180 bpm, a pass of 2.7 s) to a loop whose tuned kick's fit takes 90-odd
+    // blocks, longer than the old loop had decided ahead: asked anywhere about
+    // 2.28 s, the new loop starts on one of the old one's steps all the same.
+    roomy(|| {
+        let (old, new) = (4_265_576_439, 2_404_889_067);
+        for asked in (block_at(2.2)..block_at(2.36)).step_by(3) {
+            let (mut core, mut player) = playing(old, 1.0);
+            let first = player.position().2;
+            let sd = 60.0 / player.generator().spec().bpm / 4.0;
+            let mut seen = Seen { stop: Some(0.3), ..Seen::default() };
+            run(&mut core, &mut player, 6.0, &mut seen, |p, b| {
+                if b == asked {
+                    p.change(new, &Request::new(), Moment::Now, Handover::default());
+                }
+            });
+            let &[(began, at)] = seen.began.as_slice() else { panic!("asked in block {asked}: one change, not {:?}", seen.began) };
+            assert_eq!(began, new);
+            let steps = (at - first) / sd;
+            assert!((steps - steps.round()).abs() < 1e-6, "asked in block {asked}: on a step of the old loop ({steps})");
+            assert!(seen.notes.iter().filter(|n| n.0 == old).all(|n| n.1 < at), "asked in block {asked}: the old loop stops where the new one starts");
+        }
+    });
+}
+
+#[test]
 fn a_ring_out_fades_nothing() {
     roomy(|| {
         let (mut core, mut player) = playing(OLD, 1.0);

@@ -467,10 +467,18 @@ impl Player {
     fn begin<H: Host>(&mut self, host: &mut H) {
         let now = self.now(host);
         let at = self.seq.next_step_time;
+        let sd = self.seq.step_dur();
         let start = if self.start_at > now {
             self.start_at
         } else if self.was_playing && at > now {
             at
+        } else if self.was_playing && at > 0.0 && sd.is_finite() && sd > 0.0 {
+            // The loop took longer to make than the old one had decided
+            // ahead (a tuned kick's fit can take 90-odd blocks, past the
+            // lookahead), so its next step has passed: the first of its
+            // steps still to come, so the new loop starts on its grid all
+            // the same (queue item 86b).
+            at + (js::floor((now - at) / sd) + 1.0) * sd
         } else {
             now + START
         };

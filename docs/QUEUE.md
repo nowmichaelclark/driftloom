@@ -289,6 +289,16 @@ it can't and the harness's check says what it holds instead. Add the case to
 lite, ring-out and 48 kHz still 0 missed; the core baseline and every golden
 unchanged.
 
+**Built (hands, 2026-11-02):** not the `making` branch: the new loop took
+longer to make than the old one had decided ahead. Change 270's new loop
+has a tuned kick, whose fit takes 94 blocks here (0.27 s, past the 0.25 s
+lookahead), so when it was made (2.5513 s) the old loop's next step (2.5500
+s) had passed by 1.3 ms, and `begin` fell back to "now plus `START`", off
+the grid. Now it takes the first of the old loop's steps still to come
+(2.633 s, step 31). Only a load that outlasts the lookahead changes (from
+playing: a `now` change, or `load`); `core/tests/change.rs` asks it across
+2.20-2.36 s, and fails without the fix.
+
 ## 88. Length, up to 32,768 bars and Endless (was 49)
 
 49's text (below) is the brief, built on 82's player and 87's chunks. Plus:
