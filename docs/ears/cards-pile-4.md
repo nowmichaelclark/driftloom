@@ -23,6 +23,7 @@ Its self-test reads a 120 s swell, a 240 s filter swing and an A-B-A form correc
 |---|---|---|---|
 | Kankyo Ongaku (compilation, 1980 to 1990) | 23 (4) | 1,120 s | done |
 | Kyle Jameson, View From Above | 12 (4), cut from one 73:40 file | 1,515 s | done |
+| Windows 96, Enchanted Instrumentals and Whispers | 12 (4) | 908 s | done |
 
 ---
 
@@ -231,3 +232,108 @@ Numbers: Skywriting 82 BPM (grid), 15 settled chords a minute, 2% above 2 kHz, w
 - Pans below 120 Hz are the master's lean, not the separator's.
 - Three of four keys are guesses. Registers under 40 Hz are misreads. Wobble depths are floors.
 - The whole-hour long form runs across track joins, so its swells at a 6-minute spacing are the tracks themselves.
+
+---
+
+## Windows 96, Enchanted Instrumentals and Whispers (2019)
+
+Ears 10, 2026-11-02. 12 tracks, 40.3 minutes, all at mix level. Four got the deep pass: 12 Lead (typical, 2:33), and the three least like the rest, 09 Wasting Time (3:59), 04 Venus Aire (4:49) and 10 Golden Triangle (2:40). `longform.py` ran on the four; no track is 8 minutes long. Stems by Demucs htdemucs.
+
+Machine time: 908 s (15.1 min) for 14.0 minutes of deep-pass audio:
+
+- pick 75 s (12 tracks);
+- Demucs 530 s (117, 143, 171 and 99 s; 0.63 times the audio length);
+- measuring, the stem check and the long form 303 s.
+
+Ears 9's formula (1.1 x 840 s + 12 x 12) says 1,068 s, so this ran 15% under it.
+
+**Voices.** The record samples voices. I write nothing of what is said, here or anywhere. Where a voice comes up, it is described as a texture: pitch range, level, breath, width.
+
+### Stem check (read first)
+- **12 Lead**: drums 36%, bass 37%, other 25%, vocals 1.4% (bleed). The meter tool's 92 BPM agrees with the drum grid's 92.3 BPM (0.650 s, strength 0.81).
+- **09 Wasting Time**: drums 35%, bass 12%, other 41%, **vocals 12%**: a real voice texture (S6). The meter tool's 80 BPM agrees with the grid's 79.5 BPM.
+- **04 Venus Aire**: drums 40%, bass 39%, other 18%, vocals 3% (bleed). The meter tool's 64 BPM is three quarters of the grid's 84.7 BPM (0.708 s); I use the grid, so the tool's swing number is void.
+- **10 Golden Triangle**: drums 26%, bass 26%, other 44%, vocals 3% (bleed). The meter tool's 75 BPM agrees with the grid's 74.9 BPM.
+- The bass stems' pans (-0.32 on Lead, -0.53 on Wasting Time) are not in the mix. Under 120 Hz the mix is within 1.5 dB of center on 11 of 12 tracks (Bonita Camisa +3.1 dB), so read those pans as the separator's.
+
+### The hook
+- Slow, heavy, hazy beats: grids at 75 to 92 BPM; loud (-12.3 LUFS median); 57% of the energy below 120 Hz; a centroid of 361 Hz; 1.5% above 2 kHz. Faster harmony than the rest of the pile (17 chord changes a minute at mix level), much of it minor sevenths. The bass slides in pitch like slow tape (10 to 20 cents in 4 s on three of four tracks). The image is narrower than the pile (-8.5 dB median), with the width rising with pitch.
+- **[JUDGMENT]** One line a listener would say. **Guess:** a warm, slowed-down memory of late-90s computer music, under a soft heavy beat.
+
+### Sounds
+
+**S1. Half-wide soft keys (Golden Triangle): other-1, 438 notes, 54%**
+- In synth terms: harmonic (string or reed-like), about E2 (82 Hz, matching the other stem's strongest line at 82 Hz), attack 102 ms, falls 21 dB/s, correlation 0.66, level -2.5 dB. The mix is -5 to -7 dB in every band above 120 Hz.
+- Hear it at 0:01.2, 0:01.6, 0:02.9.
+- Building blocks: **[JUDGMENT]** **Guess:** rhodes or keys, low and soft; exists.
+
+**S2. Wide hazy texture (Wasting Time): other-1, 377 notes, 38%**
+- In synth terms: about C#2 (70 Hz, the other stem's strongest line), soft attack (134 ms), falls 22 dB/s, decorrelated (0.07), level -5.8 dB.
+- Weak group (silhouette 0.19): one blend.
+- Hear it at 2:39.8, 0:00.0 (1.49 s), 2:39.5.
+- Building blocks: **[JUDGMENT]** **Guess:** a pad with a wide, smeared top; the wash or a detuned softpad.
+
+**S3. Slow-swell pad (Lead): other-1, 359 notes, 36%**
+- In synth terms: about 101 Hz (59 to 194), attack 164 ms, falls 20 dB/s, correlation 0.43, level -7.0 dB.
+- Hear it at 0:05.1 (D#2, 1.41 s), 0:09.7 (1.36 s), 0:00.7.
+- Building blocks: **[JUDGMENT]** **Guess:** softpad or moogpad; exists.
+
+**S4. Round, quick bass (Lead and Venus Aire): bass-1, 174 and 217 notes, 25% each**
+- In synth terms: Lead about A#1 (59 Hz, the bass stem's strongest line), attack 38 ms, falls 29 dB/s, mono (correlation 0.99), 1.99 notes a second with 70% repeats. Venus Aire about F1 (44 Hz; strongest line 55.5 Hz, so read it as about A1 to F1), attack 68 ms, falls 30 dB/s, with 26% octave jumps.
+- Hear Lead at 1:44.7, 1:34.2, 0:42.0; Venus at 3:50.4, 0:35.2, 2:20.3.
+- Building blocks: **[JUDGMENT]** **Guess:** roundBass; the octave-jumping line (Venus) is a bassStyle option.
+
+**S5. Punchy kicks pitched high (all four)**
+- **Kick lines (kick_check):**
+  - Lead: 168 kicks on G2 (median 92.5 Hz), falling 211 dB/s, every 0.655 s (the grid beat). The bass dips to -7.9 dB at 310 ms, between kicks, and is back at its top by 530 ms: a mild half-beat dip.
+  - Wasting Time: 262 kicks on C3 (110 Hz), falling 273 dB/s, every 0.565 s (three quarters of the 0.755 s grid beat: listen). The bass is struck with the kick: -25 dB at the hit, at its top 50 to 120 ms later, then falling to -29 dB by 545 ms, a drop-per-kick bass.
+  - Venus Aire: 376 kicks on B2 to C3 (116 Hz), falling 130 dB/s, every 0.705 s (the grid beat). The same shape, milder: -9 dB at the hit, top at 110 ms, -12.5 dB by 695 ms.
+  - Golden Triangle: 161 kicks, a median of 50 Hz spread wide (35 to 130 Hz), every 0.400 s (half the grid beat). The bass plays through (within 4.3 dB).
+- These kicks sit at 90 to 116 Hz, an octave above the tunedKick range (G1 to D2).
+- Building blocks: **[JUDGMENT]** **Guess:** a short, high, tuned kick; tunedKick's short kind, moved up, with a bass that is struck with each kick and fades.
+
+**S6. A breathy voice texture (Wasting Time): vocals-1, 216 notes**
+- In synth terms: centered (correlation 0.98), median pitch about B3 (247 Hz; 100 to 490), half noisy (harmonic share 0.54, a breathy tone), brightness about 830 Hz, swelling in over 163 ms (45 to 480), phrases of about 0.7 s, 11 dB under the mix. The vocals stem plays 59% of the time, in short runs from 0:29.5.
+- Building blocks: **[JUDGMENT]** **Guess:** a wordless, breathy vowel pad around B3, synthesized, never a sample: the choir or vowel family, kept low and centered.
+
+### Techniques
+- **T1. The kit comes in late.** Lead's bass enters at 0:12 and its drums at 0:19 (the stems read a floor drop of 6.5 s at 0:07.5). Wasting Time's drums and bass enter together at 0:23.5. Venus Aire's drums enter at 0:29.5. On three of the four, the kit arrives 12 to 30 s in.
+  - **[JUDGMENT]** **Guess:** lateFloor (approved) is this move: these are reference tracks for it.
+- **T2. Many floor drops.**
+  - Golden Triangle: 2.10 a minute (0:25.5 for 4.2 s, 0:36.8 for 2.5 s, 1:05.0 for 11.5 s, 1:46.0 for 5.0 s, 1:52.5 for 6.2 s).
+  - Wasting Time: 1.40 a minute (1:33.2 for 2.2 s, 2:00.2 for 5.2 s, 2:06.2 for 5.0 s, 2:38.2 for 3.8 s, after the 12 s intro).
+  - Venus Aire: one (4:28.0 for 2.2 s).
+  - **[JUDGMENT]** **Guess:** floorDrop and its stagger shape exist; Golden Triangle's 11.5 s drop is a long one.
+- **T3. Tape drift on the bass.** The bass's speed moves up to 20 cents in 4 s on Venus Aire, 12 on Golden Triangle and 10 on Lead. Golden Triangle's other stem wobbles 14 cents at 3.8 Hz. The mix-level wobble is a median of 4.3 cents. Deep Swim's tuning reads -46 cents (nearly a quarter tone flat), a slowed-down source maybe; a listen decides.
+  - **[JUDGMENT]** **Guess:** a slow pitch drift on the bass alone (not the kit) is new; it suits hazy.
+- **T4. Builds, and no echo claimed.** Builds at Lead 0:08 to 0:28 and Golden Triangle 1:12 to 1:36. The drum "echoes" are the grid: 648 ms on Lead (beat 0.650 s) and 384 ms on Wasting Time (half its 0.755 s beat). Venus Aire's 484 ms (2 repeats) is about two thirds of its beat, too few repeats to claim. The other stem's 6 dB "pumping" peaking 30 to 35 ms after the kick is likely kick bleed in that stem: not claimed.
+- **T5. Long form: song length.** Tracks run 2.5 to 4.8 minutes, each with one minute-scale boundary: Lead at 1:00, Venus Aire at 1:00, Wasting Time at 2:00. Each has at most one swell (Venus Aire's level at 3:00, 4 dB; Wasting Time's brightness at 2:30, 0.75 octave). They travel and do not return (returns 0.0 to 0.55; drift ratio median 1.25, above 1 on 10 of 12).
+
+### Theory
+- **Th1. Chains of minor sevenths.** Wasting Time: C#min7 26%, G#min7 11%, D#min7 10%, a chain a fifth apart, in C# dorian (margin 0.022, just over the guess line). Lead: D#min7 25%, A#5 18%, C#5 12% (A# aeolian, 0.003, a guess). Venus Aire: E5, Fmaj7, A5 (A aeolian, 0.033, reliable). Golden Triangle: C#, G#5, C#sus2 (C# lydian, 0.003, a guess). Settled chords run 13 to 17 a minute; by the fast counter 20 to 39. Chord names are a guess on dense music.
+  - **[JUDGMENT]** **Guess:** a dorian vamp of min7 chords a fifth apart, for hazy and cool.
+- **Th2. Bass and top line.** Lead's bass moves 1.99 notes a second (70% repeats); Venus Aire's jumps octaves (26%); Wasting Time's swings between C# and G# (47% and 41%). The top lines of Lead and Venus Aire leap a lot (39 to 41%) over 26 semitones. Wasting Time's moves in thirds (33%). Reliable only where the line is clear of its accompaniment.
+
+### Space
+- **The low end centered, width rising with pitch.** Lead: sub -16 dB (correlation 0.95), 120 to 500 Hz -7, 500 Hz to 2 kHz -4, 2 to 5 kHz -2, above 5 kHz -1. Venus Aire: -13, -5, -4, -4, -0. Wasting Time: -10, -4, -4, -3, -2. Golden Triangle is flat at -5 to -7 dB above 120 Hz.
+- By part: the drums and bass are narrow (-10 to -19 dB, mono loss 0.1 to 0.4 dB), the other stem -2 to -6 dB. Over time (2 s windows), -10/-5/-3 dB on Lead and -9/-3/-0 dB on Wasting Time.
+- **[JUDGMENT]** **Guess:** the closest record in the pile to the approved stereo baseline, a reference for a width that grows with pitch.
+
+### Vibes
+Numbers: Lead 92 BPM, 13 settled chords a minute, 1.4% above 2 kHz, width -8.6 dB; Wasting Time 80 BPM, 17, 2.9%, -5.8 dB; Venus Aire 85 BPM (grid), 13, 3.5%, -8.0 dB; Golden Triangle 75 BPM, 17, 2.5%, -8.3 dB.
+- **[JUDGMENT]** Lean toward (x1.5 to x3): hazy, dreamy, chill, cool, mellow, groovy, misty, dusky, moonlit, velvety, swaying, cruising. Lean away (x0.2 to x0.5): still, hushed, glacial, meditative, restful, crisp. Never 0. **Guess:** a new profile could be a hazy-beats character; that is the brain's call.
+
+### Wholesome take
+- Take the slow heavy beat at a kinder low-end level, the min7 vamps, the bass's tape drift, the late kit and floor drops, the width that grows with pitch, and a breathy wordless vowel texture. Leave every sampled voice as a voice: only its texture is taken, rebuilt as a vowel, never a sample, never words. **[JUDGMENT]** **Guess:** wholesome, with the low end tamed (57% under 120 Hz).
+
+### For later
+- 01 Deep Swim (4:16): tuning -46 cents, a 1.4 octave sweep. **[JUDGMENT]** **Guess:** listen for a slowed source.
+- 11 Bonita Camisa (3:19): the biggest brightness sweep (1.85 octaves); its low end leans left 3.1 dB. **[JUDGMENT]** **Guess:** listen for a filter opening.
+- 08 Illyuziya (2:46): the narrowest (-11.1 dB) and the most travel (drift ratio 1.57). 02 Hazy Trip (3:20): the most chord changes (24.3 a minute), narrow (-10.8 dB). 05 Hello Earth (2:55): the loudest (-9.7 LUFS) and the steadiest pulse (0.84). **[JUDGMENT]** **Guess:** wait.
+- 03 Exordium (2:33): the brightest (centroid 495 Hz) and one of two tracks that circle (drift ratio 0.88). **[JUDGMENT]** **Guess:** wait.
+- Groups left over: Venus Aire bass-2 (E2, 36 dB/s) and drums-2 (a mid snap, 52 dB/s); Golden Triangle drums-1 (a mid snap, 156 dB/s); Wasting Time other-2 (bell-like C#3, 28 dB/s) and vocals-2 (C#2, bleed). **[JUDGMENT]** **Guess:** wait.
+
+### Reliability notes for this card
+- Venus Aire's meter and swing numbers are void (tool at 3/4 of the grid). Wasting Time's kicks are three quarters of its grid beat: listen.
+- The bass stems' pans are the separator's. Two of four keys are guesses.
+- Kick pitch at 90 to 116 Hz is above the sub range, so it is reliable to a few Hz.
