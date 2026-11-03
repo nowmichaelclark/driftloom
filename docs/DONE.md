@@ -259,3 +259,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   and loud voices of `docs/notes/91-voice-levels.md` (stab, tubular, nylon,
   templebell, drops, wind, swell). Nothing changes with voices and layers on
   "any".
+- #324, the bars picker sets the loop's length; the length slider sets when
+  it ends (item 88b, v148), preview URL:
+  <https://3937712d-driftloom.nowmichaelclark.workers.dev> (commit d5502ed):
+  pick 33 or 1,024 bars and the card says so; the loop plays on round after
+  round until the Sound panel's length slider hands over. Listen for: a
+  1,024-bar loop with the slider at 5 minutes ends at the first phrase line
+  past 5:00, its notes letting go over a second while the next loop starts
+  on the line (`tools/ending.mjs` renders it); 14 bars with the slider off
+  loops on; the picker now reads "Bars". For Mikey's ears: the fade's
+  length, and a long loop's repeat with wander on being a fresh round.

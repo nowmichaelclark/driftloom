@@ -10,7 +10,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v148';
+const BUILD = 'v149';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -223,8 +223,11 @@ function buildAudio() {
   // A quality switch under way is overtaken: the old synth (the one
   // playing) goes now, at the quality already chosen.
   state.switching = null;
+  // The play's wander salt (queue item 92) goes on under the new engine.
+  const salt = state.engine ? state.engine.salt : null;
   dropAudio({ synth: state.synth, media: state.media, engine: state.engine });
   ({ synth: state.synth, media: state.media, engine: state.engine } = makeAudio());
+  if (salt != null) state.engine.salt = salt;
   state.busy.reset();
   if (state.spec) {
     // The same loop, resumed under the new engine (queue item 69: its
@@ -1370,6 +1373,18 @@ function toggleMute(layer) {
   ui.renderGrids(cells, state.engine.live || state.pattern, Math.max(0, state.bar), state.spec.mutes);
 }
 
+// The loop playing as its code carries it: with the wander's salt of this
+// play when it wanders across the slider's upper range (queue item 92), so
+// the code says which play it was shared from. Opening it draws a play's
+// own salt, as any play does.
+function sharedSpec() {
+  const spec = { ...state.spec };
+  delete spec.wanderSalt;
+  const salt = state.engine ? state.engine.wanderSalt : 0;
+  if (salt) spec.wanderSalt = salt;
+  return spec;
+}
+
 function exportMidi(spec = state.spec) {
   if (!spec) return;
   const blob = patternToMidi(render(spec), { repeats: 4 });
@@ -1679,6 +1694,13 @@ function wire() {
     const gpu = gpuReport();
     lines.push(`gpu: ${gpu.renderer}  accelerated: ${gpu.accelerated}`);
     lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}, ${liteSource()}`);
+    // "Let the loop wander" (queue item 92): unrepeatable across the
+    // slider's upper range, with this play's salt.
+    if (state.engine) {
+      const e = state.engine;
+      const salt = e.wanderSalt;
+      lines.push(`wander: ${e.driftOn ? e.driftAmount : 'off'}${salt ? `, unrepeatable (salt ${salt})` : ', repeatable'}`);
+    }
     // How busy the audio thread has been (queue item 87b): the busiest
     // quarter-second over the rule's spans, while the loop played.
     {
@@ -1732,7 +1754,7 @@ function wire() {
   ui.el('copySong').addEventListener('click', async () => {
     if (!state.spec) return;
     try {
-      await offerCode(share.encodeSong(state.spec), state.spec.name);
+      await offerCode(share.encodeSong(sharedSpec()), state.spec.name);
     } catch (err) {
       console.warn('Could not build a code', err);
       ui.toast('Could not build a code for this loop');

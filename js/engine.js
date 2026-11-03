@@ -24,6 +24,25 @@ const DRIFT_SALT = 0x5eed1e55;
 // is asked for (a few to a hundred), so the first step falls this much later
 // than the engine's own would, to give it the time.
 const PLAYER_LEAD = 0.4;
+// Where "Let the loop wander" stops repeating itself (queue item 92; Mikey,
+// 2026-10-18: all the way to the right it should feel experimental, not
+// repeatable). From this amount up (the slider runs 0 to 2.4) each play of
+// a loop draws its own salt for the wander's stream (`wanderSalt`), so the
+// same code wanders another way every time it is played; below it, every
+// play wanders as every play of that code always has. The conservative
+// first point: only the slider's top sixth. For Mikey's ears.
+export const UNREPEATABLE_FROM = 2.0;
+
+// A new salt for a play (never 0, which is no salt).
+function freshSalt() {
+  try {
+    const x = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(x);
+    if (x[0]) return x[0];
+  } catch { /* no crypto here */ }
+  return (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
+}
+
 // How long the old loop's notes take to fall to nothing when the length
 // slider ends a track inside a pass, at a phrase line (queue item 88b), in
 // seconds: the core's own crossfade for a change of loop (`player::change::
@@ -333,6 +352,9 @@ export class Engine {
     this.clock = new Clock(() => this._tick());
     this.driftOn = false;
     this.driftAmount = 1.0;
+    // This play's salt for the wander's stream (queue item 92), drawn at
+    // each new loop; heard only across the slider's upper range.
+    this.salt = freshSalt();
     this.loopCount = 0;
     this.onStep = null;
     this.onLoop = null;
@@ -491,6 +513,10 @@ export class Engine {
     const back = keepPosition ? this._rewindPoint() : null;
     this.handover = false;
     this.spec = spec;
+    // A new play: its own salt for the wander (queue item 92), before its
+    // first pass is drawn. A re-roll keeps its play's; a loop resumed under
+    // a rebuilt engine is handed the one it had (`salt`).
+    if (!keepPosition && !resume) this.salt = freshSalt();
     this.base = render(spec);
     // glass's level in a sparse loop: under one chord a bar, scaled down by
     // as much (the sketch's), so the bells don't outweigh their chords.
@@ -595,7 +621,7 @@ export class Engine {
     if (!core || !this.spec) return;
     const asked = requestOf(this.spec);
     const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
-    core.playWander(this.driftOn ? this.driftAmount : 0);
+    core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
     core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme, asked.length, keyMask(asked.key), scaleMask(asked.scale), styleMask(asked.style),
       LAYERS.map((l) => voiceMask(asked.voices, l)), LAYERS.map((l) => layerState(asked.layers, l)));
     this._playerControls();
@@ -624,7 +650,14 @@ export class Engine {
     const mutes = this.spec.mutes || {};
     LAYERS.forEach((layer, i) => core.playMute(i, !!mutes[layer]));
     core.playTempo(this.spec.bpm);
-    core.playWander(this.driftOn ? this.driftAmount : 0);
+    core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
+  }
+
+  // The salt the wander's stream takes now (queue item 92): this play's,
+  // across the slider's upper range (UNREPEATABLE_FROM and up); else 0, the
+  // stream every play of a code has always wandered on.
+  get wanderSalt() {
+    return this.driftOn && this.driftAmount >= UNREPEATABLE_FROM ? this.salt : 0;
   }
 
   get stepDur() {
@@ -1097,8 +1130,10 @@ export class Engine {
   // of the stored pattern drawn from the loop's seed and the pass number, so
   // the same code wanders the same way every time it is played (queue item
   // 44), and any pass can be reached without playing the ones before it.
+  // Across the slider's upper range (queue item 92) the stream is salted by
+  // this play's own salt (`wanderSalt`; the core's `Pass::draw_salted`).
   _wander(pass) {
-    const seed = (((this.spec.seed ^ DRIFT_SALT) >>> 0) + Math.imul(pass, 0x9e3779b1)) >>> 0;
+    const seed = (((this.spec.seed ^ DRIFT_SALT ^ this.wanderSalt) >>> 0) + Math.imul(pass, 0x9e3779b1)) >>> 0;
     return drift(this.base, new Rng(seed || 1), this.driftAmount);
   }
 

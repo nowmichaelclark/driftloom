@@ -114,8 +114,18 @@ impl Pass {
     /// The same, wandering `amount` as far (the app's slider, 0 to 2.4;
     /// `Engine.driftAmount`): what the player draws each pass by.
     pub fn draw_by(&mut self, cx: &Cx, base: &Render, kick: Option<&'static str>, pass: u32, amount: f64) {
+        self.draw_salted(cx, base, kick, pass, amount, 0);
+    }
+
+    /// The same, on the wander's stream salted by `salt` (queue item 92):
+    /// the host's per-play salt across the slider's upper range, so a loop
+    /// played twice there wanders two ways (`Engine.wanderSalt`). The
+    /// pass's draws stay a function of what the host sends; a salt of 0 is
+    /// the stream every code has always wandered on. The tuned kick a pass
+    /// swaps to is not salted: it is the loop's own choice (item 67).
+    pub fn draw_salted(&mut self, cx: &Cx, base: &Render, kick: Option<&'static str>, pass: u32, amount: f64, salt: u32) {
         let seed = cx.spec.seed;
-        let mut rng = Rng::new((seed ^ DRIFT_SALT).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
+        let mut rng = Rng::new((seed ^ DRIFT_SALT ^ salt).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
         self.drift(cx, base, &mut rng, amount);
         let held = cx.spec.pins.get("tunedKick").is_some();
         self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass, held));

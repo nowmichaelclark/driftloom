@@ -276,7 +276,11 @@ class DriftloomCore extends AudioWorkletProcessor {
         if (core && this.player) core.dl_play_resume(m.at || 0);
         return;
       case 'playWander':
-        if (core && this.player) core.dl_play_wander(m.amount);
+        if (core && this.player) {
+          core.dl_play_wander(m.amount);
+          // And its salt (queue item 92): 0, every code's own wander.
+          core.dl_play_wander_salt((m.salt || 0) >>> 0);
+        }
         return;
       case 'playMute':
         if (core && this.player) core.dl_play_mute(m.layer, m.muted ? 1 : 0);

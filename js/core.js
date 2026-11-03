@@ -460,8 +460,9 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'playResume', at });
   }
 
-  playWander(amount) {
-    this.node.port.postMessage({ type: 'playWander', amount });
+  // `salt` (queue item 92): the wander's stream salted, 0 for none.
+  playWander(amount, salt = 0) {
+    this.node.port.postMessage({ type: 'playWander', amount, salt });
   }
 
   playMute(layer, muted) {

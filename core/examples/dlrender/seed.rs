@@ -31,6 +31,9 @@ pub struct Way {
     pub full: bool,
     pub layout: u32,
     pub wander: f64,
+    /// The wander's salt (`--salt`, queue item 92; `Player::set_wander_salt`):
+    /// 0, every code's own wander.
+    pub salt: u32,
     pub vibes: Vec<String>,
     /// The request as text (`--request`; `Request::parse`), the vibes of
     /// `--vibes` added to it.
@@ -214,6 +217,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
         core.set_layout(2);
     }
     player.set_wander(way.wander);
+    player.set_wander_salt(way.salt);
     way.clip.apply(&mut core, &mut player)?;
     {
         let mut host = Tracer { core: &mut core, lines: &mut lines, pins: &way.clip.pins };
@@ -324,6 +328,7 @@ pub fn cost_seed(seed: u32, way: &Way, runs: usize) -> Result<Costs, String> {
                         core.set_layout(2);
                     }
                     player.set_wander(way.wander);
+                    player.set_wander_salt(way.salt);
                     player.attach(&mut *core, way.rate, way.full);
                     player.load(seed, &request);
                     for (b, st) in best.iter_mut().zip(stages.iter_mut()) {
