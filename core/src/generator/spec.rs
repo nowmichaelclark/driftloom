@@ -7,7 +7,8 @@ use super::data::{self, CHARACTERS, MOODS};
 use super::js;
 use super::list::{List, Name};
 use super::melody::{self, Figure};
-use super::request::{self, Request};
+use super::piece::SECTION_BARS;
+use super::request::{self, Length, Request};
 use super::rng::{Rng, seed_name};
 use super::theory::{self, GLAD_FROM, SCALES};
 use super::{LAYERS, Layer};
@@ -59,6 +60,9 @@ pub struct Spec {
     /// The theme asked (queue item 85d): the seed whose loop this one bends,
     /// kept, so `metre` finds its gait again and a share code carries it.
     pub theme: Option<u32>,
+    /// The length asked (queue item 88), kept: the piece's (`piece::Piece`),
+    /// and a share code carries it.
+    pub length: Option<Length>,
     /// The theme's tune (`themeTune`, worked out once here, not written):
     /// `None` without a theme, `Some(None)` where the theme's melody rests,
     /// else its figure and rhythmic cell, which the melody plays in place of
@@ -91,6 +95,7 @@ impl Spec {
         tempo: None,
         pins: request::Pins::NONE,
         theme: None,
+        length: None,
         tune: None,
         cycles: None,
     };
@@ -157,6 +162,7 @@ impl Spec {
             w.num(f64::from(self.layer_seed(layer)));
         }
         w.end_obj();
+        write_length(w, self.length);
         w.key("mix");
         write_weights(w, &self.mix, |k| CHARACTERS[k].id);
         w.key("mood");
@@ -448,6 +454,12 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
 
     let mut steps_per_bar = c.steps_per_bar.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
     let bars = c.bars.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
+    // A short length asked is the loop's own (queue item 88): the draw is
+    // still made, so nothing else moves, and overruled.
+    let bars = match request.length() {
+        Some(Length::Bars(n)) if n <= SECTION_BARS => n,
+        _ => bars,
+    };
     // A theme keeps its own gait and metre; a tempo asked then plays in it.
     let gait = match (request.theme(), &held) {
         (Some(th), Some(_)) => theme_gait(th, &mix),
@@ -536,8 +548,24 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         tempo: t,
         pins: *request.pins(),
         theme: request.theme(),
+        length: request.length(),
         tune: held.as_ref().map(melody::theme_tune),
         cycles,
+    }
+}
+
+/// The length asked, if one was (`length`: its bars, or "endless").
+fn write_length<S: Sink>(w: &mut Writer<S>, length: Option<Length>) {
+    match length {
+        Some(Length::Bars(n)) => {
+            w.key("length");
+            w.num(n);
+        }
+        Some(Length::Endless) => {
+            w.key("length");
+            w.str("endless");
+        }
+        None => {}
     }
 }
 

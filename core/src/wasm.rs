@@ -550,6 +550,22 @@ mod player {
         *request() = request().with_theme(seed);
     }
 
+    /// Ask the next `dl_play_load` for a piece `bars` bars long, or Endless
+    /// with `bars` infinite (`Request::with_length`; queue item 88). 1 if it
+    /// can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_length(bars: f64) -> u32 {
+        use crate::generator::request::Length;
+        let length = if bars == f64::INFINITY { Length::Endless } else { Length::Bars(bars) };
+        match request().with_length(length) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
     /// Pin setting `number` at `value` for what the next `dl_play_load`
     /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
     #[unsafe(no_mangle)]

@@ -847,5 +847,54 @@ console.log('\nThe space (queue item 65)');
   check('player: Play again hands it the loop again', posts.some((p) => p[0] === 'playLoad'));
 }
 
+console.log('\nLength (queue item 88)');
+{
+  // A piece plays its sections, a round's last cut short, and hands over
+  // once round, at exactly its length; its first section is section 0.
+  const tops = (spec, passes) => {
+    const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
+    const { synth } = stubSynth(false);
+    const engine = new Engine(ctx, synth);
+    engine.driftOn = true;
+    // A load after a loop that played three passes: today's first pass is
+    // drawn at 3, a piece's at its own 0.
+    engine.loopCount = 3;
+    engine.load(spec);
+    const first = JSON.stringify(engine.live);
+    let ended = null;
+    engine.onTrackEnd = () => { ended ??= engine.absStep; };
+    const starts = [0];
+    let n = 0;
+    while (engine.loopCount < passes && n++ < 1e6) {
+      const before = engine.loopCount;
+      engine._advance();
+      if (engine.loopCount !== before) starts.push(engine.absStep);
+    }
+    engine.clock.dispose();
+    return { starts, ended, first, zero: JSON.stringify(engine._wander(0)), three: JSON.stringify(engine._wander(3)), engine };
+  };
+  // A loop of 16 or 24 bars, which 100 doesn't divide.
+  let at = 7100;
+  while (![16, 24].includes(newSpec(at, 'bars=100').bars)) at++;
+  const spec = newSpec(at, 'bars=100');
+  const spb = spec.stepsPerBar;
+  const sections = Math.ceil(100 / spec.bars);
+  const { starts, ended, first, zero, three } = tops(spec, sections + 2);
+  const lens = starts.slice(1).map((x, i) => (x - starts[i]) / spb);
+  const want = [];
+  for (let i = 0; i < sections + 2; i++) want.push(i % sections === sections - 1 ? 100 % spec.bars : spec.bars);
+  check(`100 bars of a ${spec.bars}-bar loop: its sections, the last cut short`, JSON.stringify(lens) === JSON.stringify(want), JSON.stringify(lens));
+  check('it hands over once round, at exactly 100 bars', ended === 100 * spb, String(ended));
+  check('a piece\'s first section is section 0, not the last loop\'s count', first === zero && first !== three);
+  const plain = newSpec(7100);
+  const t = tops(plain, 3);
+  check('a loop with no length keeps today\'s first pass and never hands over', t.first === t.three && t.ended === null);
+  const short = tops(newSpec(7101, 'bars=3'), 2);
+  check('3 bars: a pass of 3 bars, handed over after it', short.starts[1] === 3 * short.engine.spec.stepsPerBar && short.ended === short.starts[1]);
+  const endless = tops(newSpec(7102, 'bars=endless'), 6);
+  check('endless: whole sections, never handed over', endless.ended === null
+    && endless.starts.slice(1).every((x, i) => x - endless.starts[i] === endless.engine.spec.bars * endless.engine.spec.stepsPerBar));
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

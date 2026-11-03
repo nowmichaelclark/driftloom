@@ -22,7 +22,9 @@
 # (tools/seeds.sh): natively and in its .wasm the baseline's loops equal the
 # browser's renders, and a C host plays them through the C header alone.
 # The third job, `emscripten`, builds the core as a web game links it
-# (queue item 87) and holds it to the same hashes.
+# (queue item 87) and holds it to the same hashes. The fourth, `endless`,
+# renders an Endless piece for 24 hours at speed on the player (queue item
+# 88, `dlrender --endless`): no drift, no growth.
 #
 # The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
 # the runner, installs that exact version and its wasm32 target on first
@@ -255,3 +257,17 @@ jobs:
         run: tools/seeds.sh --first 8 wasm32-unknown-emscripten
       - name: Loops from their seeds, through the C header, built with emcc
         run: tools/seeds.sh --c --first 8 wasm32-unknown-emscripten
+
+  # Endless (queue item 88): an Endless piece rendered for 24 hours of music
+  # at speed, natively, on the player (`dlrender --endless 24`: 22,050 Hz,
+  # lite, mono, about 13 minutes): the step grid doesn't drift, and no hour
+  # costs or sounds unlike the first.
+  endless:
+    name: endless, 24 hours
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: 24 hours of Endless
+        working-directory: core
+        run: cargo run --release --locked --example dlrender -- --endless 24

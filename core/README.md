@@ -290,13 +290,34 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   choice pinned on plays where its eligibility test allows, today's where
   not; a setting pinned shapes its choice when the loop plays it, and does
   not turn it on. `js/pins.js` is the table and says why.
+- **The length** (`Request::with_length`, queue item 88; `bars=1024` or
+  `bars=endless` as text, `dl_player_length`; `generator/piece.rs`): any
+  whole number of bars from 1 up, or `Length::Endless`. Up to 32 bars (the
+  longest any profile draws) it is the loop's own length, honored where the
+  tables never draw it (the table's draw made, then overruled). Past that,
+  and for Endless, the loop keeps the length it drew and the piece is that
+  loop played section after section, section `n` its pass `n` as the wander
+  draws it, from the seed and the number alone (`Generator::section`): the
+  memory and a section's cost are the same at 4 bars, 32,768 or Endless,
+  and any section is reached straight from its number. A round's last
+  section is cut short at a bar line where the loop's length doesn't divide
+  the piece's (`Piece::bars_of`), the next round counting its bars from
+  where it begins; at its end a piece comes round, its sections numbered on.
+  A piece's first section is section 0 (a load's first pass otherwise wanders
+  at the count the last loop reached). `player.piece()` says how a round
+  ends; `position()`'s pass is the section. `dlrender --endless 24` renders
+  a day of Endless at speed (CI's `endless` job: no drift, no growth), and
+  `tests/length.rs` holds the rest (every profile, 1 to 32,768 bars, a
+  section reached straight or through). `piece::time` is the play time the
+  app's Length picker shows (`pieceTime` in `js/generator.js`).
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
   (`dl_player_start`, `dl_player_load`, `dl_player_change` and
   `dl_player_next_change`, `dl_player_render`, ...; the
   request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
-  `dl_player_theme`, `dl_player_pin` and `dl_player_ask`, each refusal its
+  `dl_player_theme`, `dl_player_pin`, `dl_player_length` and
+  `dl_player_ask`, each refusal its
   line): build the
   library with `cargo rustc --release --lib --features capi --crate-type
   staticlib`; the host gives each player its memory. `examples/c/seed.c` is

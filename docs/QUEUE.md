@@ -7,12 +7,12 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-02:** `main` is at v143. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-03:** `main` is at v144. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) and **86b** (#315, a late `now` change on the grid). **Next: 88.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless). **Next: 89.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -303,6 +303,28 @@ playing: a `now` change, or `load`); `core/tests/change.rs` asks it across
 
 49's text (below) is the brief, built on 82's player and 87's chunks. Plus:
 Endless and long pieces render ahead as 87 says.
+
+**Built (hands, 2026-11-03):** the request's length (`bars=N`, any whole
+number from 1 to 2^53 - 1, or `bars=endless`; `Request::with_length`,
+`dl_player_length`, `readRequest`'s `length`), in both generators, the
+player, the page's engine, the C header and wasm, share code format 8 (a
+number in as few bytes as it needs). Up to 32 bars (the longest any table
+draws) it is the loop's own length, the table's draw made and overruled.
+Past that, and Endless, the loop keeps its own length and plays section
+after section, section `n` its wandered pass `n` (`generator/piece.rs`,
+`pieceOf`): memory and a section's cost flat, any section straight from
+its number. **For Mikey's ears:** a round's last section is cut short at a
+bar line where the loop's length doesn't divide the piece's (100 bars of a
+16-bar loop: six sections and four bars); a piece comes round with new
+sections, as a loop's next pass wanders (the app plays it once round, then
+the next loop, as before); sections wander as the slider says (off: the
+loop repeated); layers with their own cycles keep drifting across sections;
+a piece's first section is section 0 (a load's first pass otherwise wanders
+at the last loop's count). The Length picker's play time is `pieceTime`,
+the core's `piece::time`; Now Playing keeps today's clock (a countdown to
+the piece's end). Section `n` is held for its notes as the generator draws
+them (the pass's hash), not its samples: a section's audio carries what
+rang into it from the one before, which a jump can't have.
 
 ## 89-91. Key and scale (was 50), style (was 51), voices and layers (was 52)
 

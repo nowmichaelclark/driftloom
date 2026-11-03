@@ -7,22 +7,19 @@
 //
 // The five lines are moods, tempo and length (sharing a line), key, style
 // and voices. Moods are today's vibes (state.vibes). Length and tempo are
-// state.picks, saved in the prefs. The moods and the tempo reach the
-// generator as its request (`requestFor`, queue item 85); length still
-// reaches it through `applyPicks`, clamped to what it can play, until item
-// 88. Key, style and voices have no picker yet and always read "any".
+// state.picks, saved in the prefs. The moods, the tempo and the length reach
+// the generator as its request (`requestFor`; queue items 85 and 88: any
+// length from 1 bar to 32,768, or Endless). Key, style and voices have no
+// picker yet and always read "any".
 
 import { el } from './ui.js';
 import { log2, pow } from './dlmath.js';
-import { readRequest, RequestError } from './generator.js';
+import { readRequest, RequestError, pieceTime } from './generator.js';
 
 export const MIN_BARS = 1;
 export const MAX_BARS = 32768;
 // The doubling slider: one stop per power of two, 1 to 32,768.
 const STOPS = 15;
-// Today's generator plays loops of 1 to 32 bars. A longer length is played
-// as passes of one loop; item 88 brings the full range.
-const GEN_MAX_BARS = 32;
 
 const NB = ' ';
 const LINES = [
@@ -80,10 +77,10 @@ const spoken = (t) => t.replace('–', ' to ').replace(/ /g, ' ').replace('…'
 
 // ---------------------------------------------------- the request
 
-// What the next loop is asked for (the generator's request): the moods and
-// the tempo picked. The same shape a game or a developer sends.
+// What the next loop is asked for (the generator's request): the moods, the
+// tempo and the length picked. The same shape a game or a developer sends.
 export function requestFor(state) {
-  return { vibes: state.vibes.slice(), tempo: state.picks.tempo };
+  return { vibes: state.vibes.slice(), tempo: state.picks.tempo, length: state.picks.length };
 }
 
 // The "can't do that" line for the picks (a short plain line, its look a
@@ -96,27 +93,6 @@ export function pickProblem(state) {
     if (e instanceof RequestError) return e.message;
     throw e;
   }
-}
-
-// ---------------------------------------------------- today's generator
-
-// Bends a freshly drawn loop toward the length picked, within what the
-// generator can play (the tempo is the request's now). A length of up to 32
-// bars is the loop's own length, played once; a longer one keeps the loop
-// as drawn and plays it enough times round to last that long. Endless and
-// "any" leave it looping until skipped, as today.
-export function applyPicks(spec, picks) {
-  if (!spec || !picks) return spec;
-  const len = picks.length;
-  if (typeof len === 'number') {
-    if (len <= GEN_MAX_BARS) {
-      spec.bars = len;
-      spec.playFor = 1;
-    } else {
-      spec.playFor = Math.max(1, Math.round(len / spec.bars));
-    }
-  }
-  return spec;
 }
 
 // ------------------------------------------------------------ the pills
@@ -294,14 +270,15 @@ function fitPanel() {
 function stopOf(bars) { return log2(bars); }
 
 // Seconds of play for `bars` bars, at each end of the picked tempo range
-// (or the playing loop's tempo), in the playing loop's metre.
+// (or the playing loop's tempo), in the playing loop's metre: the
+// generator's `pieceTime`, the core's `piece::time`, so the two never
+// disagree.
 function playTime(bars) {
   const { state } = api;
   const spec = state.spec;
   const spb = (spec && spec.stepsPerBar) || 16;
   const t = state.picks.tempo || [spec ? spec.bpm : 80, spec ? spec.bpm : 80];
-  const secs = (bpm) => bars * spb * (60 / bpm / 4);
-  return [secs(t[1]), secs(t[0])];
+  return pieceTime(bars, spb, t);
 }
 
 function roughly([a, b]) {

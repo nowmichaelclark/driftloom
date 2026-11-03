@@ -40,6 +40,10 @@ export const THEME_N = 240;
 export const REST_SEED = 8506;
 export const REST_N = 24;
 export const REST_FIRST = [2428270433, 'theme=3570153259,booming=0.31,cheeky=0.26,experimental'];
+// The lengths (queue item 88): seeds from their own stream, each with a
+// length of the kind its index picks (`lengthCase`).
+export const LENGTH_SEED = 88;
+export const LENGTH_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -140,7 +144,32 @@ export function cases(goldenCodes) {
     out.push({ set: 'theme', index: i, seed, vibes: null, request: themeCase(themed, i, seed) });
   }
   restCases().forEach(([seed, request], i) => out.push({ set: 'rest', index: i, seed, vibes: null, request }));
+  const long = new Rng(LENGTH_SEED);
+  for (let i = 0; i < LENGTH_N; i++) {
+    const seed = long.seed32();
+    out.push({ set: 'length', index: i, seed, vibes: null, request: lengthCase(long, i, seed) });
+  }
   return out;
+}
+
+// A length, of the kind `i` picks, drawn from `r` (queue item 88): a short
+// one (the loop's own, 1 to 32 bars), 1, 2 or 3 bars in turn, a long one (a
+// piece in sections, 33 to 40,000 bars, or 32,768), Endless, and a short or
+// long one with vibes, a tempo, pins and a theme.
+function lengthCase(r, i, seed) {
+  const short = () => 1 + Math.floor(r.f() * 32);
+  const long = () => (r.f() < 0.2 ? 32768 : 33 + Math.floor(r.f() * 39968));
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  switch (i % 8) {
+    case 0: return `bars=${short()}`;
+    case 1: return `bars=${1 + (Math.floor(i / 8) % 3)}`;
+    case 2: return `bars=${long()}`;
+    case 3: return 'bars=endless';
+    case 4: return [...vibes(1 + (i % 3)), `bars=${short()}`].join(',');
+    case 5: return [`bpm=${32 + Math.floor(r.f() * 159)}`, `bars=${long()}`].join(',');
+    case 6: return [...vibes(2), `bars=${short()}`, 'organ=on', 'echo.beats=1'].join(',');
+    default: return [`theme=${(seed ^ 0x5eed) >>> 0}`, `bars=${i % 16 < 8 ? short() : 'endless'}`].join(',');
+  }
 }
 
 // The rest cases (queue item 85f): the brain's, then resting themes on choir

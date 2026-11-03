@@ -13,6 +13,7 @@ use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
 use crate::generator::js;
 use crate::generator::layers::DrumEvent;
+use crate::generator::piece::Piece;
 use crate::generator::load::{Load, Stab};
 use crate::generator::plan::ChordEvent;
 use crate::generator::render::Render;
@@ -180,8 +181,18 @@ pub struct Sequencer {
     /// The step from the load: it never resets, as layers with their own
     /// cycles index off it.
     pub abs_step: u64,
-    /// The pass, from the load's first (0).
+    /// The pass, from the load's first (0): in a piece (queue item 88), the
+    /// section playing.
     pub loop_count: u32,
+    /// The steps the pass playing takes: the loop's, or fewer in a piece's
+    /// section cut short (queue item 88).
+    pub pass_steps: f64,
+    /// The step from the load the piece's round playing began on (0 in a
+    /// loop with no length, and in a piece no section of which is cut): the
+    /// loop's bars are counted from it, as a cut section moves them off the
+    /// load's grid. Layers with their own cycles go on counting from the
+    /// load, drifting as ever.
+    pub origin: u64,
     /// The tempo playing, in beats a minute (the loop's, unless a host set
     /// another).
     pub bpm: f64,
@@ -223,6 +234,8 @@ impl Sequencer {
             step: 0,
             abs_step: 0,
             loop_count: 0,
+            pass_steps: 0.0,
+            origin: 0,
             bpm: 0.0,
             mutes: [false; 5],
             tails_ducked: false,
@@ -297,6 +310,8 @@ impl Sequencer {
         self.step = 0;
         self.abs_step = 0;
         self.loop_count = 0;
+        self.origin = 0;
+        self.pass_steps = Piece::of(lp.spec).map_or_else(|| lp.total(), |p| p.bars_of(0) * lp.spec.steps_per_bar);
         self.hold = NO_HOLD;
         self.kick_kind = s.kick.map(|k| k.kind);
     }
@@ -310,25 +325,37 @@ impl Sequencer {
     }
 
     /// `_advance`: the next step's time and place. True at the top of a
-    /// new pass (the caller hands the sequencer the pass it plays).
+    /// new pass (the caller hands the sequencer the pass it plays). In a
+    /// piece (queue item 88) a pass is a section: a round's last may be cut
+    /// short, and the round after it counts its bars from where it begins.
     pub fn advance(&mut self, lp: &Loop) -> bool {
         self.next_step_time += self.step_dur();
         self.step += 1;
         self.abs_step += 1;
         #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
-        let wrapped = self.step as f64 >= lp.total();
+        let wrapped = self.step as f64 >= self.pass_steps;
         if wrapped {
             self.step = 0;
             self.loop_count = self.loop_count.wrapping_add(1);
+            self.pass_steps = lp.total();
+            if let Some(p) = Piece::of(lp.spec) {
+                let n = u64::from(self.loop_count);
+                self.pass_steps = p.bars_of(n) * lp.spec.steps_per_bar;
+                if p.cut() && p.begins_round(n) {
+                    self.origin = self.abs_step;
+                }
+            }
         }
         wrapped
     }
 
-    /// `_isSilentBar(absStep)`: every layer scheduled out for the bar
-    /// holding the step.
-    fn is_silent_bar(lp: &Loop, abs: f64) -> bool {
+    /// `_isSilentBar(absStep, rel)`: every layer scheduled out for the bar
+    /// holding the step, `abs` from the load and `rel` from the round's
+    /// start (the same, but in a piece with a section cut short).
+    fn is_silent_bar(lp: &Loop, abs: f64, rel: f64) -> bool {
         let spb = lp.spec.steps_per_bar;
-        let bar = js::floor((abs % lp.total()) / spb);
+        let total = lp.total();
+        let bar = js::floor((rel % total) / spb);
         if lp.base.quiet.iter().any(|&q| js::num(q) == bar) {
             return true;
         }
@@ -336,7 +363,8 @@ impl Sequencer {
         for layer in LAYERS {
             let sched = &form[layer as usize];
             let n = js::num(sched.len());
-            let b = js::floor((abs % lp.cycle(layer)) / spb) % n;
+            let cycle = lp.cycle(layer);
+            let b = js::floor(((if cycle == total { rel } else { abs }) % cycle) / spb) % n;
             if b.is_finite() && sched.get(js::index(b)).copied().unwrap_or(false) {
                 return false;
             }
@@ -353,6 +381,8 @@ impl Sequencer {
         let s = lp.settings;
         #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
         let abs = self.abs_step as f64;
+        #[allow(clippy::cast_precision_loss)] // the same
+        let rel = (self.abs_step - self.origin) as f64;
         #[allow(clippy::cast_precision_loss)]
         let stepf = step as f64;
 
@@ -390,7 +420,7 @@ impl Sequencer {
         // At each bar line, whether the tails should still be ringing.
         let spb = lp.spec.steps_per_bar;
         if abs % spb == 0.0 {
-            let quiet = Self::is_silent_bar(lp, abs);
+            let quiet = Self::is_silent_bar(lp, abs, rel);
             // The organ lets go in a bar the loop leaves silent.
             if quiet && self.hold.on {
                 Synth::organ_off(host, time, 0.25);
@@ -546,7 +576,7 @@ impl Sequencer {
                 Self::glass(host, synth, lp, s_at, t, sd, Key { seed, pass, step: step32, ord: 0 });
             }
             if let Some(stab) = &s.stab {
-                Self::dub_stab(host, synth, lp, stab, mutes, &at, s_at, t, abs, Key { seed, pass, step: step32, ord: 0 });
+                Self::dub_stab(host, synth, lp, stab, mutes, &at, s_at, t, [abs, rel], Key { seed, pass, step: step32, ord: 0 });
             }
         }
         // Muted, the chords' organ lets go.
@@ -710,7 +740,7 @@ impl Sequencer {
     /// loop's density, a soft stab of the chord sounding now, folded into
     /// G3-C5; never in a silent bar, and only over a groove.
     #[allow(clippy::too_many_arguments)] // the step's own place and times
-    fn dub_stab<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, stab: &Stab, mutes: [bool; 5], at: &impl Fn(Layer) -> f64, s: f64, t: f64, abs: f64, key: Key) {
+    fn dub_stab<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, stab: &Stab, mutes: [bool; 5], at: &impl Fn(Layer) -> f64, s: f64, t: f64, [abs, rel]: [f64; 2], key: Key) {
         let spb = lp.spec.steps_per_bar;
         let pos = s % spb;
         let which = if pos == 2.0 {
@@ -720,7 +750,7 @@ impl Sequencer {
         } else {
             return;
         };
-        if !(stab.rates[which] > 0.0) || Self::is_silent_bar(lp, abs) {
+        if !(stab.rates[which] > 0.0) || Self::is_silent_bar(lp, abs, rel) {
             return;
         }
         let mut n = 0;

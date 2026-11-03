@@ -1614,10 +1614,10 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
 // and the code that carries it.
 {
   const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
-  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null}'
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null}'
     && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
   check('text, in the frozen order, weights and the tempo low first',
-    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null}');
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null}');
   check('an object reads as its text does',
     JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
   check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
@@ -1628,6 +1628,14 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
   check('the refusals, each its plain line', lines.every(([t, line]) => refused(t) === line), lines.map(([t]) => refused(t)).join(' | '));
   check('refusals in an object too', refused({ tempo: NaN }) === 'a bad tempo' && refused({ vibes: { cozy: -1 } }) === 'a bad weight'
     && refused({ vibes: { nope: 1 } }) === 'no such vibe');
+  // The length (queue item 88): bars from 1 to 2^53 - 1, or endless.
+  check('a length reads', parseRequest('bars=1024').length === 1024 && parseRequest('bars=endless,cozy').length === 'endless'
+    && readRequest({ length: 3 }).length === 3 && readRequest({ length: 'endless' }).length === 'endless'
+    && parseRequest('bars=9007199254740991').length === Number.MAX_SAFE_INTEGER);
+  const badLengths = ['bars=0', 'bars=', 'bars', 'bars=1.5', 'bars=-4', 'bars=forever', 'bars=9007199254740992', 'bars=9007199254740993'];
+  check('a bad length says so', badLengths.every((t) => refused(t) === 'a bad length') && refused({ length: 2.5 }) === 'a bad length'
+    && refused({ length: 0 }) === 'a bad length' && refused({ length: '16' }) === 'a bad length', badLengths.map(refused).join(' | '));
+  check('a length reads back the same', requestText(parseRequest('cozy,bars=100')) === 'cozy,bars=100' && requestText({ length: 'endless' }) === 'bars=endless');
   check('the core\'s tempos', TEMPO_LIMIT[0] === 32 && TEMPO_LIMIT[1] === 190 && readRequest({ tempo: 76.6 }).tempo.join() === '77,77');
 
   const r = new Rng(85);
@@ -1838,6 +1846,29 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
   }
   check('theme: a loop with a theme is format 7, the others as before', encodeSong(newSpec(5, 'theme=9')).slice(4, 6) === '0W'
     && encodeSong(newSpec(5, 'organ=on')).slice(4, 6) === '0R' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+}
+
+console.log('\nLength (queue item 88)');
+{
+  // A share code carries the length, in as few bytes as it needs (format 8).
+  let codes = 0;
+  const lengths = [1, 3, 32, 33, 126, 127, 1000, 16382, 16383, 32768, 'endless', Number.MAX_SAFE_INTEGER];
+  for (const [i, length] of lengths.entries()) {
+    const spec = newSpec(6000 + i, { vibes: i % 2 ? ['cozy'] : null, length });
+    const code = encodeSong(spec);
+    const back = decodeSong(code);
+    if (back.length === length && encodeSong(back) === code && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks)
+      && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
+  }
+  check('a loop with a length is made again from its code', codes === lengths.length, String(codes));
+  const plain = encodeSong({ ...newSpec(6100), length: undefined });
+  const longer = (n) => encodeSong(newSpec(6100, { length: n })).length - plain.length;
+  // The length costs a byte up to 126 bars, two to 16,382, three past (and
+  // the format's byte), the 8-bit bytes in base32's 5-bit characters.
+  check('the length costs only what it uses', longer(32) <= longer(1000) && longer(1000) <= longer(32768) && longer(32768) - longer(32) <= 4,
+    [longer(32), longer(1000), longer(32768)].join(' '));
+  check('a loop with a length is format 8, the others as before', encodeSong(newSpec(5, 'bars=64')).slice(4, 6) === '10'
+    && encodeSong(newSpec(5, 'theme=9')).slice(4, 6) === '0W' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
