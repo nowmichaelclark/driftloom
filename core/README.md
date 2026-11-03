@@ -214,6 +214,14 @@ player.render(&mut core, &mut [&mut left, &mut right])?;  // again and again, an
 player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set_tempo, set_volume
 ```
 
+- **`set_wander_salt(salt)`** (queue item 92; `dl_player_wander_salt`,
+  `dl_play_wander_salt`, `dlrender --salt`): the wander's stream salted from
+  the next pass, so a host that sends a new salt each play hears a loop
+  wander differently each time (the app does across its wander slider's
+  upper range, `UNREPEATABLE_FROM` in `js/engine.js`). 0, the default, is
+  the wander every code has always had; the same seed, request and salt
+  make the same samples.
+
 - **`load(seed, request)`** asks for a loop; it is made a stage a block over
   the blocks rendered next (a few, up to about a hundred: the spec, the plan,
   the render in five parts, the load's decisions, the kick's fit in slices,

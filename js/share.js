@@ -44,12 +44,14 @@ const DECODE_MAP = (() => {
 // asked for; format 9 (queue item 89) the key and the mode it was asked for;
 // format 10 (queue item 90) the style (set of profiles) it was asked for;
 // format 11 (queue item 91) the voices and the layers it was asked for;
-// format 12 (queue item 88b) a track length shorter than one pass, in bars.
+// format 12 (queue item 88b) a track length shorter than one pass, in bars;
+// format 13 (queue item 92) the wander's salt of the play it was shared from.
 // Each is written only by a loop that needs it
 // (a loop without vibes is still format 3), so every code already in
 // circulation, every saved album and every `/rank` answer keeps the exact
 // string it had.
-export const FORMAT = 12;
+export const FORMAT = 13;
+const PLAYBARS_FORMAT = 12;
 const VOICES_FORMAT = 11;
 const STYLE_FORMAT = 10;
 const KEY_FORMAT = 9;
@@ -97,8 +99,14 @@ function hasPlayBars(spec) {
   return !!(spec && !spec.playFor && Number.isInteger(spec.playBars) && spec.playBars >= 1);
 }
 
+// Shared from a play that wandered unrepeatably (queue item 92).
+function hasSalt(spec) {
+  return !!(spec && Number.isInteger(spec.wanderSalt) && spec.wanderSalt > 0 && spec.wanderSalt <= 0xffffffff);
+}
+
 function formatOf(spec) {
-  if (hasPlayBars(spec)) return FORMAT;
+  if (hasSalt(spec)) return FORMAT;
+  if (hasPlayBars(spec)) return PLAYBARS_FORMAT;
   if (hasVoices(spec)) return VOICES_FORMAT;
   if (hasStyle(spec)) return STYLE_FORMAT;
   if (hasKeyScale(spec)) return KEY_FORMAT;
@@ -313,6 +321,11 @@ function writeSpec(w, spec, version = FORMAT) {
   // bars, as one number in as few bytes as it needs; zero is none. (A track
   // length of whole passes is the two bytes above, as ever.)
   if (version >= 12) w.vu(hasPlayBars(spec) ? spec.playBars : 0);
+  // Format 13: the wander's salt of the play the code was shared from
+  // (queue item 92), as one number in as few bytes as it needs; zero is a
+  // play that wandered as every play of the code does. It says which play
+  // it was; opening the code draws a play's own salt, as any play does.
+  if (version >= 13) w.vu(hasSalt(spec) ? spec.wanderSalt : 0);
 }
 
 function readSpec(r, version = FORMAT) {
@@ -446,6 +459,10 @@ function readSpec(r, version = FORMAT) {
   if (version >= 12) {
     const bars = r.vu();
     if (bars >= 1 && bars <= Number.MAX_SAFE_INTEGER && !spec.playFor) spec.playBars = bars;
+  }
+  if (version >= 13) {
+    const salt = r.vu();
+    if (salt >= 1 && salt <= 0xffffffff) spec.wanderSalt = salt;
   }
   return spec;
 }

@@ -23,7 +23,7 @@
 //! cargo run --release --example dlrender -- --wav OUT.wav [--signal NAME] LIST
 //! cargo run --release --example dlrender -- --seed N[,N...] [--vibes ID,...]
 //!     [--request TEXT] [--seconds 45] [--rate 44100] [--stereo] [--lite] [--wander 1]
-//!     [--wav OUT.wav] [--calls OUT.calls]
+//!     [--salt 0] [--wav OUT.wav] [--calls OUT.calls]
 //!                                           a loop from its seed on the
 //!                                           player (queue item 82), no note
 //!                                           list: one hash line a seed;
@@ -79,7 +79,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--salt N] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -268,6 +268,7 @@ struct BySeed {
     full: bool,
     seconds: Option<f64>,
     wander: Option<f64>,
+    salt: u32,
     vibes: Vec<String>,
     request: Option<String>,
     clip: clip::Clip,
@@ -281,7 +282,7 @@ impl BySeed {
     /// length, at 22,050 Hz and lite unless asked otherwise.
     fn endless(self, hours: f64, rate: Option<f64>, layout: u32) -> Result<(), String> {
         let seed = self.seeds.first().map_or(1_027_928_796, |&(_, s)| s);
-        let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false };
+        let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, salt: 0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false };
         let request = way.request()?;
         endless::run(&endless::Way { hours, seed, rate: rate.unwrap_or(22_050.0), full: self.full, layout, wander: self.wander.unwrap_or(1.0), request })
     }
@@ -297,7 +298,7 @@ impl BySeed {
                 return Err(format!("--pick {i}: the corpus has no such loop"));
             }
         }
-        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices };
+        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), salt: b.salt, vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices };
         match b.measure {
             Some(Measure::Costs) => return seed_costs(&b.seeds, &way),
             Some(Measure::Fades) => return fades::run(&b.seeds, &way),
@@ -334,6 +335,7 @@ impl BySeed {
             "--full" => self.full = true,
             "--seconds" => self.seconds = Some(number(args.next())?),
             "--wander" => self.wander = Some(number(args.next())?),
+            "--salt" => self.salt = args.next().and_then(|s| s.parse().ok()).ok_or(USAGE)?,
             "--vibes" => self.vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),
             "--request" => self.request = Some(args.next().ok_or(USAGE)?),
             _ => return Ok(false),

@@ -152,6 +152,9 @@ pub struct Player {
     /// How far each pass wanders (`Engine.driftAmount`), 0 for the loop as
     /// composed.
     wander: f64,
+    /// The host's salt on the wander's stream (queue item 92,
+    /// `set_wander_salt`): 0, every code's own wander.
+    salt: u32,
     /// When the loop asked for should take its first step, on the core's
     /// clock (0: as soon as it is made); and, stopped, when to go on.
     start_at: f64,
@@ -202,6 +205,7 @@ impl Player {
             was_playing: false,
             rate: 0.0,
             wander: AMOUNT,
+            salt: 0,
             start_at: 0.0,
             resume_at: None,
             tempo: None,
@@ -479,12 +483,13 @@ impl Player {
         }
     }
 
-    /// Draw pass `number` into `passes[slot]`, at the wander's amount.
+    /// Draw pass `number` into `passes[slot]`, at the wander's amount, on
+    /// its stream salted as the host asked.
     fn draw(&mut self, slot: usize, number: u32) {
         let g = &self.generator;
         let kick = g.settings().kick.map(|k| k.kind);
         if let Some(p) = self.passes.get_mut(slot) {
-            p.draw_by(&Cx::new(g.spec()), g.render(), kick, number, self.wander);
+            p.draw_salted(&Cx::new(g.spec()), g.render(), kick, number, self.wander, self.salt);
         }
     }
 
@@ -777,6 +782,26 @@ impl Player {
             self.wander = amount;
             self.next_drawn = false;
         }
+    }
+
+    /// The salt on the wander's stream from now on (queue item 92), heard
+    /// from the next pass: a host that wants a loop to wander differently
+    /// each time it is played (the app, across the wander slider's upper
+    /// range: `UNREPEATABLE_FROM` in `js/engine.js`) sends a new one each
+    /// play; 0, the default, is the wander every code has always had. The
+    /// draws stay a function of what the host sends: the same seed, request
+    /// and salt make the same samples.
+    pub fn set_wander_salt(&mut self, salt: u32) {
+        if salt != self.salt {
+            self.salt = salt;
+            self.next_drawn = false;
+        }
+    }
+
+    /// The wander's salt (`set_wander_salt`).
+    #[must_use]
+    pub fn wander_salt(&self) -> u32 {
+        self.salt
     }
 
     /// Mute a layer or bring it back, as the app's layer buttons do: its

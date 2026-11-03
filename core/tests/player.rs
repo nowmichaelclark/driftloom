@@ -228,3 +228,81 @@ fn its_memory_is_fixed() {
         std::mem::size_of::<Generator>()
     );
 }
+
+/// What a player hands over, by pass (its note's key), every field bit for
+/// bit, on a host that keeps the core's clock and renders nothing.
+#[derive(Default)]
+struct ByPass {
+    frame: u64,
+    pass: u32,
+    passes: Vec<Vec<String>>,
+}
+
+impl Host for ByPass {
+    fn frame(&self) -> u64 {
+        self.frame
+    }
+    fn key(&mut self, key: Key) {
+        self.pass = key.pass;
+    }
+    fn note(&mut self, voice: u32, channel: u32, time: f64, midi: f64, dur: f64, vel: f64, parts: u32, extra: [f64; EXTRA]) {
+        let n = self.pass as usize;
+        if n < self.passes.len() {
+            let bits: Vec<u64> = [time, midi, dur, vel].iter().chain(&extra).map(|x| x.to_bits()).collect();
+            self.passes[n].push(format!("{voice} {channel} {parts} {bits:?}"));
+        }
+    }
+    fn event(&mut self, _: u32, _: Event) {}
+    fn damp(&mut self, _: u32, _: f64) {}
+    fn set(&mut self, _: u32, _: usize, _: usize, _: f64, _: f64) {}
+    fn route(&mut self, _: u32, _: usize, _: usize, _: Option<Tap>, _: f64) {}
+    fn param(&mut self, _: u32, _: u32, _: f64, _: f64, _: f64) {}
+    fn steal(&mut self, _: u32, _: Key, _: f64, _: f64) {}
+    fn fade_all(&mut self, _: f64, _: f64) {}
+    fn bass_lift(&mut self, _: f64) {}
+    fn space_range(&mut self, _: usize, _: f64, _: f64) {}
+}
+
+/// The notes of the loop of `seed`'s passes 0 to 8, played with the wander
+/// at `amount` and its stream salted by `salt` (`None`: never set).
+fn passes_of(seed: u32, amount: f64, salt: Option<u32>) -> Vec<Vec<String>> {
+    let mut host = ByPass { passes: vec![Vec::new(); 9], ..ByPass::default() };
+    let mut player = Box::new(Player::new());
+    player.attach(&mut host, 44_100.0, true);
+    player.set_wander(amount);
+    if let Some(s) = salt {
+        player.set_wander_salt(s);
+    }
+    player.load(seed, &Request::new());
+    player.ready(&mut host);
+    for _ in 0..100_000 {
+        if player.position().1 > 9 {
+            break;
+        }
+        player.decide(&mut host);
+        host.frame += 4096;
+    }
+    host.passes
+}
+
+/// Queue item 92: a host's salt on the wander's stream. None (or 0) is the
+/// wander every code has always had, bit for bit; a salt wanders a loop
+/// another way, from the same seed, pass after pass; and the same salt
+/// again makes the same notes, so the draws stay a function of what the
+/// host sends.
+#[test]
+fn a_salt_wanders_a_loop_another_way() {
+    roomy(|| {
+        let seed = 306_182_396;
+        let plain = passes_of(seed, 2.2, None);
+        assert!(plain.iter().all(|p| !p.is_empty()), "nine passes played");
+        assert!(passes_of(seed, 2.2, Some(0)) == plain, "a salt of 0 is today's wander");
+        let a = passes_of(seed, 2.2, Some(0x1234_5678));
+        let b = passes_of(seed, 2.2, Some(0x9abc_def0));
+        assert!(passes_of(seed, 2.2, Some(0x1234_5678)) == a, "the same salt, the same notes");
+        for n in 2..=8 {
+            assert!(a[n] != b[n] && a[n] != plain[n], "pass {n} wanders another way with another salt");
+        }
+        assert!(passes_of(seed, 0.0, Some(0x1234_5678)) == passes_of(seed, 0.0, None), "with the wander off a salt changes nothing");
+    });
+}

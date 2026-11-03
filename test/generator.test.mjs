@@ -2335,6 +2335,17 @@ console.log('\nVoices and layers (queue item 91)');
     const album = decodeAlbum(encodeAlbum('ends', [bars, newSpec(2)])).specs;
     check('an album carries it too', album[0].playBars === 150 && album[1].playBars === undefined);
   }
+  // Share code format 13 (queue item 92): the wander's salt of the play
+  // shared from, only when it had one.
+  {
+    const spec = newSpec(7120);
+    const plain = encodeSong(spec);
+    const code = encodeSong({ ...spec, wanderSalt: 0xdeadbeef });
+    const back = decodeSong(code);
+    check('a code says which play it was shared from', back.wanderSalt === 0xdeadbeef && encodeSong(back) === code && decodeSong(plain).wanderSalt === undefined
+      && code.slice(4, 6) !== plain.slice(4, 6) && encodeSong({ ...spec, wanderSalt: 0 }) === plain, code);
+    check('and plays the same loop', JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks));
+  }
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

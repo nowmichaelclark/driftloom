@@ -783,6 +783,13 @@ mod player {
         player().set_wander(amount);
     }
 
+    /// The salt on the wander's stream (queue item 92,
+    /// `Player::set_wander_salt`): 0, every code's own wander.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_wander_salt(salt: u32) {
+        player().set_wander_salt(salt);
+    }
+
     /// Mute layer `layer` (the generator's order: drums, bass, chords,
     /// melody, texture) or bring it back (`Player::set_mute`).
     #[unsafe(no_mangle)]

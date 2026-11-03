@@ -490,6 +490,16 @@ pub extern "C" fn dl_player_wander(player: *mut Engine, amount: f64) {
     }
 }
 
+/// The salt on the wander's stream, from the next pass (queue item 92,
+/// `Player::set_wander_salt`): a new one each play makes a loop wander
+/// differently each time; 0, the default, is every code's own wander.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_wander_salt(player: *mut Engine, salt: u32) {
+    if let Some(e) = engine(player) {
+        e.player.set_wander_salt(salt);
+    }
+}
+
 /// Mute layer `layer` (`DL_DRUMS` to `DL_TEXTURE`) or bring it back (`muted`
 /// 0). It holds, across loads, until brought back.
 #[unsafe(no_mangle)]

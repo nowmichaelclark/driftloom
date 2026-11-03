@@ -15,7 +15,7 @@
 // `?engine=player` the core's player is handed the loop, at Play or as the
 // core arrives, and the controls; the page sends no notes of its own.
 
-import { Engine } from '../js/engine.js';
+import { Engine, UNREPEATABLE_FROM } from '../js/engine.js';
 import { newSpec, rerollLayer, vibesOf } from '../js/generator.js';
 import { echoTimeOf } from '../js/choices.js';
 
@@ -958,6 +958,54 @@ console.log('\nLength (queue items 88 and 88b)');
   e.restartCount();
   const was = e.loopCount;
   check('moved: one pass ends it at the end of the pass playing', e.endStep() === 28 * s14.stepsPerBar && e.loopCount === was, String(e.endStep()));
+}
+
+console.log('\n"Let the loop wander", unrepeatable in its upper range (queue item 92)');
+{
+  const passes = (amount, seed = 7400) => {
+    const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
+    const { synth } = stubSynth(false);
+    const engine = new Engine(ctx, synth);
+    engine.driftOn = true;
+    engine.driftAmount = amount;
+    engine.load(newSpec(seed));
+    const out = [];
+    for (let n = 0; n <= 8; n++) out.push(JSON.stringify(engine._wander(n)));
+    engine.clock.dispose();
+    return { out, engine };
+  };
+  const a = passes(2.2);
+  const b = passes(2.2);
+  check('in the upper range, the same code played twice wanders differently (passes 2-8)', [2, 3, 4, 5, 6, 7, 8].every((n) => a.out[n] !== b.out[n]) && a.engine.wanderSalt !== 0);
+  const lo1 = passes(1.9);
+  const lo2 = passes(1.9);
+  check('below it, identically, bit for bit, on the stream it always had', lo1.out.join() === lo2.out.join() && lo1.engine.wanderSalt === 0);
+  check(`the range starts at ${UNREPEATABLE_FROM}`, UNREPEATABLE_FROM === 2.0);
+  // The default amount draws what the goldens hold: no salt.
+  const d = passes(1);
+  d.engine.salt = 12345;
+  check('at the default amount the salt is not heard', d.engine.wanderSalt === 0 && JSON.stringify(d.engine._wander(3)) === d.out[3]);
+  // A re-roll keeps its play's salt; a new loop draws another.
+  const e = a.engine;
+  const salt = e.salt;
+  e.load(rerollLayer(e.spec, 'melody'), { keepPosition: true });
+  const kept = e.salt === salt;
+  e.load(newSpec(7401));
+  check('a re-roll keeps the play\'s salt, a new loop draws its own', kept && e.salt !== salt && e.salt !== 0);
+  // The player is handed the salt with the wander.
+  const posts = [];
+  const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
+  const { synth } = stubSynth(true);
+  const fakeCore = { playWander: (amount, s) => posts.push([amount, s]), playLoad() {}, playMute() {}, playTempo() {} };
+  const engine = new Engine(ctx, new Proxy(synth, { get: (t, p) => (p === 'core' ? fakeCore : t[p]) }));
+  engine.driftOn = true;
+  engine.driftAmount = 2.4;
+  engine.load(newSpec(7402));
+  engine._playerControls();
+  engine.driftAmount = 1;
+  engine._playerControls();
+  check('the core\'s player is told the salt in the upper range, and 0 below it', posts.length === 2 && posts[0][1] === engine.salt && posts[0][1] !== 0 && posts[1][1] === 0, JSON.stringify(posts));
+  engine.clock.dispose();
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

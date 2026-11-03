@@ -213,6 +213,11 @@ void dl_player_resume(dl_player *player);
    loads. The tempo in beats a minute, from the next step (asked while a loop
    is being made, it starts at it). The listener's volume, 0 to 1 (0.85). */
 void dl_player_wander(dl_player *player, double amount);
+/* The salt on the wander's stream, from the next pass (queue item 92): send
+   a new one each time a loop is played and it wanders differently each
+   time; 0, the default, is the wander every code has always had. The same
+   seed, request and salt make the same samples. */
+void dl_player_wander_salt(dl_player *player, uint32_t salt);
 void dl_player_mute(dl_player *player, uint32_t layer, int muted);
 void dl_player_tempo(dl_player *player, double bpm);
 void dl_player_volume(dl_player *player, double volume);

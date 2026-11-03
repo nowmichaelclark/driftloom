@@ -480,6 +480,22 @@ which it was. Item 54's choices stay the loop's own.
 differently (passes 2-8 differ), below it identically (bit for bit); the
 generation goldens (wander at the default) unchanged.
 
+**Built (hands, 2026-11-03):** from `UNREPEATABLE_FROM` (2.0, the slider's
+top sixth: the conservative point, **for Mikey's ears**) each play of a loop
+draws its own salt (at each new loop; a re-roll and a quality switch keep
+the play's), and every pass's wander is drawn on the stream salted by it
+(`Engine.wanderSalt`; the core's `Pass::draw_salted`,
+`Player::set_wander_salt`, `dl_play_wander_salt`, `dl_player_wander_salt`,
+`dlrender --salt`). Below it the salt is 0: the stream every code has always
+wandered on, bit for bit. A long loop's sections wander salted too; item
+54's choices and the tuned kick a pass swaps to (item 67) stay the loop's
+own. A code shared from a salted play carries its salt (share code format
+13): it says which play it was, and opening it draws a play's own salt, as
+any play does (**for Mikey's ears**: replaying the sharer's exact wander is
+one line, reading the code's salt at its first play). Diagnostics: `wander:
+2.2, unrepeatable (salt N)`. The MIDI export is the loop as composed, so
+it has nothing to say.
+
 ## The phase's end (brain)
 
 When 92 is merged: the brain's check (generation goldens on every target,
@@ -825,6 +841,7 @@ stay channel sources until an ears session needs a voice's note-by-note play
   2026-10-18**; where that range starts is to be tuned by ear as we
   go), so the same code with the slider lower still wanders the same
   way, and a share code or export says which it was.
+  **Built as item 92 (hands, 2026-11-03); the rest of this entry is history.**
   **Queued as item 92 (brain, Session 26).** Where it was written down (brain, Session 24, 2026-10-19): to be
   built in phase 2's port, not before; carried in `docs/CORE.md` (phase
   2, beside the octave fix) and in `docs/BRAIN.md` ("Start here"), so
