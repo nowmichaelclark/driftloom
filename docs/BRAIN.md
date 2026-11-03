@@ -285,7 +285,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   with one small case for the hands (86b). `main` at v141 (3cd2fb1). What
   the brain ran: the log (`docs/archive/brain-log.md`). Mikey's answers this
   session: the steal at full (85e), a theme's rest kept (85f), the app may
-  choose lite by itself on slow devices (87b). **Next: the hands take 88-92.** **The brain's next check: the phase's end, after
+  choose lite by itself on slow devices (87b). **Next: the hands take 88b, then 92** (88 #318, 89-91 #319-#321 merged 2026-11-03; 91's note answered in the queue's "The phase's end"). **The brain's next check: the phase's end, after
   92** (the queue says what it holds), or sooner if a note comes in.
 - **Waiting on Mikey's ears, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
