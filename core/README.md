@@ -309,7 +309,11 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   a day of Endless at speed (CI's `endless` job: no drift, no growth), and
   `tests/length.rs` holds the rest (every profile, 1 to 32,768 bars, a
   section reached straight or through). `piece::time` is the play time the
-  app's Length picker shows (`pieceTime` in `js/generator.js`).
+  app's Bars picker shows (`pieceTime` in `js/generator.js`). The length is
+  how many bars the loop is, never when it ends (queue item 88b): the player
+  plays round after round and hands the host no end; the app's length slider
+  decides when a track hands over, and one that ends inside a pass lets the
+  core's notes go at a phrase line (`dl_fade_all`, `Core::fade_all`).
 - **The key and the mode** (`Request::with_keys`, `Request::with_scales`,
   queue item 89; `key=D`, `key=D|G`, `scale=dorian` and `scale=dorian|aeolian`
   as text, `dl_player_keys` and `dl_player_scales` with a bit for each home

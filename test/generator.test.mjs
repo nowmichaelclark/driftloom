@@ -2320,6 +2320,21 @@ console.log('\nVoices and layers (queue item 91)');
     const back = decodeAlbum(album).specs;
     check('an album carries them too', back[0].askVoices.melody.join() === 'flute' && back[1].askVoices === undefined && back[2].askLayers.melody === 'off' && back[2].mutes.melody === true);
   }
+  // Share code format 12 (queue item 88b): a track length shorter than a
+  // pass, in bars; one of whole passes is the two bytes it always was.
+  {
+    const spec = newSpec(7110, 'bars=1024');
+    const plain = encodeSong(spec);
+    const passes = encodeSong({ ...spec, playFor: 3 });
+    const bars = { ...spec, playBars: 150 };
+    const code = encodeSong(bars);
+    const back = decodeSong(code);
+    check('a track length shorter than a pass is kept in its code, and only there', back.playBars === 150 && !back.playFor && encodeSong(back) === code
+      && decodeSong(plain).playBars === undefined && decodeSong(passes).playFor === 3 && decodeSong(passes).playBars === undefined, code);
+    check('which is format 12; whole passes keep the format they had', code.slice(4, 6) !== plain.slice(4, 6) && passes.slice(4, 6) === plain.slice(4, 6) && passes.length === plain.length);
+    const album = decodeAlbum(encodeAlbum('ends', [bars, newSpec(2)])).specs;
+    check('an album carries it too', album[0].playBars === 150 && album[1].playBars === undefined);
+  }
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

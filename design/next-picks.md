@@ -91,6 +91,11 @@ weight, `--text-secondary`.
 
 ## Length picker
 
+**Renamed "Bars" (Mikey, 2026-11-03; queue item 88b):** its head reads
+"Bars" and the panel's "any length" reads "any bars"; it sets how many bars
+a loop is, and when a loop ends is the Sound panel's length slider. Text
+only; the rest of this section stands.
+
 Opened from the length value in the panel. A view of its own in the
 middle viewport.
 

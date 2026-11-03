@@ -39,8 +39,11 @@ export const STEPS_PER_BAR = 16;
 // seed and the number alone), so a section costs the same and is reached
 // straight from its number at any length. A round's last section is cut
 // short at a bar line where the loop's length doesn't divide the piece's
-// (for Mikey's ears). At its end a piece comes round, its sections numbered
-// on, as a loop's passes are; the app plays it once round and moves on.
+// (for Mikey's ears). At its end a piece comes round to its first section,
+// its sections numbered on, as a loop's passes are (each round wanders
+// afresh; with the wander off every round is the same notes): a piece is a
+// loop, its pass all of its sections. The length asked is the loop's, never
+// when it ends: the app's length slider decides that (queue item 88b).
 export const SECTION_BARS = Math.max(...Object.values(CHARACTERS).flatMap((c) => c.bars.map(([n]) => n)));
 
 // The piece of the loop of `spec`, or null for a loop with no length asked:
@@ -56,6 +59,15 @@ export function pieceOf(spec) {
   return { bars, sections, last: rest || bars };
 }
 
+// The bars a pass of the loop of `spec` plays (queue item 88b): the length
+// asked (Infinity for 'endless'), else the loop's own. What the card shows,
+// and what the length slider counts a pass as.
+export function loopBars(spec) {
+  if (!spec) return 0;
+  if (spec.length === 'endless') return Infinity;
+  return typeof spec.length === 'number' ? spec.length : spec.bars;
+}
+
 // The bars section `n` of `piece` plays: a section's, or a round's last's.
 export function sectionBars(piece, n) {
   return Number.isFinite(piece.sections) && n % piece.sections === piece.sections - 1 ? piece.last : piece.bars;
@@ -68,7 +80,7 @@ export function pieceCut(piece) {
 
 // How long `bars` bars of `stepsPerBar` steps play at `bpm`, in seconds (the
 // Rust's `piece::seconds`, the same operations in the same order): what the
-// Length picker shows, so the app and the core never disagree.
+// Bars picker shows, so the app and the core never disagree.
 export function pieceSeconds(bars, stepsPerBar, bpm) {
   return bars * stepsPerBar * (60 / bpm / 4);
 }

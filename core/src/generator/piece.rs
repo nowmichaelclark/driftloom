@@ -6,7 +6,7 @@
 //! bars (the longest any profile's table draws, 32) is the loop's length:
 //! the spec's `bars` is the length asked, the table's draw still made and
 //! overruled (so no other draw moves), honored where the tables never draw
-//! it (1, 3, 7 bars). The piece is that loop, played once round.
+//! it (1, 3, 7 bars). The piece is that loop, played round as loops are.
 //!
 //! **Longer ones are sections.** Past `SECTION_BARS`, and for Endless, the
 //! loop keeps the length its profile drew, and the piece is that loop
@@ -26,11 +26,13 @@
 //! **At its end** a piece comes round, as a loop does: its sections are
 //! numbered on (each round's drawn afresh, as a loop's next pass wanders),
 //! and every round is exactly the length asked, its last section cut short
-//! where it was. With the wander off the rounds are the same. The app plays
-//! a piece once round and moves on to the next loop; a host that wants
-//! another piece asks for one. Endless never comes round: its sections are
-//! numbered on, the wander's pass number wrapping past 2^32 (some ten
-//! thousand years of two-bar sections) as the JavaScript's does.
+//! where it was. With the wander off the rounds are the same. The length is
+//! how many bars the loop is, never when it ends (queue item 88b): the
+//! player plays round after round and hands the host no end; the host
+//! decides, as the app's length slider does. Endless never comes round:
+//! its sections are numbered on, the wander's pass number wrapping past
+//! 2^32 (some ten thousand years of two-bar sections) as the JavaScript's
+//! does.
 //!
 //! A piece's section `n` is its loop's pass `n`: the player counts them
 //! from the piece's start (a loop with no length asked keeps today's first
@@ -121,7 +123,7 @@ pub fn pass_number(n: u64) -> u32 {
 
 /// How long `bars` bars of `steps_per_bar` steps play at `bpm`, in seconds
 /// (`pieceSeconds` in `js/generator.js`, the same operations in the same
-/// order): what the app's Length picker shows ("16 bars, about 45-55 s"),
+/// order): what the app's Bars picker shows ("16 bars, about 45-55 s"),
 /// so the app and the core never disagree.
 #[must_use]
 pub fn seconds(bars: f64, steps_per_bar: f64, bpm: f64) -> f64 {

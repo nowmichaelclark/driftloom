@@ -851,31 +851,34 @@ check('player: its first step a moment on, and the cursor starts there with it',
   check('player: Play again hands it the loop again', posts.some((p) => p[0] === 'playLoad'));
 }
 
-console.log('\nLength (queue item 88)');
+console.log('\nLength (queue items 88 and 88b)');
 {
-  // A piece plays its sections, a round's last cut short, and hands over
-  // once round, at exactly its length; its first section is section 0.
-  const tops = (spec, passes) => {
+  // A piece plays its sections, a round's last cut short, and comes round
+  // to its first section; its first section is section 0. A loop's own
+  // length never ends it: only the length slider does (queue item 88b).
+  const tops = (spec, passes, { drift = true, onEnd = null } = {}) => {
     const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
-    const { synth } = stubSynth(false);
+    const { synth, calls } = stubSynth(false);
     const engine = new Engine(ctx, synth);
-    engine.driftOn = true;
+    engine.driftOn = drift;
     // A load after a loop that played three passes: today's first pass is
     // drawn at 3, a piece's at its own 0.
     engine.loopCount = 3;
     engine.load(spec);
     const first = JSON.stringify(engine.live);
     let ended = null;
-    engine.onTrackEnd = () => { ended ??= engine.absStep; };
+    let fade = null;
+    engine.onTrackEnd = () => { if (ended == null) { ended = engine.absStep; fade = engine.endFade; } if (onEnd) onEnd(engine); };
     const starts = [0];
+    const lives = [first];
     let n = 0;
-    while (engine.loopCount < passes && n++ < 1e6) {
+    while (engine.loopCount < passes && n++ < 1e7 && !engine.handover) {
       const before = engine.loopCount;
       engine._advance();
-      if (engine.loopCount !== before) starts.push(engine.absStep);
+      if (engine.loopCount !== before) { starts.push(engine.absStep); lives.push(JSON.stringify(engine.live)); }
     }
     engine.clock.dispose();
-    return { starts, ended, first, zero: JSON.stringify(engine._wander(0)), three: JSON.stringify(engine._wander(3)), engine };
+    return { starts, lives, ended, fade, calls, first, zero: JSON.stringify(engine._wander(0)), three: JSON.stringify(engine._wander(3)), engine };
   };
   // A loop of 16 or 24 bars, which 100 doesn't divide.
   let at = 7100;
@@ -883,21 +886,78 @@ console.log('\nLength (queue item 88)');
   const spec = newSpec(at, 'bars=100');
   const spb = spec.stepsPerBar;
   const sections = Math.ceil(100 / spec.bars);
-  const { starts, ended, first, zero, three } = tops(spec, sections + 2);
+  const { starts, ended, first, zero, three } = tops(spec, 2 * sections + 1);
   const lens = starts.slice(1).map((x, i) => (x - starts[i]) / spb);
   const want = [];
-  for (let i = 0; i < sections + 2; i++) want.push(i % sections === sections - 1 ? 100 % spec.bars : spec.bars);
-  check(`100 bars of a ${spec.bars}-bar loop: its sections, the last cut short`, JSON.stringify(lens) === JSON.stringify(want), JSON.stringify(lens));
-  check('it hands over once round, at exactly 100 bars', ended === 100 * spb, String(ended));
+  for (let i = 0; i < 2 * sections + 1; i++) want.push(i % sections === sections - 1 ? 100 % spec.bars : spec.bars);
+  check(`100 bars of a ${spec.bars}-bar loop: its sections, the last cut short, then round again`, JSON.stringify(lens) === JSON.stringify(want), JSON.stringify(lens));
+  check('with the slider off it plays on past its 100 bars', ended === null && starts[sections] === 100 * spb && starts[2 * sections] === 200 * spb, String(ended));
   check('a piece\'s first section is section 0, not the last loop\'s count', first === zero && first !== three);
+  const still = tops(spec, 2 * sections + 1, { drift: false });
+  check('wander off: pass 2\'s section 0 is pass 1\'s', still.lives[sections] === still.lives[0] && still.lives[0] === JSON.stringify(still.engine.base));
   const plain = newSpec(7100);
   const t = tops(plain, 3);
-  check('a loop with no length keeps today\'s first pass and never hands over', t.first === t.three && t.ended === null);
-  const short = tops(newSpec(7101, 'bars=3'), 2);
-  check('3 bars: a pass of 3 bars, handed over after it', short.starts[1] === 3 * short.engine.spec.stepsPerBar && short.ended === short.starts[1]);
+  check('a loop with no length keeps today\'s first pass and plays on', t.first === t.three && t.ended === null);
+  const short = tops(newSpec(7101, 'bars=3'), 4);
+  check('3 bars: passes of 3 bars, never handed over with the slider off', short.starts.slice(1).every((x, i) => x - short.starts[i] === 3 * short.engine.spec.stepsPerBar) && short.starts.length === 5 && short.ended === null);
+  const s14 = newSpec(7103, 'bars=14');
+  const fourteen = tops(s14, 3);
+  check('14 bars: a cycle of 14 bars, three passes and on with the slider off', s14.bars === 14 && fourteen.ended === null
+    && fourteen.starts.slice(1).every((x, i) => x - fourteen.starts[i] === 14 * s14.stepsPerBar), JSON.stringify(fourteen.starts));
   const endless = tops(newSpec(7102, 'bars=endless'), 6);
   check('endless: whole sections, never handed over', endless.ended === null
     && endless.starts.slice(1).every((x, i) => x - endless.starts[i] === endless.engine.spec.bars * endless.engine.spec.stepsPerBar));
+
+  // The slider: whole passes hand over at a pass's end, with no fade.
+  const two = { ...s14, playFor: 2 };
+  const twice = tops(two, 9);
+  check('14 bars, the slider at two passes: handed over at 28 bars, no fade', twice.ended === 28 * s14.stepsPerBar && twice.fade === null, `${twice.ended} ${twice.fade}`);
+  const round2 = tops({ ...spec, playFor: 2 }, 9 * sections);
+  check('100 bars, the slider at two passes: handed over at 200 bars, no fade', round2.ended === 200 * spb && round2.fade === null, String(round2.ended));
+  // Shorter than a pass: past the bars, at the first phrase line, fading.
+  let lat = 7200;
+  while (![16, 24, 32].includes(newSpec(lat, 'bars=1024').bars)) lat++;
+  const long = newSpec(lat, 'bars=1024');
+  const bars5 = Math.ceil(300 / ((long.stepsPerBar || 16) * (60 / long.bpm / 4)));
+  const mid = tops({ ...long, playBars: bars5 }, 1e6);
+  const lspb = long.stepsPerBar;
+  const line = Math.ceil(bars5 / 4) * 4 * lspb;
+  check(`1,024 bars (${long.bars}-bar sections), ${bars5} bars set: handed over at the first four-bar line past them, fading there`,
+    mid.ended === line && mid.ended >= bars5 * lspb && mid.fade != null && Math.abs(mid.fade - line * mid.engine.stepDur) < 1e-6,
+    `${mid.ended} against ${line}, fade ${mid.fade}`);
+  const ahead = tops({ ...long, playBars: bars5 }, 0);
+  check('the clock counts down to that line', ahead.engine.endStep() === line, String(ahead.engine.endStep()));
+  const fiveBar = newSpec(7300, 'bars=endless');
+  fiveBar.bars = 5; // sections of five bars: no four- or two-bar lines
+  const odd = tops({ ...fiveBar, playBars: 7 }, 1e6);
+  check('Endless of five-bar sections, 7 bars set: handed over at the section\'s end, 10 bars', odd.ended === 10 * fiveBar.stepsPerBar && odd.fade != null, String(odd.ended));
+
+  // Decided on the core: nothing of the old loop at or after the line, and
+  // its notes let go there before the next loop's are handed over.
+  const r = rig(true, lat);
+  r.engine.load({ ...long, mutes: r.spec.mutes, playBars: 8 });
+  let endAt = null;
+  r.engine.onTrackEnd = () => { endAt = r.engine.nextStepTime; };
+  r.run(40);
+  const notes = r.calls.filter((c) => ['drum', 'bass', 'pad', 'voice', 'texture'].includes(c.name));
+  const fades = r.calls.filter((c) => c.name === 'fadeNotes');
+  check('on the core: no note decided at or past the line', endAt != null && notes.every((c) => c.time < endAt + 0.2) && notes.filter((c) => c.time >= endAt - 1e-6).length === 0,
+    `end ${endAt}, last ${Math.max(...notes.map((c) => c.time))}`);
+  check('and every note let go from the line over a second', fades.length === 1 && Math.abs(fades[0].args[0] - endAt) < 1e-9 && Math.abs(fades[0].args[1] - endAt - 1) < 1e-9
+    && r.calls.indexOf(fades[0]) > r.calls.indexOf(notes[notes.length - 1]), JSON.stringify(fades.map((c) => c.args)));
+  r.engine.clock.dispose();
+
+  // Moved while playing: counted from the step heard, the pass playing the
+  // first; a loop's wander count is left alone.
+  const e = tops({ ...s14, playFor: 1 }, 0).engine;
+  let endedAt = null;
+  e.onTrackEnd = () => { endedAt ??= e.absStep; };
+  for (let i = 0; i < 20 * s14.stepsPerBar; i++) e._advance();
+  check('before the slider moved, one pass ended it at 14 bars', endedAt === 14 * s14.stepsPerBar, String(endedAt));
+  e.handover = false;
+  e.restartCount();
+  const was = e.loopCount;
+  check('moved: one pass ends it at the end of the pass playing', e.endStep() === 28 * s14.stepsPerBar && e.loopCount === was, String(e.endStep()));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

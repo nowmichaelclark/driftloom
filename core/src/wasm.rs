@@ -305,6 +305,15 @@ pub extern "C" fn dl_cancel_from(time: f64) {
     core().cancel_from(time);
 }
 
+/// Let every note handed over go, falling from `from` to nothing at `to`
+/// (seconds; `Core::fade_all`): the page's track that its length slider
+/// ends inside a pass, at a phrase line (queue item 88b), before it hands
+/// over the next loop's notes. Returns how many notes it reached.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_fade_all(from: f64, to: f64) -> u32 {
+    core().fade_all(from, to)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_late() -> u32 {
     core().late()

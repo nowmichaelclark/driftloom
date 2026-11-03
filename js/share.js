@@ -43,12 +43,14 @@ const DECODE_MAP = (() => {
 // item 85d) the theme it bends; format 8 (queue item 88) the length it was
 // asked for; format 9 (queue item 89) the key and the mode it was asked for;
 // format 10 (queue item 90) the style (set of profiles) it was asked for;
-// format 11 (queue item 91) the voices and the layers it was asked for.
+// format 11 (queue item 91) the voices and the layers it was asked for;
+// format 12 (queue item 88b) a track length shorter than one pass, in bars.
 // Each is written only by a loop that needs it
 // (a loop without vibes is still format 3), so every code already in
 // circulation, every saved album and every `/rank` answer keeps the exact
 // string it had.
-export const FORMAT = 11;
+export const FORMAT = 12;
+const VOICES_FORMAT = 11;
 const STYLE_FORMAT = 10;
 const KEY_FORMAT = 9;
 const LENGTH_FORMAT = 8;
@@ -90,8 +92,14 @@ function hasVoices(spec) {
   return !!(spec && ((spec.askVoices && Object.values(spec.askVoices).some((v) => v && v.length)) || (spec.askLayers && Object.keys(spec.askLayers).length)));
 }
 
+// A track length shorter than one pass (queue item 88b; `spec.playBars`).
+function hasPlayBars(spec) {
+  return !!(spec && !spec.playFor && Number.isInteger(spec.playBars) && spec.playBars >= 1);
+}
+
 function formatOf(spec) {
-  if (hasVoices(spec)) return FORMAT;
+  if (hasPlayBars(spec)) return FORMAT;
+  if (hasVoices(spec)) return VOICES_FORMAT;
   if (hasStyle(spec)) return STYLE_FORMAT;
   if (hasKeyScale(spec)) return KEY_FORMAT;
   if (hasLength(spec)) return LENGTH_FORMAT;
@@ -301,6 +309,10 @@ function writeSpec(w, spec, version = FORMAT) {
     });
     w.vu(layers);
   }
+  // Format 12: a track length shorter than one pass (queue item 88b), in
+  // bars, as one number in as few bytes as it needs; zero is none. (A track
+  // length of whole passes is the two bytes above, as ever.)
+  if (version >= 12) w.vu(hasPlayBars(spec) ? spec.playBars : 0);
 }
 
 function readSpec(r, version = FORMAT) {
@@ -430,6 +442,10 @@ function readSpec(r, version = FORMAT) {
       else if (layers & (1 << (i + 5))) asked[layer] = 'off';
     });
     if (Object.keys(asked).length) spec.askLayers = asked;
+  }
+  if (version >= 12) {
+    const bars = r.vu();
+    if (bars >= 1 && bars <= Number.MAX_SAFE_INTEGER && !spec.playFor) spec.playBars = bars;
   }
   return spec;
 }

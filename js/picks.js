@@ -2,8 +2,9 @@
 // toward. Three places: Now Playing shows the picked values as pills (only
 // outside an album; in an album the album is what comes next), the Vibe
 // panel lists the five lines (the vibe key and the pills open it; it was
-// "New loops" in the brief, renamed by Mikey 2026-10-14), and the Length
-// picker sets bars.
+// "New loops" in the brief, renamed by Mikey 2026-10-14), and the Bars
+// picker (was Length; queue item 88b) sets how many bars a new loop is.
+// When a loop ends is the Sound panel's length slider, not the picks.
 //
 // The five lines are moods, tempo and length (sharing a line), key, style
 // and voices. Moods are today's vibes (state.vibes). Length and tempo are
@@ -30,14 +31,14 @@ const STOPS = 15;
 const NB = ' ';
 const LINES = [
   { id: 'mood', any: 'any mood', name: 'Any mood' },
-  { id: 'pace', any: 'any tempo · any length', name: 'Any tempo and length' },
+  { id: 'pace', any: 'any tempo · any bars', name: 'Any tempo and bars' },
   { id: 'key', any: 'any key', name: 'Any key' },
   { id: 'style', any: 'any style', name: 'Any style' },
   { id: 'voices', any: 'any voices', name: 'Any voices' },
 ];
 
 let api = null;
-// The Length picker works on a draft: done keeps it, cancel drops it.
+// The Bars picker works on a draft: done keeps it, cancel drops it.
 // mode is 'bars', 'endless' or 'any'; bars is the number shown when the
 // mode is 'bars', and where −1, +1 and the slider start from otherwise.
 let draft = null;   // { bars, mode }
@@ -274,8 +275,9 @@ export function renderPanel() {
       }
       vals.append(b);
     } else if (line.id === 'pace') {
-      // Tempo has no picker yet, so it is shown, not tapped. Length opens
-      // the Length picker.
+      // Tempo has no picker yet, so it is shown, not tapped. The bars open
+      // the Bars picker (queue item 88b: was Length; when a loop ends is the
+      // Sound panel's length slider).
       if (isAny.pace) {
         vals.append(plain('any tempo'));
         const sep = document.createElement('span');
@@ -284,8 +286,8 @@ export function renderPanel() {
         sep.textContent = '·';
         vals.append(sep);
         const b = lineButton('', () => api.openLength());
-        b.append(plain('any length'));
-        b.setAttribute('aria-label', 'Length: any');
+        b.append(plain('any bars'));
+        b.setAttribute('aria-label', 'Bars: any');
         vals.append(b);
       } else {
         const t = document.createElement('span');
@@ -293,8 +295,8 @@ export function renderPanel() {
         t.append(tempo ? pill(tempoText(tempo), 'tempo') : pill('any tempo', 'tempo', { dashed: true }));
         vals.append(t);
         const b = lineButton('', () => api.openLength());
-        b.append(length != null ? pill(lengthText(length), 'length') : pill('any length', 'length', { dashed: true }));
-        b.setAttribute('aria-label', `Length: ${length != null ? spoken(lengthText(length)) : 'any'}`);
+        b.append(length != null ? pill(lengthText(length), 'length') : pill('any bars', 'length', { dashed: true }));
+        b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any'}`);
         vals.append(b);
       }
       const cant = pickProblem(state);
@@ -367,7 +369,7 @@ function fitPanel() {
   fitPills(list);
 }
 
-// --------------------------------------------------------- Length picker
+// ----------------------------------------------- Bars picker (was Length)
 
 function stopOf(bars) { return log2(bars); }
 

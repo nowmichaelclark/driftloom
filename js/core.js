@@ -476,6 +476,12 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'playVolume', volume });
   }
 
+  // Every note handed over, sounding or waiting, falls from `from` to
+  // nothing at `to` and ends (queue item 88b; Core::fade_all).
+  fadeAll(from, to) {
+    this.node.port.postMessage({ type: 'fadeAll', from, to });
+  }
+
   // Every note handed over that has not started yet, dropped; the ones
   // sounding carry on (queue item 39). With `from`, only those asked for
   // at that time or later (queue item 40).

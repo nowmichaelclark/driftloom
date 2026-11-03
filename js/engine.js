@@ -5,7 +5,7 @@
 // The actual note times are absolute Web Audio clock times, which are
 // sample-accurate. Standard two-clock pattern.
 
-import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf, keyMask, scaleMask, styleMask, voiceMask, layerState, pieceOf, sectionBars, pieceCut } from './generator.js';
+import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf, keyMask, scaleMask, styleMask, voiceMask, layerState, pieceOf, sectionBars, pieceCut, loopBars } from './generator.js';
 import { Rng } from './rng.js';
 import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
@@ -24,6 +24,17 @@ const DRIFT_SALT = 0x5eed1e55;
 // is asked for (a few to a hundred), so the first step falls this much later
 // than the engine's own would, to give it the time.
 const PLAYER_LEAD = 0.4;
+// How long the old loop's notes take to fall to nothing when the length
+// slider ends a track inside a pass, at a phrase line (queue item 88b), in
+// seconds: the core's own crossfade for a change of loop (`player::change::
+// CROSSFADE`), so a loop let go mid-pass sounds as one changed at a phrase
+// does. For Mikey's ears.
+export const END_FADE = 1.0;
+// The bars a phrase takes, at most (`player::change::PHRASE_BARS`): a
+// track ending inside a pass ends on the next line of four bars from its
+// section's start (two where four doesn't divide it, else the section's
+// end), as a change at `Moment::Phrase` does.
+const PHRASE_BARS = 4;
 
 // While you are looking at it, a short lookahead keeps mutes and re-rolls
 // feeling immediate. Once the page is hidden the timer may be throttled to
@@ -326,6 +337,16 @@ export class Engine {
     this.onStep = null;
     this.onLoop = null;
     this.onTrackEnd = null;
+    // The step the length slider counts from (queue item 88b): 0 at a load,
+    // the step being heard when the slider moves. A track hands over after
+    // `spec.playFor` whole passes (a pass of a piece is all of its
+    // sections), the pass playing then counted as the first; or, with a
+    // length shorter than a pass, `spec.playBars` bars on, at the next
+    // phrase line, the old loop's notes fading (END_FADE).
+    this.countFrom = 0;
+    // A track ending inside a pass: the time of the phrase line it ends on,
+    // until its notes are let go (`_decide`).
+    this.endFade = null;
     // No step at or after this time is decided (queue item 87b: an engine
     // handing over to another at a boundary). Infinity: no end.
     this.until = Infinity;
@@ -462,6 +483,9 @@ export class Engine {
     // Next, Previous or a loop picked while playing: what the old loop has
     // decided ahead does not play out first.
     if (this.playing && !keepPosition && !this.handover) this._cut();
+    // A track that ended inside a pass lets its notes go first (a host that
+    // loads the next loop at once, inside the step that ended it).
+    this._letGo();
     // A re-roll keeps its place: on the core, from the step sounding now,
     // decided again with the new layer, not after the queue has run out.
     const back = keepPosition ? this._rewindPoint() : null;
@@ -549,6 +573,7 @@ export class Engine {
       this.absStep = 0;
       this.loopCount = 0;
       this.origin = 0;
+      this.countFrom = 0;
       this.decided = [];
       this.organHold = NO_HOLD;
     } else {
@@ -586,6 +611,7 @@ export class Engine {
     this.absStep = 0;
     this.loopCount = 0;
     this.origin = 0;
+    this.countFrom = 0;
     this.live = this.driftOn ? this._wander(0) : this.base;
     this.visualQueue = [];
     this._playerLoad();
@@ -1035,7 +1061,9 @@ export class Engine {
     while (old < this.decided.length && this.decided[old].time < now - 1) old++;
     if (old) this.decided.splice(0, old);
     let guard = 0;
-    while (this.nextStepTime < horizon && this.nextStepTime < this.until && guard++ < 256) {
+    // A track that has handed over decides nothing more: the next loop
+    // takes its first step where this one's next would have been.
+    while (this.nextStepTime < horizon && this.nextStepTime < this.until && !this.handover && guard++ < 256) {
       if (keep) {
         this.decided.push({
           time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount, origin: this.origin,
@@ -1049,7 +1077,20 @@ export class Engine {
       this._advance();
     }
     if (keep) this._why('lookahead');
+    this._letGo();
     this._flush();
+  }
+
+  // A track ending inside a pass (queue item 88b): every note it decided is
+  // handed over, then each falls from the phrase line to nothing over
+  // END_FADE, before the next loop hands over any of its own
+  // (Core::fade_all). On the JavaScript synth they ring out, as at a pass's
+  // end.
+  _letGo() {
+    if (this.endFade == null) return;
+    for (const { build } of this.pending.splice(0)) build();
+    this.synth.fadeNotes(this.endFade, this.endFade + END_FADE);
+    this.endFade = null;
   }
 
   // How the loop wanders on pass `pass` ("Let the loop wander"): a variation
@@ -1089,15 +1130,73 @@ export class Engine {
       // touched, so the piece always returns to the version you saved.
       this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
       if (this.onLoop) this.onLoop(this.loopCount);
-      // A track with a set length hands over once it has run its passes; a
-      // piece once it has played round.
-      const limit = this.spec && this.spec.playFor;
-      const round = piece && Number.isFinite(piece.sections) ? piece.sections : 0;
-      if (((limit && this.loopCount >= limit) || (round && this.loopCount >= round)) && this.onTrackEnd) {
-        this.handover = true;
-        this.onTrackEnd();
-      }
     }
+    // A track with a set length hands over once it has run it (queue item
+    // 88b): at a pass's end, or inside a pass at a phrase line, its notes
+    // let go there. A loop's own length never ends it.
+    if (this.onTrackEnd && !this.handover && this._ends()) {
+      this.handover = true;
+      if (this.absStep % this.roundSteps() !== 0) this.endFade = this.nextStepTime;
+      this.onTrackEnd();
+    }
+  }
+
+  // The steps a pass of the whole loop takes (queue item 88b): all of a
+  // piece's sections (Infinity for Endless), or the loop's own. Every pass
+  // takes as many, so a pass begins on a multiple of it from the load.
+  roundSteps() {
+    const spb = this.base.stepsPerBar || 16;
+    return pieceOf(this.spec) ? loopBars(this.spec) * spb : this.base.totalSteps;
+  }
+
+  // The first phrase line at or after step `at` from the load: the next
+  // line of PHRASE_BARS bars from its section's start (two bars where four
+  // don't divide a section, else the section's end), or the section's end
+  // where a round's last is cut short first.
+  phraseLine(at) {
+    const spb = this.base.stepsPerBar || 16;
+    const section = this.base.totalSteps;
+    const unit = section % (PHRASE_BARS * spb) === 0 ? PHRASE_BARS * spb : section % (2 * spb) === 0 ? 2 * spb : section;
+    const round = this.roundSteps();
+    const start = Number.isFinite(round) ? at - (at % round) : 0;
+    const k = Math.floor((at - start) / section);
+    const into = at - start - k * section;
+    const piece = pieceOf(this.spec);
+    const length = piece ? sectionBars(piece, k) * spb : section;
+    return start + k * section + Math.min(Math.ceil(into / unit) * unit, length);
+  }
+
+  // The step from the load the track hands over at, or null when it plays
+  // on (queue item 88b): `spec.playFor` passes from the start of the pass it
+  // was counted from, or the first phrase line `spec.playBars` bars on.
+  endStep() {
+    const spec = this.spec;
+    if (!spec || !this.base) return null;
+    if (spec.playFor) {
+      const round = this.roundSteps();
+      if (!Number.isFinite(round)) return null;
+      return (Math.floor(this.countFrom / round) + spec.playFor) * round;
+    }
+    if (spec.playBars) return this.phraseLine(this.countFrom + spec.playBars * (this.base.stepsPerBar || 16));
+    return null;
+  }
+
+  // Whether the track ends at the step about to be decided: at or past its
+  // end, on a pass's line (whole passes) or a phrase line (a length shorter
+  // than a pass). A slider set to a time already passed ends at the next
+  // such line.
+  _ends() {
+    const end = this.endStep();
+    if (end == null || this.absStep < end) return false;
+    if (this.spec.playFor) return this.absStep % this.roundSteps() === 0;
+    return this.phraseLine(this.absStep) === this.absStep;
+  }
+
+  // The length slider moved (queue item 88b): the track's length counts
+  // from the step being heard, the pass playing as its first.
+  restartCount() {
+    const ahead = this.playing && this.spec ? Math.max(0, Math.round((this.nextStepTime - this.ctx.currentTime) / this.stepDur)) : 0;
+    this.countFrom = Math.max(0, this.absStep - ahead);
   }
 
   // The chapel organ (queue item 61), at each chord the loop strikes, as the
