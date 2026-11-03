@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless). **Next: 89.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless). **Next: 90.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -330,6 +330,29 @@ rang into it from the one before, which a jump can't have.
 
 50, 51 and 52's texts (below) are the briefs, in that order, each on 85's
 request. Sonnet 5.5, high, each.
+
+**89 built (hands, 2026-11-03):** the request's key and mode, each a note or
+mode or a set to choose from (`key=D`, `key=D|G`, `scale=dorian|aeolian`;
+`Request::with_keys`, `with_scales`, `dl_player_keys`, `dl_player_scales`,
+`readRequest`'s `key` and `scale`), in both generators, the player, the
+page's engine, the C header and wasm, and share code format 9 (two numbers,
+each as few bytes as it needs; a loop asked for neither is the format it
+was). The draws are made as ever and the request then overrules two values:
+one the seed already drew inside the set stands, else one of the set from a
+stream of the seed's own (keys alike; modes weighted by the profile mix and
+vibes, a mode the profiles never draw at a floor, `ASKED_FLOOR` 0.25, **for
+Mikey's ears**: so no pair is forbidden and the vibes still lean what they
+can). A key and mode asked overrule a theme's. The app's key line shows what
+is asked ("D dorian") and clears with its "any" key; there is no picker, so
+it cannot be tapped. What a pin changes, per profile: nothing is forbidden;
+a profile's progressions written for other modes fall back to the
+seven-note shapes, and cinder's added F over E and wayfare's minor v play
+where the mode allows them (`plainTriad`, `spelledSteps`). Out of the mode,
+as the catalog's own loops are: the bass's fifth and pickups (a fixed
+interval from a chord's root; 1.2% of its notes pinned, the catalog's 0.85%),
+cinder's spelled chords and the melody over them, and the organ's and
+stab's fixed intervals on the chords channel (0.9% of its notes pinned, the
+same seeds on their own modes 0.7%).
 
 ## 92. "Let the loop wander", unrepeatable in the slider's upper range
 

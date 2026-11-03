@@ -566,6 +566,34 @@ mod player {
         }
     }
 
+    /// Ask the next `dl_play_load` for the home notes in `keys`, a bit each
+    /// with C the lowest (`Request::with_keys`; queue item 89). 1 if it can
+    /// be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_keys(keys: u32) -> u32 {
+        match request().with_keys(keys) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// Ask the next `dl_play_load` for the modes in `scales`, a bit each by
+    /// its place in the core's list (`Request::with_scales`; queue item 89).
+    /// 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_scales(scales: u32) -> u32 {
+        match request().with_scales(scales) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
     /// Pin setting `number` at `value` for what the next `dl_play_load`
     /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
     #[unsafe(no_mangle)]

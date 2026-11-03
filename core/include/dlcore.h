@@ -112,11 +112,26 @@ void dl_player_theme(dl_player *player, uint32_t seed);
    at its end, as a loop does ("a bad length" for anything else). */
 const char *dl_player_length(dl_player *player, double bars);
 
+/* Ask for the home notes in `keys`, a bit each with C the lowest (so D or G
+   is (1 << 2) | (1 << 7)), or for no key in particular with 0 (queue item 89).
+   One note is a pinned key; a set is chosen from, the loop's seed's own where
+   that is in it ("no such key" for a bit past B). */
+const char *dl_player_keys(dl_player *player, uint32_t keys);
+
+/* Ask for the modes in `scales`, a bit each by its place in the core's list
+   (dorian, aeolian, ionian, mixolydian, lydian, phrygian, harmonicMinor,
+   minorPent, majorPent, kumoi, hirajoshi, insen, wholeTone, lydianDominant,
+   phrygianDominant, dorianSharp4, yo, ritusen, akebono), or for no mode in
+   particular with 0 (queue item 89). One mode is a pinned scale ("no such
+   scale" for a bit past the last). */
+const char *dl_player_scales(dl_player *player, uint32_t scales);
+
 /* Ask for what `request` says, as text, in place of what was asked since the
    last load: items split by commas, each a vibe ("glacial"), a vibe and its
    weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
-   ("theme=1234") or a pin ("organ=on", "tunedKick=long", "arc.period=240",
-   "space.room=0.8"). */
+   ("theme=1234"), the length ("bars=1024", "bars=endless"), the key ("key=D",
+   "key=D|G"), the mode ("scale=dorian", "scale=dorian|aeolian") or a pin
+   ("organ=on", "tunedKick=long", "arc.period=240", "space.room=0.8"). */
 const char *dl_player_ask(dl_player *player, const char *request);
 
 /* Ask for the loop of `seed`, with what was asked since the last load. It

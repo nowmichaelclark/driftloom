@@ -8,7 +8,7 @@
 import { newSpec, render, choirOf, drift, rerollLayer, LAYERS, gracesOf, harmonyOf, developmentOf, DEPTH, characterOf, withTodaysChords, vibesOf, metreOf, readRequest, parseRequest, requestText, requestOf, RequestError, TEMPO_LIMIT } from '../js/generator.js';
 import { Rng, randomSeed, seedName } from '../js/rng.js';
 import { patternToMidi } from '../js/midi.js';
-import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
+import { SCALES, SCALE_BRIGHTNESS, SCALE_ORDER, NOTE_NAMES } from '../js/theory.js';
 import { MOODS, moodForCode, codeForMood, moodWord, pointWord } from '../js/moods.js';
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
 import { PINS, SPACE_SETTINGS, isPinName, pinNumbers } from '../js/pins.js';
@@ -1614,10 +1614,10 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
 // and the code that carries it.
 {
   const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
-  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null}'
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null,"key":null,"scale":null}'
     && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
   check('text, in the frozen order, weights and the tempo low first',
-    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null}');
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null,"key":null,"scale":null}');
   check('an object reads as its text does',
     JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
   check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
@@ -1869,6 +1869,162 @@ console.log('\nLength (queue item 88)');
     [longer(32), longer(1000), longer(32768)].join(' '));
   check('a loop with a length is format 8, the others as before', encodeSong(newSpec(5, 'bars=64')).slice(4, 6) === '10'
     && encodeSong(newSpec(5, 'theme=9')).slice(4, 6) === '0W' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+}
+
+console.log('\nKey and scale (queue item 89)');
+{
+  const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
+  check('key and scale read, as text and as an object', JSON.stringify(parseRequest('scale=aeolian|dorian,key=G|D'))
+    === JSON.stringify(readRequest({ key: ['D', 7], scale: ['dorian', 'aeolian'] }))
+    && parseRequest('key=D').key.join() === '2' && parseRequest('key=Db').key.join() === '1' && parseRequest('key=C#|Db').key.join() === '1'
+    && parseRequest('scale=lydian').scale.join() === 'lydian' && readRequest({ key: 'Eb|A' }).key.join() === '3,9' && readRequest({ key: [] }).key === null);
+  check('every note by name, either spelling of a black key',
+    NOTE_NAMES.every((n, i) => parseRequest(`key=${n}`).key.join() === String(i)) && ['A#', 'D#', 'G#', 'Gb'].every((n) => parseRequest(`key=${n}`).key.length === 1));
+  check('they read back the same', requestText(parseRequest('cozy,bpm=80,scale=aeolian|dorian,key=G|D')) === 'cozy,bpm=80,key=D|G,scale=dorian|aeolian'
+    && requestText({ key: 5 }) === 'key=F' && requestText({ scale: 'kumoi' }) === 'scale=kumoi');
+  const lines = [['key=H', 'no such key'], ['key=', 'no such key'], ['key', 'no such key'], ['key=D|', 'no such key'], ['key=d', 'no such key'],
+    ['scale=nope', 'no such scale'], ['scale=', 'no such scale'], ['scale', 'no such scale'], ['scale=dorian|', 'no such scale'], ['scale=Dorian', 'no such scale']];
+  check('the refusals, each its plain line', lines.every(([t, line]) => refused(t) === line), lines.map(([t]) => refused(t)).join(' | '));
+  check('in an object too', refused({ key: 12 }) === 'no such key' && refused({ key: 1.5 }) === 'no such key' && refused({ key: ['D', 'Q'] }) === 'no such key'
+    && refused({ scale: 'constructor' }) === 'no such scale' && refused({ scale: 3 }) === 'no such scale' && refused({ key: 0, scale: ['dorian'] }) === null);
+  check('the modes\' order is the share code\'s and the core\'s', SCALE_ORDER.join() === Object.keys(SCALES).join() && SCALE_ORDER.length === 19);
+  check('nothing asked keeps nothing in the spec', newSpec(5).askKey === undefined && newSpec(5).askScale === undefined
+    && JSON.stringify(newSpec(5, 'cozy')) === JSON.stringify({ ...newSpec(5, { vibes: ['cozy'], key: null, scale: null }) }));
+
+  // Pinned: the key and the mode are the loop's, and measured in the render
+  // the melody, the chords and the texture stay in the mode, the tonic chord
+  // sounds on the key, whichever profile leads (200 loops and every profile
+  // at least a dozen times). The bass is judged apart: its fifth and its
+  // pickups sit a fixed interval from a chord's root, in or out of a mode,
+  // as they always did; and cinder's chords, spelled to carry the added F
+  // over E, are the profile's own exception, and its melody over them.
+  const lead = (spec) => Object.entries(spec.mix).sort((a, b) => b[1] - a[1])[0][0];
+  const profiles = Object.keys(CHARACTERS).filter((k) => !CHARACTERS[k].alias);
+  const led = Object.fromEntries(profiles.map((p) => [p, 0]));
+  const r = new Rng(8901);
+  let loops = 0, honored = 0, tonics = 0, sounded = 0, outside = 0, bassOut = 0, bassAll = 0, bad = '';
+  const outBy = {};
+  for (let i = 0; loops < 200 || Object.values(led).some((n) => n < 12); i++) {
+    if (i > 6000) { bad ||= `no pin led every profile: ${JSON.stringify(led)}`; break; }
+    const seed = r.seed32();
+    const key = r.int(0, 11);
+    const scale = SCALE_ORDER[r.int(0, SCALE_ORDER.length - 1)];
+    const spec = newSpec(seed, { key, scale });
+    const p = lead(spec);
+    if (loops >= 200 && led[p] >= 12) continue;
+    led[p]++;
+    loops++;
+    if (spec.root === key && spec.scale === scale && spec.askKey.join() === String(key) && spec.askScale.join() === scale) honored++; else bad ||= `spec ${seed} ${key} ${scale}`;
+    const rb = render(spec);
+    const pcs = new Set(SCALES[scale].steps.map((x) => (x + key) % 12));
+    const slot = rb.harmony.slots.find((s) => s.degree === 0);
+    if (!slot || ((slot.rootMidi % 12) + 12) % 12 === key) tonics++; else bad ||= `tonic ${seed} ${key} ${scale}`;
+    for (const layer of ['chords', 'melody', 'texture']) {
+      for (const e of rb.tracks[layer]) {
+        if (!e.vel) continue;
+        for (const m of e.notes || [e.midi]) {
+          sounded++;
+          if (!pcs.has(((m % 12) + 12) % 12)) { outside++; outBy[p] = (outBy[p] || 0) + 1; }
+        }
+      }
+    }
+    for (const e of rb.tracks.bass) if (e.vel) { bassAll++; if (!pcs.has(((e.midi % 12) + 12) % 12)) bassOut++; }
+  }
+  check(`pinned: the loop's key and mode are the pin's, and the tonic chord sounds on the key (${loops} loops)`, honored === loops && tonics === loops, bad);
+  check('pinned: the melody, chords and texture stay in the mode (cinder\'s spelled chords excepted)',
+    Object.keys(outBy).every((p) => p === 'cinder') && outside / sounded < 0.0005, `${JSON.stringify(outBy)} of ${sounded}`);
+  // The catalog's own bass sounds 0.85% of its notes outside its mode (1,500
+  // loops, seed 8901); pinned onto all nineteen modes alike, whole tone and
+  // phrygian dominant among them, it is 1.2%. Judged against 2%.
+  check('pinned: the bass\'s fixed-interval pickups are the only notes it sounds outside the mode (under 2%; the catalog\'s own is 0.85%)', bassOut / bassAll < 0.02, `${bassOut} of ${bassAll}`);
+  console.log(`        ${loops} loops, ${outside} of ${sounded} notes outside (${JSON.stringify(outBy)}), the bass ${bassOut} of ${bassAll}`);
+
+  // A set draws only from the set, every member is reached, and a draw
+  // already inside the set stands: nothing the seed made is moved for no
+  // reason.
+  {
+    const keys = [2, 7], scales = ['dorian', 'aeolian', 'kumoi'];
+    const reached = { keys: new Set(), scales: new Set() };
+    let inside = 0, stands = 0, kept = 0, n = 0;
+    for (let i = 0; i < 500; i++) {
+      const seed = r.seed32();
+      const plain = newSpec(seed);
+      const spec = newSpec(seed, { key: keys, scale: scales });
+      reached.keys.add(spec.root);
+      reached.scales.add(spec.scale);
+      if (keys.includes(spec.root) && scales.includes(spec.scale)) inside++;
+      if (keys.includes(plain.root)) { n++; if (spec.root === plain.root) stands++; }
+      if (scales.includes(plain.scale) && spec.scale === plain.scale) kept++;
+    }
+    check('a set: every loop inside it, each member reached across 500 seeds', inside === 500 && reached.keys.size === 2 && reached.scales.size === 3,
+      `${inside} ${[...reached.keys]} ${[...reached.scales]}`);
+    check('a set: a key the seed drew inside it stands', stands === n && n > 0 && kept > 0, `${stands} of ${n}`);
+  }
+
+  // A pinned mode against a profile that never draws it finds its in-between:
+  // no pair is forbidden. Every mode, on every profile, makes a loop that
+  // renders and plays (200 loops and every mode).
+  {
+    let made = 0, total = 0;
+    for (const [s, scale] of SCALE_ORDER.entries()) {
+      for (const [q, p] of profiles.entries()) {
+        const spec = newSpec(9000 + s * 31 + q, { key: (s + q) % 12, scale });
+        spec.mix = { [p]: 1 };
+        const rb = render(spec);
+        total++;
+        // (A bass may rest the whole loop: its sparse style sometimes does.)
+        if (spec.scale === scale && rb.tracks.chords.length) made++;
+      }
+    }
+    check(`no pair is forbidden: every mode on every profile renders (${total} loops)`, made === total, `${made} of ${total}`);
+  }
+
+  // The theme: a key and a mode asked overrule the theme's own, and a theme
+  // asked nothing keeps its own.
+  {
+    let over = 0, keeps = 0;
+    for (let i = 0; i < 60; i++) {
+      const seed = r.seed32(), T = r.seed32();
+      const th = newSpec(T);
+      const key = (th.root + 1 + (i % 11)) % 12;
+      const scale = SCALE_ORDER[(SCALE_ORDER.indexOf(th.scale) + 1 + (i % 18)) % 19];
+      const b = newSpec(seed, { theme: T, key, scale });
+      if (b.root === key && b.scale === scale && JSON.stringify(b.mix) === JSON.stringify(th.mix)) over++;
+      const c = newSpec(seed, { theme: T, key: th.root });
+      if (c.root === th.root && c.scale === th.scale) keeps++;
+    }
+    check('theme: a key and a mode asked overrule the theme\'s, its profile mix stays; a key it already has stands', over === 60 && keeps === 60, `${over} ${keeps}`);
+  }
+
+  // Share code format 9 carries both, in as few bytes as it needs; a loop
+  // with neither is the format it was.
+  {
+    let codes = 0;
+    for (let i = 0; i < 60; i++) {
+      const asked = [{ key: i % 12 }, { scale: SCALE_ORDER[i % 19] }, { key: [i % 12, (i + 5) % 12], scale: [SCALE_ORDER[i % 19], SCALE_ORDER[(i + 7) % 19]] },
+        { vibes: ['cozy'], key: (i + 3) % 12, scale: SCALE_ORDER[(i + 3) % 19], length: 64 }][i % 4];
+      const spec = newSpec(7000 + i, asked);
+      const code = encodeSong(spec);
+      const back = decodeSong(code);
+      if (JSON.stringify(back.askKey) === JSON.stringify(spec.askKey) && JSON.stringify(back.askScale) === JSON.stringify(spec.askScale)
+        && back.root === spec.root && back.scale === spec.scale && encodeSong(back) === code
+        && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks)
+        && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
+    }
+    check('a loop with a key or a mode is made again from its code (60 loops)', codes === 60, String(codes));
+    const plain = encodeSong(newSpec(7100, { length: 8 }));
+    const extra = (asked) => encodeSong(newSpec(7100, { length: 8, ...asked })).length - plain.length;
+    // Two to four bytes: each set a number in as few as it needs, a code's
+    // characters carrying five bits each.
+    check('a key and a mode cost only what they use (two bytes for none, up to four for both)', extra({ key: 3 }) <= 4 && extra({ scale: 'dorian' }) <= 4
+      && extra({ key: 3, scale: 'akebono' }) <= 8 && extra({ key: [0, 5, 11], scale: ['dorian', 'akebono'] }) <= 10,
+      [extra({ key: 3 }), extra({ scale: 'dorian' }), extra({ key: 3, scale: 'akebono' })].join(' '));
+    check('and are format 9; a length alone is still 8, a theme 7, nothing 3', encodeSong(newSpec(5, 'key=D')).slice(4, 6) !== encodeSong(newSpec(5, 'bars=64')).slice(4, 6)
+      && encodeSong(newSpec(5, 'bars=64')).slice(4, 6) === '10' && encodeSong(newSpec(5, 'theme=9')).slice(4, 6) === '0W' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+    const album = encodeAlbum('keys', [newSpec(1, 'key=D'), newSpec(2), newSpec(3, 'scale=kumoi')]);
+    const back = decodeAlbum(album).specs;
+    check('an album carries them too', back[0].askKey.join() === '2' && back[1].askKey === undefined && back[2].askScale.join() === 'kumoi');
+  }
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

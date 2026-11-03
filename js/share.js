@@ -21,7 +21,7 @@
 // It drops I, L, O and U, so there is no 1/l or 0/O confusion, and it is
 // case-insensitive.
 
-import { SCALES } from './theory.js';
+import { SCALES, SCALE_ORDER } from './theory.js';
 import { CHARACTERS, resolveKey } from './characters.js';
 import { codeForMood, moodForCode } from './moods.js';
 import { seedName } from './rng.js';
@@ -41,11 +41,13 @@ const DECODE_MAP = (() => {
 // appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
 // for; format 6 (queue item 85b) the pins it was asked for; format 7 (queue
 // item 85d) the theme it bends; format 8 (queue item 88) the length it was
-// asked for. Each is written only by a loop that needs it
+// asked for; format 9 (queue item 89) the key and the mode it was asked for.
+// Each is written only by a loop that needs it
 // (a loop without vibes is still format 3), so every code already in
 // circulation, every saved album and every `/rank` answer keeps the exact
 // string it had.
-export const FORMAT = 8;
+export const FORMAT = 9;
+const LENGTH_FORMAT = 8;
 const THEME_FORMAT = 7;
 const PINS_FORMAT = 6;
 const TEMPO_FORMAT = 5;
@@ -72,8 +74,13 @@ function hasLength(spec) {
   return !!(spec && (spec.length === 'endless' || (Number.isInteger(spec.length) && spec.length >= 1)));
 }
 
+function hasKeyScale(spec) {
+  return !!(spec && ((Array.isArray(spec.askKey) && spec.askKey.length) || (Array.isArray(spec.askScale) && spec.askScale.length)));
+}
+
 function formatOf(spec) {
-  if (hasLength(spec)) return FORMAT;
+  if (hasKeyScale(spec)) return FORMAT;
+  if (hasLength(spec)) return LENGTH_FORMAT;
   if (hasTheme(spec)) return THEME_FORMAT;
   if (hasPins(spec)) return PINS_FORMAT;
   if (hasTempo(spec)) return TEMPO_FORMAT;
@@ -82,12 +89,7 @@ function formatOf(spec) {
 
 // Frozen orderings. These must never be reordered or codes already written
 // down stop meaning what they meant; append only.
-const SCALE_IDS = [
-  'dorian', 'aeolian', 'ionian', 'mixolydian', 'lydian', 'phrygian',
-  'harmonicMinor', 'minorPent', 'majorPent', 'kumoi', 'hirajoshi', 'insen',
-  'wholeTone', 'lydianDominant', 'phrygianDominant', 'dorianSharp4',
-  'yo', 'ritusen', 'akebono',
-];
+const SCALE_IDS = SCALE_ORDER;
 const PROFILE_IDS = [
   'dust', 'glade', 'thaw', 'haven', 'bloom', 'vapor',
   'halcyon', 'clockwork', 'shatter', 'undertow',
@@ -258,6 +260,15 @@ function writeSpec(w, spec, version = FORMAT) {
   if (version >= 8) {
     w.vu(!hasLength(spec) ? 0 : spec.length === 'endless' ? 1 : spec.length + 1);
   }
+  // Format 9: the key and the mode asked, each a set as a bit mask in as few
+  // bytes as it needs: the home notes (C is bit 0), then the modes (bit by
+  // place in the frozen order). Zero is none asked.
+  if (version >= 9) {
+    const keys = hasKeyScale(spec) && Array.isArray(spec.askKey) ? spec.askKey : [];
+    const scales = hasKeyScale(spec) && Array.isArray(spec.askScale) ? spec.askScale : [];
+    w.vu(keys.reduce((m, k) => m | (1 << ((k % 12 + 12) % 12)), 0));
+    w.vu(scales.reduce((m, k) => (SCALE_IDS.indexOf(k) < 0 ? m : m | (1 << SCALE_IDS.indexOf(k))), 0));
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -358,6 +369,14 @@ function readSpec(r, version = FORMAT) {
     const n = r.vu();
     if (n === 1) spec.length = 'endless';
     else if (n > 1 && n - 1 <= Number.MAX_SAFE_INTEGER) spec.length = n - 1;
+  }
+  if (version >= 9) {
+    const keys = r.vu();
+    const scales = r.vu();
+    const askKey = Array.from({ length: 12 }, (_, i) => i).filter((i) => keys & (1 << i));
+    const askScale = SCALE_IDS.filter((_, i) => scales & (1 << i));
+    if (askKey.length) spec.askKey = askKey;
+    if (askScale.length) spec.askScale = askScale;
   }
   return spec;
 }

@@ -9,6 +9,7 @@ import { Rng } from '../js/rng.js';
 import { VIBE_IDS } from '../js/vibes.js';
 import { kickKindOf } from '../js/choices.js';
 import { PINS } from '../js/pins.js';
+import { SCALE_ORDER } from '../js/theory.js';
 
 // The corpora (tools/gen-golden.mjs, "The cases").
 export const CORPUS_SEED = 1;
@@ -44,6 +45,10 @@ export const REST_FIRST = [2428270433, 'theme=3570153259,booming=0.31,cheeky=0.2
 // length of the kind its index picks (`lengthCase`).
 export const LENGTH_SEED = 88;
 export const LENGTH_N = 240;
+// The keys and modes (queue item 89): seeds from their own stream, each
+// with a key and a mode of the kind its index picks (`keyCase`).
+export const KEY_SEED = 89;
+export const KEY_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -149,7 +154,34 @@ export function cases(goldenCodes) {
     const seed = long.seed32();
     out.push({ set: 'length', index: i, seed, vibes: null, request: lengthCase(long, i, seed) });
   }
+  const keyed = new Rng(KEY_SEED);
+  for (let i = 0; i < KEY_N; i++) {
+    const seed = keyed.seed32();
+    out.push({ set: 'key', index: i, seed, vibes: null, request: keyCase(keyed, i, seed) });
+  }
   return out;
+}
+
+// A key and a mode, of the kind `i` picks, drawn from `r` (queue item 89):
+// one key, a set of two to four, one mode, a set of two to five, one of each,
+// sets of both with vibes, one of each with a tempo and pins, and a theme
+// with a key and a mode asked.
+function keyCase(r, i, seed) {
+  const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const some = (list, n) => r.shuffle(list.slice()).slice(0, n);
+  const keys = (n) => `key=${some(KEYS, n).join('|')}`;
+  const scales = (n) => `scale=${some(SCALE_ORDER, n).join('|')}`;
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  switch (i % 8) {
+    case 0: return keys(1);
+    case 1: return keys(2 + (i % 3));
+    case 2: return scales(1);
+    case 3: return scales(2 + (i % 4));
+    case 4: return [keys(1), scales(1)].join(',');
+    case 5: return [...vibes(1 + (i % 3)), keys(2 + (i % 3)), scales(2 + (i % 4))].join(',');
+    case 6: return [`bpm=${60 + Math.floor(r.f() * 100)}`, keys(1), scales(1 + (i % 2)), 'organ=on', 'echo.beats=1'].join(',');
+    default: return [`theme=${(seed ^ 0x5eed) >>> 0}`, i % 16 < 8 ? keys(1) : scales(2), ...(i % 16 < 8 ? [] : [keys(2)])].join(',');
+  }
 }
 
 // A length, of the kind `i` picks, drawn from `r` (queue item 88): a short

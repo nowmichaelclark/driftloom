@@ -7,7 +7,7 @@
 // random streams never moved.
 
 import { Rng, randomSeed, seedName } from './rng.js';
-import { SCALES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted, GLAD_FROM } from './theory.js';
+import { SCALES, SCALE_ORDER, NOTE_NAMES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted, GLAD_FROM } from './theory.js';
 import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
@@ -292,6 +292,16 @@ export function newSpec(seed = randomSeed(), request = null) {
     spec.scale = held.scale;
     spec.theme = theme;
   }
+  // The key and the mode asked (queue item 89), over the theme's too: the
+  // draws above were still made, and one already inside the set is kept.
+  if (asked.key) {
+    spec.root = askedKey(seed, spec.root, asked.key);
+    spec.askKey = asked.key.slice();
+  }
+  if (asked.scale) {
+    spec.scale = askedScale(seed, c, mix, feel.lift, v, spec.scale, asked.scale);
+    spec.askScale = asked.scale.slice();
+  }
 
   if (c.polymeter) {
     const cycles = r.shuffle(POLY_CYCLES);
@@ -361,6 +371,33 @@ function drawScale(r, seed, c, mix, lift, v) {
   const b = new Rng(((seed ^ BORROW_SALT) >>> 0) || 23);
   if (!b.chance(extraTotal / (ownTotal + extraTotal))) return drawn;
   return b.weighted(extra);
+}
+
+// The key asked (queue item 89), as a set of home notes (0 is C). A draw
+// already inside it stands, so a loop whose key suits the request is the
+// loop the seed makes; else one of the set, from a stream of its own, each
+// alike. The same function overrules a theme's key.
+const KEY_SALT = 0x4b455931;
+function askedKey(seed, root, keys) {
+  if (keys.includes(root)) return root;
+  return new Rng(((seed ^ KEY_SALT) >>> 0) || 29).pick(keys);
+}
+
+// The mode asked (queue item 89), as a set of modes. A draw inside it
+// stands; else one of the set, drawn on a stream of its own, weighted by how
+// much this profile mix and these vibes lean toward each (the pool the mode
+// would have been drawn from, borrowed modes too), a mode the mix never
+// draws at the floor, so no pair is forbidden and the vibes still lean what
+// they can. For Mikey's ears: the floor is a quarter of a weight where the
+// profiles' own run about 0.6 to 7.
+const SCALE_SALT = 0x53434c45;
+const ASKED_FLOOR = 0.25;
+function askedScale(seed, c, mix, lift, v, scale, wanted) {
+  if (wanted.includes(scale)) return scale;
+  const lean = (pool) => moodWeighted(pool, lift).map(([k, w]) => [k, w * vibeLean(v, 'modes', k)]);
+  const have = new Map();
+  for (const [k, w] of [...lean(c.scales), ...lean(borrowedPool(mix, lift))]) have.set(k, (have.get(k) || 0) + w);
+  return new Rng(((seed ^ SCALE_SALT) >>> 0) || 31).weighted(wanted.map((k) => [k, Math.max(have.get(k) || 0, ASKED_FLOOR)]));
 }
 
 export function characterOf(spec) {
@@ -479,7 +516,8 @@ function weighedVibes(r, asked) {
 // request.rs`): the vibes, with or without weights, the tempo, pinned or a
 // range, the theme (queue item 85d: a seed whose loop this one bends) and
 // the pins (queue item 85b, js/pins.js) and the length (queue item 88: a
-// number of bars or 'endless', `pieceOf`). Whatever is not asked is drawn
+// number of bars or 'endless', `pieceOf`), the key and the mode (queue item
+// 89: each one, or a set to choose from). Whatever is not asked is drawn
 // from the seed as ever, and a request of nothing is the loop the seed makes.
 //
 // It comes as:
@@ -488,21 +526,24 @@ function weighedVibes(r, asked) {
 //   - text, as the goldens, `dlrender --request` and the C host write it:
 //     items split by commas, each a vibe ("glacial"), a vibe and its weight
 //     ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
-//     ("theme=1234"), a pin ("organ=on") or the length ("bars=1024",
-//     "bars=endless"); "" or "-" for nothing;
-//   - an object, { vibes, tempo, theme, pins, length }: vibes a list of
-//     names, { name: weight } or [name, weight] pairs (the read form, below),
-//     tempo a number or [low, high], theme a seed, pins { name: value },
-//     length a whole number of bars or 'endless'.
+//     ("theme=1234"), a pin ("organ=on"), the length ("bars=1024",
+//     "bars=endless"), the key ("key=D", "key=D|G") or the mode
+//     ("scale=dorian", "scale=dorian|aeolian"); "" or "-" for nothing;
+//   - an object, { vibes, tempo, theme, pins, length, key, scale }: vibes a
+//     list of names, { name: weight } or [name, weight] pairs (the read form,
+//     below), tempo a number or [low, high], theme a seed, pins { name:
+//     value }, length a whole number of bars or 'endless', key a note's name
+//     or number (C is 0) or a list of them, scale a mode's name or a list.
 // Text and objects are read strictly: a name the core does not have, a bad
 // weight or a tempo out of the core's range is refused (a RequestError, its
 // message the short plain ASCII line "can't do that" shows), never guessed.
 //
-// Read, it is { vibes, tempo, theme, pins, length }: vibes null or [id,
-// weight] pairs in the frozen order (the weight null where none was given),
-// tempo null or [low, high], whole bpm (equal when pinned), theme null or a
-// seed, pins null or { name: value } in the pins' order, length null, a
-// number of bars or 'endless'.
+// Read, it is { vibes, tempo, theme, pins, length, key, scale }: vibes null
+// or [id, weight] pairs in the frozen order (the weight null where none was
+// given), tempo null or [low, high], whole bpm (equal when pinned), theme
+// null or a seed, pins null or { name: value } in the pins' order, length
+// null, a number of bars or 'endless', key null or home notes (numbers, low
+// first), scale null or modes' names in their frozen order.
 
 // The tempos the core plays, in bpm: what the share code's tempo byte holds.
 export const TEMPO_LIMIT = [32, 190];
@@ -513,12 +554,12 @@ const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
   if (Array.isArray(input)) return { ...out, vibes: lenientVibes(input) };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!['vibes', 'tempo', 'theme', 'pins', 'length'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
+  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -541,11 +582,14 @@ export function readRequest(input) {
   out.pins = readPins(input.pins);
   // The length (queue item 88): bars, or 'endless'.
   if (input.length != null) out.length = lengthOf(input.length);
+  // The key and the mode (queue item 89): a name or a set of them.
+  if (input.key != null) out.key = keysOf(input.key);
+  if (input.scale != null) out.scale = scalesOf(input.scale);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
@@ -566,6 +610,10 @@ export function parseRequest(text) {
     } else if (name === 'theme') {
       if (value == null || !BPM_TEXT.test(value)) throw new RequestError('a bad theme');
       out.theme = themeOf(Number(value));
+    } else if (name === 'key') {
+      out.key = keysOf(value == null ? '' : value);
+    } else if (name === 'scale') {
+      out.scale = scalesOf(value == null ? '' : value);
     } else if (isPinName(name)) {
       // A pin (queue item 85b): a choice's id, or a dotted setting.
       if (value == null) throw new RequestError('a bad setting');
@@ -588,6 +636,8 @@ export function requestText(request) {
   if (r.tempo) items.push(`bpm=${r.tempo[0] === r.tempo[1] ? r.tempo[0] : `${r.tempo[0]}-${r.tempo[1]}`}`);
   if (r.length != null) items.push(`bars=${r.length}`);
   if (r.theme != null) items.push(`theme=${r.theme}`);
+  if (r.key) items.push(`key=${r.key.map((k) => NOTE_NAMES[k]).join('|')}`);
+  if (r.scale) items.push(`scale=${r.scale.join('|')}`);
   items.push(...pinItems(r.pins));
   return items.length ? items.join(',') : '-';
 }
@@ -603,7 +653,53 @@ export function requestOf(spec) {
     theme: spec && spec.theme != null ? spec.theme : null,
     pins: spec && spec.pins ? { ...spec.pins } : null,
     length: spec && spec.length != null ? spec.length : null,
+    key: spec && Array.isArray(spec.askKey) ? spec.askKey.slice() : null,
+    scale: spec && Array.isArray(spec.askScale) ? spec.askScale.slice() : null,
   };
+}
+
+// A request's keys and modes as the bits the core takes (`Request::keys`,
+// `Request::scales`): a bit each, C and the first mode the lowest; 0 for none.
+export function keyMask(keys) {
+  return keys ? keys.reduce((m, k) => m | (1 << k), 0) : 0;
+}
+export function scaleMask(scales) {
+  return scales ? scales.reduce((m, k) => m | (1 << SCALE_ORDER.indexOf(k)), 0) : 0;
+}
+
+// Home notes by their names, either spelling of a black key.
+const KEY_NAMES = {
+  C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
+};
+
+// A key or a set of keys (queue item 89): a note's name ("D", "Eb"), its
+// number from 0 (C) to 11, a list of them, or names written with "|" between
+// ("D|G"). Read as the numbers, once each, low first; an empty list is
+// nothing asked.
+function keysOf(x) {
+  const list = Array.isArray(x) ? x : typeof x === 'string' ? x.split('|') : [x];
+  if (!list.length) return null;
+  const keys = new Set();
+  for (const k of list) {
+    const n = typeof k === 'number' && Number.isInteger(k) && k >= 0 && k <= 11 ? k
+      : typeof k === 'string' && Object.hasOwn(KEY_NAMES, k) ? KEY_NAMES[k] : -1;
+    if (n < 0) throw new RequestError('no such key');
+    keys.add(n);
+  }
+  return [...keys].sort((a, b) => a - b);
+}
+
+// A mode or a set of modes (queue item 89), by name ("dorian"), a list or
+// names written with "|" between; read in the modes' frozen order.
+function scalesOf(x) {
+  const list = Array.isArray(x) ? x : typeof x === 'string' ? x.split('|') : [x];
+  if (!list.length) return null;
+  const asked = new Set();
+  for (const k of list) {
+    if (typeof k !== 'string' || !SCALE_ORDER.includes(k)) throw new RequestError('no such scale');
+    asked.add(k);
+  }
+  return SCALE_ORDER.filter((k) => asked.has(k));
 }
 
 function lenientVibes(list) {
