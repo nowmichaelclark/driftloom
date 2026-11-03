@@ -216,3 +216,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   on the old loop's next step still to come. The brain's 300 changes on
   corpus 20261101 and corpus 1's 1,000 (full, lite, ring-out, 48 kHz): 0
   missed.
+- #318, length up to 32,768 bars and Endless (item 88, v144), preview URL:
+  <https://e77c1806-driftloom.nowmichaelclark.workers.dev> (commit 93164e2):
+  the Length picker now asks the generator for real. Up to 32 bars the loop
+  is that long (try 1, 3 and 7 bars: a loop of that length, played once,
+  then the next); past 32, and Endless, the loop as drawn plays in sections,
+  each wandering as a pass does. For his ears: 100 bars (a loop of 16 or 24
+  ends on a section cut short at a bar line, four bars, then the next loop);
+  1,024 bars and Endless with "Let the loop wander" on and off (off, a long
+  piece is its loop repeated). Now Playing counts down to the piece's end,
+  as before. Nothing changes with length on "any".
