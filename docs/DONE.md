@@ -269,3 +269,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   on the line (`tools/ending.mjs` renders it); 14 bars with the slider off
   loops on; the picker now reads "Bars". For Mikey's ears: the fade's
   length, and a long loop's repeat with wander on being a fresh round.
+- #325, "Let the loop wander" unrepeatable in the slider's upper range (item
+  92, v149), preview URL: PREVIEW (commit 4dad102): with the wander slider
+  at 2.0 or above, play the same loop twice (Next, then back to it, or open
+  its code twice): its passes from the second on wander differently each
+  time; at 1.9 and below every play wanders the same. Diagnostics says
+  `wander: 2.2, unrepeatable (salt N)`. For Mikey's ears: where the range
+  starts (2.0, the top sixth), and whether a code shared from such a play
+  should replay the sharer's wander (today it draws its own).
