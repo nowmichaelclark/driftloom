@@ -230,6 +230,15 @@ the brain and hands counter (Session 1, 2, ... in `docs/BRAIN.md`).
   the mix in 10 s windows: swells, sections, returns and travel over 10 to
   70 minutes. A continuous album (Kyle Jameson) can be read whole as well as
   cut into tracks.
+- **Long-form swells can be fades (Ears 10b).** On 2814 the long-form tool's
+  10 to 16 dB swells were each track's fade-in and fade-out: read its
+  minute-by-minute timeline before calling a swell. On a wide record, also
+  measure mono loss on the mix by band; the stem widths alone don't show it
+  (2814 loses up to 9 dB above 2 kHz in mono).
+- **A grid that reads 26 to 27 BPM is a bar (Ears 10b).** `check_stems.py`
+  takes the shortest strong drum repeat as the beat; on two tracks the only
+  strong repeat was a 2.24 to 2.26 s bar of four. Check it against the meter
+  tool and the kick spacing.
 - Read each tool's output on real music against its own rule before
   trusting it. Ears 3's floor drops listed "1.0 s" drops under a "2 s"
   rule: the edges sat half a second inside the true ones. Test signals
