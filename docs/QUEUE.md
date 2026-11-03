@@ -304,41 +304,6 @@ playing: a `now` change, or `load`); `core/tests/change.rs` asks it across
 49's text (below) is the brief, built on 82's player and 87's chunks. Plus:
 Endless and long pieces render ahead as 87 says.
 
-## 87c. A new loop's first notes, on a device whose core jumps ahead
-
-**Hands:** Opus 5.5, high. **After 88**, before 89 (brain, 2026-11-03).
-
-**Why:** Mikey's Lenovo tablet (Chrome 156, Android 10, on lite since 87b
-moved it) left out 10 notes in a minute, in two bursts, each at the start of
-a new loop: 6 at 19.5 s (87b's switch, the loop from its top on the new
-synth) and 4 at 56.0 s, each `late note, 304-350 ms behind the core, posted
-250-339 ms ahead (inside the buffer), left out; decided by play, new loop
-[margin]`, and each followed by a render-ahead jump (600 ms, then 643 ms,
-from 0-54). Its Diagnostics: `renderAheadMs: 80 (measured 20)`,
-`worstRenderAheadMs: 643`, `leastSpareMs: -315`, `outputLatency: 0.336`. The
-Moto on the same build: none late, worst render-ahead 80 ms. So on screen,
-on a slow device, the core sometimes renders hundreds of ms past the page's
-plan at the moment a new loop's first notes are decided, and those notes,
-often the loop's first chord, are lost. Item 41 plans visible notes from the
-last measurement and item 47 plans hidden ones from the worst seen; neither
-covers a jump on screen at a new loop. Suspects, unproven: the new loop's
-own work on the page (a long task, 343 ms longest in that view) or, at the
-switch, the new worklet compiling on the audio thread.
-
-**What:** find what makes the core jump by rendering (`tools/perf.mjs` with
-the slowed audio thread 87b used, and `tools/views.mjs --buffer 0.37 --delay
-400`), then make a new loop's first notes reach the core in time on such a
-device: a new loop may start later (its own first step pushed back by what
-this device has been seen to need, `deviceAhead`), which costs a fraction of
-a second of silence at a change, never a lost note. Notes inside a playing
-loop keep item 41's plan. Phase 3 retires the page's scheduling altogether;
-this is the cheap fix until then.
-
-**Yardsticks:** on the slowed thread, at a new loop and at 87b's switch, no
-note late or left out over 50 new loops; the Moto-like path unchanged (its
-first notes no later than today, measured); Mikey's tablet: no late notes in
-Diagnostics over a few minutes and a few Nexts.
-
 ## 89-91. Key and scale (was 50), style (was 51), voices and layers (was 52)
 
 50, 51 and 52's texts (below) are the briefs, in that order, each on 85's
@@ -393,6 +358,19 @@ margin in the progression's decision, not a return to reading the events.
 - **The automatic lite switch becomes a crossfade** (Mikey, 2026-11-03: the
   fade and restart from the top doesn't bother him, a proper crossfade is a
   good idea): item 87b's `quality.handOff` moves onto `Player::change`.
+- **A new loop's first notes on a slow device** (brain, 2026-11-03; Mikey:
+  wait for phase 3 rather than fix the page's scheduling now). On v142 his
+  Lenovo tablet left out 10 notes in a minute at two new loops (87b's switch
+  at 19.5 s, a new loop at 56.0 s): `304-350 ms behind the core, posted
+  250-339 ms ahead (inside the buffer), left out; decided by play, new loop
+  [margin]`, each followed by a render-ahead jump to 600-643 ms
+  (`worstRenderAheadMs: 643`, `leastSpareMs: -315`); the Moto had none.
+  Phase 3 removes the page's note hand-over, so the notes themselves go; but
+  find what made the core jump at those moments (the new loop's work on the
+  page, or the new worklet compiling on the audio thread at the switch), since
+  a stall of the audio thread there would still be heard. Yardstick before
+  the app switches: the tablet shows no late notes and no underruns over a
+  few minutes, a few Nexts and an automatic switch.
 - **Phones:** the player's costs were measured on a cloud machine; a block
   while a loop is made is 9.6% of its deadline in wasm. Check a phone
   (`?engine=player`, Diagnostics: late and dropped notes) before the app
