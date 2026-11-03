@@ -270,7 +270,9 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   loops on; the picker now reads "Bars". For Mikey's ears: the fade's
   length, and a long loop's repeat with wander on being a fresh round.
 - #325, "Let the loop wander" unrepeatable in the slider's upper range (item
-  92, v149), preview URL: PREVIEW (commit 4dad102): with the wander slider
+  92, v149), preview URL:
+  <https://f280ce1a-driftloom.nowmichaelclark.workers.dev> (commit 693d54f,
+  the app as #325 left it): with the wander slider
   at 2.0 or above, play the same loop twice (Next, then back to it, or open
   its code twice): its passes from the second on wander differently each
   time; at 1.9 and below every play wanders the same. Diagnostics says
