@@ -238,3 +238,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   (whole tone, phrygian dominant) a little more than in the catalog (1.2%
   of the bass's notes against 0.85%). Nothing changes with key and mode on
   "any".
+- #320, style (item 90, v146), preview URL:
+  <https://0c1ec87a-driftloom.nowmichaelclark.workers.dev> (commit c9d9b61):
+  nothing to listen for in the app yet (the style line shows what a request
+  asks and cannot be tapped). The generators and the player take
+  `style=tide|shrine` (`?engine=player`, `dlrender --request`). For Mikey's
+  ears when a picker exists: a style pinned onto a tempo outside its band
+  (the profile plays its nearest gait at the tempo asked), and a set whose
+  profiles are far from the loop the seed would have made (which of them
+  each piece of the blend lands on). Nothing changes with style on "any".

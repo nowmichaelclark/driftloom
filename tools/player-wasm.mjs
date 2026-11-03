@@ -52,7 +52,7 @@ const way = {
 const wasm = path.resolve(flag('--wasm', path.join(ROOT, 'js', 'dlplayer.wasm')));
 const bytes = fs.readFileSync(wasm);
 const { VIBE_IDS } = await import('../js/vibes.js');
-const { parseRequest, keyMask, scaleMask, styleMask } = await import('../js/generator.js');
+const { parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState, LAYERS } = await import('../js/generator.js');
 // The request, read as the core reads it (`Request::parse`), handed over
 // call by call as the worklet hands it.
 const asked = parseRequest(way.request ?? '');
@@ -89,6 +89,10 @@ function start(seed) {
   if (keyMask(asked.key) && !x.dl_play_keys(keyMask(asked.key))) throw new Error('the core refused the keys');
   if (scaleMask(asked.scale) && !x.dl_play_scales(scaleMask(asked.scale))) throw new Error('the core refused the scales');
   if (styleMask(asked.style) && !x.dl_play_styles(styleMask(asked.style))) throw new Error('the core refused the styles');
+  LAYERS.forEach((l, i) => {
+    if (voiceMask(asked.voices, l) && !x.dl_play_voices(i, voiceMask(asked.voices, l))) throw new Error(`the core refused the ${l} voices`);
+    if (layerState(asked.layers, l) && !x.dl_play_layer(i, layerState(asked.layers, l))) throw new Error(`the core refused the ${l} layer`);
+  });
   for (const id of way.vibes) {
     const i = VIBE_IDS.indexOf(id);
     if (i < 0 || !x.dl_play_vibe(i)) throw new Error(`no vibe '${id}'`);

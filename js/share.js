@@ -22,7 +22,7 @@
 // case-insensitive.
 
 import { SCALES, SCALE_ORDER } from './theory.js';
-import { CHARACTERS, PROFILE_ORDER, resolveKey } from './characters.js';
+import { CHARACTERS, PROFILE_ORDER, VOICE_ORDER, resolveKey } from './characters.js';
 import { codeForMood, moodForCode } from './moods.js';
 import { seedName } from './rng.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
@@ -42,12 +42,14 @@ const DECODE_MAP = (() => {
 // for; format 6 (queue item 85b) the pins it was asked for; format 7 (queue
 // item 85d) the theme it bends; format 8 (queue item 88) the length it was
 // asked for; format 9 (queue item 89) the key and the mode it was asked for;
-// format 10 (queue item 90) the style (set of profiles) it was asked for.
+// format 10 (queue item 90) the style (set of profiles) it was asked for;
+// format 11 (queue item 91) the voices and the layers it was asked for.
 // Each is written only by a loop that needs it
 // (a loop without vibes is still format 3), so every code already in
 // circulation, every saved album and every `/rank` answer keeps the exact
 // string it had.
-export const FORMAT = 10;
+export const FORMAT = 11;
+const STYLE_FORMAT = 10;
 const KEY_FORMAT = 9;
 const LENGTH_FORMAT = 8;
 const THEME_FORMAT = 7;
@@ -84,8 +86,13 @@ function hasStyle(spec) {
   return !!(spec && Array.isArray(spec.askStyle) && spec.askStyle.length);
 }
 
+function hasVoices(spec) {
+  return !!(spec && ((spec.askVoices && Object.values(spec.askVoices).some((v) => v && v.length)) || (spec.askLayers && Object.keys(spec.askLayers).length)));
+}
+
 function formatOf(spec) {
-  if (hasStyle(spec)) return FORMAT;
+  if (hasVoices(spec)) return FORMAT;
+  if (hasStyle(spec)) return STYLE_FORMAT;
   if (hasKeyScale(spec)) return KEY_FORMAT;
   if (hasLength(spec)) return LENGTH_FORMAT;
   if (hasTheme(spec)) return THEME_FORMAT;
@@ -278,6 +285,22 @@ function writeSpec(w, spec, version = FORMAT) {
     const styles = hasStyle(spec) ? spec.askStyle : [];
     w.vu(styles.reduce((m, k) => (PROFILE_IDS.indexOf(k) < 0 ? m : m | (1 << PROFILE_IDS.indexOf(k))), 0));
   }
+  // Format 11: the voices asked, a mask for each layer in LAYERS' order (a
+  // bit each by place in the layer's frozen list), then the layers asked on
+  // and off: the five on bits, then the five off bits. Zero is none asked.
+  if (version >= 11) {
+    for (const layer of LAYERS) {
+      const asked = (spec.askVoices && spec.askVoices[layer]) || [];
+      w.vu(asked.reduce((m, k) => (VOICE_ORDER[layer].indexOf(k) < 0 ? m : m | (1 << VOICE_ORDER[layer].indexOf(k))), 0));
+    }
+    let layers = 0;
+    LAYERS.forEach((layer, i) => {
+      const state = spec.askLayers && spec.askLayers[layer];
+      if (state === 'on') layers |= 1 << i;
+      if (state === 'off') layers |= 1 << (i + 5);
+    });
+    w.vu(layers);
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -391,6 +414,22 @@ function readSpec(r, version = FORMAT) {
     const styles = r.vu();
     const askStyle = PROFILE_IDS.filter((_, i) => styles & (1 << i));
     if (askStyle.length) spec.askStyle = askStyle;
+  }
+  if (version >= 11) {
+    const voices = {};
+    for (const layer of LAYERS) {
+      const mask = r.vu();
+      const asked = VOICE_ORDER[layer].filter((_, i) => mask & (1 << i));
+      if (asked.length) voices[layer] = asked;
+    }
+    if (Object.keys(voices).length) spec.askVoices = voices;
+    const layers = r.vu();
+    const asked = {};
+    LAYERS.forEach((layer, i) => {
+      if (layers & (1 << i)) asked[layer] = 'on';
+      else if (layers & (1 << (i + 5))) asked[layer] = 'off';
+    });
+    if (Object.keys(asked).length) spec.askLayers = asked;
   }
   return spec;
 }

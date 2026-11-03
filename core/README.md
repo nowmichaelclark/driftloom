@@ -339,6 +339,27 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   mix (its key, mode, metre and tune hold). Each profile keeps its own
   character, instruments and drums, and the vibes bend it as ever
   (`generator::spec::ask_mix`).
+- **The voices and the layers** (`Request::with_voices`,
+  `Request::with_layer`, queue item 91; `voice.melody=kalimba|marimba` and
+  `layer.drums=off` as text, `dl_player_voices` and `dl_player_layer`, the
+  layer 0 to 4 in the core's order: drums, bass, chords, melody, texture):
+  for each layer a voice or a set of them (`request::VOICE_ORDER`: the names
+  the layer's pools draw from, less the choir's, which is a rarity and is not
+  offered; the drums' voice is the kit, the texture's its kind), and each
+  layer left to chance, on or off. Every draw is made as ever and the request
+  overrules one value (`generator::asked`): a voice the loop drew inside the
+  set stands, else one of the set is drawn from the layer's own seed,
+  weighted by the profiles' pool (a voice it lacks at a floor of 0.25, so no
+  pair is forbidden). A voice asked of the melody or the chords is the voice
+  they play: the loop is not a choir, and an arpeggio is that voice, not the
+  keys. A layer on is never left out by its own chances (the drums that
+  sometimes aren't there, the melody that rests, the bass that plays
+  nothing, no texture) and plays throughout, its entry schedule all in; the
+  loop's own notes stay where it already played. A layer off is the layer
+  muted, as the listener's mute would be (`Spec::layers_off`; the sequencer
+  mutes it at the load, a layer asked on is unmuted, the others stay as the
+  host left them) and the same unmute brings it back. All five off is the
+  one request that cannot be met (`request::ALL_LAYERS_OFF`).
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
@@ -346,7 +367,8 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   `dl_player_next_change`, `dl_player_render`, ...; the
   request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
   `dl_player_theme`, `dl_player_pin`, `dl_player_length`,
-  `dl_player_keys`, `dl_player_scales`, `dl_player_styles` and
+  `dl_player_keys`, `dl_player_scales`, `dl_player_styles`,
+  `dl_player_voices`, `dl_player_layer` and
   `dl_player_ask`, each refusal its
   line): build the
   library with `cargo rustc --release --lib --features capi --crate-type

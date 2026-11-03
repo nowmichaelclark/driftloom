@@ -14,6 +14,10 @@ use super::theory::{self, GLAD_FROM, SCALES};
 use super::{LAYERS, Layer};
 use crate::math;
 
+/// The layers by name in sorted order, as the canonical text writes them.
+const ALPHABETICAL: [(&str, Layer); 5] =
+    [("bass", Layer::Bass), ("chords", Layer::Chords), ("drums", Layer::Drums), ("melody", Layer::Melody), ("texture", Layer::Texture)];
+
 /// How many profiles a mix holds at most (`howMany`'s largest).
 pub const MIX_MAX: usize = 4;
 /// How many moods a feel mix holds at most (`moodCount`'s largest).
@@ -71,6 +75,15 @@ pub struct Spec {
     /// The styles asked (queue item 90), a bit each by place in
     /// `request::PROFILE_ORDER`; 0 for none. Kept the same way.
     pub styles: u32,
+    /// The voices asked of each layer (queue item 91), in `Layer`'s order: a
+    /// bit each by place in `request::VOICE_ORDER`'s list for the layer; 0
+    /// for none. The layers' draws read them.
+    pub voices: [u32; 5],
+    /// The layers asked on and off (queue item 91), a bit each in `Layer`'s
+    /// order. A layer off is muted: the spec's `mutes`, which `Player::load`
+    /// hands the sequencer.
+    pub layers_on: u8,
+    pub layers_off: u8,
     /// The theme's tune (`themeTune`, worked out once here, not written):
     /// `None` without a theme, `Some(None)` where the theme's melody rests,
     /// else its figure and rhythmic cell, which the melody plays in place of
@@ -107,6 +120,9 @@ impl Spec {
         keys: 0,
         scales: 0,
         styles: 0,
+        voices: [0; 5],
+        layers_on: 0,
+        layers_off: 0,
         tune: None,
         cycles: None,
     };
@@ -129,9 +145,10 @@ impl Spec {
         character::character_of(&self.mix, self.vibes.as_ref())
     }
 
-    /// The key, the modes and the styles asked (queue items 89 and 90):
-    /// `askKey`, the home notes by number, `askScale`, the modes by name and
-    /// `askStyle`, the profiles by name, each only if asked.
+    /// The key, the layers, the modes and the styles asked (queue items 89 to
+    /// 91): `askKey`, the home notes by number, `askLayers`, each layer asked
+    /// on or off, `askScale`, the modes by name and `askStyle`, the profiles
+    /// by name, each only if asked.
     fn write_asked<S: Sink>(&self, w: &mut Writer<S>) {
         if self.keys != 0 {
             w.key("askKey");
@@ -142,6 +159,21 @@ impl Spec {
                 }
             }
             w.end_list();
+        }
+        if self.layers_on | self.layers_off != 0 {
+            w.key("askLayers");
+            w.obj();
+            for (key, layer) in ALPHABETICAL {
+                let bit = 1 << layer as usize;
+                if self.layers_on & bit != 0 {
+                    w.key(key);
+                    w.str("on");
+                } else if self.layers_off & bit != 0 {
+                    w.key(key);
+                    w.str("off");
+                }
+            }
+            w.end_obj();
         }
         if self.scales != 0 {
             w.key("askScale");
@@ -165,10 +197,35 @@ impl Spec {
         }
     }
 
+    /// The voices asked, `askVoices`: each layer's names, only if asked.
+    fn write_voices<S: Sink>(&self, w: &mut Writer<S>) {
+        if self.voices.iter().all(|&v| v == 0) {
+            return;
+        }
+        w.key("askVoices");
+        w.obj();
+        for (key, layer) in ALPHABETICAL {
+            let asked = self.voices[layer as usize];
+            if asked == 0 {
+                continue;
+            }
+            w.key(key);
+            w.list();
+            for (i, name) in request::VOICE_ORDER[layer as usize].iter().enumerate() {
+                if asked & (1 << i) != 0 {
+                    w.str(name);
+                }
+            }
+            w.end_list();
+        }
+        w.end_obj();
+    }
+
     /// The canonical text of the spec (`tools/gen-golden.mjs`).
     pub fn write<S: Sink>(&self, w: &mut Writer<S>) {
         w.obj();
         self.write_asked(w);
+        self.write_voices(w);
         w.key("bars");
         w.num(self.bars);
         w.key("bpm");
@@ -217,9 +274,9 @@ impl Spec {
         w.num(self.mood);
         w.key("mutes");
         w.obj();
-        for key in ["bass", "chords", "drums", "melody", "texture"] {
+        for (key, layer) in ALPHABETICAL {
             w.key(key);
-            w.bool(false);
+            w.bool(self.layers_off & (1 << layer as usize) != 0);
         }
         w.end_obj();
         w.key("name");
@@ -725,6 +782,9 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         keys: request.keys(),
         scales: request.scales(),
         styles: request.styles(),
+        voices: [0, 1, 2, 3, 4].map(|l| request.voices(l)),
+        layers_on: request.layers_on(),
+        layers_off: request.layers_off(),
         tune: held.as_ref().map(melody::theme_tune),
         cycles,
     }
@@ -802,6 +862,12 @@ impl Spec {
     #[must_use]
     pub fn choir(&self) -> Option<Choir> {
         if matches!(self.tune, Some(None)) {
+            return None;
+        }
+        // A voice asked of the melody or the chords is the voice they play:
+        // the choir is a rarity, and is not forced by the others (queue item
+        // 91).
+        if self.voices[Layer::Melody as usize] != 0 || self.voices[Layer::Chords as usize] != 0 {
             return None;
         }
         let mut r = Rng::new(js::salted(self.seed, CHOIR_SALT, 17));

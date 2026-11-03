@@ -79,6 +79,23 @@ export const PROFILE_ORDER = [
   'grove', 'hollow', 'shrine', 'tide', 'cinder', 'wayfare',
 ];
 
+// The voices a request can ask for, by layer, each in its frozen order
+// (append only): the order a share code numbers them in, and a request's
+// set of voices is written in (queue item 91). The names a layer's pools
+// draw from, less the choir's (vowel, hum and choir): the rarities stay
+// rare, and are not offered until Mikey says so. The Rust core's
+// `request::VOICE_ORDER` is the same lists. For the drums the voice is the
+// kit, for the texture its kind (less "none": that is the layer left out).
+export const VOICE_ORDER = {
+  drums: ['brush', 'tape', 'hand'],
+  bass: ['sub', 'round', 'pluckbass', 'moogbass', 'fifths', 'rhodesbass'],
+  chords: ['keys', 'pad', 'harp', 'accordion', 'piano', 'rhodes', 'moogpad', 'softpad', 'analogpad', 'prepared', 'musicbox',
+    'kalimba', 'marimba', 'templebell', 'tubular', 'stab', 'nylon'],
+  melody: ['pluck', 'bell', 'keys', 'saw', 'ocarina', 'flute', 'harp', 'musicbox', 'fiddle', 'accordion', 'piano', 'sine', 'rhodes', 'moog',
+    'whistle', 'softpad', 'analoglead', 'prepared', 'celeste', 'kalimba', 'marimba', 'templebell', 'tubular', 'stab', 'panflute'],
+  texture: ['bells', 'swell', 'drops', 'chime', 'wind', 'waves'],
+};
+
 export const CHARACTER_WEIGHTS = Object.entries(CHARACTERS).map(([k, c]) => [k, c.weight]);
 
 export const POLY_CYCLES = [3, 4, 5, 7, 8, 9, 11];

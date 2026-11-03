@@ -12,7 +12,8 @@
 //! length (queue item 88, `Length`: a piece of any number of bars, or
 //! Endless), the home notes and the modes (queue item 89: each a set to
 //! choose from, one note or mode being the pin) and the style (queue item 90:
-//! the profiles, one or a set). Item 91 grows it.
+//! the profiles, one or a set), the voices of each layer (a set to choose
+//! from) and the layers on or off (queue item 91).
 //!
 //! **Bends, never breaks.** A request is checked as it is built: a vibe the
 //! core does not have, a bad weight or a tempo outside `TEMPO_LIMIT` is
@@ -24,8 +25,9 @@
 //! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
 //! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`), the
 //! key (`key=D`, `key=D|G`) and the mode (`scale=dorian`,
-//! `scale=dorian|aeolian`) and the style (`style=tide`, `style=tide|shrine`);
-//! empty or `-` for nothing. The generation goldens, `dlrender --request` and the
+//! `scale=dorian|aeolian`), the style (`style=tide`, `style=tide|shrine`),
+//! a layer's voices (`voice.melody=kalimba|marimba`) and a layer on or off
+//! (`layer.drums=off`, `layer.melody=on`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 
 use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
@@ -58,6 +60,50 @@ pub const NO_SUCH_SCALE: &str = "no such scale";
 
 /// The line for a style that is no profile.
 pub const NO_SUCH_STYLE: &str = "no such style";
+
+/// The line for a layer that is none of the five.
+pub const NO_SUCH_LAYER: &str = "no such layer";
+/// The line for a voice a layer does not offer.
+pub const NO_SUCH_VOICE: &str = "no such voice";
+/// The line for a layer asked to be anything but on or off.
+pub const BAD_LAYER: &str = "a bad layer";
+/// The line for the one request that cannot be met: every layer off.
+pub const ALL_LAYERS_OFF: &str = "all layers off";
+
+/// The layers' names in the core's order (`Layer`).
+pub const LAYER_NAMES: [&str; 5] = ["drums", "bass", "chords", "melody", "texture"];
+
+/// The voices a layer can be asked for, in each list's frozen order (append
+/// only; `VOICE_ORDER` in `js/characters.js`): the order a share code numbers
+/// them in and `Request::voices` takes its bits in. The names the layer's
+/// pools draw from, less the choir's (vowel, hum and choir): the rarities
+/// stay rare, and are not offered until Mikey says so. The drums' voice is
+/// the kit, the texture's its kind (less "none": that is the layer left
+/// out).
+pub const VOICE_ORDER: [&[&str]; 5] = [
+    &["brush", "tape", "hand"],
+    &["sub", "round", "pluckbass", "moogbass", "fifths", "rhodesbass"],
+    &[
+        "keys", "pad", "harp", "accordion", "piano", "rhodes", "moogpad", "softpad", "analogpad", "prepared", "musicbox", "kalimba", "marimba",
+        "templebell", "tubular", "stab", "nylon",
+    ],
+    &[
+        "pluck", "bell", "keys", "saw", "ocarina", "flute", "harp", "musicbox", "fiddle", "accordion", "piano", "sine", "rhodes", "moog", "whistle",
+        "softpad", "analoglead", "prepared", "celeste", "kalimba", "marimba", "templebell", "tubular", "stab", "panflute",
+    ],
+    &["bells", "swell", "drops", "chime", "wind", "waves"],
+];
+
+/// What a layer is asked: left to chance, always played, or left out.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LayerAsk {
+    /// Drawn as ever.
+    Chance,
+    /// Never left out by its own chances, and playing throughout.
+    On,
+    /// Left out: muted, as the listener's mute would, and unmuted the same.
+    Off,
+}
 
 /// The profiles in their frozen order (`PROFILE_ORDER`): the order a share
 /// code numbers them in and `Request::styles` takes its bits in.
@@ -140,13 +186,20 @@ pub struct Request {
     /// The styles asked (queue item 90): a bit each by place in
     /// `PROFILE_ORDER`; 0 for none asked.
     styles: u32,
+    /// The voices asked of each layer (queue item 91), in the core's layer
+    /// order: a bit each by place in the layer's `VOICE_ORDER`; 0 for none.
+    voices: [u32; 5],
+    /// The layers asked on, a bit each in the core's layer order.
+    layers_on: u8,
+    /// The layers asked off.
+    layers_off: u8,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0 }
+        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0 }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -335,12 +388,91 @@ impl Request {
         self.styles
     }
 
+    /// The same, with the voices asked of layer `layer` (0 to 4, the core's
+    /// order): a set to choose from, a bit each by place in the layer's
+    /// `VOICE_ORDER`, one being a pinned voice. A voice the loop already drew
+    /// inside the set stands; else one of the set is drawn from the layer's
+    /// seed, leaning toward the ones the profiles favor. A voice asked of the
+    /// melody or the chords is the voice they play: the choir (a rarity) is
+    /// not forced by the others. 0 asks for nothing.
+    ///
+    /// # Errors
+    /// `NO_SUCH_LAYER` for a layer past the fifth, `NO_SUCH_VOICE` for a bit
+    /// past the layer's last voice.
+    pub fn with_voices(mut self, layer: usize, voices: u32) -> Result<Self, &'static str> {
+        let list = VOICE_ORDER.get(layer).ok_or(NO_SUCH_LAYER)?;
+        if voices >> list.len() != 0 {
+            return Err(NO_SUCH_VOICE);
+        }
+        self.voices[layer] = voices;
+        Ok(self)
+    }
+
+    /// The voices asked of layer `layer`, a bit each (0 for none).
+    #[must_use]
+    pub fn voices(&self, layer: usize) -> u32 {
+        self.voices.get(layer).copied().unwrap_or(0)
+    }
+
+    /// The same, with layer `layer` (0 to 4) asked on, off or left to chance.
+    /// A layer on is never left out by its own chances (the drums that
+    /// sometimes aren't there, the melody that sometimes rests, the bass
+    /// that sometimes plays nothing, no texture) and plays throughout; one
+    /// off is left out, muted as the listener's mute would be.
+    ///
+    /// # Errors
+    /// `NO_SUCH_LAYER` for a layer past the fifth, `ALL_LAYERS_OFF` for the
+    /// fifth layer off: the one request that cannot be met.
+    pub fn with_layer(mut self, layer: usize, ask: LayerAsk) -> Result<Self, &'static str> {
+        if layer >= LAYER_NAMES.len() {
+            return Err(NO_SUCH_LAYER);
+        }
+        let bit = 1u8 << layer;
+        let (on, off) = match ask {
+            LayerAsk::Chance => (self.layers_on & !bit, self.layers_off & !bit),
+            LayerAsk::On => (self.layers_on | bit, self.layers_off & !bit),
+            LayerAsk::Off => (self.layers_on & !bit, self.layers_off | bit),
+        };
+        if off == (1 << LAYER_NAMES.len()) - 1 {
+            return Err(ALL_LAYERS_OFF);
+        }
+        self.layers_on = on;
+        self.layers_off = off;
+        Ok(self)
+    }
+
+    /// What layer `layer` is asked.
+    #[must_use]
+    pub fn layer(&self, layer: usize) -> LayerAsk {
+        let bit = 1u8 << layer.min(7);
+        if self.layers_on & bit != 0 {
+            LayerAsk::On
+        } else if self.layers_off & bit != 0 {
+            LayerAsk::Off
+        } else {
+            LayerAsk::Chance
+        }
+    }
+
+    /// The layers asked on, a bit each in the core's layer order.
+    #[must_use]
+    pub fn layers_on(&self) -> u8 {
+        self.layers_on
+    }
+
+    /// The layers asked off.
+    #[must_use]
+    pub fn layers_off(&self) -> u8 {
+        self.layers_off
+    }
+
     /// A request read from its text (the module's doc says how it is
     /// written); a vibe or a pin named twice keeps the last.
     ///
     /// # Errors
     /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`, `BAD_LENGTH`,
-    /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_STYLE`, `NO_SUCH_SETTING`, `BAD_SETTING` or
+    /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_STYLE`, `NO_SUCH_LAYER`,
+    /// `NO_SUCH_VOICE`, `BAD_LAYER`, `ALL_LAYERS_OFF`, `NO_SUCH_SETTING`, `BAD_SETTING` or
     /// `SETTING_OUT`, for the first item that is one.
     pub fn parse(text: &str) -> Result<Self, &'static str> {
         let text = text.trim();
@@ -368,6 +500,17 @@ impl Request {
                 out.scales = scales_text(value.unwrap_or(""))?;
             } else if name == "style" {
                 out.styles = styles_text(value.unwrap_or(""))?;
+            } else if let Some(layer) = name.strip_prefix("voice.") {
+                let i = LAYER_NAMES.iter().position(|&l| l == layer).ok_or(NO_SUCH_LAYER)?;
+                out = out.with_voices(i, voices_text(i, value.unwrap_or(""))?)?;
+            } else if let Some(layer) = name.strip_prefix("layer.") {
+                let i = LAYER_NAMES.iter().position(|&l| l == layer).ok_or(NO_SUCH_LAYER)?;
+                let ask = match value {
+                    Some("on") => LayerAsk::On,
+                    Some("off") => LayerAsk::Off,
+                    _ => return Err(BAD_LAYER),
+                };
+                out = out.with_layer(i, ask)?;
             } else if name == "theme" {
                 let seed = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_THEME)?;
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
@@ -435,6 +578,16 @@ fn scales_text(text: &str) -> Result<u32, &'static str> {
         scales |= 1 << SCALES.iter().position(|s| s.id == name).ok_or(NO_SUCH_SCALE)?;
     }
     Ok(scales)
+}
+
+/// A layer's voices written with `|` between ("kalimba|marimba"), as the
+/// bits `Request::voices` holds.
+fn voices_text(layer: usize, text: &str) -> Result<u32, &'static str> {
+    let mut voices = 0;
+    for name in text.split('|') {
+        voices |= 1 << VOICE_ORDER[layer].iter().position(|&v| v == name).ok_or(NO_SUCH_VOICE)?;
+    }
+    Ok(voices)
 }
 
 /// A style or a set of styles written with `|` between ("tide|shrine"), as

@@ -14,7 +14,7 @@ import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js
 import { PINS, SPACE_SETTINGS, isPinName, pinNumbers } from '../js/pins.js';
 import { partsOf } from '../tools/gen-golden-lib.mjs';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
-import { CHARACTERS, PROFILE_ORDER } from '../js/characters.js';
+import { CHARACTERS, PROFILE_ORDER, VOICE_ORDER } from '../js/characters.js';
 import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf, BASS_LIFT, bassLiftOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
@@ -1614,10 +1614,10 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
 // and the code that carries it.
 {
   const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
-  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null,"key":null,"scale":null,"style":null}'
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null,"key":null,"scale":null,"style":null,"voices":null,"layers":null}'
     && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
   check('text, in the frozen order, weights and the tempo low first',
-    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null,"key":null,"scale":null,"style":null}');
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null,"key":null,"scale":null,"style":null,"voices":null,"layers":null}');
   check('an object reads as its text does',
     JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
   check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
@@ -2162,6 +2162,163 @@ console.log('\nStyle (queue item 90)');
     const album = encodeAlbum('styles', [newSpec(1, 'style=tide'), newSpec(2), newSpec(3, 'style=dust|shrine')]);
     const back = decodeAlbum(album).specs;
     check('an album carries them too', back[0].askStyle.join() === 'tide' && back[1].askStyle === undefined && back[2].askStyle.join() === 'dust,shrine');
+  }
+}
+
+console.log('\nVoices and layers (queue item 91)');
+{
+  const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
+  const layers = LAYERS;
+  check('the voices a layer offers are all its pools\' names, less the choir\'s', layers.every((layer) => {
+    const key = { drums: 'kits', bass: 'bassVoices', chords: 'chordVoices', melody: 'melodyVoices', texture: 'textures' }[layer];
+    const pool = new Set(Object.values(CHARACTERS).flatMap((c) => (c[key] || []).map(([n]) => n)));
+    for (const choir of ['vowel', 'hum', 'choir', 'none']) pool.delete(choir);
+    return VOICE_ORDER[layer].length === new Set(VOICE_ORDER[layer]).size && VOICE_ORDER[layer].length === pool.size && VOICE_ORDER[layer].every((v) => pool.has(v));
+  }));
+  check('voices and layers read, as text and as an object', JSON.stringify(parseRequest('layer.drums=off,voice.melody=marimba|kalimba,layer.texture=on'))
+    === JSON.stringify(readRequest({ voices: { melody: ['kalimba', 'marimba'] }, layers: { texture: 'on', drums: 'off' } }))
+    && readRequest({ voices: { chords: 'keys|pad' } }).voices.chords.join() === 'keys,pad' && readRequest({ voices: { chords: [] } }).voices === null);
+  check('they read back the same', requestText(parseRequest('cozy,layer.melody=on,voice.bass=round|sub,bpm=80,layer.drums=off,voice.chords=keys'))
+    === 'cozy,bpm=80,voice.bass=sub|round,voice.chords=keys,layer.drums=off,layer.melody=on');
+  const lines = [['voice.melody=nope', 'no such voice'], ['voice.melody=', 'no such voice'], ['voice.melody=vowel', 'no such voice'], ['voice.melody=choir', 'no such voice'],
+    ['voice.drums=kalimba', 'no such voice'], ['voice.melody=flute|', 'no such voice'], ['voice.nope=flute', 'no such layer'], ['layer.nope=on', 'no such layer'],
+    ['layer.drums=maybe', 'a bad layer'], ['layer.drums=', 'a bad layer'], ['layer.drums', 'a bad layer'],
+    ['layer.drums=off,layer.bass=off,layer.chords=off,layer.melody=off,layer.texture=off', 'all layers off']];
+  check('the refusals, each its plain line (the choir is not offered)', lines.every(([t, line]) => refused(t) === line), lines.map(([t]) => refused(t)).join(' | '));
+  check('in an object too', refused({ voices: { melody: ['nope'] } }) === 'no such voice' && refused({ voices: { nope: ['flute'] } }) === 'no such layer'
+    && refused({ layers: { drums: 'maybe' } }) === 'a bad layer' && refused({ layers: { nope: 'on' } }) === 'no such layer'
+    && refused({ layers: { drums: 'off', bass: 'off', chords: 'off', melody: 'off', texture: 'off' } }) === 'all layers off'
+    && refused({ layers: { drums: 'off', bass: 'off', chords: 'off', melody: 'off' } }) === null);
+  check('nothing asked keeps nothing in the spec', newSpec(5).askVoices === undefined && newSpec(5).askLayers === undefined
+    && JSON.stringify(newSpec(5, { voices: null, layers: null })) === JSON.stringify(newSpec(5)));
+
+  // Voices honored in the render, per layer, whichever profile (each profile
+  // led by a pin of the style, 6 loops a layer): what plays is what was asked
+  // wherever the layer plays at all, and the choir never turns up.
+  {
+    const r = new Rng(9101);
+    let played = 0, total = 0, choir = 0, bad = '';
+    const choirVoices = new Set(['vowel', 'hum', 'choir']);
+    for (const p of PROFILE_ORDER) {
+      for (const layer of layers) {
+        for (let i = 0; i < 6; i++) {
+          const wanted = r.shuffle(VOICE_ORDER[layer].slice()).slice(0, 1 + (i % 3));
+          const spec = newSpec(r.seed32(), { style: p, voices: { [layer]: wanted } });
+          const rb = render(spec);
+          total++;
+          const heard = layer === 'drums' ? (rb.meta.kit === 'none' ? [] : [rb.meta.kit])
+            : layer === 'texture' ? (rb.meta.textureKind === 'none' ? [] : [rb.meta.textureKind])
+            : [...new Set(rb.tracks[layer].map((e) => e.voice))];
+          if (heard.length) played++;
+          if (!heard.every((v) => wanted.includes(v))) bad ||= `${p} ${layer} ${wanted} heard ${heard}`;
+          if ((layer === 'chords' || layer === 'melody') && choirOf(spec)) choir++;
+          if (choirVoices.has(heard[0]) && (layer === 'chords' || layer === 'melody')) choir++;
+        }
+      }
+    }
+    check(`voices: what plays is what was asked, on every profile and layer (${total} loops, ${played} where the layer plays)`, !bad && played > total * 0.7, bad || `${played} of ${total}`);
+    check('voices: asked of the melody or the chords, no choir', choir === 0, String(choir));
+  }
+  // The choir stays rare and is untouched where nothing is asked of the
+  // melody or the chords; asked of the others, the choir loops are still
+  // choirs.
+  {
+    let choirs = 0, still = 0, n = 0;
+    for (let seed = 1; seed < 700; seed++) {
+      if (!choirOf(newSpec(seed))) continue;
+      choirs++;
+      if (choirOf(newSpec(seed, { voices: { bass: ['sub'], texture: ['wind'] } }))) still++;
+      n += choirOf(newSpec(seed, { voices: { melody: ['flute'] } })) ? 1 : 0;
+      n += choirOf(newSpec(seed, { voices: { chords: ['pad'] } })) ? 1 : 0;
+    }
+    check('the choir: asked of the bass or the texture, a choir loop still sings; asked of the melody or the chords, it does not', choirs > 5 && still === choirs && n === 0, `${choirs} ${still} ${n}`);
+  }
+  // A voice inside the set stands: nothing the seed drew is moved for no
+  // reason.
+  {
+    let stands = 0, n = 0, same = 0, m = 0;
+    for (let seed = 1; seed < 300; seed++) {
+      const plain = render(newSpec(seed));
+      const v = plain.meta.melodyVoice;
+      if (!v || !VOICE_ORDER.melody.includes(v)) continue;
+      n++;
+      const asked = render(newSpec(seed, { voices: { melody: [v, VOICE_ORDER.melody[(VOICE_ORDER.melody.indexOf(v) + 3) % 25]] } }));
+      if (asked.meta.melodyVoice === v) stands++;
+      m++;
+      if (JSON.stringify(asked.tracks.chords) === JSON.stringify(plain.tracks.chords) && JSON.stringify(asked.tracks.bass) === JSON.stringify(plain.tracks.bass)) same++;
+    }
+    check('voices: one the loop already drew stands, and the other layers are untouched', stands === n && same === m && n > 100, `${stands}/${n} ${same}/${m}`);
+  }
+  // Layers: off is a layer muted (the listener\'s mute), nothing else moved;
+  // on is a layer that plays (every layer, 200 loops).
+  {
+    const r = new Rng(9102);
+    let offs = 0, ons = 0, plays = 0, n = 0, moved = 0, bad = '';
+    for (let i = 0; i < 200; i++) {
+      const seed = r.seed32();
+      const layer = layers[i % 5];
+      const plain = newSpec(seed);
+      const off = newSpec(seed, { layers: { [layer]: 'off' } });
+      if (off.mutes[layer] && layers.every((l) => l === layer || !off.mutes[l]) && off.askLayers[layer] === 'off') offs++; else bad ||= `off ${seed} ${layer}`;
+      if (JSON.stringify(render(off).tracks) === JSON.stringify(render(plain).tracks)) moved++;
+      const spec = newSpec(seed, { layers: { [layer]: 'on' } });
+      const rb = render(spec);
+      n++;
+      if (!spec.mutes[layer] && spec.askLayers[layer] === 'on') ons++;
+      const sound = layer === 'drums' ? rb.meta.kit !== 'none' && rb.tracks.drums.length > 0 : layer === 'texture' ? rb.meta.textureKind !== 'none' && rb.tracks.texture.length > 0
+        : rb.tracks[layer].some((e) => e.vel);
+      if (sound) plays++; else bad ||= `on ${seed} ${layer}`;
+    }
+    check('layers: off is the layer muted and nothing else changed (200 loops)', offs === 200 && moved === 200, `${offs} ${moved} ${bad}`);
+    // (A melody on a one-bar cycle of undertow's micro-loops sometimes comes
+    // out of its own generator with no notes, 4 loops in 3,000, forced or
+    // asked alike: the same for a re-rolled melody, not a request's doing.)
+    check('layers: on is a layer that plays, drums, bass, chords, melody and texture alike (200 loops, 99%)', ons === n && plays >= n * 0.99, `${ons} ${plays} ${bad}`);
+    // A layer on keeps what the loop drew where it already played.
+    let kept = 0, was = 0;
+    for (let seed = 1; seed < 200; seed++) {
+      const plain = render(newSpec(seed));
+      // (A loop with entry schedules plays its drums throughout when asked on.)
+      if (plain.meta.kit === 'none' || plain.form) continue;
+      was++;
+      if (JSON.stringify(render(newSpec(seed, { layers: { drums: 'on' } })).tracks.drums) === JSON.stringify(plain.tracks.drums)) kept++;
+    }
+    check('layers: drums asked on keep the loop\'s own drums where it had them', kept === was && was > 50, `${kept}/${was}`);
+  }
+  // With the others: a style, a key, a tempo and a theme ride along.
+  {
+    let ok = 0, n = 0;
+    const r = new Rng(9103);
+    for (let i = 0; i < 60; i++) {
+      const spec = newSpec(r.seed32(), { style: PROFILE_ORDER[i % 16], key: 'D', tempo: 100, voices: { melody: ['flute'], chords: ['pad'] }, layers: { bass: 'off', texture: 'on' } });
+      const rb = render(spec);
+      n++;
+      if (spec.root === 2 && spec.bpm === 100 && spec.mutes.bass && rb.tracks.melody.every((e) => e.voice === 'flute') && rb.tracks.chords.every((e) => e.voice === 'pad')) ok++;
+    }
+    check('with a style, a key and a tempo: all honored (60 loops)', ok === n, `${ok}/${n}`);
+  }
+  // Share code format 11.
+  {
+    let codes = 0;
+    for (let i = 0; i < 48; i++) {
+      const asked = [{ voices: { melody: [VOICE_ORDER.melody[i % 25]] } }, { layers: { drums: 'off', texture: 'on' } },
+        { vibes: ['cozy'], style: 'tide', voices: { bass: ['sub', 'round'], texture: ['bells'], drums: ['hand'] }, layers: { melody: 'on' } }][i % 3];
+      const spec = newSpec(7600 + i, asked);
+      const code = encodeSong(spec);
+      const back = decodeSong(code);
+      if (JSON.stringify(back.askVoices) === JSON.stringify(spec.askVoices) && JSON.stringify(back.askLayers) === JSON.stringify(spec.askLayers) && encodeSong(back) === code
+        && JSON.stringify(back.mutes) === JSON.stringify(spec.mutes) && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks)
+        && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
+    }
+    check('a loop with voices or layers asked is made again from its code (48 loops)', codes === 48, String(codes));
+    const base = encodeSong(newSpec(7100, 'style=tide')).length;
+    const extra = (t) => encodeSong(newSpec(7100, `style=tide,${t}`)).length - base;
+    check('they cost only what they use (the five voice masks and the layers: up to 12 characters, a late voice 18)', extra('layer.drums=off') <= 12 && extra('voice.melody=flute') <= 12 && extra('voice.melody=panflute') <= 18, [extra('layer.drums=off'), extra('voice.melody=flute'), extra('voice.melody=panflute')].join(' '));
+    check('and are format 11; a style alone is still 10', encodeSong(newSpec(5, 'style=tide,layer.drums=off')).slice(4, 6) !== encodeSong(newSpec(5, 'style=tide')).slice(4, 6)
+      && encodeSong(newSpec(5, 'bars=64')).slice(4, 6) === '10' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+    const album = encodeAlbum('voices', [newSpec(1, 'voice.melody=flute'), newSpec(2), newSpec(3, 'layer.melody=off')]);
+    const back = decodeAlbum(album).specs;
+    check('an album carries them too', back[0].askVoices.melody.join() === 'flute' && back[1].askVoices === undefined && back[2].askLayers.melody === 'off' && back[2].mutes.melody === true);
   }
 }
 

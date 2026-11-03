@@ -448,8 +448,8 @@ export class CoreHost {
   // in LAYERS), the tempo and the volume.
   // `vibes` [[index, weight], ...], `tempo` null or [low, high]: the
   // request (generator.js, `requestOf`).
-  playLoad(seed, vibes, at, tempo = null, pins = [], theme = null, length = null, keys = 0, scales = 0, styles = 0) {
-    this.node.port.postMessage({ type: 'playLoad', seed, vibes, at, tempo, pins, theme, length, keys, scales, styles });
+  playLoad(seed, vibes, at, tempo = null, pins = [], theme = null, length = null, keys = 0, scales = 0, styles = 0, voices = null, layers = null) {
+    this.node.port.postMessage({ type: 'playLoad', seed, vibes, at, tempo, pins, theme, length, keys, scales, styles, voices, layers });
   }
 
   playStop() {

@@ -105,6 +105,9 @@ pub struct Load {
     /// The loop's tempo and tone, for the calls.
     bpm: f64,
     tone: [f64; 3],
+    /// The layers the request asked off (`spec.mutes`, queue item 91), a bit
+    /// each in `Layer`'s order.
+    muted: u8,
 }
 
 impl Load {
@@ -126,6 +129,7 @@ impl Load {
         level: 1.0,
         bpm: 0.0,
         tone: [0.0; 3],
+        muted: 0,
     };
 
     /// What the engine decides loading the loop of `cx`, rendered as `r`
@@ -184,6 +188,7 @@ impl Load {
             level: cx.c.level.unwrap_or(1.0),
             bpm: spec.bpm,
             tone: spec.tone,
+            muted: spec.layers_off,
         }
     }
 
@@ -230,7 +235,8 @@ impl Load {
 
     /// The calls the engine makes to the synth at load, in order: the
     /// loop's tone, the profile's level, the echo's time, and each layer's
-    /// mute (none muted: a spec from a seed mutes nothing).
+    /// mute (none muted unless the request asked a layer off: a spec from a
+    /// seed mutes nothing).
     fn write_calls<S: Sink>(&self, w: &mut Writer<S>) {
         w.list();
         w.list();
@@ -256,7 +262,7 @@ impl Load {
             w.list();
             w.str("setMute");
             w.str(layer.name());
-            w.bool(false);
+            w.bool(self.muted & (1 << layer as usize) != 0);
             w.end_list();
         }
         w.end_list();

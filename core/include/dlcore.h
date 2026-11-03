@@ -133,12 +133,27 @@ const char *dl_player_scales(dl_player *player, uint32_t scales);
    chosen from ("no such style" for a bit past the last). */
 const char *dl_player_styles(dl_player *player, uint32_t styles);
 
+/* Ask for the voices in `voices` of layer `layer` (0 to 4: drums, bass,
+   chords, melody, texture), a bit each by its place in the layer's list, or
+   for none in particular with 0 (queue item 91). The drums' voice is the kit,
+   the texture's its kind. A voice asked of the melody or the chords is the
+   voice they play: the choir is not forced by the others. ("no such layer",
+   "no such voice"). */
+const char *dl_player_voices(dl_player *player, uint32_t layer, uint32_t voices);
+
+/* Ask for layer `layer` (0 to 4) to be left to chance (`state` 0), always
+   played (1) or left out (2), muted as the listener's mute would be (queue
+   item 91). "all layers off" for the fifth left out: the one request that
+   cannot be met. */
+const char *dl_player_layer(dl_player *player, uint32_t layer, uint32_t state);
+
 /* Ask for what `request` says, as text, in place of what was asked since the
    last load: items split by commas, each a vibe ("glacial"), a vibe and its
    weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
    ("theme=1234"), the length ("bars=1024", "bars=endless"), the key ("key=D",
    "key=D|G"), the mode ("scale=dorian", "scale=dorian|aeolian"), the style ("style=tide",
-   "style=tide|shrine") or a pin
+   "style=tide|shrine"), a layer's voices ("voice.melody=kalimba|marimba"), a
+   layer on or off ("layer.drums=off") or a pin
    ("organ=on", "tunedKick=long", "arc.period=240", "space.room=0.8"). */
 const char *dl_player_ask(dl_player *player, const char *request);
 

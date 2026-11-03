@@ -8,7 +8,7 @@
 
 import { Rng, randomSeed, seedName } from './rng.js';
 import { SCALES, SCALE_ORDER, NOTE_NAMES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted, GLAD_FROM } from './theory.js';
-import { CHARACTERS, CHARACTER_WEIGHTS, PROFILE_ORDER, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
+import { CHARACTERS, CHARACTER_WEIGHTS, PROFILE_ORDER, VOICE_ORDER, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
 import { drawChoices, dropShapeOf, FLOORDROP, PEDAL, pedalOf } from './choices.js';
@@ -300,6 +300,14 @@ export function newSpec(seed = randomSeed(), request = null) {
   // The key and the mode asked (queue item 89), over the theme's too: the
   // draws above were still made, and one already inside the set is kept.
   if (asked.style) spec.askStyle = asked.style.slice();
+  // The voices and the layers asked (queue item 91), kept: the layers' draws
+  // read them. A layer asked off is a layer muted, as the listener's mute
+  // button would (and unmutes the same way).
+  if (asked.voices) spec.askVoices = Object.fromEntries(Object.entries(asked.voices).map(([l, v]) => [l, v.slice()]));
+  if (asked.layers) {
+    spec.askLayers = { ...asked.layers };
+    for (const [layer, state] of Object.entries(asked.layers)) if (state === 'off') spec.mutes[layer] = true;
+  }
   if (asked.key) {
     spec.root = askedKey(seed, spec.root, asked.key);
     spec.askKey = asked.key.slice();
@@ -591,12 +599,12 @@ const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null, voices: null, layers: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
   if (Array.isArray(input)) return { ...out, vibes: lenientVibes(input) };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale', 'style'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
+  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale', 'style', 'voices', 'layers'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -624,15 +632,21 @@ export function readRequest(input) {
   if (input.scale != null) out.scale = scalesOf(input.scale);
   // The style (queue item 90): a profile or a set of them.
   if (input.style != null) out.style = stylesOf(input.style);
+  // The voices (queue item 91): { layer: a voice or a set }, and the layers
+  // on or off: { layer: 'on' | 'off' }.
+  if (input.voices != null) out.voices = voicesOf(input.voices);
+  if (input.layers != null) out.layers = layersOf(input.layers);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null, voices: null, layers: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
   const pins = {};
+  const voices = {};
+  const layers = {};
   for (const item of t.split(',')) {
     const eq = item.indexOf('=');
     const name = eq < 0 ? item : item.slice(0, eq);
@@ -655,6 +669,10 @@ export function parseRequest(text) {
       out.scale = scalesOf(value == null ? '' : value);
     } else if (name === 'style') {
       out.style = stylesOf(value == null ? '' : value);
+    } else if (name.startsWith('voice.')) {
+      voices[name.slice(6)] = value == null ? '' : value;
+    } else if (name.startsWith('layer.')) {
+      layers[name.slice(6)] = value == null ? '' : value;
     } else if (isPinName(name)) {
       // A pin (queue item 85b): a choice's id, or a dotted setting.
       if (value == null) throw new RequestError('a bad setting');
@@ -667,6 +685,8 @@ export function parseRequest(text) {
   }
   out.vibes = framed(asked);
   out.pins = framedPins(pins);
+  if (Object.keys(voices).length) out.voices = voicesOf(voices);
+  if (Object.keys(layers).length) out.layers = layersOf(layers);
   return out;
 }
 
@@ -680,6 +700,8 @@ export function requestText(request) {
   if (r.key) items.push(`key=${r.key.map((k) => NOTE_NAMES[k]).join('|')}`);
   if (r.scale) items.push(`scale=${r.scale.join('|')}`);
   if (r.style) items.push(`style=${r.style.join('|')}`);
+  if (r.voices) for (const layer of LAYERS) if (r.voices[layer]) items.push(`voice.${layer}=${r.voices[layer].join('|')}`);
+  if (r.layers) for (const layer of LAYERS) if (r.layers[layer]) items.push(`layer.${layer}=${r.layers[layer]}`);
   items.push(...pinItems(r.pins));
   return items.length ? items.join(',') : '-';
 }
@@ -698,6 +720,8 @@ export function requestOf(spec) {
     key: spec && Array.isArray(spec.askKey) ? spec.askKey.slice() : null,
     scale: spec && Array.isArray(spec.askScale) ? spec.askScale.slice() : null,
     style: spec && Array.isArray(spec.askStyle) ? spec.askStyle.slice() : null,
+    voices: spec && spec.askVoices ? Object.fromEntries(Object.entries(spec.askVoices).map(([l, v]) => [l, v.slice()])) : null,
+    layers: spec && spec.askLayers ? { ...spec.askLayers } : null,
   };
 }
 
@@ -721,6 +745,55 @@ function stylesOf(x) {
     asked.add(k);
   }
   return PROFILE_ORDER.filter((k) => asked.has(k));
+}
+
+// The voices asked (queue item 91), { layer: a voice, a list, or names
+// written with "|" between }: each layer's names from its own list
+// (`VOICE_ORDER`), read in that list's frozen order. A layer with none is
+// nothing asked.
+function voicesOf(x) {
+  if (typeof x !== 'object' || Array.isArray(x)) throw new RequestError('no such layer');
+  const out = {};
+  for (const layer of LAYERS) {
+    if (!Object.hasOwn(x, layer)) continue;
+    const v = x[layer];
+    const list = Array.isArray(v) ? v : typeof v === 'string' ? v.split('|') : [v];
+    if (!list.length) continue;
+    const asked = new Set();
+    for (const k of list) {
+      if (typeof k !== 'string' || !VOICE_ORDER[layer].includes(k)) throw new RequestError('no such voice');
+      asked.add(k);
+    }
+    out[layer] = VOICE_ORDER[layer].filter((k) => asked.has(k));
+  }
+  for (const k of Object.keys(x)) if (!LAYERS.includes(k)) throw new RequestError('no such layer');
+  return Object.keys(out).length ? out : null;
+}
+
+// The layers asked on or off (queue item 91), { layer: 'on' | 'off' }. All
+// five off is the one request that cannot be met.
+function layersOf(x) {
+  if (typeof x !== 'object' || x === null || Array.isArray(x)) throw new RequestError('no such layer');
+  for (const k of Object.keys(x)) if (!LAYERS.includes(k)) throw new RequestError('no such layer');
+  const out = {};
+  for (const layer of LAYERS) {
+    if (!Object.hasOwn(x, layer) || x[layer] == null) continue;
+    if (x[layer] !== 'on' && x[layer] !== 'off') throw new RequestError('a bad layer');
+    out[layer] = x[layer];
+  }
+  if (LAYERS.every((l) => out[l] === 'off')) throw new RequestError('all layers off');
+  return Object.keys(out).length ? out : null;
+}
+
+// A request's voices as the bits the core takes (`Request::voices`): a mask
+// for a layer, a bit each by place in the layer's frozen list; 0 for none.
+export function voiceMask(voices, layer) {
+  return voices && voices[layer] ? voices[layer].reduce((m, k) => m | (1 << VOICE_ORDER[layer].indexOf(k)), 0) : 0;
+}
+
+// A layer's state as the core takes it: 0 chance, 1 on, 2 off.
+export function layerState(layers, layer) {
+  return layers && layers[layer] === 'on' ? 1 : layers && layers[layer] === 'off' ? 2 : 0;
 }
 
 // A request's styles as the bits the core takes (`Request::styles`): a bit
@@ -1017,6 +1090,9 @@ export function choirOf(spec) {
   // they drew, and the melody rests). The choir's draws below are a stream
   // of their own, so nothing else moves.
   if (themeRests(spec)) return null;
+  // A voice asked of the melody or the chords is the voice they play: the
+  // choir is a rarity, and is not forced by the others (queue item 91).
+  if (spec.askVoices && (spec.askVoices.melody || spec.askVoices.chords)) return null;
   const r = new Rng(((spec.seed ^ CHOIR_SALT) >>> 0) || 17);
   if (!r.chance(CHOIR_RATE)) return null;
   // A standing few cents between the two layers.
@@ -1061,6 +1137,39 @@ export function moodOf(spec) {
 // otherwise the button looks broken. Silence is what Mute is for.
 function forced(spec, layer) {
   return !!(spec.forceLayers && spec.forceLayers[layer]);
+}
+
+// The voice asked for a layer (queue item 91), a set of names. A draw
+// already inside it stands; else one of the set, drawn on a stream of the
+// layer's own seed, weighted by how much the profiles' pool leans toward
+// each (a voice the pool lacks at the floor, a quarter of a weight, so no
+// pair is forbidden). The draw is always made first. For Mikey's ears: the
+// floor.
+const VOICE_SALT = 0x564f4943;
+const VOICE_FLOOR = 0.25;
+function askedVoice(spec, layer, drawn, pool) {
+  const wanted = spec.askVoices && spec.askVoices[layer];
+  if (!wanted || wanted.includes(drawn)) return drawn;
+  const have = new Map();
+  for (const [k, w] of pool) have.set(k, (have.get(k) || 0) + w);
+  return new Rng(((spec.layerSeeds[layer] ^ VOICE_SALT) >>> 0) || 41)
+    .weighted(wanted.map((k) => [k, Math.max(have.get(k) || 0, VOICE_FLOOR)]));
+}
+
+// Whether a layer is asked to be on (queue item 91): never left out by its
+// own chances. Every draw is made and the layer's rest overruled, so what
+// the layer plays is the loop's own wherever it already played.
+function layerOn(spec, layer) {
+  return !!(spec.askLayers && spec.askLayers[layer] === 'on');
+}
+
+// One of `pool` but not `not`, for a layer asked on whose draw landed on
+// the layer's rest (a bass style that plays nothing, no texture); drawn on
+// a stream of the layer's own seed.
+const ON_SALT = 0x4c415950;
+function onPick(spec, layer, pool, not) {
+  const rest = pool.filter(([k]) => k !== not);
+  return new Rng(((spec.layerSeeds[layer] ^ ON_SALT) >>> 0) || 43).weighted(rest.length ? rest : pool);
 }
 
 // The longest thing that has to happen before the piece could repeat.
@@ -1342,7 +1451,7 @@ function genHarmony(spec, vary = null, besides = null) {
   const slotCount = spec.bars * chordsPerBar;
 
   const size = r.weighted(c.chordSize);
-  const voice = r.weighted(c.chordVoices);
+  const voice = askedVoice(spec, 'chords', r.weighted(c.chordVoices), c.chordVoices);
   // Stacking fourths instead of thirds removes the major/minor question
   // altogether, which is most of why the BOTW piano sounds placeless.
   const quartal = c.quartal ? r.chance(c.quartal) : false;
@@ -1455,7 +1564,8 @@ function genHarmony(spec, vary = null, besides = null) {
             dur: at < slotEnd ? Math.min(full, slotEnd - at) : Math.min(full, 2),
             notes: [n],
             vel: 0.45 + r.f() * 0.2,
-            voice: choir ? choir.voice : 'keys',
+            // (An arpeggio is the keys, unless a voice was asked of the chords.)
+            voice: choir ? choir.voice : spec.askVoices && spec.askVoices.chords ? voice : 'keys',
             ...(choir ? { vowel: slotVowel, detune: choir.keysDetune } : {}),
           });
         });
@@ -1623,9 +1733,12 @@ function genBass(spec, harmony) {
     ? r.weighted(c.bassStyles.filter(([k]) => k !== 'sparse').length
         ? c.bassStyles.filter(([k]) => k !== 'sparse') : c.bassStyles)
     : r.weighted(c.bassStyles);
+  // A bass asked on is not the sparse style that sometimes plays nothing.
+  if (style === 'sparse' && layerOn(spec, 'bass')) style = onPick(spec, 'bass', c.bassStyles, 'sparse');
   if (c.drone && new Rng(((spec.layerSeeds.bass ^ DRONE_SALT) >>> 0) || 1).chance(c.drone)) style = 'drone';
   if (chugs(spec)) style = 'chug';
-  const voice = r.weighted(c.bassVoices || [['sub', 1]]);
+  const bassPool = c.bassVoices || [['sub', 1]];
+  const voice = askedVoice(spec, 'bass', r.weighted(bassPool), bassPool);
   const glideChance = c.glide || 0;
   // roundBass (queue item 56, approved by Mikey 2026-10-10): the bass sits
   // in 36-57, its bottom an octave higher than the old 28-52, and never
@@ -2060,7 +2173,7 @@ function genMelody(spec, harmony, dev = null) {
   const spb = spec.stepsPerBar || STEPS_PER_BAR;
   const scale = SCALES[spec.scale].steps;
   const total = spec.bars * spb;
-  const drawnVoice = r.weighted(c.melodyVoices);
+  const drawnVoice = askedVoice(spec, 'melody', r.weighted(c.melodyVoices), c.melodyVoices);
   const choir = choirOf(spec);
   const voice = dev ? dev.voice : choir ? choir.voice : drawnVoice;
   const lf = feelForLayer(spec, 'melody');
@@ -2072,7 +2185,7 @@ function genMelody(spec, harmony, dev = null) {
   // A theme's tune (queue item 85d): whether there is one, and its figure,
   // held in place of this loop's own (whose draws are still made).
   const tune = !dev && spec.theme != null ? themeTune(spec.theme) : null;
-  if (!dev && !forced(spec, 'melody') && !choir && (tune ? !tune.figure : silent)) return { events: [], voice, motif: [], cell: null };
+  if (!dev && !forced(spec, 'melody') && !layerOn(spec, 'melody') && !choir && (tune ? !tune.figure : silent)) return { events: [], voice, motif: [], cell: null };
 
   // --- the motif ------------------------------------------------------
   //
@@ -2421,9 +2534,10 @@ function genDrums(spec) {
   const beat = metre === '6/8' ? 6 : 4;
   const total = spec.bars * spb;
   const events = [];
-  if (!forced(spec, 'drums') && !r.chance(c.drums)) return { events, kit: 'none', hatDensity: 0 };
+  if (!forced(spec, 'drums') && !r.chance(c.drums) && !layerOn(spec, 'drums')) return { events, kit: 'none', hatDensity: 0 };
   // A profile may name its kits; the draw is the same one either way.
-  const kit = r.weighted(c.kits || [['tape', 4], ['brush', 2], ['machine', 3]]);
+  const kitPool = c.kits || [['tape', 4], ['brush', 2], ['machine', 3]];
+  const kit = askedVoice(spec, 'drums', r.weighted(kitPool), kitPool);
   // A profile may play grooves of its own (wayfare's, for travelling). The
   // draws above are the same either way, so it keeps the same kit and the
   // same share of loops with drums; every other loop goes on as before.
@@ -2665,7 +2779,11 @@ function genTexture(spec, harmony) {
   const c = characterOf(spec);
   const pool = (c.textures || [['bells', 3], ['swell', 3], ['chime', 2], ['drops', 2], ['wind', 1], ['none', 1.5]])
     .filter(([k]) => !(forced(spec, 'texture') && k === 'none'));
-  const kind = r.weighted(pool);
+  let kind = r.weighted(pool);
+  // A texture asked on is not the one that is no texture; one asked a voice
+  // keeps its rest unless it is asked on too.
+  if (kind === 'none' && layerOn(spec, 'texture')) kind = onPick(spec, 'texture', pool, 'none');
+  if (kind !== 'none') kind = askedVoice(spec, 'texture', kind, pool);
   const events = [];
   if (kind === 'none') return { events, kind };
 
@@ -3532,6 +3650,10 @@ export function genForm(spec) {
       }
     }
   }
+  // A layer asked on plays throughout (queue item 91): every draw above is
+  // made, the schedule and the rest placed by hand included, and then it is
+  // all in.
+  for (const layer of LAYERS) if (layerOn(spec, layer) && schedules[layer]) schedules[layer] = schedules[layer].map(() => true);
   return schedules;
 }
 

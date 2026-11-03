@@ -3,6 +3,7 @@
 //! with wayfare's travelling grooves (`travelGroove`), and `genTexture`,
 //! from `js/generator.js` and `js/choices.js`.
 
+use super::asked;
 use super::choices::lean_of;
 use super::data::{self, MAX_BARS, PEDAL};
 use super::js;
@@ -49,6 +50,11 @@ pub struct BassOut {
     pub voice: &'static str,
 }
 
+/// The kits a profile with none of its own draws from.
+const KITS: [(&str, f64); 3] = [("tape", 4.0), ("brush", 2.0), ("machine", 3.0)];
+/// The textures a profile with none of its own draws from.
+const TEXTURES: [(&str, f64); 6] = [("bells", 3.0), ("swell", 3.0), ("chime", 2.0), ("drops", 2.0), ("wind", 1.0), ("none", 1.5)];
+
 const DRONE_SALT: u32 = 0x0d70_11e5;
 const CHUG_SALT: u32 = 0x0c4a_6e11;
 const CHUG_DUR: f64 = 0.5;
@@ -77,6 +83,10 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
     let scale = spec.steps();
     let total = bars * spb;
     let mut style = c.bass_styles.as_ref().and_then(|p| r.weighted(p)).unwrap_or("");
+    // A bass asked on is not the sparse style that sometimes plays nothing.
+    if style == "sparse" && asked::on(spec, Layer::Bass) {
+        style = asked::on_pick(spec, Layer::Bass, c.bass_styles.as_ref().map_or(&[][..], |p| &p[..]), "sparse");
+    }
     if let Some(d) = c.drone
         && d != 0.0
         && Rng::new(js::salted(seed, DRONE_SALT, 1)).chance(d)
@@ -86,10 +96,11 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
     if chugs(cx) {
         style = "chug";
     }
-    let voice = match &c.bass_voices {
-        Some(p) => r.weighted(p).unwrap_or(""),
-        None => "sub",
+    let (drawn, pool) = match &c.bass_voices {
+        Some(p) => (r.weighted(p).unwrap_or(""), &p[..]),
+        None => ("sub", &[("sub", 1.0)][..]),
     };
+    let voice = asked::voice(spec, Layer::Bass, drawn, pool);
     let glide_chance = c.glide.unwrap_or(0.0);
     r.chance(0.25);
     out.clear();
@@ -394,14 +405,14 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
     let total = bars * spb;
     out.clear();
-    if !r.chance(c.drums.unwrap_or(f64::NAN)) {
+    if !r.chance(c.drums.unwrap_or(f64::NAN)) && !asked::on(spec, Layer::Drums) {
         return DrumsOut { kit: "none" };
     }
-    let kit = match c.kits {
-        Some(p) => r.weighted(p),
-        None => r.weighted(&[("tape", 4.0), ("brush", 2.0), ("machine", 3.0)]),
-    }
-    .unwrap_or("tape");
+    let (kit, pool) = match c.kits {
+        Some(p) => (r.weighted(p), p),
+        None => (r.weighted(&KITS), &KITS[..]),
+    };
+    let kit = asked::voice(spec, Layer::Drums, kit.unwrap_or("tape"), pool);
     if c.groove == Some("travel") {
         travel_groove(cx, bars, &mut r, kit, out);
         return DrumsOut { kit };
@@ -702,11 +713,19 @@ pub fn gen_texture(cx: &Cx, bars: f64, slots: &[Slot], cycle_steps: f64, out: &m
     let mut r = Rng::new(spec.layer_seed(Layer::Texture));
     let spb = cx.spb;
     let total = bars * spb;
-    let kind = match &cx.c.textures {
-        Some(p) => r.weighted(p),
-        None => r.weighted(&[("bells", 3.0), ("swell", 3.0), ("chime", 2.0), ("drops", 2.0), ("wind", 1.0), ("none", 1.5)]),
+    let (kind, pool) = match &cx.c.textures {
+        Some(p) => (r.weighted(p), &p[..]),
+        None => (r.weighted(&TEXTURES), &TEXTURES[..]),
+    };
+    let mut kind = kind.unwrap_or("none");
+    // A texture asked on is not the one that is no texture; one asked a voice
+    // keeps its rest unless it is asked on too (queue item 91).
+    if kind == "none" && asked::on(spec, Layer::Texture) {
+        kind = asked::on_pick(spec, Layer::Texture, pool, "none");
     }
-    .unwrap_or("none");
+    if kind != "none" {
+        kind = asked::voice(spec, Layer::Texture, kind, pool);
+    }
     out.clear();
     let note = |slot: &Slot, r: &mut Rng, up: i16| {
         let n = slot.notes.len();
