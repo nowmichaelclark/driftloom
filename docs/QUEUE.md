@@ -419,6 +419,21 @@ choir, under 5" rose from 2.34% to 3.73% when the octave stopped being read
 from what sounds). If Mikey hears them crowd the tune, the fix is a wider
 margin in the progression's decision, not a return to reading the events.
 
+**From items 88-91 (brain, 2026-11-03):** the same listening, so Mikey
+listens once: 88's lengths (100 bars, whose last section stops at a bar
+line; 1,024 bars and Endless, wander on and off; 1-, 3- and 7-bar loops),
+and two or three undertow loops with the chords' stab, beside a loop with
+`voice.chords=stab` pinned on another profile. **Decided (brain,
+2026-11-03; `docs/archive/notes/91-voice-levels.md`): the quiet voices stay
+offered as built** (the catalog's own voices at their own levels; no picker
+can ask for them yet, and `VOICE_ORDER` is append-only). If Mikey hears the
+stab's chords as too quiet in undertow's own loops, the fix is the voice's
+level in `data/voices.txt` for every loop (a sound change, for his ears),
+not a separate level for pinned use; the same question for tubular, nylon,
+templebell and wind. Also accepted: 91's lite refusals for a pinned piano
+(a lower mean than the catalog's; 3 of 222 loops losing a note against 1 of
+224 is within the noise of so few).
+
 ## For phase 3 (from item 82; brain, Session 28)
 
 - **When notes reach the core** (`docs/archive/notes/82-hand-over.md`): the
