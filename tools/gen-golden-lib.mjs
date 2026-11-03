@@ -10,6 +10,7 @@ import { VIBE_IDS } from '../js/vibes.js';
 import { kickKindOf } from '../js/choices.js';
 import { PINS } from '../js/pins.js';
 import { SCALE_ORDER } from '../js/theory.js';
+import { PROFILE_ORDER } from '../js/characters.js';
 
 // The corpora (tools/gen-golden.mjs, "The cases").
 export const CORPUS_SEED = 1;
@@ -49,6 +50,10 @@ export const LENGTH_N = 240;
 // with a key and a mode of the kind its index picks (`keyCase`).
 export const KEY_SEED = 89;
 export const KEY_N = 240;
+// The styles (queue item 90): seeds from their own stream, each with a style
+// of the kind its index picks (`styleCase`).
+export const STYLE_SEED = 90;
+export const STYLE_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -159,7 +164,31 @@ export function cases(goldenCodes) {
     const seed = keyed.seed32();
     out.push({ set: 'key', index: i, seed, vibes: null, request: keyCase(keyed, i, seed) });
   }
+  const styled = new Rng(STYLE_SEED);
+  for (let i = 0; i < STYLE_N; i++) {
+    const seed = styled.seed32();
+    out.push({ set: 'style', index: i, seed, vibes: null, request: styleCase(styled, i, seed) });
+  }
   return out;
+}
+
+// A style, of the kind `i` picks, drawn from `r` (queue item 90): one
+// profile, a set of two to five, one with vibes, one with a tempo, a set
+// with a key and a mode, one with pins, and a theme with a style asked.
+function styleCase(r, i, seed) {
+  const some = (list, n) => r.shuffle(list.slice()).slice(0, n);
+  const style = (n) => `style=${some(PROFILE_ORDER, n).join('|')}`;
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  switch (i % 8) {
+    case 0: return style(1);
+    case 1: return style(2 + (i % 4));
+    case 2: return [...vibes(1 + (i % 3)), style(1)].join(',');
+    case 3: return [`bpm=${32 + Math.floor(r.f() * 159)}`, style(1 + (i % 3))].join(',');
+    case 4: return [style(2 + (i % 2)), `key=${some(['C', 'D', 'Eb', 'F#', 'A'], 1)[0]}`, `scale=${some(SCALE_ORDER, 1)[0]}`].join(',');
+    case 5: return [style(1), 'organ=on', 'echo.beats=1'].join(',');
+    case 6: return [...vibes(2), `bpm=${60 + Math.floor(r.f() * 100)}`, style(2)].join(',');
+    default: return [`theme=${(seed ^ 0x5eed) >>> 0}`, style(1 + (i % 2))].join(',');
+  }
 }
 
 // A key and a mode, of the kind `i` picks, drawn from `r` (queue item 89):

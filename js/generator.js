@@ -8,7 +8,7 @@
 
 import { Rng, randomSeed, seedName } from './rng.js';
 import { SCALES, SCALE_ORDER, NOTE_NAMES, scalePitch, buildChord, voiceInRange, nearestChordTone, moodWeighted, GLAD_FROM } from './theory.js';
-import { CHARACTERS, CHARACTER_WEIGHTS, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
+import { CHARACTERS, CHARACTER_WEIGHTS, PROFILE_ORDER, POLY_CYCLES, blendMix, resolveKey } from './characters.js';
 import { MOODS } from './moods.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
 import { drawChoices, dropShapeOf, FLOORDROP, PEDAL, pedalOf } from './choices.js';
@@ -127,8 +127,10 @@ export function newSpec(seed = randomSeed(), request = null) {
     // A tempo asked leans the draw toward the profiles whose band holds it.
     return [k, wt * Math.max(0.28, 1 + drive * (mid - 0.45) * 2.5) * vibeLean(v, 'profiles', k) * tempoLean(t, CHARACTERS[k].bpm)];
   });
+  // (The pool before the draws take from it: a style asked pulls on it.)
+  const poolAll = pool.map(([k, w]) => [k, w]);
   const howMany = r.weighted([[1, 2.2], [2, 4], [3, 2.6], [4, 1.2]]);
-  const mix = {};
+  let mix = {};
   for (let i = 0; i < howMany && pool.length; i++) {
     const key = r.weighted(pool);
     const idx = pool.findIndex(([k]) => k === key);
@@ -144,6 +146,9 @@ export function newSpec(seed = randomSeed(), request = null) {
     for (const k of Object.keys(mix)) delete mix[k];
     Object.assign(mix, held.mix);
   }
+  // The style asked (queue item 90), over the theme's too: the draws above
+  // were still made, and a mix already inside the set stands.
+  if (asked.style) mix = askedMix(seed, mix, asked.style, poolAll);
 
   const c = vibedCharacter(blendMix(mix), v);
 
@@ -294,6 +299,7 @@ export function newSpec(seed = randomSeed(), request = null) {
   }
   // The key and the mode asked (queue item 89), over the theme's too: the
   // draws above were still made, and one already inside the set is kept.
+  if (asked.style) spec.askStyle = asked.style.slice();
   if (asked.key) {
     spec.root = askedKey(seed, spec.root, asked.key);
     spec.askKey = asked.key.slice();
@@ -371,6 +377,33 @@ function drawScale(r, seed, c, mix, lift, v) {
   const b = new Rng(((seed ^ BORROW_SALT) >>> 0) || 23);
   if (!b.chance(extraTotal / (ownTotal + extraTotal))) return drawn;
   return b.weighted(extra);
+}
+
+// The style asked (queue item 90), as a set of profiles. A mix whose every
+// profile is inside it stands; else each profile outside it is replaced by
+// one of the set, drawn on a stream of the seed's own in the order the mix
+// was drawn, weighted as the mix's own draw weighed the profiles (the
+// profile's weight, the loop's drive, the vibes and the tempo asked), and a
+// member that two of them land on takes both weights. So a pinned style is
+// the one profile whole, and a set keeps the loop's lopsided or even blend
+// across its members. Each profile keeps its own character: only which
+// profiles, never what one is.
+const STYLE_SALT = 0x5354594c;
+function askedMix(seed, mix, wanted, pool) {
+  const keys = Object.keys(mix);
+  if (keys.every((k) => wanted.includes(k))) return mix;
+  const r = new Rng(((seed ^ STYLE_SALT) >>> 0) || 37);
+  const weight = new Map(pool);
+  const sums = new Map();
+  for (const k of keys) {
+    const to = wanted.includes(k) ? k : r.weighted(wanted.map((m) => [m, weight.get(m)]));
+    sums.set(to, (sums.get(to) || 0) + mix[k]);
+  }
+  let total = 0;
+  for (const w of sums.values()) total += w;
+  const out = {};
+  for (const [k, w] of sums) out[k] = sums.size === 1 ? 1 : q8(w / total);
+  return out;
 }
 
 // The key asked (queue item 89), as a set of home notes (0 is C). A draw
@@ -517,7 +550,8 @@ function weighedVibes(r, asked) {
 // range, the theme (queue item 85d: a seed whose loop this one bends) and
 // the pins (queue item 85b, js/pins.js) and the length (queue item 88: a
 // number of bars or 'endless', `pieceOf`), the key and the mode (queue item
-// 89: each one, or a set to choose from). Whatever is not asked is drawn
+// 89: each one, or a set to choose from) and the style (queue item 90: the
+// profiles, one or a set). Whatever is not asked is drawn
 // from the seed as ever, and a request of nothing is the loop the seed makes.
 //
 // It comes as:
@@ -527,23 +561,26 @@ function weighedVibes(r, asked) {
 //     items split by commas, each a vibe ("glacial"), a vibe and its weight
 //     ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
 //     ("theme=1234"), a pin ("organ=on"), the length ("bars=1024",
-//     "bars=endless"), the key ("key=D", "key=D|G") or the mode
-//     ("scale=dorian", "scale=dorian|aeolian"); "" or "-" for nothing;
-//   - an object, { vibes, tempo, theme, pins, length, key, scale }: vibes a
+//     "bars=endless"), the key ("key=D", "key=D|G"), the mode
+//     ("scale=dorian", "scale=dorian|aeolian") or the style ("style=tide",
+//     "style=tide|shrine"); "" or "-" for nothing;
+//   - an object, { vibes, tempo, theme, pins, length, key, scale, style }: vibes a
 //     list of names, { name: weight } or [name, weight] pairs (the read form,
 //     below), tempo a number or [low, high], theme a seed, pins { name:
 //     value }, length a whole number of bars or 'endless', key a note's name
-//     or number (C is 0) or a list of them, scale a mode's name or a list.
+//     or number (C is 0) or a list of them, scale a mode's name or a list,
+//     style a profile's name or a list.
 // Text and objects are read strictly: a name the core does not have, a bad
 // weight or a tempo out of the core's range is refused (a RequestError, its
 // message the short plain ASCII line "can't do that" shows), never guessed.
 //
-// Read, it is { vibes, tempo, theme, pins, length, key, scale }: vibes null
+// Read, it is { vibes, tempo, theme, pins, length, key, scale, style }: vibes null
 // or [id, weight] pairs in the frozen order (the weight null where none was
 // given), tempo null or [low, high], whole bpm (equal when pinned), theme
 // null or a seed, pins null or { name: value } in the pins' order, length
 // null, a number of bars or 'endless', key null or home notes (numbers, low
-// first), scale null or modes' names in their frozen order.
+// first), scale null or modes' names in their frozen order, style null or
+// profile names in theirs.
 
 // The tempos the core plays, in bpm: what the share code's tempo byte holds.
 export const TEMPO_LIMIT = [32, 190];
@@ -554,12 +591,12 @@ const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
   if (Array.isArray(input)) return { ...out, vibes: lenientVibes(input) };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
+  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale', 'style'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -585,11 +622,13 @@ export function readRequest(input) {
   // The key and the mode (queue item 89): a name or a set of them.
   if (input.key != null) out.key = keysOf(input.key);
   if (input.scale != null) out.scale = scalesOf(input.scale);
+  // The style (queue item 90): a profile or a set of them.
+  if (input.style != null) out.style = stylesOf(input.style);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
@@ -614,6 +653,8 @@ export function parseRequest(text) {
       out.key = keysOf(value == null ? '' : value);
     } else if (name === 'scale') {
       out.scale = scalesOf(value == null ? '' : value);
+    } else if (name === 'style') {
+      out.style = stylesOf(value == null ? '' : value);
     } else if (isPinName(name)) {
       // A pin (queue item 85b): a choice's id, or a dotted setting.
       if (value == null) throw new RequestError('a bad setting');
@@ -638,6 +679,7 @@ export function requestText(request) {
   if (r.theme != null) items.push(`theme=${r.theme}`);
   if (r.key) items.push(`key=${r.key.map((k) => NOTE_NAMES[k]).join('|')}`);
   if (r.scale) items.push(`scale=${r.scale.join('|')}`);
+  if (r.style) items.push(`style=${r.style.join('|')}`);
   items.push(...pinItems(r.pins));
   return items.length ? items.join(',') : '-';
 }
@@ -655,6 +697,7 @@ export function requestOf(spec) {
     length: spec && spec.length != null ? spec.length : null,
     key: spec && Array.isArray(spec.askKey) ? spec.askKey.slice() : null,
     scale: spec && Array.isArray(spec.askScale) ? spec.askScale.slice() : null,
+    style: spec && Array.isArray(spec.askStyle) ? spec.askStyle.slice() : null,
   };
 }
 
@@ -665,6 +708,25 @@ export function keyMask(keys) {
 }
 export function scaleMask(scales) {
   return scales ? scales.reduce((m, k) => m | (1 << SCALE_ORDER.indexOf(k)), 0) : 0;
+}
+
+// A style or a set of styles (queue item 90), by profile name ("tide"), a
+// list or names written with "|" between; read in the profiles' frozen order.
+function stylesOf(x) {
+  const list = Array.isArray(x) ? x : typeof x === 'string' ? x.split('|') : [x];
+  if (!list.length) return null;
+  const asked = new Set();
+  for (const k of list) {
+    if (typeof k !== 'string' || !PROFILE_ORDER.includes(k)) throw new RequestError('no such style');
+    asked.add(k);
+  }
+  return PROFILE_ORDER.filter((k) => asked.has(k));
+}
+
+// A request's styles as the bits the core takes (`Request::styles`): a bit
+// each by place in the profiles' frozen order; 0 for none.
+export function styleMask(styles) {
+  return styles ? styles.reduce((m, k) => m | (1 << PROFILE_ORDER.indexOf(k)), 0) : 0;
 }
 
 // Home notes by their names, either spelling of a black key.

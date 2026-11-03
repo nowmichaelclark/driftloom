@@ -68,6 +68,9 @@ pub struct Spec {
     /// none. Kept, so a share code carries them and the loop is made again.
     pub keys: u32,
     pub scales: u32,
+    /// The styles asked (queue item 90), a bit each by place in
+    /// `request::PROFILE_ORDER`; 0 for none. Kept the same way.
+    pub styles: u32,
     /// The theme's tune (`themeTune`, worked out once here, not written):
     /// `None` without a theme, `Some(None)` where the theme's melody rests,
     /// else its figure and rhythmic cell, which the melody plays in place of
@@ -103,6 +106,7 @@ impl Spec {
         length: None,
         keys: 0,
         scales: 0,
+        styles: 0,
         tune: None,
         cycles: None,
     };
@@ -125,8 +129,9 @@ impl Spec {
         character::character_of(&self.mix, self.vibes.as_ref())
     }
 
-    /// The key and the modes asked (queue item 89): `askKey`, the home notes
-    /// by number, and `askScale`, the modes by name, each only if asked.
+    /// The key, the modes and the styles asked (queue items 89 and 90):
+    /// `askKey`, the home notes by number, `askScale`, the modes by name and
+    /// `askStyle`, the profiles by name, each only if asked.
     fn write_asked<S: Sink>(&self, w: &mut Writer<S>) {
         if self.keys != 0 {
             w.key("askKey");
@@ -144,6 +149,16 @@ impl Spec {
             for (k, scale) in SCALES.iter().enumerate() {
                 if self.scales & (1 << k) != 0 {
                     w.str(scale.id);
+                }
+            }
+            w.end_list();
+        }
+        if self.styles != 0 {
+            w.key("askStyle");
+            w.list();
+            for (k, id) in request::PROFILE_ORDER.iter().enumerate() {
+                if self.styles & (1 << k) != 0 {
+                    w.str(id);
                 }
             }
             w.end_list();
@@ -355,6 +370,52 @@ fn borrowed_pool(mix: &[(usize, f64)], lift: f64) -> character::Names {
     extra
 }
 
+const STYLE_SALT: u32 = 0x5354_594c;
+
+/// A profile's place in `CHARACTERS` by its place in the frozen order.
+fn character_of_bit(bit: usize) -> usize {
+    data::character_index(request::PROFILE_ORDER[bit]).unwrap_or(0)
+}
+
+/// `askedMix`: the style asked (queue item 90), `wanted` a bit each by place
+/// in the frozen order. A mix whose every profile is inside the set stands;
+/// else each profile outside it, in the order the mix was drawn, is replaced
+/// by one of the set drawn on a stream of the seed's own, weighted as the
+/// mix's own draw weighed the profiles (`pool`), a member that two of them
+/// land on taking both weights; a mix left with one profile is that profile
+/// whole.
+fn ask_mix(seed: u32, mix: &List<(usize, f64), MIX_MAX>, wanted: u32, pool: &[(usize, f64)]) -> List<(usize, f64), MIX_MAX> {
+    let inside = |c: usize| (0..request::PROFILE_ORDER.len()).any(|b| wanted & (1 << b) != 0 && character_of_bit(b) == c);
+    if mix.iter().all(|e| inside(e.0)) {
+        return *mix;
+    }
+    let mut r = Rng::new(js::salted(seed, STYLE_SALT, 37));
+    let members = (0..request::PROFILE_ORDER.len()).filter(|&b| wanted & (1 << b) != 0).map(character_of_bit);
+    let weight = |c: usize| pool.iter().find(|e| e.0 == c).map_or(f64::NAN, |e| e.1);
+    let mut sums: List<(usize, f64), MIX_MAX> = List::filled((0, 0.0));
+    for &(k, w) in mix.iter() {
+        let to = if inside(k) {
+            k
+        } else {
+            let i = r.weighted_index(members.clone().map(weight));
+            i.and_then(|i| members.clone().nth(i)).unwrap_or(k)
+        };
+        match sums.iter_mut().find(|e| e.0 == to) {
+            Some(e) => e.1 += w,
+            None => sums.push((to, 0.0 + w)),
+        }
+    }
+    let mut total = 0.0;
+    for e in sums.iter() {
+        total += e.1;
+    }
+    let one = sums.len() == 1;
+    for e in sums.iter_mut() {
+        e.1 = if one { 1.0 } else { q8(e.1 / total) };
+    }
+    sums
+}
+
 const KEY_SALT: u32 = 0x4b45_5931;
 const SCALE_SALT: u32 = 0x5343_4c45;
 /// `ASKED_FLOOR`: the weight a mode the profiles never draw has when a mode
@@ -468,6 +529,8 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
             wt * js::max(0.28, 1.0 + drive * (mid - 0.45) * 2.5) * character::lean_in(v, |x| x.profiles, c.id) * request::tempo_lean(t, band),
         ));
     }
+    // (The pool before the draws take from it: a style asked pulls on it.)
+    let pool_all = pool;
     let how_many = r.weighted(&[(1, 2.2), (2, 4.0), (3, 2.6), (4, 1.2)]).unwrap_or(1);
     let mut mix: List<(usize, f64), MIX_MAX> = List::filled((0, 0.0));
     for i in 0..how_many {
@@ -490,6 +553,11 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     }
     if let Some(h) = &held {
         mix = h.mix;
+    }
+    // The style asked (queue item 90), over the theme's too: the draws above
+    // were still made, and a mix already inside the set stands.
+    if request.styles() != 0 {
+        mix = ask_mix(seed, &mix, request.styles(), &pool_all);
     }
 
     let c = character::character_of(&mix, v);
@@ -656,6 +724,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         length: request.length(),
         keys: request.keys(),
         scales: request.scales(),
+        styles: request.styles(),
         tune: held.as_ref().map(melody::theme_tune),
         cycles,
     }

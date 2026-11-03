@@ -226,3 +226,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   1,024 bars and Endless with "Let the loop wander" on and off (off, a long
   piece is its loop repeated). Now Playing counts down to the piece's end,
   as before. Nothing changes with length on "any".
+- #319, key and scale (item 89, v145), preview URL:
+  <https://d5e8a6dc-driftloom.nowmichaelclark.workers.dev> (commit b44c693):
+  nothing to listen for in the app yet (no picker; the key line shows what a
+  request asks and cannot be tapped). The core's player and the generators
+  take `key=D|G` and `scale=dorian|aeolian` (`?engine=player`, `dlrender
+  --request`). For Mikey's ears when a picker exists: a mode a profile
+  never draws, pinned onto it (the floor of 0.25 decides how often the
+  profile's own modes still win among a set); the bass's fifth and pickups
+  sit a fixed interval from a chord's root and fall outside a strange mode
+  (whole tone, phrygian dominant) a little more than in the catalog (1.2%
+  of the bass's notes against 0.85%). Nothing changes with key and mode on
+  "any".

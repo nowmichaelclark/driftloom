@@ -594,6 +594,20 @@ mod player {
         }
     }
 
+    /// Ask the next `dl_play_load` for the profiles in `styles`, a bit each
+    /// by place in the frozen order (`Request::with_styles`; queue item 90).
+    /// 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_styles(styles: u32) -> u32 {
+        match request().with_styles(styles) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
     /// Pin setting `number` at `value` for what the next `dl_play_load`
     /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
     #[unsafe(no_mangle)]

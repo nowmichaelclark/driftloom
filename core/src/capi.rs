@@ -140,7 +140,7 @@ pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) 
 /// NUL-terminated): plain ASCII, static, never freed.
 fn line(refused: &'static str) -> *const c_char {
     use crate::generator::request::{
-        BAD_LENGTH, BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_KEY, NO_SUCH_SCALE, NO_SUCH_SETTING, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT,
+        BAD_LENGTH, BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_KEY, NO_SUCH_SCALE, NO_SUCH_SETTING, NO_SUCH_STYLE, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT,
     };
     let c: &'static CStr = match refused {
         NO_SUCH_VIBE => c"no such vibe",
@@ -154,6 +154,7 @@ fn line(refused: &'static str) -> *const c_char {
         BAD_LENGTH => c"a bad length",
         NO_SUCH_KEY => c"no such key",
         NO_SUCH_SCALE => c"no such scale",
+        NO_SUCH_STYLE => c"no such style",
         _ => c"can't do that",
     };
     c.as_ptr()
@@ -278,6 +279,22 @@ pub extern "C" fn dl_player_keys(player: *mut Engine, keys: u32) -> *const c_cha
 pub extern "C" fn dl_player_scales(player: *mut Engine, scales: u32) -> *const c_char {
     let Some(e) = engine(player) else { return line("") };
     match e.request.with_scales(scales) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for the profiles in `styles`, a bit each by
+/// its place in the frozen order, or for no style in particular with 0
+/// (queue item 90; `Request::with_styles`). Null if it can be met; else the
+/// line saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_styles(player: *mut Engine, styles: u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_styles(styles) {
         Ok(r) => {
             e.request = r;
             ptr::null()
