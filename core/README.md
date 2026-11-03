@@ -310,13 +310,29 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   `tests/length.rs` holds the rest (every profile, 1 to 32,768 bars, a
   section reached straight or through). `piece::time` is the play time the
   app's Length picker shows (`pieceTime` in `js/generator.js`).
+- **The key and the mode** (`Request::with_keys`, `Request::with_scales`,
+  queue item 89; `key=D`, `key=D|G`, `scale=dorian` and `scale=dorian|aeolian`
+  as text, `dl_player_keys` and `dl_player_scales` with a bit for each home
+  note, C the lowest, and each mode, by its place in `theory::SCALES`): one
+  note or mode is a pin, a set is chosen from ("D or G", the minor-ish
+  modes). Every draw is made as ever and the request then overrules two
+  values: a key or mode the seed drew that is already inside the set stands,
+  else one of the set is drawn from a stream of the seed's own (the keys
+  alike; the modes weighted by how far this profile mix and these vibes lean
+  toward each, a mode the profiles never draw at a floor of 0.25, so no pair
+  is forbidden and the vibes still lean what they can). A key and mode asked
+  overrule a theme's own. The generator is already written over any mode, so
+  a profile's progressions written for other modes fall back to the
+  seven-note shapes, and the ones spelled for a mode (cinder's added F over
+  E, wayfare's minor v) play where that mode allows them.
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
   (`dl_player_start`, `dl_player_load`, `dl_player_change` and
   `dl_player_next_change`, `dl_player_render`, ...; the
   request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
-  `dl_player_theme`, `dl_player_pin`, `dl_player_length` and
+  `dl_player_theme`, `dl_player_pin`, `dl_player_length`,
+  `dl_player_keys`, `dl_player_scales` and
   `dl_player_ask`, each refusal its
   line): build the
   library with `cargo rustc --release --lib --features capi --crate-type

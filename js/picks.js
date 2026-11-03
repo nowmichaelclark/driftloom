@@ -7,14 +7,18 @@
 //
 // The five lines are moods, tempo and length (sharing a line), key, style
 // and voices. Moods are today's vibes (state.vibes). Length and tempo are
-// state.picks, saved in the prefs. The moods, the tempo and the length reach
-// the generator as its request (`requestFor`; queue items 85 and 88: any
-// length from 1 bar to 32,768, or Endless). Key, style and voices have no
-// picker yet and always read "any".
+// state.picks, saved in the prefs, with the key and the mode (queue item
+// 89). The moods, the tempo, the length and the key and mode reach the
+// generator as its request (`requestFor`; queue items 85, 88 and 89: any
+// length from 1 bar to 32,768, or Endless; one key or mode, or a set to
+// choose from). Style and voices have no picker yet and always read "any";
+// the key line shows what is picked but cannot be tapped until a Painter
+// session designs its picker.
 
 import { el } from './ui.js';
 import { log2, pow } from './dlmath.js';
 import { readRequest, RequestError, pieceTime } from './generator.js';
+import { NOTE_NAMES, SCALES, SCALE_ORDER } from './theory.js';
 
 export const MIN_BARS = 1;
 export const MAX_BARS = 32768;
@@ -40,13 +44,23 @@ let before = null;  // what length was when the picker opened
 // ------------------------------------------------------------- words
 
 export function cleanPicks(p) {
-  const out = { tempo: null, length: null };
+  const out = { tempo: null, length: null, key: null, scale: null };
   if (p && Array.isArray(p.tempo) && p.tempo.length === 2) {
     const lo = Math.round(Number(p.tempo[0])), hi = Math.round(Number(p.tempo[1]));
     if (lo > 0 && hi >= lo) out.tempo = [lo, hi];
   }
   if (p && p.length === 'endless') out.length = 'endless';
   else if (p && Number.isFinite(Number(p.length)) && p.length !== null) out.length = clampBars(p.length);
+  // The key (home notes, 0 is C) and the mode (names), a set each; what the
+  // generator would not take is left out.
+  if (p && Array.isArray(p.key)) {
+    const keys = [...new Set(p.key)].filter((k) => Number.isInteger(k) && k >= 0 && k <= 11).sort((a, b) => a - b);
+    if (keys.length) out.key = keys;
+  }
+  if (p && Array.isArray(p.scale)) {
+    const scales = SCALE_ORDER.filter((id) => p.scale.includes(id));
+    if (scales.length) out.scale = scales;
+  }
   return out;
 }
 
@@ -66,6 +80,14 @@ export function tempoText(t) {
   return t ? (t[0] === t[1] ? `${t[0]}${NB}bpm` : `${t[0]}–${t[1]}${NB}bpm`) : '';
 }
 
+// The key line's words: "D dorian", "D or G", "dorian or aeolian", or ''.
+export function keyText(key, scale) {
+  const parts = [];
+  if (key && key.length) parts.push(key.map((k) => NOTE_NAMES[k]).join(' or '));
+  if (scale && scale.length) parts.push(scale.map((id) => SCALES[id].label.toLowerCase()).join(' or '));
+  return parts.join(' ');
+}
+
 export function lengthText(len) {
   if (len === 'endless') return 'endless';
   if (len == null) return '';
@@ -80,7 +102,8 @@ const spoken = (t) => t.replace('–', ' to ').replace(/ /g, ' ').replace('…'
 // What the next loop is asked for (the generator's request): the moods, the
 // tempo and the length picked. The same shape a game or a developer sends.
 export function requestFor(state) {
-  return { vibes: state.vibes.slice(), tempo: state.picks.tempo, length: state.picks.length };
+  const { tempo, length, key, scale } = state.picks;
+  return { vibes: state.vibes.slice(), tempo, length, key, scale };
 }
 
 // The "can't do that" line for the picks (a short plain line, its look a
@@ -120,7 +143,7 @@ export function renderNowPicks() {
   const { state } = api;
   const b = el('nowPicks');
   const moods = state.vibes;
-  const { tempo, length } = state.picks;
+  const { tempo, length, key, scale } = state.picks;
   b.textContent = '';
   const spokenParts = [];
   if (moods.length) {
@@ -136,6 +159,13 @@ export function renderNowPicks() {
     if (tempo) { row.append(pill(tempoText(tempo), 'tempo')); spokenParts.push(spoken(tempoText(tempo))); }
     if (length != null) { row.append(pill(lengthText(length), 'length')); spokenParts.push(spoken(lengthText(length))); }
     b.append(row);
+  }
+  if (key || scale) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill(keyText(key, scale), 'key'));
+    b.append(row);
+    spokenParts.push(spoken(keyText(key, scale)));
   }
   if (!spokenParts.length) {
     const row = document.createElement('span');
@@ -170,8 +200,8 @@ export function renderPanel() {
   const list = el('picksList');
   list.textContent = '';
   const moods = state.vibes;
-  const { tempo, length } = state.picks;
-  const isAny = { mood: !moods.length, pace: !tempo && length == null, key: true, style: true, voices: true };
+  const { tempo, length, key, scale } = state.picks;
+  const isAny = { mood: !moods.length, pace: !tempo && length == null, key: !key && !scale, style: true, voices: true };
 
   for (const line of LINES) {
     const row = document.createElement('div');
@@ -222,6 +252,13 @@ export function renderPanel() {
         note.textContent = `can't do that: ${cant}`;
         vals.append(note);
       }
+    } else if (line.id === 'key' && !isAny.key) {
+      // The key and the mode have no picker yet, so they are shown, not
+      // tapped: "D dorian".
+      const t = document.createElement('span');
+      t.className = 'pk-val static';
+      t.append(pill(keyText(key, scale), 'key'));
+      vals.append(t);
     } else {
       vals.append(plain(line.any));
     }

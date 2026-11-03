@@ -5,7 +5,7 @@
 // The actual note times are absolute Web Audio clock times, which are
 // sample-accurate. Standard two-clock pattern.
 
-import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf, pieceOf, sectionBars, pieceCut } from './generator.js';
+import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf, keyMask, scaleMask, pieceOf, sectionBars, pieceCut } from './generator.js';
 import { Rng } from './rng.js';
 import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
@@ -571,7 +571,7 @@ export class Engine {
     const asked = requestOf(this.spec);
     const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
     core.playWander(this.driftOn ? this.driftAmount : 0);
-    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme, asked.length);
+    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme, asked.length, keyMask(asked.key), scaleMask(asked.scale));
     this._playerControls();
     this._playerOn = true;
   }

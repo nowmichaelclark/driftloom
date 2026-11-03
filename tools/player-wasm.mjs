@@ -52,7 +52,7 @@ const way = {
 const wasm = path.resolve(flag('--wasm', path.join(ROOT, 'js', 'dlplayer.wasm')));
 const bytes = fs.readFileSync(wasm);
 const { VIBE_IDS } = await import('../js/vibes.js');
-const { parseRequest } = await import('../js/generator.js');
+const { parseRequest, keyMask, scaleMask } = await import('../js/generator.js');
 // The request, read as the core reads it (`Request::parse`), handed over
 // call by call as the worklet hands it.
 const asked = parseRequest(way.request ?? '');
@@ -86,6 +86,8 @@ function start(seed) {
   for (const [i, v] of pinNumbers(asked.pins)) if (!x.dl_play_pin(i, v)) throw new Error(`the core refused pin ${i}`);
   if (asked.theme != null) x.dl_play_theme(asked.theme >>> 0);
   if (asked.length != null && !x.dl_play_length(asked.length === 'endless' ? Infinity : asked.length)) throw new Error('the core refused the length');
+  if (keyMask(asked.key) && !x.dl_play_keys(keyMask(asked.key))) throw new Error('the core refused the keys');
+  if (scaleMask(asked.scale) && !x.dl_play_scales(scaleMask(asked.scale))) throw new Error('the core refused the scales');
   for (const id of way.vibes) {
     const i = VIBE_IDS.indexOf(id);
     if (i < 0 || !x.dl_play_vibe(i)) throw new Error(`no vibe '${id}'`);

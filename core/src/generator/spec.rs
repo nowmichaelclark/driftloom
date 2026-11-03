@@ -63,6 +63,11 @@ pub struct Spec {
     /// The length asked (queue item 88), kept: the piece's (`piece::Piece`),
     /// and a share code carries it.
     pub length: Option<Length>,
+    /// The home notes asked (queue item 89), a bit each (C the lowest), and
+    /// the modes asked, a bit each by their place in `theory::SCALES`; 0 for
+    /// none. Kept, so a share code carries them and the loop is made again.
+    pub keys: u32,
+    pub scales: u32,
     /// The theme's tune (`themeTune`, worked out once here, not written):
     /// `None` without a theme, `Some(None)` where the theme's melody rests,
     /// else its figure and rhythmic cell, which the melody plays in place of
@@ -96,6 +101,8 @@ impl Spec {
         pins: request::Pins::NONE,
         theme: None,
         length: None,
+        keys: 0,
+        scales: 0,
         tune: None,
         cycles: None,
     };
@@ -118,9 +125,35 @@ impl Spec {
         character::character_of(&self.mix, self.vibes.as_ref())
     }
 
+    /// The key and the modes asked (queue item 89): `askKey`, the home notes
+    /// by number, and `askScale`, the modes by name, each only if asked.
+    fn write_asked<S: Sink>(&self, w: &mut Writer<S>) {
+        if self.keys != 0 {
+            w.key("askKey");
+            w.list();
+            for k in 0..12 {
+                if self.keys & (1 << k) != 0 {
+                    w.num(f64::from(k));
+                }
+            }
+            w.end_list();
+        }
+        if self.scales != 0 {
+            w.key("askScale");
+            w.list();
+            for (k, scale) in SCALES.iter().enumerate() {
+                if self.scales & (1 << k) != 0 {
+                    w.str(scale.id);
+                }
+            }
+            w.end_list();
+        }
+    }
+
     /// The canonical text of the spec (`tools/gen-golden.mjs`).
     pub fn write<S: Sink>(&self, w: &mut Writer<S>) {
         w.obj();
+        self.write_asked(w);
         w.key("bars");
         w.num(self.bars);
         w.key("bpm");
@@ -289,16 +322,9 @@ const POLY_CYCLES: [f64; 7] = [3.0, 4.0, 5.0, 7.0, 8.0, 9.0, 11.0];
 const BORROW: f64 = 1.2;
 const BORROW_SALT: u32 = 0x4252_4954;
 
-/// `drawScale`.
-fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>) -> usize {
-    let lean = |k: &str, w: f64| theory::mood_weighted(w, theory::brightness(k), lift) * character::lean_in(v, |x| x.modes, k);
-    let mut own: character::Names = List::filled(("", 0.0));
-    for &(k, w) in c.scales.as_ref().map_or(&[][..], |p| &p[..]) {
-        own.push((k, lean(k, w)));
-    }
-    let drawn = r.weighted(&own).unwrap_or("dorian");
-    let mut chosen = drawn;
-    // borrowedPool
+/// `borrowedPool`: the bright modes a glad loop's profiles may borrow, with
+/// the share each adds (queue item 36), before the lean.
+fn borrowed_pool(mix: &[(usize, f64)], lift: f64) -> character::Names {
     let glad = js::max(0.0, lift - GLAD_FROM) / (1.0 - GLAD_FROM);
     let mut extra: character::Names = List::filled(("", 0.0));
     if glad != 0.0 {
@@ -326,6 +352,77 @@ fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64,
             }
         }
     }
+    extra
+}
+
+const KEY_SALT: u32 = 0x4b45_5931;
+const SCALE_SALT: u32 = 0x5343_4c45;
+/// `ASKED_FLOOR`: the weight a mode the profiles never draw has when a mode
+/// is asked for (the profiles' own run about 0.6 to 7; for Mikey's ears).
+const ASKED_FLOOR: f64 = 0.25;
+
+/// `askedKey`: the key asked (queue item 89), `keys` a bit each. A draw
+/// already inside the set stands; else one of the set, each alike, drawn on
+/// a stream of its own.
+fn ask_key(seed: u32, root: f64, keys: u32) -> f64 {
+    if keys & (1u32 << js::index(root).min(31)) != 0 {
+        return root;
+    }
+    let mut r = Rng::new(js::salted(seed, KEY_SALT, 29));
+    let mut i = r.pick_index(keys.count_ones() as usize);
+    for k in 0..12u8 {
+        if keys & (1 << k) != 0 {
+            if i == 0 {
+                return f64::from(k);
+            }
+            i -= 1;
+        }
+    }
+    root
+}
+
+/// `askedScale`: the mode asked (queue item 89), `wanted` a bit each. A draw
+/// inside the set stands; else one of the set, drawn on a stream of its own,
+/// weighted by how much the profile mix and the vibes lean toward each (the
+/// pool the mode would have come from, borrowed modes too), a mode the mix
+/// never draws at the floor: no pair is forbidden.
+fn ask_scale(seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>, scale: usize, wanted: u32) -> usize {
+    if wanted & (1 << scale) != 0 {
+        return scale;
+    }
+    let lean = |k: &str, w: f64| theory::mood_weighted(w, theory::brightness(k), lift) * character::lean_in(v, |x| x.modes, k);
+    let extra = borrowed_pool(mix, lift);
+    let weight = |k: usize| {
+        let id = SCALES[k].id;
+        let mut have = 0.0;
+        for &(name, w) in c.scales.as_ref().map_or(&[][..], |p| &p[..]) {
+            if name == id {
+                have += lean(name, w);
+            }
+        }
+        for &(name, w) in extra.iter() {
+            if name == id {
+                have += lean(name, w);
+            }
+        }
+        js::max(have, ASKED_FLOOR)
+    };
+    let members = (0..SCALES.len()).filter(|&k| wanted & (1 << k) != 0);
+    let mut r = Rng::new(js::salted(seed, SCALE_SALT, 31));
+    let chosen = r.weighted_index(members.clone().map(weight)).and_then(|i| members.clone().nth(i));
+    chosen.unwrap_or(scale)
+}
+
+/// `drawScale`.
+fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>) -> usize {
+    let lean = |k: &str, w: f64| theory::mood_weighted(w, theory::brightness(k), lift) * character::lean_in(v, |x| x.modes, k);
+    let mut own: character::Names = List::filled(("", 0.0));
+    for &(k, w) in c.scales.as_ref().map_or(&[][..], |p| &p[..]) {
+        own.push((k, lean(k, w)));
+    }
+    let drawn = r.weighted(&own).unwrap_or("dorian");
+    let mut chosen = drawn;
+    let mut extra = borrowed_pool(mix, lift);
     if !extra.is_empty() {
         for e in extra.iter_mut() {
             e.1 = lean(e.0, e.1);
@@ -487,7 +584,15 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let root = r.int(0.0, 11.0);
     let scale = draw_scale(&mut r, seed, &c, &mix, feel.lift, v);
     // The theme's key and mode, over the draws.
-    let (root, scale) = held.as_ref().map_or((root, scale), |h| (h.root, h.scale));
+    let (mut root, mut scale) = held.as_ref().map_or((root, scale), |h| (h.root, h.scale));
+    // The key and the mode asked (queue item 89), over the theme's too: the
+    // draws above were still made, and one already inside the set is kept.
+    if request.keys() != 0 {
+        root = ask_key(seed, root, request.keys());
+    }
+    if request.scales() != 0 {
+        scale = ask_scale(seed, &c, &mix, feel.lift, v, scale, request.scales());
+    }
     let swing_band = c.swing.unwrap_or([f64::NAN, f64::NAN]);
     let swing_draw = character::pull(v, |rec| rec.swing, r.f());
     let swing = swing_band[0] + swing_draw * (swing_band[1] - swing_band[0]);
@@ -549,6 +654,8 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         pins: *request.pins(),
         theme: request.theme(),
         length: request.length(),
+        keys: request.keys(),
+        scales: request.scales(),
         tune: held.as_ref().map(melody::theme_tune),
         cycles,
     }

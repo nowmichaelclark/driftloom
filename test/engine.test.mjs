@@ -809,7 +809,7 @@ console.log('\nThe space (queue item 65)');
     },
   });
   const engine = new Engine(ctx, synth);
-  const spec = newSpec(8282);
+  const spec = newSpec(8282, 'key=D|G,scale=dorian|aeolian');
   spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
   engine.load(spec);
   engine.start();
@@ -829,6 +829,7 @@ console.log('\nThe space (queue item 65)');
   run(0.55);
   const load = posts.find((p) => p[0] === 'playLoad');
   check('player: as the core arrives, the player is handed the loop of the spec\'s seed', !!load && load[1] === spec.seed >>> 0);
+  check('player: the key and the mode asked go with it, a bit each (queue item 89)', !!load && load[8] === ((1 << 2) | (1 << 7)) && load[9] === 0b11, JSON.stringify(load && load.slice(7)));
   check('player: its first step a moment on, and the cursor starts there with it', !!load && load[3] >= arrived + 0.4 && engine.step <= 1 && engine.loopCount === 0);
   check('player: the layers\' mutes and the tempo go with it', posts.filter((p) => p[0] === 'playMute').length === 5 && posts.some((p) => p[0] === 'playTempo' && p[1] === spec.bpm));
   const before = notes.length;

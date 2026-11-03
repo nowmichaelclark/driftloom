@@ -34,6 +34,16 @@ export const SCALES = {
   akebono: { steps: [0, 2, 3, 7, 9], label: 'Akebono' },
 };
 
+// The modes in their frozen order (append only): the order a share code and
+// the Rust core's `theory::SCALES` number them in, and a request's set of
+// scales is written in (queue item 89).
+export const SCALE_ORDER = [
+  'dorian', 'aeolian', 'ionian', 'mixolydian', 'lydian', 'phrygian',
+  'harmonicMinor', 'minorPent', 'majorPent', 'kumoi', 'hirajoshi', 'insen',
+  'wholeTone', 'lydianDominant', 'phrygianDominant', 'dorianSharp4',
+  'yo', 'ritusen', 'akebono',
+];
+
 export function midiToFreq(m) {
   return 440 * pow(2, (m - 69) / 12);
 }

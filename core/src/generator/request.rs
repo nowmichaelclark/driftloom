@@ -10,7 +10,8 @@
 //! tempo, pinned or a range, a theme (a seed whose loop this one bends: a
 //! friend keeps its tune as the day changes), the pins (`Pins`) and the
 //! length (queue item 88, `Length`: a piece of any number of bars, or
-//! Endless). Items 89 to 91 grow it.
+//! Endless), the home notes and the modes (queue item 89: each a set to
+//! choose from, one note or mode being the pin). Items 90 and 91 grow it.
 //!
 //! **Bends, never breaks.** A request is checked as it is built: a vibe the
 //! core does not have, a bad weight or a tempo outside `TEMPO_LIMIT` is
@@ -20,12 +21,14 @@
 //! **As text** (`parse`): items split by commas, each a vibe (`glacial`),
 //! a vibe and its weight (`glacial=0.7`), the tempo (`bpm=77`,
 //! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
-//! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`); empty
-//! or `-` for nothing. The generation goldens, `dlrender --request` and the
+//! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`), the
+//! key (`key=D`, `key=D|G`) and the mode (`scale=dorian`,
+//! `scale=dorian|aeolian`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 
 use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
 use super::js;
+use super::theory::SCALES;
 use crate::space;
 
 /// The tempos the core plays, in bpm: what a share code's tempo byte holds
@@ -46,6 +49,38 @@ pub const TEMPO_OUT: &str = "tempo must be 32 to 190 bpm";
 /// The line for a length that is not a whole number of bars from 1 to
 /// `LENGTH_MOST`, nor `endless`.
 pub const BAD_LENGTH: &str = "a bad length";
+/// The line for a key that is no note.
+pub const NO_SUCH_KEY: &str = "no such key";
+/// The line for a mode the core does not have.
+pub const NO_SUCH_SCALE: &str = "no such scale";
+
+/// The home notes by name, either spelling of a black key (`KEY_NAMES`): a
+/// note's number, C being 0.
+const KEY_NAMES: [(&str, u8); 17] = [
+    ("C", 0),
+    ("C#", 1),
+    ("Db", 1),
+    ("D", 2),
+    ("D#", 3),
+    ("Eb", 3),
+    ("E", 4),
+    ("F", 5),
+    ("F#", 6),
+    ("Gb", 6),
+    ("G", 7),
+    ("G#", 8),
+    ("Ab", 8),
+    ("A", 9),
+    ("A#", 10),
+    ("Bb", 10),
+    ("B", 11),
+];
+
+/// Every home note asked, as `keys` holds them: twelve bits, C the lowest.
+pub const KEYS_ALL: u32 = 0xfff;
+/// Every mode, as `scales` holds them: a bit each by its place in
+/// `theory::SCALES`.
+pub const SCALES_ALL: u32 = (1 << SCALES.len()) - 1;
 
 /// The longest length a request holds, in bars: 2^53 - 1, the largest whole
 /// number below which a double (and so the JavaScript) holds every whole
@@ -80,13 +115,19 @@ pub struct Request {
     pins: Pins,
     /// The length asked (queue item 88).
     length: Option<Length>,
+    /// The home notes asked (queue item 89): a bit each, C the lowest; 0 for
+    /// none asked.
+    keys: u32,
+    /// The modes asked (queue item 89): a bit each by its place in
+    /// `theory::SCALES`; 0 for none asked.
+    scales: u32,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None }
+        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0 }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -210,13 +251,56 @@ impl Request {
         self.length
     }
 
+    /// The same, with the home notes asked (queue item 89): a set to choose
+    /// from, a bit each (C the lowest), one note being a pinned key. The
+    /// loop's key is its seed's own where that is in the set, else one of
+    /// them drawn from the seed. 0 asks for nothing.
+    ///
+    /// # Errors
+    /// `NO_SUCH_KEY` for a bit past B.
+    pub fn with_keys(mut self, keys: u32) -> Result<Self, &'static str> {
+        if keys & !KEYS_ALL != 0 {
+            return Err(NO_SUCH_KEY);
+        }
+        self.keys = keys;
+        Ok(self)
+    }
+
+    /// The home notes asked, a bit each (0 for none).
+    #[must_use]
+    pub fn keys(&self) -> u32 {
+        self.keys
+    }
+
+    /// The same, with the modes asked (queue item 89): a set to choose from,
+    /// a bit each by its place in `theory::SCALES`. The loop's mode is its
+    /// seed's own where that is in the set, else one of them drawn from the
+    /// seed, leaning toward the ones its profiles and vibes favor. 0 asks for
+    /// nothing.
+    ///
+    /// # Errors
+    /// `NO_SUCH_SCALE` for a bit past the last mode.
+    pub fn with_scales(mut self, scales: u32) -> Result<Self, &'static str> {
+        if scales & !SCALES_ALL != 0 {
+            return Err(NO_SUCH_SCALE);
+        }
+        self.scales = scales;
+        Ok(self)
+    }
+
+    /// The modes asked, a bit each (0 for none).
+    #[must_use]
+    pub fn scales(&self) -> u32 {
+        self.scales
+    }
+
     /// A request read from its text (the module's doc says how it is
     /// written); a vibe or a pin named twice keeps the last.
     ///
     /// # Errors
     /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`, `BAD_LENGTH`,
-    /// `NO_SUCH_SETTING`, `BAD_SETTING` or `SETTING_OUT`, for the first item
-    /// that is one.
+    /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_SETTING`, `BAD_SETTING` or
+    /// `SETTING_OUT`, for the first item that is one.
     pub fn parse(text: &str) -> Result<Self, &'static str> {
         let text = text.trim();
         let mut out = Request::new();
@@ -237,6 +321,10 @@ impl Request {
                 let value = value.ok_or(BAD_LENGTH)?;
                 let length = if value == "endless" { Length::Endless } else { Length::Bars(whole(value).ok_or(BAD_LENGTH)?) };
                 out = out.with_length(length)?;
+            } else if name == "key" {
+                out.keys = keys_text(value.unwrap_or(""))?;
+            } else if name == "scale" {
+                out.scales = scales_text(value.unwrap_or(""))?;
             } else if name == "theme" {
                 let seed = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_THEME)?;
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
@@ -283,6 +371,27 @@ impl Default for Request {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// A key or a set of keys written with `|` between ("D|G"), as the bits
+/// `Request::keys` holds.
+fn keys_text(text: &str) -> Result<u32, &'static str> {
+    let mut keys = 0;
+    for name in text.split('|') {
+        let (_, n) = KEY_NAMES.iter().find(|k| k.0 == name).ok_or(NO_SUCH_KEY)?;
+        keys |= 1 << n;
+    }
+    Ok(keys)
+}
+
+/// A mode or a set of modes written with `|` between ("dorian|aeolian"), as
+/// the bits `Request::scales` holds.
+fn scales_text(text: &str) -> Result<u32, &'static str> {
+    let mut scales = 0;
+    for name in text.split('|') {
+        scales |= 1 << SCALES.iter().position(|s| s.id == name).ok_or(NO_SUCH_SCALE)?;
+    }
+    Ok(scales)
 }
 
 /// Digits only, as a number (the JavaScript's `/^\d+$/` and `Number`).
