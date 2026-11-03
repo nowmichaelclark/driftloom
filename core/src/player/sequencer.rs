@@ -303,6 +303,17 @@ impl Sequencer {
         synth.set_tone(host, lp.spec.tone, at);
         synth.set_level(host, s.level, at);
         Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats, at);
+        // A layer the request asked off is muted, as the listener's mute
+        // would (queue item 91), one asked on is not; the others stay as the
+        // host left them (a mute holds across loads until brought back).
+        for layer in LAYERS {
+            let bit = 1u8 << layer as usize;
+            if lp.spec.layers_off & bit != 0 {
+                self.mutes[layer as usize] = true;
+            } else if lp.spec.layers_on & bit != 0 {
+                self.mutes[layer as usize] = false;
+            }
+        }
         // spec.mutes, in its order: drums, bass, chords, melody, texture.
         for layer in LAYERS {
             synth.set_mute(host, channel_of(layer) as usize, self.mutes[layer as usize], now);

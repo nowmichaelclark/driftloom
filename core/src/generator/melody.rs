@@ -2,6 +2,7 @@
 //! phrase plan, the anchors, the register) and a developing loop's
 //! `developMelody` (`answerFigure`, `varyFigure`), from `js/generator.js`.
 
+use super::asked;
 use super::data::{MAX_BARS, MAX_STEPS_PER_BAR};
 use super::js;
 use super::list::List;
@@ -407,6 +408,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     let scale = spec.steps();
     let total = bars * spb;
     let drawn_voice = c.melody_voices.as_ref().and_then(|p| r.weighted(p)).unwrap_or("");
+    let drawn_voice = asked::voice(spec, Layer::Melody, drawn_voice, c.melody_voices.as_ref().map_or(&[][..], |p| &p[..]));
     let choir = cx.choir;
     let voice = match (dev, choir) {
         (Some(d), _) => d.voice,
@@ -419,7 +421,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     // held in place of this loop's own (whose draws are still made).
     let tune = if dev.is_none() { spec.tune } else { None };
     out.clear();
-    if dev.is_none() && choir.is_none() && tune.map_or(silent, |t| t.is_none()) {
+    if dev.is_none() && choir.is_none() && !asked::on(spec, Layer::Melody) && tune.map_or(silent, |t| t.is_none()) {
         return MelodyOut { voice, motif: List::filled(NO_MOTIF), cell: None, centre: None };
     }
     let driven = lf.energy > 0.6;

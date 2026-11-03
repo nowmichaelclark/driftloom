@@ -27,7 +27,9 @@
 // ("theme=1234"), the pins ("organ=on", "arc.period=240"; js/pins.js), the
 // length ("bars=1024", "bars=endless"), the key ("key=D", "key=D|G") and the
 // mode ("scale=dorian", "scale=dorian|aeolian") and the style ("style=tide",
-// "style=tide|shrine"); '-' for nothing.
+// "style=tide|shrine"), a layer's voices ("voice.melody=kalimba|marimba")
+// and a layer on or off ("layer.drums=off", "layer.melody=on"); '-' for
+// nothing.
 // The loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
 // digits) of a canonical text (below) of:
 //   spec     the spec, as newSpec makes it;
@@ -115,6 +117,12 @@
 //                   90): one profile, a set of two to five, one with vibes,
 //                   with a tempo, a set with a key and a mode, one with pins,
 //                   and a theme with a style asked.
+//   voice:0-239     240 seeds from Rng(91), each with voices and layers of the
+//                   kind its index picks (gen-golden-lib.mjs, `voiceCase`;
+//                   queue item 91): one voice of a layer, a set, voices of
+//                   several layers, a layer off, a layer on, voices and layers
+//                   with a style and a key, with vibes and a tempo, and a theme
+//                   with voices and a layer.
 //
 // Run it after any change to the generator, the vibes, the choices or the
 // engine's load. A change that is meant to move what is generated writes the

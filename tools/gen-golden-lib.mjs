@@ -10,7 +10,7 @@ import { VIBE_IDS } from '../js/vibes.js';
 import { kickKindOf } from '../js/choices.js';
 import { PINS } from '../js/pins.js';
 import { SCALE_ORDER } from '../js/theory.js';
-import { PROFILE_ORDER } from '../js/characters.js';
+import { PROFILE_ORDER, VOICE_ORDER } from '../js/characters.js';
 
 // The corpora (tools/gen-golden.mjs, "The cases").
 export const CORPUS_SEED = 1;
@@ -54,6 +54,10 @@ export const KEY_N = 240;
 // of the kind its index picks (`styleCase`).
 export const STYLE_SEED = 90;
 export const STYLE_N = 240;
+// The voices and layers (queue item 91): seeds from their own stream, each
+// with voices and layers of the kind its index picks (`voiceCase`).
+export const VOICE_SEED = 91;
+export const VOICE_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
 export const PASSES = 8;
@@ -169,7 +173,40 @@ export function cases(goldenCodes) {
     const seed = styled.seed32();
     out.push({ set: 'style', index: i, seed, vibes: null, request: styleCase(styled, i, seed) });
   }
+  const voiced = new Rng(VOICE_SEED);
+  for (let i = 0; i < VOICE_N; i++) {
+    const seed = voiced.seed32();
+    out.push({ set: 'voice', index: i, seed, vibes: null, request: voiceCase(voiced, i, seed) });
+  }
   return out;
+}
+
+// Voices and layers, of the kind `i` picks, drawn from `r` (queue item 91):
+// one voice of a layer, a set, voices of several layers, a layer off, a layer
+// on, voices and layers together with a style and a key, with vibes and a
+// tempo, and a theme with voices and a layer.
+function voiceCase(r, i, seed) {
+  const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
+  const some = (list, n) => r.shuffle(list.slice()).slice(0, n);
+  const voice = (layer, n) => `voice.${layer}=${some(VOICE_ORDER[layer], n).join('|')}`;
+  const pick = () => layers[Math.floor(r.f() * layers.length)];
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  const off = (n) => some(layers, n).map((l) => `layer.${l}=off`);
+  switch (i % 8) {
+    case 0: return voice(pick(), 1);
+    case 1: return voice(pick(), 2 + (i % 3));
+    case 2: return some(layers, 2 + (i % 4)).map((l) => voice(l, 1 + (i % 2))).join(',');
+    case 3: return off(1 + (i % 3)).join(',');
+    case 4: return some(layers, 1 + (i % 3)).map((l) => `layer.${l}=on`).join(',');
+    case 5: return [voice('melody', 1 + (i % 3)), voice('chords', 1 + (i % 2)), ...off(1), style1(r, PROFILE_ORDER), 'key=D'].join(',');
+    case 6: return [...vibes(1 + (i % 3)), `bpm=${60 + Math.floor(r.f() * 100)}`, voice(pick(), 2), `layer.${pick()}=on`].join(',');
+    default: return [`theme=${(seed ^ 0x5eed) >>> 0}`, voice('melody', 1), voice('bass', 1), 'layer.texture=on'].join(',');
+  }
+}
+
+// `style=` one profile, drawn from `r`.
+function style1(r, order) {
+  return `style=${order[Math.floor(r.f() * order.length)]}`;
 }
 
 // A style, of the kind `i` picks, drawn from `r` (queue item 90): one

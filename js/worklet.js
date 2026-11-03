@@ -258,6 +258,10 @@ class DriftloomCore extends AudioWorkletProcessor {
           if (m.scales) core.dl_play_scales(m.scales);
           // And its styles (queue item 90): a bit each.
           if (m.styles) core.dl_play_styles(m.styles);
+          // And its voices and layers (queue item 91): a mask and a state
+          // for each layer, in the layers' order.
+          (m.voices || []).forEach((mask, layer) => { if (mask) core.dl_play_voices(layer, mask); });
+          (m.layers || []).forEach((state, layer) => { if (state) core.dl_play_layer(layer, state); });
           core.dl_play_load(m.seed >>> 0, m.at || 0);
         }
         return;

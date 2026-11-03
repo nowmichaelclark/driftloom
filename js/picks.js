@@ -11,16 +11,16 @@
 // 89). The moods, the tempo, the length and the key and mode reach the
 // generator as its request (`requestFor`; queue items 85, 88 and 89: any
 // length from 1 bar to 32,768, or Endless; one key or mode, or a set to
-// choose from), and the style (queue item 90: one profile or a set).
-// Voices have no picker yet and always read "any"; the key and style lines
-// show what is picked but cannot be tapped until a Painter session designs
-// their pickers.
+// choose from), the style (queue item 90: one profile or a set), and the
+// voices of each layer and the layers on or off (queue item 91). None of
+// the key, style and voices lines has a picker yet: they show what is picked
+// but cannot be tapped until a Painter session designs their pickers.
 
 import { el } from './ui.js';
 import { log2, pow } from './dlmath.js';
-import { readRequest, RequestError, pieceTime } from './generator.js';
+import { readRequest, RequestError, pieceTime, LAYERS } from './generator.js';
 import { NOTE_NAMES, SCALES, SCALE_ORDER } from './theory.js';
-import { PROFILE_ORDER } from './characters.js';
+import { PROFILE_ORDER, VOICE_ORDER } from './characters.js';
 
 export const MIN_BARS = 1;
 export const MAX_BARS = 32768;
@@ -46,7 +46,7 @@ let before = null;  // what length was when the picker opened
 // ------------------------------------------------------------- words
 
 export function cleanPicks(p) {
-  const out = { tempo: null, length: null, key: null, scale: null, style: null };
+  const out = { tempo: null, length: null, key: null, scale: null, style: null, voices: null, layers: null };
   if (p && Array.isArray(p.tempo) && p.tempo.length === 2) {
     const lo = Math.round(Number(p.tempo[0])), hi = Math.round(Number(p.tempo[1]));
     if (lo > 0 && hi >= lo) out.tempo = [lo, hi];
@@ -66,6 +66,21 @@ export function cleanPicks(p) {
   if (p && Array.isArray(p.style)) {
     const styles = PROFILE_ORDER.filter((id) => p.style.includes(id));
     if (styles.length) out.style = styles;
+  }
+  // The voices, { layer: names } in each layer's frozen order, and the
+  // layers, { layer: 'on' | 'off' } (not all five off).
+  if (p && p.voices && typeof p.voices === 'object') {
+    const voices = {};
+    for (const layer of LAYERS) {
+      const asked = Array.isArray(p.voices[layer]) ? VOICE_ORDER[layer].filter((v) => p.voices[layer].includes(v)) : [];
+      if (asked.length) voices[layer] = asked;
+    }
+    if (Object.keys(voices).length) out.voices = voices;
+  }
+  if (p && p.layers && typeof p.layers === 'object') {
+    const layers = {};
+    for (const layer of LAYERS) if (p.layers[layer] === 'on' || p.layers[layer] === 'off') layers[layer] = p.layers[layer];
+    if (Object.keys(layers).length && !LAYERS.every((l) => layers[l] === 'off')) out.layers = layers;
   }
   return out;
 }
@@ -99,6 +114,19 @@ export function styleText(style) {
   return style && style.length ? style.join(' or ') : '';
 }
 
+// The voices line's words: the voices asked ("kalimba, marimba"), then the
+// layers left out ("no drums") and the layers always played ("melody
+// always"), or ''.
+export function voicesText(voices, layers) {
+  const parts = [];
+  if (voices) for (const layer of LAYERS) for (const v of voices[layer] || []) if (!parts.includes(v)) parts.push(v);
+  if (layers) {
+    for (const layer of LAYERS) if (layers[layer] === 'off') parts.push(`no ${layer}`);
+    for (const layer of LAYERS) if (layers[layer] === 'on') parts.push(`${layer} always`);
+  }
+  return parts.join(', ');
+}
+
 export function lengthText(len) {
   if (len === 'endless') return 'endless';
   if (len == null) return '';
@@ -113,8 +141,8 @@ const spoken = (t) => t.replace('–', ' to ').replace(/ /g, ' ').replace('…'
 // What the next loop is asked for (the generator's request): the moods, the
 // tempo and the length picked. The same shape a game or a developer sends.
 export function requestFor(state) {
-  const { tempo, length, key, scale, style } = state.picks;
-  return { vibes: state.vibes.slice(), tempo, length, key, scale, style };
+  const { tempo, length, key, scale, style, voices, layers } = state.picks;
+  return { vibes: state.vibes.slice(), tempo, length, key, scale, style, voices, layers };
 }
 
 // The "can't do that" line for the picks (a short plain line, its look a
@@ -154,7 +182,7 @@ export function renderNowPicks() {
   const { state } = api;
   const b = el('nowPicks');
   const moods = state.vibes;
-  const { tempo, length, key, scale, style } = state.picks;
+  const { tempo, length, key, scale, style, voices, layers } = state.picks;
   b.textContent = '';
   const spokenParts = [];
   if (moods.length) {
@@ -184,6 +212,13 @@ export function renderNowPicks() {
     row.append(pill(styleText(style), 'style'));
     b.append(row);
     spokenParts.push(spoken(styleText(style)));
+  }
+  if (voices || layers) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill(voicesText(voices, layers), 'voices'));
+    b.append(row);
+    spokenParts.push(spoken(voicesText(voices, layers)));
   }
   if (!spokenParts.length) {
     const row = document.createElement('span');
@@ -218,8 +253,8 @@ export function renderPanel() {
   const list = el('picksList');
   list.textContent = '';
   const moods = state.vibes;
-  const { tempo, length, key, scale, style } = state.picks;
-  const isAny = { mood: !moods.length, pace: !tempo && length == null, key: !key && !scale, style: !style, voices: true };
+  const { tempo, length, key, scale, style, voices, layers } = state.picks;
+  const isAny = { mood: !moods.length, pace: !tempo && length == null, key: !key && !scale, style: !style, voices: !voices && !layers };
 
   for (const line of LINES) {
     const row = document.createElement('div');
@@ -276,6 +311,12 @@ export function renderPanel() {
       const t = document.createElement('span');
       t.className = 'pk-val static';
       t.append(pill(keyText(key, scale), 'key'));
+      vals.append(t);
+    } else if (line.id === 'voices' && !isAny.voices) {
+      // The voices have no picker yet either, so they are shown, not tapped.
+      const t = document.createElement('span');
+      t.className = 'pk-val static';
+      t.append(pill(voicesText(voices, layers), 'voices'));
       vals.append(t);
     } else if (line.id === 'style' && !isAny.style) {
       // The style has no picker yet either, so it is shown, not tapped.

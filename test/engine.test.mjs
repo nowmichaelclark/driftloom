@@ -809,7 +809,7 @@ console.log('\nThe space (queue item 65)');
     },
   });
   const engine = new Engine(ctx, synth);
-  const spec = newSpec(8282, 'key=D|G,scale=dorian|aeolian,style=tide|shrine');
+  const spec = newSpec(8282, 'key=D|G,scale=dorian|aeolian,style=tide|shrine,voice.melody=kalimba|marimba,voice.bass=sub,layer.texture=on,layer.drums=off');
   spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
   engine.load(spec);
   engine.start();
@@ -831,7 +831,9 @@ console.log('\nThe space (queue item 65)');
   check('player: as the core arrives, the player is handed the loop of the spec\'s seed', !!load && load[1] === spec.seed >>> 0);
   check('player: the key and the mode asked go with it, a bit each (queue item 89)', !!load && load[8] === ((1 << 2) | (1 << 7)) && load[9] === 0b11, JSON.stringify(load && load.slice(7)));
   check('player: and the style asked, a bit by place in the profiles\' frozen order (queue item 90)', !!load && load[10] === ((1 << 12) | (1 << 13)), JSON.stringify(load && load.slice(7)));
-  check('player: its first step a moment on, and the cursor starts there with it', !!load && load[3] >= arrived + 0.4 && engine.step <= 1 && engine.loopCount === 0);
+  check('player: and the voices and layers, a mask and a state for each layer in the layers\' order (queue item 91)', !!load
+  && JSON.stringify(load[11]) === JSON.stringify([0, 1 << 0, 0, (1 << 19) | (1 << 20), 0]) && JSON.stringify(load[12]) === JSON.stringify([2, 0, 0, 0, 1]), JSON.stringify(load && load.slice(10)));
+check('player: its first step a moment on, and the cursor starts there with it', !!load && load[3] >= arrived + 0.4 && engine.step <= 1 && engine.loopCount === 0);
   check('player: the layers\' mutes and the tempo go with it', posts.filter((p) => p[0] === 'playMute').length === 5 && posts.some((p) => p[0] === 'playTempo' && p[1] === spec.bpm));
   const before = notes.length;
   run(3);

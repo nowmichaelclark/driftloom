@@ -5,6 +5,7 @@
 //! `js/generator.js` makes them. The goldens hash it as `plan`
 //! (`planOf`).
 
+use super::asked;
 use super::canon::{Sink, Writer};
 use super::character::Char;
 use super::data::{self, Degree, MAX_BARS, MAX_CHORD_SIZE, Progressions};
@@ -508,6 +509,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
 
     let size = c.chord_size.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
     let voice = c.chord_voices.as_ref().and_then(|p| r.weighted(p)).unwrap_or("");
+    let voice = asked::voice(spec, Layer::Chords, voice, c.chord_voices.as_ref().map_or(&[][..], |p| &p[..]));
     let quartal = match c.quartal {
         Some(q) if q != 0.0 => r.chance(q),
         _ => false,
@@ -623,7 +625,8 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                         dur: if at < slot_end { js::min(full, slot_end - at) } else { js::min(full, 2.0) },
                         notes: one,
                         vel: 0.45 + r.f() * 0.2,
-                        voice: choir.map_or("keys", |ch| ch.voice),
+                        // (An arpeggio is the keys, unless a voice was asked of the chords.)
+                        voice: choir.map_or(if spec.voices[Layer::Chords as usize] != 0 { voice } else { "keys" }, |ch| ch.voice),
                         vowel: choir.map(|_| vowel),
                         detune: choir.map(|ch| ch.keys_detune),
                         ..EMPTY_EVENT
@@ -921,6 +924,16 @@ pub fn gen_form(cx: &Cx) -> Option<Form> {
                     continue;
                 }
                 sched[idx] = false;
+            }
+        }
+    }
+    // A layer asked on plays throughout (queue item 91): every draw above is
+    // made, the schedule and the rest placed by hand included, and then it is
+    // all in.
+    for layer in LAYERS {
+        if asked::on(spec, layer) {
+            for on in form[layer as usize].iter_mut() {
+                *on = true;
             }
         }
     }

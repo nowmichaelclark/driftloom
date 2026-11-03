@@ -140,7 +140,8 @@ pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) 
 /// NUL-terminated): plain ASCII, static, never freed.
 fn line(refused: &'static str) -> *const c_char {
     use crate::generator::request::{
-        BAD_LENGTH, BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_KEY, NO_SUCH_SCALE, NO_SUCH_SETTING, NO_SUCH_STYLE, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT,
+        ALL_LAYERS_OFF, BAD_LAYER, BAD_LENGTH, BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_KEY, NO_SUCH_LAYER, NO_SUCH_SCALE,
+        NO_SUCH_SETTING, NO_SUCH_STYLE, NO_SUCH_VOICE, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT,
     };
     let c: &'static CStr = match refused {
         NO_SUCH_VIBE => c"no such vibe",
@@ -155,6 +156,10 @@ fn line(refused: &'static str) -> *const c_char {
         NO_SUCH_KEY => c"no such key",
         NO_SUCH_SCALE => c"no such scale",
         NO_SUCH_STYLE => c"no such style",
+        NO_SUCH_LAYER => c"no such layer",
+        NO_SUCH_VOICE => c"no such voice",
+        BAD_LAYER => c"a bad layer",
+        ALL_LAYERS_OFF => c"all layers off",
         _ => c"can't do that",
     };
     c.as_ptr()
@@ -295,6 +300,47 @@ pub extern "C" fn dl_player_scales(player: *mut Engine, scales: u32) -> *const c
 pub extern "C" fn dl_player_styles(player: *mut Engine, styles: u32) -> *const c_char {
     let Some(e) = engine(player) else { return line("") };
     match e.request.with_styles(styles) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for the voices in `voices` of layer `layer`
+/// (0 to 4: drums, bass, chords, melody, texture), a bit each by its place in
+/// the layer's list, or for none in particular with 0 (queue item 91;
+/// `Request::with_voices`). Null if it can be met; else the line saying why
+/// not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_voices(player: *mut Engine, layer: u32, voices: u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_voices(layer as usize, voices) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for layer `layer` (0 to 4) to be left to
+/// chance (`state` 0), always played (1) or left out (2): queue item 91,
+/// `Request::with_layer`. Null if it can be met ("all layers off" for the
+/// fifth left out); else the line saying why not, and the request is left as
+/// it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_layer(player: *mut Engine, layer: u32, state: u32) -> *const c_char {
+    use crate::generator::request::{BAD_LAYER, LayerAsk};
+    let Some(e) = engine(player) else { return line("") };
+    let ask = match state {
+        0 => LayerAsk::Chance,
+        1 => LayerAsk::On,
+        2 => LayerAsk::Off,
+        _ => return line(BAD_LAYER),
+    };
+    match e.request.with_layer(layer as usize, ask) {
         Ok(r) => {
             e.request = r;
             ptr::null()

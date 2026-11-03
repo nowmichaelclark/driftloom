@@ -49,6 +49,7 @@
 // read side by side.
 #![allow(clippy::many_single_char_names)]
 
+pub mod asked;
 pub mod canon;
 pub mod character;
 pub mod choices;
