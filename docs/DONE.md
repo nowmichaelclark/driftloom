@@ -247,3 +247,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   (the profile plays its nearest gait at the tempo asked), and a set whose
   profiles are far from the loop the seed would have made (which of them
   each piece of the blend lands on). Nothing changes with style on "any".
+- #321, voices and layers (item 91, v147), preview URL:
+  <https://915ad235-driftloom.nowmichaelclark.workers.dev> (commit 5e0af1e):
+  nothing to listen for in the app yet (the voices line shows what a request
+  asks and cannot be tapped). The generators and the player take
+  `voice.melody=kalimba|marimba` and `layer.drums=off` (`?engine=player`,
+  `dlrender --request`). For Mikey's ears when a picker exists: a voice
+  pinned onto a profile that never draws it (the floor of 0.25 decides how
+  often the profile's own voices still win in a set), a layer asked on (the
+  drums come in late where the loop has the lateFloor choice), and the quiet
+  and loud voices of `docs/notes/91-voice-levels.md` (stab, tubular, nylon,
+  templebell, drops, wind, swell). Nothing changes with voices and layers on
+  "any".
