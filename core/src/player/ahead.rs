@@ -32,6 +32,7 @@
 //! where there is no deadline (`ready`, a loading screen).
 
 use super::{Player, State};
+use crate::generator::piece::Piece;
 use crate::{Core, QUANTUM};
 
 /// A block's fixed cost, in microseconds on the reference host, at full
@@ -66,21 +67,30 @@ impl Player {
             return None;
         }
         let g = &self.generator;
-        let total = g.spec().bars * g.spec().steps_per_bar;
+        let spb = g.spec().steps_per_bar;
+        let total = g.spec().bars * spb;
         let sd = self.seq.step_dur();
         if !(total >= 1.0 && sd.is_finite() && sd > 0.0) {
             return None;
         }
-        let total_steps = total as u64;
+        // A piece's pass is its section, a round's last maybe cut short
+        // (queue item 88): the pass playing's steps, and each next one's.
+        let piece = Piece::of(g.spec());
+        let steps = |n: u32| piece.map_or(total, |p| p.bars_of(u64::from(n)) * spb) as u64;
+        let mine = steps(self.seq.loop_count);
         // A loop that began after a lead-in and has decided no step yet: its
         // first pass, lead-in and all, not the lead-in alone.
-        let left = if self.lead_in && self.seq.abs_step == 0 { total_steps } else { (total_steps - self.seq.step % total_steps) % total_steps };
+        let left = if self.lead_in && self.seq.abs_step == 0 { mine } else { (mine - self.seq.step % mine) % mine };
         let mut end = self.seq.next_step_time + left as f64 * sd;
         let served = core.served();
         let frame = |t: f64| crate::math::ceil(t * self.rate).max(0.0) as u64;
         let mut guard = 0;
+        // The pass after the one whose end is reached (`left` 0: the pass
+        // playing ends on the next step).
+        let mut n = self.seq.loop_count.wrapping_add(u32::from(left != 0));
         while frame(end) <= served && guard < 64 {
-            end += total * sd;
+            end += steps(n) as f64 * sd;
+            n = n.wrapping_add(1);
             guard += 1;
         }
         Some(frame(end) - served)

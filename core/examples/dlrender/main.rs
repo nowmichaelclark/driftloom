@@ -43,6 +43,12 @@
 //!                                           (queue item 86, `change.rs`):
 //!                                           on the moment, no click, the
 //!                                           new loop as itself, the cost
+//! cargo run --release --example dlrender -- --endless HOURS [--seed N]
+//!     [--request TEXT] [--rate 22050] [--stereo] [--full] [--wander 1]
+//!                                           an Endless piece for hours at
+//!                                           speed (queue item 88,
+//!                                           `endless.rs`): no drift, no
+//!                                           growth, a line an hour
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! cargo run --release --example dlrender -- --block NAME/PROBE [--rate HZ] [--wav OUT.wav]
 //!                                           one building block alone, as the
@@ -61,6 +67,7 @@
 
 mod change;
 mod clip;
+mod endless;
 mod fades;
 mod notelist;
 mod seed;
@@ -72,7 +79,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] (the last four: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -91,6 +98,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
     let mut by_seed = BySeed::default();
     let mut changes = Changes::default();
+    let mut endless: Option<f64> = None;
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? {
@@ -101,6 +109,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
             "--stereo" => layout = 2,
             "--flush" => flush = true,
             "--compare" => compare = true,
+            "--endless" => endless = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
             "--block" => block = Some(args.next().ok_or(USAGE)?),
             "--wav" => wav_to = Some(args.next().ok_or(USAGE)?),
             "--signal" => signal = args.next().ok_or(USAGE)?,
@@ -124,6 +133,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
     }
     if let Some(name) = block {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
+    }
+    if let Some(hours) = endless {
+        return by_seed.endless(hours, rate, layout);
     }
     if let Some(n) = changes.n {
         return changes.run(n, rate, &by_seed);
@@ -251,6 +263,9 @@ struct BySeed {
     /// `--costs` or `--fades` in place of the renders.
     measure: Option<Measure>,
     lite: bool,
+    /// `--full`: the full mix for `--endless`, which renders lite unless
+    /// asked.
+    full: bool,
     seconds: Option<f64>,
     wander: Option<f64>,
     vibes: Vec<String>,
@@ -261,6 +276,16 @@ struct BySeed {
 }
 
 impl BySeed {
+    /// `--endless HOURS` (`endless.rs`): the first seed's loop (shaisk-sha's
+    /// unless one is given), Endless unless `--request` asks for another
+    /// length, at 22,050 Hz and lite unless asked otherwise.
+    fn endless(self, hours: f64, rate: Option<f64>, layout: u32) -> Result<(), String> {
+        let seed = self.seeds.first().map_or(1_027_928_796, |&(_, s)| s);
+        let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false };
+        let request = way.request()?;
+        endless::run(&endless::Way { hours, seed, rate: rate.unwrap_or(22_050.0), full: self.full, layout, wander: self.wander.unwrap_or(1.0), request })
+    }
+
     /// `--seed` and `--corpus` (`seed.rs`): the loops rendered, or their
     /// costs or fades measured.
     fn run(self, rate: Option<f64>, layout: u32, wav_to: Option<&str>) -> Result<(), String> {
@@ -306,6 +331,7 @@ impl BySeed {
             "--costs" => self.measure = Some(Measure::Costs),
             "--fades" => self.measure = Some(Measure::Fades),
             "--lite" => self.lite = true,
+            "--full" => self.full = true,
             "--seconds" => self.seconds = Some(number(args.next())?),
             "--wander" => self.wander = Some(number(args.next())?),
             "--vibes" => self.vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),

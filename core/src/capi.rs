@@ -139,7 +139,7 @@ pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) 
 /// A refusal's line as C text (the request's `&'static str` lines,
 /// NUL-terminated): plain ASCII, static, never freed.
 fn line(refused: &'static str) -> *const c_char {
-    use crate::generator::request::{BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_SETTING, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT};
+    use crate::generator::request::{BAD_LENGTH, BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_SETTING, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT};
     let c: &'static CStr = match refused {
         NO_SUCH_VIBE => c"no such vibe",
         BAD_WEIGHT => c"a bad weight",
@@ -149,6 +149,7 @@ fn line(refused: &'static str) -> *const c_char {
         BAD_SETTING => c"a bad setting",
         SETTING_OUT => c"a setting outside its range",
         BAD_THEME => c"a bad theme",
+        BAD_LENGTH => c"a bad length",
         _ => c"can't do that",
     };
     c.as_ptr()
@@ -229,6 +230,23 @@ pub extern "C" fn dl_player_pin(player: *mut Engine, number: u32, value: f64) ->
 pub extern "C" fn dl_player_theme(player: *mut Engine, seed: u32) {
     if let Some(e) = engine(player) {
         e.request = e.request.with_theme(seed);
+    }
+}
+
+/// Ask the next `dl_player_load` for a piece `bars` bars long, a whole
+/// number from 1 up, or for Endless with `bars` infinite (queue item 88;
+/// `Request::with_length`, `generator::piece`). Null if it can be met; else
+/// the line saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_length(player: *mut Engine, bars: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    let length = if bars == f64::INFINITY { crate::generator::request::Length::Endless } else { crate::generator::request::Length::Bars(bars) };
+    match e.request.with_length(length) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
     }
 }
 

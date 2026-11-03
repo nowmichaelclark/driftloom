@@ -5,7 +5,7 @@
 // The actual note times are absolute Web Audio clock times, which are
 // sample-accurate. Standard two-clock pattern.
 
-import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf } from './generator.js';
+import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf, pieceOf, sectionBars, pieceCut } from './generator.js';
 import { Rng } from './rng.js';
 import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
@@ -313,6 +313,11 @@ export class Engine {
     // they keep drifting instead of resynchronising every time the pattern
     // wraps -- which is the whole point of the Eno character.
     this.absStep = 0;
+    // The step from the load the piece's round playing began on (queue item
+    // 88): 0 in a loop with no length, and in a piece no section of which is
+    // cut short. The loop's bars count from it; layers with their own cycles
+    // go on counting from the load.
+    this.origin = 0;
     this.nextStepTime = 0;
     this.clock = new Clock(() => this._tick());
     this.driftOn = false;
@@ -524,7 +529,10 @@ export class Engine {
     const space = spaceOf(spec, this.base);
     this.spaceChange = !(keepPosition && JSON.stringify(space) === JSON.stringify(this.space));
     this.space = space;
-    this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
+    // The first pass at the count the last loop reached, as ever; a piece's
+    // (queue item 88) at its first section, so a section is the same however
+    // it is reached.
+    this.live = this.driftOn ? this._wander(!keepPosition && spec.length != null ? 0 : this.loopCount) : this.base;
     this.synth.setTone(spec.tone);
     const character = characterOf(spec);
     this.synth.setCharacterLevel(character.level ?? 1);
@@ -540,6 +548,7 @@ export class Engine {
       this.step = 0;
       this.absStep = 0;
       this.loopCount = 0;
+      this.origin = 0;
       this.decided = [];
       this.organHold = NO_HOLD;
     } else {
@@ -562,7 +571,7 @@ export class Engine {
     const asked = requestOf(this.spec);
     const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
     core.playWander(this.driftOn ? this.driftAmount : 0);
-    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme);
+    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme, asked.length);
     this._playerControls();
     this._playerOn = true;
   }
@@ -575,6 +584,7 @@ export class Engine {
     this.step = 0;
     this.absStep = 0;
     this.loopCount = 0;
+    this.origin = 0;
     this.live = this.driftOn ? this._wander(0) : this.base;
     this.visualQueue = [];
     this._playerLoad();
@@ -784,6 +794,7 @@ export class Engine {
     this.step = back.step % this.base.totalSteps;
     this.absStep = back.absStep;
     this.loopCount = back.loopCount;
+    this.origin = back.origin;
     this.live = live || back.live;
     this.tailsDucked = back.tailsDucked;
     this.organHold = back.organHold || NO_HOLD;
@@ -909,6 +920,7 @@ export class Engine {
     this.step = 0;
     this.absStep = 0;
     this.loopCount = 0;
+    this.origin = 0;
     this.synth.setTone(this.spec.tone);
   }
 
@@ -1025,7 +1037,7 @@ export class Engine {
     while (this.nextStepTime < horizon && this.nextStepTime < this.until && guard++ < 256) {
       if (keep) {
         this.decided.push({
-          time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount,
+          time: this.nextStepTime, step: this.step, absStep: this.absStep, loopCount: this.loopCount, origin: this.origin,
           live: this.live, tailsDucked: this.tailsDucked, organHold: this.organHold,
         });
         // A loop's first step, or a pass's, says so in the log.
@@ -1055,20 +1067,32 @@ export class Engine {
     return kind === this.kick.kind ? this.kick : { kick: this.kick.kick, kind };
   }
 
+  // The steps pass `n` plays: the loop's, or in a piece (queue item 88) its
+  // section's, a round's last maybe cut short.
+  passSteps(n = this.loopCount) {
+    const piece = pieceOf(this.spec);
+    return piece ? sectionBars(piece, n) * (this.live.stepsPerBar || 16) : this.live.totalSteps;
+  }
+
   _advance() {
     this.nextStepTime += this.stepDur;
     this.step++;
     this.absStep++;
-    if (this.step >= this.live.totalSteps) {
+    if (this.step >= this.passSteps()) {
       this.step = 0;
       this.loopCount++;
+      // A piece's next round counts its bars from where it begins.
+      const piece = pieceOf(this.spec);
+      if (pieceCut(piece) && this.loopCount % piece.sections === 0) this.origin = this.absStep;
       // Fresh variation at the top of each pass. The base pattern is never
       // touched, so the piece always returns to the version you saved.
       this.live = this.driftOn ? this._wander(this.loopCount) : this.base;
       if (this.onLoop) this.onLoop(this.loopCount);
-      // A track with a set length hands over once it has run its passes.
+      // A track with a set length hands over once it has run its passes; a
+      // piece once it has played round.
       const limit = this.spec && this.spec.playFor;
-      if (limit && this.loopCount >= limit && this.onTrackEnd) {
+      const round = piece && Number.isFinite(piece.sections) ? piece.sections : 0;
+      if (((limit && this.loopCount >= limit) || (round && this.loopCount >= round)) && this.onTrackEnd) {
         this.handover = true;
         this.onTrackEnd();
       }
@@ -1165,7 +1189,7 @@ export class Engine {
     const spb = p.stepsPerBar || 16;
     const pos = s % spb;
     const which = pos === 2 ? 0 : pos === Math.floor(spb / 2) + 2 ? 1 : -1;
-    if (which < 0 || !(this.stab.rates[which] > 0) || this._isSilentBar(abs)) return;
+    if (which < 0 || !(this.stab.rates[which] > 0) || this._isSilentBar(abs, abs - this.origin)) return;
     let n = 0;
     let floor = 0;
     for (const l of ['drums', 'bass', 'melody', 'texture']) {
@@ -1193,18 +1217,20 @@ export class Engine {
   // True when every layer is scheduled out for the bar containing this step
   // by the loop's entry schedule. (Drift's full stop, the other way a bar
   // fell silent, became a floor drop in queue item 58: the loop plays on.)
-  _isSilentBar(absStep) {
+  // `rel`: the step from the round's start (the same as `absStep`, but in a
+  // piece with a section cut short, queue item 88).
+  _isSilentBar(absStep, rel = absStep) {
     const p = this.live;
     if (!p) return false;
     const spb = p.stepsPerBar || 16;
-    const bar = Math.floor((absStep % p.totalSteps) / spb);
+    const bar = Math.floor((rel % p.totalSteps) / spb);
     if (p.silentBars && p.silentBars.indexOf(bar) !== -1) return true;
     if (!p.form) return false;
     for (const layer of LAYERS) {
       const sched = p.form[layer];
       if (!sched) return false; // a freshly rolled layer plays throughout
       const cycle = (p.cycles && p.cycles[layer]) || p.totalSteps;
-      const b = Math.floor((absStep % cycle) / spb) % sched.length;
+      const b = Math.floor(((cycle === p.totalSteps ? rel : absStep) % cycle) / spb) % sched.length;
       if (sched[b]) return false;
     }
     return true;
@@ -1260,7 +1286,7 @@ export class Engine {
     // At each bar line, decide whether the tails should still be ringing.
     const spbNow = p.stepsPerBar || 16;
     if (abs % spbNow === 0) {
-      const quiet = this._isSilentBar(abs);
+      const quiet = this._isSilentBar(abs, abs - this.origin);
       // Deciding again after a change, a bar line before it is heard was
       // handed over already, as it was.
       const kept = time < this.floor;

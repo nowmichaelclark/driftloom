@@ -40,11 +40,13 @@ const DECODE_MAP = (() => {
 // The newest format this build reads and writes. Format 4 (queue item 38a)
 // appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
 // for; format 6 (queue item 85b) the pins it was asked for; format 7 (queue
-// item 85d) the theme it bends. Each is written only by a loop that needs it
+// item 85d) the theme it bends; format 8 (queue item 88) the length it was
+// asked for. Each is written only by a loop that needs it
 // (a loop without vibes is still format 3), so every code already in
 // circulation, every saved album and every `/rank` answer keeps the exact
 // string it had.
-export const FORMAT = 7;
+export const FORMAT = 8;
+const THEME_FORMAT = 7;
 const PINS_FORMAT = 6;
 const TEMPO_FORMAT = 5;
 const VIBES_FORMAT = 4;
@@ -66,8 +68,13 @@ function hasTheme(spec) {
   return !!(spec && spec.theme != null);
 }
 
+function hasLength(spec) {
+  return !!(spec && (spec.length === 'endless' || (Number.isInteger(spec.length) && spec.length >= 1)));
+}
+
 function formatOf(spec) {
-  if (hasTheme(spec)) return FORMAT;
+  if (hasLength(spec)) return FORMAT;
+  if (hasTheme(spec)) return THEME_FORMAT;
   if (hasPins(spec)) return PINS_FORMAT;
   if (hasTempo(spec)) return TEMPO_FORMAT;
   return hasVibes(spec) ? VIBES_FORMAT : PLAIN_FORMAT;
@@ -96,6 +103,16 @@ class Writer {
   u8(v) { this.bytes.push(v & 0xff); return this; }
   u16(v) { this.u8(v >> 8); this.u8(v); return this; }
   u32(v) { this.u16(v >>> 16); this.u16(v & 0xffff); return this; }
+  // A whole number from 0 to 2^53 - 1 in as few bytes as it needs: seven
+  // bits a byte, low first, the top bit set on every byte but the last.
+  vu(v) {
+    let x = v;
+    while (x >= 128) {
+      this.u8((x % 128) | 128);
+      x = Math.floor(x / 128);
+    }
+    return this.u8(x);
+  }
   // A 0..1 value at 1/255 resolution, which is finer than anyone can hear.
   unit(v) { return this.u8(Math.round(Math.max(0, Math.min(1, v)) * 255)); }
   str(s, max = 40) {
@@ -111,6 +128,17 @@ class Reader {
   u8() { return this.b[this.i++]; }
   u16() { return (this.u8() << 8) | this.u8(); }
   u32() { return ((this.u16() << 16) >>> 0) + this.u16(); }
+  vu() {
+    let x = 0;
+    let scale = 1;
+    for (let i = 0; i < 8; i++) {
+      const b = this.u8();
+      x += (b & 127) * scale;
+      if (!(b & 128)) return x;
+      scale *= 128;
+    }
+    return x;
+  }
   // No rounding here. The writer stores round(v * 255); dividing straight
   // back by 255 reproduces the generator's quantised value exactly, and
   // trimming to three decimals would undo that for the sake of tidiness.
@@ -224,6 +252,12 @@ function writeSpec(w, spec, version = FORMAT) {
     if (hasTheme(spec)) w.u8(1).u32(spec.theme >>> 0);
     else w.u8(0);
   }
+  // Format 8: the length asked, as one number in as few bytes as it needs
+  // (promise 8: it costs only what it uses): 0 none, 1 Endless, bars + 1
+  // otherwise. One byte up to 126 bars, two up to 16,382, three past.
+  if (version >= 8) {
+    w.vu(!hasLength(spec) ? 0 : spec.length === 'endless' ? 1 : spec.length + 1);
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -320,6 +354,11 @@ function readSpec(r, version = FORMAT) {
     if (framed) spec.pins = framed;
   }
   if (version >= 7 && r.u8()) spec.theme = r.u32();
+  if (version >= 8) {
+    const n = r.vu();
+    if (n === 1) spec.length = 'endless';
+    else if (n > 1 && n - 1 <= Number.MAX_SAFE_INTEGER) spec.length = n - 1;
+  }
   return spec;
 }
 

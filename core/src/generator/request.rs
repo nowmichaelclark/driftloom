@@ -8,8 +8,9 @@
 //! holds the vibes, with or without weights (a game steers by a friend's
 //! mood and the time of day; the core never knows what a friend is), the
 //! tempo, pinned or a range, a theme (a seed whose loop this one bends: a
-//! friend keeps its tune as the day changes) and the pins (`Pins`). Items
-//! 86 to 91 grow it.
+//! friend keeps its tune as the day changes), the pins (`Pins`) and the
+//! length (queue item 88, `Length`: a piece of any number of bars, or
+//! Endless). Items 89 to 91 grow it.
 //!
 //! **Bends, never breaks.** A request is checked as it is built: a vibe the
 //! core does not have, a bad weight or a tempo outside `TEMPO_LIMIT` is
@@ -19,7 +20,8 @@
 //! **As text** (`parse`): items split by commas, each a vibe (`glacial`),
 //! a vibe and its weight (`glacial=0.7`), the tempo (`bpm=77`,
 //! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
-//! `arc.period=240`; `Pins`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
+//! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`); empty
+//! or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 
 use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
@@ -41,6 +43,25 @@ pub const BAD_TEMPO: &str = "a bad tempo";
 pub const BAD_THEME: &str = "a bad theme";
 /// The line for a tempo outside `TEMPO_LIMIT`.
 pub const TEMPO_OUT: &str = "tempo must be 32 to 190 bpm";
+/// The line for a length that is not a whole number of bars from 1 to
+/// `LENGTH_MOST`, nor `endless`.
+pub const BAD_LENGTH: &str = "a bad length";
+
+/// The longest length a request holds, in bars: 2^53 - 1, the largest whole
+/// number below which a double (and so the JavaScript) holds every whole
+/// number exactly, so a length written longer never rounds into range. No
+/// cap on the music: at 190 bpm in 2/4 it is some seventy million years.
+pub const LENGTH_MOST: f64 = 9_007_199_254_740_991.0;
+
+/// How long the piece asked for is (promise 11, queue item 88): a number of
+/// bars, any whole number from 1 up, or one that never ends.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Length {
+    /// This many bars, a whole number from 1 to `LENGTH_MOST`.
+    Bars(f64),
+    /// Never ends.
+    Endless,
+}
 
 /// A request: the vibes asked, each with its weight or none, the tempo
 /// asked, and the pins. Plain data, `Copy`, about two kilobytes: a host
@@ -57,13 +78,15 @@ pub struct Request {
     theme: Option<u32>,
     /// The named settings fixed (queue item 85b).
     pins: Pins,
+    /// The length asked (queue item 88).
+    length: Option<Length>,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE }
+        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -162,11 +185,36 @@ impl Request {
         Ok(self)
     }
 
+    /// The same, with the length asked (queue item 88): a piece of `bars`
+    /// bars, or Endless. A length of up to `piece::SECTION_BARS` bars is the
+    /// loop's own; a longer one, or Endless, is the loop as drawn played
+    /// section after section, each drawn as a wandering pass is
+    /// (`generator::piece` says how).
+    ///
+    /// # Errors
+    /// `BAD_LENGTH` for a number of bars that is not whole, or not from 1 to
+    /// `LENGTH_MOST`.
+    pub fn with_length(mut self, length: Length) -> Result<Self, &'static str> {
+        if let Length::Bars(n) = length
+            && !((1.0..=LENGTH_MOST).contains(&n) && js::floor(n) == n)
+        {
+            return Err(BAD_LENGTH);
+        }
+        self.length = Some(length);
+        Ok(self)
+    }
+
+    /// The length asked.
+    #[must_use]
+    pub fn length(&self) -> Option<Length> {
+        self.length
+    }
+
     /// A request read from its text (the module's doc says how it is
     /// written); a vibe or a pin named twice keeps the last.
     ///
     /// # Errors
-    /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`,
+    /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`, `BAD_LENGTH`,
     /// `NO_SUCH_SETTING`, `BAD_SETTING` or `SETTING_OUT`, for the first item
     /// that is one.
     pub fn parse(text: &str) -> Result<Self, &'static str> {
@@ -185,6 +233,10 @@ impl Request {
                 let (lo, hi) = value.split_once('-').unwrap_or((value, value));
                 let (Some(lo), Some(hi)) = (whole(lo), whole(hi)) else { return Err(BAD_TEMPO) };
                 out = out.with_tempo(lo, hi)?;
+            } else if name == "bars" {
+                let value = value.ok_or(BAD_LENGTH)?;
+                let length = if value == "endless" { Length::Endless } else { Length::Bars(whole(value).ok_or(BAD_LENGTH)?) };
+                out = out.with_length(length)?;
             } else if name == "theme" {
                 let seed = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_THEME)?;
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range

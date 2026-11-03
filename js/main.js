@@ -1,4 +1,4 @@
-import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
+import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, pieceOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
 import { ENGINE, PLAYER, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import * as quality from './quality.js';
@@ -10,7 +10,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v143';
+const BUILD = 'v144';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -1020,8 +1020,13 @@ function updateNowClock() {
   const pos = state.nowSteps || 0;
   let text;
   let frac;
-  if (spec.playFor) {
-    const end = spec.playFor * total;
+  // A piece asked for a length (queue item 88) ends when it has played
+  // round, as a set track length ends; whichever comes first. Today's clock:
+  // the long-piece display waits for a Painter session.
+  const piece = pieceOf(spec);
+  const round = piece && Number.isFinite(piece.sections) ? ((piece.sections - 1) * piece.bars + piece.last) * (e.live.stepsPerBar || 16) : Infinity;
+  const end = Math.min(round, spec.playFor ? spec.playFor * total : Infinity);
+  if (Number.isFinite(end)) {
     text = `\u2212${clock(Math.max(0, end - pos) * e.stepDur)}`;
     frac = Math.min(1, pos / end);
   } else {
@@ -1253,7 +1258,7 @@ function newSpec() {
     if (!(e instanceof RequestError)) throw e;
     spec = drawSpec(undefined, state.vibes);
   }
-  return picks.applyPicks(spec, state.picks);
+  return spec;
 }
 
 function togglePlay() {

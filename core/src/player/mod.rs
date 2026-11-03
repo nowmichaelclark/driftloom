@@ -62,9 +62,11 @@ pub mod sequencer;
 pub mod synth;
 
 use crate::generator::js;
+use crate::generator::piece::Piece;
 use crate::generator::plan::Cx;
 use crate::generator::spec::Metre;
 use crate::generator::wander::{AMOUNT, Pass};
+pub use crate::generator::request::Length;
 use crate::generator::{Generator, Layer};
 use crate::{Core, Error, MAX_RATE, MIN_RATE};
 
@@ -419,6 +421,29 @@ impl Player {
         (self.seq.step, self.seq.loop_count, self.seq.next_step_time)
     }
 
+    /// The piece of the loop playing (queue item 88: a length asked), or none
+    /// for a loop with no length; `position`'s pass is its section.
+    #[must_use]
+    pub fn piece(&self) -> Option<Piece> {
+        Piece::of(self.generator.spec())
+    }
+
+    /// The pass playing as it wanders (a piece's section), or none for the
+    /// loop as composed: what `Generator::section` draws for its number.
+    #[must_use]
+    pub fn pass(&self) -> Option<&Pass> {
+        if self.state != State::Playing || !self.wandering {
+            return None;
+        }
+        self.passes.get(self.current)
+    }
+
+    /// The steps decided since the loop playing was loaded (`absStep`).
+    #[must_use]
+    pub fn steps(&self) -> u64 {
+        self.seq.abs_step
+    }
+
     /// Notes the budget could not hold for want of room in its list (0).
     #[must_use]
     pub fn budget_full(&self) -> u32 {
@@ -438,11 +463,14 @@ impl Player {
                 // The first pass, at the pass count the engine still holds
                 // (`_wander(this.loopCount)` before the load resets it); a
                 // change's loop at its own first, so it plays as it does
-                // alone (queue item 86).
+                // alone (queue item 86); a piece's at its first section, so
+                // a section is the same however it is reached (queue item
+                // 88).
                 self.current = 0;
                 self.wandering = self.wander > 0.0;
                 if self.wandering {
-                    let n = if self.asked_by == Asked::Load { self.seq.loop_count } else { 0 };
+                    let piece = self.generator.spec().length.is_some();
+                    let n = if self.asked_by == Asked::Load && !piece { self.seq.loop_count } else { 0 };
                     self.draw(0, n);
                 }
                 self.begin(host);
@@ -569,6 +597,24 @@ impl Player {
         }
         let lead = self.lead();
         let abs = self.seq.abs_step;
+        // A piece with a section cut short (queue item 88): its boundaries
+        // walked step by step, section by section, from the next step.
+        if let Some(p) = Piece::of(g.spec()).filter(Piece::cut) {
+            let (mut s, mut n, mut t) = (self.seq.step, u64::from(self.seq.loop_count), abs);
+            let steps = |n: u64| (p.bars_of(n) * spb) as u64;
+            for _ in 0..1 << 16 {
+                if s % u == 0 && self.time_of(t) - now >= lead {
+                    return Some(t);
+                }
+                t += 1;
+                s += 1;
+                if s >= steps(n) {
+                    s = 0;
+                    n += 1;
+                }
+            }
+            return Some(t);
+        }
         let into = |t: u64| (self.seq.step + (t - abs)) % total;
         let mut t = abs + (u - into(abs) % u) % u;
         let mut guard = 0;

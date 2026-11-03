@@ -304,6 +304,28 @@ playing: a `now` change, or `load`); `core/tests/change.rs` asks it across
 49's text (below) is the brief, built on 82's player and 87's chunks. Plus:
 Endless and long pieces render ahead as 87 says.
 
+**Built (hands, 2026-11-03):** the request's length (`bars=N`, any whole
+number from 1 to 2^53 - 1, or `bars=endless`; `Request::with_length`,
+`dl_player_length`, `readRequest`'s `length`), in both generators, the
+player, the page's engine, the C header and wasm, share code format 8 (a
+number in as few bytes as it needs). Up to 32 bars (the longest any table
+draws) it is the loop's own length, the table's draw made and overruled.
+Past that, and Endless, the loop keeps its own length and plays section
+after section, section `n` its wandered pass `n` (`generator/piece.rs`,
+`pieceOf`): memory and a section's cost flat, any section straight from
+its number. **For Mikey's ears:** a round's last section is cut short at a
+bar line where the loop's length doesn't divide the piece's (100 bars of a
+16-bar loop: six sections and four bars); a piece comes round with new
+sections, as a loop's next pass wanders (the app plays it once round, then
+the next loop, as before); sections wander as the slider says (off: the
+loop repeated); layers with their own cycles keep drifting across sections;
+a piece's first section is section 0 (a load's first pass otherwise wanders
+at the last loop's count). The Length picker's play time is `pieceTime`,
+the core's `piece::time`; Now Playing keeps today's clock (a countdown to
+the piece's end). Section `n` is held for its notes as the generator draws
+them (the pass's hash), not its samples: a section's audio carries what
+rang into it from the one before, which a jump can't have.
+
 ## 89-91. Key and scale (was 50), style (was 51), voices and layers (was 52)
 
 50, 51 and 52's texts (below) are the briefs, in that order, each on 85's

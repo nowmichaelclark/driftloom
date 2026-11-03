@@ -28,6 +28,57 @@ export const LAYER_LABELS = LAYER_DATA.label;
 // loop's gait reads it as a waltz), 20 is 5/4.
 export const STEPS_PER_BAR = 16;
 
+// ---------------------------------------------------------------- pieces
+
+// A piece of a length asked (promise 11, queue item 88; the Rust's
+// `core/src/generator/piece.rs`, the same way). A length of up to
+// SECTION_BARS bars (the longest any profile's table draws) is the loop's
+// own: `bars` is the length asked. Past it, and for 'endless', the loop keeps
+// the bars its profile drew and the piece is that loop played section after
+// section, section n its pass n as "Let the loop wander" draws it (from the
+// seed and the number alone), so a section costs the same and is reached
+// straight from its number at any length. A round's last section is cut
+// short at a bar line where the loop's length doesn't divide the piece's
+// (for Mikey's ears). At its end a piece comes round, its sections numbered
+// on, as a loop's passes are; the app plays it once round and moves on.
+export const SECTION_BARS = Math.max(...Object.values(CHARACTERS).flatMap((c) => c.bars.map(([n]) => n)));
+
+// The piece of the loop of `spec`, or null for a loop with no length asked:
+// { bars: a section's, sections: a round's (Infinity for 'endless'), last:
+// the bars a round's last section plays }.
+export function pieceOf(spec) {
+  if (!spec || spec.length == null || !(spec.bars >= 1)) return null;
+  const bars = spec.bars;
+  if (spec.length === 'endless') return { bars, sections: Infinity, last: bars };
+  // In whole numbers, so a length near 2^53 counts exactly.
+  const rest = spec.length % bars;
+  const sections = (spec.length - rest) / bars + (rest ? 1 : 0);
+  return { bars, sections, last: rest || bars };
+}
+
+// The bars section `n` of `piece` plays: a section's, or a round's last's.
+export function sectionBars(piece, n) {
+  return Number.isFinite(piece.sections) && n % piece.sections === piece.sections - 1 ? piece.last : piece.bars;
+}
+
+// Whether some section of `piece` is cut short.
+export function pieceCut(piece) {
+  return !!piece && Number.isFinite(piece.sections) && piece.last < piece.bars;
+}
+
+// How long `bars` bars of `stepsPerBar` steps play at `bpm`, in seconds (the
+// Rust's `piece::seconds`, the same operations in the same order): what the
+// Length picker shows, so the app and the core never disagree.
+export function pieceSeconds(bars, stepsPerBar, bpm) {
+  return bars * stepsPerBar * (60 / bpm / 4);
+}
+
+// How long `bars` bars play across a tempo range [lo, hi], shortest first
+// (`piece::time`).
+export function pieceTime(bars, stepsPerBar, tempo) {
+  return [pieceSeconds(bars, stepsPerBar, Math.max(tempo[0], tempo[1])), pieceSeconds(bars, stepsPerBar, Math.min(tempo[0], tempo[1]))];
+}
+
 // Vowels belong to the composition, not to the pitch. Deriving them from
 // the note number (the first attempt) meant they changed on every note,
 // which reads as texture rather than singing, and meant any two loops in a
@@ -154,7 +205,11 @@ export function newSpec(seed = randomSeed(), request = null) {
   const coherence = q8(r.range(0.42, 0.82));
 
   let stepsPerBar = r.weighted(c.stepsPerBar);
-  const bars = r.weighted(c.bars);
+  // A short length asked is the loop's own (queue item 88, `pieceOf`): the
+  // draw is still made, so nothing else moves, and overruled.
+  const drawn = r.weighted(c.bars);
+  const len = asked.length;
+  const bars = typeof len === 'number' && len <= SECTION_BARS ? len : drawn;
   // A profile with gaits draws tempo and metre together, from its own salted
   // stream so every other loop's draws stay where they were. The two draws
   // above and the tempo draw below are still made, and simply overruled.
@@ -226,6 +281,9 @@ export function newSpec(seed = randomSeed(), request = null) {
   // The pins asked (queue item 85b; js/pins.js), kept the same way: the
   // choices' draw and the engine's load read them from here.
   if (asked.pins) spec.pins = { ...asked.pins };
+  // The length asked (queue item 88), kept: the piece's (`pieceOf`), and a
+  // share code carries it.
+  if (asked.length != null) spec.length = asked.length;
   // The theme (queue item 85d): its key and mode, drawn over (the draws above
   // were still made), and its seed, kept, so `metreOf` and `genMelody` find
   // its gait and its tune again and a share code carries it.
@@ -420,8 +478,9 @@ function weighedVibes(r, asked) {
 // events, read the same way by the Rust generator (`core/src/generator/
 // request.rs`): the vibes, with or without weights, the tempo, pinned or a
 // range, the theme (queue item 85d: a seed whose loop this one bends) and
-// the pins (queue item 85b, js/pins.js). Whatever is not asked is drawn from
-// the seed as ever, and a request of nothing is the loop the seed makes.
+// the pins (queue item 85b, js/pins.js) and the length (queue item 88: a
+// number of bars or 'endless', `pieceOf`). Whatever is not asked is drawn
+// from the seed as ever, and a request of nothing is the loop the seed makes.
 //
 // It comes as:
 //   - nothing (null), or a list of vibe names (a listener's selection: names
@@ -429,18 +488,21 @@ function weighedVibes(r, asked) {
 //   - text, as the goldens, `dlrender --request` and the C host write it:
 //     items split by commas, each a vibe ("glacial"), a vibe and its weight
 //     ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
-//     ("theme=1234") or a pin ("organ=on"); "" or "-" for nothing;
-//   - an object, { vibes, tempo, theme, pins }: vibes a list of names,
-//     { name: weight } or [name, weight] pairs (the read form, below), tempo
-//     a number or [low, high], theme a seed, pins { name: value }.
+//     ("theme=1234"), a pin ("organ=on") or the length ("bars=1024",
+//     "bars=endless"); "" or "-" for nothing;
+//   - an object, { vibes, tempo, theme, pins, length }: vibes a list of
+//     names, { name: weight } or [name, weight] pairs (the read form, below),
+//     tempo a number or [low, high], theme a seed, pins { name: value },
+//     length a whole number of bars or 'endless'.
 // Text and objects are read strictly: a name the core does not have, a bad
 // weight or a tempo out of the core's range is refused (a RequestError, its
 // message the short plain ASCII line "can't do that" shows), never guessed.
 //
-// Read, it is { vibes, tempo, theme, pins }: vibes null or [id, weight] pairs
-// in the frozen order (the weight null where none was given), tempo null or
-// [low, high], whole bpm (equal when pinned), theme null or a seed, pins
-// null or { name: value } in the pins' order.
+// Read, it is { vibes, tempo, theme, pins, length }: vibes null or [id,
+// weight] pairs in the frozen order (the weight null where none was given),
+// tempo null or [low, high], whole bpm (equal when pinned), theme null or a
+// seed, pins null or { name: value } in the pins' order, length null, a
+// number of bars or 'endless'.
 
 // The tempos the core plays, in bpm: what the share code's tempo byte holds.
 export const TEMPO_LIMIT = [32, 190];
@@ -451,12 +513,12 @@ const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
-  if (Array.isArray(input)) return { vibes: lenientVibes(input), tempo: null, theme: null, pins: null };
+  if (Array.isArray(input)) return { ...out, vibes: lenientVibes(input) };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!['vibes', 'tempo', 'theme', 'pins'].some((k) => k in input)) return { vibes: lenientVibes(Object.keys(input)), tempo: null, theme: null, pins: null };
+  if (!['vibes', 'tempo', 'theme', 'pins', 'length'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -477,11 +539,13 @@ export function readRequest(input) {
   if (input.theme != null) out.theme = themeOf(input.theme);
   // The pins (queue item 85b; js/pins.js), { name: value }.
   out.pins = readPins(input.pins);
+  // The length (queue item 88): bars, or 'endless'.
+  if (input.length != null) out.length = lengthOf(input.length);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
@@ -496,6 +560,9 @@ export function parseRequest(text) {
       const [lo, hi] = dash < 0 ? [value, value] : [value.slice(0, dash), value.slice(dash + 1)];
       if (!BPM_TEXT.test(lo) || !BPM_TEXT.test(hi)) throw new RequestError('a bad tempo');
       out.tempo = tempoOf(Number(lo), Number(hi));
+    } else if (name === 'bars') {
+      if (value !== 'endless' && (value == null || !BPM_TEXT.test(value))) throw new RequestError('a bad length');
+      out.length = lengthOf(value === 'endless' ? value : Number(value));
     } else if (name === 'theme') {
       if (value == null || !BPM_TEXT.test(value)) throw new RequestError('a bad theme');
       out.theme = themeOf(Number(value));
@@ -519,6 +586,7 @@ export function requestText(request) {
   const r = readRequest(request);
   const items = (r.vibes || []).map(([id, w]) => (w == null ? id : `${id}=${w}`));
   if (r.tempo) items.push(`bpm=${r.tempo[0] === r.tempo[1] ? r.tempo[0] : `${r.tempo[0]}-${r.tempo[1]}`}`);
+  if (r.length != null) items.push(`bars=${r.length}`);
   if (r.theme != null) items.push(`theme=${r.theme}`);
   items.push(...pinItems(r.pins));
   return items.length ? items.join(',') : '-';
@@ -534,6 +602,7 @@ export function requestOf(spec) {
     tempo: spec && Array.isArray(spec.tempo) ? spec.tempo.slice() : null,
     theme: spec && spec.theme != null ? spec.theme : null,
     pins: spec && spec.pins ? { ...spec.pins } : null,
+    length: spec && spec.length != null ? spec.length : null,
   };
 }
 
@@ -556,6 +625,17 @@ function weightOf(w) {
 function framed(asked) {
   const list = VIBE_IDS.filter((id) => asked.has(id)).map((id) => [id, asked.get(id)]);
   return list.length ? list : null;
+}
+
+// The longest length a request holds, in bars (`LENGTH_MOST`): 2^53 - 1,
+// so a length written longer never rounds into range. No cap on the music.
+export const LENGTH_MOST = Number.MAX_SAFE_INTEGER;
+
+// A length: a whole number of bars from 1 to LENGTH_MOST, or 'endless'.
+function lengthOf(x) {
+  if (x === 'endless') return x;
+  if (typeof x !== 'number' || !Number.isInteger(x) || x < 1 || x > LENGTH_MOST) throw new RequestError('a bad length');
+  return x;
 }
 
 // A theme: a seed, a whole number from 0 to 2^32 - 1, or refused.

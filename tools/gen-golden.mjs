@@ -24,8 +24,8 @@
 // its text (`parseRequest`): the vibes asked for, in the frozen order
 // (`vibeSelection`), comma-separated, each with its weight or not
 // ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
-// ("theme=1234") and the pins ("organ=on", "arc.period=240"; js/pins.js);
-// '-' for nothing.
+// ("theme=1234"), the pins ("organ=on", "arc.period=240"; js/pins.js) and
+// the length ("bars=1024", "bars=endless"); '-' for nothing.
 // The loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
 // digits) of a canonical text (below) of:
 //   spec     the spec, as newSpec makes it;
@@ -98,6 +98,11 @@
 //                   draws a choir (gen-golden-lib.mjs, `restCases`; queue
 //                   item 85f): the brain's case first, then from Rng(8506),
 //                   alone, with vibes, weighted vibes or a tempo.
+//   length:0-239    240 seeds from Rng(88), each with a length of the kind its
+//                   index picks (gen-golden-lib.mjs, `lengthCase`; queue item
+//                   88): 1 to 32 bars (the loop's own), 1, 2 or 3 bars, a long
+//                   piece (33 to 40,000 bars, or 32,768), Endless, and short
+//                   or long with vibes, a tempo, pins or a theme.
 //
 // Run it after any change to the generator, the vibes, the choices or the
 // engine's load. A change that is meant to move what is generated writes the

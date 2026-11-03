@@ -58,6 +58,7 @@ pub mod layers;
 pub mod list;
 pub mod load;
 pub mod melody;
+pub mod piece;
 pub mod plan;
 pub mod render;
 pub mod request;
@@ -395,6 +396,39 @@ impl Generator {
             self.pass.draw(&plan::Cx::new(&self.spec), &self.render, kick, pass);
         }
         &self.pass
+    }
+
+    /// Section `n` of the loop's piece (queue item 88; `piece` says what a
+    /// piece is), as the player plays it with the wander at `amount`: the
+    /// loop's pass numbered as the section, drawn now from the seed and the
+    /// number alone, without making the sections before it. The same pass
+    /// `wander` draws at the default amount.
+    pub fn section(&mut self, n: u64, amount: f64) -> &wander::Pass {
+        let kick = self.settings.kick.map(|k| k.kind);
+        self.pass.draw_by(&plan::Cx::new(&self.spec), &self.render, kick, piece::pass_number(n), amount);
+        // `wander` keeps the pass it drew at the default amount only.
+        if amount != wander::AMOUNT {
+            self.pass.number = None;
+        }
+        &self.pass
+    }
+
+    /// Write a pass's canonical text (the goldens' `passes`) into `sink`:
+    /// `pass`, of this loop, as the player plays it (`Player::pass`).
+    pub fn write_pass<S: canon::Sink>(&self, pass: &wander::Pass, sink: &mut S) {
+        let mut w = canon::Writer::new(sink);
+        pass.write(&mut w, &plan::Cx::new(&self.spec), &self.plan, &self.render);
+    }
+
+    /// Section `n`'s hash at the wander's `amount` (`section`, then FNV-1a
+    /// 64 over its canonical text): a section drawn straight from the seed
+    /// and its number, to hold against the one the player reached.
+    pub fn section_hash(&mut self, n: u64, amount: f64) -> u64 {
+        self.section(n, amount);
+        let mut h = canon::Fnv::new();
+        let mut w = canon::Writer::new(&mut h);
+        self.pass.write(&mut w, &plan::Cx::new(&self.spec), &self.plan, &self.render);
+        h.0
     }
 
     /// Write a part's canonical text into `sink` (a pass is drawn first,

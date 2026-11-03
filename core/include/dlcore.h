@@ -104,6 +104,14 @@ const char *dl_player_pin(dl_player *player, uint32_t number, double value);
    friend keeps its tune as the day changes. */
 void dl_player_theme(dl_player *player, uint32_t seed);
 
+/* Ask for a piece `bars` bars long, any whole number from 1 up, or Endless
+   with `bars` INFINITY (queue item 88). Up to 32 bars it is the loop's own
+   length; past that the loop as drawn plays section after section, each
+   drawn as a wandering pass is, the last of a round cut short at a bar line
+   where the loop's length doesn't divide the piece's. A piece comes round
+   at its end, as a loop does ("a bad length" for anything else). */
+const char *dl_player_length(dl_player *player, double bars);
+
 /* Ask for what `request` says, as text, in place of what was asked since the
    last load: items split by commas, each a vibe ("glacial"), a vibe and its
    weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
