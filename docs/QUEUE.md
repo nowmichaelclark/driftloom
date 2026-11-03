@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless), **89** (#319, key and scale), **90** (#320, style) and **91** (#321, voices and layers). **Next: 92.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless), **89** (#319, key and scale), **90** (#320, style) and **91** (#321, voices and layers). **Next: 88b** (the bars picker sets the loop's length; the length slider sets when it ends), **then 92.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -325,6 +325,59 @@ the core's `piece::time`; Now Playing keeps today's clock (a countdown to
 the piece's end). Section `n` is held for its notes as the generator draws
 them (the pass's hash), not its samples: a section's audio carries what
 rang into it from the one before, which a jump can't have.
+
+## 88b. The bars picker sets the loop's length; the length slider sets when it ends
+
+**Hands:** Opus 5.5, high. **Before 92** (Mikey, 2026-11-03;
+`docs/DECISIONS.md`). The brain's brief for 88 (49's) read the picker as
+how long a piece plays; Mikey means how many bars the loop is.
+
+**What Mikey saw on v147:** with 14 bars picked, the loop played 14 bars
+once and the next loop came; with 33 picked, the card read "16 bars" (and
+"32 bars" on another loop): the loop's own drawn length, the section 88
+plays, not the number he picked.
+
+**What it should be:**
+- **The picker sets the loop's own length**, 1 to 32,768 bars or Endless,
+  and the card shows that number ("4/4 · 33 bars"). The loop repeats as
+  loops do (each pass wandering as "Let the loop wander" says) until **the
+  length slider** (`trackLen`, `spec.playFor`, in the Sound panel beside
+  tempo and warmth) hands over to the next loop; with the slider off it
+  plays on, as today. No more "a piece plays once round, then the next
+  loop".
+- **Long loops keep 88's machinery:** past 32 bars the loop is built a
+  section at a time (section `n` its wandered pass `n`), and after its last
+  section the whole loop comes round to section 0 again, its pass being all
+  of its sections (88's "a round's last section cut short at a bar line"
+  stays). With wander on, a repeat of a long loop wanders as a pass does;
+  say exactly what that means for a long loop's sections, the conservative
+  reading "for Mikey's ears".
+- **Endless** never comes round; the slider still decides when it ends.
+- **When the slider's time is shorter than one pass** (a 1,024-bar loop is
+  about an hour; the slider at 5 minutes): the loop ends at the next phrase
+  line after the time is up, with a short fade (Mikey: yes), then the next
+  loop. Today `trackLen` rounds to whole passes (at least one), so this is
+  new.
+- **The slider's time readout** for a long loop counts time, not passes
+  (`describeLength`), and the picker's "bars · ≈ 3 min" stays the time of
+  one pass.
+- **Rename the picker "Bars"** (Mikey: yes): the head reads "Bars", and the
+  New loops panel's pill keeps "33 bars". Two things called length was part
+  of the misreading. Text only; `design/next-picks.md` gets one line saying
+  so.
+- The request's `bars=` field and share code format 8 keep their meaning
+  (the loop's length); what changes is only how long the app plays it. The
+  core's `Player` hands no "round over" to the host as an end: the host
+  decides, as the slider does.
+
+**Yardsticks:** a pinned 14 bars loops 14 bars until the slider hands over
+(rendered: the cycle 14 bars, at least three passes with the slider off);
+33, 100 and 1,024 bars show their number on the card and come round to
+section 0 (the notes of pass 2's section 0 equal pass 1's with wander off);
+the slider at 5 minutes on a 1,024-bar loop ends at the first phrase line
+past 5:00 with the fade, no click; nothing picked: unchanged (the goldens,
+the baseline and the balance lock); the generation goldens' `length` cases
+unchanged unless a case's round was part of what they hashed (say which).
 
 ## 89-91. Key and scale (was 50), style (was 51), voices and layers (was 52)
 
