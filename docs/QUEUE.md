@@ -377,6 +377,22 @@ margin in the progression's decision, not a return to reading the events.
   `Player::new()` is not all zeros and its 1.5 MB is stored in the module.
   Make it zeros, as `Core::new()` is, before the app ships it (first-visit
   weight on phones).
+- **The automatic lite switch becomes a crossfade** (Mikey, 2026-11-03: the
+  fade and restart from the top doesn't bother him, a proper crossfade is a
+  good idea): item 87b's `quality.handOff` moves onto `Player::change`.
+- **A new loop's first notes on a slow device** (brain, 2026-11-03; Mikey:
+  wait for phase 3 rather than fix the page's scheduling now). On v142 his
+  Lenovo tablet left out 10 notes in a minute at two new loops (87b's switch
+  at 19.5 s, a new loop at 56.0 s): `304-350 ms behind the core, posted
+  250-339 ms ahead (inside the buffer), left out; decided by play, new loop
+  [margin]`, each followed by a render-ahead jump to 600-643 ms
+  (`worstRenderAheadMs: 643`, `leastSpareMs: -315`); the Moto had none.
+  Phase 3 removes the page's note hand-over, so the notes themselves go; but
+  find what made the core jump at those moments (the new loop's work on the
+  page, or the new worklet compiling on the audio thread at the switch), since
+  a stall of the audio thread there would still be heard. Yardstick before
+  the app switches: the tablet shows no late notes and no underruns over a
+  few minutes, a few Nexts and an automatic switch.
 - **Phones:** the player's costs were measured on a cloud machine; a block
   while a loop is made is 9.6% of its deadline in wasm. Check a phone
   (`?engine=player`, Diagnostics: late and dropped notes) before the app

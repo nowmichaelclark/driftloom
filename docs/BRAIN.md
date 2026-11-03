@@ -217,6 +217,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 | Phase 1 check (blind A/B, 9, v92 vs v99) | "everything sounds the same on both versions"; no difference he could hear |
 | Session 26 (the sound batch, 3 albums + clips, v123) | every new sound and mixing idea kept; bass +3 dB with a kick, today's without; lateFloor's second arrival should vary; stereo vs mono: "same" on 5 of 6 (and the null), stereo "just barely" nicer on the sixth |
 | Lite Room Album (item 85c, 6 loops before and after, lite) | "it sounded great for lite mode"; the steal goes to full quality too (item 85e) |
+| 87b on his devices (v142 preview) | Moto stays on full (busiest 18-24%, no late notes); tablet moved to lite by itself (75% at full; on lite 55%, 40% of real time); the switch "doesn't bother" him, a crossfade in phase 3; the tablet lost 10 notes at two new loops: folded into phase 3 (the queue's "For phase 3") |
 
 ## Methods that proved themselves
 
@@ -284,13 +285,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   with one small case for the hands (86b). `main` at v141 (3cd2fb1). What
   the brain ran: the log (`docs/archive/brain-log.md`). Mikey's answers this
   session: the steal at full (85e), a theme's rest kept (85f), the app may
-  choose lite by itself on slow devices (87b). **Next: the hands take 87b,
-  then 86b, then 88-92.** **The brain's next check: the phase's end, after
+  choose lite by itself on slow devices (87b). **Next: the hands take 88-92.** **The brain's next check: the phase's end, after
   92** (the queue says what it holds), or sooner if a note comes in.
 - **Waiting on Mikey's ears, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); 86's 1 s crossfade and "a phrase is 4 bars" (clips on request,
-  else in phase 3); 87b's switch on his Moto and tablet once built.
+  else in phase 3); 87b's switch heard and checked 2026-11-03 (the tablet's late notes at a new loop go to phase 3).
 - **Ears:** Ears 10 (pile 4, uploaded 2026-11-02) runs on Mikey's second
   account; its prompt lifts the pause in `docs/ears/plan.md` itself, so the
   brain leaves that file alone while it runs. Pile 5 next.
