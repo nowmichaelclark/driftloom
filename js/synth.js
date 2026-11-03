@@ -1319,6 +1319,16 @@ export class Synth {
     }
   }
 
+  // Every note handed to the core falls from `from` to nothing at `to` and
+  // ends there (queue item 88b: a track the length slider ends inside a
+  // pass, at a phrase line; Core::fade_all); notes handed over after this
+  // are untouched, so the next loop plays at its own level. The JavaScript
+  // synth's notes ring out, as at a pass's end.
+  fadeNotes(from, to) {
+    const core = this._coreMix();
+    if (core) core.fadeAll(from, to);
+  }
+
   unsilence(when = this.ctx.currentTime) {
     this._asked.killed = false;
     const core = this._coreMix();

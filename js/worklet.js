@@ -229,6 +229,10 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'param':
         if (core) core.dl_param(m.id, m.op, m.value, m.time, m.tau);
         return;
+      // A track ending inside a pass (queue item 88b): Core::fade_all.
+      case 'fadeAll':
+        if (core) core.dl_fade_all(m.from, m.to);
+        return;
       case 'dispose':
         // Clear everything, and let go of the instance so its memory can be
         // reclaimed: a browser holds only so many WebAssembly memories at

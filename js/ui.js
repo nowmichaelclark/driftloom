@@ -1,4 +1,4 @@
-import { LAYERS, LAYER_LABELS, STEPS_PER_BAR } from './generator.js';
+import { LAYERS, LAYER_LABELS, STEPS_PER_BAR, loopBars } from './generator.js';
 import { CHARACTERS, resolveKey } from './characters.js';
 import { NOTE_NAMES, SCALES } from './theory.js';
 import { moodWord, pointWord } from './moods.js';
@@ -78,7 +78,7 @@ export function renderReadout(spec, pattern, extra = {}) {
     feel: feelParts(spec),
     key: `${NOTE_NAMES[spec.root]} ${SCALES[spec.scale].label}`,
     bpm: `${spec.bpm} bpm`,
-    meter: `${meter} · ${spec.bars} bars`,
+    meter: `${meter} · ${barsText(spec)}`,
     shape: shape.join(' · '),
     album: extra.album || '',
     pass: extra.pass || '',
@@ -146,15 +146,31 @@ export function renderAlbumCard(title, specs, extra = {}) {
     const hi = Math.max(...bpms);
     lines.push([lo === hi ? `${lo} bpm` : `${lo}-${hi} bpm`]);
     const secs = specs.reduce((t, s) => t + passSeconds(s), 0);
-    lines.push([`~${formatTime(secs)} once through`]);
+    lines.push([Number.isFinite(secs) ? `~${formatTime(secs)} once through` : 'endless']);
   }
   if (extra.playing) lines.push([extra.playing, 'album-line']);
   setLines(lines);
   if (overflowing()) el('loopDetail').classList.add('tight');
 }
 
+// How many bars the loop is, as the card shows it (queue item 88b): the
+// number the Bars picker asked for ("33 bars", "1,024 bars"), or Endless;
+// else the loop's own.
+function barsText(spec) {
+  const n = loopBars(spec);
+  if (!Number.isFinite(n)) return 'endless';
+  return `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ${n === 1 ? 'bar' : 'bars'}`;
+}
+
+// One pass of the loop, in seconds: every bar it is (a long loop's every
+// section; Infinity for Endless).
 export function passSeconds(spec) {
-  return spec.bars * (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
+  return loopBars(spec) * (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
+}
+
+// One bar, in seconds.
+export function barSeconds(spec) {
+  return (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
 }
 
 export function formatTime(secs) {

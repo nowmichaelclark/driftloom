@@ -295,7 +295,7 @@ export function findSame(spec) {
 }
 
 function recipeKey(spec) {
-  const { name, playFor, ...rest } = spec;
+  const { name, playFor, playBars, ...rest } = spec;
   return stable(rest);
 }
 

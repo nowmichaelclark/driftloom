@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless), **89** (#319, key and scale), **90** (#320, style) and **91** (#321, voices and layers). **Next: 88b** (the bars picker sets the loop's length; the length slider sets when it ends), **then 92.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless), **89** (#319, key and scale), **90** (#320, style) and **91** (#321, voices and layers). **88b** (the bars picker sets the loop's length; the length slider sets when it ends). **Next: 92.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -378,6 +378,27 @@ the slider at 5 minutes on a 1,024-bar loop ends at the first phrase line
 past 5:00 with the fade, no click; nothing picked: unchanged (the goldens,
 the baseline and the balance lock); the generation goldens' `length` cases
 unchanged unless a case's round was part of what they hashed (say which).
+
+**Built (hands, 2026-11-03):** the Bars picker (renamed; the panel reads
+"any bars") sets the loop's length and the card shows it ("4/4 · 33 bars",
+"1,024 bars", "endless"); a loop of any length plays round after round,
+never handed over by its own length. The length slider hands over: a time
+of a pass or more is whole passes (`spec.playFor`, as ever; a long loop's
+pass is all its sections); a shorter one is bars (`spec.playBars`, share
+code format 12), and the track ends at the first phrase line past them (four
+bars from its section's start, two where four doesn't divide it, else the
+section's end: `Moment::Phrase`'s rule), every note the old loop handed the
+core falling to nothing over `END_FADE`, 1 s, from the line
+(`Core::fade_all`, the new `dl_fade_all`) while the next loop plays from it.
+**For Mikey's ears:** the fade's length (the core's crossfade); a repeat of
+a long loop with wander on is a fresh round, round `r`'s section `n` its
+pass `r·S + n` (no section heard twice, as no short loop's pass is; wander
+off, every round the same notes); the slider's count starts at the step
+heard when it moves, the pass playing as its first (it no longer resets the
+wander's pass count). A track now ends exactly at its line: the old loop
+decides nothing past it (it used to play on for the core's two-second
+lookahead). On the JavaScript synth and `?engine=player` the old notes ring
+out at a phrase line, as at a pass's end. `tools/ending.mjs` renders it.
 
 ## 89-91. Key and scale (was 50), style (was 51), voices and layers (was 52)
 

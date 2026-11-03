@@ -1,4 +1,4 @@
-import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, pieceOf, LAYERS, STEPS_PER_BAR } from './generator.js';
+import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
 import { ENGINE, PLAYER, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import * as quality from './quality.js';
@@ -10,7 +10,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v147';
+const BUILD = 'v148';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -53,7 +53,9 @@ function gpuReport() {
 }
 // Track length is chosen as a time, which is how anyone thinks of it, and
 // stored as passes (a track ends on a whole loop), worked out at this tempo
-// when the slider moves. The stops are curated: fine at the short end, where
+// when the slider moves; a time shorter than one pass (a long loop's pass
+// can be hours) as bars, and the track ends at the first phrase line after
+// them (queue item 88b; `trackLength`). The stops are curated: fine at the short end, where
 // people actually set it, and reaching a whole day at the top.
 const TRACK_TIMES = [
   0, 60, 120, 180, 300, 600, 900, 1200, 1800, 2700,
@@ -640,13 +642,33 @@ function syncMediaMetadata() {
 }
 
 // Passes are the honest unit -- a track ends on a whole loop -- but nobody
-// thinks in passes, so show the time it comes to at this tempo as well.
-// The time a length actually comes to (whole passes at this tempo), kept
-// short: it sits beside the slider and must not change width much.
-function describeLength(passes, spec) {
-  if (!passes) return 'off';
-  if (!spec) return `${passes}×`;
-  return ui.formatTime(passes * ui.passSeconds(spec));
+// thinks in passes, so show the time it comes to at this tempo instead:
+// whole passes, or a length shorter than a pass counted in time (queue item
+// 88b). Kept short: it sits beside the slider and must not change width much.
+function describeLength(spec) {
+  const secs = lengthSeconds(spec);
+  return secs ? ui.formatTime(secs) : 'off';
+}
+
+// The time the track length set comes to at this tempo, or 0 for none.
+function lengthSeconds(spec) {
+  if (!spec) return 0;
+  if (spec.playFor) return spec.playFor * ui.passSeconds(spec);
+  if (spec.playBars) return spec.playBars * ui.barSeconds(spec);
+  return 0;
+}
+
+// The slider's time, `secs` (0 for off), as the spec keeps it: whole passes
+// where it is a pass or longer, as ever; shorter than a pass, the bars it
+// comes to, rounded up (queue item 88b: the track ends at the first phrase
+// line after them, its notes fading).
+function trackLength(spec, secs) {
+  spec.playFor = null;
+  delete spec.playBars;
+  if (!secs) return;
+  const pass = ui.passSeconds(spec);
+  if (secs >= pass) spec.playFor = Math.max(1, Math.round(secs / pass));
+  else spec.playBars = Math.max(1, Math.ceil(secs / ui.barSeconds(spec) - 1e-9));
 }
 
 // The playing loop's cover on the card. Drawn off the main thread
@@ -1002,7 +1024,7 @@ function audibleSteps() {
   if (!e || !e.playing || !e.live || !e.spec) return null;
   const heard = state.ctx.currentTime - (e.latency || 0);
   const ahead = (e.nextStepTime - heard) / e.stepDur;
-  return Math.max(0, e.loopCount * e.live.totalSteps + e.step - ahead);
+  return Math.max(0, e.absStep - ahead);
 }
 
 // The clock and the bar. Called every animation frame while Now Playing is
@@ -1019,20 +1041,20 @@ function updateNowClock() {
     ui.el('nowFill').style.transform = 'scaleX(0)';
     return;
   }
-  const total = e.live.totalSteps;
   const pos = state.nowSteps || 0;
   let text;
   let frac;
-  // A piece asked for a length (queue item 88) ends when it has played
-  // round, as a set track length ends; whichever comes first. Today's clock:
-  // the long-piece display waits for a Painter session.
-  const piece = pieceOf(spec);
-  const round = piece && Number.isFinite(piece.sections) ? ((piece.sections - 1) * piece.bars + piece.last) * (e.live.stepsPerBar || 16) : Infinity;
-  const end = Math.min(round, spec.playFor ? spec.playFor * total : Infinity);
-  if (Number.isFinite(end)) {
+  // A set track length counts down to where it hands over (queue item 88b:
+  // whole passes, or a phrase line inside one); a loop's own length, however
+  // long, never ends it. Today's clock: the long-piece display waits for a
+  // Painter session.
+  const end = e.endStep();
+  const round = e.roundSteps();
+  if (end != null) {
     text = `\u2212${clock(Math.max(0, end - pos) * e.stepDur)}`;
-    frac = Math.min(1, pos / end);
+    frac = Math.min(1, Math.max(0, (pos - e.countFrom) / Math.max(1, end - e.countFrom)));
   } else {
+    const total = Number.isFinite(round) ? round : e.base.totalSteps;
     text = clock(pos * e.stepDur);
     frac = (pos % total) / total;
   }
@@ -1157,12 +1179,11 @@ async function offerCode(code, label) {
 
 function syncToneInputs(spec) {
   ui.el('bpm').value = spec.bpm;
-  const len = spec.playFor || 0;
-  const secs = len * ui.passSeconds(spec);
-  const idx = len ? TRACK_TIMES.reduce((best, v, i) =>
+  const secs = lengthSeconds(spec);
+  const idx = secs ? TRACK_TIMES.reduce((best, v, i) =>
     (i && Math.abs(v - secs) < Math.abs(TRACK_TIMES[best] - secs) ? i : best), 1) : 0;
   ui.el('trackLen').value = idx;
-  ui.el('lenVal').textContent = describeLength(len, spec);
+  ui.el('lenVal').textContent = describeLength(spec);
   ui.el('warmth').value = spec.tone.warmth;
   ui.el('space').value = spec.tone.space;
   ui.el('wobble').value = spec.tone.wobble;
@@ -1577,10 +1598,10 @@ function wire() {
   ui.el('trackLen').addEventListener('input', (e) => {
     if (!state.spec) return;
     const secs = TRACK_TIMES[parseInt(e.target.value, 10)] || 0;
-    const passes = secs ? Math.max(1, Math.round(secs / ui.passSeconds(state.spec))) : 0;
-    state.spec.playFor = passes || null;
-    if (state.engine) state.engine.loopCount = 0;
-    ui.el('lenVal').textContent = describeLength(passes, state.spec);
+    trackLength(state.spec, secs);
+    // Counted from what is heard now, the pass playing as the first.
+    if (state.engine) state.engine.restartCount();
+    ui.el('lenVal').textContent = describeLength(state.spec);
     state.passCount = 0;
     renderNow();
     updateSaveButton();
@@ -1591,7 +1612,7 @@ function wire() {
     state.spec.bpm = parseInt(e.target.value, 10);
     ui.el('bpmVal').textContent = state.spec.bpm;
     // The same number of passes takes a different time at a new tempo.
-    ui.el('lenVal').textContent = describeLength(state.spec.playFor || 0, state.spec);
+    ui.el('lenVal').textContent = describeLength(state.spec);
     // The loop's own echo time in beats (queue item 73), at the new tempo.
     if (state.synth) state.synth.setEchoTime((60 / state.spec.bpm) * (state.engine ? state.engine.echoBeats : 0.75));
     if (state.engine) state.engine.redecide();
