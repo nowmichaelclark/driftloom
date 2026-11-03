@@ -4,7 +4,7 @@
 // Run with:  node test/picks.test.mjs
 
 import { newSpec, render, pieceOf, sectionBars, pieceSeconds, pieceTime } from '../js/generator.js';
-import { cleanPicks, moodsText, tempoText, lengthText, keyText, clampBars, requestFor, pickProblem } from '../js/picks.js';
+import { cleanPicks, moodsText, tempoText, lengthText, keyText, styleText, clampBars, requestFor, pickProblem } from '../js/picks.js';
 
 let failures = 0;
 function check(label, condition, detail = '') {
@@ -21,14 +21,17 @@ check('length with grouping', lengthText(4096) === '4,096 bars');
 check('one bar', lengthText(1) === '1 bar');
 check('endless', lengthText('endless') === 'endless');
 check('clamped to 1..32,768', clampBars(0) === 1 && clampBars(99999) === 32768 && clampBars(24.4) === 24);
-check('clean prefs', JSON.stringify(cleanPicks({ tempo: [85, 70], length: '16' })) === '{"tempo":null,"length":16,"key":null,"scale":null}');
+check('clean prefs', JSON.stringify(cleanPicks({ tempo: [85, 70], length: '16' })) === '{"tempo":null,"length":16,"key":null,"scale":null,"style":null}');
 check('clean endless', cleanPicks({ length: 'endless' }).length === 'endless');
-check('clean nothing', JSON.stringify(cleanPicks(undefined)) === '{"tempo":null,"length":null,"key":null,"scale":null}');
+check('clean nothing', JSON.stringify(cleanPicks(undefined)) === '{"tempo":null,"length":null,"key":null,"scale":null,"style":null}');
 check('the key line\'s words', keyText([2], ['dorian']) === 'D dorian' && keyText([2, 7], null) === 'D or G' && keyText(null, ['dorian', 'minorPent']) === 'dorian or minor pentatonic'
   && keyText(null, null) === '');
 check('clean key and scale: sorted, once each, only what the core takes',
-  JSON.stringify(cleanPicks({ key: [7, 2, 2, 12, -1, 1.5, 'D'], scale: ['aeolian', 'nope', 'dorian'] })) === '{"tempo":null,"length":null,"key":[2,7],"scale":["dorian","aeolian"]}'
+  JSON.stringify(cleanPicks({ key: [7, 2, 2, 12, -1, 1.5, 'D'], scale: ['aeolian', 'nope', 'dorian'] })) === '{"tempo":null,"length":null,"key":[2,7],"scale":["dorian","aeolian"],"style":null}'
   && cleanPicks({ key: [], scale: 'dorian' }).key === null && cleanPicks({ scale: 'dorian' }).scale === null);
+
+check('the style line\'s words, and what is cleaned: frozen order, once each, only profiles', styleText(['tide']) === 'tide' && styleText(['dust', 'shrine']) === 'dust or shrine' && styleText(null) === ''
+  && JSON.stringify(cleanPicks({ style: ['tide', 'nope', 'dust', 'tide'] }).style) === '["dust","tide"]' && cleanPicks({ style: [] }).style === null && cleanPicks({ style: 'tide' }).style === null);
 
 console.log('\nThe request (queue items 85 and 88)');
 {
@@ -113,6 +116,20 @@ console.log('\nKey and mode in the request (queue item 89)');
   check('a key and a mode the core can play say nothing', pickProblem({ vibes: [], picks: { tempo: null, length: null, key: [0], scale: ['akebono'] } }) === null);
   check('and one it cannot says so', pickProblem({ vibes: [], picks: { tempo: null, length: null, key: [12] } }) === 'no such key'
     && pickProblem({ vibes: [], picks: { tempo: null, length: null, scale: ['nope'] } }) === 'no such scale');
+}
+
+console.log('\nStyle in the request (queue item 90)');
+{
+  let ok = true, bad = '';
+  for (let s = 0; s < 60; s++) {
+    const state = { vibes: ['cozy'], picks: { tempo: [70, 85], length: 16, key: [2], scale: null, style: ['tide', 'shrine'] } };
+    const spec = newSpec(9500 + s, requestFor(state));
+    if (!Object.keys(spec.mix).every((m) => ['tide', 'shrine'].includes(m)) || spec.bpm < 70 || spec.bpm > 85 || spec.root !== 2) { ok = false; bad = JSON.stringify([spec.mix, spec.bpm, spec.root]); }
+  }
+  check('tide or shrine, with a tempo, a length and a key: all honored', ok, bad);
+  check('nothing picked for the style asks for nothing', JSON.stringify(newSpec(9600, requestFor({ vibes: [], picks: { tempo: null, length: null, style: null } }))) === JSON.stringify(newSpec(9600)));
+  check('a style the core cannot play says so', pickProblem({ vibes: [], picks: { tempo: null, length: null, style: ['nope'] } }) === 'no such style'
+    && pickProblem({ vibes: [], picks: { tempo: null, length: null, style: ['dust'] } }) === null);
 }
 
 console.log(failures ? `\n${failures} failed` : '\nall passed');

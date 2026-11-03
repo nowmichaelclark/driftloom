@@ -22,7 +22,7 @@
 // case-insensitive.
 
 import { SCALES, SCALE_ORDER } from './theory.js';
-import { CHARACTERS, resolveKey } from './characters.js';
+import { CHARACTERS, PROFILE_ORDER, resolveKey } from './characters.js';
 import { codeForMood, moodForCode } from './moods.js';
 import { seedName } from './rng.js';
 import { VIBES, VIBE_IDS } from './vibes.js';
@@ -41,12 +41,14 @@ const DECODE_MAP = (() => {
 // appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
 // for; format 6 (queue item 85b) the pins it was asked for; format 7 (queue
 // item 85d) the theme it bends; format 8 (queue item 88) the length it was
-// asked for; format 9 (queue item 89) the key and the mode it was asked for.
+// asked for; format 9 (queue item 89) the key and the mode it was asked for;
+// format 10 (queue item 90) the style (set of profiles) it was asked for.
 // Each is written only by a loop that needs it
 // (a loop without vibes is still format 3), so every code already in
 // circulation, every saved album and every `/rank` answer keeps the exact
 // string it had.
-export const FORMAT = 9;
+export const FORMAT = 10;
+const KEY_FORMAT = 9;
 const LENGTH_FORMAT = 8;
 const THEME_FORMAT = 7;
 const PINS_FORMAT = 6;
@@ -78,8 +80,13 @@ function hasKeyScale(spec) {
   return !!(spec && ((Array.isArray(spec.askKey) && spec.askKey.length) || (Array.isArray(spec.askScale) && spec.askScale.length)));
 }
 
+function hasStyle(spec) {
+  return !!(spec && Array.isArray(spec.askStyle) && spec.askStyle.length);
+}
+
 function formatOf(spec) {
-  if (hasKeyScale(spec)) return FORMAT;
+  if (hasStyle(spec)) return FORMAT;
+  if (hasKeyScale(spec)) return KEY_FORMAT;
   if (hasLength(spec)) return LENGTH_FORMAT;
   if (hasTheme(spec)) return THEME_FORMAT;
   if (hasPins(spec)) return PINS_FORMAT;
@@ -90,11 +97,7 @@ function formatOf(spec) {
 // Frozen orderings. These must never be reordered or codes already written
 // down stop meaning what they meant; append only.
 const SCALE_IDS = SCALE_ORDER;
-const PROFILE_IDS = [
-  'dust', 'glade', 'thaw', 'haven', 'bloom', 'vapor',
-  'halcyon', 'clockwork', 'shatter', 'undertow',
-  'grove', 'hollow', 'shrine', 'tide', 'cinder', 'wayfare',
-];
+const PROFILE_IDS = PROFILE_ORDER;
 // Moods are numbered in moods.js, beside the rest of their vocabulary.
 const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 
@@ -269,6 +272,12 @@ function writeSpec(w, spec, version = FORMAT) {
     w.vu(keys.reduce((m, k) => m | (1 << ((k % 12 + 12) % 12)), 0));
     w.vu(scales.reduce((m, k) => (SCALE_IDS.indexOf(k) < 0 ? m : m | (1 << SCALE_IDS.indexOf(k))), 0));
   }
+  // Format 10: the style asked, a set of profiles as a bit mask (a bit by
+  // place in the frozen order). Zero is none asked.
+  if (version >= 10) {
+    const styles = hasStyle(spec) ? spec.askStyle : [];
+    w.vu(styles.reduce((m, k) => (PROFILE_IDS.indexOf(k) < 0 ? m : m | (1 << PROFILE_IDS.indexOf(k))), 0));
+  }
 }
 
 function readSpec(r, version = FORMAT) {
@@ -377,6 +386,11 @@ function readSpec(r, version = FORMAT) {
     const askScale = SCALE_IDS.filter((_, i) => scales & (1 << i));
     if (askKey.length) spec.askKey = askKey;
     if (askScale.length) spec.askScale = askScale;
+  }
+  if (version >= 10) {
+    const styles = r.vu();
+    const askStyle = PROFILE_IDS.filter((_, i) => styles & (1 << i));
+    if (askStyle.length) spec.askStyle = askStyle;
   }
   return spec;
 }

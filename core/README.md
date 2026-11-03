@@ -325,6 +325,20 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   a profile's progressions written for other modes fall back to the
   seven-note shapes, and the ones spelled for a mode (cinder's added F over
   E, wayfare's minor v) play where that mode allows them.
+- **The style** (`Request::with_styles`, queue item 90; `style=tide` or
+  `style=tide|shrine` as text, `dl_player_styles` with a bit for each profile
+  by place in `request::PROFILE_ORDER`, the order a share code numbers them
+  in): a profile or a set of them. Every draw is made as ever and the
+  request then overrules the loop's profile mix: a mix whose every profile
+  is inside the set stands; else each profile outside it, in the order the
+  mix was drawn, is replaced by one of the set (a stream of the seed's own,
+  weighted as the mix's own draw weighed the profiles: their weight, the
+  loop's drive, the vibes and the tempo asked), a member two land on taking
+  both weights. A pinned style is that profile whole (weight 1); a set keeps
+  the loop's blend across its members. A style asked overrules a theme's
+  mix (its key, mode, metre and tune hold). Each profile keeps its own
+  character, instruments and drums, and the vibes bend it as ever
+  (`generator::spec::ask_mix`).
 - **The controls** are the app's: `set_wander` (0 plays the loop as
   composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
 - **The C header**, `include/dlcore.h` (promise 4), has the same calls
@@ -332,7 +346,7 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   `dl_player_next_change`, `dl_player_render`, ...; the
   request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
   `dl_player_theme`, `dl_player_pin`, `dl_player_length`,
-  `dl_player_keys`, `dl_player_scales` and
+  `dl_player_keys`, `dl_player_scales`, `dl_player_styles` and
   `dl_player_ask`, each refusal its
   line): build the
   library with `cargo rustc --release --lib --features capi --crate-type

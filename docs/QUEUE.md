@@ -12,7 +12,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and phase 2 so far: **the port, items 77-82**
 (#287-#296; checked by the brain's Session 28), **83** (ears on the core),
 **84** (the chords' octave), **85** (the request: 85a #302, 85c #303, 85b
-#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless). **Next: 90.** Item
+#304, 85d #305; checked by the brain's Session 29), **86** (#308, a change of loop at a musical moment), **85e** (#309, the steal at full quality), **85f** (#310, a theme's rest kept) and **87** (#311, rendering ahead); 86-87 checked by the brain's Session 29; **87b** (#313, the app picks lite by itself on slow devices) **86b** (#315, a late `now` change on the grid) and **88** (#318, length up to 32,768 bars and Endless), **89** (#319, key and scale). **Next: 91.** Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here: read the standing
 rules and the merge policy, then take the next item.
 
@@ -353,6 +353,23 @@ interval from a chord's root; 1.2% of its notes pinned, the catalog's 0.85%),
 cinder's spelled chords and the melody over them, and the organ's and
 stab's fixed intervals on the chords channel (0.9% of its notes pinned, the
 same seeds on their own modes 0.7%).
+
+**90 built (hands, 2026-11-03):** the request's style, a profile or a set
+(`style=tide`, `style=tide|shrine`; `Request::with_styles`,
+`dl_player_styles`, `readRequest`'s `style`), in both generators, the player,
+the page's engine, the C header and wasm, and share code format 10 (one
+number). The draws are made as ever and the request then overrules the
+profile mix: a mix already inside the set stands, else each profile outside
+it is replaced by one of the set (a stream of the seed's own, weighted as the
+mix's draw weighed the profiles), so a pinned style is that profile whole and
+a set keeps the loop's blend across its members. A style asked overrules a
+theme's mix (its key, mode, metre and tune hold); a tempo asked is honored
+(a profile with gaits plays its nearest gait at it). Profiles keep their own
+character; vibes bend them as ever. The app's style line shows what is asked
+("tide or shrine") and clears with its "any" key; no picker, so it cannot be
+tapped. **For Mikey's ears:** the substitution's weights (a set of profiles
+far from the seed's own lands where the mix's draw would have), and a pinned
+style onto a tempo outside its band.
 
 ## 92. "Let the loop wander", unrepeatable in the slider's upper range
 

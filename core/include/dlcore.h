@@ -126,11 +126,19 @@ const char *dl_player_keys(dl_player *player, uint32_t keys);
    scale" for a bit past the last). */
 const char *dl_player_scales(dl_player *player, uint32_t scales);
 
+/* Ask for the profiles in `styles`, a bit each by its place in the frozen
+   order (dust, glade, thaw, haven, bloom, vapor, halcyon, clockwork, shatter,
+   undertow, grove, hollow, shrine, tide, cinder, wayfare), or for no style in
+   particular with 0 (queue item 90). One profile is a pinned style; a set is
+   chosen from ("no such style" for a bit past the last). */
+const char *dl_player_styles(dl_player *player, uint32_t styles);
+
 /* Ask for what `request` says, as text, in place of what was asked since the
    last load: items split by commas, each a vibe ("glacial"), a vibe and its
    weight ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
    ("theme=1234"), the length ("bars=1024", "bars=endless"), the key ("key=D",
-   "key=D|G"), the mode ("scale=dorian", "scale=dorian|aeolian") or a pin
+   "key=D|G"), the mode ("scale=dorian", "scale=dorian|aeolian"), the style ("style=tide",
+   "style=tide|shrine") or a pin
    ("organ=on", "tunedKick=long", "arc.period=240", "space.room=0.8"). */
 const char *dl_player_ask(dl_player *player, const char *request);
 

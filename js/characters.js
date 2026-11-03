@@ -70,6 +70,15 @@ export function resolveKey(key) {
   return LEGACY_NAMES[key] || 'dust';
 }
 
+// The profiles in their frozen order (append only): the order a share code
+// numbers them in, and a request's set of styles is written in (queue item
+// 90). The Rust core's `request::PROFILE_ORDER` is the same list.
+export const PROFILE_ORDER = [
+  'dust', 'glade', 'thaw', 'haven', 'bloom', 'vapor',
+  'halcyon', 'clockwork', 'shatter', 'undertow',
+  'grove', 'hollow', 'shrine', 'tide', 'cinder', 'wayfare',
+];
+
 export const CHARACTER_WEIGHTS = Object.entries(CHARACTERS).map(([k, c]) => [k, c.weight]);
 
 export const POLY_CYCLES = [3, 4, 5, 7, 8, 9, 11];

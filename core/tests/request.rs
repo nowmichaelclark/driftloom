@@ -1,7 +1,8 @@
 //! The request (queue item 85; promise 11): a test that walks its choices,
 //! and the tempo it asks for measured in what the player plays (the notes'
 //! onsets), not only in the spec. It grows with items 86 to 91 (the key and
-//! the mode, item 89, are measured in `key.rs`).
+//! the mode, item 89, and the style, item 90, are measured in `key.rs` and
+//! `style.rs`).
 
 // The tempos are whole bpm, compared exactly on purpose.
 #![allow(clippy::float_cmp)]
@@ -196,14 +197,16 @@ fn the_request_walks_its_choices() {
     let pinned = Request::new().with_tempo(76.6, 76.6).expect("in range");
     assert_eq!(pinned.tempo(), Some([77.0, 77.0]));
 
-    // The key and the mode (queue item 89; core/tests/key.rs walks them).
-    let r = Request::parse("cozy,key=G|D,scale=aeolian|dorian,bpm=80").expect("a request");
-    assert_eq!((r.keys(), r.scales(), r.tempo()), ((1 << 2) | (1 << 7), 0b11, Some([80.0, 80.0])));
+    // The key, the mode and the style (queue items 89 and 90; core/tests/
+    // key.rs and style.rs walk them).
+    let r = Request::parse("cozy,key=G|D,scale=aeolian|dorian,style=shrine|tide,bpm=80").expect("a request");
+    assert_eq!((r.keys(), r.scales(), r.styles(), r.tempo()), ((1 << 2) | (1 << 7), 0b11, (1 << 12) | (1 << 13), Some([80.0, 80.0])));
 
     // The refusals, each its plain line.
     assert_eq!(Request::parse("nope").err(), Some(request::NO_SUCH_VIBE));
     assert_eq!(Request::parse("key=H").err(), Some(request::NO_SUCH_KEY));
     assert_eq!(Request::parse("scale=nope").err(), Some(request::NO_SUCH_SCALE));
+    assert_eq!(Request::parse("style=nope").err(), Some(request::NO_SUCH_STYLE));
     assert_eq!(Request::parse("glacial=x").err(), Some(request::BAD_WEIGHT));
     assert_eq!(Request::parse("glacial=-1").err(), Some(request::BAD_WEIGHT));
     assert_eq!(Request::parse("bpm=7a").err(), Some(request::BAD_TEMPO));
@@ -213,7 +216,7 @@ fn the_request_walks_its_choices() {
     assert_eq!(Request::new().with_tempo(f64::NAN, 80.0).err(), Some(request::BAD_TEMPO));
     assert_eq!(Request::new().with_weight(glacial, f64::INFINITY).err(), Some(request::BAD_WEIGHT));
     assert_eq!(Request::new().with_weight(VIBES.len(), 0.5).err(), Some(request::NO_SUCH_VIBE));
-    for line in [request::NO_SUCH_VIBE, request::BAD_WEIGHT, request::BAD_TEMPO, request::TEMPO_OUT, request::NO_SUCH_KEY, request::NO_SUCH_SCALE] {
+    for line in [request::NO_SUCH_VIBE, request::BAD_WEIGHT, request::BAD_TEMPO, request::TEMPO_OUT, request::NO_SUCH_KEY, request::NO_SUCH_SCALE, request::NO_SUCH_STYLE] {
         assert!(line.is_ascii() && line.len() < 40);
     }
 

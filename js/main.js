@@ -10,7 +10,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v145';
+const BUILD = 'v146';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -87,7 +87,7 @@ const state = {
   vibes: [],
   // The other next picks (design/next-picks.md): a tempo range and a
   // length in bars (or 'endless'); null is "any". Saved in the prefs.
-  picks: { tempo: null, length: null, key: null, scale: null },
+  picks: { tempo: null, length: null, key: null, scale: null, style: null },
   // The album most recently left, so Now Playing can offer the way back.
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
@@ -907,6 +907,7 @@ function clearPickLine(line) {
   if (line === 'mood') setVibes([]);
   else if (line === 'pace') setPicks({ tempo: null, length: null });
   else if (line === 'key') setPicks({ key: null, scale: null });
+  else if (line === 'style') setPicks({ style: null });
 }
 
 function toggleVibe(id) {

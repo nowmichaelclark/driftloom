@@ -11,7 +11,8 @@
 //! friend keeps its tune as the day changes), the pins (`Pins`) and the
 //! length (queue item 88, `Length`: a piece of any number of bars, or
 //! Endless), the home notes and the modes (queue item 89: each a set to
-//! choose from, one note or mode being the pin). Items 90 and 91 grow it.
+//! choose from, one note or mode being the pin) and the style (queue item 90:
+//! the profiles, one or a set). Item 91 grows it.
 //!
 //! **Bends, never breaks.** A request is checked as it is built: a vibe the
 //! core does not have, a bad weight or a tempo outside `TEMPO_LIMIT` is
@@ -23,7 +24,8 @@
 //! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
 //! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`), the
 //! key (`key=D`, `key=D|G`) and the mode (`scale=dorian`,
-//! `scale=dorian|aeolian`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
+//! `scale=dorian|aeolian`) and the style (`style=tide`, `style=tide|shrine`);
+//! empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 
 use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
@@ -53,6 +55,20 @@ pub const BAD_LENGTH: &str = "a bad length";
 pub const NO_SUCH_KEY: &str = "no such key";
 /// The line for a mode the core does not have.
 pub const NO_SUCH_SCALE: &str = "no such scale";
+
+/// The line for a style that is no profile.
+pub const NO_SUCH_STYLE: &str = "no such style";
+
+/// The profiles in their frozen order (`PROFILE_ORDER`): the order a share
+/// code numbers them in and `Request::styles` takes its bits in.
+pub const PROFILE_ORDER: [&str; 16] = [
+    "dust", "glade", "thaw", "haven", "bloom", "vapor", "halcyon", "clockwork", "shatter", "undertow", "grove", "hollow", "shrine", "tide", "cinder",
+    "wayfare",
+];
+
+/// Every style, as `styles` holds them: a bit each by place in
+/// `PROFILE_ORDER`.
+pub const STYLES_ALL: u32 = (1 << PROFILE_ORDER.len()) - 1;
 
 /// The home notes by name, either spelling of a black key (`KEY_NAMES`): a
 /// note's number, C being 0.
@@ -121,13 +137,16 @@ pub struct Request {
     /// The modes asked (queue item 89): a bit each by its place in
     /// `theory::SCALES`; 0 for none asked.
     scales: u32,
+    /// The styles asked (queue item 90): a bit each by place in
+    /// `PROFILE_ORDER`; 0 for none asked.
+    styles: u32,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0 }
+        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0 }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -294,12 +313,34 @@ impl Request {
         self.scales
     }
 
+    /// The same, with the styles asked (queue item 90): the profiles to
+    /// choose from, a bit each by place in `PROFILE_ORDER`, one being a
+    /// pinned style. A loop whose profile mix is all inside the set stands;
+    /// else each profile outside it is replaced by one of the set, drawn from
+    /// the seed (`spec::ask_mix` says how). 0 asks for nothing.
+    ///
+    /// # Errors
+    /// `NO_SUCH_STYLE` for a bit past the last profile.
+    pub fn with_styles(mut self, styles: u32) -> Result<Self, &'static str> {
+        if styles & !STYLES_ALL != 0 {
+            return Err(NO_SUCH_STYLE);
+        }
+        self.styles = styles;
+        Ok(self)
+    }
+
+    /// The styles asked, a bit each (0 for none).
+    #[must_use]
+    pub fn styles(&self) -> u32 {
+        self.styles
+    }
+
     /// A request read from its text (the module's doc says how it is
     /// written); a vibe or a pin named twice keeps the last.
     ///
     /// # Errors
     /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`, `BAD_LENGTH`,
-    /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_SETTING`, `BAD_SETTING` or
+    /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_STYLE`, `NO_SUCH_SETTING`, `BAD_SETTING` or
     /// `SETTING_OUT`, for the first item that is one.
     pub fn parse(text: &str) -> Result<Self, &'static str> {
         let text = text.trim();
@@ -325,6 +366,8 @@ impl Request {
                 out.keys = keys_text(value.unwrap_or(""))?;
             } else if name == "scale" {
                 out.scales = scales_text(value.unwrap_or(""))?;
+            } else if name == "style" {
+                out.styles = styles_text(value.unwrap_or(""))?;
             } else if name == "theme" {
                 let seed = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_THEME)?;
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
@@ -392,6 +435,16 @@ fn scales_text(text: &str) -> Result<u32, &'static str> {
         scales |= 1 << SCALES.iter().position(|s| s.id == name).ok_or(NO_SUCH_SCALE)?;
     }
     Ok(scales)
+}
+
+/// A style or a set of styles written with `|` between ("tide|shrine"), as
+/// the bits `Request::styles` holds.
+fn styles_text(text: &str) -> Result<u32, &'static str> {
+    let mut styles = 0;
+    for name in text.split('|') {
+        styles |= 1 << PROFILE_ORDER.iter().position(|&p| p == name).ok_or(NO_SUCH_STYLE)?;
+    }
+    Ok(styles)
 }
 
 /// Digits only, as a number (the JavaScript's `/^\d+$/` and `Number`).

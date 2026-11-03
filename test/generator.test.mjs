@@ -14,7 +14,7 @@ import { encodeSong, decodeSong, encodeAlbum, decodeAlbum } from '../js/share.js
 import { PINS, SPACE_SETTINGS, isPinName, pinNumbers } from '../js/pins.js';
 import { partsOf } from '../tools/gen-golden-lib.mjs';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
-import { CHARACTERS } from '../js/characters.js';
+import { CHARACTERS, PROFILE_ORDER } from '../js/characters.js';
 import { CHOICES, CHANGE_COUNTS, drawChoices, changesIn, ARC, arcOf, arcPlays, KICK, kickOf, kickKindOf, SUBDUCK, subDuckOf, LATEFLOOR, lateFloorOf, FLOORDROP, PEDAL, pedalOf, PADSWEEP, padSweepOf, ECHO, echoTimeOf, BASS_LIFT, bassLiftOf } from '../js/choices.js';
 
 // Node ships a real Blob, but it only hands its bytes back asynchronously.
@@ -1614,10 +1614,10 @@ console.log('\nThe chords\' octave, from the progression (queue item 84; tools/o
 // and the code that carries it.
 {
   const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
-  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null,"key":null,"scale":null}'
+  check('a request of nothing is nothing', JSON.stringify(readRequest(null)) === '{"vibes":null,"tempo":null,"theme":null,"pins":null,"length":null,"key":null,"scale":null,"style":null}'
     && JSON.stringify(parseRequest('-')) === JSON.stringify(parseRequest('')));
   check('text, in the frozen order, weights and the tempo low first',
-    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null,"key":null,"scale":null}');
+    JSON.stringify(parseRequest('misty=0.3,glacial,bpm=85-70')) === '{"vibes":[["glacial",null],["misty",0.3]],"tempo":[70,85],"theme":null,"pins":null,"length":null,"key":null,"scale":null,"style":null}');
   check('an object reads as its text does',
     JSON.stringify(readRequest({ vibes: { misty: 0.3, glacial: true }, tempo: [85, 70] })) === JSON.stringify(parseRequest('glacial,misty=0.3,bpm=70-85')));
   check('the text form reads back the same', requestText(parseRequest('misty=0.3,glacial,bpm=77')) === 'glacial,misty=0.3,bpm=77');
@@ -2024,6 +2024,144 @@ console.log('\nKey and scale (queue item 89)');
     const album = encodeAlbum('keys', [newSpec(1, 'key=D'), newSpec(2), newSpec(3, 'scale=kumoi')]);
     const back = decodeAlbum(album).specs;
     check('an album carries them too', back[0].askKey.join() === '2' && back[1].askKey === undefined && back[2].askScale.join() === 'kumoi');
+  }
+}
+
+console.log('\nStyle (queue item 90)');
+{
+  const refused = (input) => { try { readRequest(input); return null; } catch (e) { return e instanceof RequestError ? e.message : `threw ${e}`; } };
+  const profiles = Object.keys(CHARACTERS);
+  check('the profiles\' frozen order is the share code\'s and the core\'s', PROFILE_ORDER.length === 16 && profiles.length === 16 && profiles.every((p) => PROFILE_ORDER.includes(p)));
+  check('style reads, as text and as an object', JSON.stringify(parseRequest('style=tide|shrine')) === JSON.stringify(readRequest({ style: ['shrine', 'tide'] }))
+    && parseRequest('style=tide').style.join() === 'tide' && readRequest({ style: 'dust|wayfare' }).style.join() === 'dust,wayfare' && readRequest({ style: [] }).style === null);
+  check('they read back the same', requestText(parseRequest('cozy,style=wayfare|dust,bpm=80')) === 'cozy,bpm=80,style=dust|wayfare' && requestText({ style: 'tide' }) === 'style=tide');
+  const lines = ['style=nope', 'style=', 'style', 'style=tide|', 'style=Tide', 'style=tape'];
+  check('the refusals, each its plain line', lines.every((t) => refused(t) === 'no such style') && refused({ style: 'constructor' }) === 'no such style'
+    && refused({ style: 3 }) === 'no such style' && refused({ style: ['tide', 'nope'] }) === 'no such style', lines.map(refused).join(' | '));
+  check('nothing asked keeps nothing in the spec', newSpec(5).askStyle === undefined && JSON.stringify(newSpec(5, { style: null })) === JSON.stringify(newSpec(5)));
+
+  const lead = (spec) => Object.entries(spec.mix).sort((a, b) => b[1] - a[1])[0][0];
+  // Pinned: every loop is that profile whole, and renders (16 profiles, 40
+  // loops each).
+  {
+    let whole = 0, total = 0, rendered = 0, bad = '';
+    const r = new Rng(9001);
+    for (const p of PROFILE_ORDER) {
+      for (let i = 0; i < 40; i++) {
+        const spec = newSpec(r.seed32(), { style: p });
+        total++;
+        if (JSON.stringify(spec.mix) === JSON.stringify({ [p]: 1 }) && spec.askStyle.join() === p) whole++; else bad ||= `${p} ${JSON.stringify(spec.mix)}`;
+        const rb = render(spec);
+        if (rb.totalSteps === spec.bars * spec.stepsPerBar && rb.tracks.chords.length + rb.tracks.melody.length + rb.tracks.bass.length > 0) rendered++;
+      }
+    }
+    check(`pinned: every loop is that profile whole, and plays (${total} loops)`, whole === total && rendered === total, `${whole} ${rendered} ${bad}`);
+  }
+  // A set draws only from the set, every member is reached across 500 seeds
+  // (as the lead, too), and a mix already inside the set stands.
+  {
+    const sets = [['tide', 'shrine'], ['dust', 'glade', 'cinder'], ['wayfare', 'shatter', 'hollow', 'vapor', 'undertow']];
+    let inside = 0, n = 0, stands = 0, was = 0;
+    const reached = sets.map(() => new Set());
+    const leads = sets.map(() => new Set());
+    const blends = [0, 0, 0];
+    const r = new Rng(9002);
+    for (let i = 0; i < 500; i++) {
+      const seed = r.seed32();
+      const plain = newSpec(seed);
+      sets.forEach((set, k) => {
+        const spec = newSpec(seed, { style: set });
+        n++;
+        if (Object.keys(spec.mix).every((m) => set.includes(m))) inside++;
+        for (const m of Object.keys(spec.mix)) reached[k].add(m);
+        leads[k].add(lead(spec));
+        if (Object.keys(spec.mix).length > 1) blends[k]++;
+        if (Object.keys(plain.mix).every((m) => set.includes(m))) { was++; if (JSON.stringify(spec.mix) === JSON.stringify(plain.mix)) stands++; }
+      });
+    }
+    check('a set: every loop inside it, every member reached (and leading) across 500 seeds', inside === n && sets.every((set, k) => set.every((m) => reached[k].has(m) && leads[k].has(m))),
+      `${inside}/${n} ${reached.map((x) => [...x])}`);
+    check('a set: a mix already inside it stands, and a set of several still blends', stands === was && was > 0 && blends[2] > 10 && blends[1] > 10, `${stands}/${was} ${blends}`);
+  }
+  // A pin picks a profile; it doesn't change it. Against the same profile's
+  // whole loops drawn on chance (80 each, six profiles), the pinned ones'
+  // tempo, feel and layers' density agree within sampling and the drive that
+  // favors a profile in a chance draw.
+  {
+    const metrics = (spec) => {
+      const rb = render(spec);
+      const cnt = (l) => rb.tracks[l].filter((e) => e.vel).length / spec.bars;
+      return { bpm: spec.bpm, lift: spec.feel.lift, energy: spec.feel.energy, drums: cnt('drums'), bass: cnt('bass'), chords: cnt('chords'), melody: cnt('melody') };
+    };
+    const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    let ok = true, bad = '';
+    const shown = [];
+    for (const p of ['tide', 'shrine', 'cinder', 'shatter', 'dust', 'wayfare']) {
+      const r = new Rng(9003);
+      const pure = [];
+      for (let tries = 0; pure.length < 80 && tries < 400000; tries++) {
+        const seed = r.seed32();
+        const mix = Object.keys(newSpec(seed).mix);
+        if (mix.length === 1 && mix[0] === p) pure.push(seed);
+      }
+      const r2 = new Rng(9004);
+      const A = pure.map((seed) => metrics(newSpec(seed)));
+      const B = pure.map(() => metrics(newSpec(r2.seed32(), { style: p })));
+      for (const k of Object.keys(A[0])) {
+        const [a, b] = [mean(A.map((m) => m[k])), mean(B.map((m) => m[k]))];
+        const tol = k === 'bpm' ? 0.05 * a : k === 'lift' || k === 'energy' ? 0.12 : Math.max(0.35 * a, 1);
+        if (Math.abs(a - b) > tol) { ok = false; bad ||= `${p} ${k} ${a.toFixed(2)} against ${b.toFixed(2)}`; }
+      }
+      shown.push(`${p} ${mean(A.map((m) => m.bpm)).toFixed(0)}/${mean(B.map((m) => m.bpm)).toFixed(0)} bpm`);
+    }
+    check('pinned: the profile\'s figures match its whole loops on chance (tempo 5%, feel 0.12, layers 35% or 1 note a bar)', ok, bad);
+    console.log(`        ${shown.join(', ')}`);
+  }
+  // Other requests ride with it: a tempo is honored, a key and a mode,
+  // and a style overrules a theme's mix (its tune and key hold).
+  {
+    let tempos = 0, keys = 0, themed = 0, tunes = 0, n = 0;
+    const r = new Rng(9005);
+    for (let i = 0; i < 80; i++) {
+      const seed = r.seed32(), T = r.seed32();
+      const p = PROFILE_ORDER[i % 16];
+      const bpm = 32 + r.int(0, 158);
+      const a = newSpec(seed, { style: p, tempo: bpm, key: 'D', scale: 'dorian' });
+      if (a.bpm === bpm && lead(a) === p) tempos++;
+      if (a.root === 2 && a.scale === 'dorian') keys++;
+      const th = newSpec(T);
+      const b = newSpec(seed, { style: p, theme: T });
+      n++;
+      if (JSON.stringify(b.mix) === JSON.stringify({ [p]: 1 }) || (Object.keys(th.mix).every((m) => m === p))) themed++;
+      if (b.root === th.root && b.scale === th.scale && render(b).meta.melodyCell === render(newSpec(T, { style: p, theme: T })).meta.melodyCell) tunes++;
+      render(a);
+    }
+    check('with a tempo, a key and a mode, the style is the lead and the others hold (80 loops)', tempos === n && keys === n, `${tempos} ${keys}`);
+    check('with a theme, the style overrules its mix; its key, mode and tune hold (80 loops)', themed === n && tunes === n, `${themed} ${tunes}`);
+  }
+  // Share code format 10.
+  {
+    let codes = 0;
+    for (let i = 0; i < 48; i++) {
+      const asked = [{ style: PROFILE_ORDER[i % 16] }, { style: [PROFILE_ORDER[i % 16], PROFILE_ORDER[(i + 5) % 16]] },
+        { vibes: ['cozy'], style: PROFILE_ORDER[(i + 3) % 16], key: 'F', scale: 'lydian' }][i % 3];
+      const spec = newSpec(7500 + i, asked);
+      const code = encodeSong(spec);
+      const back = decodeSong(code);
+      if (JSON.stringify(back.askStyle) === JSON.stringify(spec.askStyle) && JSON.stringify(back.mix) === JSON.stringify(spec.mix) && encodeSong(back) === code
+        && JSON.stringify(render(back).tracks) === JSON.stringify(render(spec).tracks)
+        && JSON.stringify(newSpec(back.seed, requestOf(back))) === JSON.stringify(spec)) codes++;
+    }
+    check('a loop with a style is made again from its code (48 loops)', codes === 48, String(codes));
+    const base = encodeSong(newSpec(7100, 'key=D')).length;
+    const extra = (st) => encodeSong(newSpec(7100, `key=D,style=${st}`)).length - base;
+    check('a style costs only what it uses (a byte and the format\'s: up to four characters)', extra('dust') <= 4 && extra('wayfare') <= 4 && extra('dust|wayfare') <= 5,
+      [extra('dust'), extra('wayfare'), extra('dust|wayfare')].join(' '));
+    check('and is format 10; a key alone is still 9, a length 8', encodeSong(newSpec(5, 'key=D,style=tide')).slice(4, 6) !== encodeSong(newSpec(5, 'key=D')).slice(4, 6)
+      && encodeSong(newSpec(5, 'bars=64')).slice(4, 6) === '10' && encodeSong(newSpec(5)).slice(4, 6) === '0C');
+    const album = encodeAlbum('styles', [newSpec(1, 'style=tide'), newSpec(2), newSpec(3, 'style=dust|shrine')]);
+    const back = decodeAlbum(album).specs;
+    check('an album carries them too', back[0].askStyle.join() === 'tide' && back[1].askStyle === undefined && back[2].askStyle.join() === 'dust,shrine');
   }
 }
 

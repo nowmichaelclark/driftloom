@@ -256,6 +256,8 @@ class DriftloomCore extends AudioWorkletProcessor {
           // And its keys and modes (queue item 89): a bit each.
           if (m.keys) core.dl_play_keys(m.keys);
           if (m.scales) core.dl_play_scales(m.scales);
+          // And its styles (queue item 90): a bit each.
+          if (m.styles) core.dl_play_styles(m.styles);
           core.dl_play_load(m.seed >>> 0, m.at || 0);
         }
         return;
