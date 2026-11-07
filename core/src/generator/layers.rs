@@ -7,7 +7,7 @@ use super::asked;
 use super::choices::lean_of;
 use super::data::{self, MAX_BARS, PEDAL};
 use super::js;
-use super::list::List;
+use super::list::{List, Word};
 use super::plan::{Cx, Notes, Slot, slot_at, SLOTS_MAX};
 use super::rng::Rng;
 use super::spec::Metre;
@@ -46,8 +46,8 @@ pub type Bass = List<BassEvent, BASS_MAX>;
 /// What `genBass` returns besides its notes.
 #[derive(Clone, Copy)]
 pub struct BassOut {
-    pub style: &'static str,
-    pub voice: &'static str,
+    pub style: Word,
+    pub voice: Word,
 }
 
 /// The kits a profile with none of its own draws from.
@@ -127,7 +127,7 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
             }
             bar += 1.0;
         }
-        return BassOut { style, voice };
+        return BassOut { style: style.into(), voice: voice.into() };
     }
 
     if style == "chug" {
@@ -145,7 +145,7 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
                 s += 2.0;
             }
         }
-        return BassOut { style, voice };
+        return BassOut { style: style.into(), voice: voice.into() };
     }
 
     for slot in slots {
@@ -229,7 +229,7 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
             }
         }
     }
-    BassOut { style, voice }
+    BassOut { style: style.into(), voice: voice.into() }
 }
 
 const PEDAL_SALT: u32 = 0x0009_eda1;
@@ -358,7 +358,7 @@ pub type Drums = List<DrumEvent, DRUMS_MAX>;
 /// What `genDrums` returns besides its hits.
 #[derive(Clone, Copy)]
 pub struct DrumsOut {
-    pub kit: &'static str,
+    pub kit: Word,
 }
 
 const KICK_PATTERNS: [&[f64]; 8] = [
@@ -406,7 +406,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     let total = bars * spb;
     out.clear();
     if !r.chance(c.drums.unwrap_or(f64::NAN)) && !asked::on(spec, Layer::Drums) {
-        return DrumsOut { kit: "none" };
+        return DrumsOut { kit: Word::new("none") };
     }
     let (kit, pool) = match c.kits {
         Some(p) => (r.weighted(p), p),
@@ -415,7 +415,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     let kit = asked::voice(spec, Layer::Drums, kit.unwrap_or("tape"), pool);
     if c.groove == Some("travel") {
         travel_groove(cx, bars, &mut r, kit, out);
-        return DrumsOut { kit };
+        return DrumsOut { kit: kit.into() };
     }
     let four_floor = match c.four_floor {
         Some(p) if p != 0.0 => spb == 16.0 && r.chance(p),
@@ -526,7 +526,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
             e.inst = hand(e.inst);
         }
     }
-    DrumsOut { kit }
+    DrumsOut { kit: kit.into() }
 }
 
 const TRAVEL_SWELL: [f64; 4] = [0.78, 0.92, 1.08, 1.22];

@@ -11,8 +11,10 @@ builds from the Done list.
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
-(2026-11-07). **Next: phase 3, item 93.** Item 75 is low priority. 37 stays
-on hold. A new Claude Code session starts here: read the standing rules and
+(2026-11-07). Phase 3's item 93 is built: the player's module is 637 KB,
+not within 50 KB of the core's 252 KB; the brain decides what to do about
+that (`docs/notes/93-module-size.md`). **Next: item 94a.** Item 75 is low
+priority. 37 stays on hold. A new Claude Code session starts here: read the standing rules and
 the merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
@@ -107,21 +109,6 @@ gone, a browser that can't run the core (no WebAssembly or no AudioWorklet)
 shows one plain line instead of playing, "This browser can't play
 Driftloom; try a recent Chrome, Firefox or Safari", in the info card's
 place. No fallback synth is kept for it.
-
-## 93. The player's module at the core's size
-
-**Hands:** Sonnet 5.5, high.
-
-**What:** `js/dlplayer.wasm` is 1.9 MB against `js/dlcore.wasm`'s 251 KB
-because `Player::new()` is not all zeros and its state is stored in the
-module ("For phase 3", below). Make it zeros, as `Core::new()` is, so the
-module the app will load first is small. Then say what else in it costs
-bytes, and whether one module (the player with the core inside) can replace
-the two the page loads today.
-
-**Yardsticks:** the module's size, before and after (aim: within 50 KB of
-`dlcore.wasm`'s); every golden, the 80 seeds, the browser comparisons and
-the core baseline unchanged; `tools/build-core.sh --check` for both.
 
 ## 94a. Everything the app does, as a command or an event
 
@@ -251,10 +238,6 @@ against the app before phase 3, the same codes): it should sound the same.
   the up-front harness for the core (it stays for the JavaScript fallback).
   A canonical order only if a host turns up that must hand notes over itself
   and needs bit-identity.
-- **`js/dlplayer.wasm` is 1.8 MB** against the app's 249 KB, because
-  `Player::new()` is not all zeros and its 1.5 MB is stored in the module.
-  Make it zeros, as `Core::new()` is, before the app ships it (first-visit
-  weight on phones).
 - **The automatic lite switch becomes a crossfade** (Mikey, 2026-11-03: the
   fade and restart from the top doesn't bother him, a proper crossfade is a
   good idea): item 87b's `quality.handOff` moves onto `Player::change`.

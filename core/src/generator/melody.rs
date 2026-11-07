@@ -5,7 +5,7 @@
 use super::asked;
 use super::data::{MAX_BARS, MAX_STEPS_PER_BAR};
 use super::js;
-use super::list::List;
+use super::list::{List, Word};
 use super::plan::{B_SALT, ChordEvent, Cx, Development, RETURN_SALT, Sections, Slot, VARY_SALT, VOWEL_KEYS, slot_at};
 use super::rng::Rng;
 use super::spec::{Feel, Metre, Spec};
@@ -242,7 +242,7 @@ pub struct Handed {
 /// What `genMelody` returns besides its notes.
 #[derive(Clone, Copy)]
 pub struct MelodyOut {
-    pub voice: &'static str,
+    pub voice: Word,
     pub motif: Figure,
     pub cell: Option<&'static str>,
     pub centre: Option<f64>,
@@ -422,7 +422,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     let tune = if dev.is_none() { spec.tune } else { None };
     out.clear();
     if dev.is_none() && choir.is_none() && !asked::on(spec, Layer::Melody) && tune.map_or(silent, |t| t.is_none()) {
-        return MelodyOut { voice, motif: List::filled(NO_MOTIF), cell: None, centre: None };
+        return MelodyOut { voice: voice.into(), motif: List::filled(NO_MOTIF), cell: None, centre: None };
     }
     let driven = lf.energy > 0.6;
     let pointillist = c.pointillist.unwrap_or(0.0);
@@ -631,7 +631,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
             i = j;
         }
     }
-    MelodyOut { voice, motif: figure, cell: Some(cell), centre: line_centre }
+    MelodyOut { voice: voice.into(), motif: figure, cell: Some(cell), centre: line_centre }
 }
 
 /// How B's figure answers A's (`answerFigure`'s `how`).
@@ -729,11 +729,11 @@ pub fn develop_melody(
             'A' => &*a_events,
             role => {
                 let (salt, h, handed) = match role {
-                    'B' => (B_SALT, &harmony.b, Handed { figure: answer, voice: a.voice, centre: a.centre.map(|c| c + shift), open_end: true, vel: 1.06 }),
-                    'V' => (VARY_SALT, &harmony.v, Handed { figure: vary_figure(&a.motif, &mut Rng::new(melody_seed ^ VARY_SALT)), voice: a.voice, centre: a.centre, open_end: true, vel: 1.0 }),
+                    'B' => (B_SALT, &harmony.b, Handed { figure: answer, voice: a.voice.get(), centre: a.centre.map(|c| c + shift), open_end: true, vel: 1.06 }),
+                    'V' => (VARY_SALT, &harmony.v, Handed { figure: vary_figure(&a.motif, &mut Rng::new(melody_seed ^ VARY_SALT)), voice: a.voice.get(), centre: a.centre, open_end: true, vel: 1.0 }),
                     _ => {
                         let figure = if four { vary_figure(&a.motif, &mut Rng::new(melody_seed ^ RETURN_SALT)) } else { a.motif };
-                        (RETURN_SALT, if harmony.has_r { &harmony.r } else { &harmony.a }, Handed { figure, voice: a.voice, centre: a.centre, open_end: false, vel: 1.0 })
+                        (RETURN_SALT, if harmony.has_r { &harmony.r } else { &harmony.a }, Handed { figure, voice: a.voice.get(), centre: a.centre, open_end: false, vel: 1.0 })
                     }
                 };
                 // B plays over its own harmony as drawn; the others over

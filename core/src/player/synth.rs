@@ -17,6 +17,7 @@ use crate::blocks::midi_to_freq;
 use crate::blocks::{bass, drum, kalimba, struck, texture};
 use crate::generator::data::{self, VOICE_COSTS};
 use crate::generator::js;
+use crate::generator::list::Biased;
 use crate::rng::{Key, salt, unit};
 use crate::{BASS_CHANNEL, CHORDS, DRUMS_CHANNEL, EXTRA, MELODY, TEXTURE_CHANNEL, Tap, WASH_CHANNEL};
 use crate::{
@@ -231,9 +232,9 @@ pub struct Synth {
     /// Each channel muted (`_asked.mutes`), in the core's channel order.
     pub mutes: [bool; 5],
     /// The listener's volume (`_gain`).
-    pub volume: f64,
+    pub volume: Biased<{ VOLUME.to_bits() }>,
     /// The profile's level (`_gain`).
-    pub level: f64,
+    pub level: Biased<{ 1.0_f64.to_bits() }>,
 }
 
 impl Synth {
@@ -251,8 +252,8 @@ impl Synth {
             pad_sweep: false,
             space_pinned: [false; crate::space::n::COUNT],
             mutes: [false; 5],
-            volume: VOLUME,
-            level: 1.0,
+            volume: Biased::DEFAULT,
+            level: Biased::DEFAULT,
         }
     }
 
@@ -269,13 +270,13 @@ impl Synth {
         self.sub_duck = false;
         self.pad_sweep = false;
         self.mutes = [false; 5];
-        self.level = 1.0;
+        self.level.set(1.0);
         host.param(crate::LFO_START, SET, 0.0, now, 0.0);
         host.param(crate::VOLUME, SET, self.gain(), 0.0, 0.0);
     }
 
     fn gain(&self) -> f64 {
-        self.volume * self.level
+        self.volume.get() * self.level.get()
     }
 
     // ------------------------------------------------------------ the mix
@@ -299,13 +300,13 @@ impl Synth {
     /// `setCharacterLevel(level)`, or the volume (`setVolume`): the master
     /// gain glides to the product.
     pub fn set_level<H: Host>(&mut self, host: &mut H, level: f64, now: f64) {
-        self.level = level;
+        self.level.set(level);
         host.param(crate::VOLUME, TARGET, self.gain(), now, 0.08);
     }
 
     /// `setVolume(v)`.
     pub fn set_volume<H: Host>(&mut self, host: &mut H, volume: f64, now: f64) {
-        self.volume = volume;
+        self.volume.set(volume);
         host.param(crate::VOLUME, TARGET, self.gain(), now, 0.08);
     }
 

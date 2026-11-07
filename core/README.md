@@ -388,7 +388,11 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   a whole C host, a seed to a WAV.
 - **On the web** the `player` feature builds `js/dlplayer.wasm` with the
   `dl_play_*` exports; the app plays it with `?engine=player`, for testing,
-  its own engine keeping only the cursor and the controls.
+  its own engine keeping only the cursor and the controls. The module is
+  637 KB (215 KB gzipped) against the app's 252 KB (91 KB gzipped): the
+  generator and the player's code, 547 KB of the module before gzip. The player is all
+  zero bytes when new (`a_new_player_is_all_zeros`), so its 1.5 MB is `.bss`,
+  not bytes in the file (the module was 1.9 MB when it was stored).
 
 Why a player's render depends on when it hands notes over: the core keeps its
 waiting notes in no fixed order (a note that starts takes the last one's

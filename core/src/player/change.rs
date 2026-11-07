@@ -81,13 +81,15 @@ impl Moment {
 /// How the loop playing hands over to the next at the boundary.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Handover {
+    /// The old loop's notes ring out as they would (`Player::load`'s way).
+    /// First, so that a player of nothing, which hands over this way, is
+    /// all zero bytes (queue item 93).
+    RingOut,
     /// Everything the old loop handed over falls from the boundary to
     /// nothing over this many seconds (`Core::fade_all`), its organ letting
     /// go over the same; the new loop plays from the boundary at its own
     /// level.
     Crossfade(f64),
-    /// The old loop's notes ring out as they would (`Player::load`'s way).
-    RingOut,
 }
 
 impl Handover {

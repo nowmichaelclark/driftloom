@@ -102,8 +102,8 @@ impl Player {
     /// second or more. None for a loop just made.
     #[must_use]
     pub fn units(&self) -> Option<f64> {
-        if self.units >= 0.0 {
-            return Some(self.units);
+        if self.units.get() >= 0.0 {
+            return Some(self.units.get());
         }
         if self.state != State::Playing {
             return None;
