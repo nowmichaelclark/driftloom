@@ -11,11 +11,10 @@ builds from the Done list.
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
-(2026-11-07). Phase 3's item 93 is built: the player's module is 637 KB,
-not within 50 KB of the core's 252 KB; the brain decides what to do about
-that (`docs/notes/93-module-size.md`). **Next: item 94a.** Item 75 is low
-priority. 37 stays on hold. A new Claude Code session starts here: read the standing rules and
-the merge policy, then take the next item.
+(2026-11-07). **Phase 3: item 93 done** (the player's module, 636 KB; the
+brain accepted the size, `docs/notes/93-module-size.md`); **next: 94a.** Item
+75 is low priority. 37 stays on hold. A new Claude Code session starts here:
+read the standing rules and the merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
 on alongside the core track, as separate PRs; app-track sessions stay out of

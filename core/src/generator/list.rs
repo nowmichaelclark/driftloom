@@ -7,42 +7,76 @@
 //! declared), and the tests check across the goldens' corpus that nothing
 //! is ever lost.
 
-use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
+
+/// A type with an empty value that is all zero bytes (queue item 93).
+///
+/// A `List` fills its slots with it, and a `Maybe` holds it while empty, so a
+/// list or a maybe, and everything that holds one, starts as zero bytes: the
+/// module then keeps the player in `.bss` and not as bytes in the file.
+/// Rust's own fillers are not zeros (a `&'static str` is never null; an
+/// `Option`'s `None` can be a spare value of one of its fields), so every
+/// type a `List` or a `Maybe` holds says what its empty value is.
+/// `a_new_player_is_all_zeros` (`tests/zeros.rs`) fails, with the offset, if
+/// one is not zero bytes where the player holds it.
+pub trait Empty: Copy {
+    /// The empty value.
+    const EMPTY: Self;
+}
+
+macro_rules! empty_as {
+    ($($t:ty => $v:expr),* $(,)?) => { $( impl Empty for $t { const EMPTY: Self = $v; } )* };
+}
+
+empty_as!(f64 => 0.0, f32 => 0.0, i16 => 0, i32 => 0, u8 => 0, u16 => 0, u32 => 0, u64 => 0, usize => 0, bool => false);
+
+impl<A: Empty, B: Empty> Empty for (A, B) {
+    const EMPTY: Self = (A::EMPTY, B::EMPTY);
+}
+
+impl<T: Empty, const N: usize> Empty for [T; N] {
+    const EMPTY: Self = [T::EMPTY; N];
+}
+
+impl<T: Copy> Empty for Option<T> {
+    const EMPTY: Self = None;
+}
+
+impl<T: Empty, const N: usize> Empty for List<T, N> {
+    const EMPTY: Self = List::new();
+}
+
+impl<T: 'static> Empty for &'static [T] {
+    const EMPTY: Self = &[];
+}
+
+/// `""`: held in a list or a maybe it is a slot nothing reads; to hold an
+/// empty string where it must be zero bytes, use `Word`.
+impl Empty for &'static str {
+    const EMPTY: Self = "";
+}
 
 /// Up to `N` items of `T`.
 ///
-/// Only the first `len` slots hold items; the rest are zero bytes that are
-/// never read as a `T` (queue item 93). That is what lets a list, and the
-/// player that holds dozens of them, start as all zeros: the module keeps
-/// the zeros as `.bss`, not as bytes in the file (a filler item such as an
-/// empty note holds a name and a pointer, which are not zeros).
+/// Slots past the length hold `T::EMPTY`, which nothing reads.
 #[derive(Clone, Copy)]
-pub struct List<T: Copy, const N: usize> {
-    items: [MaybeUninit<T>; N],
+pub struct List<T: Empty, const N: usize> {
+    items: [T; N],
     len: usize,
     lost: usize,
 }
 
-impl<T: Copy, const N: usize> List<T, N> {
-    /// An empty list, all zero bytes.
+impl<T: Empty, const N: usize> List<T, N> {
+    /// An empty list, all zero bytes where `T::EMPTY` is.
     #[must_use]
     pub const fn new() -> Self {
-        List { items: [MaybeUninit::zeroed(); N], len: 0, lost: 0 }
-    }
-
-    /// An empty list. `fill` is no longer stored: the slots past the length
-    /// are never read, so the list starts as zeros (`new`); the argument
-    /// stays so that the many callers read as they did.
-    #[must_use]
-    pub const fn filled(_fill: T) -> Self {
-        Self::new()
+        List { items: [T::EMPTY; N], len: 0, lost: 0 }
     }
 
     /// Add `x` at the end; past the capacity it is dropped and counted.
     pub fn push(&mut self, x: T) {
         if self.len < N {
-            self.items[self.len] = MaybeUninit::new(x);
+            self.items[self.len] = x;
             self.len += 1;
         } else {
             self.lost += 1;
@@ -72,7 +106,7 @@ impl<T: Copy, const N: usize> List<T, N> {
     pub fn retain(&mut self, mut keep: impl FnMut(&T) -> bool) {
         let mut n = 0;
         for i in 0..self.len {
-            if keep(&self[i]) {
+            if keep(&self.items[i]) {
                 self.items[n] = self.items[i];
                 n += 1;
             }
@@ -92,20 +126,20 @@ impl<T: Copy, const N: usize> List<T, N> {
     /// no buffer, and the generator's lists are short and mostly sorted.
     pub fn sort_stable_by(&mut self, mut before: impl FnMut(&T, &T) -> bool) {
         for i in 1..self.len {
-            let x = self[i];
+            let x = self.items[i];
             let mut j = i;
-            while j > 0 && before(&x, &self[j - 1]) {
+            while j > 0 && before(&x, &self.items[j - 1]) {
                 self.items[j] = self.items[j - 1];
                 j -= 1;
             }
-            self.items[j] = MaybeUninit::new(x);
+            self.items[j] = x;
         }
     }
 
     /// The list from `items`.
     #[must_use]
-    pub fn from_slice(fill: T, items: &[T]) -> Self {
-        let mut out = Self::filled(fill);
+    pub fn from_slice(items: &[T]) -> Self {
+        let mut out = Self::new();
         for x in items {
             out.push(*x);
         }
@@ -113,25 +147,22 @@ impl<T: Copy, const N: usize> List<T, N> {
     }
 }
 
-impl<T: Copy, const N: usize> Default for List<T, N> {
+impl<T: Empty, const N: usize> Default for List<T, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Copy, const N: usize> Deref for List<T, N> {
+impl<T: Empty, const N: usize> Deref for List<T, N> {
     type Target = [T];
     fn deref(&self) -> &[T] {
-        // SAFETY: the first `len` slots were written by `push` (the only way
-        // `len` grows), and `MaybeUninit<T>` has the layout of `T`.
-        unsafe { core::slice::from_raw_parts(self.items.as_ptr().cast::<T>(), self.len) }
+        &self.items[..self.len]
     }
 }
 
-impl<T: Copy, const N: usize> DerefMut for List<T, N> {
+impl<T: Empty, const N: usize> DerefMut for List<T, N> {
     fn deref_mut(&mut self) -> &mut [T] {
-        // SAFETY: as `deref`.
-        unsafe { core::slice::from_raw_parts_mut(self.items.as_mut_ptr().cast::<T>(), self.len) }
+        &mut self.items[..self.len]
     }
 }
 
@@ -226,42 +257,38 @@ impl PartialEq<&str> for Word {
 /// Rust writes the `None` of an `Option<T>` into a spare value of one of
 /// `T`'s fields (a flag's 2, say), so a struct holding one is not all zeros
 /// even when empty, and a player made of them cannot start in `.bss`. A
-/// `Maybe` keeps its own flag and `T`'s bytes beside it, zero while empty.
+/// `Maybe` keeps its own flag, and holds `T::EMPTY` while it is empty.
 #[derive(Clone, Copy)]
-pub struct Maybe<T: Copy> {
+pub struct Maybe<T: Empty> {
     some: bool,
-    value: MaybeUninit<T>,
+    value: T,
 }
 
-impl<T: Copy> Maybe<T> {
-    /// Nothing, all zero bytes.
-    pub const NONE: Maybe<T> = Maybe { some: false, value: MaybeUninit::zeroed() };
+impl<T: Empty> Maybe<T> {
+    /// Nothing, all zero bytes where `T::EMPTY` is.
+    pub const NONE: Maybe<T> = Maybe { some: false, value: T::EMPTY };
 
     /// `x`.
     #[must_use]
     pub const fn some(x: T) -> Self {
-        Maybe { some: true, value: MaybeUninit::new(x) }
+        Maybe { some: true, value: x }
     }
 
     /// The `Option`.
     #[must_use]
     pub fn get(&self) -> Option<T> {
-        // SAFETY: `value` was written by `some` or `set` whenever `some` is
-        // set, and only then.
-        if self.some { Some(unsafe { self.value.assume_init() }) } else { None }
+        self.some.then_some(self.value)
     }
 
     /// A reference to the value, if any.
     #[must_use]
     pub fn as_ref(&self) -> Option<&T> {
-        // SAFETY: as `get`.
-        if self.some { Some(unsafe { self.value.assume_init_ref() }) } else { None }
+        self.some.then_some(&self.value)
     }
 
     /// A mutable reference to the value, if any.
     pub fn as_mut(&mut self) -> Option<&mut T> {
-        // SAFETY: as `get`.
-        if self.some { Some(unsafe { self.value.assume_init_mut() }) } else { None }
+        if self.some { Some(&mut self.value) } else { None }
     }
 
     /// Whether there is a value.
@@ -286,8 +313,7 @@ impl<T: Copy> Maybe<T> {
         if !self.some {
             *self = Self::some(make());
         }
-        // SAFETY: just set.
-        unsafe { self.value.assume_init_mut() }
+        &mut self.value
     }
 
     /// Take the value, leaving none.
@@ -298,16 +324,20 @@ impl<T: Copy> Maybe<T> {
     }
 }
 
-impl<T: Copy> Default for Maybe<T> {
+impl<T: Empty> Default for Maybe<T> {
     fn default() -> Self {
         Self::NONE
     }
 }
 
-impl<T: Copy> From<Option<T>> for Maybe<T> {
+impl<T: Empty> From<Option<T>> for Maybe<T> {
     fn from(x: Option<T>) -> Self {
         x.map_or(Self::NONE, Self::some)
     }
+}
+
+impl Empty for Word {
+    const EMPTY: Self = Word::EMPTY;
 }
 
 /// A number whose stored bits are its bits XOR `BITS`: all zero bytes while it

@@ -7,7 +7,7 @@ use super::asked;
 use super::choices::lean_of;
 use super::data::{self, MAX_BARS, PEDAL};
 use super::js;
-use super::list::{List, Word};
+use super::list::{Empty, List, Word};
 use super::plan::{Cx, Notes, Slot, slot_at, SLOTS_MAX};
 use super::rng::Rng;
 use super::spec::Metre;
@@ -30,7 +30,7 @@ pub struct BassEvent {
     /// The velocity as generated (a repair puts it back).
     pub vel0: f64,
     pub glide: bool,
-    pub voice: &'static str,
+    pub voice: Word,
     /// Marked when a chug plays it.
     pub chug: bool,
     pub steps: Option<List<f64, 7>>,
@@ -38,7 +38,7 @@ pub struct BassEvent {
 
 /// An empty bass note.
 pub const NO_BASS: BassEvent =
-    BassEvent { step: 0.0, dur: 0.0, midi: 0.0, vel: 0.0, vel0: 0.0, glide: false, voice: "", chug: false, steps: None };
+    BassEvent { step: 0.0, dur: 0.0, midi: 0.0, vel: 0.0, vel0: 0.0, glide: false, voice: Word::EMPTY, chug: false, steps: None };
 
 /// The bass's notes.
 pub type Bass = List<BassEvent, BASS_MAX>;
@@ -112,7 +112,7 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
         while m < 36.0 {
             m += 12.0;
         }
-        out.push(BassEvent { step: step % total, dur, midi: m, vel, vel0: vel, glide, voice, ..NO_BASS });
+        out.push(BassEvent { step: step % total, dur, midi: m, vel, vel0: vel, glide, voice: voice.into(), ..NO_BASS });
     };
 
     if style == "drone" {
@@ -253,7 +253,7 @@ pub fn pedal_bass(cx: &Cx, bars: f64, drawn: &Bass, voice: &'static str, out: &m
     let mut rng = Rng::new(js::salted(spec.layer_seed(Layer::Bass), PEDAL_SALT, 1));
     rng.f();
     let rhythm = rng.weighted(PEDAL.rhythms).unwrap_or("held");
-    let mut nbs: List<(f64, f64), 8> = List::filled((0.0, 0.0));
+    let mut nbs: List<(f64, f64), 8> = List::new();
     for &(nb, w) in PEDAL.neighbors {
         if scale.contains(&(((nb % 12.0) + 12.0) % 12.0)) {
             nbs.push((nb, w * lean_of(data::table_at(PEDAL.neighbor_vibes, nb), v)));
@@ -263,7 +263,7 @@ pub fn pedal_bass(cx: &Cx, bars: f64, drawn: &Bass, voice: &'static str, out: &m
     let share = rng.range(PEDAL.share[0], PEDAL.share[1]);
 
     let mid = |get: fn(&super::layers::BassEvent) -> f64| {
-        let mut x: List<f64, BASS_MAX> = List::filled(0.0);
+        let mut x: List<f64, BASS_MAX> = List::new();
         for e in drawn.iter().filter(|e| e.vel0 != 0.0) {
             x.push(get(e));
         }
@@ -324,7 +324,7 @@ pub fn pedal_bass(cx: &Cx, bars: f64, drawn: &Bass, voice: &'static str, out: &m
                 Some(o) if o != 0.0 && !o.is_nan() => js::min(d, js::max(1.0, o)),
                 _ => d,
             };
-            out.push(BassEvent { step: bar * spb + st, dur, midi: m, vel, vel0: vel, glide: false, voice, ..NO_BASS });
+            out.push(BassEvent { step: bar * spb + st, dur, midi: m, vel, vel0: vel, glide: false, voice: voice.into(), ..NO_BASS });
         }
         bar += 1.0;
     }
@@ -341,7 +341,7 @@ pub const DRUMS_MAX: usize = MAX_BARS * (4 + 3 + 1 + data::MAX_STEPS_PER_BAR + 5
 #[derive(Clone, Copy)]
 pub struct DrumEvent {
     pub step: f64,
-    pub inst: &'static str,
+    pub inst: Word,
     pub vel: f64,
     /// The velocity as generated (a repair puts it back).
     pub vel0: f64,
@@ -350,7 +350,7 @@ pub struct DrumEvent {
 }
 
 /// An empty hit.
-pub const NO_DRUM: DrumEvent = DrumEvent { step: 0.0, inst: "", vel: 0.0, vel0: 0.0, roll: false, micro: None };
+pub const NO_DRUM: DrumEvent = DrumEvent { step: 0.0, inst: Word::EMPTY, vel: 0.0, vel0: 0.0, roll: false, micro: None };
 
 /// The drums' hits.
 pub type Drums = List<DrumEvent, DRUMS_MAX>;
@@ -392,7 +392,7 @@ pub fn hand(inst: &'static str) -> &'static str {
 }
 
 fn hit(step: f64, inst: &'static str, vel: f64) -> DrumEvent {
-    DrumEvent { step, inst, vel, vel0: vel, ..NO_DRUM }
+    DrumEvent { step, inst: inst.into(), vel, vel0: vel, ..NO_DRUM }
 }
 
 /// `genDrums(layerSpec(spec, 'drums'))`, its hits into `out`.
@@ -523,7 +523,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     out.retain(|e| e.step < total);
     if kit == "hand" {
         for e in out.iter_mut() {
-            e.inst = hand(e.inst);
+            e.inst = hand(e.inst.get()).into();
         }
     }
     DrumsOut { kit: kit.into() }
@@ -553,7 +553,7 @@ fn travel_groove(cx: &Cx, bars: f64, r: &mut Rng, kit: &'static str, out: &mut D
     let eighth = if shaker && !chug { "shaker" } else { "hat" };
     let other = if eighth == "hat" { "shaker" } else { "hat" };
     let ghost = if back == "rim" { "snare" } else { "rim" };
-    let mut offbeats: List<f64, 16> = List::filled(0.0);
+    let mut offbeats: List<f64, 16> = List::new();
     let mut s = 2.0;
     while s < spb {
         if s % beat != 0.0 {
@@ -561,7 +561,7 @@ fn travel_groove(cx: &Cx, bars: f64, r: &mut Rng, kit: &'static str, out: &mut D
         }
         s += 2.0;
     }
-    let mut ghost_at: List<f64, 8> = List::filled(0.0);
+    let mut ghost_at: List<f64, 8> = List::new();
     let mut k = 1.0;
     while k <= beats {
         if k % 2.0 == 1.0 || k == beats {
@@ -669,9 +669,9 @@ fn travel_groove(cx: &Cx, bars: f64, r: &mut Rng, kit: &'static str, out: &mut D
     out.retain(|e| e.step < total);
     for e in out.iter_mut() {
         e.inst = if kit == "hand" {
-            hand(e.inst)
+            hand(e.inst.get()).into()
         } else if e.inst == "kick" {
-            "softkick"
+            Word::new("softkick")
         } else {
             e.inst
         };
@@ -692,18 +692,18 @@ pub struct TextureEvent {
     pub vel: f64,
     /// The velocity as generated (a repair puts it back).
     pub vel0: f64,
-    pub kind: &'static str,
+    pub kind: Word,
     pub band: Option<f64>,
 }
 
 /// An empty texture event.
-pub const NO_TEXTURE: TextureEvent = TextureEvent { step: 0.0, dur: 0.0, notes: List::filled(0), vel: 0.0, vel0: 0.0, kind: "", band: None };
+pub const NO_TEXTURE: TextureEvent = TextureEvent { step: 0.0, dur: 0.0, notes: List::new(), vel: 0.0, vel0: 0.0, kind: Word::EMPTY, band: None };
 
 /// The texture's events.
 pub type Texture = List<TextureEvent, TEXTURE_MAX>;
 
 fn air(step: f64, dur: f64, notes: &[i16], vel: f64, kind: &'static str) -> TextureEvent {
-    TextureEvent { step, dur, notes: List::from_slice(0, notes), vel, vel0: vel, kind, band: None }
+    TextureEvent { step, dur, notes: List::from_slice(notes), vel, vel0: vel, kind: kind.into(), band: None }
 }
 
 /// `genTexture(layerSpec(spec, 'texture'), harmony)`, into `out`; returns
@@ -738,7 +738,7 @@ pub fn gen_texture(cx: &Cx, bars: f64, slots: &[Slot], cycle_steps: f64, out: &m
             let mut bar = 0.0;
             while bar < bars {
                 let slot = slot_at(slots, bar * spb, cycle_steps);
-                let notes: List<i16, 2> = slot.notes.iter().take(2).map(|n| n + 12).fold(List::filled(0), |mut l, n| {
+                let notes: List<i16, 2> = slot.notes.iter().take(2).map(|n| n + 12).fold(List::new(), |mut l, n| {
                     l.push(n);
                     l
                 });
@@ -796,4 +796,16 @@ pub fn gen_texture(cx: &Cx, bars: f64, slots: &[Slot], cycle_steps: f64, out: &m
         }
     }
     kind
+}
+
+impl Empty for BassEvent {
+    const EMPTY: Self = NO_BASS;
+}
+
+impl Empty for DrumEvent {
+    const EMPTY: Self = NO_DRUM;
+}
+
+impl Empty for TextureEvent {
+    const EMPTY: Self = NO_TEXTURE;
 }

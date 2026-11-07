@@ -5,7 +5,7 @@
 use super::asked;
 use super::data::{MAX_BARS, MAX_STEPS_PER_BAR};
 use super::js;
-use super::list::{List, Word};
+use super::list::{Empty, List, Word};
 use super::plan::{B_SALT, ChordEvent, Cx, Development, RETURN_SALT, Sections, Slot, VARY_SALT, VOWEL_KEYS, slot_at};
 use super::rng::Rng;
 use super::spec::{Feel, Metre, Spec};
@@ -45,10 +45,10 @@ pub struct MelodyEvent {
     /// The velocity as generated, before the entry schedules (a repair
     /// puts it back).
     pub vel0: f64,
-    pub voice: &'static str,
+    pub voice: Word,
     pub degree: f64,
     pub phrase: f64,
-    pub vowel: &'static str,
+    pub vowel: Word,
     pub detune: Option<f64>,
     pub prev: Option<f64>,
     pub orn: Option<&'static str>,
@@ -63,10 +63,10 @@ pub const NO_NOTE: MelodyEvent = MelodyEvent {
     midi: 0.0,
     vel: 0.0,
     vel0: 0.0,
-    voice: "",
+    voice: Word::EMPTY,
     degree: 0.0,
     phrase: 0.0,
-    vowel: "a",
+    vowel: Word::new("a"),
     detune: None,
     prev: None,
     orn: None,
@@ -147,27 +147,27 @@ const CELLS_34: [(&str, f64, f64, f64, Pat); 10] = [
 type Pool = List<Cell, 18>;
 
 fn cell(id: &'static str, e: f64, l: f64, w: f64, pat: &[[f64; 3]]) -> Cell {
-    Cell { id, e, l, w, pat: List::from_slice([0.0; 3], pat) }
+    Cell { id, e, l, w, pat: List::from_slice(pat) }
 }
 
 /// `genericCells(spb)`: the families built to fit a metre without a table
 /// of its own (5/4).
 fn generic_cells(spb: f64, out: &mut Pool) {
     let beat = if spb % 4.0 == 0.0 { 4.0 } else { 3.0 };
-    let mut beats: List<f64, MAX_STEPS_PER_BAR> = List::filled(0.0);
+    let mut beats: List<f64, MAX_STEPS_PER_BAR> = List::new();
     let mut i = 0.0;
     while i + beat <= spb {
         beats.push(i);
         i += beat;
     }
     let half = js::max(2.0, js::round(spb / 2.0));
-    let mut dotted: List<[f64; 3], 10> = List::filled([0.0; 3]);
+    let mut dotted: List<[f64; 3], 10> = List::new();
     let mut i = 0.0;
     while i + 3.0 <= spb {
         dotted.push([i, 3.0, if i % beat == 0.0 { 1.0 } else { 0.0 }]);
         i += 3.0;
     }
-    let mut anticipated: List<[f64; 3], 10> = List::filled([0.0; 3]);
+    let mut anticipated: List<[f64; 3], 10> = List::new();
     for (k, &b) in beats.iter().enumerate() {
         if k % 2 == 1 {
             continue;
@@ -177,7 +177,7 @@ fn generic_cells(spb: f64, out: &mut Pool) {
         }
         anticipated.push([b, beat, 1.0]);
     }
-    let mut pulse: List<[f64; 3], 10> = List::filled([0.0; 3]);
+    let mut pulse: List<[f64; 3], 10> = List::new();
     for (k, &b) in beats.iter().enumerate() {
         pulse.push([b, beat, if k % 2 == 0 { 1.0 } else { 0.0 }]);
     }
@@ -199,7 +199,7 @@ fn generic_cells(spb: f64, out: &mut Pool) {
 
 /// `cellsFor(spb, metre)`, with `usable`'s filter.
 fn cells_for(spb: f64, metre: Metre) -> Pool {
-    let mut pool: Pool = List::filled(cell("", 0.0, 0.0, 0.0, &[]));
+    let mut pool: Pool = List::new();
     let table: &[(&str, f64, f64, f64, Pat)] = if spb == 16.0 {
         &CELLS_16
     } else if spb == 12.0 {
@@ -267,7 +267,7 @@ enum Kind {
 
 /// The phrase plan's transforms (`transform` in `genMelody`).
 fn transform(m: &Figure, kind: Kind, amount: f64, spb: f64, waltz: bool) -> Figure {
-    let mut out: Figure = List::filled(NO_MOTIF);
+    let mut out: Figure = List::new();
     let base = m.first().map_or(0.0, |x| x.degree);
     match kind {
         Kind::Sequence => {
@@ -340,7 +340,7 @@ fn figure_draws(r: &mut Rng, cx: &Cx, lf: Feel) -> (Cell, Figure, Figure) {
     let mood = lf.lift;
     let rhythm = draw_cell(r, spb, cx.metre, lf.energy, mood);
 
-    let mut motif: Figure = List::filled(NO_MOTIF);
+    let mut motif: Figure = List::new();
     let mut deg = 0.0;
     let mut last_move = 0.0;
     let up = 1.0 + mood * 2.2;
@@ -370,7 +370,7 @@ fn figure_draws(r: &mut Rng, cx: &Cx, lf: Feel) -> (Cell, Figure, Figure) {
     }
 
     let omit = js::max(0.0, 0.2 - lf.energy * 0.15);
-    let mut kept: Figure = List::filled(NO_MOTIF);
+    let mut kept: Figure = List::new();
     for x in motif.iter() {
         if !r.chance(omit) {
             kept.push(*x);
@@ -422,7 +422,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     let tune = if dev.is_none() { spec.tune } else { None };
     out.clear();
     if dev.is_none() && choir.is_none() && !asked::on(spec, Layer::Melody) && tune.map_or(silent, |t| t.is_none()) {
-        return MelodyOut { voice: voice.into(), motif: List::filled(NO_MOTIF), cell: None, centre: None };
+        return MelodyOut { voice: voice.into(), motif: List::new(), cell: None, centre: None };
     }
     let driven = lf.energy > 0.6;
     let pointillist = c.pointillist.unwrap_or(0.0);
@@ -445,7 +445,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     let phrase_count = js::max(1.0, js::round(bars / bars_per_phrase));
     let form = r.pick(&FORMS).unwrap_or(FORMS[0]);
 
-    let mut bar_of: List<f64, MELODY_MAX> = List::filled(0.0);
+    let mut bar_of: List<f64, MELODY_MAX> = List::new();
     let mut centre_so_far: Option<f64> = None;
     let mut centre_count = 0.0;
     let mut centre_sum = 0.0;
@@ -564,10 +564,10 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
                     midi,
                     vel,
                     vel0: vel,
-                    voice,
+                    voice: voice.into(),
                     degree: m.degree,
                     phrase: ph,
-                    vowel: VOWEL_KEYS[vowel_i],
+                    vowel: VOWEL_KEYS[vowel_i].into(),
                     detune: choir.map(|ch| ch.melody_detune),
                     ..NO_NOTE
                 });
@@ -757,4 +757,18 @@ pub fn develop_melody(
         phrases += top;
     }
     (MelodyOut { voice: a.voice, motif: a.motif, cell: a.cell, centre: a.centre }, Depth { answer: Some(how), shift: Some(shift) })
+}
+
+impl Empty for Motif {
+    const EMPTY: Self = NO_MOTIF;
+}
+
+/// All zero bytes, unlike `NO_NOTE` (whose vowel is "a", the template notes
+/// are made from): the slot of a list nothing reads.
+impl Empty for MelodyEvent {
+    const EMPTY: Self = MelodyEvent { vowel: Word::EMPTY, ..NO_NOTE };
+}
+
+impl Empty for Cell {
+    const EMPTY: Self = Cell { id: "", e: 0.0, l: 0.0, w: 0.0, pat: List::new() };
 }

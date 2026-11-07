@@ -11,7 +11,7 @@ use super::choices::lean_of;
 use super::data::{self, CHOICES, MAX_BARS, PADSWEEP, PEDAL};
 use super::js;
 use super::layers::{self, Bass, BassEvent, BassOut, DrumEvent, Drums, DrumsOut, PedalOut, Texture, TextureEvent};
-use super::list::{List, Word};
+use super::list::{List, Maybe, Word};
 use super::melody::{self, Depth, Melody, MelodyOut, Over};
 use super::plan::{self, CHORD_EVENTS_MAX, ChordEvent, Cx, Form, Gap, Harmony, Plan};
 use super::rng::Rng;
@@ -48,11 +48,11 @@ pub struct Render {
     pub chords: Chords,
     pub melody: Melody,
     pub texture: Texture,
-    pub form: Option<Form>,
+    pub form: Maybe<Form>,
     pub gaps: List<Gap, 3>,
     pub quiet: List<usize, MAX_BARS>,
     /// Each choice's option, in `CHOICES`' order.
-    pub choices: List<&'static str, CHOICES_MAX>,
+    pub choices: List<Word, CHOICES_MAX>,
     /// Choices a clip forces (`dlrender --force`, queue item 83): each
     /// choice's option number, or `NOT_FORCED`. The sketch build only.
     #[cfg(feature = "sketch")]
@@ -87,29 +87,29 @@ impl Render {
     pub const fn new() -> Self {
         Render {
             harmony: Harmony::new(),
-            drums: List::filled(layers::NO_DRUM),
-            bass: List::filled(layers::NO_BASS),
-            chords: List::filled(plan::EMPTY_EVENT),
-            melody: List::filled(melody::NO_NOTE),
-            texture: List::filled(layers::NO_TEXTURE),
-            form: None,
-            gaps: List::filled(Gap { start: 0.0, len: 0.0 }),
-            quiet: List::filled(0),
-            choices: List::filled(""),
+            drums: List::new(),
+            bass: List::new(),
+            chords: List::new(),
+            melody: List::new(),
+            texture: List::new(),
+            form: Maybe::NONE,
+            gaps: List::new(),
+            quiet: List::new(),
+            choices: List::new(),
             #[cfg(feature = "sketch")]
             forced: [NOT_FORCED; CHOICES_MAX],
             bass_out: BassOut { style: Word::EMPTY, voice: Word::EMPTY },
             pedal: None,
             drums_out: DrumsOut { kit: Word::EMPTY },
-            melody_out: MelodyOut { voice: Word::EMPTY, motif: List::filled(melody::NO_MOTIF), cell: None, centre: None },
+            melody_out: MelodyOut { voice: Word::EMPTY, motif: List::new(), cell: None, centre: None },
             texture_kind: Word::EMPTY,
             depth: Depth { answer: None, shift: None },
             depth_made: false,
             chord_shift: 0.0,
             register_given: None,
-            pedal_notes: List::filled(layers::NO_BASS),
-            a_notes: List::filled(melody::NO_NOTE),
-            section_notes: List::filled(melody::NO_NOTE),
+            pedal_notes: List::new(),
+            a_notes: List::new(),
+            section_notes: List::new(),
         }
     }
 
@@ -160,7 +160,7 @@ impl Render {
     fn melody_part(&mut self, cx: &Cx, plan: &Plan) {
         let spec = cx.spec;
         self.depth_made = false;
-        if let Some(dev) = &plan.development {
+        if let Some(dev) = plan.development.as_ref() {
             let (out, depth) = melody::develop_melody(cx, &plan.sections, dev, &mut self.melody, &mut self.a_notes, &mut self.section_notes);
             self.melody_out = out;
             self.depth = depth;
@@ -198,7 +198,7 @@ impl Render {
         self.gaps = plan.gaps;
         self.quiet.clear();
         if self.form.is_some() {
-            if let (Some(dev), Some(form)) = (&plan.development, &mut self.form) {
+            if let (Some(dev), Some(form)) = (plan.development.as_ref(), self.form.as_mut()) {
                 let sched = &mut form[Layer::Melody as usize];
                 let n = sched.len().max(1);
                 for s in dev.sections.iter().filter(|s| s.role == 'B') {
@@ -326,7 +326,7 @@ impl Render {
     }
 
     fn apply_form(&mut self, layer: Layer, spb: f64) {
-        let Some(form) = &self.form else { return };
+        let Some(form) = self.form.as_ref() else { return };
         let sched = &form[layer as usize];
         let n = sched.len().max(1);
         let off = |step: f64| !sched.get(js::index(js::floor(step / spb)) % n).copied().unwrap_or(false);
@@ -405,7 +405,7 @@ impl Render {
                     Layer::Melody => self.melody.iter_mut().filter(|e| in_bar(e.step)).for_each(|e| e.vel = e.vel0),
                     Layer::Texture => self.texture.iter_mut().filter(|e| in_bar(e.step)).for_each(|e| e.vel = e.vel0),
                 }
-                if let Some(form) = &mut self.form
+                if let Some(form) = self.form.as_mut()
                     && let Some(x) = form[layer as usize].get_mut(local)
                 {
                     *x = true;
@@ -419,7 +419,7 @@ impl Render {
             counts = self.audible_per_bar(cx, bars);
             run = 0.0;
         }
-        let mut out = List::filled(0.0);
+        let mut out = List::new();
         for &c in &counts[..bars] {
             out.push(c);
         }
@@ -429,7 +429,7 @@ impl Render {
     /// The loop's option for the choice `id` (`render(spec).choices[id]`).
     #[must_use]
     pub fn choice(&self, id: &str) -> Option<&'static str> {
-        CHOICES.iter().position(|c| c.id == id).and_then(|i| self.choices.get(i).copied())
+        CHOICES.iter().position(|c| c.id == id).and_then(|i| self.choices.get(i).map(|w| w.get()))
     }
 
     /// Force the choice `id` to the option `option` in every loop made from
@@ -460,14 +460,14 @@ impl Render {
         let v = spec.vibes.as_ref();
         self.choices.clear();
         for c in CHOICES {
-            self.choices.push(c.options.first().map_or("", |o| o.0));
+            self.choices.push(c.options.first().map_or("", |o| o.0).into());
         }
         if CHOICES.is_empty() {
             return;
         }
         let mut r = Rng::new(js::salted(spec.seed, 0x4348_4f49, 1));
         let count = r.weighted(data::CHANGE_COUNTS).unwrap_or(0.0);
-        let mut pool: List<(usize, f64), CHOICES_MAX> = List::filled((0, 0.0));
+        let mut pool: List<(usize, f64), CHOICES_MAX> = List::new();
         for (i, c) in CHOICES.iter().enumerate() {
             if self.eligible(cx, c.id) {
                 pool.push((i, c.weight.unwrap_or(1.0) * lean_of(c.vibes, v)));
@@ -482,14 +482,14 @@ impl Render {
             let pick = if others.len() == 1 {
                 others[0].0
             } else {
-                let mut leaned: List<(&'static str, f64), 8> = List::filled(("", 0.0));
+                let mut leaned: List<(&'static str, f64), 8> = List::new();
                 for &(o, w) in others {
                     leaned.push((o, w * lean_of(data::table_named(c.option_vibes, o), v)));
                 }
                 r.weighted(&leaned).unwrap_or("")
             };
             if let Some(x) = self.choices.get_mut(i) {
-                *x = pick;
+                *x = pick.into();
             }
             k += 1.0;
         }
@@ -502,14 +502,14 @@ impl Render {
                 && (o == 0 || self.eligible(cx, c.id))
                 && let Some(x) = self.choices.get_mut(i)
             {
-                *x = name;
+                *x = name.into();
             }
         }
         #[cfg(feature = "sketch")]
         for (i, c) in CHOICES.iter().enumerate() {
             let forced = self.forced.get(i).copied().unwrap_or(NOT_FORCED);
             if let (Some(o), Some(x)) = (c.options.get(usize::from(forced)), self.choices.get_mut(i)) {
-                *x = o.0;
+                *x = o.0.into();
             }
         }
     }
@@ -547,7 +547,7 @@ impl Render {
             }
             "floorDrop" => cx.spec.bars >= 4.0 && (has_drums || has_bass),
             "pedalBass" => PEDAL.styles.contains(&self.bass_out.style.get()) && has_bass,
-            "padSweep" => self.chords.iter().any(|e| e.vel != 0.0 && PADSWEEP.sustained.contains(&e.voice)),
+            "padSweep" => self.chords.iter().any(|e| e.vel != 0.0 && PADSWEEP.sustained.contains(&e.voice.get())),
             _ => false,
         }
     }
@@ -605,7 +605,7 @@ impl Render {
                 }
             }
         } else if gap(0.0) < 5.0 {
-            let down: List<f64, 2> = [-12.0, -24.0].into_iter().filter(|&sh| room(sh)).fold(List::filled(0.0), |mut l, x| {
+            let down: List<f64, 2> = [-12.0, -24.0].into_iter().filter(|&sh| room(sh)).fold(List::new(), |mut l, x| {
                 l.push(x);
                 l
             });
@@ -656,7 +656,7 @@ impl Render {
     /// `annotatePrev`: the pitch each melody note slides from.
     fn annotate_prev(&mut self, cx: &Cx, cycle: f64) {
         let sd = 60.0 / cx.spec.bpm / 4.0;
-        let mut order: List<usize, { melody::MELODY_MAX }> = List::filled(0);
+        let mut order: List<usize, { melody::MELODY_MAX }> = List::new();
         for (i, e) in self.melody.iter().enumerate() {
             if e.vel != 0.0 {
                 order.push(i);
@@ -711,7 +711,7 @@ impl Render {
         let kind = r.weighted(&[("third", 2.0), ("sixth", 1.0)]).unwrap_or("third");
         let m = &mut self.melody;
         // The last note of each phrase (the first of the latest, by step).
-        let mut last: List<(f64, usize), { melody::MELODY_MAX }> = List::filled((0.0, 0));
+        let mut last: List<(f64, usize), { melody::MELODY_MAX }> = List::new();
         let mut sounding = 0;
         let mut held = 0;
         for (i, e) in m.iter().enumerate().filter(|(_, e)| e.vel != 0.0) {
@@ -737,7 +737,7 @@ impl Render {
             return;
         }
         let marks: List<usize, { melody::MELODY_MAX }> =
-            m.iter().enumerate().filter(|(i, e)| chosen(*i, e)).map(|(i, _)| i).fold(List::filled(0), |mut l, i| {
+            m.iter().enumerate().filter(|(i, e)| chosen(*i, e)).map(|(i, _)| i).fold(List::new(), |mut l, i| {
                 l.push(i);
                 l
             });
@@ -813,7 +813,7 @@ impl Render {
             w.str(ch.voice);
             w.end_obj();
         }
-        if let (Some(dev), true) = (&plan.development, self.depth_made) {
+        if let (Some(dev), true) = (plan.development.as_ref(), self.depth_made) {
             let depth = &self.depth;
             w.key("depth");
             w.obj();
@@ -867,7 +867,7 @@ impl Render {
 
     /// `choices`' text.
     pub fn write_choices<S: Sink>(&self, w: &mut Writer<S>) {
-        let mut order: List<usize, CHOICES_MAX> = List::filled(0);
+        let mut order: List<usize, CHOICES_MAX> = List::new();
         for i in 0..self.choices.len() {
             order.push(i);
         }
@@ -875,7 +875,7 @@ impl Render {
         w.obj();
         for &i in order.iter() {
             w.key_any(CHOICES[i].id);
-            w.str(self.choices[i]);
+            w.str(self.choices[i].get());
         }
         w.end_obj();
     }
@@ -903,7 +903,7 @@ pub fn write_cycles<S: Sink>(w: &mut Writer<S>, cx: &Cx) {
 pub fn write_drum<S: Sink>(w: &mut Writer<S>, e: &DrumEvent) {
     w.obj();
     w.key("inst");
-    w.str(e.inst);
+    w.str(e.inst.get());
     if let Some(m) = e.micro {
         w.key("micro");
         w.num(m);
@@ -941,7 +941,7 @@ pub fn write_bass<S: Sink>(w: &mut Writer<S>, e: &BassEvent) {
     w.key("vel");
     w.num(e.vel);
     w.key("voice");
-    w.str(e.voice);
+    w.str(e.voice.get());
     w.end_obj();
 }
 
@@ -981,9 +981,9 @@ pub fn write_melody<S: Sink>(w: &mut Writer<S>, e: &melody::MelodyEvent) {
     w.key("vel");
     w.num(e.vel);
     w.key("voice");
-    w.str(e.voice);
+    w.str(e.voice.get());
     w.key("vowel");
-    w.str(e.vowel);
+    w.str(e.vowel.get());
     w.end_obj();
 }
 
@@ -997,7 +997,7 @@ pub fn write_texture<S: Sink>(w: &mut Writer<S>, e: &TextureEvent) {
     w.key("dur");
     w.num(e.dur);
     w.key("kind");
-    w.str(e.kind);
+    w.str(e.kind.get());
     w.key("notes");
     w.list();
     for &n in e.notes.iter() {

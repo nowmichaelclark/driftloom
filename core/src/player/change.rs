@@ -147,6 +147,11 @@ pub fn unit(moment: Moment, beat: f64, spb: f64, total: f64) -> Option<f64> {
     (u.is_finite() && u >= 1.0).then_some(u)
 }
 
+impl crate::generator::list::Empty for Change {
+    const EMPTY: Self =
+        Change { seed: 0, request: super::Request::new(), handover: Handover::RingOut, asked: 0, target: None };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

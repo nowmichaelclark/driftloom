@@ -17,7 +17,7 @@ use super::canon::{Sink, Writer};
 use super::choices;
 use super::data::FLOORDROP;
 use super::js;
-use super::list::Maybe;
+use super::list::{Empty, Maybe};
 use super::layers::{self, BASS_MAX, BassEvent, DRUMS_MAX, DrumEvent};
 use super::melody::{MELODY_MAX, MelodyEvent};
 use super::plan::{self, CHORD_EVENTS_MAX, ChordEvent, Cx, Plan};
@@ -163,7 +163,7 @@ impl Pass {
             let inst = rng.pick(&["rim", "shaker", "hat"]).unwrap_or("rim");
             let vel = 0.16 + rng.f() * 0.14;
             let inst = if base.drums_out.kit == "hand" { layers::hand(inst) } else { inst };
-            self.ghost = Maybe::some(DrumEvent { step, inst, vel, vel0: vel, roll: false, micro: None });
+            self.ghost = Maybe::some(DrumEvent { step, inst: inst.into(), vel, vel0: vel, roll: false, micro: None });
         }
         // Occasionally the kick sits one out.
         if rng.chance(0.18 * a) {
@@ -313,7 +313,7 @@ impl Pass {
         let inside = |step: f64| step >= from && step < to;
         if kit {
             for (m, e) in self.drums.iter_mut().zip(base.drums.iter()) {
-                if FLOOR_DRUMS.contains(&e.inst) && inside(e.step) {
+                if FLOOR_DRUMS.contains(&e.inst.get()) && inside(e.step) {
                     *m |= SILENT;
                 }
             }
@@ -379,7 +379,7 @@ impl Pass {
     #[must_use]
     pub fn drum(&self, i: usize, e: &DrumEvent) -> (f64, &'static str) {
         let m = self.drums.get(i).copied().unwrap_or(0);
-        let inst = if (m & OPEN) != 0 { if e.inst == "hat" { "ohat" } else { "ojingle" } } else { e.inst };
+        let inst = if (m & OPEN) != 0 { if e.inst.get() == "hat" { "ohat" } else { "ojingle" } } else { e.inst.get() };
         (if (m & SILENT) != 0 { 0.0 } else { e.vel }, inst)
     }
 
@@ -472,7 +472,7 @@ impl Pass {
         w.list();
         for (i, e) in base.drums.iter().enumerate() {
             let (vel, inst) = self.drum(i, e);
-            render::write_drum(w, &DrumEvent { inst, vel, ..*e });
+            render::write_drum(w, &DrumEvent { inst: inst.into(), vel, ..*e });
         }
         if let Some(g) = self.ghost() {
             render::write_drum(w, g);
@@ -537,4 +537,8 @@ pub(crate) fn neighbour_in_scale(midi: f64, root: f64, steps: &[f64], dir: f64) 
         }
     }
     midi
+}
+
+impl Empty for FloorDrop {
+    const EMPTY: Self = FloorDrop { bar: 0.0, bars: 0.0, kind: None, late: None, count: None, len: None };
 }

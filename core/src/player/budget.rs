@@ -18,7 +18,7 @@
 use super::host::Host;
 use crate::Key;
 use crate::generator::{Layer, js};
-use crate::generator::list::Maybe;
+use crate::generator::list::{Empty, Maybe};
 
 /// The whole ceiling, in cost units (`MAX_BUDGET`).
 pub const MAX_BUDGET: f64 = 260.0;
@@ -395,6 +395,10 @@ impl Default for Budget {
     fn default() -> Self {
         Self::new()
     }
+}
+
+impl Empty for Group {
+    const EMPTY: Self = NO_GROUP;
 }
 
 #[cfg(test)]

@@ -4194,8 +4194,9 @@ the two the page loads today.
 the core baseline unchanged; `tools/build-core.sh --check` for both.
 
 **Built (hands, 2026-11-07):** `Player::new()` is all zero bytes, so
-`js/dlplayer.wasm` is 636,731 bytes (it was 1,938,596; the player's 1.5 MB is
+`js/dlplayer.wasm` is 636,125 bytes (it was 1,938,596; the player's 1.5 MB is
 `.bss`), not within 50 KB of `dlcore.wasm`'s 252,292: the generator and the
 player are about 300 KB of code. One module can replace the two (it exports
-every call the worklet makes). Gzipped, the module is 215 KB (it was 222 KB).
+every call the worklet makes). Gzipped, the module is 217 KB (it was 222 KB). The brain accepted the size
+(Session 30).
 All in `docs/notes/93-module-size.md`.

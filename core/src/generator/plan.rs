@@ -10,7 +10,7 @@ use super::canon::{Sink, Writer};
 use super::character::Char;
 use super::data::{self, Degree, MAX_BARS, MAX_CHORD_SIZE, Progressions};
 use super::js;
-use super::list::List;
+use super::list::{Empty, List, Maybe, Word};
 use super::rng::Rng;
 use super::spec::{Choir, Metre, Spec};
 use super::theory::{self, scale_pitch};
@@ -51,7 +51,7 @@ pub struct ChordEvent {
     pub dur: f64,
     pub notes: Notes,
     pub vel: f64,
-    pub voice: &'static str,
+    pub voice: Word,
     pub vowel: Option<&'static str>,
     pub detune: Option<f64>,
     /// A nylon guitar's strum ('down' or 'up'), written by render.
@@ -81,7 +81,7 @@ const EMPTY_SLOT: Slot = Slot {
     start_step: 0.0,
     length_steps: 0.0,
     degree: 0.0,
-    notes: List::filled(0),
+    notes: List::new(),
     root_midi: 0.0,
     bass_degree: 0.0,
     bass_midi: 0.0,
@@ -89,16 +89,16 @@ const EMPTY_SLOT: Slot = Slot {
 };
 /// An empty chord event.
 pub const EMPTY_EVENT: ChordEvent =
-    ChordEvent { step: 0.0, dur: 0.0, notes: List::filled(0), vel: 0.0, voice: "", vowel: None, detune: None, strum: None, vel0: 0.0, alias: false };
+    ChordEvent { step: 0.0, dur: 0.0, notes: List::new(), vel: 0.0, voice: Word::EMPTY, vowel: None, detune: None, strum: None, vel0: 0.0, alias: false };
 
 impl Harmony {
     /// An empty harmony.
     #[must_use]
     pub const fn new() -> Self {
         Harmony {
-            slots: List::filled(EMPTY_SLOT),
-            events: List::filled(EMPTY_EVENT),
-            shape: List::filled(Degree::plain(0)),
+            slots: List::new(),
+            events: List::new(),
+            shape: List::new(),
             cycle_steps: 0.0,
             long_chords: None,
         }
@@ -231,7 +231,7 @@ fn fifth_above(steps: &[f64], degree: i32) -> f64 {
 /// `spelledSteps`: the mode with a spelled chord's root and third moved.
 fn spelled_steps(scale: &[f64], step: Degree) -> List<f64, 7> {
     let n = scale.len();
-    let mut steps = List::from_slice(0.0, scale);
+    let mut steps = List::from_slice(scale);
     #[allow(clippy::cast_sign_loss)] // a written degree, not negative
     let d = (step.d as usize) % n;
     if step.flat {
@@ -366,7 +366,7 @@ fn long_chords_of(cx: &Cx, chords_seed: u32, shape: &[Degree], chords_per_bar: f
         hold = js::min(hold, js::max(1.0, js::floor(slot_count / 2.0)));
     }
     let turnaround = kind != "whole" && hold >= 2.0 && lr.chance(0.3);
-    let mut seq = List::filled(Degree::plain(0));
+    let mut seq = List::new();
     let n = shape.len();
     let mut k = 0;
     while js::num(seq.len()) < slot_count && n > 0 {
@@ -429,7 +429,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
         Some(Progressions::PerMode(m)) => m.iter().find(|(k, _)| *k == theory::SCALES[spec.scale].id).map(|x| x.1),
         None => None,
     };
-    let mut fitting: List<&'static [Degree], 16> = List::filled(&[]);
+    let mut fitting: List<&'static [Degree], 16> = List::new();
     if n == 7
         && let Some(written) = written
     {
@@ -441,7 +441,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
     }
     let own = !fitting.is_empty();
     let per_mode = own && matches!(c.progressions, Some(Progressions::PerMode(_)));
-    let mut pool: List<&[Degree], 16> = List::filled(&[]);
+    let mut pool: List<&[Degree], 16> = List::new();
     if pentatonic {
         for s in &SHAPES_PENT {
             pool.push(s);
@@ -455,7 +455,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
             pool.push(s);
         }
     }
-    let mut shape: List<Degree, 8> = List::from_slice(Degree::plain(0), r.pick(&pool).unwrap_or(&[]));
+    let mut shape: List<Degree, 8> = List::from_slice(r.pick(&pool).unwrap_or(&[]));
 
     if r.chance(0.35) {
         let i = js::index(r.int(1.0, js::num(shape.len()) - 1.0));
@@ -485,7 +485,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
         && !own
     {
         let half = shape.len() / 2;
-        let mut ends: List<&[Degree], 16> = List::filled(&[]);
+        let mut ends: List<&[Degree], 16> = List::new();
         for sh in pool.iter() {
             let differs = !same_shape(tail(sh, half), tail(&shape, half));
             let not_besides = !besides.is_some_and(|b| same_shape(tail(sh, half), tail(b, half)));
@@ -536,7 +536,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
         let degree = f64::from(chord.d);
         let spelled = chord.spelled.then(|| spelled_steps(scale, chord));
         let steps: &[f64] = spelled.as_ref().map_or(scale, |x| &x[..]);
-        let mut notes: Notes = List::filled(0);
+        let mut notes: Notes = List::new();
         if quartal {
             for step in [0.0, 3.0, 6.0, 9.0].iter().take(js::index(size).min(4)) {
                 notes.push(note(scale_pitch(spec.root, steps, degree + step, 0.0)));
@@ -566,7 +566,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
             }
         }
         voice_in_range(&mut notes, 52, 84);
-        let mut uniq: Notes = List::filled(0);
+        let mut uniq: Notes = List::new();
         for &x in notes.iter() {
             if !uniq.contains(&x) {
                 uniq.push(x);
@@ -591,7 +591,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
             steps: spelled,
         });
 
-        let mut hits: List<[f64; 2], 5> = List::filled([0.0; 2]);
+        let mut hits: List<[f64; 2], 5> = List::new();
         if chords_per_bar == 2.0 {
             let both = [[0.0, slot_len], [4.0, slot_len - 4.0]];
             let k = if r.chance(0.5) { 1 } else { 2 };
@@ -618,7 +618,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                 for (i, &nn) in notes.iter().enumerate() {
                     let at = step + js::num(i) * 2.0;
                     let full = js::max(2.0, dur);
-                    let mut one: Notes = List::filled(0);
+                    let mut one: Notes = List::new();
                     one.push(nn);
                     out.events.push(ChordEvent {
                         step: at % total,
@@ -626,7 +626,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                         notes: one,
                         vel: 0.45 + r.f() * 0.2,
                         // (An arpeggio is the keys, unless a voice was asked of the chords.)
-                        voice: choir.map_or(if spec.voices[Layer::Chords as usize] != 0 { voice } else { "keys" }, |ch| ch.voice),
+                        voice: choir.map_or(if spec.voices[Layer::Chords as usize] != 0 { voice } else { "keys" }, |ch| ch.voice).into(),
                         vowel: choir.map(|_| vowel),
                         detune: choir.map(|ch| ch.keys_detune),
                         ..EMPTY_EVENT
@@ -639,7 +639,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                     dur,
                     notes,
                     vel: 0.4 + r.f() * 0.25,
-                    voice: choir.map_or(drawn, |ch| ch.voice),
+                    voice: choir.map_or(drawn, |ch| ch.voice).into(),
                     vowel: Some(vowel),
                     detune: choir.map(|ch| ch.keys_detune),
                     ..EMPTY_EVENT
@@ -663,7 +663,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
             let e = out.events[i];
             if tied > 0 {
                 let p = &mut out.events[tied - 1];
-                if SUSTAINED_CHORDS.contains(&e.voice)
+                if SUSTAINED_CHORDS.contains(&e.voice.get())
                     && p.voice == e.voice
                     && p.notes.len() > 1
                     && p.notes[..] == e.notes[..]
@@ -726,7 +726,7 @@ pub fn development_of(spec: &Spec, choir: Option<Choir>) -> Option<Development> 
         24.0 => &[('A', 8.0), ('B', 8.0), ('R', 8.0)],
         _ => &[('A', 16.0), ('B', 8.0), ('R', 8.0)],
     };
-    let mut sections = List::filled(Section { role: 'A', bars: 0.0, at: 0.0 });
+    let mut sections = List::new();
     let mut at = 0.0;
     for &(role, bars) in form {
         sections.push(Section { role, bars, at });
@@ -820,12 +820,12 @@ pub fn develop_harmony(cx: &Cx, dev: &Development, out: &mut Harmony, parts: &mu
     for e in parts.a.events.iter() {
         let n = parts.a.events.iter().filter(|x| x.voice == e.voice).count();
         if best.is_none_or(|(_, bn)| n > bn) {
-            best = Some((e.voice, n));
+            best = Some((e.voice.get(), n));
         }
     }
     if let Some((voice, _)) = best {
         for e in parts.b.events.iter_mut() {
-            e.voice = voice;
+            e.voice = voice.into();
         }
     }
     parts.has_r = parts.has_v;
@@ -856,7 +856,7 @@ const FORM_RUNS: [[[f64; 2]; 2]; 5] =
     [[[4.0, 12.0], [2.0, 6.0]], [[4.0, 10.0], [2.0, 6.0]], [[4.0, 12.0], [2.0, 5.0]], [[2.0, 6.0], [3.0, 9.0]], [[2.0, 6.0], [3.0, 10.0]]];
 
 fn run_schedule(r: &mut Rng, bars: f64, inr: [f64; 2], outr: [f64; 2], start_in: bool) -> Schedule {
-    let mut out: Schedule = List::filled(false);
+    let mut out: Schedule = List::new();
     let mut i = 0.0;
     while i < bars {
         out.push(false);
@@ -906,7 +906,7 @@ pub fn gen_form(cx: &Cx) -> Option<Form> {
     if !r.chance(cx.c.airy.unwrap_or(0.25)) {
         return None;
     }
-    let mut form: Form = [List::filled(false); 5];
+    let mut form: Form = [List::new(); 5];
     for layer in LAYERS {
         let bars = local_bars(spec, layer);
         let [inr, outr] = FORM_RUNS[layer as usize];
@@ -943,7 +943,7 @@ pub fn gen_form(cx: &Cx) -> Option<Form> {
 /// `silentBars`: the bars with every layer scheduled out.
 #[must_use]
 pub fn silent_bars(form: &Form, bars: f64) -> List<usize, MAX_BARS> {
-    let mut out = List::filled(0);
+    let mut out = List::new();
     let mut bar = 0;
     while js::num(bar) < bars {
         if form.iter().all(|s| !s.get(bar % s.len().max(1)).copied().unwrap_or(false)) {
@@ -961,7 +961,7 @@ pub fn gen_gaps(cx: &Cx) -> List<Gap, 3> {
     let spb = cx.spb;
     let total = spec.bars * spb;
     let mut r = Rng::new(js::salted(spec.seed, 0x3c6e_f372, 13));
-    let mut gaps = List::filled(Gap { start: 0.0, len: 0.0 });
+    let mut gaps = List::new();
     if !r.chance(0.18 + cx.c.airy.unwrap_or(0.2) * 0.5) {
         return gaps;
     }
@@ -983,10 +983,10 @@ pub fn gen_gaps(cx: &Cx) -> List<Gap, 3> {
 
 /// What render plans before the layers (`planOf`).
 pub struct Plan {
-    pub development: Option<Development>,
+    pub development: Maybe<Development>,
     pub harmony: Harmony,
     pub sections: Sections,
-    pub form: Option<Form>,
+    pub form: Maybe<Form>,
     pub gaps: List<Gap, 3>,
 }
 
@@ -995,25 +995,25 @@ impl Plan {
     #[must_use]
     pub const fn new() -> Self {
         Plan {
-            development: None,
+            development: Maybe::NONE,
             harmony: Harmony::new(),
             sections: Sections::new(),
-            form: None,
-            gaps: List::filled(Gap { start: 0.0, len: 0.0 }),
+            form: Maybe::NONE,
+            gaps: List::new(),
         }
     }
 
     /// Plan the loop of `cx`.
     pub fn make(&mut self, cx: &Cx) {
-        self.development = development_of(cx.spec, cx.choir);
-        if let Some(dev) = &self.development {
+        self.development = development_of(cx.spec, cx.choir).into();
+        if let Some(dev) = self.development.as_ref() {
             develop_harmony(cx, dev, &mut self.harmony, &mut self.sections);
         } else {
             let bars =
                 cx.spec.cycles.of(Layer::Chords as usize).map_or(cx.spec.bars, |cyc| js::max(1.0, js::round(cyc / cx.spb)));
             gen_harmony(cx, &mut self.harmony, bars, cx.spec.layer_seed(Layer::Chords), None, None);
         }
-        self.form = gen_form(cx);
+        self.form = gen_form(cx).into();
         self.gaps = gen_gaps(cx);
     }
 
@@ -1034,7 +1034,7 @@ impl Plan {
     pub fn write<S: Sink>(&self, w: &mut Writer<S>) {
         w.obj();
         w.key("development");
-        match &self.development {
+        match self.development.as_ref() {
             None => w.null(),
             Some(d) => {
                 w.obj();
@@ -1139,7 +1139,7 @@ pub fn write_chord<S: Sink>(w: &mut Writer<S>, e: &ChordEvent, extra: Option<i16
     w.key("vel");
     w.num(e.vel);
     w.key("voice");
-    w.str(e.voice);
+    w.str(e.voice.get());
     if let Some(v) = e.vowel {
         w.key("vowel");
         w.str(v);
@@ -1232,4 +1232,24 @@ pub fn write_harmony<S: Sink>(w: &mut Writer<S>, h: &Harmony, sections: Option<&
     }
     w.end_list();
     w.end_obj();
+}
+
+impl Empty for ChordEvent {
+    const EMPTY: Self = EMPTY_EVENT;
+}
+
+impl Empty for Slot {
+    const EMPTY: Self = EMPTY_SLOT;
+}
+
+impl Empty for Section {
+    const EMPTY: Self = Section { role: '\0', bars: 0.0, at: 0.0 };
+}
+
+impl Empty for Gap {
+    const EMPTY: Self = Gap { start: 0.0, len: 0.0 };
+}
+
+impl Empty for Development {
+    const EMPTY: Self = Development { sections: List::new() };
 }

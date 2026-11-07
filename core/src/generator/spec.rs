@@ -123,9 +123,9 @@ impl Spec {
     pub const EMPTY: Spec = Spec {
         seed: 0,
         name: Name::new(),
-        mix: List::filled((0, 0.0)),
+        mix: List::new(),
         feel: Feel { lift: 0.0, energy: 0.0, warmth: 0.0 },
-        feel_mix: List::filled((0, 0.0)),
+        feel_mix: List::new(),
         coherence: 0.0,
         mood: 0.0,
         bpm: 0.0,
@@ -397,7 +397,7 @@ pub fn gait_in(seed: u32, c: &Char, t: Option<[f64; 2]>) -> Option<data::Gait> {
         return Some(own);
     }
     let g = c.gaits.as_ref()?;
-    let mut meet: List<(data::Gait, f64), 4> = List::filled((own, 0.0));
+    let mut meet: List<(data::Gait, f64), 4> = List::new();
     for &x in g.iter() {
         if request::tempo_gap(x.bpm, t) == 0.0 {
             meet.push((x, x.weight));
@@ -423,7 +423,7 @@ const BORROW_SALT: u32 = 0x4252_4954;
 /// the share each adds (queue item 36), before the lean.
 fn borrowed_pool(mix: &[(usize, f64)], lift: f64) -> character::Names {
     let glad = js::max(0.0, lift - GLAD_FROM) / (1.0 - GLAD_FROM);
-    let mut extra: character::Names = List::filled(("", 0.0));
+    let mut extra: character::Names = List::new();
     if glad != 0.0 {
         let mut total = 0.0;
         for &(_, w) in mix {
@@ -474,7 +474,7 @@ fn ask_mix(seed: u32, mix: &List<(usize, f64), MIX_MAX>, wanted: u32, pool: &[(u
     let mut r = Rng::new(js::salted(seed, STYLE_SALT, 37));
     let members = (0..request::PROFILE_ORDER.len()).filter(|&b| wanted & (1 << b) != 0).map(character_of_bit);
     let weight = |c: usize| pool.iter().find(|e| e.0 == c).map_or(f64::NAN, |e| e.1);
-    let mut sums: List<(usize, f64), MIX_MAX> = List::filled((0, 0.0));
+    let mut sums: List<(usize, f64), MIX_MAX> = List::new();
     for &(k, w) in mix.iter() {
         let to = if inside(k) {
             k
@@ -559,7 +559,7 @@ fn ask_scale(seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vi
 /// `drawScale`.
 fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>) -> usize {
     let lean = |k: &str, w: f64| theory::mood_weighted(w, theory::brightness(k), lift) * character::lean_in(v, |x| x.modes, k);
-    let mut own: character::Names = List::filled(("", 0.0));
+    let mut own: character::Names = List::new();
     for &(k, w) in c.scales.as_ref().map_or(&[][..], |p| &p[..]) {
         own.push((k, lean(k, w)));
     }
@@ -600,7 +600,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let held = request.theme().map(|th| new_spec(th, &Request::new()));
 
     let drive = math::pow(r.f(), 0.82) * 1.8 - 0.5;
-    let mut pool: List<(usize, f64), { data::CHARACTER_COUNT }> = List::filled((0, 0.0));
+    let mut pool: List<(usize, f64), { data::CHARACTER_COUNT }> = List::new();
     for (i, c) in CHARACTERS.iter().enumerate() {
         let fe = c.feel[1];
         let mid = (fe[0] + fe[1]) / 2.0;
@@ -614,7 +614,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     // (The pool before the draws take from it: a style asked pulls on it.)
     let pool_all = pool;
     let how_many = r.weighted(&[(1, 2.2), (2, 4.0), (3, 2.6), (4, 1.2)]).unwrap_or(1);
-    let mut mix: List<(usize, f64), MIX_MAX> = List::filled((0, 0.0));
+    let mut mix: List<(usize, f64), MIX_MAX> = List::new();
     for i in 0..how_many {
         if pool.is_empty() {
             break;
@@ -656,12 +656,12 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         }
         1.0 / (1.0 + d * 3.5)
     };
-    let mut moods: List<(usize, f64), { data::MOOD_COUNT }> = List::filled((0, 0.0));
+    let mut moods: List<(usize, f64), { data::MOOD_COUNT }> = List::new();
     for (i, m) in MOODS.iter().enumerate() {
         moods.push((i, fit(m) * js::max(0.08, 1.0 + drive * (m.energy - 0.47) * 2.4)));
     }
     let mood_count = r.weighted(&[(1, 2.0), (2, 4.0), (3, 2.4)]).unwrap_or(1);
-    let mut feel_mix: List<(usize, f64), FEEL_MAX> = List::filled((0, 0.0));
+    let mut feel_mix: List<(usize, f64), FEEL_MAX> = List::new();
     for i in 0..mood_count {
         if moods.is_empty() {
             break;

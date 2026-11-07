@@ -17,7 +17,7 @@
 use super::character::Vibes;
 use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, Table};
 use super::js;
-use super::list::Maybe;
+use super::list::{Empty, Maybe};
 use super::layers::DrumEvent;
 use super::request::Pins;
 use super::rng::Rng;
@@ -710,6 +710,15 @@ pub fn echo_time_of(seed: u32, v: Option<&Vibes>) -> f64 {
 /// drum anywhere in it, else the other.
 #[must_use]
 pub fn bass_lift_of(drums: &[DrumEvent]) -> f64 {
-    let kick = drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst, "kick" | "softkick" | "frame"));
+    let kick = drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame"));
     if kick { BASS_LIFT.kick } else { BASS_LIFT.no_kick }
+}
+
+impl Empty for Walking {
+    const EMPTY: Self = Walking { t: 0.0, i: 0, e: [0.0; 3], t1: 0.0, end: 0.0, tail: 0.0, rate: 0.0, stop: None };
+}
+
+impl Empty for Fitting {
+    const EMPTY: Self =
+        Fitting { long: false, dbps: 0.0, refs: [0.0; 3], lift: None, k: 0, tlo: 0.0, thi: 0.0, walking: Maybe::NONE };
 }
