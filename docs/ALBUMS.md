@@ -4,6 +4,33 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Phase 2 Blind Album" (brain, 2026-11-07, v128 against v149) -- heard 2026-11-07
+
+Page: <https://claude.ai/artifact/Ako2hvWjfw2kXvRWe6TWxC> (private to its
+owner; verdicts in its database, collection `verdicts`; the key in
+`brain/key`). The same code in the app before phase 2 (v128) and today's
+(v149), each rendered in Chromium by its own tree's Synth and Engine on the
+core, 45 s, full, stereo. Heard, so the key is written here:
+
+| pair | loop | key | heard |
+|---|---|---|---|
+| 1 | veisk-lain | null (both new) | Same |
+| 2 | keil-ruith | A new; chords up an octave (gap to the tune 16.6 to 4.6) | A (new) |
+| 3 | veisk-lain | A new; notes unchanged | Same |
+| 4 | ke-the | B new; chords up (11.2 to -0.8) | B (new) |
+| 5 | fu-glur | B new; chords down (5 to 17) | A (old) |
+| 6 | glui-shith | B new; chords down (-2 to 10) | A (old) |
+| 7 | thei-bri | B new; chords up (16 to 4) | Same ("they sound different for sure but I like the sound of both") |
+| 8 | reisk-foa | A new; chords up (17.1 to 5.1) | A (new) |
+| 9 | toask-ha | B new; notes unchanged, the busiest chords (85e) | Same |
+| 10 | sung-hal | A new; chords down (5.1 to 17.1) | A (new; "only a slight difference, but I might not") |
+| 11 | douth-roa | A new; notes unchanged | Same |
+
+Gap: the melody's mean pitch minus the chords', in semitones. Also on the
+page, not blind: the stab chords (broum-hang and no-moun, undertow's own;
+toask-ha with `voice.chords=stab`): "Fine" all three. The in-app checklist
+for bars and length (88b) was left blank.
+
 ## "Full Room Album" (item 85e, hands, 2026-11-01, on v139) -- out
 
 Labeled, not blind: six loops at full quality, each before (`main`, v138)

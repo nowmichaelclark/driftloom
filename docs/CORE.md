@@ -312,7 +312,7 @@ one before it.
    should sound the same). Also: the output layout becomes a host's
    choice (one channel today), and today's blocks move behind the shared
    block interface (promise 5), so phase 5 starts from a clean place.
-2. **The generator in Rust.** `generator.js`, vibes, moods and characters
+2. **The generator in Rust** (done 2026-11-04, items 77-92; proven 2026-11-07). `generator.js`, vibes, moods and characters
    ported, with profiles and vibes as data, built around the request
    (promise 11) from the start. **And the sequencer** (Mikey, 2026-10-26:
    Broken Friends needs a loop from a seed with no JavaScript): what the

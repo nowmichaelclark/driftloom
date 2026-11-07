@@ -6,6 +6,35 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Session 29, the phase's end (brain, Opus 5.5, 2026-11-07): phase 2 done
+(items 77-92) and proven.** On `main` at v149 (da42200), not taken from the
+reports:
+- **Checks:** the JavaScript suites (the generator's three times); `cargo
+  test --locked --release`, 212 tests; the generation goldens, 4,884 of
+  4,884, in Node and in Chromium 153; the balance lock, 22 of 22;
+  `build-core.sh --check`, both modules; the core baseline, "Nothing
+  moved"; the docs' sizes.
+- **What moved since before phase 2** (v128, d0ed42a^, a worktree), nothing
+  asked, 600 loops of corpus 1, every track's notes: only the chords, in 29
+  loops (4.8%; item 84's octave, either way by 12 semitones).
+- **The blind album** (`docs/ALBUMS.md`): 10 loops, the same code in v128's
+  app and v149's, each rendered in Chromium by its own tree's Synth and
+  Engine on the core (a scratch copy of `tools/golden-export.mjs` that
+  writes the page's stereo output; v128's own note lists did not reproduce
+  its bass, so lists were not used), 45 s, full, plus a null pair; Opus, on
+  a page with a saved verdict per pair. Mikey: the null Same; the three
+  loops whose notes didn't move Same; of the seven octave movers, wherever
+  he heard a difference the chords nearer the tune won (up moves: new 3 of
+  3; down moves: old 2 of 3, the third a "slight difference, but I might
+  not"; thei-bri "different for sure, but I like both"). The stab chords
+  (undertow's own two, and one picked onto another style): "Fine" all
+  three, so no level change (the queue's archived "The phase's end").
+- **Phase 3 written** (items 93-98) with Mikey's one decision (the plain
+  line for a browser that can't run the core), and "After phase 3": Ears
+  13's batch, then 84b.
+- **Docs:** phase 2's block and the folded briefs (49-52) archived to
+  `docs/archive/queue-items.md`.
+
 **Session 29, continued (brain, Opus 5.5, 2026-11-02): items 86, 85e, 85f
 and 87 checked (#308-#311); they pass, one small case queued (86b).** On
 `main` at v141 (3cd2fb1), not taken from the reports:
