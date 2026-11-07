@@ -11,7 +11,7 @@ The full reports are in `docs/ears/` (index: `docs/ears/README.md`):
 `batch-4.md` (the sketches and stereo, by round), `batch-5.md` (the first
 synthesis of the album cards), `sessions.md` (how to run an ears session,
 and the rule that ears outputs live in the repo), `plan.md`,
-`cards-pile-1.md` to `cards-pile-4.md` and `cards-test.md` (album cards),
+`cards-pile-1.md` to `cards-pile-6.md` and `cards-test.md` (album cards),
 `prototypes.md`, and the raw measurements in `data.csv` and `raw/`. The
 tools are in `tools/ears/`.
 

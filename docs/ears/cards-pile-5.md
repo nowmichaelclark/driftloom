@@ -22,7 +22,7 @@ Ears 11 (Sonnet 5.5, medium), 2026-11-03. Electronica. The cards come from `tool
 | The Future Sound of London, Lifeforms (1994) | 19 (4) | 1,930 s (two chains at once) | done |
 | Bowery Electric, Beat (1997) | 11 (3) | 1,473 s (two chains at once) | done |
 | Ulver, Perdition City (2000) | 9 (3) | 1,877 s (two chains at once) | done |
-| Harald Grosskopf, Synthesist (1980) | 8 (8, EP rule) | not run (picks done, 87 s) | left for Ears 11b |
+| Harald Grosskopf, Synthesist (1980) | 8 (8, EP rule) | 2,958 s (Ears 12, run alone) | done, card at the end of this file |
 
 
 ---
@@ -442,3 +442,98 @@ Numbers: The Future Sound of Music 91 BPM (felt; sixteenth grid), 12 settled cho
 - Two of three deep-pass tracks have an empty bass stem and almost no drums, so the low-end and beat numbers rest on one track (The Future Sound of Music). Chord names are guesses on dense pads (margins 0.003 to 0.006).
 - Tomorrow Never Knows is 479.4 s; I ran `longform.py` on it by hand at mix level because it is one second under the 8-minute line.
 - The sixteenth reading rests on the meter's beat and phase; a phase error of two twelfths of a beat is visible (hits at 2, 5, 8, 11), which does not change straight against swung.
+
+---
+
+## Harald Grosskopf, Synthesist (1980)
+
+Ears 12, 2026-11-07 (the card Ears 11 left for an Ears 11b). 8 tracks, 44.5 minutes (3:36 to 7:34 each), every track at mix level (`monoloss.py` and the album medians too) and, by the EP rule, every track deep-passed (the picks were made by Ears 11: `pick.json` in `pile-5-raw.tar.gz`; only the joined wavs were rebuilt). **No track is 8 minutes long** (the longest, 04 Synthesist, is 7:34), so `longform.py` was not run. Stems by Demucs htdemucs (checked on a 20 s clip first: 0.78 times real time, weights downloaded, no fallback).
+
+Machine time: 2,958 s (49 min) for 44.5 minutes of deep-pass audio, run alone: Demucs 1,907 s for 2,668 s of audio (**0.71 times the audio**), events, techniques, theory and space 756 s, the stem check and the card the rest. Ears 9's formula (1.1 x 2,668 + 12 x 8) says 3,031 s, so this ran 2% under it. Picks (87 s, Ears 11) are not in the sum.
+
+### Stem check (read first)
+- **01 So Weit, So Gut**: drums 12%, bass 20%, other 69%, vocals 0% (0.2%: bleed). The meter tool's 91 BPM is half the drum grid (178 BPM): kicks come every 0.330 s, so a kick hit on every eighth of a 91 BPM beat.
+- **02 B. Aldrian**: other 98%, drums 0%, bass 1%. **No beat**: meter, swing and on-beat numbers are void (the 104 BPM and "swung 0.55" are the pad's own movement).
+- **03 Emphasis**: drums 21%, bass 29%, other 48%. Meter 83 BPM, grid 166.7 BPM: the same eighth-note reading.
+- **04 Synthesist**: drums 10%, bass **0.0%**, other 90%. The **bass stem is empty**: bass notes and the duck are void; the low end is in the drums stem. Meter 105 BPM agrees with the grid (105.4).
+- **05 1847 - Earth**: drums 33%, bass 9%, other 47%, vocals 11% (a voice-like texture, not read for words). The meter tool's 91 BPM does not match the grid (224.7 BPM) by a simple ratio, and `beatphase.py` finds no clear grid: **the beat is unclear** (see T2).
+- **06 Trauma**: other 99%. **No beat.** **08 Tai Ki**: other 100%. **No beat**, and **the channels are opposite in polarity** (below).
+- **07 Transcendental Overdrive**: drums 16%, bass 50%, other 33%. Meter 84 BPM, grid 166.7 BPM.
+- Vocals stems hold 0 to 2% on every track except 05 (11%): bleed on an instrumental record. No words anywhere.
+- No subharmonic misreads claimed. The kick lines on 01, 03 and 07 start near 64 to 91 Hz, so they are not sub reads; 04's kick line includes sub (empty bass stem).
+
+### The hook
+- Early German analog electronics: sequencers that do not stop, then long drifting synth pads. A median track is 5:09 and loud for this folder (-12.4 LUFS), mid-heavy (centroid 470 Hz; only 14% of the energy below 120 Hz, 53% from 120 to 500, 22% from 500 to 2 k, 4% in 2 to 5 kHz), wide (-5.4 dB), with almost no chord changes a minute (0.25 median at mix level; the settled-chord counter reads 2 to 14 a minute on the deep pass) and **a pulse of 0.76** (steady). Tuning median -6.5 cents (-18.6 to +8.9).
+- **[JUDGMENT]** One line a listener would say. **Guess:** a warm sequencer that keeps going while a slow pad breathes over it: motion in the floor, calm on top.
+
+### Sounds
+
+**S1. A deep held drone (Trauma, B. Aldrian): other-1, 416 and 330 notes, 85% and 59% of note energy**
+- In synth terms: Trauma's group sits around D1 (37 Hz), noisy partials (42 cents off whole multiples), a slow swell (attack 218 ms), falls 4 dB/s, nearly centered. B. Aldrian's is about C#1 (34 Hz) but very harmonic (share 0.99, partials 8 cents off), soft attack (79 ms), falls 12 dB/s, correlation 0.71. Under 60 Hz pitch is good to a semitone only; a phone cannot play it.
+- Hear it at Trauma 2:21.0 (D1, 2.62 s), 4:51.6 (D1, 2.41 s); B. Aldrian 2:26.8 (C#1, 0.31 s).
+- Building blocks: **[JUDGMENT]** **Guess:** sub with bassStyle held, sine-like, with its octave above for phones; exists. Trauma's is closer to a rumble (noisy), B. Aldrian's to a clean sine.
+
+**S2. Sequenced synth lines in mid register (Emphasis, So Weit, So Gut, Synthesist): other-1, 470, 121 and 315 notes, 40 to 53%**
+- In synth terms: Emphasis about F#3 (186 Hz, 10th to 90th 93 to 368), slow swell (160 ms), falls 12 dB/s, brightness at the start 1.2 kHz, partials 52 cents off; So Weit, So Gut about B2 (121 Hz), slow attack (244 ms), flat decay (2 dB/s, so it holds), brightness 1.2 kHz; Synthesist about C3 (133 Hz), soft attack (61 ms), falls 44 dB/s (plucky), brightness only 431 Hz. All three are nearly centered but not mono (correlation 0.24 to 0.68): a little chorus or detune.
+- Hear it at Emphasis 4:44.1 (A2); So Weit, So Gut 4:25.1 (G#3, 0.17 s); Synthesist 0:34.7 (G#2, 0.12 s), 0:22.9 (C3).
+- Building blocks: **[JUDGMENT]** **Guess:** Synthesist's is a pluck with a 60 ms attack and a quick fall (exists as the plucked bass/lead voices); Emphasis's and So Weit, So Gut's are saw-like pads with a 150 to 250 ms attack (softpad, with a slightly inharmonic top); exists.
+
+**S3. A bell-like voice with the polarity flipped (Tai Ki): other-1 and other-2, 235 and 264 notes, 56% and 44%**
+- In synth terms: other-1 about F4 (347 Hz), mixed partials 54 cents off, soft attack (102 ms), falls 23 dB/s, bright (1.4 kHz at the start); other-2 about D#2 (79 Hz), harmonic 0.80, falls 24 dB/s. **Both have left-right correlation -0.97 to -0.98**: the whole track is stereo with one channel's polarity flipped (below).
+- Hear it at 1:23.3 (E4, 0.26 s), 1:48.6 (A#4, 0.4 s), 1:23.7 (G2, 0.24 s).
+- Building blocks: **[JUDGMENT]** **Guess:** glass keys / bell (Ears 4's tone) with a soft 100 ms attack and the low line as a pluck; exists. The flipped polarity is a thing Driftloom must not copy.
+
+**S4. A kit with a hard sequenced kick (So Weit, So Gut, Emphasis, Synthesist, 1847 - Earth, Transcendental Overdrive)**
+- **Kick lines (kick_check):**
+  - So Weit, So Gut: 884 kicks, median 64 Hz (B1 28%, 10th to 90th 48 to 121 Hz), falling 273 dB/s, every 0.330 s (a kick on every eighth of the 91 BPM beat).
+  - Emphasis: 731 kicks, 64 Hz (B1 34%), 231 dB/s, every 0.365 s.
+  - Synthesist: 718 kicks, 71 Hz (C#2 24%, D2 18%), 222 dB/s, every 0.570 s (one a beat at 105 BPM). Bass stem empty: the kick line includes sub.
+  - 1847 - Earth: 416 kicks, 77 Hz (D2 22%), **68 dB/s**, a long soft kick, every 0.535 s.
+  - Transcendental Overdrive: 718 kicks, 91 Hz (C3 28%, B1 26%), 207 dB/s, every 0.360 s.
+  - Against Driftloom's tunedKick (a 45 to 60 Hz boom): Grosskopf's kicks sit higher (64 to 91 Hz) and fall fast (207 to 273 dB/s), i.e. tight, short and tuned to the key (B1 and C#2 are the track's root notes).
+- **Duck (kick_check duck):** So Weit, So Gut -6.5 dB at 175 ms (the bass is down at the kick and back by 55 ms: a quick sixteenth-scale dip); Emphasis -2.7 dB at 170 ms (shallow); Synthesist void (no bass); 1847 - Earth -7.4 dB at 375 ms; Transcendental Overdrive -10.7 dB at the kick itself, back to 0 by 200 ms.
+- Hear it at So Weit, So Gut and Emphasis from the start; 1847 - Earth 0:20 (a drop to the bare pad for 6 s, then the kit returns).
+- Building blocks: **[JUDGMENT]** **Guess:** tunedKick at 64 to 90 Hz, on the root, short (200+ dB/s); subDuck of 3 to 10 dB with a recovery under 250 ms exists.
+
+### Techniques
+
+- **T1. A kick on every eighth, with the bass ducked and a pad above.** So Weit, So Gut, Emphasis and Transcendental Overdrive all put a kick on the eighth of a 84 to 91 BPM beat (spacing 0.33 to 0.365 s), with the bass dipping 3 to 11 dB at each (pumping on the bass stem: 5.9 dB for So Weit, So Gut, 11.5 dB for Synthesist, "a floor", the tool reads about 70% of true) and the pad barely moving (1.7 to 4 dB). The record's motion lives in the floor; the pad is steady.
+- **T2. Swing, placed.** `beatphase.py` on the drum stems, against the meter tool's beat: **So Weit, So Gut** (90.6 BPM): hits at 0 and 6 (the beat and the eighth) plus 5 and 11 (a twelfth early, the same split-attack double hit seen on Lifeforms' Vertical Pig); on beat 37%, straight eighth 33%, swung eighth 0%, triplet 1%: **straight, at the drum grid's eighth**. **Emphasis** (83 BPM): same shape, straight eighth 27%, swung 5%: straight. **Synthesist** (105 BPM): hits on 0, 3, 6, 9 (sixteenths) plus the early doubles: sixteenths 14%, triplet 13%, swung eighth 2%: **a straight sixteenth grid**, not a triplet (the 13% at the third is the early double, positions 3 and 9). **1847 - Earth** and **Transcendental Overdrive**: onsets spread over every twelfth (3 to 14%, many toms and fills): no grid, no swing claim. The meter tool's "swung 0.60 / 0.62" on 1847 - Earth and Transcendental Overdrive are this spread, not swung eighths. No triplet shuffle on this record, so batch-5.md's lead still has only Vertical Pig.
+- **T3. Tape wobble and wow.** Per stem: So Weit, So Gut's other 11 cents at 3.2 Hz; Synthesist's other 17 cents at 1.2 Hz; 1847 - Earth's other **27 cents at 0.3 Hz** (a slow wow, a pad drifting); Trauma's other and bass 18 and 21 cents at 2.6 Hz; Tai Ki 15 cents at 0.8 Hz; B. Aldrian 9 to 12 cents with speed moving up to 22 cents in 4 s. Emphasis and Transcendental Overdrive: nothing at 4 cents or more. Against Driftloom's 3.6 cents of wobble this record is 3 to 7 times wider on the pads; it is an analog drift, the oscillator kind, not tape.
+  - **[JUDGMENT]** **Guess:** a per-layer slow drift of 10 to 25 cents at 0.3 to 1.2 Hz on the pad layers only, never on the kick or bass; the 2.6 to 3.2 Hz kind (Trauma, B. Aldrian, So Weit, So Gut) reads as vibrato, so keep it out.
+- **T4. Brightness sweeps, many and long.** The mix moves 0.7 to 2.4 octaves many times a track (sweeps of 0.7 octave or more: Tai Ki 4, So Weit, So Gut 18, Emphasis 19, Trauma 21, Synthesist 39, 1847 - Earth 41, B. Aldrian 43): filters opening and closing over 5 to 13 s. Examples: Transcendental Overdrive up 2.4 oct 0:19.0 to 0:27.5; Trauma up 1.7 oct 0:00 to 0:05; 1847 - Earth up 1.5 oct 6:04.0 to 6:12.5; So Weit, So Gut up 1.1 oct 1:11.0 to 1:19.5. Album median sweep 0.94 octave. **[JUDGMENT]** **Guess:** padSweep (Ears 8's approved lowpass on the chord layer, 12 to 28 s cycles; its records swing 2.7 to 6.5 octaves) fits the shape; this record's sweeps are smaller (0.7 to 2.4 octaves) and shorter (5 to 13 s), and their rate (20 to 40 a track) is higher than a calm vibe wants.
+- **T5. Floor drops and stem exits.** Real but rare: 1847 - Earth 0.50 a minute (0:20.0 for 6.0 s, 6:08.8 for 5.0 s, 6:14.0 for 9.0 s); Synthesist 0.15 a minute (0:22.5 for 13.0 s); Tai Ki 0.31 a minute (3:18.0 for 2.5 s, but no drum or bass stem, so a read of the other stem). So Weit, So Gut takes the bass out at 0:55, 2:34.5 and 4:07 and brings it back at 1:39, 3:01 and 4:28.5 (bass plays 69% of the time) while the kick runs on, so the bass-leaves-the-kick move is a section line here. **[JUDGMENT]** **Guess:** floorDrop in plan.
+- **T6. Echo.** Drums echo at the beat on four tracks: 329 ms (So Weit, So Gut, +22.8 dB, 3 repeats), 264 ms (Transcendental Overdrive, +22.8 dB, 3), 569 ms (Synthesist, one repeat) and 654 ms (1847 - Earth, +9.5 dB): a tempo-synced delay on the kit, one eighth long on So Weit, So Gut and Transcendental Overdrive (329 and 264 ms against 0.33 and 0.36 s kicks). **[JUDGMENT]** **Guess:** echoTime synced to the eighth for the kit and pad stabs; exists.
+- **T7. Long form.** Drift ratio (60 s against 10 s) 1.33 median, 8 of 8 tracks above 1; no track reaches 8 minutes, so no long-form tool was run. Arc 3.4 dB median (1.1 to 7.0 at the 10th and 90th percentiles): modest; the sections come from stem exits and sweeps at 20 to 40 s, not from one long build.
+
+### Theory
+
+- **Th1. Long, held chords over a pedal (the calm half).** B. Aldrian: C#5 62% of the time, C#maj7 15%, C#sus2 8% over a **pure C# pedal** (bass 1.00 on C#), 7 changes a minute, 44% on a beat (chance 52%), C# lydian (margin 0.009, a guess; fits C# pentatonic). Trauma: **Dsus2 94% of the time** over E, G# and F# bass, 3 a minute, E mixolydian (guess; fits E pentatonic). Synthesist: C#maj7 76%, A#min7 18%, 6 changes a minute (median chord 5.0 s). **[JUDGMENT]** **Guess:** sus2 and major seventh chords held 5 to 20 s over a pedal, with 3 to 7 changes a minute in these; exists (Ears 4's long chords and organ, and the chapel organ).
+- **Th2. A busy half with the chords drawn on the sequencer.** Emphasis: 83 changes a minute at mix chord level (median chord 0.5 s; only 7 a minute last 1.5 s or more): Bmaj7 29%, D#min7 19%, Asus2 12%, Esus2 10% over an A and B pedal (A 85%, B 14%), B ionian (guess). Transcendental Overdrive: 41 a minute (13 settled), C5 28%, Fsus2 17%, F5 16%, G5 16% (G mixolydian: a power-chord and sus2 set with 0 thirds), bass moves by fourths and fifths 33% (a 1.25 notes a second walking bass). The fast counts are an arpeggiating sequencer, not 83 harmony changes; the settled counts (7 and 13) are the usable figures. **[JUDGMENT]** **Guess:** an arpeggio layer (a note per eighth through a 3 to 5 note set) over held sus2/maj7 chords; exists in the melody voices; the generator's chord grid is the slow one.
+- **Th3. Chords with sevenths and a flat second.** 1847 - Earth: F#maj7 31%, D#min7 16%, Dmin7 9%, Dmaj7 9% (18 distinct chords, 12 changes a minute, 10 settled, F dorian by margin 0.002, a guess): major sevenths and minor sevenths, with a D major and D minor seventh in the same piece (a mode mixture). Tai Ki: A#maj7 24%, D#sus2 9%, A#5 8%, A#7 7% (29 chords, A# phrygian by margin 0.005, a guess: the reading rests on a weak margin and the chord list is mostly A#maj7, so call it A# major-seventh color with a flat second at most). So Weit, So Gut: F#7 37%, C#7 23%, C#maj7 9% (a blues-flavored dominant seventh pair around C# ionian: **dominant sevenths**, 23 changes a minute at mix chord level).
+- **Th4. The top line is narrow and repeats.** Synthesist's top line: 1,394 notes in a range of **5 semitones**, 20% repeats, phrases of 9 notes, rising 39% (a sequence climbing a fourth or fifth). Trauma: 54% repeats, median interval 0, range 6 semitones. B. Aldrian: 39% repeats, range 7. Emphasis, So Weit, So Gut and Transcendental Overdrive: ranges of 17 to 21 semitones with leaps 19 to 31% and arch phrases (64% on Transcendental Overdrive, 7-note phrases). **[JUDGMENT]** **Guess:** a narrow-range sequence (a 4 to 7 semitone range, 20 to 50% repeats) for the calm half; no new block.
+- **Th5. Repetition.** Bars repeat with the strongest correlation at 1 bar on every track (0.5 to 0.8); So Weit, So Gut repeats at 8 and 12 bars (0.33, 0.21); Transcendental Overdrive at 2, 4 and 6 bars (0.61, 0.58, 0.41); near-duplicate bars 0 to 5%: a one-bar sequence that never exactly repeats (the drift in the filters and oscillators). Bar lengths are uncertain on all but the beat tracks.
+
+### Space
+- **Wide from 120 Hz up, centered below.** Mix width (dB; 0 = unrelated channels) per band, sub / 120 to 500 / 500 to 2 k / 2 to 5 k / above 5 k: So Weit, So Gut -15 / -4 / -1 / -1 / 0; Emphasis -15 / -9 / -4 / -3 / +2; Synthesist -16 / -6 / -5 / -3 / +2; 1847 - Earth -7 / -3 / -2 / -2 / -4; Trauma -4 / -7 / -2 / -2 / 0; Transcendental Overdrive -20 / -16 / -5 / -2 / 0. Album median width -5.4 dB (p90 +3.8): **wider than Boards of Canada (-10.6) or Lifeforms.** The bass and kick are centered (bass stem width -15 to -22 dB, drums -11 to -18, pan within 0.3).
+- **What the mix loses in mono** (corr and loss in dB, below 120 Hz, 120 to 500, 500 to 2 k, 2 to 5 k, above 5 k): So Weit, So Gut 0.95/0.1, 0.48/1.4, 0.09/2.6, 0.16/2.4, -0.12/**3.5**; B. Aldrian 0.94/0.2, 0.76/0.6, 0.43/1.4, 0.42/1.5, 0.05/2.8; Emphasis 0.94/0.1, 0.77/0.5, 0.42/1.5, 0.33/1.8, -0.21/**4.0**; Synthesist 0.95/0.1, 0.59/1.0, 0.52/1.2, 0.31/1.9, -0.23/**4.1**; 1847 - Earth 0.64/0.9, 0.34/1.7, 0.25/2.1, 0.19/2.3, 0.47/1.4; Trauma 0.49/1.3, 0.66/0.8, 0.28/2.0, 0.17/2.3, -0.04/3.2; Transcendental Overdrive 0.99/0.0, 0.95/0.1, 0.53/1.2, 0.22/2.2, -0.02/3.1. So the pads and the highs lose **2 to 4 dB** in mono above 500 Hz and the top band is uncorrelated or slightly negative (-0.1 to -0.23): synthesizer chorus and stereo delay in the highs.
+- **Tai Ki is opposite in polarity (corr -1.00 below 2 kHz, -0.65 above 5 kHz).** The mix loses **31.4 dB below 120 Hz, 27.6 from 120 to 500, 11 to 12 dB from 500 Hz to 5 kHz and 7.5 above** when L and R are summed: on a phone speaker or in the app's Mono switch it nearly vanishes. It is the second case after Bowery Electric's Looped (-7 dB), and far worse. The "width" the tool reads (+20 dB on the other stem) is this inversion. **[JUDGMENT]** **Guess:** a guard, not a recipe: Driftloom's stereo guard (folded to mono within limits) already forbids it; keep it forbidden for the new instruments.
+- **[JUDGMENT]** **Guess:** a mono switch would lose 2 to 4 dB on the pads and highs of this record, which is more than Boards of Canada; the wide top and centered bottom is the pattern Ears 4 liked ("a steady image, width from the room, a symmetric spread").
+
+### Vibes
+Numbers: So Weit, So Gut 91 BPM (kick on every eighth), 5 settled chords a minute, 13% above 2 kHz, width -3 dB; B. Aldrian no beat, 6, 6%, -7 dB; Emphasis 83, 7, 9%, -7 dB; Synthesist 105, 4, 5%, -6 dB; 1847 - Earth 91 (unclear), 10, 3%, -4 dB; Trauma no beat, 2, 3%, -5 dB; Transcendental Overdrive 84, 13, 7%, -10 dB; Tai Ki no beat, 14, 2%, +20 dB (inverted).
+- **[JUDGMENT]** Lean toward (x1.5 to x3): hypnotic, pulsing, cosmic, droning, steady, floating, starry, spacious, meditative. Lean away (x0.2 to x0.5): bouncy, cheeky, lively, crisp, sour. Never 0. **Guess:** the reference record for hypnotic and pulsing, with cosmic for the drone half (Trauma, B. Aldrian, Tai Ki).
+
+### Wholesome take
+- Take the tuned eighth-note kick with a quick duck, the narrow-range sequence over a pedal, the slow filter sweeps, the sus2 and major seventh chords held long, the deep sine drone with a bright pad above, and the tempo-synced echo on the kit; leave the opposite-polarity stereo of Tai Ki (a mono-compatibility failure, 31 dB) and the 2.6 to 3.2 Hz vibrato wobble. Nothing here is harsh: the record is calm even at 105 BPM. **[JUDGMENT]** **Guess:** wholesome, pulsing but restful; a good reference for "steady motion in the floor, calm on top".
+
+### For later
+- 04 Synthesist, other-2 (185 notes, around G#1, falls 39 dB/s, hear it at 0:16.5 and 5:31.4): a low pluck under the pad, close to a bass with the bass stem empty. **Guess:** wait, it duplicates the kick's sub.
+- 07 Transcendental Overdrive, bass-1 (247 notes, around F2, harmonic, falls 18 dB/s, hear it at 1:36.5 and 4:10.6): the walking fourths-and-fifths bass. **Guess:** deep-pass its bass line as a figure (bassStyle) before Ears 13.
+- 05 1847 - Earth, other-1 (296 notes, around F1, falls 59 dB/s, hear it at 3:10.5 and 3:12.9), and 01 So Weit, So Gut other-2 (309 notes, B2, leans right +0.21, hear it at 1:16.0, 1:24.0): single-sound curiosities. **Guess:** wait.
+- 06 Trauma and 02 B. Aldrian are beatless drones with a 1 s to 5 s ringing top: a listen to the first 5 s of Trauma (a 1.7 octave opening sweep) would show a "wake-up" filter open for the slow-arc item. **Guess:** the first 5 s of Trauma and Transcendental Overdrive (2.4 octaves at 0:19) are the best reference for a filter opening.
+
+### Reliability notes for this card
+- The deep pass covers the whole record (8 of 8 tracks), so none of this is a sample, but two tracks' stems are thin: 04 has an empty bass stem and 02, 06 and 08 have empty drums and bass (all the energy is in "other", so the instrument groups are one blended texture; the silhouettes of Tai Ki's two groups are 0.21).
+- Chord counts of 41 and 83 a minute are the arpeggio, not the harmony; use the settled counts. Keys are guesses (margins 0.000 to 0.009).
+- The "swung" lines the meter tool prints for 1847 - Earth (0.60), Trauma (0.57) and Transcendental Overdrive (0.62) are not swing: the first and third spread over every twelfth, and Trauma has no drum stem.
