@@ -33,9 +33,11 @@ pub type Chords = List<ChordEvent, CHORD_EVENTS_MAX>;
 /// The most choices there can be.
 const CHOICES_MAX: usize = 16;
 
-/// `Render::forced`'s mark for a choice nothing forces.
+/// `Render::forced`'s mark for a choice nothing forces: zero, so that a render
+/// of nothing is all zero bytes (queue item 93); a forced option is stored
+/// as its number plus one.
 #[cfg(feature = "sketch")]
-const NOT_FORCED: u8 = u8::MAX;
+const NOT_FORCED: u8 = 0;
 
 /// How many parts `Render::run` is made of (`Render::part`).
 pub const PARTS: usize = 5;
@@ -450,7 +452,7 @@ impl Render {
             return Ok(());
         };
         let o = CHOICES[i].options.iter().position(|o| o.0 == name).ok_or("no such option")?;
-        self.forced[i] = u8::try_from(o).map_err(|_| "no such option")?;
+        self.forced[i] = u8::try_from(o + 1).map_err(|_| "no such option")?;
         Ok(())
     }
 
@@ -508,7 +510,8 @@ impl Render {
         #[cfg(feature = "sketch")]
         for (i, c) in CHOICES.iter().enumerate() {
             let forced = self.forced.get(i).copied().unwrap_or(NOT_FORCED);
-            if let (Some(o), Some(x)) = (c.options.get(usize::from(forced)), self.choices.get_mut(i)) {
+            let option = usize::from(forced).checked_sub(1).and_then(|o| c.options.get(o));
+            if let (Some(o), Some(x)) = (option, self.choices.get_mut(i)) {
                 *x = o.0.into();
             }
         }
