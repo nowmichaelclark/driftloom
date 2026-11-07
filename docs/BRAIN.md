@@ -277,25 +277,46 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-07
+## State -- 2026-11-08
 
 ### Start here (for the next brain)
 
+- **Session 30 (brain, Opus 5.5, from 2026-11-08): phase 3.** Item 93 built
+  on `claude/serene-archimedes-eclxle` (85fc8fe, no PR yet): the player starts
+  as zeros, `js/dlplayer.wasm` 1,938,596 to 636,731 bytes (215 KB gzipped,
+  222 before), `dlcore.wasm` byte-identical; the brain confirmed the sizes,
+  `build-core.sh --check` for both, and the generation goldens.
+  **Answered** (`docs/notes/93-module-size.md`): the size is accepted. The
+  50 KB aim was the brain's mistake: it counted the stored state and forgot
+  that the generator and the sequencer (about 300 KB of code) live in this
+  module. Item 97 takes about 155 KB gzipped of page JavaScript away, so a
+  first visit after phase 3 (one 215 KB module) weighs less than today's
+  (91 KB core plus that JavaScript). Neither `opt-level` `s` (slower voices,
+  and the tablet is phase 3's weak device) nor a second build without the
+  canonical text (about 4 KB gzipped). One module: yes, at 94b; `dlcore.wasm`
+  goes at 97. **Before the merge:** the `unsafe` the commit adds in
+  `core/src/generator/list.rs` (`List`'s and `Maybe`'s `MaybeUninit`) comes
+  out (promise 6: `unsafe` only at the C boundary; on `main` it is only in
+  `capi.rs` and `wasm.rs`), done safely with a zero value per held type,
+  which `a_new_player_is_all_zeros` already guards. Then the hands open the
+  PR and merge under the policy.
 - **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-07): phase 2 is done
   and proven.** Checked through item 87 on the way (#298-#311), then at the
   phase's end on `main` at v149 (da42200): every check passes, and Mikey's
   blind album (2026-11-07) heard no harm (the log; `docs/ALBUMS.md`). Phase
   3 is written (items 93-98, `docs/QUEUE.md`), with "After phase 3": Ears
   13's sound batch, then 84b (the chords nearer the tune, from the album).
-  **Next: the hands take 93.** **The brain's next check: after 94b** (the
-  app on the player), then the phase's end after 98.
+  **The brain's next check: after 94b** (the app on the player), then the
+  phase's end after 98.
 - **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); the blind album's in-app checklist for bars and length (88b),
   which he left blank.
 - **Ears:** Ears 10, 10b and 11 done (piles 4 and 5, #314, #316, #326),
-  on Mikey's second account; Ears 12 (Synthesist, then pile 6) next, prompt
-  given 2026-11-04; then Ears 13, the second synthesis (Opus 5.5, high).
+  on Mikey's second account; Ears 12 done (#329, 2026-11-07: Synthesist,
+  Animal Crossing and three Nonlocal Forecast cards); Ears 12b next
+  (*Triangular Reformat* and *Pyramid*, with a chord-color reading past the
+  seventh first; prompt given in Session 30); then Ears 13, the second synthesis (Opus 5.5, high).
   Mikey asked (2026-11-07) whether the ears must finish by a phase: no; Ears
   12-13 by the end of phase 3, for the batch after it; piles 7-18 have no
   deadline (phase 5's block catalogue, long-form composing, phase 8).
