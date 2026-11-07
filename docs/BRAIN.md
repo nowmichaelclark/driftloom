@@ -218,6 +218,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 | Session 26 (the sound batch, 3 albums + clips, v123) | every new sound and mixing idea kept; bass +3 dB with a kick, today's without; lateFloor's second arrival should vary; stereo vs mono: "same" on 5 of 6 (and the null), stereo "just barely" nicer on the sixth |
 | Lite Room Album (item 85c, 6 loops before and after, lite) | "it sounded great for lite mode"; the steal goes to full quality too (item 85e) |
 | 87b on his devices (v142 preview) | Moto stays on full (busiest 18-24%, no late notes); tablet moved to lite by itself (75% at full; on lite 55%, 40% of real time); the switch "doesn't bother" him, a crossfade in phase 3; the tablet lost 10 notes at two new loops: folded into phase 3 (the queue's "For phase 3") |
+| Phase 2 Blind Album (v128 against v149, 11 pairs, 2026-11-07) | the null pair Same; no pair worse for phase 2 apart from item 84's downward octave moves (old preferred 2 of 3); upward moves new preferred 3 of 3: 84b after phase 3; the stab chords "Fine" in all three |
 
 ## Methods that proved themselves
 
@@ -276,24 +277,28 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-02
+## State -- 2026-11-07
 
 ### Start here (for the next brain)
 
-- **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-02): phase 2 checked
-  through item 87** (83-85d, then 86, 85e, 85f and 87, #298-#311); it passes,
-  with one small case for the hands (86b). `main` at v141 (3cd2fb1). What
-  the brain ran: the log (`docs/archive/brain-log.md`). Mikey's answers this
-  session: the steal at full (85e), a theme's rest kept (85f), the app may
-  choose lite by itself on slow devices (87b). **Next: the hands take 88b, then 92** (88 #318, 89-91 #319-#321 merged 2026-11-03; 91's note answered in the queue's "The phase's end"). **The brain's next check: the phase's end, after
-  92** (the queue says what it holds), or sooner if a note comes in.
-- **Waiting on Mikey's ears, not urgent:** the Full Room Album (85e,
+- **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-07): phase 2 is done
+  and proven.** Checked through item 87 on the way (#298-#311), then at the
+  phase's end on `main` at v149 (da42200): every check passes, and Mikey's
+  blind album (2026-11-07) heard no harm (the log; `docs/ALBUMS.md`). Phase
+  3 is written (items 93-98, `docs/QUEUE.md`), with "After phase 3": Ears
+  13's sound batch, then 84b (the chords nearer the tune, from the album).
+  **Next: the hands take 93.** **The brain's next check: after 94b** (the
+  app on the player), then the phase's end after 98.
+- **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
-  account); 86's 1 s crossfade and "a phrase is 4 bars" (clips on request,
-  else in phase 3); 87b's switch heard and checked 2026-11-03 (the tablet's late notes at a new loop go to phase 3).
-- **Ears:** Ears 10 (pile 4, uploaded 2026-11-02) runs on Mikey's second
-  account; its prompt lifts the pause in `docs/ears/plan.md` itself, so the
-  brain leaves that file alone while it runs. Pile 5 next.
+  account); the blind album's in-app checklist for bars and length (88b),
+  which he left blank.
+- **Ears:** Ears 10, 10b and 11 done (piles 4 and 5, #314, #316, #326),
+  on Mikey's second account; Ears 12 (Synthesist, then pile 6) next, prompt
+  given 2026-11-04; then Ears 13, the second synthesis (Opus 5.5, high).
+  Mikey asked (2026-11-07) whether the ears must finish by a phase: no; Ears
+  12-13 by the end of phase 3, for the batch after it; piles 7-18 have no
+  deadline (phase 5's block catalogue, long-form composing, phase 8).
 - **Broken Friends:** `docs/notes/82-for-broken-friends.md` is for the game's
   next session (repin the core from f654fdb, the calls, the hashes to
   refresh). It stays in `docs/notes/` until the game's session has used it;
@@ -311,9 +316,9 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   line; long-piece display (`docs/PAINTER.md`, section 2) before item 53.
 - **Ears:** the pause (until Session 26's album was heard) is over; it was
   heard 2026-10-29. Item 83 gives them sketches and clips on the core.
-- **New profiles** wait until phase 2 lands, then go in as data (before
-  phase 3 and Broken Friends). **Before phase 5:** the block catalogue for
-  Mikey (charter, promise 5).
+- **New profiles and sounds** go in with Ears 13's batch, after phase 3 and
+  before phase 4 (one generator by then). **Before phase 5:** the block
+  catalogue for Mikey (charter, promise 5).
 - **Still open, not urgent:** the Pixel 10a's 1.3-1.8 s main-thread stalls
   (item 41) were never reproduced, and no report has come since v92; item
   75 (the reverb, rate-true) for a session with usage to spare; item 37 on
