@@ -18,6 +18,7 @@
 use super::host::Host;
 use crate::Key;
 use crate::generator::{Layer, js};
+use crate::generator::list::Maybe;
 
 /// The whole ceiling, in cost units (`MAX_BUDGET`).
 pub const MAX_BUDGET: f64 = 260.0;
@@ -88,14 +89,14 @@ pub struct Budget {
     cost: [f64; HOLDS],
     start: [f64; HOLDS],
     /// Each hold's voice call, if it was made by one for a layer.
-    group: [Option<Group>; HOLDS],
+    group: [Maybe<Group>; HOLDS],
     head: usize,
     len: usize,
     lite: bool,
     full: u32,
     /// The voice call being made (`begin`), and how many calls there have
     /// been (each one's number).
-    current: Option<Group>,
+    current: Maybe<Group>,
     calls: u32,
     /// The voice calls let go, by layer (`synth.stolen`).
     stolen: [u32; 5],
@@ -117,12 +118,12 @@ impl Budget {
             at: [0.0; HOLDS],
             cost: [0.0; HOLDS],
             start: [0.0; HOLDS],
-            group: [None; HOLDS],
+            group: [Maybe::NONE; HOLDS],
             head: 0,
             len: 0,
             lite: false,
             full: 0,
-            current: None,
+            current: Maybe::NONE,
             calls: 0,
             stolen: [0; 5],
             older: [Older { group: NO_GROUP, start: 0.0, cost: 0.0, released: false }; HOLDS],
@@ -136,7 +137,7 @@ impl Budget {
         self.len = 0;
         self.lite = lite;
         self.full = 0;
-        self.current = None;
+        self.current = Maybe::NONE;
         self.stolen = [0; 5];
     }
 
@@ -145,7 +146,7 @@ impl Budget {
     /// can let them go together. `None` for a part that plays for no layer.
     pub fn begin(&mut self, layer: Option<Layer>, key: Key) {
         self.calls = self.calls.wrapping_add(1);
-        self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0, kept: false });
+        self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0, kept: false }).into();
     }
 
     /// The voice call being made is never let go for a newer note (queue
@@ -160,7 +161,7 @@ impl Budget {
 
     /// The voice call is over.
     pub fn end(&mut self) {
-        self.current = None;
+        self.current = Maybe::NONE;
     }
 
     /// The voice call handed a note to the core's `channel` (`_toCore`):
@@ -242,14 +243,14 @@ impl Budget {
     /// from `STEAL_FADE` before `time` (or its start, if later) to nothing
     /// at `time` in every channel its notes went to, lowest first.
     fn steal<H: Host>(&mut self, host: &mut H, time: f64, cost: f64, cap: f64, spent: f64) -> bool {
-        let Some(g) = self.current else { return false };
+        let Some(g) = self.current.get() else { return false };
         if !(if self.lite { STEAL_LITE } else { STEAL_FULL }) {
             return false;
         }
         let mut n = 0;
         for k in 0..self.len {
             let i = self.slot(k);
-            let Some(h) = self.group[i] else { continue };
+            let Some(h) = self.group[i].get() else { continue };
             if h.kept || h.id == g.id || h.layer != g.layer || (h.key.pass == g.key.pass && h.key.step == g.key.step) {
                 continue;
             }
@@ -311,7 +312,7 @@ impl Budget {
         let mut kept = 0;
         for k in 0..self.len {
             let i = self.slot(k);
-            let gone = self.group[i].is_some_and(|h| self.older[..take].iter().any(|e| e.group.id == h.id));
+            let gone = self.group[i].get().is_some_and(|h| self.older[..take].iter().any(|e| e.group.id == h.id));
             if !gone {
                 let to = self.slot(kept);
                 self.at[to] = self.at[i];

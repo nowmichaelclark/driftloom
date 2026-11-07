@@ -704,7 +704,7 @@ pub fn development_of(spec: &Spec, choir: Option<Choir>) -> Option<Development> 
         24.0 | 32.0 => 0.72,
         _ => return None,
     };
-    if spec.cycles.is_some() || choir.is_some() {
+    if spec.cycles.set || choir.is_some() {
         return None;
     }
     // leadKey: the first of the heaviest profiles in the mix.
@@ -891,7 +891,7 @@ pub type Form = [Schedule; 5];
 /// `localBars`: a layer's own cycle, in bars.
 #[must_use]
 pub fn local_bars(spec: &Spec, layer: Layer) -> f64 {
-    let cycle = spec.cycles.and_then(|c| c[layer as usize]).unwrap_or(spec.bars * spec.steps_per_bar);
+    let cycle = spec.cycles.of(layer as usize).unwrap_or(spec.bars * spec.steps_per_bar);
     js::max(1.0, js::round(cycle / spec.steps_per_bar))
 }
 
@@ -1010,7 +1010,7 @@ impl Plan {
             develop_harmony(cx, dev, &mut self.harmony, &mut self.sections);
         } else {
             let bars =
-                cx.spec.cycles.and_then(|c| c[Layer::Chords as usize]).map_or(cx.spec.bars, |cyc| js::max(1.0, js::round(cyc / cx.spb)));
+                cx.spec.cycles.of(Layer::Chords as usize).map_or(cx.spec.bars, |cyc| js::max(1.0, js::round(cyc / cx.spb)));
             gen_harmony(cx, &mut self.harmony, bars, cx.spec.layer_seed(Layer::Chords), None, None);
         }
         self.form = gen_form(cx);

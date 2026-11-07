@@ -11,7 +11,7 @@ use super::choices::lean_of;
 use super::data::{self, CHOICES, MAX_BARS, PADSWEEP, PEDAL};
 use super::js;
 use super::layers::{self, Bass, BassEvent, BassOut, DrumEvent, Drums, DrumsOut, PedalOut, Texture, TextureEvent};
-use super::list::List;
+use super::list::{List, Word};
 use super::melody::{self, Depth, Melody, MelodyOut, Over};
 use super::plan::{self, CHORD_EVENTS_MAX, ChordEvent, Cx, Form, Gap, Harmony, Plan};
 use super::rng::Rng;
@@ -21,7 +21,7 @@ use super::{LAYERS, Layer};
 /// A layer's own length in bars (`layerSpec(spec, layer).bars`).
 #[must_use]
 pub fn layer_bars(cx: &Cx, layer: Layer) -> f64 {
-    match cx.spec.cycles.and_then(|c| c[layer as usize]) {
+    match cx.spec.cycles.of(layer as usize) {
         Some(cyc) if cyc != 0.0 => js::max(1.0, js::round(cyc / cx.spb)),
         _ => cx.spec.bars,
     }
@@ -61,8 +61,12 @@ pub struct Render {
     pub pedal: Option<(PedalOut, f64)>,
     pub drums_out: DrumsOut,
     pub melody_out: MelodyOut,
-    pub texture_kind: &'static str,
-    pub depth: Option<Depth>,
+    pub texture_kind: Word,
+    pub depth: Depth,
+    /// Whether `depth` was decided (a developing loop's melody); a flag
+    /// beside it, not an `Option`, so that a render of nothing is all zero
+    /// bytes (queue item 93).
+    pub depth_made: bool,
     /// The octave (in semitones) the chords take, decided from the
     /// progression once the melody is drawn (`chordsOctave`, queue item
     /// 84), and applied by the register work.
@@ -94,12 +98,13 @@ impl Render {
             choices: List::filled(""),
             #[cfg(feature = "sketch")]
             forced: [NOT_FORCED; CHOICES_MAX],
-            bass_out: BassOut { style: "", voice: "" },
+            bass_out: BassOut { style: Word::EMPTY, voice: Word::EMPTY },
             pedal: None,
-            drums_out: DrumsOut { kit: "" },
-            melody_out: MelodyOut { voice: "", motif: List::filled(melody::NO_MOTIF), cell: None, centre: None },
-            texture_kind: "",
-            depth: None,
+            drums_out: DrumsOut { kit: Word::EMPTY },
+            melody_out: MelodyOut { voice: Word::EMPTY, motif: List::filled(melody::NO_MOTIF), cell: None, centre: None },
+            texture_kind: Word::EMPTY,
+            depth: Depth { answer: None, shift: None },
+            depth_made: false,
             chord_shift: 0.0,
             register_given: None,
             pedal_notes: List::filled(layers::NO_BASS),
@@ -154,11 +159,12 @@ impl Render {
 
     fn melody_part(&mut self, cx: &Cx, plan: &Plan) {
         let spec = cx.spec;
-        self.depth = None;
+        self.depth_made = false;
         if let Some(dev) = &plan.development {
             let (out, depth) = melody::develop_melody(cx, &plan.sections, dev, &mut self.melody, &mut self.a_notes, &mut self.section_notes);
             self.melody_out = out;
-            self.depth = Some(depth);
+            self.depth = depth;
+            self.depth_made = true;
         } else {
             let over = Over { slots: &self.harmony.slots, cycle_steps: self.harmony.cycle_steps, events: &self.harmony.events };
             self.melody_out =
@@ -183,7 +189,7 @@ impl Render {
         let spb = cx.spb;
         self.drums_out = layers::gen_drums(cx, layer_bars(cx, Layer::Drums), &mut self.drums);
         self.texture_kind =
-            layers::gen_texture(cx, layer_bars(cx, Layer::Texture), &self.harmony.slots, self.harmony.cycle_steps, &mut self.texture);
+            layers::gen_texture(cx, layer_bars(cx, Layer::Texture), &self.harmony.slots, self.harmony.cycle_steps, &mut self.texture).into();
         self.chords.clear();
         for e in self.harmony.events.iter() {
             self.chords.push(ChordEvent { vel0: e.vel, alias: true, ..*e });
@@ -244,7 +250,7 @@ impl Render {
 
         self.pedal = None;
         if self.choice("pedalBass") == Some("on") {
-            let out = layers::pedal_bass(cx, bass_bars, &self.bass, self.bass_out.voice, &mut self.pedal_notes);
+            let out = layers::pedal_bass(cx, bass_bars, &self.bass, self.bass_out.voice.get(), &mut self.pedal_notes);
             let mut on = [false; 4 * MAX_BARS];
             for e in self.bass.iter().filter(|e| e.vel != 0.0) {
                 if let Some(x) = on.get_mut(js::index(js::floor(e.step / spb))) {
@@ -276,7 +282,7 @@ impl Render {
             self.spell_over(cx);
         }
 
-        let cycle = spec.cycles.and_then(|c| c[Layer::Melody as usize]).filter(|&c| c != 0.0).unwrap_or(spec.bars * spb);
+        let cycle = spec.cycles.of(Layer::Melody as usize).filter(|&c| c != 0.0).unwrap_or(spec.bars * spb);
         self.annotate_prev(cx, cycle);
 
         let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
@@ -540,7 +546,7 @@ impl Render {
                         || self.texture.iter().any(|e| e.vel != 0.0 && first(e.step)))
             }
             "floorDrop" => cx.spec.bars >= 4.0 && (has_drums || has_bass),
-            "pedalBass" => PEDAL.styles.contains(&self.bass_out.style) && has_bass,
+            "pedalBass" => PEDAL.styles.contains(&self.bass_out.style.get()) && has_bass,
             "padSweep" => self.chords.iter().any(|e| e.vel != 0.0 && PADSWEEP.sustained.contains(&e.voice)),
             _ => false,
         }
@@ -793,9 +799,9 @@ impl Render {
     pub fn write_meta<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan) {
         w.obj();
         w.key("bassStyle");
-        w.str(if self.pedal.is_some() { "pedal" } else { self.bass_out.style });
+        w.str(if self.pedal.is_some() { "pedal" } else { self.bass_out.style.get() });
         w.key("bassVoice");
-        w.str(self.bass_out.voice);
+        w.str(self.bass_out.voice.get());
         if let Some(ch) = cx.choir {
             w.key("choir");
             w.obj();
@@ -807,7 +813,8 @@ impl Render {
             w.str(ch.voice);
             w.end_obj();
         }
-        if let (Some(dev), Some(depth)) = (&plan.development, &self.depth) {
+        if let (Some(dev), true) = (&plan.development, self.depth_made) {
+            let depth = &self.depth;
             w.key("depth");
             w.obj();
             w.key("answer");
@@ -830,14 +837,14 @@ impl Render {
             w.end_obj();
         }
         w.key("kit");
-        w.str(self.drums_out.kit);
+        w.str(self.drums_out.kit.get());
         w.key("melodyCell");
         match self.melody_out.cell {
             Some(c) => w.str(c),
             None => w.null(),
         }
         w.key("melodyVoice");
-        w.str(self.melody_out.voice);
+        w.str(self.melody_out.voice.get());
         if let Some((p, n0)) = &self.pedal {
             w.key("pedal");
             w.obj();
@@ -850,11 +857,11 @@ impl Render {
             w.key("share");
             w.num(fixed3(p.share));
             w.key("was");
-            w.str(self.bass_out.style);
+            w.str(self.bass_out.style.get());
             w.end_obj();
         }
         w.key("textureKind");
-        w.str(self.texture_kind);
+        w.str(self.texture_kind.get());
         w.end_obj();
     }
 
@@ -887,7 +894,7 @@ pub fn write_cycles<S: Sink>(w: &mut Writer<S>, cx: &Cx) {
     w.obj();
     for (key, layer) in [("bass", Layer::Bass), ("chords", Layer::Chords), ("drums", Layer::Drums), ("melody", Layer::Melody), ("texture", Layer::Texture)] {
         w.key(key);
-        w.num(spec.cycles.and_then(|c| c[layer as usize]).filter(|&c| c != 0.0).unwrap_or(full));
+        w.num(spec.cycles.of(layer as usize).filter(|&c| c != 0.0).unwrap_or(full));
     }
     w.end_obj();
 }

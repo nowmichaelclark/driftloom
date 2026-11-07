@@ -73,6 +73,7 @@ use crate::{Core, Error, MAX_RATE, MIN_RATE};
 use change::{Change, LOAD_BLOCKS};
 pub use change::{CROSSFADE, Handover, Moment};
 use host::Host;
+use crate::generator::list::{Biased, Maybe};
 use sequencer::{Loop, ORGAN_FALL, Sequencer, channel_of};
 use synth::Synth;
 
@@ -151,7 +152,7 @@ pub struct Player {
     rate: f64,
     /// How far each pass wanders (`Engine.driftAmount`), 0 for the loop as
     /// composed.
-    wander: f64,
+    wander: Biased<{ AMOUNT.to_bits() }>,
     /// The host's salt on the wander's stream (queue item 92,
     /// `set_wander_salt`): 0, every code's own wander.
     salt: u32,
@@ -163,14 +164,14 @@ pub struct Player {
     tempo: Option<f64>,
     /// The changes waiting for their boundaries (queue item 86), one for
     /// each kind of moment but `Now`, and how many have been asked.
-    pending: [Option<Change>; 4],
+    pending: [Maybe<Change>; 4],
     asked: u32,
     /// How the loop being made takes over from the one that played, and
     /// how it was asked for.
     handover: Handover,
     asked_by: Asked,
     /// The loop playing's beat, in steps (4, or 6 in 6/8).
-    beat: f64,
+    beat: Biased<{ 4.0_f64.to_bits() }>,
     /// The full mix or lite's, as started (`attach`).
     full: bool,
     /// The work the voices asked for, a pass at a time (queue item 87,
@@ -179,7 +180,7 @@ pub struct Player {
     /// the last whole pass decided (negative: none yet).
     pass_held: f64,
     pass_from: f64,
-    units: f64,
+    units: Biased<{ (-1.0_f64).to_bits() }>,
     /// Whether the loop playing began after a lead-in (`START`, a load with
     /// nothing playing): its first pass, for `pass_frames`, takes it in.
     lead_in: bool,
@@ -204,20 +205,20 @@ impl Player {
             state: State::Idle,
             was_playing: false,
             rate: 0.0,
-            wander: AMOUNT,
+            wander: Biased::DEFAULT,
             salt: 0,
             start_at: 0.0,
             resume_at: None,
             tempo: None,
-            pending: [None; 4],
+            pending: [Maybe::NONE; 4],
             asked: 0,
             handover: Handover::RingOut,
             asked_by: Asked::Load,
-            beat: 4.0,
+            beat: Biased::DEFAULT,
             full: false,
             pass_held: 0.0,
             pass_from: 0.0,
-            units: -1.0,
+            units: Biased::DEFAULT,
             lead_in: false,
         }
     }
@@ -259,11 +260,11 @@ impl Player {
         self.was_playing = false;
         self.wandering = false;
         self.next_drawn = false;
-        self.pending = [None; 4];
+        self.pending = [Maybe::NONE; 4];
         self.handover = Handover::RingOut;
         self.asked_by = Asked::Load;
         self.full = full;
-        self.units = -1.0;
+        self.units.set(-1.0);
         let now = self.now(host);
         self.synth.start(host, rate, !full, now);
     }
@@ -288,7 +289,7 @@ impl Player {
     /// if not, or for `at` 0. Any change waiting (`change`) is dropped: a
     /// load starts afresh.
     pub fn load_at(&mut self, seed: u32, request: &Request, at: f64) {
-        self.pending = [None; 4];
+        self.pending = [Maybe::NONE; 4];
         self.handover = Handover::RingOut;
         self.asked_by = Asked::Load;
         self.was_playing = self.state == State::Playing || self.was_playing;
@@ -339,7 +340,7 @@ impl Player {
             Some(slot) => {
                 self.asked = self.asked.wrapping_add(1);
                 if let Some(p) = self.pending.get_mut(slot) {
-                    *p = Some(Change { seed, request: *request, handover, asked: self.asked, target: None });
+                    *p = Maybe::some(Change { seed, request: *request, handover, asked: self.asked, target: None });
                 }
             }
         }
@@ -367,7 +368,7 @@ impl Player {
     /// silence at once cancels it, `Core::cancel`). The changes waiting are
     /// dropped.
     pub fn stop(&mut self) {
-        self.pending = [None; 4];
+        self.pending = [Maybe::NONE; 4];
         if self.state == State::Loading || self.state == State::Wandering {
             self.state = State::Idle;
             self.was_playing = false;
@@ -471,7 +472,7 @@ impl Player {
                 // a section is the same however it is reached (queue item
                 // 88).
                 self.current = 0;
-                self.wandering = self.wander > 0.0;
+                self.wandering = self.wander.get() > 0.0;
                 if self.wandering {
                     let piece = self.generator.spec().length.is_some();
                     let n = if self.asked_by == Asked::Load && !piece { self.seq.loop_count } else { 0 };
@@ -489,7 +490,7 @@ impl Player {
         let g = &self.generator;
         let kick = g.settings().kick.map(|k| k.kind);
         if let Some(p) = self.passes.get_mut(slot) {
-            p.draw_salted(&Cx::new(g.spec()), g.render(), kick, number, self.wander, self.salt);
+            p.draw_salted(&Cx::new(g.spec()), g.render(), kick, number, self.wander.get(), self.salt);
         }
     }
 
@@ -530,11 +531,11 @@ impl Player {
         } else {
             self.seq.load(host, &mut self.synth, &lp, now);
         }
-        self.beat = if Cx::new(g.spec()).metre == Metre::SixEight { 6.0 } else { 4.0 };
+        self.beat.set(if Cx::new(g.spec()).metre == Metre::SixEight { 6.0 } else { 4.0 });
         if let Some(bpm) = self.tempo.take() {
             self.seq.bpm = bpm;
             let when = if at_moment { start } else { now };
-            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats, when);
+            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats.get(), when);
         }
         // The old loop's notes hold the voice budget no longer: the new one
         // asks as it would alone (the fading notes' cost is the change's,
@@ -547,7 +548,7 @@ impl Player {
         // A new loop's work is its own: nothing measured yet.
         self.pass_held = self.synth.budget.held();
         self.pass_from = start;
-        self.units = -1.0;
+        self.units.set(-1.0);
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.pass_begins(&lp);
         self.next_drawn = false;
@@ -555,7 +556,7 @@ impl Player {
         self.asked_by = Asked::Load;
         self.handover = Handover::RingOut;
         // The changes still waiting are worked out against this loop.
-        for c in self.pending.iter_mut().flatten() {
+        for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
             c.target = None;
         }
         self.state = State::Playing;
@@ -573,7 +574,7 @@ impl Player {
     fn soonest(&self) -> Option<(usize, u64)> {
         let mut best: Option<(usize, u64, u32)> = None;
         for (i, c) in self.pending.iter().enumerate() {
-            let Some(c) = c else { continue };
+            let Some(c) = c.as_ref() else { continue };
             let Some(t) = c.target else { continue };
             let better = match best {
                 None => true,
@@ -595,7 +596,7 @@ impl Player {
         let g = &self.generator;
         let spb = g.spec().steps_per_bar;
         let total = g.spec().bars * spb;
-        let u = change::unit(moment, self.beat, spb, total)? as u64;
+        let u = change::unit(moment, self.beat.get(), spb, total)? as u64;
         let total = total as u64;
         if total == 0 {
             return None;
@@ -638,7 +639,7 @@ impl Player {
     /// there. Returns the steps decided, if it began one.
     fn arm<H: Host>(&mut self, host: &mut H, now: f64) -> Option<usize> {
         for slot in 0..self.pending.len() {
-            if self.pending[slot].is_some_and(|c| c.target.is_none()) {
+            if self.pending[slot].get().is_some_and(|c| c.target.is_none()) {
                 let t = self.resolve(slot, now);
                 match t {
                     Some(t) => {
@@ -646,7 +647,7 @@ impl Player {
                             c.target = Some(t);
                         }
                     }
-                    None => self.pending[slot] = None,
+                    None => self.pending[slot] = Maybe::NONE,
                 }
             }
         }
@@ -654,15 +655,15 @@ impl Player {
         if self.time_of(target) - now > self.lead() {
             return None;
         }
-        let change = self.pending[slot]?;
+        let change = self.pending[slot].get()?;
         let mut n = 0;
         while self.seq.abs_step < target && n < 4096 {
             n += 1;
             self.step_once(host, now, target);
         }
         for c in &mut self.pending {
-            if c.is_some_and(|c| c.target == Some(target)) {
-                *c = None;
+            if c.get().is_some_and(|c| c.target == Some(target)) {
+                *c = Maybe::NONE;
             }
         }
         let start = self.seq.next_step_time;
@@ -694,7 +695,7 @@ impl Player {
         let held = self.synth.budget.held();
         let span = self.seq.next_step_time - self.pass_from;
         if span > 0.0 {
-            self.units = (held - self.pass_held) / span;
+            self.units.set((held - self.pass_held) / span);
         }
         self.pass_held = held;
         self.pass_from = self.seq.next_step_time;
@@ -744,7 +745,7 @@ impl Player {
     /// The top of a new pass: the next one drawn (now, if it is not yet),
     /// and played.
     fn next_pass(&mut self) {
-        if self.wander > 0.0 {
+        if self.wander.get() > 0.0 {
             let next = 1 - self.current;
             if !self.wandering || !self.next_drawn {
                 let n = self.seq.loop_count;
@@ -778,8 +779,8 @@ impl Player {
     /// pass.
     pub fn set_wander(&mut self, amount: f64) {
         let amount = if amount.is_finite() { amount.max(0.0) } else { 0.0 };
-        if amount != self.wander {
-            self.wander = amount;
+        if amount != self.wander.get() {
+            self.wander.set(amount);
             self.next_drawn = false;
         }
     }
@@ -829,7 +830,7 @@ impl Player {
         } else if self.seq.bpm > 0.0 {
             let now = self.now(host);
             self.seq.bpm = bpm;
-            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats, now);
+            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats.get(), now);
         }
     }
 
@@ -853,5 +854,24 @@ fn loop_of<'a>(g: &'a Generator, passes: &'a [Pass; 2], slot: Option<usize>) -> 
 impl Default for Player {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Queue item 93: a new player is all zero bytes, so the module keeps it
+    /// in `.bss` (no bytes in the file) and loads small. A field whose empty
+    /// state is not zero (a default number, an `Option` whose `None` Rust
+    /// writes as a spare value) fails here, with where it is.
+    #[test]
+    fn a_new_player_is_all_zeros() {
+        static NEW: Player = Player::new();
+        // SAFETY: reads the bytes of a static, which are all initialized
+        // (padding is zero in a constant), as a slice of `u8`.
+        let bytes = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(NEW).cast::<u8>(), core::mem::size_of::<Player>()) };
+        let first = bytes.iter().position(|&b| b != 0);
+        assert_eq!(first, None, "Player::new() has a nonzero byte at offset {first:?}");
     }
 }

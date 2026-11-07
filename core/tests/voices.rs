@@ -99,11 +99,11 @@ fn voices() {
                 loops += 1;
                 let asked = |name: &str| list.iter().enumerate().any(|(b, &v)| v == name && wanted & (1 << b) != 0);
                 let heard: Vec<&str> = match layer {
-                    0 => vec![rd.drums_out.kit].into_iter().filter(|&k| k != "none").collect(),
+                    0 => vec![rd.drums_out.kit.get()].into_iter().filter(|&k| k != "none").collect(),
                     1 => rd.bass.iter().filter(|e| e.vel != 0.0).map(|e| e.voice).collect(),
                     2 => rd.chords.iter().filter(|e| e.vel != 0.0).map(|e| e.voice).collect(),
                     3 => rd.melody.iter().filter(|e| e.vel != 0.0).map(|e| e.voice).collect(),
-                    _ => vec![rd.texture_kind].into_iter().filter(|&k| k != "none").collect(),
+                    _ => vec![rd.texture_kind.get()].into_iter().filter(|&k| k != "none").collect(),
                 };
                 played += usize::from(!heard.is_empty());
                 for v in &heard {

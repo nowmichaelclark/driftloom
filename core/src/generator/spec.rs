@@ -91,7 +91,31 @@ pub struct Spec {
     pub tune: Option<Option<(Figure, &'static str)>>,
     /// Each layer's own cycle in steps, or `None` (null); `None` overall
     /// for a loop without cycles.
-    pub cycles: Option<[Option<f64>; 5]>,
+    pub cycles: Cycles,
+}
+
+/// Each layer's own cycle in steps, or none (`cycles` in the JavaScript spec,
+/// where the whole object is null for a loop without cycles, and a layer's
+/// entry is null where it has none). `set` is whether the object exists. Plain
+/// fields rather than nested `Option`s, so that a spec of nothing is all
+/// zero bytes (queue item 93).
+#[derive(Clone, Copy)]
+pub struct Cycles {
+    /// Whether the loop has cycles at all.
+    pub set: bool,
+    /// By layer, in `LAYERS`' order.
+    pub layers: [Option<f64>; 5],
+}
+
+impl Cycles {
+    /// A loop without cycles.
+    pub const NONE: Cycles = Cycles { set: false, layers: [None; 5] };
+
+    /// The layer's own cycle in steps, or `None`.
+    #[must_use]
+    pub fn of(&self, layer: usize) -> Option<f64> {
+        if self.set { self.layers[layer] } else { None }
+    }
 }
 
 impl Spec {
@@ -124,7 +148,7 @@ impl Spec {
         layers_on: 0,
         layers_off: 0,
         tune: None,
-        cycles: None,
+        cycles: Cycles::NONE,
     };
 
     /// The layer's seed.
@@ -232,7 +256,8 @@ impl Spec {
         w.num(self.bpm);
         w.key("coherence");
         w.num(self.coherence);
-        if let Some(cycles) = &self.cycles {
+        if self.cycles.set {
+            let cycles = &self.cycles.layers;
             w.key("cycles");
             w.obj();
             for (key, layer) in [
@@ -740,7 +765,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         }
     }
 
-    let mut cycles = None;
+    let mut cycles = Cycles::NONE;
     if c.polymeter == Some(true) {
         let mut cy = POLY_CYCLES;
         r.shuffle(&mut cy);
@@ -748,14 +773,14 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         for (i, layer) in [Layer::Bass, Layer::Chords, Layer::Melody, Layer::Texture].into_iter().enumerate() {
             out[layer as usize] = Some(cy[i] * steps_per_bar);
         }
-        cycles = Some(out);
+        cycles = Cycles { set: true, layers: out };
     } else if c.micro_loop == Some(true) && bars >= 8.0 {
         let short = r.pick(&[1.0, 2.0, 2.0, 4.0]).unwrap_or(1.0);
         let mut out = [None; 5];
         out[Layer::Bass as usize] = Some(short * steps_per_bar);
         out[Layer::Chords as usize] = Some(r.pick(&[2.0, 4.0]).unwrap_or(2.0) * steps_per_bar);
         out[Layer::Melody as usize] = Some(r.pick(&[1.0, 2.0, 3.0]).unwrap_or(1.0) * steps_per_bar);
-        cycles = Some(out);
+        cycles = Cycles { set: true, layers: out };
     }
     let _ = LAYERS;
     Spec {

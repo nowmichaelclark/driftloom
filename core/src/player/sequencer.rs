@@ -12,6 +12,7 @@
 use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
 use crate::generator::js;
+use crate::generator::list::Biased;
 use crate::generator::layers::DrumEvent;
 use crate::generator::piece::Piece;
 use crate::generator::load::{Load, Stab};
@@ -108,11 +109,11 @@ struct Hold {
     key: Option<Chord>,
     until: f64,
     held: Option<Chord>,
-    last: f64,
+    last: Biased<{ f64::NEG_INFINITY.to_bits() }>,
     on: bool,
 }
 
-const NO_HOLD: Hold = Hold { key: None, until: 0.0, held: None, last: f64::NEG_INFINITY, on: false };
+const NO_HOLD: Hold = Hold { key: None, until: 0.0, held: None, last: Biased::DEFAULT, on: false };
 
 /// A JavaScript number's truth: not 0, not NaN.
 fn truthy(x: f64) -> bool {
@@ -142,7 +143,7 @@ impl Loop<'_> {
     /// A layer's own cycle in steps (`p.cycles[layer]`): the loop's length
     /// unless the layer has its own.
     fn cycle(&self, layer: Layer) -> f64 {
-        self.spec.cycles.and_then(|c| c[layer as usize]).filter(|&c| truthy(c)).unwrap_or_else(|| self.total())
+        self.spec.cycles.of(layer as usize).filter(|&c| truthy(c)).unwrap_or_else(|| self.total())
     }
 
     /// Drum hit `i` as the pass plays it.
@@ -217,7 +218,7 @@ pub struct Sequencer {
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
-    organ_fall: f64,
+    organ_fall: Biased<{ ORGAN_FALL.to_bits() }>,
     /// The loop's: glass on, a choir's ensemble, and the tuned kick's kind
     /// this pass plays.
     glass: bool,
@@ -252,7 +253,7 @@ impl Sequencer {
             had_arc: false,
             had_sub_duck: false,
             had_pad_sweep: false,
-            organ_fall: ORGAN_FALL,
+            organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
             kick_kind: None,
@@ -282,7 +283,7 @@ impl Sequencer {
     /// the mutes are sent again at `now` (as they stand), and the last
     /// loop's organ lets go over `organ_fall` seconds at the first step.
     pub fn load_at<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, now: f64, at: f64, organ_fall: f64) {
-        self.organ_fall = organ_fall;
+        self.organ_fall.set(organ_fall);
         let s = lp.settings;
         let on = |id: &str| lp.base.choice(id) == Some("on");
         self.organ_change = s.organ.is_some() || self.had_organ;
@@ -301,8 +302,8 @@ impl Sequencer {
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
         synth.set_tone(host, lp.spec.tone, at);
-        synth.set_level(host, s.level, at);
-        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats, at);
+        synth.set_level(host, s.level.get(), at);
+        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats.get(), at);
         // A layer the request asked off is muted, as the listener's mute
         // would (queue item 91), one asked on is not; the others stay as the
         // host left them (a mute holds across loads until brought back).
@@ -399,7 +400,7 @@ impl Sequencer {
 
         // A new loop's setups, from its first step decided.
         if self.organ_change {
-            Synth::organ_off(host, time, self.organ_fall);
+            Synth::organ_off(host, time, self.organ_fall.get());
             synth.organ_setup(host, s.organ.as_ref(), time);
             self.organ_change = false;
             self.hold = NO_HOLD;
@@ -679,11 +680,11 @@ impl Sequencer {
                 let a = held.notes();
                 let b = chord.notes();
                 let shared = b.iter().filter(|&&x| a.iter().any(|&y| pc(y) == pc(x))).count();
-                if abs - h.last < spb || (a.first().map(|&n| pc(n)) == b.first().map(|&n| pc(n)) && shared >= 2) {
+                if abs - h.last.get() < spb || (a.first().map(|&n| pc(n)) == b.first().map(|&n| pc(n)) && shared >= 2) {
                     continue;
                 }
             }
-            let mut hold = Hold { key: Some(chord), until: abs + (next - s), held: Some(chord.sorted()), last: abs, on: true };
+            let mut hold = Hold { key: Some(chord), until: abs + (next - s), held: Some(chord.sorted()), last: Biased::of(abs), on: true };
             synth.organ_chord(host, &chord.notes()[..chord.len.min(NOTES)], t);
             if next_any - s > 2.0 * spb {
                 let off = js::max(if truthy(e.dur) { e.dur } else { 0.0 }, spb);
