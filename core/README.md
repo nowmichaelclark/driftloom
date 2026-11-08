@@ -251,6 +251,31 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   plays its own first pass (a load's wanders at the pass count the last loop
   reached, the page's way). `dlrender --changes N` makes N across the corpus
   and measures each join; `tools/player-wasm.mjs --changes N` times them.
+- **Everything the app does** (queue item 94a), so a host needs no
+  generator of its own:
+  - *A code's edits* (`Request::with_layer_seed`, `with_tone`, `with_bpm`;
+    as text `edit.roll.drums=N`, `edit.seed.bass=N`, `edit.warmth=0.6`,
+    `edit.space`, `edit.wobble`, `edit.bpm=88`): what a listener changed
+    after the loop was made, overwritten on the spec after every draw, as
+    the app overwrites its own (a re-rolled layer always plays, the port of
+    `forceLayers`). The generation goldens' `edit` cases hold it to the
+    page's.
+  - *`revise(seed, request)`*: the loop playing made again in its place (a
+    re-roll): it takes the old loop's next step and goes on from that step
+    and pass, its setups sent again only where they differ.
+  - *`set_tone`*, and *`set_track(Track)`*: the length slider, whole passes
+    or bars to the next phrase line, counted from the step heard;
+    `Moment::End` is a change that waits for it (ringing out at a pass's
+    end, the crossfade inside one).
+  - *Events* (`player/events.rs`, `event()`): a loop's first step, a pass, a
+    piece's section, a phrase line, each step, a re-roll and the track's end,
+    each at the time it is heard, decided up to a lookahead ahead.
+  - *Reports* (`player/about.rs`): `grid(layer)`, the layers' grid of the pass
+    being decided; `notes`/`note`, the loop as composed note by note (the
+    MIDI export's); `describe`, plain ASCII lines of what a card, a cover
+    and a share code show. `test/player.test.mjs` holds them to the page's
+    generator in `js/dlplayer.wasm`; `examples/c/report.c` calls them through
+    the header.
 - **Rendering ahead** (queue item 87, `player/ahead.rs`), for a host with no
   audio thread (Godot's web build): `render` any number of frames a call,
   and each call carries on exactly where the last stopped, the same samples
