@@ -10,6 +10,9 @@
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { newSpec, rerollLayer, vibeSelection, LAYERS } from '../js/generator.js';
+import { askOf, KIND, END_FADE } from '../js/player.js';
+import { Rng } from '../js/rng.js';
 
 const QUANTUM = 128;
 const RATE = 44100;
@@ -308,6 +311,107 @@ console.log('\nHow busy the audio thread is (queue item 87b)');
   // Its count settles as it runs: the last report.
   const last = slow[slow.length - 1];
   check(`a slow device reads as one (burn 1500 us: about ${Math.round(want * 100)}% of a block)`, last && last.max > want * 0.7 && last.max < want * 1.5 + 0.1, JSON.stringify(slow));
+}
+
+console.log('\nThe core\'s player (queue item 94b)');
+{
+  // The app's engine on the player: js/player.js's `askOf` through the
+  // worklet's `ask` to js/dlplayer.wasm, as the app sends it. A loop's
+  // request with its edits sent whole (every layer's seed, the tone, the
+  // tempo) plays the very loop its seed and request make; an edited spec
+  // plays its edits; the events reach the page, with the grids of each
+  // pass; the loop armed for the track's end starts there; a resumed load
+  // doesn't wait out its lateFloor again.
+  const player = fs.readFileSync(fileURLToPath(new URL('../js/dlplayer.wasm', import.meta.url)));
+  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: player, quality: 'full', layout: 2, player: true } });
+  // `seconds` of blocks from the processor's next, the output's left lane.
+  const render = (p, seconds) => {
+    const out = [];
+    const from = p.next || 0;
+    for (let b = 0; b * QUANTUM < seconds * RATE; b++) {
+      globalThis.currentFrame = from + b * QUANTUM;
+      const o = [[new Float32Array(QUANTUM), new Float32Array(QUANTUM)]];
+      p.process(Array.from({ length: 5 }, () => []), o);
+      out.push(...o[0][0]);
+    }
+    return out;
+  };
+  const probe = (p) => {
+    p.receive({ type: 'probe', id: 1 });
+    const m = p.sent.filter((x) => x.type === 'probe').pop();
+    return Object.fromEntries(m.about.split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
+  };
+  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  const r = new Rng(94);
+  let whole = true;
+  let detail = '';
+  for (let i = 0; i < 8; i++) {
+    const seed = r.seed32();
+    const spec = newSpec(seed, i % 2 ? vibeSelection(['cozy', 'rainy'].slice(0, 1 + (i % 2))) : null);
+    const full = askOf(spec);
+    const bare = { ...full, seeds: [], tone: null, bpm: null };
+    const a = make();
+    a.receive({ type: 'playWander', amount: 1, salt: 0 });
+    a.receive({ type: 'playLoad', seed, ask: full, at: 0 });
+    const b = make();
+    b.receive({ type: 'playWander', amount: 1, salt: 0 });
+    b.receive({ type: 'playLoad', seed, ask: bare, at: 0 });
+    const ra = render(a, 6);
+    const rb = render(b, 6);
+    if (!same(ra, rb) || a.refused || !ra.some((v) => v !== 0)) {
+      whole = false;
+      detail += ` ${seed}${a.refused ? ` (refused ${a.refused})` : ''}`;
+    }
+  }
+  check('a loop\'s edits sent whole play the loop its seed and request make, sample for sample (8 loops)', whole, detail);
+  // An edited spec: a layer re-rolled, the tone, the tempo.
+  const seed = r.seed32();
+  let spec = newSpec(seed);
+  spec = rerollLayer(spec, 'bass');
+  spec.tone = { warmth: 0.2, space: 0.75, wobble: 0.05 };
+  spec.bpm = 101;
+  const p = make();
+  p.receive({ type: 'playLoad', seed, ask: askOf(spec), at: 0 });
+  render(p, 1);
+  const d = probe(p);
+  check('an edited spec plays its edits: the layer re-rolled, the tone, the tempo', d.layer_seeds === LAYERS.map((l) => spec.layerSeeds[l] >>> 0).join('|')
+    && d.rolled === 'bass' && d.tone === '0.2|0.75|0.05' && Number(d.bpm) === 101 && p.refused === 0, JSON.stringify(d));
+  // The events, posted every 50 ms of audio (or at once), with the grids.
+  const posted = p.sent.filter((m) => m.type === 'events');
+  const ev = posted.flatMap((m) => m.events);
+  const kinds = [];
+  for (let i = 0; i < ev.length; i += 4) kinds.push(ev[i + 1]);
+  const steps = [];
+  for (let i = 0; i < ev.length; i += 4) if (ev[i + 1] === KIND.step) steps.push(ev[i + 3]);
+  check('the events reach the page: the loop, its first pass, every step in order', kinds[0] === KIND.loop && kinds.includes(KIND.pass) && steps.length > 4 && steps.every((s, i) => s === i));
+  const grids = posted.flatMap((m) => m.grids);
+  check('with the layers\' grids of the pass, read as it begins', grids.length >= 2 && grids.every((g) => g.grid.length === 5) && grids[0].grid.some((row) => row.some((v) => v > 0)));
+  check('posted a few times a second, not every block', posted.length > 5 && posted.length < 40, `${posted.length}`);
+  // The track's end: one pass, the loop armed for it starts there.
+  const next = newSpec(r.seed32());
+  p.receive({ type: 'playTrack', kind: 1, count: 1, arm: { seed: next.seed, ask: askOf(next), fade: END_FADE } });
+  const total = (spec.bars * (spec.stepsPerBar || 16) * 60) / spec.bpm / 4;
+  render(p, total + 2);
+  const later = p.sent.filter((m) => m.type === 'events').flatMap((m) => m.events);
+  let ended = false;
+  let took = null;
+  for (let i = 0; i < later.length; i += 4) {
+    if (later[i + 1] === KIND.end) ended = true;
+    if (ended && later[i + 1] === KIND.loop) took = later[i + 2];
+  }
+  check('the track ends where the slider set it, and the loop armed for it starts there', ended && took === next.seed >>> 0, `${ended} ${took}`);
+  // A tempo the core refuses is counted, for Diagnostics.
+  const q = make();
+  q.receive({ type: 'playLoad', seed, ask: { ...askOf(spec), bpm: 400 }, at: 0 });
+  check('a refused edit is counted', q.refused === 1);
+  // A resumed load (the quality switch) doesn't wait out its lateFloor.
+  const late = newSpec(seed, 'lateFloor=on');
+  const first = (resumed) => {
+    const x = make();
+    x.receive({ type: 'playLoad', seed, ask: askOf(late), at: 0, resumed });
+    return render(x, 3);
+  };
+  check('a resumed load plays its lateFloor loop otherwise than a load does', !same(first(true), first(false)));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

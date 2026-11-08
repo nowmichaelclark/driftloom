@@ -11,12 +11,14 @@
 // touched by any of it. And (queue item 47) hidden or frozen, the core is
 // planned for a deep output buffer at once: Next, Play and the catch-up after
 // a freeze start past it, the old loop playing on until the new one starts;
-// visible changes keep their 60 ms. And (queue item 82) with
-// `?engine=player` the core's player is handed the loop, at Play or as the
-// core arrives, and the controls; the page sends no notes of its own.
+// visible changes keep their 60 ms. And (queue item 94b) the app's default
+// engine, js/player.js, hands the core's player the loop, the controls and
+// the track, and draws the core's events; it decides no notes.
 
 import { Engine, UNREPEATABLE_FROM } from '../js/engine.js';
-import { newSpec, rerollLayer, vibesOf } from '../js/generator.js';
+import { PlayerEngine, MOMENT, KIND, CHANGE_FADE, END_FADE } from '../js/player.js';
+import { boundary } from '../js/quality.js';
+import { newSpec, rerollLayer, vibesOf, LAYERS } from '../js/generator.js';
 import { echoTimeOf } from '../js/choices.js';
 
 // The engine draws its jitter from Math.random: seeded, so a run is a run.
@@ -789,66 +791,131 @@ console.log('\nThe space (queue item 65)');
   check('a light texture (bells, chimes, drops) says so', light && light.engine.space.light === true);
 }
 
+console.log('\nThe core\'s player (queue item 94b)');
 {
-  // `?engine=player` (queue item 82): the core's player plays the notes. The
-  // engine hands it the loop, a moment on, at Play, or as the core arrives
-  // if Play came first; sends no notes itself once it has; and passes the
-  // controls on.
+  // The core's player (queue item 94b, js/player.js): the app's engine by
+  // default. It waits for a core still on its way, then hands it the loop
+  // (its seed, request and a code's edits), the controls and the track; a
+  // new loop is a change with a crossfade, a re-roll a revision in place;
+  // Pause stops the core and Play goes on where it stood; the cursor, the
+  // grid, the passes and the track's end come from the core's events, and
+  // the loop armed for the track's end is taken without a second change.
   const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
   const posts = [];
-  const core = new Proxy({}, { get: (t, prop) => (...args) => posts.push([prop, ...args]) });
-  const notes = [];
-  const target = {
-    queuesAhead: true, renderAhead: null, aheadMeasured: true, worstAhead: 0, player: false, core: null,
-    channels: { drums: { gain: 'drums' }, bass: { gain: 'bass' }, chords: { gain: 'chords' }, melody: { gain: 'melody' }, texture: { gain: 'texture' } },
+  const core = {
+    player: true, failed: null, onevents: null, playerAt: null, eventsLost: 0, refused: 0,
   };
-  const synth = new Proxy(target, {
-    get(t, prop) {
-      if (prop in t) return t[prop];
-      return (...args) => { if (['drum', 'bass', 'pad', 'voice', 'texture'].includes(prop)) notes.push(prop); };
-    },
-  });
-  const engine = new Engine(ctx, synth);
+  for (const m of ['playLoad', 'playChange', 'playRevise', 'playTrack', 'playArm', 'playTone', 'playStop', 'playResume', 'playWander', 'playMute', 'playTempo', 'playVolume', 'cancel']) {
+    core[m] = (...args) => posts.push([m, ...args]);
+  }
+  const synthCalls = [];
+  const synth = { core: null, userVolume: 0.7, unsilence: () => synthCalls.push('unsilence'), silence: () => synthCalls.push('silence') };
+  const engine = new PlayerEngine(ctx, synth);
+  engine.driftOn = true;
+  engine.driftAmount = 1;
   const spec = newSpec(8282, 'key=D|G,scale=dorian|aeolian,style=tide|shrine,voice.melody=kalimba|marimba,voice.bass=sub,layer.texture=on,layer.drums=off');
-  spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
+  spec.mutes = { drums: false, bass: true, chords: false, melody: false, texture: false };
   engine.load(spec);
   engine.start();
-  engine.clock.stop();
-  const run = (to) => {
-    while (ctx.currentTime < to - 1e-9) {
-      ctx.currentTime = +(ctx.currentTime + 0.05).toFixed(6);
-      engine._tick();
-    }
-  };
-  run(0.5);
-  check('player: before the core, the page plays the notes', notes.length > 0 && posts.length === 0);
-  // The core arrives.
-  target.player = true;
-  target.core = core;
-  const arrived = ctx.currentTime;
-  run(0.55);
+  check('player: before the core, nothing is sent and Play is heard as the core arrives', posts.length === 0 && synthCalls[0] === 'unsilence');
+  synth.core = core;
+  engine.coreArrived();
   const load = posts.find((p) => p[0] === 'playLoad');
-  check('player: as the core arrives, the player is handed the loop of the spec\'s seed', !!load && load[1] === spec.seed >>> 0);
-  check('player: the key and the mode asked go with it, a bit each (queue item 89)', !!load && load[8] === ((1 << 2) | (1 << 7)) && load[9] === 0b11, JSON.stringify(load && load.slice(7)));
-  check('player: and the style asked, a bit by place in the profiles\' frozen order (queue item 90)', !!load && load[10] === ((1 << 12) | (1 << 13)), JSON.stringify(load && load.slice(7)));
-  check('player: and the voices and layers, a mask and a state for each layer in the layers\' order (queue item 91)', !!load
-  && JSON.stringify(load[11]) === JSON.stringify([0, 1 << 0, 0, (1 << 19) | (1 << 20), 0]) && JSON.stringify(load[12]) === JSON.stringify([2, 0, 0, 0, 1]), JSON.stringify(load && load.slice(10)));
-check('player: its first step a moment on, and the cursor starts there with it', !!load && load[3] >= arrived + 0.4 && engine.step <= 1 && engine.loopCount === 0);
-  check('player: the layers\' mutes and the tempo go with it', posts.filter((p) => p[0] === 'playMute').length === 5 && posts.some((p) => p[0] === 'playTempo' && p[1] === spec.bpm));
-  const before = notes.length;
-  run(3);
-  check('player: the page sends no notes once the player has the loop', notes.length === before);
+  check('player: as the core arrives, it is handed the loop of the spec\'s seed, as soon as it is made', !!load && load[1] === spec.seed >>> 0 && load[3] === 0 && load[4] === false);
+  const ask = load && load[2];
+  check('player: the key and the mode asked go with it, a bit each (queue item 89)', !!ask && ask.keys === ((1 << 2) | (1 << 7)) && ask.scales === 0b11, JSON.stringify(ask));
+  check('player: and the style asked, a bit by place in the profiles\' frozen order (queue item 90)', !!ask && ask.styles === ((1 << 12) | (1 << 13)));
+  check('player: and the voices and layers, a mask and a state for each layer in the layers\' order (queue item 91)', !!ask
+    && JSON.stringify(ask.voices) === JSON.stringify([0, 1 << 0, 0, (1 << 19) | (1 << 20), 0]) && JSON.stringify(ask.layers) === JSON.stringify([2, 0, 0, 0, 1]));
+  check('player: and a code\'s edits, whole: every layer\'s seed, the tone and the tempo (queue item 94a)', !!ask
+    && ask.seeds.length === 5 && ask.seeds.every(([i, s, rolled]) => s === spec.layerSeeds[LAYERS[i]] >>> 0 && rolled === false)
+    && JSON.stringify(ask.tone) === JSON.stringify([spec.tone.warmth, spec.tone.space, spec.tone.wobble]) && ask.bpm === spec.bpm);
+  const wanderAt = posts.findIndex((p) => p[0] === 'playWander');
+  check('player: the wander goes before the loop, its first pass drawn with it', wanderAt >= 0 && wanderAt < posts.indexOf(load));
+  check('player: the volume, the layers\' mutes and the track go with it', posts.some((p) => p[0] === 'playVolume' && p[1] === 0.7)
+    && posts.filter((p) => p[0] === 'playMute').length === 5 && posts.some((p) => p[0] === 'playMute' && p[1] === 1 && p[2] === true)
+    && posts.some((p) => p[0] === 'playTrack' && p[1] === 0));
+  // The controls.
   posts.length = 0;
-  spec.mutes.drums = true;
-  engine.redecide();
-  check('player: a mute is passed on', posts.some((p) => p[0] === 'playMute' && p[1] === 0 && p[2] === true));
+  engine.setMute('drums', true);
+  engine.setTempo(91);
+  engine.setTone({ warmth: 0.2, space: 0.3, wobble: 0.4 });
+  engine.setWander(2.4);
+  const salted = posts.find((p) => p[0] === 'playWander');
+  engine.setWander(0);
+  check('player: a mute, the tempo and the tone are passed on', posts.some((p) => p[0] === 'playMute' && p[1] === 0 && p[2] === true)
+    && posts.some((p) => p[0] === 'playTempo' && p[1] === 91) && posts.some((p) => p[0] === 'playTone' && p[1].warmth === 0.2));
+  check('player: the wander, salted in its upper range, and off at 0 (queue item 92)', !!salted && salted[1] === 2.4 && salted[2] === engine.salt && salted[2] !== 0
+    && posts.some((p) => p[0] === 'playWander' && p[1] === 0 && p[2] === 0) && engine.driftOn === false);
+  engine.setWander(1);
+  // A re-roll: made again in its place, the play's salt kept.
+  posts.length = 0;
+  const salt = engine.salt;
+  const rolled = rerollLayer(spec, 'melody');
+  engine.load(rolled, { keepPosition: true });
+  const revise = posts.find((p) => p[0] === 'playRevise');
+  check('player: a re-roll is a revision in place, its layer re-rolled, the salt kept', !!revise && revise[1] === spec.seed >>> 0
+    && revise[2].seeds[3][1] === rolled.layerSeeds.melody >>> 0 && revise[2].seeds[3][2] === true && engine.salt === salt && !posts.some((p) => p[0] === 'playChange'));
+  // A new loop while playing: a change now, with a crossfade.
+  posts.length = 0;
+  const other = newSpec(9393);
+  other.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
+  engine.load(other);
+  const change = posts.find((p) => p[0] === 'playChange');
+  check('player: Next is a change now, the old loop crossfading over the core\'s second', !!change && change[1] === other.seed >>> 0 && change[3] === MOMENT.now && change[4] === CHANGE_FADE);
+  check('player: and a new play draws its own salt', engine.salt !== salt && engine.salt !== 0);
+  // The events: the cursor, the grid of each pass, the track's end.
+  const sd = engine.stepDur;
+  const grid = LAYERS.map((l, i) => (i === 0 ? [0.9, 0, 0.4, 0] : []));
+  core.onevents({
+    events: [1, KIND.loop, other.seed, 0, 1, KIND.pass, 0, 0, 1, KIND.step, 0, 0, 1 + sd, KIND.step, 1, 1, 1 + 2 * sd, KIND.step, 2, 2],
+    grids: [{ at: 0, grid }], trackEnd: -1,
+  });
+  ctx.currentTime = 1 + sd + 0.001;
+  const lit = engine.visualStep();
+  check('player: the cursor follows the core\'s steps, at their time', lit === 1 && engine.visualQueue.length === 1, `${lit}`);
+  check('player: the grid is the core\'s, from its pass\'s time', engine.live.tracks.drums.length === 2 && engine.live.tracks.drums[1].step === 2 && engine.live.cycles.drums === 4);
+  check('player: where it stands, for the quality switch\'s boundary', engine.step === 3 && Math.abs(engine.nextStepTime - (1 + 3 * sd)) < 1e-9);
+  const at = boundary(engine, 16, ctx.currentTime);
+  check('player: the next pass\'s boundary is its line', Math.abs(at - (1 + 16 * sd)) < 1e-9, `${at}`);
+  // The length slider: the loop that follows armed for the track's end, in
+  // the same message.
+  posts.length = 0;
+  other.playFor = 2;
+  const next = newSpec(9494);
+  engine.trackChanged(next);
+  const track = posts.find((p) => p[0] === 'playTrack');
+  check('player: the track and the loop armed for its end go together', !!track && track[1] === 1 && track[2] === 2 && track[3].seed === next.seed >>> 0 && track[3].fade === END_FADE);
+  core.onevents({ events: [], trackEnd: 96 });
+  check('player: the track\'s end, as the core counts it', engine.endStep() === 96);
+  // Pause, then Play: the core stops and goes on where it stood; the armed
+  // loop goes again (Pause dropped it), the track's count is not restarted.
   posts.length = 0;
   engine.stop();
-  check('player: Pause stops the player', posts.some((p) => p[0] === 'playStop'));
+  check('player: Pause stops the core, drops what has not started, and silences', posts.some((p) => p[0] === 'playStop') && posts.some((p) => p[0] === 'cancel') && synthCalls.includes('silence'));
   posts.length = 0;
   engine.start();
-  engine.clock.stop();
-  check('player: Play again hands it the loop again', posts.some((p) => p[0] === 'playLoad'));
+  check('player: Play goes on where it stood, the armed loop sent again, the track not restarted', posts.some((p) => p[0] === 'playResume')
+    && !posts.some((p) => p[0] === 'playLoad') && posts.some((p) => p[0] === 'playArm' && p[1].seed === next.seed >>> 0) && !posts.some((p) => p[0] === 'playTrack'));
+  // The track ends: the core has started the armed loop; the page catches up
+  // without a second change.
+  let ended = 0;
+  engine.onTrackEnd = () => ended++;
+  core.onevents({ events: [5, KIND.end, 0, 96, 5, KIND.loop, next.seed, 0], trackEnd: -1 });
+  posts.length = 0;
+  next.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
+  engine.load(next);
+  check('player: at the track\'s end the page is told, and takes the loop the core took', ended === 1 && !posts.some((p) => p[0] === 'playChange' || p[0] === 'playLoad'));
+  posts.length = 0;
+  engine.load(newSpec(9595));
+  check('player: a loop after that is a change again', posts.some((p) => p[0] === 'playChange'));
+  // The quality switch's new engine: the loop from its top, resumed.
+  posts.length = 0;
+  const again = new PlayerEngine(ctx, synth);
+  again.load(next, { resume: true });
+  again.start();
+  const resumed = posts.find((p) => p[0] === 'playLoad');
+  check('player: a loop resumed on a new core is a load from its top, its lateFloor not waited again', !!resumed && resumed[1] === next.seed >>> 0 && resumed[4] === true);
 }
 
 console.log('\nLength (queue items 88 and 88b)');
@@ -992,20 +1059,6 @@ console.log('\n"Let the loop wander", unrepeatable in its upper range (queue ite
   const kept = e.salt === salt;
   e.load(newSpec(7401));
   check('a re-roll keeps the play\'s salt, a new loop draws its own', kept && e.salt !== salt && e.salt !== 0);
-  // The player is handed the salt with the wander.
-  const posts = [];
-  const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
-  const { synth } = stubSynth(true);
-  const fakeCore = { playWander: (amount, s) => posts.push([amount, s]), playLoad() {}, playMute() {}, playTempo() {} };
-  const engine = new Engine(ctx, new Proxy(synth, { get: (t, p) => (p === 'core' ? fakeCore : t[p]) }));
-  engine.driftOn = true;
-  engine.driftAmount = 2.4;
-  engine.load(newSpec(7402));
-  engine._playerControls();
-  engine.driftAmount = 1;
-  engine._playerControls();
-  check('the core\'s player is told the salt in the upper range, and 0 below it', posts.length === 2 && posts[0][1] === engine.salt && posts[0][1] !== 0 && posts[1][1] === 0, JSON.stringify(posts));
-  engine.clock.dispose();
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
