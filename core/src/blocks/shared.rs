@@ -15,7 +15,7 @@ use super::osc::{Part, Pitch};
 
 /// `midiToFreq` in `js/theory.js`.
 #[must_use]
-pub fn midi_to_freq(midi: f64) -> f64 {
+pub fn midi_to_freq(midi: f64) -> f64 { #[cfg(feature = "sketch")] let midi = midi + crate::tuning::get("master.CENTS", 0.0) / 100.0;
     440.0 * math::pow(2.0, (midi - 69.0) / 12.0)
 }
 

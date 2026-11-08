@@ -631,7 +631,7 @@ pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop
     r.f();
     let lean = lean_of(Some(LATEFLOOR.long_vibes), v);
     let u = r.f();
-    let [lo, hi] = LATEFLOOR.seconds;
+    let [lo, hi] = LATEFLOOR.seconds; #[cfg(feature = "sketch")] let hi = crate::tuning::get("latefloor.SECONDS_MAX", hi);
     let secs = p.get("lateFloor.seconds").unwrap_or_else(|| lo + math::pow(u, 1.0 / lean) * (hi - lo));
     let order = r.weighted(LATEFLOOR.orders).unwrap_or("together");
     let order = p.word("lateFloor.order").unwrap_or(order);

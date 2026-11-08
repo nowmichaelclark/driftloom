@@ -274,7 +274,7 @@ impl Render {
     }
 
     fn finish_part(&mut self, cx: &Cx) {
-        let spec = cx.spec;
+        let spec = cx.spec; #[cfg(feature = "sketch")] self.drum_levers(cx);
         let spb = cx.spb;
         if self.chord_shift != 0.0 {
             #[allow(clippy::cast_possible_truncation)] // whole octaves
@@ -451,7 +451,7 @@ impl Render {
     /// The choice or the option is not in the data.
     #[cfg(feature = "sketch")]
     pub fn force(&mut self, id: &str, option: Option<&str>) -> Result<(), &'static str> {
-        let i = CHOICES.iter().position(|c| c.id == id).ok_or("no such choice")?;
+        let Some(i) = CHOICES.iter().position(|c| c.id == id) else { return crate::levers::force(id, option) };
         let Some(name) = option else {
             self.forced[i] = NOT_FORCED;
             return Ok(());
@@ -1050,6 +1050,18 @@ pub fn fixed3(x: f64) -> f64 {
     };
     let v = n as f64 / 1000.0;
     if neg { -v } else { v }
+}
+
+// The sketch levers' hooks (queue item 99). They sit here, after the code the
+// app runs, so that the lines of that code do not move: the player's module
+// holds its panic locations by line (`tools/build-core.sh --check`).
+impl Render {
+    /// The levers that re-time the kit (queue item 99): tripletKit, then
+    /// dottedPulse. Off, they change nothing.
+    #[cfg(feature = "sketch")]
+    fn drum_levers(&mut self, cx: &Cx) {
+        crate::levers::drum_levers(&mut self.drums, cx.metre == Metre::SixEight, layer_bars(cx, Layer::Drums) * cx.spb, cx.spb);
+    }
 }
 
 #[cfg(test)]

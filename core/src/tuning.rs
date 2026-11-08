@@ -20,7 +20,25 @@ use core::sync::atomic::{AtomicU64, Ordering};
 
 /// The constants that can move: their names, as `--set` spells them. A
 /// constant is in this list or it cannot be set.
-pub const NAMES: [&str; 1] = ["bass.LIFT_DB"];
+///
+/// - `bass.LIFT_DB`: the bass layer's lift (item 83).
+/// - `latefloor.SECONDS_MAX`: the longest wait lateFloor draws, in seconds
+///   (the data's is 30); lets the wait run past it, as a slow opening's does
+///   (queue item 99). The draw stays what it is for the same seed, spread
+///   over the wider range (`choices::late_floor_of`).
+/// - `latefloor.FADE`: seconds the kit and the bass take to rise to their
+///   level after they arrive (0, the data's, is at once); a velocity ramp on
+///   each from its arrival (`Sequencer::schedule_step`).
+/// - `master.CENTS`: the whole loop's tuning against A440, in cents; every
+///   pitched voice reads it where a note becomes Hz (`blocks::midi_to_freq`).
+///   The kick's own tuned pitch and the noise voices keep theirs.
+/// - `chords.RETUNE`: 1 sends the chords channel a retune to the whole chord
+///   at every chord of the progression, where today it hears one only while
+///   the organ plays (0, the default). A chord sketch (`HEARS` a retune)
+///   needs no silent organ with it, and sees an arpeggio's chord whole
+///   (`Sequencer::retune_chords`). A loop with the organ keeps the organ's
+///   own.
+pub const NAMES: [&str; 5] = ["bass.LIFT_DB", "latefloor.SECONDS_MAX", "latefloor.FADE", "master.CENTS", "chords.RETUNE"];
 
 /// The bits of NaN, which means "not set" (every real value is a finite
 /// number, which `set` insists on).

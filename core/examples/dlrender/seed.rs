@@ -263,13 +263,21 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
     if way.choices {
         // The options the loop drew other than today's, as the brain's
         // Session 26 index listed them: `lateFloor`, or `kick:soft`.
-        let drawn: Vec<String> = dlcore::generator::data::CHOICES
+        #[cfg_attr(not(feature = "sketch"), allow(unused_mut))]
+        let mut drawn: Vec<String> = dlcore::generator::data::CHOICES
             .iter()
             .filter_map(|c| {
                 let option = player.generator().render().choice(c.id)?;
                 (Some(option) != c.options.first().map(|o| o.0)).then(|| if option == "on" { c.id.to_string() } else { format!("{}:{option}", c.id) })
             })
             .collect();
+        // The sketch levers that are no choice (queue item 99), where a clip
+        // forced one.
+        #[cfg(feature = "sketch")]
+        drawn.extend(dlcore::levers::LEVERS.iter().filter_map(|l| {
+            let option = dlcore::levers::named(l.id)?;
+            (option != "today").then(|| if option == "on" { l.id.to_string() } else { format!("{}:{option}", l.id) })
+        }));
         let _ = write!(line, " choices={}", if drawn.is_empty() { "-".to_string() } else { drawn.join(",") });
     }
     Ok(Rendered { line, samples, calls: calls.then_some(lines) })

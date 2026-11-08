@@ -57,8 +57,8 @@ pub mod resample;
 pub mod rng;
 pub mod space;
 pub mod timeline;
-#[cfg(feature = "sketch")]
-pub mod tuning;
+#[cfg(feature = "sketch")] pub mod levers;
+#[cfg(feature = "sketch")] pub mod tuning;
 pub mod wave;
 
 #[cfg(all(target_arch = "wasm32", feature = "web"))]

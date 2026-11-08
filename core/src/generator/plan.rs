@@ -526,7 +526,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
     let choir = cx.choir;
     let mood = spec.feel_for(Layer::Chords).lift;
 
-    let mut s = 0.0;
+    let mut s = 0.0; #[cfg(feature = "sketch")] let mut planer = crate::levers::Planer::new(chords_seed);
     while s < slot_count {
         let si = js::index(s);
         let chord = match &lc {
@@ -554,7 +554,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                 notes.push(note(ninth));
             }
         }
-        voice_in_range(&mut notes, 55, 79);
+        #[cfg(feature = "sketch")] planer.notes(s == 0.0, spec.root, scale, &mut notes); voice_in_range(&mut notes, 55, 79);
         if let Some(p) = &prev {
             let here = mean(&notes);
             let there = mean(p);
@@ -589,7 +589,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
             bass_degree: pedal_degree,
             bass_midi: scale_pitch(spec.root, steps, pedal_degree, 0.0),
             steps: spelled,
-        });
+        }); #[cfg(feature = "sketch")] planer.apply(out.slots.last_mut());
 
         let mut hits: List<[f64; 2], 5> = List::new();
         if chords_per_bar == 2.0 {
