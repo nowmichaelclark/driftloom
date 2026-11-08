@@ -27,14 +27,28 @@
 //     "force": { "lateFloor": "on" },        // choices forced ("today": none)
 //     "set": { "bass.LIFT_DB": 3 },          // constants moved (core/src/tuning.rs)
 //     "pin": { "sub_duck.depth": 0.5 },      // a channel block's setting pinned
+//     "space": { "spread-chords": 1.4 },     // a space setting pinned, past its range if you like (item 99);
+//                                            //   "0.6:1.2" draws it from a range instead
+//     "route": { "sketch": "drums" },        // a layer's signal into the sketch block's mod ("sketch.1" for
+//                                            //   mod 1); the sketch must declare MODS (item 99)
 //     "sketch": true }                       // core/sketch/block.rs on, where.txt says where
 //
-// Forced choices, constants and pins are the sketch build's: "force" moves
-// onto the request once item 85 lands. A clip with none of them is the
-// player's plain render, bit for bit run to run (and the same bits as the
-// build without the feature: the sketch slot is off unless a job turns it
-// on). The index lists the options a loop drew other than today's; a forced
-// one shows up there.
+// "force" also takes the levers that are not in the data (item 99; core/src/levers.rs):
+//   "tripletKit": "on"                       the kit's hats and ghost hits on the thirds of the beat, the kick on it
+//   "dottedPulse": "pulse" | "kick332"       a soft rim every three eighths, or the kick on a 3-3-2
+//   "planingSevenths": "on"                  every chord a major seventh, roots a step or a minor third apart
+// and "set" takes these constants (core/src/tuning.rs, item 99):
+//   "latefloor.SECONDS_MAX": 90              the longest lateFloor wait, in seconds (the data's is 30)
+//   "latefloor.FADE": 12                     seconds the kit and bass take to rise once they arrive (0: at once)
+//   "master.CENTS": -25                      the whole loop's tuning against A440, in cents
+//   "chords.RETUNE": 1                       the chords channel hears a retune to each whole chord, with no organ
+//
+// Forced choices, levers, constants, pins, spaces and routes are the sketch
+// build's: "force" moves onto the request once item 85 lands. A clip with
+// none of them is the player's plain render, bit for bit run to run (and the
+// same bits as the build without the feature: the sketch slot is off unless
+// a job turns it on, and so is every lever). The index lists the options a
+// loop drew other than today's; a forced one, a lever too, shows up there.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -104,6 +118,8 @@ const flagsOf = (j) => {
   for (const [id, option] of Object.entries(j.force ?? {})) a.push('--force', `${id}=${option}`);
   for (const [name, v] of Object.entries(j.set ?? {})) a.push('--set', `${name}=${v}`);
   for (const [name, v] of Object.entries(j.pin ?? {})) a.push('--pin', `${name}=${v}`);
+  for (const [name, v] of Object.entries(j.space ?? {})) a.push('--space', `${name}=${v}`);
+  for (const [name, v] of Object.entries(j.route ?? {})) a.push('--route', `${name}=${v}`);
   if (j.sketch) a.push('--sketch');
   return a;
 };
@@ -134,6 +150,8 @@ for (const j of jobs) {
     forced: j.force ?? {},
     set: j.set ?? {},
     pin: j.pin ?? {},
+    space: j.space ?? {},
+    route: j.route ?? {},
     sketch: Boolean(j.sketch),
     hash: get('hash'),
   };
@@ -153,6 +171,8 @@ for (const r of index) {
     ...Object.entries(r.forced).map(([k, v]) => `force ${k}=${v}`),
     ...Object.entries(r.set).map(([k, v]) => `set ${k}=${v}`),
     ...Object.entries(r.pin).map(([k, v]) => `pin ${k}=${v}`),
+    ...Object.entries(r.space).map(([k, v]) => `space ${k}=${v}`),
+    ...Object.entries(r.route).map(([k, v]) => `route ${k}=${v}`),
     ...(r.sketch ? ['sketch'] : []),
   ].join(', ') || '-';
   const where = r.corpus ? ` (corpus ${r.corpus[0]} #${r.corpus[1]})` : '';

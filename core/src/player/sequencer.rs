@@ -568,7 +568,7 @@ impl Sequencer {
                 // the notes still counted, so no draw moves).
                 if late.is_some_and(|l| abs < l.drums) {
                     continue;
-                }
+                } #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.drums, sd));
                 let jitter = if e.roll { 0.0 } else { (unit(key, DRUMS_CHANNEL, salt::HOST_JITTER, 0) - 0.5) * 0.008 };
                 let at = t + micro + jitter;
                 let kicked = inst == "kick" || inst == "softkick";
@@ -602,7 +602,7 @@ impl Sequencer {
                 let key = key_of(Layer::Bass);
                 if late.is_some_and(|l| abs < l.bass) {
                     continue;
-                }
+                } #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.bass, sd));
                 synth.budget.begin(Some(Layer::Bass), key);
                 if drone {
                     synth.budget.keep();
@@ -666,7 +666,7 @@ impl Sequencer {
             }
             if s.organ.is_some() {
                 self.organ(host, synth, lp, s_at, t, sd, abs);
-            }
+            } #[cfg(feature = "sketch")] if s.organ.is_none() { Self::retune_chords(host, lp, s_at, t); }
             if self.glass {
                 Self::glass(host, synth, lp, s_at, t, sd, Key { seed, pass, step: step32, ord: 0 });
             }
@@ -945,4 +945,50 @@ fn graces_of(orn: Option<&str>, midi: f64, root: f64, steps: &[f64]) -> ([f64; 2
     let Some(orn) = orn.filter(|o| !o.is_empty()) else { return ([0.0; 2], 0) };
     let above = neighbour_in_scale(midi, root, steps, 1.0);
     if orn == "turn" { ([above, neighbour_in_scale(midi, root, steps, -1.0)], 2) } else { ([above, 0.0], 1) }
+}
+
+// The sketch levers' hooks (queue item 99), after the code the app runs so
+// that the lines of that code do not move (`tools/build-core.sh --check`
+// holds the player's module to its panic locations).
+#[cfg(feature = "sketch")]
+impl Sequencer {
+    /// At the first step of a chord of the progression (a slot of the
+    /// harmony), send the chords channel a retune to the whole chord (the
+    /// `chords.RETUNE` constant, `tuning`; the sketch build only): the notes
+    /// of every chord event in the slot, so an arpeggio's single notes
+    /// arrive as the chord they make. Today only the organ's loops retune
+    /// (`Synth::organ_chord`), so a chord sketch had to be played with a
+    /// silent organ. Held voices that hear a retune (the choir's) follow it
+    /// too. A loop with the organ keeps the organ's own.
+    fn retune_chords<H: Host>(host: &mut H, lp: &Loop, s: f64, t: f64) {
+        use crate::block::event::NOTES;
+        if crate::tuning::get("chords.RETUNE", 0.0) == 0.0 {
+            return;
+        }
+        let Some(slot) = lp.base.harmony.slots.iter().find(|x| x.start_step == s) else { return };
+        let end = slot.start_step + slot.length_steps;
+        let mut chord = [i16::MIN; NOTES];
+        let mut n = 0;
+        for (i, e) in lp.base.chords.iter().enumerate() {
+            let (vel, played) = lp.chord(i, e);
+            if e.step < slot.start_step || e.step >= end || !truthy(vel) {
+                continue;
+            }
+            for &m in played.notes() {
+                if n < NOTES && !chord[..n].contains(&m) {
+                    chord[n] = m;
+                    n += 1;
+                }
+            }
+        }
+        if n == 0 {
+            return;
+        }
+        chord[..n].sort_unstable();
+        let mut notes = [0.0; NOTES];
+        for (x, &m) in notes.iter_mut().zip(&chord[..n]) {
+            *x = f64::from(m);
+        }
+        host.event(CHORDS, crate::block::Event::retune(t, &notes[..n]));
+    }
 }
