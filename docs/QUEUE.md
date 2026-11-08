@@ -7,12 +7,13 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-07:** `main` is at v149. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-08:** `main` is at v149. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
 (2026-11-07). **Phase 3: item 93 done** (the player's module, 636 KB; the
-brain accepted the size, `docs/notes/93-module-size.md`); **next: 94a.** Item
+brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
+(#337); **next: 94b, and 99 alongside it** (the sketch build only). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -149,15 +150,23 @@ lookahead and decides no notes (`?engine=page` keeps today's path, for
 comparison, until 97). Next, Previous and the length slider's hand-over
 are `Player::change` at the moments the app uses (a crossfade; 88b's
 "next phrase line with a short fade" when the slider ends a long loop);
-the automatic lite switch (87b) becomes a crossfade on `Player::change`
-("For phase 3"). The page is free to stall: the worklet has what it needs.
+the automatic lite switch (87b) keeps today's fade and the loop from its
+top, now on the player (brain, Session 30: a crossfade needs two cores at
+once, twice the cost on the slow device that is switching, or a mix
+switchable while it plays, which is core work; Mikey, 2026-11-03: the fade
+"doesn't bother" him). A one-core crossfade is a later item. The page is
+free to stall: the worklet has what it needs. If 94b needs a core change,
+keep it small: item 99 may be in `core/` at the same time (the sketch build
+only).
 
 **Yardsticks:** every row of 94a's table works in the app (a check per
 row, scripted where it can be); promise 1's stall test on the player (the
 page's main thread blocked for 2 s, hidden for a minute, frozen): no late
 note, no underrun; `tools/views.mjs` on every view; then Mikey on his
 phone and tablet with Diagnostics ("For phase 3": the tablet's new-loop
-case, the phones' costs).
+case, the phones' costs). **Merge after Mikey's check** on the PR's preview
+(Mikey, 2026-11-03: a check on the tablet before the app switches), not on
+green CI alone; then the brain's phase check.
 
 ## 95. The picks through the core's commands (was 53)
 
