@@ -298,8 +298,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   `core/src/generator/list.rs` (`List`'s and `Maybe`'s `MaybeUninit`) comes
   out (promise 6: `unsafe` only at the C boundary; on `main` it is only in
   `capi.rs` and `wasm.rs`), done safely with a zero value per held type,
-  which `a_new_player_is_all_zeros` already guards. Then the hands open the
-  PR and merge under the policy.
+  which `a_new_player_is_all_zeros` already guards. **Merged** (#331,
+  2026-11-08, `d5af578`): `unsafe` gone (an `Empty` trait; the zeros test in
+  `core/tests/zeros.rs`), 636,125 bytes (217 KB gzipped), baseline "Nothing
+  moved", the 80 seeds bit-identical, all 10 CI checks green; Done line #333.
+  **Next: 94a.**
 - **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-07): phase 2 is done
   and proven.** Checked through item 87 on the way (#298-#311), then at the
   phase's end on `main` at v149 (da42200): every check passes, and Mikey's
@@ -314,9 +317,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   which he left blank.
 - **Ears:** Ears 10, 10b and 11 done (piles 4 and 5, #314, #316, #326),
   on Mikey's second account; Ears 12 done (#329, 2026-11-07: Synthesist,
-  Animal Crossing and three Nonlocal Forecast cards); Ears 12b next
-  (*Triangular Reformat* and *Pyramid*, with a chord-color reading past the
-  seventh first; prompt given in Session 30); then Ears 13, the second synthesis (Opus 5.5, high).
+  Animal Crossing and three Nonlocal Forecast cards); Ears 12b done (#332,
+  2026-11-08: *Triangular Reformat*, *Pyramid*, six more K.K. songs, and
+  `theory.py`'s colors reading past the seventh). Ears 13 (the second
+  synthesis, sketches on the core with item 83's folder) prompt given in
+  Session 30; it runs during phase 3, and its approved batch is built after
+  phase 3, the second synthesis (Opus 5.5, high).
   Mikey asked (2026-11-07) whether the ears must finish by a phase: no; Ears
   12-13 by the end of phase 3, for the batch after it; piles 7-18 have no
   deadline (phase 5's block catalogue, long-form composing, phase 8).
