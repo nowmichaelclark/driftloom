@@ -116,7 +116,8 @@ fn fresh(way: &Way) -> (Box<Core>, Box<Player>) {
 /// Change `i`: what it asks, and its measure.
 fn measure(i: usize, seeds: (u32, u32), way: &Way) -> Measured {
     let (old, new) = seeds;
-    let moment = way.moment.unwrap_or(Moment::ALL[i % Moment::ALL.len()]);
+    // The five on the loop's own grid (the track's end waits for a length).
+    let moment = way.moment.unwrap_or(Moment::ALL[i % 5]);
     let request = if i % 2 == 1 { Request::new().with_theme(old) } else { Request::new() };
     let mut r = Rng::new(0x86_0000 + i as u32);
     let ask = 2.0 + r.range(0.0, 5.0);

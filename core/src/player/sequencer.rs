@@ -374,6 +374,10 @@ impl Sequencer {
         let Some(form) = lp.base.form.as_ref() else { return false };
         for layer in LAYERS {
             let sched = &form[layer as usize];
+            // A layer re-rolled plays throughout (queue item 94a).
+            if sched.is_empty() {
+                return false;
+            }
             let n = js::num(sched.len());
             let cycle = lp.cycle(layer);
             let b = js::floor(((if cycle == total { rel } else { abs }) % cycle) / spb) % n;

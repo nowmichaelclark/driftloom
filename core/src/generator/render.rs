@@ -330,6 +330,11 @@ impl Render {
     fn apply_form(&mut self, layer: Layer, spb: f64) {
         let Some(form) = self.form.as_ref() else { return };
         let sched = &form[layer as usize];
+        // A layer re-rolled has no schedule and plays throughout (queue item
+        // 94a; `applyForm(events, null)`).
+        if sched.is_empty() {
+            return;
+        }
         let n = sched.len().max(1);
         let off = |step: f64| !sched.get(js::index(js::floor(step / spb)) % n).copied().unwrap_or(false);
         match layer {

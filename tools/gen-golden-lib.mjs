@@ -3,7 +3,7 @@
 // browser JavaScript, so both run the very same code; the file format, the
 // canonical text and the cases are documented in tools/gen-golden.mjs.
 
-import { newSpec, planOf, vibeSelection, choirOf, themeRests, LAYERS } from '../js/generator.js';
+import { newSpec, planOf, vibeSelection, choirOf, themeRests, cloneSpec, LAYERS } from '../js/generator.js';
 import { Engine } from '../js/engine.js';
 import { Rng } from '../js/rng.js';
 import { VIBE_IDS } from '../js/vibes.js';
@@ -60,6 +60,10 @@ export const VOICE_SEED = 91;
 export const VOICE_N = 240;
 // How many wandered passes each case hashes, and how far it wanders (the
 // app's default, `Engine.driftAmount`).
+// The edit cases (queue item 94a): a code's edits, made on the spec as the
+// app makes them (`editCase`, `edited`).
+export const EDIT_SEED = 94;
+export const EDIT_N = 240;
 export const PASSES = 8;
 
 // ------------------------------------------------------- canonical text
@@ -178,7 +182,64 @@ export function cases(goldenCodes) {
     const seed = voiced.seed32();
     out.push({ set: 'voice', index: i, seed, vibes: null, request: voiceCase(voiced, i, seed) });
   }
+  const edits = new Rng(EDIT_SEED);
+  for (let i = 0; i < EDIT_N; i++) {
+    const seed = edits.seed32();
+    out.push({ set: 'edit', index: i, seed, vibes: null, request: editCase(edits, i, seed) });
+  }
   return out;
+}
+
+// A code's edits (queue item 94a), of the kind `i` picks, drawn from `r`: a
+// layer re-rolled, two, a layer's seed alone, the tone, the tempo the slider
+// sets, a re-roll with the tone and the tempo and vibes, a re-roll with a
+// request (a layer on, a voice, a style), and every layer re-rolled with a
+// length or a theme. Each is an `edit.` item of the request's text, which
+// the Rust reads (`Request::parse`) and `edited` makes on the spec.
+function editCase(r, i, seed) {
+  const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
+  const some = (list, n) => r.shuffle(list.slice()).slice(0, n);
+  const roll = (l) => `edit.roll.${l}=${r.seed32()}`;
+  const tone = () => ['warmth', 'space', 'wobble'].map((k) => `edit.${k}=${Math.floor(r.f() * 101) / 100}`);
+  const bpm = () => `edit.bpm=${32 + Math.floor(r.f() * 159)}`;
+  const vibes = (n) => vibeSelection(r.shuffle(VIBE_IDS.slice()).slice(0, n));
+  switch (i % 8) {
+    case 0: return roll(some(layers, 1)[0]);
+    case 1: return some(layers, 2).map(roll).join(',');
+    case 2: return `edit.seed.${some(layers, 1)[0]}=${r.seed32()}`;
+    case 3: return tone().join(',');
+    case 4: return bpm();
+    case 5: return [...vibes(1 + (i % 3)), roll(some(layers, 1)[0]), ...tone(), bpm()].join(',');
+    case 6: return [`layer.${some(layers, 1)[0]}=on`, `voice.melody=${some(VOICE_ORDER.melody, 1)[0]}`, `style=${some(PROFILE_ORDER, 1)[0]}`, roll(some(layers, 1)[0])].join(',');
+    default: return [i % 16 === 7 ? 'bars=64' : `theme=${(seed ^ 0x5eed) >>> 0}`, ...layers.map(roll)].join(',');
+  }
+}
+
+// The spec of `seed` with `request` (text, a list of vibes or null), its
+// `edit.` items made as the app makes them (queue item 94a): a re-roll as
+// `rerollLayer` makes it (a copy, the layer's seed, `forceLayers`), a seed
+// alone, the Sound panel's tone, the tempo slider's bpm.
+export function edited(seed, request) {
+  if (typeof request !== 'string' || !request.includes('edit.')) return newSpec(seed, request);
+  const items = request.split(',');
+  const asked = items.filter((x) => !x.startsWith('edit.')).join(',');
+  let spec = cloneSpec(newSpec(seed, asked || null));
+  for (const item of items.filter((x) => x.startsWith('edit.'))) {
+    const [name, value] = item.slice(5).split('=');
+    const [kind, layer] = name.split('.');
+    if (kind === 'roll') {
+      spec = cloneSpec(spec);
+      spec.layerSeeds[layer] = Number(value) >>> 0;
+      spec.forceLayers = { ...(spec.forceLayers || {}), [layer]: true };
+    } else if (kind === 'seed') {
+      spec.layerSeeds[layer] = Number(value) >>> 0;
+    } else if (kind === 'bpm') {
+      spec.bpm = parseInt(value, 10);
+    } else {
+      spec.tone[kind] = parseFloat(value);
+    }
+  }
+  return spec;
 }
 
 // Voices and layers, of the kind `i` picks, drawn from `r` (queue item 91):
@@ -403,7 +464,7 @@ const LOAD_FIELDS = ['glassScale', 'stab', 'organ', 'wash', 'arc', 'kick', 'subD
  * plan, form, <each layer>, meta, choices, load, passes: [...] }.
  */
 export function partsOf(c) {
-  const spec = newSpec(c.seed, c.request ?? c.vibes);
+  const spec = edited(c.seed, c.request ?? c.vibes);
   const parts = { spec, plan: planOf(spec) };
   // The engine renders the pattern itself, at load; nothing it decides
   // there may come from chance.

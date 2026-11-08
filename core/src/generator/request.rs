@@ -29,6 +29,15 @@
 //! a layer's voices (`voice.melody=kalimba|marimba`) and a layer on or off
 //! (`layer.drums=off`, `layer.melody=on`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
+//!
+//! **A code's edits** (queue item 94a, `Edits`): what a listener changed in a
+//! loop after it was made, which a share code carries and a load must make
+//! again: a layer's seed (`edit.seed.drums=1234`), a layer re-rolled (its seed
+//! and always played, `edit.roll.drums=1234`: `rerollLayer`), the tone
+//! (`edit.warmth=0.6`, `edit.space=0.5`, `edit.wobble=0.4`) and the tempo the
+//! slider set (`edit.bpm=88`). They are not asks: every draw is made as the
+//! seed and the request make it, and the edits then overwrite the spec, as the
+//! app overwrites its own.
 
 use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
 use super::js;
@@ -69,6 +78,95 @@ pub const NO_SUCH_VOICE: &str = "no such voice";
 pub const BAD_LAYER: &str = "a bad layer";
 /// The line for the one request that cannot be met: every layer off.
 pub const ALL_LAYERS_OFF: &str = "all layers off";
+/// The line for a layer's seed that is not a whole number from 0 to
+/// 4294967295.
+pub const BAD_SEED: &str = "a bad seed";
+/// The line for a tone that is not a number from 0 to 1.
+pub const BAD_TONE: &str = "a bad tone";
+/// The line for an edit the core does not know.
+pub const NO_SUCH_EDIT: &str = "no such edit";
+
+/// The tone's three parts in the spec's order (`Spec::tone`), as the edits
+/// name them.
+pub const TONE_NAMES: [&str; 3] = ["warmth", "space", "wobble"];
+
+/// What a listener changed in a loop after it was made (queue item 94a; the
+/// module's doc): each set or not. A share code carries them and a load makes
+/// them again, after every draw (`Edits::apply`). All zero bytes when nothing
+/// is set (queue item 93): `Option`'s `None` is.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Edits {
+    /// Each layer's seed set, in the core's layer order.
+    seeds: [Option<u32>; 5],
+    /// The layers re-rolled (`forceLayers`), a bit each: always played,
+    /// whatever their own chances draw.
+    rolled: u8,
+    /// The tone set, in `TONE_NAMES`' order.
+    tone: [Option<f64>; 3],
+    /// The tempo set, in bpm.
+    bpm: Option<f64>,
+}
+
+impl Edits {
+    /// Nothing changed.
+    pub const NONE: Edits = Edits { seeds: [None; 5], rolled: 0, tone: [None; 3], bpm: None };
+
+    /// Whether anything is set.
+    #[must_use]
+    pub fn any(&self) -> bool {
+        *self != Edits::NONE
+    }
+
+    /// The seed set for layer `layer` (the core's order), if one is.
+    #[must_use]
+    pub fn seed(&self, layer: usize) -> Option<u32> {
+        self.seeds.get(layer).copied().flatten()
+    }
+
+    /// The layers re-rolled, a bit each in the core's layer order.
+    #[must_use]
+    pub fn rolled(&self) -> u8 {
+        self.rolled
+    }
+
+    /// The tone's part `which` (`TONE_NAMES`' order) set, if it is.
+    #[must_use]
+    pub fn tone(&self, which: usize) -> Option<f64> {
+        self.tone.get(which).copied().flatten()
+    }
+
+    /// The tempo set, if it is.
+    #[must_use]
+    pub fn bpm(&self) -> Option<f64> {
+        self.bpm
+    }
+
+    /// Overwrite the spec as the app overwrites its own: `layerSeeds`,
+    /// `forceLayers` (`Spec::rolled`), `tone` and `bpm`. Nothing else moves:
+    /// the edits come after every draw.
+    pub fn apply(&self, spec: &mut super::spec::Spec) {
+        for (layer, seed) in self.seeds.iter().enumerate() {
+            if let Some(s) = *seed {
+                spec.layer_seeds[layer] = s;
+            }
+        }
+        spec.rolled |= self.rolled;
+        for (k, t) in self.tone.iter().enumerate() {
+            if let Some(t) = *t {
+                spec.tone[k] = t;
+            }
+        }
+        if let Some(b) = self.bpm {
+            spec.bpm = b;
+        }
+    }
+}
+
+impl Default for Edits {
+    fn default() -> Self {
+        Edits::NONE
+    }
+}
 
 /// The layers' names in the core's order (`Layer`).
 pub const LAYER_NAMES: [&str; 5] = ["drums", "bass", "chords", "melody", "texture"];
@@ -199,13 +297,15 @@ pub struct Request {
     layers_on: u8,
     /// The layers asked off.
     layers_off: u8,
+    /// A code's edits (queue item 94a).
+    edits: Edits,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0 }
+        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0, edits: Edits::NONE }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -472,6 +572,69 @@ impl Request {
         self.layers_off
     }
 
+    /// The same, with layer `layer`'s seed (0 to 4, the core's order) set to
+    /// `seed`, and with `rolled` the layer re-rolled as well: always played,
+    /// as the app's Roll button does (`rerollLayer`). A code's edit (queue
+    /// item 94a): the loop's other draws are not moved.
+    ///
+    /// # Errors
+    /// `NO_SUCH_LAYER` for a layer past the fifth.
+    pub fn with_layer_seed(mut self, layer: usize, seed: u32, rolled: bool) -> Result<Self, &'static str> {
+        let slot = self.edits.seeds.get_mut(layer).ok_or(NO_SUCH_LAYER)?;
+        *slot = Some(seed);
+        if rolled {
+            self.edits.rolled |= 1 << layer;
+        }
+        Ok(self)
+    }
+
+    /// The same, with the tone's part `which` (`TONE_NAMES`' order: warmth,
+    /// space, wobble) set to `value`, as the Sound panel's sliders set it. A
+    /// code's edit (queue item 94a).
+    ///
+    /// # Errors
+    /// `BAD_TONE` for a part past the third or a value outside 0 to 1.
+    pub fn with_tone(mut self, which: usize, value: f64) -> Result<Self, &'static str> {
+        let slot = self.edits.tone.get_mut(which).ok_or(BAD_TONE)?;
+        if !(0.0..=1.0).contains(&value) {
+            return Err(BAD_TONE);
+        }
+        *slot = Some(value);
+        Ok(self)
+    }
+
+    /// The same, with the tempo set to `bpm` after the loop is drawn, as the
+    /// app's tempo slider sets it (not a tempo asked: `with_tempo` asks the
+    /// draws for one). A code's edit (queue item 94a).
+    ///
+    /// # Errors
+    /// `BAD_TEMPO` for a tempo that is not a number, `TEMPO_OUT` for one
+    /// outside `TEMPO_LIMIT`.
+    pub fn with_bpm(mut self, bpm: f64) -> Result<Self, &'static str> {
+        if bpm.is_nan() {
+            return Err(BAD_TEMPO);
+        }
+        if !(TEMPO_LIMIT[0]..=TEMPO_LIMIT[1]).contains(&bpm) {
+            return Err(TEMPO_OUT);
+        }
+        self.edits.bpm = Some(bpm);
+        Ok(self)
+    }
+
+    /// The code's edits (queue item 94a).
+    #[must_use]
+    pub fn edits(&self) -> &Edits {
+        &self.edits
+    }
+
+    /// The same request without its edits: what the draws were asked, as a
+    /// theme's or a section's loop is made.
+    #[must_use]
+    pub fn asked(mut self) -> Self {
+        self.edits = Edits::NONE;
+        self
+    }
+
     /// A request read from its text (the module's doc says how it is
     /// written); a vibe or a pin named twice keeps the last.
     ///
@@ -479,7 +642,8 @@ impl Request {
     /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`, `BAD_LENGTH`,
     /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_STYLE`, `NO_SUCH_LAYER`,
     /// `NO_SUCH_VOICE`, `BAD_LAYER`, `ALL_LAYERS_OFF`, `NO_SUCH_SETTING`, `BAD_SETTING` or
-    /// `SETTING_OUT`, for the first item that is one.
+    /// `SETTING_OUT`, or for an edit `NO_SUCH_EDIT`, `BAD_SEED`, `BAD_TONE`,
+    /// for the first item that is one.
     pub fn parse(text: &str) -> Result<Self, &'static str> {
         let text = text.trim();
         let mut out = Request::new();
@@ -491,7 +655,9 @@ impl Request {
                 Some((n, v)) => (n, Some(v)),
                 None => (item, None),
             };
-            if name == "bpm" {
+            if let Some(edit) = name.strip_prefix("edit.") {
+                out = out.with_edit_text(edit, value)?;
+            } else if name == "bpm" {
                 let value = value.ok_or(BAD_TEMPO)?;
                 let (lo, hi) = value.split_once('-').unwrap_or((value, value));
                 let (Some(lo), Some(hi)) = (whole(lo), whole(hi)) else { return Err(BAD_TEMPO) };
@@ -534,6 +700,28 @@ impl Request {
             }
         }
         Ok(out)
+    }
+
+    /// An edit read from its text (`edit.` and what follows it: `bpm`,
+    /// `warmth`, `space`, `wobble`, `seed.<layer>` or `roll.<layer>`).
+    fn with_edit_text(self, edit: &str, value: Option<&str>) -> Result<Self, &'static str> {
+        let value = value.unwrap_or("");
+        if edit == "bpm" {
+            return self.with_bpm(decimal(value).ok_or(BAD_TEMPO)?);
+        }
+        if let Some(k) = TONE_NAMES.iter().position(|&n| n == edit) {
+            return self.with_tone(k, decimal(value).ok_or(BAD_TONE)?);
+        }
+        let (rolled, layer) = match (edit.strip_prefix("seed."), edit.strip_prefix("roll.")) {
+            (Some(l), _) => (false, l),
+            (_, Some(l)) => (true, l),
+            _ => return Err(NO_SUCH_EDIT),
+        };
+        let i = LAYER_NAMES.iter().position(|&l| l == layer).ok_or(NO_SUCH_LAYER)?;
+        let seed = whole(value).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_SEED)?;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
+        let seed = seed as u32;
+        self.with_layer_seed(i, seed, rolled)
     }
 
     /// Whether the vibe numbered `index` is asked, and its weight (`None`
