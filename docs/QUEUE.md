@@ -13,7 +13,8 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 checked by the brain's Session 29 and heard by Mikey in its blind album
 (2026-11-07). **Phase 3: item 93 done** (the player's module, 636 KB; the
 brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
-(#337); **next: 94b, and 99 alongside it** (the sketch build only). Item
+(#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
+and **95** (the picks through the core's commands); **next: 96**. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -172,6 +173,19 @@ green CI alone; then the brain's phase check.
 
 **Hands:** Opus 5.5, high. Item 53's brief, below, with 88b's meaning of
 the bars picker (the loop's length; the length slider says when it ends).
+
+**Built (hands, 2026-11-08, v151):** the panel's request is a command
+(`Player::set_picks`, `dl_play_picks`), held by the core with a number the
+page gives it; the core makes every new loop itself (`Player::next` at Next,
+and a track's end with nothing of the page's armed), its seeds drawn from a
+seed the page sends each core (`set_draws`), and says which (`Kind::Own`,
+the picks' number, before the `Loop` with the seed); the page draws the same
+spec for its card and history and sends nothing. Picks the core can't meet
+are held as their vibes, and the panel's line is the core's own words. The
+pills and the Bars picker's time read the picks the core holds. An armed
+loop carries its own track (`change_with_track`), so a page asleep at a
+hand-over leaves the core playing what it would have set. The opening loop
+(before Play) is still drawn on the page: there is no core before a tap.
 
 ## 96. The checks on the player
 
