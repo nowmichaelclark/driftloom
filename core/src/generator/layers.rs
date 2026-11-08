@@ -82,7 +82,16 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
     let spb = cx.spb;
     let scale = spec.steps();
     let total = bars * spb;
-    let mut style = c.bass_styles.as_ref().and_then(|p| r.weighted(p)).unwrap_or("");
+    // A bass re-rolled (queue item 94a) is not the sparse style, unless
+    // that is all there is.
+    let styles = c.bass_styles.as_ref().map_or(&[][..], |p| &p[..]);
+    let mut style = if spec.forced(Layer::Bass) {
+        let rest = asked::without(styles, "sparse");
+        if rest.is_empty() { r.weighted(styles) } else { r.weighted(&rest) }
+    } else {
+        c.bass_styles.as_ref().and_then(|p| r.weighted(p))
+    }
+    .unwrap_or("");
     // A bass asked on is not the sparse style that sometimes plays nothing.
     if style == "sparse" && asked::on(spec, Layer::Bass) {
         style = asked::on_pick(spec, Layer::Bass, c.bass_styles.as_ref().map_or(&[][..], |p| &p[..]), "sparse");
@@ -405,7 +414,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
     let total = bars * spb;
     out.clear();
-    if !r.chance(c.drums.unwrap_or(f64::NAN)) && !asked::on(spec, Layer::Drums) {
+    if !spec.forced(Layer::Drums) && !r.chance(c.drums.unwrap_or(f64::NAN)) && !asked::on(spec, Layer::Drums) {
         return DrumsOut { kit: Word::new("none") };
     }
     let (kit, pool) = match c.kits {
@@ -713,10 +722,14 @@ pub fn gen_texture(cx: &Cx, bars: f64, slots: &[Slot], cycle_steps: f64, out: &m
     let mut r = Rng::new(spec.layer_seed(Layer::Texture));
     let spb = cx.spb;
     let total = bars * spb;
-    let (kind, pool) = match &cx.c.textures {
-        Some(p) => (r.weighted(p), &p[..]),
-        None => (r.weighted(&TEXTURES), &TEXTURES[..]),
+    let all = match &cx.c.textures {
+        Some(p) => &p[..],
+        None => &TEXTURES[..],
     };
+    // A texture re-rolled (queue item 94a) never draws none.
+    let kept = asked::without(all, "none");
+    let pool = if spec.forced(Layer::Texture) { &kept[..] } else { all };
+    let kind = r.weighted(pool);
     let mut kind = kind.unwrap_or("none");
     // A texture asked on is not the one that is no texture; one asked a voice
     // keeps its rest unless it is asked on too (queue item 91).

@@ -486,7 +486,9 @@ mod player {
 
     use super::core;
     use crate::generator::Layer;
-    use crate::player::{Handover, Moment, Player, Request, State};
+    use crate::player::about::GRID_MAX;
+    use crate::player::events::EVENTS_MAX;
+    use crate::player::{Handover, Moment, Player, Request, State, Track};
 
     struct Global(UnsafeCell<Player>);
     // Single-threaded, as the core's own global.
@@ -665,6 +667,222 @@ mod player {
         }
     }
 
+    /// Set layer `layer`'s seed (0 to 4, the core's order) to `seed` in what
+    /// the next load, change or re-roll asks for, re-rolled (always played)
+    /// with `rolled` not 0 (`Request::with_layer_seed`; queue item 94a, a
+    /// code's edit). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_seed(layer: u32, seed: u32, rolled: u32) -> u32 {
+        match request().with_layer_seed(layer as usize, seed, rolled != 0) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// Set the tone's part `which` (0 warmth, 1 space, 2 wobble) to `value`,
+    /// 0 to 1, in what the next load asks for (`Request::with_tone`; a code's
+    /// edit). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_edit_tone(which: u32, value: f64) -> u32 {
+        match request().with_tone(which as usize, value) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// Set the tempo to `bpm` after the next load's loop is drawn
+    /// (`Request::with_bpm`; a code's edit, the tempo slider's). 1 if it can
+    /// be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_edit_bpm(bpm: f64) -> u32 {
+        match request().with_bpm(bpm) {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// The loop playing made again with what was asked since the last load,
+    /// in its place (`Player::revise`; queue item 94a, a re-roll): the loop
+    /// of `seed` with a layer's new seed (`dl_play_seed`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_revise(seed: u32) {
+        player().revise(seed, request());
+        *request() = Request::new();
+    }
+
+    /// The tone from now (`Player::set_tone`): warmth, space and wobble.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_tone(warmth: f64, space: f64, wobble: f64) {
+        player().set_tone(core(), [warmth, space, wobble]);
+    }
+
+    /// How long the track plays (`Player::set_track`): `kind` 0 on and on, 1
+    /// `count` whole passes, 2 `count` bars (to the next phrase line). 1 if
+    /// it is a kind there is.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_track(kind: u32, count: u32) -> u32 {
+        let track = match kind {
+            0 => Track::Always,
+            1 => Track::Passes(count.max(1)),
+            2 => Track::Bars(count.max(1)),
+            _ => return 0,
+        };
+        player().set_track(core(), track);
+        1
+    }
+
+    /// The step from the loop's load the track ends at
+    /// (`Player::track_end`); -1 while it plays on.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a step, far below 2^53
+    pub extern "C" fn dl_play_track_end() -> f64 {
+        player().track_end().map_or(-1.0, |s| s as f64)
+    }
+
+    struct Floats<const N: usize>(UnsafeCell<[f64; N]>);
+    // Single-threaded, as above.
+    unsafe impl<const N: usize> Sync for Floats<N> {}
+    static EVENTS: Floats<{ 4 * EVENTS_MAX }> = Floats(UnsafeCell::new([0.0; 4 * EVENTS_MAX]));
+    static GRID: Floats<GRID_MAX> = Floats(UnsafeCell::new([0.0; GRID_MAX]));
+
+    /// Take every event waiting (`Player::event`; queue item 94a) into
+    /// `dl_play_event_at`, four doubles each: its time on the core's clock,
+    /// its kind (`Kind::ALL`'s order: 0 step, 1 pass, 2 section, 3 phrase, 4
+    /// loop, 5 revised, 6 end), its number and its step from the load.
+    /// Returns how many. The worklet calls it after each block.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // numbers and steps, far below 2^53
+    pub extern "C" fn dl_play_events() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *EVENTS.0.get() };
+        let mut n = 0;
+        for slot in buf.as_chunks_mut::<4>().0 {
+            let Some(e) = player().event() else { break };
+            slot.copy_from_slice(&[e.time, f64::from(e.kind as u8), e.number as f64, e.step as f64]);
+            n += 1;
+        }
+        n
+    }
+
+    /// Where `dl_play_events` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_event_at() -> *const f64 {
+        EVENTS.0.get().cast()
+    }
+
+    /// Events lost for want of room (`Player::events_lost`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_events_lost() -> u32 {
+        player().events_lost()
+    }
+
+    /// Layer `layer`'s grid (`Player::grid`) at `dl_play_grid_at`, a double
+    /// a step; returns its steps (0 for none).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_grid(layer: u32) -> u32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *GRID.0.get() };
+        u32::try_from(player().grid(l, buf)).unwrap_or(0)
+    }
+
+    /// Where `dl_play_grid` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_grid_at() -> *const f64 {
+        GRID.0.get().cast()
+    }
+
+    static NOTE: Floats<16> = Floats(UnsafeCell::new([0.0; 16]));
+
+    /// How many notes layer `layer` has in the loop as composed
+    /// (`Player::notes`; the MIDI export's).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_notes(layer: u32) -> u32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+        u32::try_from(player().notes(l)).unwrap_or(0)
+    }
+
+    /// Layer `layer`'s note `index` (`Player::note`) at `dl_play_note_at`:
+    /// its step, length, velocity, offset (a roll's), how many pitches, then
+    /// the pitches; a drum hit's instrument at `dl_play_text`, its length
+    /// returned. -1 past the last note.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a few pitches
+    pub extern "C" fn dl_play_note(layer: u32, index: u32) -> i32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return -1 };
+        let Some(n) = player().note(l, index as usize) else { return -1 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *NOTE.0.get() };
+        buf[..5].copy_from_slice(&[n.step, n.dur, n.vel, n.micro, n.count as f64]);
+        for (slot, &p) in buf[5..].iter_mut().zip(&n.notes) {
+            *slot = p;
+        }
+        // SAFETY: as above.
+        let name = unsafe { &mut *NAME.0.get() };
+        let drum = n.drum.as_bytes();
+        let k = drum.len().min(name.len());
+        name[..k].copy_from_slice(&drum[..k]);
+        i32::try_from(k).unwrap_or(0)
+    }
+
+    /// Where `dl_play_note` writes the numbers.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_note_at() -> *const f64 {
+        NOTE.0.get().cast()
+    }
+
+    /// Room for the loop's description: some 600 bytes, with room to spare.
+    const ABOUT_MAX: usize = 4096;
+    struct About(UnsafeCell<[u8; ABOUT_MAX]>);
+    // Single-threaded, as above.
+    unsafe impl Sync for About {}
+    static ABOUT: About = About(UnsafeCell::new([0; ABOUT_MAX]));
+
+    /// A writer into a fixed buffer that fails rather than cut short.
+    struct Fill<'a> {
+        buf: &'a mut [u8],
+        len: usize,
+    }
+
+    impl core::fmt::Write for Fill<'_> {
+        fn write_str(&mut self, s: &str) -> core::fmt::Result {
+            let end = self.len + s.len();
+            let slot = self.buf.get_mut(self.len..end).ok_or(core::fmt::Error)?;
+            slot.copy_from_slice(s.as_bytes());
+            self.len = end;
+            Ok(())
+        }
+    }
+
+    /// The loop's description (`Player::describe`: plain ASCII lines,
+    /// `name=value`) at `dl_play_about_at`; returns its length (0 with no
+    /// loop made).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_describe() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *ABOUT.0.get() };
+        let mut w = Fill { buf, len: 0 };
+        match player().describe(&mut w) {
+            Ok(()) => u32::try_from(w.len).unwrap_or(0),
+            Err(_) => 0,
+        }
+    }
+
+    /// Where `dl_play_describe` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_about_at() -> *const u8 {
+        ABOUT.0.get().cast()
+    }
+
     /// Ask for the loop of `seed` with what was asked since the last load,
     /// its first step at `at` seconds on the core's clock, or as soon as it
     /// is made if that has passed (0: as soon as made). See `Player::load`.
@@ -676,7 +894,7 @@ mod player {
 
     /// Change to the loop of `seed` with what was asked since the last load,
     /// at `moment` of the loop playing (0 now, 1 the next beat, 2 bar, 3
-    /// phrase, 4 pass: `Moment::ALL`), the old loop crossfading over
+    /// phrase, 4 pass, 5 the track's end: `Moment::ALL`), the old loop crossfading over
     /// `crossfade` seconds, or ringing out for a negative one (queue item
     /// 86, `Player::change`). 0 for a moment there is no such number for
     /// (nothing changes), else 1.

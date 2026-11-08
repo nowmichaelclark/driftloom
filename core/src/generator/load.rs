@@ -43,7 +43,7 @@ pub struct Stab {
 /// The wash (queue item 62; `washOf`): one swell's period in seconds, the
 /// follower's gain, and its tint (Hz, its gain and the high one in dB, its
 /// resonance).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Wash {
     pub level: f64,
     pub period: f64,
@@ -57,7 +57,7 @@ pub struct Wash {
 /// place it in a stereo render. Its seed (the core draws every width from
 /// it), how busy it is (notes a second, every layer, as heard), how wet,
 /// and whether its texture is a light one, whose whole layer is placed.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Space {
     pub seed: u32,
     pub busy: f64,
@@ -117,6 +117,11 @@ pub struct Load {
     /// The layers the request asked off (`spec.mutes`, queue item 91), a bit
     /// each in `Layer`'s order.
     muted: u8,
+}
+
+impl crate::generator::list::Empty for Load {
+    /// Nothing loaded (all zero bytes, queue item 93).
+    const EMPTY: Self = Load::EMPTY;
 }
 
 impl Load {

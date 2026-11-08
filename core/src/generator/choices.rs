@@ -50,7 +50,7 @@ const ARC_SALT: u32 = 0x0a4c;
 /// A loop's arc (`arcOf`): its shape ("deep" or "dip"), its swing's period
 /// in seconds, where it starts on the swing (0 the darkest point), the
 /// dip's floor in Hz and the share of the swing the dip takes.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Arc {
     pub shape: &'static str,
     pub period: f64,
@@ -585,7 +585,7 @@ const SUBDUCK_SALT: u32 = 0x5dc4;
 
 /// A loop's subDuck (`subDuckOf`): the dip at a kick in dB, and the
 /// recovery in seconds.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SubDuck {
     pub depth: f64,
     pub recover: f64,
@@ -668,7 +668,7 @@ const PADSWEEP_SALT: u32 = 0x5e3e;
 
 /// A loop's padSweep (`padSweepOf`): where the lowpass closes (Hz), how
 /// far it opens (octaves), one swing (seconds) and its resonance.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PadSweep {
     pub lo: f64,
     pub oct: f64,

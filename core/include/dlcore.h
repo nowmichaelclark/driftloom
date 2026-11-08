@@ -28,6 +28,11 @@
  *
  * Every call takes a null player and does nothing with it. Text the core
  * gives is plain ASCII.
+ *
+ * The player's calls take some 60 KB of the calling thread's stack at most
+ * (56 to 60 KB measured in WebAssembly, a loop being made inside a render).
+ * Emscripten's default stack is 64 KB, so a web build keeps its own big
+ * buffers off the stack or sets a bigger one (-sSTACK_SIZE).
  */
 #ifndef DLCORE_H
 #define DLCORE_H
@@ -47,9 +52,11 @@ enum { DL_DRUMS = 0, DL_BASS = 1, DL_CHORDS = 2, DL_MELODY = 3, DL_TEXTURE = 4 }
 
 /* The moments a change waits for, for dl_player_change (queue item 86): as
    soon as the next loop is made, or the loop playing's next beat, bar line,
-   phrase (four bars) or pass. And the crossfade's length by default, in
-   seconds. */
-enum { DL_NOW = 0, DL_BEAT = 1, DL_BAR = 2, DL_PHRASE = 3, DL_PASS = 4 };
+   phrase (four bars) or pass, or the track's end (queue item 94a,
+   dl_player_track: the old loop rings out at a pass's end, and fades over
+   the crossfade at a phrase line inside one; it waits while no length is
+   set). And the crossfade's length by default, in seconds. */
+enum { DL_NOW = 0, DL_BEAT = 1, DL_BAR = 2, DL_PHRASE = 3, DL_PASS = 4, DL_END = 5 };
 #define DL_CROSSFADE 1.0
 
 /* Where a player is, from dl_player_state. */
@@ -164,7 +171,7 @@ const char *dl_player_ask(dl_player *player, const char *request);
 void dl_player_load(dl_player *player, uint32_t seed);
 
 /* Change to the loop of `seed`, with what was asked since the last load, at
-   `moment` of the loop playing (DL_NOW to DL_PASS): the next loop is made in
+   `moment` of the loop playing (DL_NOW to DL_END): the next loop is made in
    the blocks before the moment and takes its first step on it, and the old
    one's notes fall to nothing over `crossfade` seconds from there
    (DL_CROSSFADE), or ring out for a negative one. No reset, no second core.
@@ -233,6 +240,81 @@ size_t dl_player_name(dl_player *player, char *out, size_t size);
 /* Notes the core could not play as asked since the start (dropped, late or
    left out): 0, always, unless something is wrong. */
 uint32_t dl_player_trouble(dl_player *player);
+
+/* Queue item 94a: everything the app does, as a call or an event.
+ *
+ * A share code's edits, for the next load, change or re-roll (with the
+ * vibes and the rest; dl_player_ask takes them as text too: "edit.roll.drums=
+ * 1234", "edit.seed.bass=99", "edit.warmth=0.6", "edit.space=0.5",
+ * "edit.wobble=0.4", "edit.bpm=88"): layer `layer`'s seed, re-rolled (always
+ * played) with `rolled` not 0. NULL if it can be met, else why not. */
+const char *dl_player_seed(dl_player *player, uint32_t layer, uint32_t seed, int rolled);
+
+/* The loop playing made again with what was asked since the last load, in
+   its place: the steps go on where they were (a layer re-rolled). With
+   nothing playing it is a change now. */
+void dl_player_revise(dl_player *player, uint32_t seed);
+
+/* The tone from now: warmth, space and wobble, 0 to 1 each. */
+void dl_player_tone(dl_player *player, double warmth, double space, double wobble);
+
+/* How long the track plays, counted from now (or a new loop's first step),
+   holding across loads: DL_ALWAYS (on and on), `count` whole passes
+   (DL_PASSES) or `count` bars to the next phrase line (DL_BARS). 1 if it is
+   a kind there is. And the step from the loop's load it ends at (-1 while
+   it plays on); a change for DL_END starts its loop there. */
+enum { DL_ALWAYS = 0, DL_PASSES = 1, DL_BARS = 2 };
+int dl_player_track(dl_player *player, uint32_t kind, uint32_t count);
+int64_t dl_player_track_end(dl_player *player);
+
+/* What the player tells the host, each at the time it is heard (seconds on
+   the core's clock), decided up to a lookahead before: take them after each
+   render (dl_player_event, 1 while one was taken) and show each at its
+   time. `number` is the step in its pass (DL_STEP, DL_PHRASE), the pass
+   (DL_PASS; in a piece, its round), the section (DL_SECTION, a piece's), the
+   seed (DL_LOOP: a new loop's first step; DL_REVISED: the loop made again
+   in place), or 0 (DL_END: the track's end); `step` is from the loop's load.
+   256 wait at most; dl_player_events_lost counts the ones lost. */
+enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6 };
+typedef struct dl_event {
+    double time;
+    uint32_t kind;
+    uint64_t number;
+    uint64_t step;
+} dl_event;
+int dl_player_event(dl_player *player, dl_event *out);
+uint32_t dl_player_events_lost(dl_player *player);
+
+/* Layer `layer`'s grid, of the pass being decided (read it when a pass or a
+   section begins, and show it from that event's time): the loudest note on
+   each step of the layer's cycle, 0 for none, into `out` (`size` doubles;
+   640 is always enough). Returns the cycle's steps, 0 if nothing is made or
+   `out` is too short. */
+size_t dl_player_grid(dl_player *player, uint32_t layer, double *out, size_t size);
+
+/* The loop described, plain ASCII lines of name=value (seed, name, mix,
+   moods, feel, vibes, root, scale, bpm, metre, bars, tone, layer_seeds and
+   the rest: what a card, a cover and a share code show), into `out` (`size`
+   bytes, NUL-terminated, cut short if it must be); returns its whole
+   length. */
+size_t dl_player_describe(dl_player *player, char *out, size_t size);
+
+/* The loop as composed, note by note (a MIDI export's): how many notes layer
+   `layer` has, and note `index` into `out` (1, or 0 past the last): its step
+   from the loop's first, its length in steps, its velocity (0 for a note
+   left out), a drum hit's offset off the step and instrument ("kick",
+   "hat"...), and `count` pitches, MIDI note numbers. */
+typedef struct dl_note {
+    double step;
+    double dur;
+    double vel;
+    double micro;
+    uint32_t count;
+    double notes[8];
+    char drum[16];
+} dl_note;
+size_t dl_player_notes(dl_player *player, uint32_t layer);
+int dl_player_note(dl_player *player, uint32_t layer, size_t index, dl_note *out);
 
 #ifdef __cplusplus
 }

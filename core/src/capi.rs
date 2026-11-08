@@ -567,3 +567,199 @@ pub unsafe extern "C" fn dl_player_name(player: *mut Engine, out: *mut c_char, s
 pub extern "C" fn dl_player_trouble(player: *mut Engine) -> u32 {
     engine(player).map_or(0, |e| e.core.dropped().saturating_add(e.core.late()).saturating_add(e.core.missed()))
 }
+
+/// Layer `layer`'s seed set to `seed` for the next load, change or re-roll,
+/// re-rolled (always played) with `rolled` not 0 (`Request::with_layer_seed`;
+/// queue item 94a, a code's edit): null if it can be met, else why not.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_seed(player: *mut Engine, layer: u32, seed: u32, rolled: c_int) -> *const c_char {
+    let Some(e) = engine(player) else { return ptr::null() };
+    match e.request.with_layer_seed(layer as usize, seed, rolled != 0) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// The loop playing made again with what was asked since the last load, in
+/// its place (`Player::revise`; a re-roll).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_revise(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.player.revise(seed, &e.request);
+        e.request = Request::new();
+    }
+}
+
+/// The tone from now (`Player::set_tone`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_tone(player: *mut Engine, warmth: f64, space: f64, wobble: f64) {
+    if let Some(e) = engine(player) {
+        e.player.set_tone(&mut e.core, [warmth, space, wobble]);
+    }
+}
+
+/// How long the track plays (`Player::set_track`): `kind` 0 on and on, 1
+/// `count` passes, 2 `count` bars. 1 if it is a kind there is.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_track(player: *mut Engine, kind: u32, count: u32) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let track = match kind {
+        0 => crate::player::Track::Always,
+        1 => crate::player::Track::Passes(count.max(1)),
+        2 => crate::player::Track::Bars(count.max(1)),
+        _ => return 0,
+    };
+    e.player.set_track(&e.core, track);
+    1
+}
+
+/// The step from the loop's load the track ends at (`Player::track_end`);
+/// -1 while it plays on.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_track_end(player: *mut Engine) -> i64 {
+    engine(player).and_then(|e| e.player.track_end()).and_then(|s| i64::try_from(s).ok()).unwrap_or(-1)
+}
+
+/// An event as C sees it (`dl_event`).
+#[repr(C)]
+pub struct CEvent {
+    time: f64,
+    kind: u32,
+    number: u64,
+    step: u64,
+}
+
+/// Take the oldest event waiting into `out` (`Player::event`): 1 if one was
+/// taken, 0 if none waits.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_event`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_event(player: *mut Engine, out: *mut CEvent) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(ev) = e.player.event() else { return 0 };
+    // SAFETY: a writable `dl_event` (the caller's promise), checked not null.
+    unsafe { out.write(CEvent { time: ev.time, kind: u32::from(ev.kind as u8), number: ev.number, step: ev.step }) };
+    1
+}
+
+/// Events lost for want of room (`Player::events_lost`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_events_lost(player: *mut Engine) -> u32 {
+    engine(player).map_or(0, |e| e.player.events_lost())
+}
+
+/// Layer `layer`'s grid into `out` (`size` doubles; `Player::grid`).
+///
+/// # Safety
+///
+/// `out` is `size` writable doubles, or null with `size` 0.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_grid(player: *mut Engine, layer: u32, out: *mut f64, size: usize) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+    if out.is_null() || size == 0 {
+        return 0;
+    }
+    // SAFETY: `size` writable doubles (the caller's promise), not null.
+    let out = unsafe { core::slice::from_raw_parts_mut(out, size) };
+    e.player.grid(l, out)
+}
+
+/// Counts what a description would write, and copies what fits.
+struct Text<'a> {
+    out: &'a mut [u8],
+    len: usize,
+}
+
+impl core::fmt::Write for Text<'_> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for &b in s.as_bytes() {
+            if let Some(x) = self.out.get_mut(self.len) {
+                *x = b;
+            }
+            self.len += 1;
+        }
+        Ok(())
+    }
+}
+
+/// The loop described into `out` (`size` bytes, NUL-terminated, cut short if
+/// it must be; `Player::describe`); returns its whole length.
+///
+/// # Safety
+///
+/// `out` is `size` writable bytes, or null with `size` 0.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_describe(player: *mut Engine, out: *mut c_char, size: usize) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    let buf: &mut [u8] = if out.is_null() || size == 0 {
+        &mut []
+    } else {
+        // SAFETY: `size` writable bytes (the caller's promise), not null.
+        unsafe { core::slice::from_raw_parts_mut(out.cast::<u8>(), size - 1) }
+    };
+    let mut t = Text { out: buf, len: 0 };
+    let _ = e.player.describe(&mut t);
+    if !out.is_null() && size > 0 {
+        // SAFETY: as above; the last byte is the NUL's.
+        unsafe { *out.add(t.len.min(size - 1)) = 0 };
+    }
+    t.len
+}
+
+/// How many notes layer `layer` has in the loop as composed
+/// (`Player::notes`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_notes(player: *mut Engine, layer: u32) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    LAYERS.get(layer as usize).map_or(0, |&l| e.player.notes(l))
+}
+
+/// A note as C sees it (`dl_note`).
+#[repr(C)]
+pub struct CNote {
+    step: f64,
+    dur: f64,
+    vel: f64,
+    micro: f64,
+    count: u32,
+    notes: [f64; 8],
+    drum: [c_char; 16],
+}
+
+// The header's room for a chord's pitches holds every chord the core makes.
+const _: () = assert!(crate::generator::plan::NOTES_MAX <= 8);
+
+/// Layer `layer`'s note `index` into `out` (`Player::note`): 1, or 0 past
+/// the last.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_note`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_note(player: *mut Engine, layer: u32, index: usize, out: *mut CNote) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(&l) = LAYERS.get(layer as usize) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(n) = e.player.note(l, index) else { return 0 };
+    let mut c = CNote { step: n.step, dur: n.dur, vel: n.vel, micro: n.micro, count: u32::try_from(n.count).unwrap_or(0), notes: [0.0; 8], drum: [0; 16] };
+    for (slot, &p) in c.notes.iter_mut().zip(&n.notes) {
+        *slot = p;
+    }
+    for (slot, &b) in c.drum.iter_mut().take(15).zip(n.drum.as_bytes()) {
+        *slot = c_char::from_ne_bytes([b]);
+    }
+    // SAFETY: a writable `dl_note` (the caller's promise), checked not null.
+    unsafe { out.write(c) };
+    1
+}

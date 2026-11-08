@@ -84,6 +84,10 @@ pub struct Spec {
     /// hands the sequencer.
     pub layers_on: u8,
     pub layers_off: u8,
+    /// The layers re-rolled (`forceLayers`; queue item 94a, a code's edit):
+    /// a bit each in the core's order, always played whatever their own
+    /// chances draw, and playing throughout an airy loop.
+    pub rolled: u8,
     /// The theme's tune (`themeTune`, worked out once here, not written):
     /// `None` without a theme, `Some(None)` where the theme's melody rests,
     /// else its figure and rhythmic cell, which the melody plays in place of
@@ -147,6 +151,7 @@ impl Spec {
         voices: [0; 5],
         layers_on: 0,
         layers_off: 0,
+        rolled: 0,
         tune: None,
         cycles: Cycles::NONE,
     };
@@ -155,6 +160,13 @@ impl Spec {
     #[must_use]
     pub fn layer_seed(&self, layer: Layer) -> u32 {
         self.layer_seeds[layer as usize]
+    }
+
+    /// `forced(spec, layer)`: whether the layer was re-rolled (queue item
+    /// 94a), and so always plays.
+    #[must_use]
+    pub fn forced(&self, layer: Layer) -> bool {
+        self.rolled & (1 << layer as usize) != 0
     }
 
     /// The mode's steps.
@@ -221,6 +233,23 @@ impl Spec {
         }
     }
 
+    /// The layers re-rolled, `forceLayers` (queue item 94a): each `true`,
+    /// only if any.
+    fn write_rolled<S: Sink>(&self, w: &mut Writer<S>) {
+        if self.rolled == 0 {
+            return;
+        }
+        w.key("forceLayers");
+        w.obj();
+        for (key, layer) in ALPHABETICAL {
+            if self.forced(layer) {
+                w.key(key);
+                w.bool(true);
+            }
+        }
+        w.end_obj();
+    }
+
     /// The voices asked, `askVoices`: each layer's names, only if asked.
     fn write_voices<S: Sink>(&self, w: &mut Writer<S>) {
         if self.voices.iter().all(|&v| v == 0) {
@@ -279,6 +308,7 @@ impl Spec {
         write_feel(w, &self.feel);
         w.key("feelMix");
         write_weights(w, &self.feel_mix, |k| MOODS[k].id);
+        self.write_rolled(w);
         w.key("layerSeeds");
         w.obj();
         for (key, layer) in [
@@ -783,7 +813,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         cycles = Cycles { set: true, layers: out };
     }
     let _ = LAYERS;
-    Spec {
+    let mut spec = Spec {
         seed,
         name: seed_name(seed),
         mix,
@@ -810,9 +840,14 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         voices: [0, 1, 2, 3, 4].map(|l| request.voices(l)),
         layers_on: request.layers_on(),
         layers_off: request.layers_off(),
+        rolled: 0,
         tune: held.as_ref().map(melody::theme_tune),
         cycles,
-    }
+    };
+    // A code's edits (queue item 94a), after every draw, as the app makes
+    // them on the spec it holds.
+    request.edits().apply(&mut spec);
+    spec
 }
 
 /// The length asked, if one was (`length`: its bars, or "endless").

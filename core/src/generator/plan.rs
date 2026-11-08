@@ -908,6 +908,12 @@ pub fn gen_form(cx: &Cx) -> Option<Form> {
     }
     let mut form: Form = [List::new(); 5];
     for layer in LAYERS {
+        // A layer re-rolled (queue item 94a) plays throughout, so the roll is
+        // heard at once: no schedule (an empty one, the JavaScript's null),
+        // and none of its draws.
+        if spec.forced(layer) {
+            continue;
+        }
         let bars = local_bars(spec, layer);
         let [inr, outr] = FORM_RUNS[layer as usize];
         let start = r.chance(0.7);
@@ -946,7 +952,8 @@ pub fn silent_bars(form: &Form, bars: f64) -> List<usize, MAX_BARS> {
     let mut out = List::new();
     let mut bar = 0;
     while js::num(bar) < bars {
-        if form.iter().all(|s| !s.get(bar % s.len().max(1)).copied().unwrap_or(false)) {
+        // A layer with no schedule (re-rolled) plays every bar.
+        if form.iter().all(|s| !s.is_empty() && !s.get(bar % s.len().max(1)).copied().unwrap_or(false)) {
             out.push(bar);
         }
         bar += 1;
@@ -1085,8 +1092,14 @@ pub fn write_form<S: Sink>(w: &mut Writer<S>, form: Option<&Form>) {
                 ("texture", Layer::Texture),
             ] {
                 w.key(key);
+                let sched = &f[layer as usize];
+                // A layer re-rolled has none (queue item 94a): null.
+                if sched.is_empty() {
+                    w.null();
+                    continue;
+                }
                 w.list();
-                for &b in f[layer as usize].iter() {
+                for &b in sched.iter() {
                     w.bool(b);
                 }
                 w.end_list();

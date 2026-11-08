@@ -421,7 +421,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     // held in place of this loop's own (whose draws are still made).
     let tune = if dev.is_none() { spec.tune } else { None };
     out.clear();
-    if dev.is_none() && choir.is_none() && !asked::on(spec, Layer::Melody) && tune.map_or(silent, |t| t.is_none()) {
+    if dev.is_none() && !spec.forced(Layer::Melody) && choir.is_none() && !asked::on(spec, Layer::Melody) && tune.map_or(silent, |t| t.is_none()) {
         return MelodyOut { voice: voice.into(), motif: List::new(), cell: None, centre: None };
     }
     let driven = lf.energy > 0.6;

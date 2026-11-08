@@ -32,7 +32,7 @@
 // nothing.
 // The loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
 // digits) of a canonical text (below) of:
-//   spec     the spec, as newSpec makes it;
+//   spec     the spec, as newSpec makes it (and the edit cases edit it);
 //   plan     what render plans before any layer plays (`planOf`, queue item
 //            79): the development's sections (null for a loop that does not
 //            develop), the harmony as drawn, before the register work moves
@@ -123,6 +123,15 @@
 //                   several layers, a layer off, a layer on, voices and layers
 //                   with a style and a key, with vibes and a tempo, and a theme
 //                   with voices and a layer.
+//   edit:0-239      240 seeds from Rng(94), each with a code's edits of the
+//                   kind its index picks (gen-golden-lib.mjs, `editCase`;
+//                   queue item 94a): a layer re-rolled (`edit.roll.drums=N`),
+//                   two, a layer's seed alone (`edit.seed.bass=N`), the tone
+//                   (`edit.warmth=0.6`, `edit.space`, `edit.wobble`), the
+//                   tempo the slider set (`edit.bpm=88`), and re-rolls with
+//                   vibes, a request, a length or a theme. The spec is the
+//                   request's, the edits then made on it as the app makes
+//                   them (`edited`).
 //
 // Run it after any change to the generator, the vibes, the choices or the
 // engine's load. A change that is meant to move what is generated writes the

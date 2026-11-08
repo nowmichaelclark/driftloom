@@ -31,7 +31,8 @@ fn every_case() {
         assert_eq!(generator.lost(), 0, "{}: the lists ran out of room", fields[0]);
         cases += 1;
     }
-    assert_eq!(cases, 4884);
+    // With the 240 edit cases (queue item 94a).
+    assert_eq!(cases, 5124);
 }
 
 #[test]

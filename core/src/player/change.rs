@@ -38,6 +38,11 @@ pub const CROSSFADE_MAX: f64 = 30.0;
 /// line is a phrase's end in either.
 pub const PHRASE_BARS: f64 = 4.0;
 
+/// The slot of the change that waits for the track's end (`Moment::End`).
+pub(super) const END_SLOT: usize = 4;
+/// How many changes may wait: one a kind of moment but `Now`.
+pub(super) const SLOTS: usize = 5;
+
 /// Where a change waits for: the boundary of the loop playing it starts on.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Moment {
@@ -54,11 +59,17 @@ pub enum Moment {
     Phrase,
     /// The end of the pass, where the loop would start again.
     Pass,
+    /// The end of the track (queue item 94a, `Player::set_track`): the
+    /// app's length slider, a number of passes or of bars counted from when
+    /// it was set. The old loop hands over as the app's does: its notes ring
+    /// out at a pass's end, and fall over the crossfade asked at a phrase line
+    /// inside one. It waits while no length is set, and for Endless.
+    End,
 }
 
 impl Moment {
-    /// Every moment, in the order the hosts number them (0 to 4).
-    pub const ALL: [Moment; 5] = [Moment::Now, Moment::Beat, Moment::Bar, Moment::Phrase, Moment::Pass];
+    /// Every moment, in the order the hosts number them (0 to 5).
+    pub const ALL: [Moment; 6] = [Moment::Now, Moment::Beat, Moment::Bar, Moment::Phrase, Moment::Pass, Moment::End];
 
     /// The moment a host numbers `n` (`ALL`'s order), if there is one.
     #[must_use]
@@ -74,6 +85,7 @@ impl Moment {
             Moment::Bar => Some(1),
             Moment::Phrase => Some(2),
             Moment::Pass => Some(3),
+            Moment::End => Some(END_SLOT),
         }
     }
 }
@@ -138,7 +150,7 @@ pub fn unit(moment: Moment, beat: f64, spb: f64, total: f64) -> Option<f64> {
         total
     };
     let u = match moment {
-        Moment::Now => return None,
+        Moment::Now | Moment::End => return None,
         Moment::Beat => beat,
         Moment::Bar => spb,
         Moment::Phrase => phrase,
@@ -179,6 +191,8 @@ mod tests {
         assert_eq!(Handover::RingOut.fade(), None);
         assert_eq!(Handover::default(), Handover::Crossfade(CROSSFADE));
         assert_eq!(Moment::of(4), Some(Moment::Pass));
-        assert_eq!(Moment::of(5), None);
+        assert_eq!(Moment::of(5), Some(Moment::End));
+        assert_eq!(Moment::of(6), None);
+        assert_eq!(Moment::End.slot(), Some(END_SLOT));
     }
 }

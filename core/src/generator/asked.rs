@@ -63,3 +63,16 @@ pub fn on_pick(spec: &Spec, layer: Layer, pool: &[(&'static str, f64)], not: &st
     let chosen = r.weighted_index(rest.clone().map(|e| e.1)).and_then(|i| rest.clone().nth(i));
     chosen.map_or("", |e| e.0)
 }
+
+/// `pool.filter(([k]) => k !== not)`: the pool without `not`, for a layer
+/// re-rolled (queue item 94a, `forced`), which never draws its rest.
+#[must_use]
+pub fn without(pool: &[(&'static str, f64)], not: &str) -> super::character::Names {
+    let mut out = super::character::Names::new();
+    for &e in pool {
+        if e.0 != not {
+            out.push(e);
+        }
+    }
+    out
+}

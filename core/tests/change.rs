@@ -166,7 +166,10 @@ fn block_at(seconds: f64) -> usize {
 #[test]
 fn a_change_lands_on_its_moment() {
     roomy(|| {
-        for moment in Moment::ALL {
+        // The moments on the loop's own grid (the track's end has its own
+        // test, `tests/track.rs`).
+        for moment in &Moment::ALL[..5] {
+            let moment = *moment;
             let (mut core, mut player) = playing(OLD, 1.0);
             let first = player.position().2;
             let spec = player.generator().spec();
