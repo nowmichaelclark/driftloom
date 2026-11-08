@@ -201,6 +201,9 @@ pub struct Player {
     track: Track,
     count_from: u64,
     ended: bool,
+    /// Whether the load being made is a loop resumed on a new core
+    /// (`load_resumed`): it doesn't wait out its lateFloor a second time.
+    resumed: bool,
     /// What the player tells the host (`event`).
     events: Events,
 }
@@ -243,6 +246,7 @@ impl Player {
             track: Track::Always,
             count_from: 0,
             ended: false,
+            resumed: false,
             events: Events::new(),
         }
     }
@@ -324,6 +328,18 @@ impl Player {
         self.start_at = if at.is_finite() { at } else { 0.0 };
         self.resume_at = None;
         self.tempo = None;
+        self.resumed = false;
+    }
+
+    /// `load_at` for a loop that was already playing on another core (queue
+    /// item 94b: the app's automatic switch to "lighter on processor", which
+    /// starts a new core at the other quality and the loop again from its
+    /// top, as `Engine.load(spec, { resume: true })` does): the same, but its
+    /// lateFloor (the kit and the bass sitting out after a load) is not waited
+    /// out a second time.
+    pub fn load_resumed(&mut self, seed: u32, request: &Request, at: f64) {
+        self.load_at(seed, request, at);
+        self.resumed = true;
     }
 
     /// Change to the loop of `seed`, with what `request` asks, at a musical
@@ -351,6 +367,7 @@ impl Player {
             None if making => {
                 self.generator.begin_with(seed, request);
                 self.state = State::Loading;
+                self.resumed = false;
                 self.handover = handover;
                 if self.asked_by == Asked::Load {
                     self.asked_by = Asked::Now;
@@ -626,6 +643,11 @@ impl Player {
             return;
         }
         self.kept = Maybe::NONE;
+        // A loop resumed on a new core has waited out its lateFloor already.
+        if self.resumed {
+            self.generator.keep_late(None);
+            self.resumed = false;
+        }
         let now = self.now(host);
         let at = self.seq.next_step_time;
         let sd = self.seq.step_dur();

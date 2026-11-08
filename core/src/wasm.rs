@@ -892,6 +892,15 @@ mod player {
         *request() = Request::new();
     }
 
+    /// `dl_play_load` for a loop resumed on a new core (`Player::load_resumed`;
+    /// queue item 94b, the app's automatic quality switch): its lateFloor is
+    /// not waited out a second time.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_load_resumed(seed: u32, at: f64) {
+        player().load_resumed(seed, request(), at);
+        *request() = Request::new();
+    }
+
     /// Change to the loop of `seed` with what was asked since the last load,
     /// at `moment` of the loop playing (0 now, 1 the next beat, 2 bar, 3
     /// phrase, 4 pass, 5 the track's end: `Moment::ALL`), the old loop crossfading over

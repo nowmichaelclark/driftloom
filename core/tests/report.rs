@@ -365,3 +365,45 @@ fn the_grid_and_the_description_report_what_plays() {
         assert!(text.is_empty() && idle.grid(Layer::Drums, &mut out) == 0);
     });
 }
+
+#[test]
+fn a_loop_resumed_on_a_new_core_does_not_wait_out_its_late_floor_again() {
+    // Queue item 94b: the app's automatic switch to "lighter on processor"
+    // starts a new core and the loop again from its top, as the page's
+    // `Engine.load(spec, { resume: true })` does: the kit and the bass come
+    // in at once, where a load of a lateFloor loop keeps them out a while.
+    roomy(|| {
+        let request = Request::parse("lateFloor=on").expect("a pin");
+        let first_kit = |resumed: bool| {
+            let mut core = Box::new(Core::new());
+            let mut player = Box::new(Player::new());
+            player.start(&mut core, RATE, 1, true).expect("a player");
+            if resumed {
+                player.load_resumed(SEED, &request, 0.0);
+            } else {
+                player.load(SEED, &request);
+            }
+            player.ready(&mut *core);
+            let seen = run(&mut core, &mut player, 60.0, true, |_, _, _| {});
+            assert_eq!(seen.allocated, 0, "nothing allocates");
+            let start = seen.events.iter().find(|e| e.kind == Kind::Loop).expect("the loop starts").time;
+            seen.drums.iter().copied().fold(f64::INFINITY, f64::min) - start
+        };
+        let waited = first_kit(false);
+        let resumed = first_kit(true);
+        assert!(resumed < 0.5, "resumed, the kit plays from the top: {resumed} s");
+        assert!(waited.is_finite() && waited > resumed + 1.0, "loaded, it sits out its lateFloor: {waited} s against {resumed} s");
+        // A load after a resumed one waits again, as any load does.
+        let mut core = Box::new(Core::new());
+        let mut player = Box::new(Player::new());
+        player.start(&mut core, RATE, 1, true).expect("a player");
+        player.load_resumed(SEED, &request, 0.0);
+        player.ready(&mut *core);
+        player.load(SEED, &request);
+        player.ready(&mut *core);
+        let seen = run(&mut core, &mut player, 60.0, true, |_, _, _| {});
+        let start = seen.events.iter().find(|e| e.kind == Kind::Loop).expect("the loop starts").time;
+        let kit = seen.drums.iter().copied().fold(f64::INFINITY, f64::min) - start;
+        assert!(kit.is_finite() && (kit - waited).abs() < 1e-6, "{kit} against {waited}");
+    });
+}
