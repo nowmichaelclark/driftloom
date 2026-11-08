@@ -1,4 +1,6 @@
-// Scheduling.
+// Scheduling: the page's own engine (`?engine=page`, and the JavaScript
+// synth's). Since queue item 94b the app plays the core's player by default
+// (js/player.js), and this engine stays for comparison until item 97.
 //
 // setTimeout is far too jittery to place notes on, so it is only used to
 // wake up and ask "what needs scheduling in the next fraction of a second?"

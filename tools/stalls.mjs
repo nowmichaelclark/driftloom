@@ -19,6 +19,8 @@
 //              starved of CPU): the ticks queue up and arrive together.
 //   freeze     the page frozen (Page.setWebLifecycleState) for the stall's
 //              length, where Chromium allows it.
+//   hidden     no stall: the tab stays hidden for the stall's length (queue
+//              item 94b's minute), as it is throughout.
 //   jumps      no stall: Next, Previous and Pause then Play, from the media
 //              keys (the same calls the lock screen's and a headset's
 //              buttons make), each checked for acting at once: how long
@@ -33,9 +35,11 @@
 //                `worstLateMs`): the scheduler woke after a step it should
 //                already have queued, so its steps were skipped.
 //   late notes   notes handed to the synth after their start time: on the
-//                core, notes posted to the worklet (it starts them at once,
-//                late and bunched); on ?engine=js, distinct source start
-//                times already past (Web Audio starts them at once).
+//                page's engine, notes posted to the worklet (it starts them
+//                at once, late and bunched); on ?engine=js, distinct source
+//                start times already past (Web Audio starts them at once);
+//                on the player, which posts none, the core's own count of
+//                notes it took late (Diagnostics' engine line).
 //   silent s     music that never sounded: gaps between notes that touch a
 //                stall (or the second after it), beyond the longest gap in
 //                the same loop unstalled (the control run). Rests the loop
@@ -47,10 +51,12 @@
 // Options:
 //   --loops <names>     shatter,cinder (default), hollow, undertow, from
 //                       tools/perf.mjs's set
-//   --engines <list>    core,js                              (default both)
+//   --engines <list>    player (the app's default, queue item 94b), page
+//                       (?engine=page, the page's engine on the core; `core`
+//                       names it too) and js        (default player,page,js)
 //   --throttle <list>   CPU slowdown factors                 (default 4,6)
 //   --lengths <list>    stall lengths in seconds        (default 0.5,1,2,5)
-//   --modes <list>      ticks,main,freeze                    (default all)
+//   --modes <list>      ticks,main,freeze,hidden,jumps  (default ticks,main,freeze)
 //   --each <n>          stalls per pattern                      (default 3)
 //   --quality <q>       full or lite                         (default full)
 //   --report            print Diagnostics once the tab is back in front
@@ -78,7 +84,7 @@ export const LOOPS = {
 
 function parseArgs(argv) {
   const o = {
-    loops: ['shatter', 'cinder'], engines: ['core', 'js'], throttle: [4, 6], lengths: [0.5, 1, 2, 5],
+    loops: ['shatter', 'cinder'], engines: ['player', 'page', 'js'], throttle: [4, 6], lengths: [0.5, 1, 2, 5],
     modes: ['ticks', 'main', 'freeze'], each: 3, quality: 'full', port: 8753, chrome: null, json: null, md: null,
   };
   const list = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
@@ -129,6 +135,17 @@ export function findChrome(explicit) {
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// The app's URL for an engine (queue item 94b): the player is the default,
+// `page` (or `core`, its old name here) the page's engine on the core.
+export function engineUrl(port, engine) {
+  const q = engine === 'js' ? '?engine=js' : engine === 'page' || engine === 'core' ? '?engine=page' : '';
+  return `http://127.0.0.1:${port}/${q}`;
+}
+
+// Whether the page posts notes to the core on this engine (the page's
+// engine), or starts them in Web Audio (js); the player posts none.
+export const postsNotes = (engine) => engine === 'page' || engine === 'core';
 
 // `args`: more Chromium switches (tools/views.mjs's graphics modes).
 export async function launch(chromePath, args = []) {
@@ -368,7 +385,7 @@ function silent(events, from, to, allow, windows = []) {
 
 function lateCount(events, from, to, engine) {
   const late = events.filter(([time, handed]) => time >= from && time <= to && time < handed);
-  if (engine === 'core') return late.length;
+  if (postsNotes(engine)) return late.length;
   return new Set(late.map(([time]) => Math.round(time * 1000))).size;
 }
 
@@ -380,20 +397,25 @@ async function measure(tab, engine, { label, run, settle = 4000, control = null 
   await sleep(settle);
   const diag = await tab.diagnostics();
   const after = await tab.evaluate(`window.__stalls.since(${JSON.stringify(mark)})`);
-  const events = engine === 'core' ? after.notes : after.starts;
+  const events = postsNotes(engine) ? after.notes : after.starts;
   const from = mark.ctx + 0.5;
   // Notes are decided ahead, so the last few seconds are not all in yet.
   const to = after.ctx;
   let gap = 0;
   for (let i = 1; i < after.ticks.length; i++) gap = Math.max(gap, after.ticks[i] - after.ticks[i - 1]);
   const quiet = silent(events, from, to, control ? control.worstGap + 0.05 : Infinity, after.windows);
+  const coreLate = before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null;
+  // The player's notes never pass the page: its late notes are the core's
+  // count, and its silences are not seen from here.
+  const player = engine === 'player';
   return {
     label, ...info,
-    gapMs: Math.round(gap),
+    // The player has no clock on the page (queue item 94b).
+    gapMs: engine === 'player' ? '-' : Math.round(gap),
     lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs,
-    lateNotes: lateCount(events, from, to, engine),
-    coreLate: before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null,
-    silentS: control ? +quiet.sum.toFixed(2) : null,
+    lateNotes: player ? coreLate : lateCount(events, from, to, engine),
+    coreLate,
+    silentS: control && !player ? +quiet.sum.toFixed(2) : null,
     worstGap: +quiet.worst.toFixed(3),
     fills: after.fills != null && mark.fills != null ? after.fills - mark.fills : null,
     engineLine: diag.engine,
@@ -423,11 +445,11 @@ async function jumps(tab, engine) {
     }
     await sleep(3000);
     const all = await tab.evaluate(`(() => { const S = window.__stalls; return { notes: S.notes, starts: S.starts, cancels: S.cancels }; })()`);
-    const events = engine === 'core' ? all.notes : all.starts;
-    const before = events.slice(0, engine === 'core' ? mark.notes : mark.starts);
-    const after = events.slice(engine === 'core' ? mark.notes : mark.starts);
+    const events = postsNotes(engine) ? all.notes : all.starts;
+    const before = events.slice(0, postsNotes(engine) ? mark.notes : mark.starts);
+    const after = events.slice(postsNotes(engine) ? mark.notes : mark.starts);
     const resumed = codes.length > 1 ? at : t;
-    const cancelled = engine === 'core' && all.cancels.some((c) => c >= t);
+    const cancelled = postsNotes(engine) && all.cancels.some((c) => c >= t);
     const left = cancelled ? 0 : before.filter(([time]) => time > resumed + 0.4).length;
     const first = after.filter(([, handed]) => handed >= resumed).map(([time]) => time).sort((x, y) => x - y)[0];
     rows.push({ label: `jump: ${label}`, firstNoteMs: first != null ? Math.round((first - resumed) * 1000) : null, oldLeft: left });
@@ -440,8 +462,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
   const b = await launch(chromePath);
   const rows = [];
   try {
-    const url = `http://127.0.0.1:${opts.port}/${engine === 'js' ? '?engine=js' : ''}`;
-    const tab = await openTab(b, url, throttle);
+    const tab = await openTab(b, engineUrl(opts.port, engine), throttle);
     if (opts.quality === 'lite') {
       const on = await tab.evaluate("document.getElementById('liteMode').checked");
       if (!on) await tab.evaluate("document.getElementById('liteMode').click()");
@@ -466,7 +487,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
         const ms = len * 1000;
         const patterns = mode === 'ticks'
           ? [['now and then', opts.each, 6000], ['back to back', opts.each + 1, 0]]
-          : [['now and then', opts.each, 6000]];
+          : mode === 'hidden' ? [['once', 1, 0]] : [['now and then', opts.each, 6000]];
         for (const [pattern, count, gapMs] of patterns) {
           const row = await measure(tab, engine, {
             label: `${mode} ${len} s, ${pattern}`,
@@ -480,7 +501,10 @@ async function session(opts, chromePath, loop, engine, throttle) {
                 return {};
               }
               for (let i = 0; i < count; i++) {
-                if (mode === 'main') {
+                if (mode === 'hidden') {
+                  await tab.evaluate(`window.__stalls.window(${ms})`);
+                  await sleep(ms);
+                } else if (mode === 'main') {
                   await tab.evaluate(`(() => { window.__stalls.window(${ms}); const t = performance.now() + ${ms}; while (performance.now() < t); return true; })()`);
                 } else {
                   await tab.evaluate(`window.__stalls.window(${ms})`);

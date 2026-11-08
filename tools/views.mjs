@@ -40,7 +40,8 @@
 //
 // Options:
 //   --loops <names>     shatter,hollow (default; a busy loop and a sung one)
-//   --engines <list>    core (default), js
+//   --engines <list>    player (default; the app's engine since queue item
+//                       94b), page (?engine=page; `core` names it too), js
 //   --throttle <list>   CPU slowdown factors                 (default 4,6)
 //   --quality <list>    full,lite                       (default full,lite)
 //   --changes           also time the changes that must be heard at once
@@ -71,12 +72,12 @@
 
 import fs from 'node:fs';
 import {
-  LOOPS, findChrome, sleep, launch, startServer, INSTRUMENT, openTab, loadCode,
+  LOOPS, findChrome, sleep, launch, startServer, INSTRUMENT, openTab, loadCode, engineUrl, postsNotes,
 } from './stalls.mjs';
 
 function parseArgs(argv) {
   const o = {
-    loops: ['shatter', 'hollow'], engines: ['core'], throttle: [4, 6], quality: ['full', 'lite'],
+    loops: ['shatter', 'hollow'], engines: ['player'], throttle: [4, 6], quality: ['full', 'lite'],
     port: 8754, chrome: null, json: null, md: null, changes: false, report: false,
     buffer: null, graphics: ['default'], phases: null, delay: 0,
   };
@@ -287,7 +288,9 @@ async function go(tab, name) {
   const key = { library: '#libraryBtn', save: '#saveBtn', now: '#nowBtn', vibes: '#vibesBtn' }[name];
   if (name === 'vibes' && !(await view(tab, 'now'))) await go(tab, 'now');
   if (key) await click(tab, key);
-  else {
+  // The vibe key opens the Vibe panel; its mood line opens the vibe words.
+  if (name === 'vibes' && (await view(tab, 'vibe'))) await click(tab, '#picksList .pk-line-mood .pk-val');
+  if (key) { /* done */ } else {
     // Sound and Layers: the switch, once or twice.
     for (let i = 0; i < 3 && !(await view(tab, name)); i++) await click(tab, '#viewBtn');
   }
@@ -389,10 +392,12 @@ async function phase(tab, engine, ph, loop) {
   const after = await tab.evaluate(`(() => { const S = window.__stalls; const m = ${JSON.stringify(mark)};
     return { ...S.since(m), frames: S.frames.slice(m.frames), reads: window.__reads.slice(m.reads),
       early: (window.__early || []).slice(m.early) }; })()`);
-  const events = engine === 'core' ? after.notes : after.starts;
+  const events = postsNotes(engine) ? after.notes : after.starts;
   // Notes handed over during the phase, late or not.
   const handed = events.filter(([, h]) => h >= mark.ctx);
-  const late = engine === 'core'
+  const coreLate = before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null;
+  // On the player no note passes the page: the core's own count.
+  const late = engine === 'player' ? coreLate : postsNotes(engine)
     ? handed.filter(([t, h]) => t < h).length
     : new Set(handed.filter(([t, h]) => t < h).map(([t]) => Math.round(t * 1000))).size;
   let gap = 0;
@@ -409,9 +414,10 @@ async function phase(tab, engine, ph, loop) {
     reads: readbacks(after.reads),
     view: ph.view,
     longTasks: lt.count, longestMs: lt.longest, what: lt.what,
-    gapMs: Math.round(gap),
+    // The player has no clock on the page (queue item 94b).
+    gapMs: engine === 'player' ? '-' : Math.round(gap),
     lateNotes: late,
-    coreLate: before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null,
+    coreLate,
     lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs,
     fills: after.fills != null && mark.fills != null ? after.fills - mark.fills : null,
     notes: handed.length,
@@ -439,7 +445,7 @@ async function changes(tab, engine, loop) {
     const lateNow = await coreLate();
     const late = lateMark != null && lateNow != null ? lateNow - lateMark : null;
     const S = await tab.evaluate('(() => { const S = window.__stalls; return { notes: S.notes, starts: S.starts, froms: S.froms || [] }; })()');
-    const ev = engine === 'core' ? S.notes : S.starts;
+    const ev = postsNotes(engine) ? S.notes : S.starts;
     const fresh = ev.filter(([t, h]) => h >= t0 && t >= t0).map(([t]) => t).sort((a, b) => a - b);
     const first = fresh.length ? Math.round((fresh[0] - t0) * 1000) : null;
     const cut = S.froms.find(([sent]) => sent >= t0);
@@ -486,7 +492,7 @@ async function changes(tab, engine, loop) {
 async function session(opts, chromePath, loop, engine, throttle, quality, graphics) {
   const b = await launch(chromePath, GRAPHICS[graphics]);
   try {
-    const url = `http://127.0.0.1:${opts.port}/${engine === 'js' ? '?engine=js' : ''}`;
+    const url = engineUrl(opts.port, engine);
     // A phone's screen, so the views lay out (and paint) as on one.
     const tab = await openTab(b, url, throttle, {
       sources: [extra(quality === 'lite', opts.buffer)],
@@ -503,7 +509,8 @@ async function session(opts, chromePath, loop, engine, throttle, quality, graphi
     const diag = await tab.diagnostics();
     const lite = /lite: true/.test(diag.text);
     if (lite !== (quality === 'lite')) throw new Error(`lite is ${lite}, asked for ${quality}`);
-    if (engine === 'core' && !/^rust/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
+    if (engine !== 'js' && !/^rust/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
+    if (engine === 'player' && !/the core's player/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
     const out = await tab.evaluate(`(() => { const c = window.__stalls.ctx; return { base: c.baseLatency, out: c.outputLatency, rate: c.sampleRate }; })()`);
     log(`  audio: baseLatency ${out.base.toFixed(4)} s, outputLatency ${out.out.toFixed(3)} s, ${out.rate} Hz; graphics ${graphics}`);
     const rows = [];

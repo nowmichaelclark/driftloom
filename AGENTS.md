@@ -7,11 +7,13 @@ Read first by every Claude session in this repo (`CLAUDE.md` points here).
 
 A procedural loop machine at <https://driftloom.nowmichaelclark.workers.dev/>:
 relaxing, nostalgic loops, generated and synthesized in the browser, played
-forever. A loop is a small spec (`js/generator.js`); its notes play on a Rust
-audio core compiled to WebAssembly (`core/`, built to the committed
-`js/dlcore.wasm`) in an AudioWorklet; the JavaScript synth is the fallback
-(`?engine=js`), and `?engine=player` plays the core's own player (item 82),
-for testing. The page has no build step and no dependencies, and it
+forever. A loop is a small spec (`js/generator.js`); since item 94b the
+core's player (`core/`, a Rust audio core compiled to WebAssembly, built to
+the committed `js/dlplayer.wasm`) decides and plays its notes in an
+AudioWorklet, and the page (`js/player.js`) sends it commands and draws its
+events; `?engine=page` keeps the page's own engine on the core
+(`js/engine.js`, `js/dlcore.wasm`) for comparison until item 97, and the
+JavaScript synth is the fallback (`?engine=js`). The page has no build step and no dependencies, and it
 deploys as static files (`wrangler.jsonc`; pushing to `main` deploys). Mikey
 (nowmichaelclark) owns it. His ears are the acceptance test for anything
 that changes how it sounds.
@@ -73,5 +75,7 @@ that changes how it sounds.
   proves it matches the source; `cd core && cargo test --locked`; golden
   renders `tools/golden.sh --strict <target>`. More in `core/AGENTS.md`.
 - Measuring: `tools/measure.mjs`, `tools/perf.mjs`, `tools/views.mjs`;
-  usage in the queue's standing rules and the file headers.
+  usage in the queue's standing rules and the file headers. The app's
+  controls on the player, a check each: `node tools/rows.mjs` (`--long`
+  adds the length slider's minute).
 - Docs: `node tools/check-docs.mjs`.
