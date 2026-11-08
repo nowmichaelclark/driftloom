@@ -309,8 +309,13 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   blind album (2026-11-07) heard no harm (the log; `docs/ALBUMS.md`). Phase
   3 is written (items 93-98, `docs/QUEUE.md`), with "After phase 3": Ears
   13's sound batch, then 84b (the chords nearer the tune, from the album).
-  **The brain's next check: after 94b** (the app on the player), then the
-  phase's end after 98.
+  94b merged (#343, 2026-11-08, v150) after Mikey's check; 99 merged (#341,
+  the sketch levers). **The brain's check after 94b, done:** on `main`,
+  `tools/rows.mjs` 25 of 25 on the player (late, missed and dropped 0, no
+  event lost), and the player, engine and worklet tests pass. Next: 95; the
+  brain's next check is the phase's end after 98. Ears 13b (the seven
+  levered candidates, plus a tremolo-twang synth voice in the spirit of a
+  baritone guitar) prompt given in Session 30.
 - **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); the blind album's in-app checklist for bars and length (88b),
