@@ -304,3 +304,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   widePad as `--space`, dropSpotlight as `--route`, and a retune at every
   chord), all off until a clip pulls them, for an Ears 13b session
   (`core/sketch/README.md`).
+- #346, the picks through the core's commands (item 95, v151), preview URL:
+  <https://8218f17b-driftloom.nowmichaelclark.workers.dev> (commit 4b6bf50):
+  nothing should sound different (the baseline, the 80 seeds and the 5,124
+  generation cases are unchanged). The core holds the New loops panel's
+  picks and makes every new loop itself, at Next and where the length
+  slider's time runs out, so a hand-over plays with the screen off. Listen
+  for: Next and a length's end feel as before; a new loop's card comes up
+  about a tenth of a second after the tap.
