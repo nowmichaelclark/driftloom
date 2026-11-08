@@ -1,0 +1,418 @@
+{
+ "00-everything-without.opus": [
+  {
+   "loop": "grove62",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 3.51
+  },
+  {
+   "loop": "shrine0",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 6.96
+  },
+  {
+   "loop": "thaw71",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 10.24
+  },
+  {
+   "loop": "tide39",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 5.04
+  }
+ ],
+ "00-everything-with.opus": [
+  {
+   "loop": "grove62",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 3.76
+  },
+  {
+   "loop": "shrine0",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 6.99
+  },
+  {
+   "loop": "thaw71",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 10.25
+  },
+  {
+   "loop": "tide39",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 5.37
+  }
+ ],
+ "01-lowBell-without.opus": [
+  {
+   "loop": "haven38",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.32
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  },
+  {
+   "loop": "dust69",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  }
+ ],
+ "01-lowBell-with.opus": [
+  {
+   "loop": "haven38",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.12
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.06
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.47
+  },
+  {
+   "loop": "dust69",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  }
+ ],
+ "01-lowBell-with-swell.opus": [
+  {
+   "loop": "haven38",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.18
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.06
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.48
+  },
+  {
+   "loop": "dust69",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  }
+ ],
+ "02-padWow-without.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.22
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  },
+  {
+   "loop": "undertow45",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  }
+ ],
+ "02-padWow-with.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.28
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.52
+  },
+  {
+   "loop": "undertow45",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.02
+  }
+ ],
+ "03-colorTone-without.opus": [
+  {
+   "loop": "vapor4",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 11.18
+  },
+  {
+   "loop": "shrine0",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 7.22
+  },
+  {
+   "loop": "tide39",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 5.05
+  },
+  {
+   "loop": "grove62",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  }
+ ],
+ "03-colorTone-with.opus": [
+  {
+   "loop": "vapor4",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 11.04
+  },
+  {
+   "loop": "shrine0",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 7.21
+  },
+  {
+   "loop": "tide39",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 5.04
+  },
+  {
+   "loop": "grove62",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 3.48
+  }
+ ],
+ "04-deepDuck-without.opus": [
+  {
+   "loop": "grove62",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  },
+  {
+   "loop": "undertow45",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  },
+  {
+   "loop": "halcyon48",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 2.51
+  },
+  {
+   "loop": "dust69",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  }
+ ],
+ "04-deepDuck-approved-subDuck.opus": [
+  {
+   "loop": "grove62",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 3.55
+  },
+  {
+   "loop": "undertow45",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 1.12
+  },
+  {
+   "loop": "halcyon48",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 2.55
+  },
+  {
+   "loop": "dust69",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 0.3
+  }
+ ],
+ "04-deepDuck-with.opus": [
+  {
+   "loop": "grove62",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 3.79
+  },
+  {
+   "loop": "undertow45",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 1.51
+  },
+  {
+   "loop": "halcyon48",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 2.72
+  },
+  {
+   "loop": "dust69",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 0.78
+  }
+ ],
+ "05-wideSweep-without.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.22
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  },
+  {
+   "loop": "undertow45",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  }
+ ],
+ "05-wideSweep-approved-padSweep.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.18
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.04
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  },
+  {
+   "loop": "undertow45",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  }
+ ],
+ "05-wideSweep-with-wide.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.13
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.04
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  },
+  {
+   "loop": "undertow45",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  }
+ ],
+ "05-wideSweep-with-fast.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.2
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "grove62",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 3.51
+  },
+  {
+   "loop": "undertow45",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  }
+ ]
+}

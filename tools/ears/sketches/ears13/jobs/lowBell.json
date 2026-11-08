@@ -1,0 +1,134 @@
+[
+ {
+  "name": "lowBell-haven38-none",
+  "corpus": [
+   20261009,
+   38
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "lowBell-haven38-with",
+  "corpus": [
+   20261009,
+   38
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ },
+ {
+  "name": "lowBell-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "lowBell-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ },
+ {
+  "name": "lowBell-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "lowBell-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ },
+ {
+  "name": "lowBell-dust69-none",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "lowBell-dust69-with",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ }
+]

@@ -9,7 +9,7 @@ still the one who decides whether anything sounds good.
 The full reports are in `docs/ears/` (index: `docs/ears/README.md`):
 `batch-1.md` (20 albums), `batch-2.md` (12 more), `batch-3.md` and
 `batch-4.md` (the sketches and stereo, by round), `batch-5.md` (the first
-synthesis of the album cards), `sessions.md` (how to run an ears session,
+synthesis of the album cards), `batch-6.md` (the second, sketched on the core), `sessions.md` (how to run an ears session,
 and the rule that ears outputs live in the repo), `plan.md`,
 `cards-pile-1.md` to `cards-pile-6.md` and `cards-test.md` (album cards),
 `prototypes.md`, and the raw measurements in `data.csv` and `raw/`. The
@@ -171,6 +171,29 @@ part by ear and cap its energy by band; a change in one layer's event count
 shifts drift's stream for every layer after it; a long sound must not hold
 the voice budget longer than the part it replaces. New tools:
 `low_guard.py`, `kick_check.py`.
+
+### The second synthesis (Ears 13, 2026-11-08)
+
+The 25 cards of piles 3 to 6 turned into twelve ranked candidates, batch 5's
+three unreviewed ones among them, and the first ears sketches **on the Rust
+core** (queue item 83; `tools/ears/sketches/ears13/`), rendered by
+`tools/clips.mjs` for Mikey (`docs/ears/batch-6.md`; verdicts pending):
+
+| Candidate | Records | What it adds | Measured on the sketch |
+|---|---|---|---|
+| tripletKit | 5 | a kit in threes (12/8 shuffle, no straight eighth) | lever wanted |
+| lowBell | 11 | a struck inharmonic bell at D2 to C#3 on each chord's root | 14 to 22 LU under the loop; nothing under 60 Hz; +0.2 LU at most |
+| padWow | 10 | a slow wow (14 cents, 0.5 Hz) on the pads alone | loudness within 0.05 LU |
+| widePad | 8 + 10 | the chord layer wide on the side only | lever wanted |
+| colorTone | 6 | a held 13 over major chords, an 11 over minor | 13 to 22 LU under the loop |
+| deepDuck | 7 | subDuck at 14 dB with a 0.6 s return | the loop 0.2 to 0.6 LU quieter |
+| wideSweep | 10 | padSweep's 4-octave 16 s ride and 2.6-octave 6.5 s swing | loudness within 0.09 LU |
+| dottedPulse, slowOpening, planingSevenths, dropSpotlight, tuningOffset | 4 to 9 | (batch 6) | levers wanted |
+
+The sampler of the five sketched passes every stereo guard at today's values.
+What the sketch build lacks for the other seven is listed with the smallest
+hook in batch 6's "Levers wanted". Its Broken Friends section reads Animal
+Crossing's hours as what a game could ask the core for.
 
 ## Stereo, measured (Ears 2, 2026-10-15)
 

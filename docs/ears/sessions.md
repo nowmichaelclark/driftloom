@@ -226,6 +226,23 @@ the brain and hands counter (Session 1, 2, ... in `docs/BRAIN.md`).
   difference per stem), so two splits of the same track differ that much.
 - **Ears 12 (pile 6): check the environment first, and plan a giant record.** The machine's Python moved from 3.14 to 3.15 between sessions and the old user-site packages (numpy, torch, demucs) would not load: `uv python install 3.13`, `uv venv`, `uv pip install numpy scipy librosa soundfile torch torchaudio demucs audio-separator onnxruntime` made a working environment in the working folder (about 6 GB, 10 minutes), and the Demucs weights downloaded fine. Run `python3 -P` from that venv. **One chain at a time ran 15% under the formula on average** (Ears 11's two lanes ran 48% over). **A record of 238 files (Animal Crossing)** cannot take the "typical plus three least-like" deep pass: curate the picker set, deep-pass a few tracks chosen for the question (hours spanning the day), and give the rest a light pass (hpss split plus `theory.py`, about 24 s a track). On a synthesized game score Demucs does not split instruments (a "drums" stem of 99% on a pitched hour), so the groups matter and the stem labels do not; kick and duck lines on such tracks are bass notes. `beatphase.py` needs the meter tool's beat phase to be right: on four records it reads a quarter of a beat or a twelfth off, so read the spacing between the hit clusters (thirds, sixteenths), not their absolute positions.
 - **Ears 12b (from an empty folder, 2026-11-08): set up the same way, and expect the OOM killer.** The uv recipe above worked unchanged from an empty `~/ears12b` (8.5 minutes; a 20 s Demucs clip ran 0.47 times its length on 8 cores). Rebuild each picked album from its archived `pick.json`: copy it, rewrite `paths` and every row's `file` to the new joined wavs made by `pick.group_tracks`, and `album.py` resumes from there (an extra deep-pass track is added to `picks` by hand and run with `--only`). **systemd-oomd killed two `album.py` runs** (a python process of 560 to 640 MB, at the end of a stem check of a 14-minute track and at the start of a theory stage) while Demucs and a 32-track decode ran beside them: the kill leaves `Killed` in the chain log and no output, and a chain script with `touch done` afterwards carries on regardless. Don't run decodes beside Demucs, put each late stage in a short retry loop (`theory space check`, three times) and look at `journalctl -k` after every album. **Where the bar seems to change, count repeats by hand:** an autocorrelation of the drums stem's onsets, read in beats of the grid, over the whole track and over 30-second windows (`barlen.py`, `barwin.py` in the raw archive), found one changing meter (Tomita: 8 and 4 beats, then 3) that the meter tool read as a weak 3, and showed that a 60 and a 62 BPM reading were half time. **A name is not a measurement:** "Screamography" is almost voiceless (vocals stem 2.7%); scan the whole record for bright, flat stretches (`harsh.py`) before choosing the deep passes for a brief about harsh sounds. On a record of guitar and a voice (K.K. Slider) the drums and bass stems are empty and every beat number is mix-level.
+- **Ears 13 (the second synthesis, a cloud session): sketches on the core.**
+  Read how the core feeds a channel block before writing one. Only the chords
+  channel hears chords, and only while the chapel organ plays (a retune per
+  chord); forcing the organ on with its `level`, `dry` and `verb` pinned to 0
+  renders a loop bit for bit as without it, so a chord-following sketch gets
+  every chord free. The organ hears an arpeggiating loop one note at a time.
+  The bass channel gets no note events at all. A whole-channel block gets no
+  side in a stereo render (`render_side` runs only on bus blocks), so a width
+  sketch needs a lever. A clip's `--pin` rewrites only what the host sets, so a
+  sketch's own setting needs a build per variant (`--bin`). The core writes a
+  mono render as one channel (`stereo_guard.py` wants two), and has no
+  per-voice refusal report: say so. Renders are bit for bit, so a sketch's
+  part is exactly the render minus the one without it, except for a delay,
+  whose difference is its shift. Setup in the cloud: one `pip install` of
+  numpy, scipy, librosa and soundfile hung for 8 minutes at low CPU; killed
+  and run again it finished in a minute (add pyloudnorm for the guards). A
+  worker restart kept the scratch folder and the builds.
 - **Long form needs minutes, not seconds (Ears 10).** The deep pass's
   sections and sweeps are at the scale of seconds; on beatless ambient its
   "sweeps" are mostly notes changing register. `tools/ears/longform.py` reads

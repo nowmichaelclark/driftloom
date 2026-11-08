@@ -1,0 +1,8 @@
+[
+ {"file": "00-everything", "candidate": "everything", "loops": ["grove62", "shrine0", "thaw71", "tide39"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "01-lowBell", "candidate": "lowBell", "loops": ["haven38", "thaw71", "grove62", "dust69"], "tags": ["none", "with", "swell"], "names": {"none": "without", "swell": "with-swell"}},
+ {"file": "02-padWow", "candidate": "padWow", "loops": ["shrine0", "thaw71", "grove62", "undertow45"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "03-colorTone", "candidate": "colorTone", "loops": ["vapor4", "shrine0", "tide39", "grove62"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "04-deepDuck", "candidate": "deepDuck", "loops": ["grove62", "undertow45", "halcyon48", "dust69"], "tags": ["none", "approved", "with"], "names": {"none": "without", "approved": "approved-subDuck"}},
+ {"file": "05-wideSweep", "candidate": "wideSweep", "loops": ["shrine0", "thaw71", "grove62", "undertow45"], "tags": ["none", "approved", "with", "fast"], "names": {"none": "without", "approved": "approved-padSweep", "with": "with-wide", "fast": "with-fast"}}
+]
