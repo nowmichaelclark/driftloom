@@ -18,6 +18,13 @@
 
 static int failures = 0;
 
+/* Static, not on the stack: the player's own calls take some 60 KB of
+   stack, near Emscripten's 64 KB default, so a host's big buffers live
+   elsewhere (or it sets a bigger stack: -sSTACK_SIZE). */
+static char about[4096];
+static double grid[640];
+static float buf[CHUNK];
+
 static void check(const char *what, int ok) {
   if (!ok) {
     fprintf(stderr, "report: FAIL %s\n", what);
@@ -34,10 +41,8 @@ int main(void) {
   dl_player_load(p, 1063107040u);
   dl_player_ready(p);
 
-  char about[4096];
   size_t n = dl_player_describe(p, about, sizeof about);
   check("a description", n > 0 && n < sizeof about && strstr(about, "seed=1063107040\n") != NULL);
-  double grid[640];
   check("a grid", dl_player_grid(p, DL_CHORDS, grid, 640) > 0 && dl_player_grid(p, DL_CHORDS, grid, 4) == 0);
 
   dl_note note;
@@ -50,7 +55,6 @@ int main(void) {
   check("a change for the end", dl_player_change(p, 663542962u, DL_END, DL_CROSSFADE) == 1);
   check("a seed edit", dl_player_seed(p, DL_DRUMS, 4242u, 1) == NULL && dl_player_seed(p, 7, 1, 0) != NULL);
 
-  float buf[CHUNK];
   float *out[1] = { buf };
   dl_event e;
   uint64_t next_step = 0;
