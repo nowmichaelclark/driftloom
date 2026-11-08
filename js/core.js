@@ -1,9 +1,15 @@
 // The Rust core, main-thread side (queue item 21, roadmap 16).
 //
-// The core is Driftloom's engine (queue item 32): it plays by default, and
-// `?engine=js` asks for the JavaScript synth instead (for measurement and
-// comparison). An old `?engine=rust` link keeps working: it asks for what
-// is already the default. The synth hands every voice to an
+// The core is Driftloom's engine (queue item 32), and since queue item 94b
+// the app plays the core's player by default: the core decides every note
+// itself, on the audio thread (core/src/player/, through js/dlplayer.wasm),
+// and the page sends it commands and draws what it reports (js/player.js).
+// `?engine=page` asks for the page's own engine on the core instead, the way
+// the app played before 94b (js/engine.js decides the notes and hands them
+// to js/dlcore.wasm), for comparison until queue item 97 retires it; and
+// `?engine=js` for the JavaScript synth. An old `?engine=rust` or
+// `?engine=player` link keeps working: it asks for what is already the
+// default. On the page's engine the synth hands every voice to an
 // AudioWorkletNode running js/dlcore.wasm, and since queue item 29 the mix
 // as well: the channels, sends, duck, echo and reverb; since item 30 the
 // wobble, the saturator, the tone and the highpass; since item 31 the bus
@@ -16,26 +22,25 @@
 // while playing (Diagnostics says which, `js (fallback: ...)`), and what
 // `?engine=js` asks for (`js (asked)`).
 
-export const ENGINE = (() => {
+function engineAsked() {
   try {
-    return new URLSearchParams(globalThis.location?.search || '').get('engine') === 'js' ? 'js' : 'rust';
+    return new URLSearchParams(globalThis.location?.search || '').get('engine');
   } catch {
-    return 'rust';
+    return null;
   }
-})();
+}
 
-// `?engine=player` (queue item 82, for testing): the core plays the loop
-// itself, from its seed and its vibes, with its own sequencer
-// (core/src/player/), through js/dlplayer.wasm; the page's engine only keeps
-// the cursor and the controls. The core is otherwise the 'rust' engine, as
-// above. The app does not switch to it until phase 3.
-export const PLAYER = (() => {
-  try {
-    return new URLSearchParams(globalThis.location?.search || '').get('engine') === 'player';
-  } catch {
-    return false;
-  }
-})();
+export const ENGINE = engineAsked() === 'js' ? 'js' : 'rust';
+
+// `?engine=page` (queue item 94b): the page's own engine on the core, as the
+// app played before the player became its default.
+export const PAGE_ENGINE = engineAsked() === 'page';
+
+// `?engine=player` asked for by name (queue item 82). The app plays the
+// player by default (js/main.js decides, from ENGINE and PAGE_ENGINE); this
+// is the default for a CoreHost built by anything else (the measure
+// harnesses build their own, on js/dlcore.wasm, unless a page asks).
+export const PLAYER = engineAsked() === 'player';
 
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
@@ -208,21 +213,29 @@ function logEntry(entry) {
   if (coreLog.entries.length > LOG_MOST) coreLog.entries.shift();
 }
 
-const WASM_URL = new URL(PLAYER ? './dlplayer.wasm' : './dlcore.wasm', import.meta.url);
+// The core's module: the player's build (js/dlplayer.wasm, the core with its
+// generator and sequencer) or the core alone (js/dlcore.wasm, for the page's
+// engine).
+const WASM_URLS = {
+  player: new URL('./dlplayer.wasm', import.meta.url),
+  core: new URL('./dlcore.wasm', import.meta.url),
+};
 const WORKLET_URL = new URL('./worklet.js', import.meta.url);
 
-// Fetched once per page, however many contexts and synths come and go.
-let bytes = null;
-export function fetchCore() {
-  if (!bytes) {
-    bytes = fetch(WASM_URL).then((res) => {
-      if (!res.ok) throw new Error(`dlcore.wasm: HTTP ${res.status}`);
+// Each fetched once per page, however many contexts and synths come and go.
+const fetched = {};
+export function fetchCore(player = PLAYER) {
+  const which = player ? 'player' : 'core';
+  if (!fetched[which]) {
+    const url = WASM_URLS[which];
+    fetched[which] = fetch(url).then((res) => {
+      if (!res.ok) throw new Error(`${url.pathname.split('/').pop()}: HTTP ${res.status}`);
       return res.arrayBuffer();
     });
     // A failed fetch can be tried again.
-    bytes.catch(() => { bytes = null; });
+    fetched[which].catch(() => { fetched[which] = null; });
   }
-  return bytes;
+  return fetched[which];
 }
 
 // The worklet module, added once per context.
@@ -231,7 +244,9 @@ const modules = new WeakMap();
 // Everything a Synth needs to build its core node on this context: the
 // module's bytes, with the worklet already added. Async, so the app calls
 // it as soon as it has a context and the synth takes it when it arrives.
-export async function loadCore(ctx) {
+// `player`: the player's module (queue item 94b), which the CoreHost must
+// then be built for.
+export async function loadCore(ctx, player = PLAYER) {
   if (typeof WebAssembly !== 'object') throw new Error('no WebAssembly in this browser');
   if (!ctx.audioWorklet) throw new Error('no AudioWorklet in this browser');
   let added = modules.get(ctx);
@@ -239,8 +254,8 @@ export async function loadCore(ctx) {
     added = ctx.audioWorklet.addModule(WORKLET_URL);
     modules.set(ctx, added);
   }
-  const [wasm] = await Promise.all([fetchCore(), added]);
-  return { bytes: wasm };
+  const [wasm] = await Promise.all([fetchCore(player), added]);
+  return { bytes: wasm, player: !!player };
 }
 
 // A note carries up to twelve of its voice's own values (EXTRA in
@@ -267,6 +282,9 @@ const NO_KEY = { seed: 0, pass: 0, step: 0, ord: 0 };
 // output carries two channels either way, the mono render in both, so the
 // switch never rebuilds it. With `taps` (the measure harness) it carries
 // as many as the layout, as it always has.
+// On the player's module (`core.player`, queue item 94b) the core's player
+// decides the notes, and the node takes its commands (`playLoad` and the
+// rest) and reports what it decides as events (`onevents`).
 export class CoreHost {
   constructor(ctx, core, dests, { quality = 'full', taps = false, key = null, layout = 1, burn = 0 } = {}) {
     this.ctx = ctx;
@@ -317,9 +335,18 @@ export class CoreHost {
     this.onbusy = null;
     this._pings = new Map();
     this._ping = 0;
-    // With `?engine=player`, where the core's player was as of the last
-    // flush(): { state, step, time } (queue item 82).
+    // On the player's module (queue items 82 and 94b): whether the core's
+    // player decides the notes; where it was as of its last report,
+    // { state, step, time }; the events it reports, as they come (each
+    // message's `events`, four numbers an event: time, kind, number, step;
+    // `grids`, the layers' grids read with the events that begin a pass;
+    // `trackEnd`, `lost`); and the requests it refused (a code's edit, say).
+    this.player = core.player === undefined ? PLAYER : !!core.player;
     this.playerAt = null;
+    this.onevents = null;
+    this.eventsLost = 0;
+    this.refused = 0;
+    this._probes = new Map();
     const outputs = taps ? 2 + CORE_CHANNEL_COUNT : 1;
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
       numberOfInputs: dests.length,
@@ -329,7 +356,7 @@ export class CoreHost {
       channelCount: 1,
       channelCountMode: 'explicit',
       // Copied, not moved: the page keeps its copy for the next synth.
-      processorOptions: { bytes: core.bytes, quality, layout: this.layout, player: PLAYER, burn },
+      processorOptions: { bytes: core.bytes, quality, layout: this.layout, player: this.player, burn },
     });
     this.node.port.onmessage = (e) => this._receive(e.data);
     // The processor threw while playing (a trap in the core, say): the node
@@ -440,16 +467,42 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'retune', channel, time, notes: notes.slice(0, 6) });
   }
 
-  // With `?engine=player` (queue item 82): the core's player plays the loop
-  // of `seed` with the vibes numbered `vibes` (VIBE_IDS' order), its first
-  // step at `at` on the context's clock (or as soon as it is made, if that
-  // has passed); stops, going on where it stood with its next step at `at`;
-  // and takes the controls: how far it wanders, a layer muted (by its index
-  // in LAYERS), the tempo and the volume.
-  // `vibes` [[index, weight], ...], `tempo` null or [low, high]: the
-  // request (generator.js, `requestOf`).
-  playLoad(seed, vibes, at, tempo = null, pins = [], theme = null, length = null, keys = 0, scales = 0, styles = 0, voices = null, layers = null) {
-    this.node.port.postMessage({ type: 'playLoad', seed, vibes, at, tempo, pins, theme, length, keys, scales, styles, voices, layers });
+  // The core's player (queue items 82 and 94b). `ask` is a loop's request
+  // and a code's edits, as `askOf` in js/player.js builds them; `seed` its
+  // seed. `playLoad` starts the loop afresh, its first step at `at` on the
+  // context's clock (0: as soon as it is made), `resumed` a loop that was
+  // playing on another core (the quality switch: its lateFloor does not wait
+  // again). `playChange` changes to it at a moment (`MOMENT` in
+  // js/player.js), the old loop falling to nothing over `fade` seconds;
+  // `playRevise` makes the loop playing again in its place (a re-roll).
+  playLoad(seed, ask, at = 0, resumed = false) {
+    this.node.port.postMessage({ type: 'playLoad', seed, ask, at, resumed });
+  }
+
+  playChange(seed, ask, moment, fade) {
+    this.node.port.postMessage({ type: 'playChange', seed, ask, moment, fade });
+  }
+
+  playRevise(seed, ask) {
+    this.node.port.postMessage({ type: 'playRevise', seed, ask });
+  }
+
+  // How long the track plays (`kind` 0 on and on, 1 `count` passes, 2
+  // `count` bars), counted from what is heard now; with `arm` ({ seed, ask,
+  // fade }), the loop that follows when it ends, in the same message so that
+  // no block falls between them.
+  playTrack(kind, count, arm = null) {
+    this.node.port.postMessage({ type: 'playTrack', kind, count, arm });
+  }
+
+  // The loop that follows when the track ends (`MOMENT.end`), alone.
+  playArm(arm) {
+    this.node.port.postMessage({ type: 'playArm', arm });
+  }
+
+  // The Sound panel's tone, gliding there from now.
+  playTone(tone) {
+    this.node.port.postMessage({ type: 'playTone', warmth: tone.warmth, space: tone.space, wobble: tone.wobble });
   }
 
   playStop() {
@@ -475,6 +528,17 @@ export class CoreHost {
 
   playVolume(volume) {
     this.node.port.postMessage({ type: 'playVolume', volume });
+  }
+
+  // Resolves with what the player says about the loop now: its state, step,
+  // track's end, events lost, lanes and description (`describe`'s lines as
+  // an object). For the checks (tools/rows.mjs reads the same from outside).
+  probe() {
+    const id = ++this._ping;
+    return new Promise((resolve) => {
+      this._probes.set(id, resolve);
+      this.node.port.postMessage({ type: 'probe', id });
+    });
   }
 
   // Every note handed over, sounding or waiting, falls from `from` to
@@ -504,6 +568,7 @@ export class CoreHost {
   // JavaScript chain back on a disposed synth).
   dispose() {
     this.onfail = null;
+    this.onevents = null;
     this.node.onprocessorerror = null;
     this.node.port.postMessage({ type: 'dispose' });
     try { this.node.disconnect(); } catch { /* already detached */ }
@@ -511,7 +576,9 @@ export class CoreHost {
   }
 
   _receive(m) {
-    if (m.type === 'counts' || m.type === 'pong') {
+    // The player's reports carry the counts too (queue item 94b): no notes
+    // posted by the page bring them.
+    if (m.type === 'counts' || m.type === 'pong' || (m.type === 'cost' && m.late != null)) {
       this.late = m.late;
       this.dropped = m.dropped;
       if (m.missed != null) this.missed = m.missed;
@@ -532,6 +599,17 @@ export class CoreHost {
       if (m.deepest) this.deepest = this.deepest.map((d, i) => Math.min(d, m.deepest[i]));
       const resolve = this._pings.get(m.id);
       this._pings.delete(m.id);
+      if (resolve) resolve(m);
+    }
+    if (m.type === 'events') {
+      if (m.lost != null) this.eventsLost = m.lost;
+      if (m.refused != null) this.refused = m.refused;
+      if (this.onevents) this.onevents(m);
+    }
+    if (m.type === 'probe') {
+      if (m.player) this.playerAt = m.player;
+      const resolve = this._probes.get(m.id);
+      this._probes.delete(m.id);
       if (resolve) resolve(m);
     }
     if (m.type === 'failed') this._fail(m.message);

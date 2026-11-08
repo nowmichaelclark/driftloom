@@ -28,11 +28,12 @@ core, and how to add a block, is `core/README.md`.
   corpus's first 80 loops from their seeds to WAVs, against
   `golden/seeds.hashes`; `--browser` holds the baseline's 40 loops to the
   browser's renders (the baseline's `player` part), `--c` the C host
-  (`include/dlcore.h`). CI runs them. Until the app plays the player (phase
-  3), a change to what `js/engine.js` or `js/synth.js` does between the
-  generator's events and the core's notes is made in `src/player/` too, in
-  the same PR: the baseline's `player` part moves with the page, and
-  `--browser` fails until the player follows.
+  (`include/dlcore.h`). CI runs them. The app plays the player since item
+  94b; until `?engine=page` retires (item 97), a change to what
+  `js/engine.js` or `js/synth.js` does between the generator's events and
+  the core's notes is made in `src/player/` too, in the same PR: the
+  baseline's `player` part moves with the page, and `--browser` fails until
+  the player follows.
 
 - `cargo test --locked --features sketch` and `cargo clippy --all-targets
   --features sketch`: the sketch folder (`core/sketch/`, item 83) as it stands,
