@@ -156,7 +156,7 @@ mod tests {
         let mut e = Events::new();
         assert!(e.pop().is_none());
         for i in 0..EVENTS_MAX + 3 {
-            e.push(at(i as f64));
+            e.push(at(f64::from(u32::try_from(i).unwrap_or(0))));
         }
         assert_eq!((e.len(), e.lost()), (EVENTS_MAX, 3));
         assert_eq!(e.pop().map(|x| x.time), Some(0.0));

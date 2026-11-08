@@ -124,6 +124,11 @@ jobs:
       # sample for sample; with the wander and with a change waiting.
       - name: Rendering ahead, chunked against straight through
         run: node tools/ahead.mjs --sweep
+      # Everything the app does, as a command or an event (queue item 94a):
+      # the player's description, grid, edits, events, re-roll in place and
+      # track's end in js/dlplayer.wasm, against the page's generator.
+      - name: The player's commands and events, against the page
+        run: node test/player.test.mjs
       # The balance lock's corpus from the Rust generator (queue item 80):
       # every loop's figures from its tracks must equal the JavaScript's.
       - name: The balance lock, on the Rust generator

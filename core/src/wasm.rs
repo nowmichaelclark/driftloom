@@ -765,7 +765,7 @@ mod player {
         // SAFETY: single-threaded, and no export keeps the reference.
         let buf = unsafe { &mut *EVENTS.0.get() };
         let mut n = 0;
-        for slot in buf.chunks_exact_mut(4) {
+        for slot in buf.as_chunks_mut::<4>().0 {
             let Some(e) = player().event() else { break };
             slot.copy_from_slice(&[e.time, f64::from(e.kind as u8), e.number as f64, e.step as f64]);
             n += 1;

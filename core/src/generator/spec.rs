@@ -233,6 +233,23 @@ impl Spec {
         }
     }
 
+    /// The layers re-rolled, `forceLayers` (queue item 94a): each `true`,
+    /// only if any.
+    fn write_rolled<S: Sink>(&self, w: &mut Writer<S>) {
+        if self.rolled == 0 {
+            return;
+        }
+        w.key("forceLayers");
+        w.obj();
+        for (key, layer) in ALPHABETICAL {
+            if self.forced(layer) {
+                w.key(key);
+                w.bool(true);
+            }
+        }
+        w.end_obj();
+    }
+
     /// The voices asked, `askVoices`: each layer's names, only if asked.
     fn write_voices<S: Sink>(&self, w: &mut Writer<S>) {
         if self.voices.iter().all(|&v| v == 0) {
@@ -291,17 +308,7 @@ impl Spec {
         write_feel(w, &self.feel);
         w.key("feelMix");
         write_weights(w, &self.feel_mix, |k| MOODS[k].id);
-        if self.rolled != 0 {
-            w.key("forceLayers");
-            w.obj();
-            for (key, layer) in ALPHABETICAL {
-                if self.rolled & (1 << layer as usize) != 0 {
-                    w.key(key);
-                    w.bool(true);
-                }
-            }
-            w.end_obj();
-        }
+        self.write_rolled(w);
         w.key("layerSeeds");
         w.obj();
         for (key, layer) in [

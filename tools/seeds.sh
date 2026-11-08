@@ -17,7 +17,9 @@
 #                                       the C host (core/examples/c/seed.c, built
 #                                       against core/include/dlcore.h alone) against
 #                                       the same hashes, and its WAV against
-#                                       dlrender's, byte for byte; for Emscripten
+#                                       dlrender's, byte for byte, and
+#                                       core/examples/c/report.c's checks (queue
+#                                       item 94a); for Emscripten
 #                                       (queue item 87) built with emcc, run in Node
 #
 # Each loop plays 45 s at 44.1 kHz, full quality, mono, wandering as the app's
@@ -124,6 +126,15 @@ if [ "$chost" = yes ]; then
     echo "seeds: the C host's renders differ from the kept hashes:" >&2
     diff "$tmp/kept" "$tmp/lines" | sed 's/^/  /' >&2
     exit 1
+  fi
+  # The calls and events of queue item 94a, through the header alone.
+  if [ "$target" = wasm32-unknown-emscripten ]; then
+    emcc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/report.c "target/$target/release/libdlcore.a" \
+      -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1 -o "$tmp/report.js"
+    node "$tmp/report.js"
+  else
+    cc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/report.c target/release/libdlcore.a -lm -o "$tmp/report"
+    "$tmp/report"
   fi
   # Rendered ahead, a pass at a time in one call each (queue item 87): the
   # same lines.

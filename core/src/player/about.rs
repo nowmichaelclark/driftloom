@@ -55,7 +55,7 @@ impl Player {
         let row = &mut out[..n];
         row.fill(0.0);
         lp.each_velocity(layer, |step, vel| {
-            if !(vel != 0.0 && !vel.is_nan()) {
+            if vel == 0.0 || vel.is_nan() {
                 return;
             }
             let i = (((step % cycle) + cycle) % cycle) as usize;
