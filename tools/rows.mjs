@@ -18,7 +18,8 @@
 //   cover               drawn
 //   cursor              lit from the core's steps, moving
 //   Pause, Play again   the core idle and silent; then on from where it stood
-//   Next                a change now, crossfading; the core's loop is the card's
+//   Next                the core's own loop (queue item 95), crossfading;
+//                       the core's loop is the card's
 //   Previous            back to the loop before, by its seed, request and edits
 //   roll a layer        made again in place: its seed re-rolled, the steps go on
 //   mutes               all five off: silence; on: sound
@@ -28,13 +29,17 @@
 //   volume              0: silence; back: sound
 //   mono                the core renders one lane, then two
 //   layers' grid        the dots of the bar shown are the core's grid
-//   picks               a vibe picked: the next loop leans on it
+//   picks               a vibe picked: held by the core (queue item 95), the
+//                       loop playing left as it is, the next loop the
+//                       core's own and leaning on it; held again after a
+//                       reload
 //   export MIDI         a MIDI file
 //   share code          the code decodes to the loop the core plays
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
-//   length (--long)     a minute: the track ends on its line and the loop
-//                       armed for it starts there; Now Playing counts down
+//   length (--long)     a minute: the track ends on its line and the core's
+//                       own loop starts there, with the picks (queue item
+//                       95), the card following; Now Playing counts down
 //
 // With --engine page, the rows that make sense on the page's engine
 // (?engine=page) run as a comparison; the probe has nothing to say there.
@@ -201,7 +206,16 @@ async function main() {
       for (const b of R.events) if (b.node === last) for (let i = 0; i < b.events.length; i += 4) out.push(b.events.slice(i, i + 4));
       return out;
     });
-    const kinds = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6 };
+    const kinds = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7 };
+    // The last picks the page sent the core (queue item 95).
+    const lastPicks = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playPicks').pop() || null);
+    // The seed of each loop the core made itself, with the picks' number.
+    const owns = async () => {
+      const e = await steps();
+      const out = [];
+      for (let i = 0; i + 1 < e.length; i++) if (e[i][1] === kinds.own && e[i + 1][1] === kinds.loop) out.push({ tag: e[i][2], seed: e[i + 1][2] });
+      return out;
+    };
 
     console.log(`\nThe app's controls and displays on the ${PLAYER ? 'core\'s player' : 'page\'s engine (?engine=page)'} (queue item 94b)`);
     // Play.
@@ -251,11 +265,12 @@ async function main() {
     await sleep(3000);
     const second = await name();
     p = await probe();
-    const change = await ev(() => window.__rows.posts.filter((m) => m.type === 'playChange' && m.moment === 0).pop());
+    const asked = await ev(() => window.__rows.posts.filter((m) => m.type === 'playNext' && m.moment === 0).pop());
     if (PLAYER) {
-      row('Next: a change now, crossfading, to the loop on the card', second !== first && p.d.name === second && change && change.fade === 1, `${p.d.name} / ${second}`);
-      const loops = (await steps()).filter((e) => e[1] === kinds.loop).map((e) => e[2]);
-      row('Next: the core says a new loop began, by its seed', loops.includes(Number(p.d.seed)));
+      row('Next: the core\'s own loop, crossfading, the card following', second !== first && p.d.name === second && asked && asked.fade === 1, `${p.d.name} / ${second}`);
+      const own = (await owns()).pop();
+      const sent = await lastPicks();
+      row('Next: the core says its own loop began, by its seed and the picks it took', own && own.seed === Number(p.d.seed) && sent && own.tag === sent.tag, JSON.stringify(own));
     } else row('Next: a new loop', second !== first);
     await clickId('prevBtn');
     await sleep(3000);
@@ -360,6 +375,7 @@ async function main() {
     }
 
     // Picks: a vibe, then Next.
+    const playingSeed = PLAYER ? (await probe()).d.seed : null;
     const vibe = await ev(() => {
       document.getElementById('vibesBtn').click();
       document.querySelector('#picksList .pk-line-mood .pk-val').click();
@@ -367,12 +383,21 @@ async function main() {
       b.click();
       return b.dataset.vibe;
     });
+    if (PLAYER) {
+      await sleep(500);
+      p = await probe();
+      const sent = await lastPicks();
+      const index = sent ? sent.ask.vibes.map(([i]) => i) : [];
+      row('picks: sent as a command and held by the core, the loop playing left as it is', sent && p.picksTag === sent.tag && index.length === 1 && p.d.seed === playingSeed, `tag ${p.picksTag}, ${JSON.stringify(sent && sent.ask.vibes)}`);
+    }
     // N, a new loop (Next would walk forward through the history first).
     await key('n');
     await sleep(3000);
     if (PLAYER) {
       p = await probe();
-      row('picks: a vibe picked, the next new loop leans on it', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name()), `${vibe}: ${p.d.vibes}`);
+      const own = (await owns()).pop();
+      row('picks: the next new loop is the core\'s own and leans on them', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name())
+        && own && own.seed === Number(p.d.seed), `${vibe}: ${p.d.vibes}`);
     }
     await ev(() => document.getElementById('vibesClear').click());
 
@@ -428,21 +453,45 @@ async function main() {
       p = await probe();
       const track = await ev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').pop());
       const clockText = await ev(() => document.getElementById('nowBig').textContent);
-      row('length: the core counts the track, the next loop armed for its end', p.trackEnd >= 0 && track && track.kind > 0 && track.arm && track.arm.seed > 0 && clockText.startsWith('−'), `end step ${p.trackEnd}, clock ${clockText}`);
-      const armed = track.arm.seed >>> 0;
+      // At the end of the history nothing of the page's follows: the core
+      // makes its own (queue item 95).
+      row('length: the core counts the track, its own loop to follow (nothing of the page\'s armed)', p.trackEnd >= 0 && track && track.kind > 0 && track.arm === null && clockText.startsWith('−'), `end step ${p.trackEnd}, clock ${clockText}`);
+      const before = (await owns()).length;
       const t0 = Date.now();
-      let took = false;
+      let took = null;
       while (Date.now() - t0 < 150000 && !took) {
         await sleep(2000);
         const e = await steps();
         const at = e.findIndex((x) => x[1] === kinds.end);
-        took = at >= 0 && e.slice(at).some((x) => x[1] === kinds.loop && x[2] === armed);
+        const own = (await owns()).slice(before)[0];
+        took = at >= 0 && own ? own : null;
       }
       await sleep(1500);
       p = await probe();
-      row('length: the track ends on its line, the armed loop starts there, the card follows', took && Number(p.d.seed) === armed && p.d.name === (await name()), `${Math.round((Date.now() - t0) / 1000)} s`);
+      const sent = await lastPicks();
+      row('length: the track ends on its line, the core\'s own loop starts there with the picks, the card follows', took && Number(p.d.seed) === took.seed && sent && took.tag === sent.tag
+        && p.d.name === (await name()) && p.trackEnd < 0, `${Math.round((Date.now() - t0) / 1000)} s`);
       const after = (await diag()).split('\n').find((l) => l.startsWith('engine:'));
       row('length: nothing late across the hand-over', /late: 0\s+missed: 0\s+dropped: 0/.test(after), after);
+    }
+    // The picks survive a reload (kept as the vibes are, in the prefs), and
+    // go to the new core as it starts.
+    if (PLAYER) {
+      await ev(() => {
+        document.getElementById('vibesBtn').click();
+        document.querySelector('#picksList .pk-line-mood .pk-val').click();
+        document.querySelector('#vibesList .vb-key').click();
+      });
+      await sleep(300);
+      const kept = await lastPicks();
+      await page.reload();
+      await page.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+      await sleep(1500);
+      await page.click('#playBtn');
+      await sleep(3000);
+      p = await probe();
+      const again = await lastPicks();
+      row('picks: held again by the core after a reload', kept && again && p.picksTag === again.tag && JSON.stringify(again.ask.vibes) === JSON.stringify(kept.ask.vibes), JSON.stringify(again && again.ask.vibes));
     }
     row('no page errors', errors.length === 0, errors.join('; '));
   } finally {

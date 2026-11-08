@@ -16,7 +16,8 @@
 // the track, and draws the core's events; it decides no notes.
 
 import { Engine, UNREPEATABLE_FROM } from '../js/engine.js';
-import { PlayerEngine, MOMENT, KIND, CHANGE_FADE, END_FADE } from '../js/player.js';
+import { VIBE_IDS } from '../js/vibes.js';
+import { PlayerEngine, picksAsk, MOMENT, KIND, CHANGE_FADE, END_FADE } from '../js/player.js';
 import { boundary } from '../js/quality.js';
 import { newSpec, rerollLayer, vibesOf, LAYERS } from '../js/generator.js';
 import { echoTimeOf } from '../js/choices.js';
@@ -916,6 +917,88 @@ console.log('\nThe core\'s player (queue item 94b)');
   again.start();
   const resumed = posts.find((p) => p[0] === 'playLoad');
   check('player: a loop resumed on a new core is a load from its top, its lateFloor not waited again', !!resumed && resumed[1] === next.seed >>> 0 && resumed[4] === true);
+}
+
+console.log('\nThe picks through the core (queue item 95)');
+{
+  // The PlayerEngine sends the picks as a command, once a core, with a seed
+  // for the core's own loops; Next asks the core for one of its own, and the
+  // page hears which (onOwn) and catches up without a second change; the
+  // track's end with nothing armed is the core's own, so the page's
+  // onTrackEnd is not called; an arm of null drops the one waiting.
+  const ctx = { currentTime: 0, state: 'running', sampleRate: 48000 };
+  const posts = [];
+  const core = { player: true, failed: null, onevents: null, onpicks: null, playerAt: null, eventsLost: 0, refused: 0 };
+  for (const m of ['playLoad', 'playChange', 'playRevise', 'playTrack', 'playArm', 'playTone', 'playStop', 'playResume', 'playWander', 'playMute', 'playTempo', 'playVolume', 'cancel', 'playPicks', 'playDraws', 'playNext']) {
+    core[m] = (...args) => posts.push([m, ...args]);
+  }
+  const synth = { core: null, userVolume: 0.7, unsilence: () => {}, silence: () => {} };
+  const engine = new PlayerEngine(ctx, synth);
+  const sent = picksAsk({ vibes: ['cozy'], tempo: [77, 77], length: 12 });
+  engine.setPicks(sent.ask, 1);
+  check('picks: none sent before a core', posts.length === 0 && engine.ownLoops);
+  const spec = newSpec(5151);
+  engine.load(spec);
+  engine.start();
+  synth.core = core;
+  engine.coreArrived();
+  const draws = posts.findIndex((p) => p[0] === 'playDraws');
+  const sentPicks = posts.findIndex((p) => p[0] === 'playPicks');
+  check('picks: as the core arrives, a seed to draw from and the picks, before the loop', draws >= 0 && posts[draws][1] !== 0 && sentPicks > draws
+    && posts[sentPicks][1] === sent.ask && posts[sentPicks][2] === 1 && sentPicks < posts.findIndex((p) => p[0] === 'playLoad'));
+  check('picks: with the vibes a listener\'s pick, no weight, and the tempo and the bars asked', JSON.stringify(sent.ask.vibes) === JSON.stringify([[VIBE_IDS.indexOf('cozy'), null]])
+    && JSON.stringify(sent.ask.tempo) === '[77,77]' && sent.ask.length === 12);
+  let heard = null;
+  engine.onPicks = (m) => { heard = m; };
+  core.onpicks({ tag: 1, met: true, why: null });
+  check('picks: the core\'s answer reaches the page', heard && heard.tag === 1 && heard.met);
+  posts.length = 0;
+  engine.setPicks(picksAsk({ vibes: ['glacial'] }).ask, 2);
+  check('picks: a pick made while it plays is sent at once, and the loop playing is left as it is', posts.length === 1 && posts[0][0] === 'playPicks' && posts[0][2] === 2);
+  // Next: the core's own.
+  posts.length = 0;
+  engine.next();
+  const next = posts.find((p) => p[0] === 'playNext');
+  check('picks: Next asks the core for a loop of its own, crossfading', !!next && next[1] === MOMENT.now && next[2] === CHANGE_FADE && !posts.some((p) => p[0] === 'playChange'));
+  let owned = null;
+  engine.onOwn = (seed, tag) => { owned = [seed, tag]; };
+  core.onevents({ events: [2, KIND.own, 2, 0, 2, KIND.loop, 31337, 0], trackEnd: -1 });
+  check('picks: the page hears the core\'s own loop, its seed and the picks it took', owned && owned[0] === 31337 && owned[1] === 2);
+  posts.length = 0;
+  const salt = engine.salt;
+  const caught = newSpec(31337, ['glacial']);
+  engine.load(caught);
+  check('picks: the page catches up without a second change, the play\'s salt kept', !posts.some((p) => p[0] === 'playChange' || p[0] === 'playLoad') && engine.salt === salt);
+  // The track's end with nothing armed: the core's own, not the page's.
+  let ended = 0;
+  engine.onTrackEnd = () => ended++;
+  posts.length = 0;
+  caught.playFor = 1;
+  engine.trackChanged(null);
+  const track = posts.find((p) => p[0] === 'playTrack');
+  check('picks: a length with nothing of the page\'s to follow arms nothing (the core\'s own follows)', !!track && track[1] === 1 && track[3] === null);
+  core.onevents({ events: [9, KIND.end, 0, 64, 9, KIND.own, 2, 0, 9, KIND.loop, 4242, 0], trackEnd: -1 });
+  check('picks: and at its end the page is not sent forward itself: the core\'s own loop is told', ended === 0 && owned[0] === 4242);
+  // An armed loop goes with its own track; an arm of null drops it.
+  posts.length = 0;
+  const armed = newSpec(6161);
+  armed.playFor = 3;
+  engine.arm(armed);
+  engine.arm(null);
+  const arms = posts.filter((p) => p[0] === 'playArm');
+  check('picks: an armed loop goes with the track it plays, and null drops it', arms.length === 2 && JSON.stringify(arms[0][1].track) === '[1,3]' && arms[1][1] === null);
+  // Next from Pause starts playing, the core's own loop first.
+  engine.stop();
+  posts.length = 0;
+  engine.next();
+  check('picks: Next from Pause plays the core\'s own loop, not the old one', engine.playing && posts.some((p) => p[0] === 'playNext') && !posts.some((p) => p[0] === 'playResume' || p[0] === 'playLoad'));
+  // A new core (the quality switch, a reload) is given the picks again.
+  posts.length = 0;
+  const again = new PlayerEngine(ctx, synth);
+  again.setPicks(sent.ask, 3);
+  again.load(spec, { resume: true });
+  again.start();
+  check('picks: a new engine gives its core the picks again', posts.some((p) => p[0] === 'playPicks' && p[2] === 3));
 }
 
 console.log('\nLength (queue items 88 and 88b)');

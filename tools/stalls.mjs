@@ -50,7 +50,8 @@
 //
 // Options:
 //   --loops <names>     shatter,cinder (default), hollow, undertow, from
-//                       tools/perf.mjs's set
+//                       tools/perf.mjs's set; piece (shatter's seed, 32,768
+//                       bars) and endless (the same, Endless)
 //   --engines <list>    player (the app's default, queue item 94b), page
 //                       (?engine=page, the page's engine on the core; `core`
 //                       names it too) and js        (default player,page,js)
@@ -79,6 +80,10 @@ export const LOOPS = {
   shatter: { name: 'shatter-glein-fei', code: 'DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-V4G0' },
   cinder: { name: 'cinder-da-yoan', code: 'DL1-0C076-20110-60H1R-PE1MF-FVF35-ZPPA7-DDQPN-9D5MS-SBK94-FAREY-9KW08-EZW10-CDR3S-2QAD0-WEFGB-00000-0006S-3R' },
   hollow: { name: 'hollow-laith-hu', code: 'DL1-0C04J-2R00G-60ZHQ-01BZP-630Q2-3DP7M-GV3HF-3QTSE-RFHKD-SP413-ABM10-87G5Q-000V1-RW061-8Y02P-G6CYN-M2J71-49H00-00000-041D0' },
+  // Shatter's seed as a piece of 32,768 bars and as Endless (queue item 95:
+  // long pieces and Endless play from the core alone).
+  piece: { name: 'glein-fei', code: 'DL1-10088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-00000-000G6-00519-9' },
+  endless: { name: 'glein-fei', code: 'DL1-10088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-00000-00006-T2C' },
   undertow: { name: 'undertow-vith-glour', code: 'DL1-0C066-0R240-80QFF-STBB1-S7BSN-XARZ1-AG3PA-793NP-FN4X2-HKYN6-DS210-9T420-Y3G51-WD020-7ZR2W-BGV5B-5G000-08000-04001-00080-00000-2B5R' },
 };
 

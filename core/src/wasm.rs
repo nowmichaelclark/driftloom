@@ -510,6 +510,44 @@ mod player {
         unsafe { &mut *REQUEST.0.get() }
     }
 
+    /// The first thing refused in the request being asked (queue item 95), so
+    /// the picks can say why they can't be met: plain ASCII, the request's
+    /// own line ("tempo must be 32 to 190 bpm"). None while all is met.
+    struct Refused(UnsafeCell<Option<&'static str>>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Refused {}
+    static REFUSED: Refused = Refused(UnsafeCell::new(None));
+
+    fn refused() -> &'static mut Option<&'static str> {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *REFUSED.0.get() }
+    }
+
+    /// A part of the request asked: kept if it can be met (1), else the
+    /// request left as it was and the refusal noted (0).
+    // The request comes back from its builder by value, as each `with_` makes it.
+    #[allow(clippy::large_types_passed_by_value)]
+    fn take(asked: Result<Request, &'static str>) -> u32 {
+        match asked {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(why) => {
+                refused().get_or_insert(why);
+                0
+            }
+        }
+    }
+
+    /// The request asked so far, taken for a load, a change, a re-roll or
+    /// the picks: the next one starts from nothing.
+    fn taken() -> (Request, Option<&'static str>) {
+        let r = *request();
+        *request() = Request::new();
+        (r, refused().take())
+    }
+
     /// Start the player on the core just started (`Player::attach`), with
     /// the full mix (1) or lite's (0), as the worklet asked `dl_quality`.
     #[unsafe(no_mangle)]
@@ -525,6 +563,9 @@ mod player {
     pub extern "C" fn dl_play_vibe(index: u32) -> u32 {
         let known = (index as usize) < crate::generator::data::VIBE_COUNT;
         *request() = request().with(index as usize);
+        if !known {
+            refused().get_or_insert(crate::generator::request::NO_SUCH_VIBE);
+        }
         u32::from(known)
     }
 
@@ -532,26 +573,14 @@ mod player {
     /// `dl_play_load` asks for (`Request::with_weight`). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_weight(index: u32, weight: f64) -> u32 {
-        match request().with_weight(index as usize, weight) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_weight(index as usize, weight))
     }
 
     /// Ask the next `dl_play_load` for a tempo, `lo` to `hi` bpm
     /// (`Request::with_tempo`). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_ask_tempo(lo: f64, hi: f64) -> u32 {
-        match request().with_tempo(lo, hi) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_tempo(lo, hi))
     }
 
     /// Bend the loop of `seed` in what the next `dl_play_load` asks for
@@ -568,13 +597,7 @@ mod player {
     pub extern "C" fn dl_play_length(bars: f64) -> u32 {
         use crate::generator::request::Length;
         let length = if bars == f64::INFINITY { Length::Endless } else { Length::Bars(bars) };
-        match request().with_length(length) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_length(length))
     }
 
     /// Ask the next `dl_play_load` for the home notes in `keys`, a bit each
@@ -582,13 +605,7 @@ mod player {
     /// be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_keys(keys: u32) -> u32 {
-        match request().with_keys(keys) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_keys(keys))
     }
 
     /// Ask the next `dl_play_load` for the modes in `scales`, a bit each by
@@ -596,13 +613,7 @@ mod player {
     /// 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_scales(scales: u32) -> u32 {
-        match request().with_scales(scales) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_scales(scales))
     }
 
     /// Ask the next `dl_play_load` for the profiles in `styles`, a bit each
@@ -610,13 +621,7 @@ mod player {
     /// 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_styles(styles: u32) -> u32 {
-        match request().with_styles(styles) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_styles(styles))
     }
 
     /// Ask the next `dl_play_load` for the voices in `voices` of layer
@@ -624,13 +629,7 @@ mod player {
     /// (`Request::with_voices`; queue item 91). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_voices(layer: u32, voices: u32) -> u32 {
-        match request().with_voices(layer as usize, voices) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_voices(layer as usize, voices))
     }
 
     /// Ask the next `dl_play_load` for layer `layer` (0 to 4) to be left to
@@ -645,26 +644,14 @@ mod player {
             2 => LayerAsk::Off,
             _ => return 0,
         };
-        match request().with_layer(layer as usize, ask) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_layer(layer as usize, ask))
     }
 
     /// Pin setting `number` at `value` for what the next `dl_play_load`
     /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_pin(number: u32, value: f64) -> u32 {
-        match request().with_pin(number as usize, value) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_pin(number as usize, value))
     }
 
     /// Set layer `layer`'s seed (0 to 4, the core's order) to `seed` in what
@@ -673,13 +660,7 @@ mod player {
     /// code's edit). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_seed(layer: u32, seed: u32, rolled: u32) -> u32 {
-        match request().with_layer_seed(layer as usize, seed, rolled != 0) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_layer_seed(layer as usize, seed, rolled != 0))
     }
 
     /// Set the tone's part `which` (0 warmth, 1 space, 2 wobble) to `value`,
@@ -687,13 +668,7 @@ mod player {
     /// edit). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_edit_tone(which: u32, value: f64) -> u32 {
-        match request().with_tone(which as usize, value) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_tone(which as usize, value))
     }
 
     /// Set the tempo to `bpm` after the next load's loop is drawn
@@ -701,13 +676,7 @@ mod player {
     /// be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_edit_bpm(bpm: f64) -> u32 {
-        match request().with_bpm(bpm) {
-            Ok(r) => {
-                *request() = r;
-                1
-            }
-            Err(_) => 0,
-        }
+        take(request().with_bpm(bpm))
     }
 
     /// The loop playing made again with what was asked since the last load,
@@ -715,8 +684,7 @@ mod player {
     /// of `seed` with a layer's new seed (`dl_play_seed`).
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_revise(seed: u32) {
-        player().revise(seed, request());
-        *request() = Request::new();
+        player().revise(seed, &taken().0);
     }
 
     /// The tone from now (`Player::set_tone`): warmth, space and wobble.
@@ -730,14 +698,19 @@ mod player {
     /// it is a kind there is.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_track(kind: u32, count: u32) -> u32 {
-        let track = match kind {
-            0 => Track::Always,
-            1 => Track::Passes(count.max(1)),
-            2 => Track::Bars(count.max(1)),
-            _ => return 0,
-        };
+        let Some(track) = track_of(kind, count) else { return 0 };
         player().set_track(core(), track);
         1
+    }
+
+    /// The track `kind` and `count` say (`dl_play_track`'s numbers).
+    fn track_of(kind: u32, count: u32) -> Option<Track> {
+        match kind {
+            0 => Some(Track::Always),
+            1 => Some(Track::Passes(count.max(1))),
+            2 => Some(Track::Bars(count.max(1))),
+            _ => None,
+        }
     }
 
     /// The step from the loop's load the track ends at
@@ -757,7 +730,7 @@ mod player {
     /// Take every event waiting (`Player::event`; queue item 94a) into
     /// `dl_play_event_at`, four doubles each: its time on the core's clock,
     /// its kind (`Kind::ALL`'s order: 0 step, 1 pass, 2 section, 3 phrase, 4
-    /// loop, 5 revised, 6 end), its number and its step from the load.
+    /// loop, 5 revised, 6 end, 7 own), its number and its step from the load.
     /// Returns how many. The worklet calls it after each block.
     #[unsafe(no_mangle)]
     #[allow(clippy::cast_precision_loss)] // numbers and steps, far below 2^53
@@ -888,8 +861,7 @@ mod player {
     /// is made if that has passed (0: as soon as made). See `Player::load`.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_load(seed: u32, at: f64) {
-        player().load_at(seed, request(), at);
-        *request() = Request::new();
+        player().load_at(seed, &taken().0, at);
     }
 
     /// `dl_play_load` for a loop resumed on a new core (`Player::load_resumed`;
@@ -897,8 +869,7 @@ mod player {
     /// not waited out a second time.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_load_resumed(seed: u32, at: f64) {
-        player().load_resumed(seed, request(), at);
-        *request() = Request::new();
+        player().load_resumed(seed, &taken().0, at);
     }
 
     /// Change to the loop of `seed` with what was asked since the last load,
@@ -911,9 +882,102 @@ mod player {
     pub extern "C" fn dl_play_change(seed: u32, moment: u32, crossfade: f64) -> u32 {
         let Some(m) = Moment::of(moment) else { return 0 };
         let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
-        player().change(seed, request(), m, handover);
-        *request() = Request::new();
+        player().change(seed, &taken().0, m, handover);
         1
+    }
+
+    /// `dl_play_change`, and how long the loop's track plays once it starts
+    /// (`Player::change_with_track`; queue item 95): `kind` and `count` as
+    /// `dl_play_track` takes them. The app arms the loop that follows a
+    /// track's end this way. 0 for a moment or a kind there is no such number
+    /// for (nothing changes), else 1.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_change_track(seed: u32, moment: u32, crossfade: f64, kind: u32, count: u32) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        let Some(track) = track_of(kind, count) else { return 0 };
+        let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+        player().change_with_track(seed, &taken().0, m, handover, Some(track));
+        1
+    }
+
+    /// A new loop of the core's own at `moment` (`Player::next`; queue item
+    /// 95, the app's Next at the end of its history), crossfading as
+    /// `dl_play_change` does: its seed drawn from `dl_play_draws`', with the
+    /// picks (`dl_play_picks`). 1 if asked; 0 for no such moment, or with no
+    /// seed to draw from.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_next(moment: u32, crossfade: f64) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+        u32::from(player().next(m, handover))
+    }
+
+    /// Drop the change waiting for `moment` (`Player::drop_change`; queue item
+    /// 95): the app drops the one armed for the track's end when nothing it
+    /// holds comes next, so the core's own loop follows. 1 if there is such
+    /// a moment.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_drop(moment: u32) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        player().drop_change(m);
+        1
+    }
+
+    /// Why the picks last held could not be met as asked, if they could not
+    /// (plain ASCII, at `dl_play_refusal_at`).
+    struct Why(UnsafeCell<Option<&'static str>>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Why {}
+    static PICKS_REFUSED: Why = Why(UnsafeCell::new(None));
+
+    /// Hold what was asked since the last load as the picks, numbered `tag`
+    /// (`Player::set_picks`; queue item 95, the app's New loops panel): every
+    /// loop the core makes itself asks them. If any part of them was refused,
+    /// only their vibes are held, as the page's own draw kept the moods of a
+    /// request it could not meet, and the first refusal is kept for
+    /// `dl_play_refusal`. 1 if held whole, 0 if only the vibes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_picks(tag: u32) -> u32 {
+        let (r, why) = taken();
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { *PICKS_REFUSED.0.get() = why };
+        if why.is_none() {
+            player().set_picks(&r, tag);
+            1
+        } else {
+            player().set_picks(&r.vibes_only(), tag);
+            0
+        }
+    }
+
+    /// The length of why the picks last held could not be met (its bytes at
+    /// `dl_play_refusal_at`); 0 if they were met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_refusal() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let why = unsafe { *PICKS_REFUSED.0.get() };
+        why.map_or(0, |w| u32::try_from(w.len()).unwrap_or(0))
+    }
+
+    /// Where that line's bytes are (null if there is none).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_refusal_at() -> *const u8 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let why = unsafe { *PICKS_REFUSED.0.get() };
+        why.map_or(core::ptr::null(), str::as_ptr)
+    }
+
+    /// The number of the picks the core holds (`Player::picks`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_picks_tag() -> u32 {
+        player().picks().1
+    }
+
+    /// Give the core a seed to draw its own loops' seeds from
+    /// (`Player::set_draws`; queue item 95); 0, none of its own.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_draws(seed: u32) {
+        player().set_draws(seed);
     }
 
     /// When the next change waiting starts its loop, in seconds on the

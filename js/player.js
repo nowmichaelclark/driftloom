@@ -7,6 +7,12 @@
 // step, the layers' grid of each pass, the pass and the track's end. The page
 // is free to stall, hide or freeze: the worklet has what it needs.
 //
+// The picks (queue item 95) are the core's too: the New loops panel's
+// request is sent as a command (`setPicks`) and held there, and every new
+// loop is one the core makes itself with them, at Next (`next`) and when the
+// length slider's time runs out with nothing of the page's armed: the page
+// learns its seed from the core's events (`onOwn`) and draws nothing.
+//
 // It has the shape of js/engine.js's Engine (the page's engine, which
 // `?engine=page` keeps for comparison until queue item 97), so js/main.js
 // drives either: load, start, stop, the controls (setMute, setTempo,
@@ -20,7 +26,7 @@
 // request and edits, which make the same spec in the Rust generator (the
 // generation goldens, and test/player.test.mjs).
 
-import { render, LAYERS, requestOf, keyMask, scaleMask, styleMask, voiceMask, layerState, pieceOf, loopBars } from './generator.js';
+import { render, LAYERS, requestOf, readRequest, RequestError, keyMask, scaleMask, styleMask, voiceMask, layerState, pieceOf, loopBars } from './generator.js';
 import { VIBE_IDS } from './vibes.js';
 import { pinNumbers } from './pins.js';
 
@@ -46,7 +52,7 @@ export function freshSalt() {
 // The moments a change waits for, as the core numbers them (`Moment::ALL`).
 export const MOMENT = { now: 0, beat: 1, bar: 2, phrase: 3, pass: 4, end: 5 };
 // The kinds of event the player reports (`Kind::ALL`).
-export const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6 };
+export const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7 };
 // How long the old loop takes to fall to nothing at Next, Previous or a loop
 // picked while one plays, in seconds: the core's own crossfade for a change
 // (`player::change::CROSSFADE`). For Mikey's ears.
@@ -92,6 +98,34 @@ export function askOf(spec) {
   };
 }
 
+// The New loops panel's request as the core takes it (queue item 95,
+// `Player::set_picks`): the request read (`readRequest`, the reader both
+// generators share) and put in the core's numbers, the vibes a listener's
+// selection, each with no weight. A request that can't be read is sent as
+// its vibes alone, as the page's own draw kept the moods of one it could not
+// meet: { ask, vibesOnly, why }.
+export function picksAsk(request) {
+  const out = (asked) => ({
+    vibes: (asked.vibes || []).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0),
+    tempo: asked.tempo,
+    pins: pinNumbers(asked.pins),
+    theme: asked.theme,
+    length: asked.length,
+    keys: keyMask(asked.key),
+    scales: scaleMask(asked.scale),
+    styles: styleMask(asked.style),
+    voices: LAYERS.map((l) => voiceMask(asked.voices, l)),
+    layers: LAYERS.map((l) => layerState(asked.layers, l)),
+  });
+  try {
+    return { ask: out(readRequest(request)), vibesOnly: false, why: null };
+  } catch (e) {
+    if (!(e instanceof RequestError)) throw e;
+    const vibes = request && Array.isArray(request.vibes) ? request.vibes : [];
+    return { ask: out(readRequest(vibes)), vibesOnly: true, why: e.message };
+  }
+}
+
 // The length slider's track as the core takes it (`Player::set_track`):
 // [kind, count], 0 on and on, 1 whole passes (`spec.playFor`), 2 bars to the
 // next phrase line (`spec.playBars`).
@@ -118,6 +152,19 @@ export class PlayerEngine {
     this.onStep = null;
     this.onLoop = null;
     this.onTrackEnd = null;
+    // A loop the core made itself has started (queue item 95): (seed, tag),
+    // the picks numbered `tag` its request. And the core's answer to the
+    // picks: ({ tag, met, why }).
+    this.onOwn = null;
+    this.onPicks = null;
+    // The picks sent ({ ask, tag }), the core they were sent to, the core
+    // given a seed to draw from, an own loop asked while no core could take
+    // it, and the picks' number of an own loop whose Loop event comes next.
+    this.picks = null;
+    this.picksFor = null;
+    this.drawsFor = null;
+    this.wantOwn = false;
+    this.ownTag = null;
     this.visualQueue = [];
     this.visualOffset = 0;
     this.latency = null;
@@ -165,6 +212,62 @@ export class PlayerEngine {
     if (!c || this._hooked === c) return;
     this._hooked = c;
     c.onevents = (m) => this._receive(m);
+    c.onpicks = (m) => { if (this.onPicks) this.onPicks(m); };
+  }
+
+  // Every new loop is the core's own on this engine (queue item 95).
+  get ownLoops() {
+    return true;
+  }
+
+  // The New loops panel's request (`picksAsk(request).ask`), numbered `tag`:
+  // held by the core for the loops it makes itself. Sent again to a new core
+  // (a reload, the quality switch).
+  setPicks(ask, tag) {
+    this.picks = { ask, tag };
+    this.picksFor = null;
+    this._sendPicks();
+  }
+
+  _sendPicks() {
+    const core = this._core();
+    if (!core || !this.picks || this.picksFor === core) return;
+    if (this.drawsFor !== core) {
+      // A seed to draw from for this core, fresh each time one starts: the
+      // core's own loops are a pure function of it and the picks.
+      core.playDraws(freshSalt());
+      this.drawsFor = core;
+    }
+    core.playPicks(this.picks.ask, this.picks.tag);
+    this.picksFor = core;
+  }
+
+  // Next at the end of the history: a new loop of the core's own, with the
+  // picks, crossfading as any change does. The page hears which in `onOwn`.
+  // From Pause it starts playing; before the core has arrived, it waits.
+  next() {
+    this.salt = freshSalt();
+    this.wantOwn = true;
+    if (!this.playing) {
+      this.playing = true;
+      this.synth.unsilence();
+      this._begin();
+      return;
+    }
+    this._askOwn();
+  }
+
+  _askOwn() {
+    const core = this._core();
+    if (!core || !this.wantOwn) return;
+    this._sendPicks();
+    this.wantOwn = false;
+    this.taken = null;
+    core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
+    core.playNext(MOMENT.now, CHANGE_FADE);
+    this.visualQueue = [];
+    this.gridQueue = [];
+    this.countFrom = 0;
   }
 
   // The core has arrived (after Play, on a slow first visit): it is given the
@@ -201,7 +304,10 @@ export class PlayerEngine {
     this.spec = spec;
     this.base = render(spec);
     this.live = this.base;
-    if (!keepPosition && !resume) this.salt = freshSalt();
+    // A new play draws a new salt; a loop the core already took (at the
+    // track's end, or its own) keeps the one it was drawn with.
+    const caught = !keepPosition && this.taken != null && this.taken === spec.seed >>> 0;
+    if (!keepPosition && !resume && !caught) this.salt = freshSalt();
     if (!keepPosition) {
       this.gridQueue = [];
       this.countFrom = 0;
@@ -230,7 +336,7 @@ export class PlayerEngine {
   // them: each layer's mute, the wander and its salt, the track's length.
   _controls() {
     const core = this._core();
-    if (!core || !this.spec) return;
+    if (!core || !this.spec || this.wantOwn) return;
     const mutes = this.spec.mutes || {};
     LAYERS.forEach((layer, i) => core.playMute(i, !!mutes[layer]));
     core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
@@ -245,18 +351,21 @@ export class PlayerEngine {
     core.playTrack(t[0], t[1], this._arm());
   }
 
-  // The armed loop as the core takes it, or null.
+  // The armed loop as the core takes it, with the track it plays (its own
+  // length slider's), or null.
   _arm() {
     const s = this.armed;
-    return s ? { seed: s.seed >>> 0, ask: askOf(s), fade: END_FADE } : null;
+    return s ? { seed: s.seed >>> 0, ask: askOf(s), fade: END_FADE, track: trackOf(s) } : null;
   }
 
-  // The loop that follows when the track ends (`spec`, or null for none):
-  // armed in the core, so it starts there with the page asleep.
+  // The loop that follows when the track ends (`spec`): armed in the core,
+  // so it starts there with the page asleep. Null for none of the page's:
+  // the one waiting is dropped, and a loop of the core's own follows, with
+  // the picks (queue item 95).
   arm(spec) {
     this.armed = spec || null;
     const core = this._core();
-    if (!core || !this.playing || !this.armed) return;
+    if (!core || !this.playing) return;
     core.playArm(this._arm());
   }
 
@@ -275,8 +384,19 @@ export class PlayerEngine {
     const core = this._core();
     if (!core || !this.playing) return;
     if (this.synth.userVolume != null) core.playVolume(this.synth.userVolume);
+    // The picks, held by this core for the loops it makes itself.
+    this._sendPicks();
     // The wander and its salt before the loop: its first pass is drawn with them.
     core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
+    if (this.wantOwn) {
+      // Next asked from Pause or before the core arrived: the core's own
+      // loop is the one it plays; the page catches up at its Loop event.
+      this._askOwn();
+      this.track = null;
+      this.needs = null;
+      this._controls();
+      return;
+    }
     if (this.needs) {
       core.playLoad(this.spec.seed >>> 0, askOf(this.spec), 0, this.needs === 'resumed');
       this.taken = null;
@@ -382,16 +502,31 @@ export class PlayerEngine {
       } else if (kind === KIND.pass || kind === KIND.section) {
         this.loopCount = number;
         if (kind === KIND.pass && this.onLoop) this.onLoop(number);
+      } else if (kind === KIND.own) {
+        // The loop whose Loop event comes next is the core's own.
+        this.ownTag = number;
       } else if (kind === KIND.loop) {
         this.loops++;
         this.countFrom = 0;
         this.loopCount = 0;
+        if (this.ownTag != null) {
+          // The core made it with the picks numbered `ownTag`: the page
+          // catches up (main.js's onOwn draws the same spec for its card and
+          // history and loads it, and `load` sees the core has it).
+          const tag = this.ownTag;
+          this.ownTag = null;
+          this.taken = number >>> 0;
+          if (this.onOwn) this.onOwn(number >>> 0, tag);
+        }
       } else if (kind === KIND.end) {
         // The track has run: the core has started the loop armed for it, if
         // one was, and the page catches up (main.js's onTrackEnd loads that
-        // loop, and `load` sees it is the one the core took).
-        if (this.armed) this.taken = this.armed.seed >>> 0;
-        if (this.onTrackEnd) this.onTrackEnd();
+        // loop, and `load` sees it is the one the core took). With none of
+        // the page's armed, the core makes one of its own (KIND.own).
+        if (this.armed) {
+          this.taken = this.armed.seed >>> 0;
+          if (this.onTrackEnd) this.onTrackEnd();
+        }
       }
       const grid = grids.get(i);
       if (grid && this.spec) {
@@ -486,6 +621,7 @@ export class PlayerEngine {
       playerRefused: c ? c.refused : '-',
       trackEndStep: this.trackEnd == null ? 'none' : this.trackEnd,
       armed: this.armed ? this.armed.name : 'none',
+      picksSent: this.picks ? this.picks.tag : 'none',
       ctxState: this.ctx.state,
       sampleRate: this.ctx.sampleRate,
       baseLatency: this.ctx.baseLatency ? +this.ctx.baseLatency.toFixed(4) : '-',
