@@ -296,7 +296,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   quarter second later than today's. The PR's table maps each control and
   display to its command.
 - #341, the sketch levers for Ears 13b (item 99, v149, no app change), preview
-  URL: <https://a4a67e5b-driftloom.nowmichaelclark.workers.dev> (commit
+  URL: <https://40e97708-driftloom.nowmichaelclark.workers.dev> (commit
   174499e): nothing should sound different (both wasm modules are byte for
   byte, and the 80 seeds and the 5,124 generation cases are unchanged).
   Nothing to hear yet: the sketch build has seven new levers (tripletKit,
