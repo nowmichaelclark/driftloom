@@ -294,6 +294,23 @@ size_t dl_player_grid(dl_player *player, uint32_t layer, double *out, size_t siz
    length. */
 size_t dl_player_describe(dl_player *player, char *out, size_t size);
 
+/* The loop as composed, note by note (a MIDI export's): how many notes layer
+   `layer` has, and note `index` into `out` (1, or 0 past the last): its step
+   from the loop's first, its length in steps, its velocity (0 for a note
+   left out), a drum hit's offset off the step and instrument ("kick",
+   "hat"...), and `count` pitches, MIDI note numbers. */
+typedef struct dl_note {
+    double step;
+    double dur;
+    double vel;
+    double micro;
+    uint32_t count;
+    double notes[8];
+    char drum[16];
+} dl_note;
+size_t dl_player_notes(dl_player *player, uint32_t layer);
+int dl_player_note(dl_player *player, uint32_t layer, size_t index, dl_note *out);
+
 #ifdef __cplusplus
 }
 #endif

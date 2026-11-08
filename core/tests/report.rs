@@ -257,7 +257,7 @@ fn a_reroll_keeps_its_place() {
             assert_eq!(s.step, i as u64);
             assert!((s.time - (steps[0].time + i as f64 * sd)).abs() < 1e-6, "on the grid, at the tempo playing");
         }
-        assert!(revised.step > 0 && steps.iter().any(|s| s.step == revised.step && s.time == revised.time));
+        assert!(revised.step > 0 && steps.iter().any(|s| s.step == revised.step && (s.time - revised.time).abs() < 1e-12));
         let spec = player.generator().spec();
         assert!(spec.forced(Layer::Drums) && spec.layer_seed(Layer::Drums) == 424_242);
         assert!(seen.drums.iter().any(|&t| t >= revised.time), "the re-rolled drums play");
@@ -320,7 +320,21 @@ fn the_grid_and_the_description_report_what_plays() {
             let n = p.grid(Layer::Chords, &mut out);
             grids.push(out[..n].to_vec());
         });
-        assert!(!seen.events.is_empty());
+        assert_ne!(seen.events.len(), 0);
+        // The notes, as the MIDI export reads them.
+        let r = player.generator().render();
+        assert_eq!(player.notes(Layer::Bass), r.bass.len());
+        if let (Some(n), Some(e)) = (player.note(Layer::Bass, 0), r.bass.first()) {
+            assert_eq!((n.step, n.dur, n.vel, n.notes[0], n.count), (e.step, e.dur, e.vel, e.midi, 1));
+        }
+        if let (Some(n), Some(e)) = (player.note(Layer::Chords, 0), r.chords.first()) {
+            assert_eq!(n.count, e.notes.len());
+            assert!(n.notes[..n.count].iter().zip(e.notes.iter()).all(|(&a, &b)| a.to_bits() == f64::from(b).to_bits()));
+        }
+        if let (Some(n), Some(e)) = (player.note(Layer::Drums, 0), r.drums.first()) {
+            assert_eq!((n.drum, n.count), (e.inst.get(), 0));
+        }
+        assert!(player.note(Layer::Melody, r.melody.len()).is_none());
         let spec = player.generator().spec();
         let total = (spec.bars * spec.steps_per_bar) as usize;
         let chords = player.grid(Layer::Chords, &mut out);

@@ -6,13 +6,36 @@
 use core::fmt::{self, Write};
 
 use crate::generator::data::{CHARACTERS, MOODS, VIBES};
-use crate::generator::plan::Cx;
+use crate::generator::plan::{Cx, NOTES_MAX};
 use crate::generator::request::{LAYER_NAMES, Length};
 use crate::generator::spec::Metre;
 use crate::generator::theory::SCALES;
 use crate::generator::{LAYERS, Layer, Stage};
 
 use super::{Player, State, loop_of};
+
+/// A note of the loop as composed (`Player::note`), as the app's MIDI export
+/// reads `render(spec).tracks`: where it falls, how long it holds and how
+/// loud, its pitches (a chord's or a texture's several), and a drum hit's
+/// instrument and its offset off the step (a roll's).
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Note {
+    /// The step, from the loop's first.
+    pub step: f64,
+    /// How many steps it holds (0 for a drum hit).
+    pub dur: f64,
+    /// Its velocity, 0 for a note the loop leaves out (an airy form's).
+    pub vel: f64,
+    /// A drum hit's offset off its step, in steps (0 for others).
+    pub micro: f64,
+    /// Its pitches, MIDI note numbers: `count` of them.
+    pub notes: [f64; NOTES_MAX],
+    /// How many pitches (0 for a drum hit).
+    pub count: usize,
+    /// A drum hit's instrument (`kick`, `hat` and the rest; empty for
+    /// others).
+    pub drum: &'static str,
+}
 
 /// The longest a layer's grid is, in steps: a loop's 32 bars of 20 steps,
 /// or a layer's own cycle of 11 bars, whichever is longer.
@@ -66,6 +89,53 @@ impl Player {
             }
         });
         n
+    }
+
+    /// How many notes layer `layer` has in the loop as composed (`note`); 0
+    /// with nothing made.
+    #[must_use]
+    pub fn notes(&self, layer: Layer) -> usize {
+        if !self.made() {
+            return 0;
+        }
+        let r = self.generator.render();
+        match layer {
+            Layer::Drums => r.drums.len(),
+            Layer::Bass => r.bass.len(),
+            Layer::Chords => r.chords.len(),
+            Layer::Melody => r.melody.len(),
+            Layer::Texture => r.texture.len(),
+        }
+    }
+
+    /// Layer `layer`'s note `i` in the loop as composed, as the app's MIDI
+    /// export reads it (`patternToMidi(render(spec))`): none past the last.
+    #[must_use]
+    pub fn note(&self, layer: Layer, i: usize) -> Option<Note> {
+        if !self.made() {
+            return None;
+        }
+        let r = self.generator.render();
+        let blank = Note { step: 0.0, dur: 0.0, vel: 0.0, micro: 0.0, notes: [0.0; NOTES_MAX], count: 0, drum: "" };
+        let one = |step, dur, vel, midi| {
+            let mut notes = [0.0; NOTES_MAX];
+            notes[0] = midi;
+            Note { step, dur, vel, notes, count: 1, ..blank }
+        };
+        let many = |step, dur, vel, list: &[i16]| {
+            let mut notes = [0.0; NOTES_MAX];
+            for (slot, &p) in notes.iter_mut().zip(list) {
+                *slot = f64::from(p);
+            }
+            Note { step, dur, vel, notes, count: list.len().min(NOTES_MAX), ..blank }
+        };
+        match layer {
+            Layer::Drums => r.drums.get(i).map(|e| Note { step: e.step, vel: e.vel, micro: e.micro.unwrap_or(0.0), drum: e.inst.get(), ..blank }),
+            Layer::Bass => r.bass.get(i).map(|e| one(e.step, e.dur, e.vel, e.midi)),
+            Layer::Melody => r.melody.get(i).map(|e| one(e.step, e.dur, e.vel, e.midi)),
+            Layer::Chords => r.chords.get(i).map(|e| many(e.step, e.dur, e.vel, &e.notes)),
+            Layer::Texture => r.texture.get(i).map(|e| many(e.step, e.dur, e.vel, &e.notes)),
+        }
     }
 
     /// The loop playing (or stopped), described for a host to show and to

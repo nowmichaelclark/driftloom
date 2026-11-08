@@ -714,3 +714,52 @@ pub unsafe extern "C" fn dl_player_describe(player: *mut Engine, out: *mut c_cha
     }
     t.len
 }
+
+/// How many notes layer `layer` has in the loop as composed
+/// (`Player::notes`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_notes(player: *mut Engine, layer: u32) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    LAYERS.get(layer as usize).map_or(0, |&l| e.player.notes(l))
+}
+
+/// A note as C sees it (`dl_note`).
+#[repr(C)]
+pub struct CNote {
+    step: f64,
+    dur: f64,
+    vel: f64,
+    micro: f64,
+    count: u32,
+    notes: [f64; 8],
+    drum: [c_char; 16],
+}
+
+// The header's room for a chord's pitches holds every chord the core makes.
+const _: () = assert!(crate::generator::plan::NOTES_MAX <= 8);
+
+/// Layer `layer`'s note `index` into `out` (`Player::note`): 1, or 0 past
+/// the last.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_note`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_note(player: *mut Engine, layer: u32, index: usize, out: *mut CNote) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(&l) = LAYERS.get(layer as usize) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(n) = e.player.note(l, index) else { return 0 };
+    let mut c = CNote { step: n.step, dur: n.dur, vel: n.vel, micro: n.micro, count: u32::try_from(n.count).unwrap_or(0), notes: [0.0; 8], drum: [0; 16] };
+    for (slot, &p) in c.notes.iter_mut().zip(&n.notes) {
+        *slot = p;
+    }
+    for (slot, &b) in c.drum.iter_mut().take(15).zip(n.drum.as_bytes()) {
+        *slot = c_char::from_ne_bytes([b]);
+    }
+    // SAFETY: a writable `dl_note` (the caller's promise), checked not null.
+    unsafe { out.write(c) };
+    1
+}

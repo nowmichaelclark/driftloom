@@ -1,7 +1,7 @@
 // The player's commands and events in js/dlplayer.wasm (queue item 94a)
 // against what the page's own generator and engine make of the same loop:
 // what the core describes (the info card's, the cover's and a share code's
-// fields), the layers' grid of each pass as it wanders (`stepsForBar`'s
+// fields), the notes as the MIDI export reads them, the layers' grid of each pass as it wanders (`stepsForBar`'s
 // velocities), the events that say where the loop is, a code's edits (a
 // layer re-rolled as `rerollLayer` makes it, the tone, the tempo), a re-roll
 // in its place and the track's end. No browser: Node runs the module.
@@ -82,6 +82,27 @@ function about(x) {
   return Object.fromEntries(text.split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
 }
 
+// Layer `layer`'s notes from the core, as the MIDI export reads them.
+function notes(x, layer) {
+  const l = LAYERS.indexOf(layer);
+  const out = [];
+  for (let i = 0; i < x.dl_play_notes(l); i++) {
+    const k = x.dl_play_note(l, i);
+    const f = new Float64Array(x.memory.buffer, x.dl_play_note_at(), 16);
+    const drum = new TextDecoder().decode(new Uint8Array(x.memory.buffer, x.dl_play_text(), k));
+    out.push({ step: f[0], dur: f[1], vel: f[2], micro: f[3], notes: Array.from(f.slice(5, 5 + f[4])), drum });
+  }
+  return out;
+}
+
+// The page's, the same way.
+function pageNotes(p, layer) {
+  return p.tracks[layer].map((e) => ({
+    step: e.step, dur: layer === 'drums' ? 0 : e.dur, vel: e.vel, micro: layer === 'drums' ? e.micro || 0 : 0,
+    notes: layer === 'drums' ? [] : e.notes ? e.notes.slice() : e.midi != null ? [e.midi] : [], drum: layer === 'drums' ? e.inst : '',
+  }));
+}
+
 function grid(x, layer) {
   const n = x.dl_play_grid(LAYERS.indexOf(layer));
   return Array.from(new Float64Array(x.memory.buffer, x.dl_play_grid_at(), n));
@@ -125,7 +146,8 @@ const weights = (s) => Object.fromEntries((s || '').split('|').filter(Boolean).m
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // The description against the page's spec.
-function describes(label, d, spec) {
+function describes(label, x, spec) {
+  const d = about(x);
   const p = render(spec);
   const want = {
     seed: spec.seed >>> 0, name: spec.name, root: spec.root, scale: spec.scale, bpm: spec.bpm, steps_per_bar: spec.stepsPerBar,
@@ -142,6 +164,7 @@ function describes(label, d, spec) {
     tone: d.tone.split('|').map(num), layer_seeds: d.layer_seeds.split('|').map(num),
     airy: num(d.airy), drifting: num(d.drifting),
   };
+  check(`${label}: the notes`, LAYERS.every((l) => same(notes(x, l), pageNotes(p, l))));
   check(`${label}: the description`, same(got, want), `\n    got  ${JSON.stringify(got)}\n    want ${JSON.stringify(want)}`);
   check(`${label}: the mix`, same(weights(d.mix), spec.mix), `${d.mix} ${JSON.stringify(spec.mix)}`);
   check(`${label}: the moods`, same(weights(d.moods), spec.feelMix), `${d.moods} ${JSON.stringify(spec.feelMix)}`);
@@ -179,7 +202,7 @@ console.log('\nThe description and the grid, against the page (24 corpus loops)'
   for (let i = 0; i < 24; i++) {
     const seed = r.seed32();
     const x = start(seed);
-    describes(`corpus:${i}`, about(x), edited(seed, null));
+    describes(`corpus:${i}`, x, edited(seed, null));
     grids(`corpus:${i}`, x, edited(seed, null), i < 10 ? 3 : 1);
   }
 }
@@ -190,7 +213,7 @@ console.log('A code\'s edits, against the page\'s (the generation goldens\' edit
   for (const c of edits) {
     const x = start(c.seed, c.request);
     const spec = edited(c.seed, c.request);
-    describes(`edit:${c.index}`, about(x), spec);
+    describes(`edit:${c.index}`, x, spec);
     grids(`edit:${c.index}`, x, spec, 1);
   }
 }

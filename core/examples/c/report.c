@@ -40,6 +40,10 @@ int main(void) {
   double grid[640];
   check("a grid", dl_player_grid(p, DL_CHORDS, grid, 640) > 0 && dl_player_grid(p, DL_CHORDS, grid, 4) == 0);
 
+  dl_note note;
+  size_t chords = dl_player_notes(p, DL_CHORDS);
+  check("the notes", chords > 0 && dl_player_note(p, DL_CHORDS, 0, &note) == 1 && note.count > 0 && note.notes[0] > 20 &&
+                     dl_player_note(p, DL_CHORDS, chords, &note) == 0);
   check("two passes", dl_player_track(p, DL_PASSES, 2) == 1 && dl_player_track(p, 9, 1) == 0);
   int64_t end = dl_player_track_end(p);
   check("an end", end > 0);

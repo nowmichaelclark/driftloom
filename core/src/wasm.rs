@@ -801,6 +801,45 @@ mod player {
         GRID.0.get().cast()
     }
 
+    static NOTE: Floats<16> = Floats(UnsafeCell::new([0.0; 16]));
+
+    /// How many notes layer `layer` has in the loop as composed
+    /// (`Player::notes`; the MIDI export's).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_notes(layer: u32) -> u32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+        u32::try_from(player().notes(l)).unwrap_or(0)
+    }
+
+    /// Layer `layer`'s note `index` (`Player::note`) at `dl_play_note_at`:
+    /// its step, length, velocity, offset (a roll's), how many pitches, then
+    /// the pitches; a drum hit's instrument at `dl_play_text`, its length
+    /// returned. -1 past the last note.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a few pitches
+    pub extern "C" fn dl_play_note(layer: u32, index: u32) -> i32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return -1 };
+        let Some(n) = player().note(l, index as usize) else { return -1 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *NOTE.0.get() };
+        buf[..5].copy_from_slice(&[n.step, n.dur, n.vel, n.micro, n.count as f64]);
+        for (slot, &p) in buf[5..].iter_mut().zip(&n.notes) {
+            *slot = p;
+        }
+        // SAFETY: as above.
+        let name = unsafe { &mut *NAME.0.get() };
+        let drum = n.drum.as_bytes();
+        let k = drum.len().min(name.len());
+        name[..k].copy_from_slice(&drum[..k]);
+        i32::try_from(k).unwrap_or(0)
+    }
+
+    /// Where `dl_play_note` writes the numbers.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_note_at() -> *const f64 {
+        NOTE.0.get().cast()
+    }
+
     /// Room for the loop's description: some 600 bytes, with room to spare.
     const ABOUT_MAX: usize = 4096;
     struct About(UnsafeCell<[u8; ABOUT_MAX]>);
