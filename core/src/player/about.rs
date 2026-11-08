@@ -155,7 +155,8 @@ impl Player {
     ///   re-rolled, by name; only if any), `cycles` (each layer's own, in
     ///   steps, 0 for the loop's; only for a loop with its own cycles);
     /// - `airy` (1 for a loop with an airy form), `drifting` (1 with its own
-    ///   cycles), `layers` (each layer 1 if it plays notes, 0 if empty).
+    ///   cycles), `choir` (1 for a loop whose melody and chords sing),
+    ///   `layers` (each layer 1 if it plays notes, 0 if empty).
     ///
     /// # Errors
     /// The writer's.
@@ -218,6 +219,7 @@ impl Player {
         let r = g.render();
         writeln!(w, "airy={}", u8::from(r.form.is_some()))?;
         writeln!(w, "drifting={}", u8::from(spec.cycles.set))?;
+        writeln!(w, "choir={}", u8::from(spec.choir().is_some()))?;
         let plays = |l: Layer| match l {
             Layer::Drums => !r.drums.is_empty(),
             Layer::Bass => !r.bass.is_empty(),

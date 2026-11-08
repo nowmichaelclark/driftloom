@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Rng } from '../js/rng.js';
-import { render, LAYERS, parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState } from '../js/generator.js';
+import { render, choirOf, LAYERS, parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState } from '../js/generator.js';
 import { Engine } from '../js/engine.js';
 import { VIBE_IDS } from '../js/vibes.js';
 import { pinNumbers } from '../js/pins.js';
@@ -155,14 +155,14 @@ function describes(label, x, spec) {
     feel: [spec.feel.lift, spec.feel.energy, spec.feel.warmth].join('|'),
     tone: TONE.map((k) => spec.tone[k]),
     layer_seeds: LAYERS.map((l) => spec.layerSeeds[l] >>> 0),
-    airy: p.form ? 1 : 0, drifting: spec.cycles ? 1 : 0,
+    airy: p.form ? 1 : 0, drifting: spec.cycles ? 1 : 0, choir: choirOf(spec) ? 1 : 0,
   };
   const got = {
     seed: num(d.seed), name: d.name, root: num(d.root), scale: d.scale, bpm: num(d.bpm), steps_per_bar: num(d.steps_per_bar),
     bars: num(d.bars), swing: num(d.swing), coherence: num(d.coherence),
     feel: d.feel.split('|').map(num).join('|'),
     tone: d.tone.split('|').map(num), layer_seeds: d.layer_seeds.split('|').map(num),
-    airy: num(d.airy), drifting: num(d.drifting),
+    airy: num(d.airy), drifting: num(d.drifting), choir: num(d.choir),
   };
   check(`${label}: the notes`, LAYERS.every((l) => same(notes(x, l), pageNotes(p, l))));
   check(`${label}: the description`, same(got, want), `\n    got  ${JSON.stringify(got)}\n    want ${JSON.stringify(want)}`);
