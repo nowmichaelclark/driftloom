@@ -1,8 +1,9 @@
 import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
 import { Synth } from './synth.js';
-import { ENGINE, PLAYER, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
+import { ENGINE, PAGE_ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import * as quality from './quality.js';
 import { Engine } from './engine.js';
+import { PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
 import * as share from './share.js';
@@ -10,13 +11,25 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v149';
+const BUILD = 'v150';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
 // the rule that picks "lighter on processor" can be tried on a fast machine
 // (tools/perf.mjs --burn). Nothing else reads it.
 const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
+
+// The app plays the core's player (queue item 94b): the core decides every
+// note on the audio thread, and js/player.js sends it commands and draws its
+// events. `?engine=page` keeps the page's own engine on the core (js/engine.js,
+// as before 94b) for comparison until queue item 97, and `?engine=js` the
+// JavaScript synth. A browser whose core will not run plays the JavaScript
+// synth on the page's engine, as ever (`usePlayer`).
+const WANT_PLAYER = ENGINE === 'rust' && !PAGE_ENGINE;
+
+function usePlayer() {
+  return WANT_PLAYER && !state.coreError;
+}
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -119,6 +132,9 @@ const state = {
   coreError: null,        // why it will not come, if it will not
   // The last time the page was hidden, for Diagnostics (queue item 39).
   away: null,
+  // A new loop drawn ahead (queue item 94b): the one the core's player is
+  // armed with for the end of a track, so the next new loop is that one.
+  upcoming: null,
   history: [],            // array of specs (max 5)
   historyIndex: -1,       // current position in history
 };
@@ -147,18 +163,29 @@ function prepareAudio() {
     state.coreError = why;
     return;
   }
-  loadCore(ctx).then((core) => {
+  loadCore(ctx, WANT_PLAYER).then((core) => {
     if (state.ctx !== ctx) return;
     state.core = core;
     state.coreAt = Math.round(performance.now());
     if (state.synth) state.synth.attachCore(core);
+    // The player, waiting for it (Play came first), is given the loop now.
+    if (state.engine && state.engine.coreArrived) state.engine.coreArrived();
   }).catch((err) => {
     if (state.ctx !== ctx) return;
     // Everything plays in JS, and Diagnostics says why. A later synth (the
     // quality toggle) starts with the same answer.
     state.coreError = String((err && err.message) || err);
     if (state.synth) state.synth.coreFailed(err);
+    playerFailed();
   });
+}
+
+// The core's player will not play here after all (its module did not load,
+// or it failed while playing): the page's engine takes the loop, on the
+// JavaScript synth.
+function playerFailed() {
+  if (!(state.engine instanceof PlayerEngine)) return;
+  setTimeout(() => { if (state.engine instanceof PlayerEngine && !usePlayer()) buildAudio(); }, 0);
 }
 
 function ensureAudio() {
@@ -178,7 +205,7 @@ function makeAudio() {
     layout: state.mono ? 1 : 2,
     core: state.coreError ? null : state.core,
     coreError: state.coreError,
-    onCoreError: (message) => { state.coreError = message; },
+    onCoreError: (message) => { state.coreError = message; playerFailed(); },
     burn: BURN,
   });
   synth.onBusy = (busy) => onBusy(synth, busy);
@@ -193,7 +220,7 @@ function makeAudio() {
     onNext: () => goForward(),
     onPrev: () => goBack(),
   });
-  const engine = new Engine(state.ctx, synth);
+  const engine = usePlayer() ? new PlayerEngine(state.ctx, synth) : new Engine(state.ctx, synth);
   engine.onStep = onStep;
   engine.onLoop = onLoop;
   engine.onTrackEnd = onTrackEnd;
@@ -233,6 +260,7 @@ function buildAudio() {
     // The same loop, resumed under the new engine (queue item 69: its
     // late floor doesn't wait again).
     state.pattern = state.engine.load(state.spec, { resume: true });
+    armNext();
     if (wasPlaying) {
       // The new bridge has to take over the media session too, otherwise
       // the lock-screen controls stay attached to the graph we just binned.
@@ -254,9 +282,9 @@ function onBusy(synth, report) {
   const playing = !!(state.engine && state.engine.playing);
   state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000);
   state.busyPlaying = playing;
-  // The app's own engine on the core only: the JavaScript synth has no
-  // worklet to measure, and the core's player is for testing.
-  if (PLAYER || !synth.core || synth.core.failed) return;
+  // On the core only (the player, or the page's engine on it): the
+  // JavaScript synth has no worklet to measure.
+  if (!synth.core || synth.core.failed) return;
   const prefs = store.getPrefs();
   const d = quality.decide({ quality: synth.quality, yours: prefs.lite, auto: prefs.liteAuto, guess: state.liteGuess, busy: state.busy });
   if (d) autoQuality(d);
@@ -265,7 +293,9 @@ function onBusy(synth, report) {
 // The app moves to lite (or, once, up to full): kept as its own choice,
 // apart from the listener's, and heard at the next pass (or bar): the old
 // quality fades out to it, and the new one takes the loop from its top
-// (`quality.handOff` says why it is built only then).
+// (`quality.handOff` says why it is built only then). On the player as on
+// the page's engine (queue item 94b; a crossfade is a later item): the new
+// core starts the loop again, its lateFloor not waited out again.
 function autoQuality({ lite, why, at }) {
   store.setPrefs({ liteAuto: { lite, why, at: new Date().toISOString() } });
   state.lite = lite;
@@ -400,6 +430,29 @@ function loadSpec(spec, { keepPosition = false, id = null, pushToHistory = false
   if (pushToHistory) pushHistory(spec);
   updateHistoryButtons();
   syncMediaMetadata();
+  armNext();
+}
+
+// The loop that follows when the track ends, where a length is set (queue
+// item 94b): the album's next, the history's next, or a new loop drawn
+// ahead. The core's player is armed with it, so it starts on the line with
+// the page asleep; onTrackEnd then takes the same one.
+function nextForEnd() {
+  const spec = state.spec;
+  if (!spec || !(spec.playFor || spec.playBars)) return null;
+  const pl = state.playlist;
+  if (pl && pl.ids.length) {
+    const id = pl.ids[(pl.index + 1) % pl.ids.length];
+    const entry = store.loadAll().find((e) => e.id === id);
+    return entry ? cloneSpec(entry.spec) : null;
+  }
+  if (state.historyIndex < state.history.length - 1) return cloneSpec(state.history[state.historyIndex + 1]);
+  if (!state.upcoming) state.upcoming = drawNew();
+  return state.upcoming;
+}
+
+function armNext() {
+  if (state.engine) state.engine.arm(nextForEnd());
 }
 
 // ------------------------------------------------------- while hidden
@@ -909,6 +962,9 @@ function renderVibes() {
 function setVibes(list) {
   state.vibes = vibeSelection(list);
   store.setPrefs({ vibes: state.vibes });
+  // A loop drawn ahead leaned the old way: drawn again with the new vibes.
+  state.upcoming = null;
+  armNext();
   if (state.view === 'vibes') renderVibes();
   else updateVibesKey();
   // The picks on Now Playing and the panel show the moods; nothing else
@@ -922,6 +978,8 @@ function setVibes(list) {
 function setPicks(next) {
   state.picks = picks.cleanPicks({ ...state.picks, ...next });
   store.setPrefs({ picks: state.picks });
+  state.upcoming = null;
+  armNext();
   if (state.view === 'now') renderNow();
   if (state.view === 'vibe') picks.renderPanel();
 }
@@ -1024,10 +1082,7 @@ function nextName() {
 // of what is being heard, using the engine's measured output latency.
 function audibleSteps() {
   const e = state.engine;
-  if (!e || !e.playing || !e.live || !e.spec) return null;
-  const heard = state.ctx.currentTime - (e.latency || 0);
-  const ahead = (e.nextStepTime - heard) / e.stepDur;
-  return Math.max(0, e.absStep - ahead);
+  return e ? e.audibleSteps() : null;
 }
 
 // The clock and the bar. Called every animation frame while Now Playing is
@@ -1141,6 +1196,7 @@ function leaveAlbum() {
   refreshCard();
   library.refresh();
   renderNow();
+  armNext();
   ui.toast('Left the album. Next makes new loops');
 }
 
@@ -1278,6 +1334,13 @@ function advancePlaylist(step) {
 // The picks are its request (queue item 85); one the generator cannot meet
 // (the panel says so) is left out, the moods kept.
 function newSpec() {
+  // The one drawn ahead, if there is one (the player is armed with it).
+  const ahead = state.upcoming;
+  state.upcoming = null;
+  return ahead || drawNew();
+}
+
+function drawNew() {
   let spec;
   try {
     spec = drawSpec(undefined, picks.requestFor(state));
@@ -1366,10 +1429,10 @@ function toggleMute(layer) {
     state.spec.mutes = { drums: false, bass: false, chords: false, melody: false, texture: false };
   }
   state.spec.mutes[layer] = !state.spec.mutes[layer];
-  state.synth.setMute(layer, state.spec.mutes[layer]);
   // The channel goes quiet at once either way; back on, its notes are
-  // decided again from now, not after what the core holds (queue item 40).
-  state.engine.redecide();
+  // decided again from now (on the page's engine, not after what the core
+  // holds: queue item 40).
+  state.engine.setMute(layer, state.spec.mutes[layer]);
   ui.renderGrids(cells, state.engine.live || state.pattern, Math.max(0, state.bar), state.spec.mutes);
 }
 
@@ -1599,14 +1662,8 @@ function wire() {
   ui.el('driftAmount').addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
     const on = v > 0;
-    if (state.engine) {
-      state.engine.driftOn = on;
-      if (on) state.engine.driftAmount = v;
-      else if (state.engine.base) state.engine.live = state.engine.base;
-      // Off, the loop as composed from now; on, the next pass in the queue
-      // wanders as far as asked.
-      state.engine.redecide(on ? null : state.engine.base);
-    }
+    // Off, the loop as composed; on, as far as asked.
+    if (state.engine) state.engine.setWander(v);
     ui.el('wanderRow').classList.toggle('off', !on);
     store.setPrefs(on ? { drift: true, driftAmount: v } : { drift: false });
   });
@@ -1614,8 +1671,9 @@ function wire() {
     if (!state.spec) return;
     const secs = TRACK_TIMES[parseInt(e.target.value, 10)] || 0;
     trackLength(state.spec, secs);
-    // Counted from what is heard now, the pass playing as the first.
-    if (state.engine) state.engine.restartCount();
+    // Counted from what is heard now, the pass playing as the first; on the
+    // player, with the loop that follows armed for its end.
+    if (state.engine) state.engine.trackChanged(nextForEnd());
     ui.el('lenVal').textContent = describeLength(state.spec);
     state.passCount = 0;
     renderNow();
@@ -1628,16 +1686,14 @@ function wire() {
     ui.el('bpmVal').textContent = state.spec.bpm;
     // The same number of passes takes a different time at a new tempo.
     ui.el('lenVal').textContent = describeLength(state.spec);
-    // The loop's own echo time in beats (queue item 73), at the new tempo.
-    if (state.synth) state.synth.setEchoTime((60 / state.spec.bpm) * (state.engine ? state.engine.echoBeats : 0.75));
-    if (state.engine) state.engine.redecide();
+    if (state.engine) state.engine.setTempo(state.spec.bpm);
   });
 
   for (const k of ['warmth', 'space', 'wobble']) {
     ui.el(k).addEventListener('input', (e) => {
       if (!state.spec) return;
       state.spec.tone[k] = parseFloat(e.target.value);
-      if (state.synth) state.synth.setTone(state.spec.tone);
+      if (state.engine) state.engine.setTone(state.spec.tone);
     });
   }
   for (const [id, d] of [['trimDown', -5], ['trimUp', 5]]) {

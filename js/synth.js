@@ -4,7 +4,7 @@
 
 import { midiToFreq } from './theory.js';
 import {
-  CoreHost, PLAYER, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
+  CoreHost, CORE_VOICES, BASS_KINDS, TEXTURE_KINDS, DRUM_KINDS, HAT_KINDS, BASS_GLIDE, BASS_CHUG,
   KALIMBA_STRIKE, KALIMBA_BODY, SUNG_VOWELS, SUNG_OPEN_HUM, SUNG_LONGEST,
   MIX, SET, LINEAR, TARGET, CANCEL, HOLD, DROP_CAUSES, CORE_OWN, EVENTS, WASH_CHANNEL, WASH_SETTINGS, WASH_WEIGHT,
   SUB_DUCK_SETTINGS, PAD_SWEEP_SETTINGS,
@@ -611,15 +611,36 @@ export class Synth {
     });
     node.connect(this._raw.destination, 0);
     this.output = node;
+    // On the player's module the core's player sets the mix itself, the
+    // LFOs' start, the master gain, the tone, the echo and the channels'
+    // gains (queue item 94b): only the kill gain is the page's.
+    if (this.core.player) {
+      if (this._asked.killed) this.core.param(MIX.kill, SET, 0, 0);
+      this._cutJsMix(fresh);
+      return;
+    }
     this.core.param(MIX.lfoStart, SET, 0, this._lfoStart);
     // The master and kill gains where the JavaScript ones were asked to be:
     // a glide under way lands at once.
     this.core.param(MIX.master, SET, this._gain(), 0);
     if (this._asked.killed) this.core.param(MIX.kill, SET, 0, 0);
-    // The JavaScript mix and chain now hear nothing. Cut them off, so Web
-    // Audio stops rendering them -- at once if nothing has played through
-    // them yet (a new synth, or a context that has not started), and once
-    // their tails have died away if the core arrived mid-play.
+    this._cutJsMix(fresh);
+    // And bring the core's mix to where the JavaScript one was asked to
+    // be. A duck or a fade of the tails already scheduled stays with the
+    // JavaScript mix: the core's starts level.
+    // Instantly: the core's own values start where the JavaScript ones are
+    // asked to be, and only changes from here on glide.
+    const { tone, echo, mutes } = this._mixState();
+    if (tone) this._toneToMix(tone, this.ctx.currentTime, true);
+    if (echo != null) this.setEchoTime(echo, true);
+    for (const [layer, muted] of Object.entries(mutes)) if (muted) this.setMute(layer, true, true);
+  }
+
+  // The JavaScript mix and chain now hear nothing. Cut them off, so Web
+  // Audio stops rendering them -- at once if nothing has played through
+  // them yet (a new synth, or a context that has not started), and once
+  // their tails have died away if the core arrived mid-play.
+  _cutJsMix(fresh) {
     const cut = () => {
       this._ringOut = null;
       try { this.tails.disconnect(); } catch { /* already detached */ }
@@ -632,15 +653,6 @@ export class Synth {
     } else {
       cut();
     }
-    // And bring the core's mix to where the JavaScript one was asked to
-    // be. A duck or a fade of the tails already scheduled stays with the
-    // JavaScript mix: the core's starts level.
-    // Instantly: the core's own values start where the JavaScript ones are
-    // asked to be, and only changes from here on glide.
-    const { tone, echo, mutes } = this._mixState();
-    if (tone) this._toneToMix(tone, this.ctx.currentTime, true);
-    if (echo != null) this.setEchoTime(echo, true);
-    for (const [layer, muted] of Object.entries(mutes)) if (muted) this.setMute(layer, true, true);
   }
 
   // The core failed after all (too old a browser for its module): the
@@ -670,10 +682,12 @@ export class Synth {
     this.kill.gain.value = this._asked.killed ? 0 : 1;
   }
 
-  // Whether the core's player plays the notes (`?engine=player`, queue item
-  // 82): the engine then sends none, and hands the loop and the controls over.
+  // Whether the core's player plays the notes (queue items 82 and 94b: the
+  // core was built on the player's module): js/player.js then sends it
+  // commands, and the mix's parameters are the player's to set.
   get player() {
-    return PLAYER && !!this._coreMix();
+    const core = this._coreMix();
+    return !!core && core.player === true;
   }
 
   // The core, when it is the one mixing.
@@ -768,10 +782,12 @@ export class Synth {
         : `rust (loading)  fallback: ${this.fallbacks}`;
     }
     if (c.failed) return `js (fallback: ${c.failed})  fallback: ${this.fallbacks}`;
-    if (PLAYER) {
+    if (c.player) {
       const p = c.playerAt;
       const at = p ? `  player: ${['idle', 'making a loop', 'its first pass', 'playing'][p.state] || p.state}, step ${p.step}` : '';
-      return `rust (the core's player, ?engine=player)  late: ${c.late}  dropped: ${c.dropped}${at}`;
+      const dropped = c.dropped
+        ? ` (${DROP_CAUSES.map((cause, i) => `${cause} ${c.droppedBy[i] || 0}`).join(', ')})` : '';
+      return `rust (the core's player)  late: ${c.late}  missed: ${c.missed}  dropped: ${c.dropped}${dropped}${at}`;
     }
     const late = c.late ? ` (stall ${c.lateStall}, inside the buffer ${c.lateBuffer}; left out ${c.missed})` : '';
     const dropped = c.dropped
@@ -1182,6 +1198,8 @@ export class Synth {
     const fb = Math.min(0.74, 0.66 + space * 0.2);
     const core = this._coreMix();
     if (core) {
+      // The player sets its own (`playTone`).
+      if (core.player) return;
       const op = instant ? SET : TARGET;
       core.param(MIX.tone, op, 2600 + (1 - warmth) * 9000, t, 0.2);
       core.param(MIX.drive, SET, 0.55 + warmth * 1.25, t);
@@ -1252,6 +1270,8 @@ export class Synth {
     this._mixState().echo = seconds;
     const core = this._coreMix();
     if (core) {
+      // The player follows its tempo itself.
+      if (core.player) return;
       core.param(MIX.echo, instant ? SET : TARGET, Math.min(1.9, seconds), this.ctx.currentTime, 0.05);
       return;
     }
@@ -1264,6 +1284,8 @@ export class Synth {
     this._mixState().mutes[layer] = muted;
     const core = this._coreMix();
     if (core) {
+      // The player mutes its own (`playMute`).
+      if (core.player) return;
       core.param(MIX.gains + CORE_CHANNELS.indexOf(layer), instant ? SET : TARGET, muted ? 0 : ch.base.gain, this.ctx.currentTime, 0.03);
       // The wash listens to the layers as the mix plays them.
       if (this._wash) {
@@ -1388,6 +1410,9 @@ export class Synth {
     const v = this._gain();
     const core = this._coreMix();
     if (core) {
+      // The player sets the master gain itself (`playVolume`, and each
+      // loop's level).
+      if (core.player) return;
       core.param(MIX.master, TARGET, v, this.ctx.currentTime, 0.08);
       if (!this._ringOut) return;
     }

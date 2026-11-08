@@ -5,43 +5,22 @@
 // The actual note times are absolute Web Audio clock times, which are
 // sample-accurate. Standard two-clock pattern.
 
-import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, requestOf, keyMask, scaleMask, styleMask, voiceMask, layerState, pieceOf, sectionBars, pieceCut, loopBars } from './generator.js';
+import { render, drift, LAYERS, characterOf, gracesOf, harmonyOf, vibesOf, pieceOf, sectionBars, pieceCut, loopBars } from './generator.js';
 import { Rng } from './rng.js';
 import { log10, pow } from './dlmath.js';
 import { Clock } from './clock.js';
 import { draw, HOST_JITTER, HOST_ENSEMBLE, HOST_STRUM, HOST_GLASS, HOST_STAB } from './draw.js';
 import { notesPerSecond, arcOf, arcPlays, kickOf, kickKindOf, subDuckOf, lateFloorOf, padSweepOf, echoTimeOf, bassLiftOf } from './choices.js';
-import { VIBE_IDS } from './vibes.js';
-import { choicePin, pinsFor, pinNumbers, spacePins } from './pins.js';
+import { choicePin, pinsFor, spacePins } from './pins.js';
+import { UNREPEATABLE_FROM, freshSalt } from './player.js';
 
 // Which stream of a loop's seed is its wander (what ears albums have always
 // used for it).
 const DRIFT_SALT = 0x5eed1e55;
 
-// With `?engine=player` (queue item 82, for testing), the core's player plays
-// the loop from its seed and vibes; this engine keeps time for the cursor and
-// hands the controls over. The player makes a loop across the blocks after it
-// is asked for (a few to a hundred), so the first step falls this much later
-// than the engine's own would, to give it the time.
-const PLAYER_LEAD = 0.4;
-// Where "Let the loop wander" stops repeating itself (queue item 92; Mikey,
-// 2026-10-18: all the way to the right it should feel experimental, not
-// repeatable). From this amount up (the slider runs 0 to 2.4) each play of
-// a loop draws its own salt for the wander's stream (`wanderSalt`), so the
-// same code wanders another way every time it is played; below it, every
-// play wanders as every play of that code always has. The conservative
-// first point: only the slider's top sixth. For Mikey's ears.
-export const UNREPEATABLE_FROM = 2.0;
-
-// A new salt for a play (never 0, which is no salt).
-function freshSalt() {
-  try {
-    const x = new Uint32Array(1);
-    globalThis.crypto.getRandomValues(x);
-    if (x[0]) return x[0];
-  } catch { /* no crypto here */ }
-  return (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
-}
+// Where "Let the loop wander" stops repeating itself, and a play's own salt
+// (queue item 92): js/player.js's, which both engines use.
+export { UNREPEATABLE_FROM };
 
 // How long the old loop's notes take to fall to nothing when the length
 // slider ends a track inside a pass, at a phrase line (queue item 88b), in
@@ -425,8 +404,6 @@ export class Engine {
     // A track that ran its length asked for the next one (onTrackEnd): that
     // load follows on from what is decided, where any other cuts it short.
     this.handover = false;
-    // With `?engine=player`: whether the core's player has the loop.
-    this._playerOn = false;
     // What happened while the page was last hidden, for Diagnostics (queue
     // item 39): from when it was hidden until it was shown again.
     this.spell = null;
@@ -606,51 +583,7 @@ export class Engine {
       this.step = this.step % this.base.totalSteps;
     }
     if (back) this._redecideFrom(back, this.live);
-    // The core's player takes a new loop, from its first step, a moment on.
-    if (this.player && this.playing && !keepPosition && !resume) this._playerStart();
     return this.base;
-  }
-
-  // The core's player (`?engine=player`): the loop of this spec's seed and
-  // request (`requestOf`: the vibes with the weights it drew, so the loop a
-  // selection of five or fewer made, and the tempo it was asked), its first
-  // step where this engine's next falls. Edits and re-rolls are this
-  // engine's; the player plays the seed's loop.
-  _playerLoad() {
-    const core = this.synth.core;
-    if (!core || !this.spec) return;
-    const asked = requestOf(this.spec);
-    const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
-    core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
-    core.playLoad(this.spec.seed >>> 0, vibes, this.nextStepTime, asked.tempo, pinNumbers(asked.pins), asked.theme, asked.length, keyMask(asked.key), scaleMask(asked.scale), styleMask(asked.style),
-      LAYERS.map((l) => voiceMask(asked.voices, l)), LAYERS.map((l) => layerState(asked.layers, l)));
-    this._playerControls();
-    this._playerOn = true;
-  }
-
-  // The player plays the loop from its first step, a moment on: this engine
-  // starts there with it, for the cursor. At Play, or as the core arrives if
-  // Play came first (the steps until then played in JavaScript).
-  _playerStart() {
-    this.nextStepTime = Math.max(this.nextStepTime, this._soonest(0.08)) + PLAYER_LEAD;
-    this.step = 0;
-    this.absStep = 0;
-    this.loopCount = 0;
-    this.origin = 0;
-    this.countFrom = 0;
-    this.live = this.driftOn ? this._wander(0) : this.base;
-    this.visualQueue = [];
-    this._playerLoad();
-  }
-
-  // The controls the player follows: each layer's mute and the tempo.
-  _playerControls() {
-    const core = this.synth.core;
-    if (!core || !this.spec) return;
-    const mutes = this.spec.mutes || {};
-    LAYERS.forEach((layer, i) => core.playMute(i, !!mutes[layer]));
-    core.playTempo(this.spec.bpm);
-    core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
   }
 
   // The salt the wander's stream takes now (queue item 92): this play's,
@@ -664,10 +597,56 @@ export class Engine {
     return 60 / this.spec.bpm / 4;
   }
 
-  // Whether the core's player plays the notes (`?engine=player`, queue item
-  // 82): the synth says so, with its core.
-  get player() {
-    return this.synth.player === true;
+  // The controls, as js/player.js's PlayerEngine takes them (queue item
+  // 94b), so js/main.js drives either engine the same way. A layer muted or
+  // back (the spec holds it): its channel at once, and on the core its notes
+  // decided again from now, not after what the core holds (queue item 40).
+  setMute(layer, muted) {
+    this.synth.setMute(layer, muted);
+    this.redecide();
+  }
+
+  // The tempo slider (the spec holds the tempo): the loop's own echo time in
+  // beats (queue item 73) at the new tempo, and the steps decided again.
+  setTempo() {
+    this.synth.setEchoTime((60 / this.spec.bpm) * this.echoBeats);
+    this.redecide();
+  }
+
+  setTone(tone) {
+    this.synth.setTone(tone);
+  }
+
+  // "Let the loop wander", 0 for off: off, the loop as composed from now;
+  // on, the next pass in the queue wanders as far as asked.
+  setWander(amount) {
+    const on = amount > 0;
+    this.driftOn = on;
+    if (on) this.driftAmount = amount;
+    else if (this.base) this.live = this.base;
+    this.redecide(on ? null : this.base);
+  }
+
+  // The length slider moved: counted from what is heard now.
+  trackChanged() {
+    this.restartCount();
+  }
+
+  // The loop that follows when the track ends: the page's engine hands over
+  // as it reaches the end (onTrackEnd), so nothing is armed ahead.
+  arm() {}
+
+  // Where the listener is in this track, in steps, read off the audio clock.
+  // The scheduler's own counters (loopCount, step) run ahead of the sound by
+  // its lookahead, up to three seconds while the screen is off, so counting
+  // onLoop calls made the clock jump early at every pass. This takes the
+  // scheduler's position and walks it back by how far its next step is ahead
+  // of what is being heard, using the engine's measured output latency.
+  audibleSteps() {
+    if (!this.playing || !this.live || !this.spec) return null;
+    const heard = this.ctx.currentTime - (this.latency || 0);
+    const ahead = (this.nextStepTime - heard) / this.stepDur;
+    return Math.max(0, this.absStep - ahead);
   }
 
   get hidden() {
@@ -821,7 +800,6 @@ export class Engine {
   // had. On the JavaScript synth there is nothing that far ahead to redo;
   // false, and the change is heard as the next steps are decided, as ever.
   redecide(live = null) {
-    if (this.player && this.playing) this._playerControls();
     const back = this._rewindPoint();
     if (!back) return false;
     this._redecideFrom(back, live);
@@ -875,15 +853,11 @@ export class Engine {
     this.floor = -Infinity;
     this.synth.unsilence();
     this.nextStepTime = Math.max(this._soonest(0.08), at || 0);
-    this._playerOn = false;
-    if (this.player) this._playerStart();
     this.clock.start(this.hidden ? TICK_HIDDEN : TICK_VISIBLE);
     this._tick('play');
   }
 
   stop() {
-    if (this.player) this.synth.core.playStop();
-    this._playerOn = false;
     this.playing = false;
     this.handover = false;
     this.clock.stop();
@@ -1057,7 +1031,6 @@ export class Engine {
     }
     this.lastTick = now;
     this._flush();
-    if (this.player && !this._playerOn) this._playerStart();
     // If the next step was already due before we woke up, the queue ran dry
     // and something audible was missed. On the core it is due once it is
     // inside the render-ahead: it could only arrive late.
@@ -1372,13 +1345,6 @@ export class Engine {
   }
 
   _scheduleStep(step, time) {
-    // The core's player plays the notes (`?engine=player`): only the cursor's
-    // step is kept here.
-    if (this.player) {
-      this.visualQueue.push({ step, time });
-      if (this.visualQueue.length > 512) this.visualQueue.shift();
-      return;
-    }
     const p = this.live;
     const cyc = p.cycles || {};
     const abs = this.absStep;
