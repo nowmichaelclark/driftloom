@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { newSpec, rerollLayer, vibeSelection, LAYERS } from '../js/generator.js';
-import { askOf, KIND, END_FADE } from '../js/player.js';
+import { askOf, picksAsk, KIND, END_FADE, MOMENT, CHANGE_FADE } from '../js/player.js';
 import { Rng } from '../js/rng.js';
 
 const QUANTUM = 128;
@@ -412,6 +412,99 @@ console.log('\nThe core\'s player (queue item 94b)');
     return render(x, 3);
   };
   check('a resumed load plays its lateFloor loop otherwise than a load does', !same(first(true), first(false)));
+}
+
+console.log('\nThe picks through the core (queue item 95)');
+{
+  // The New loops panel's request as js/player.js's `picksAsk` puts it,
+  // held by the core (`playPicks`); the core's own loops take it, at a
+  // track's end with nothing armed and at Next (`playNext`), and say which
+  // picks they took (an Own event, then the Loop with the seed). The page's
+  // generator makes the same loop from that seed and request.
+  const player = fs.readFileSync(fileURLToPath(new URL('../js/dlplayer.wasm', import.meta.url)));
+  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: player, quality: 'full', layout: 2, player: true } });
+  const render = (p, seconds) => {
+    const from = p.next || 0;
+    for (let b = 0; b * QUANTUM < seconds * RATE; b++) {
+      globalThis.currentFrame = from + b * QUANTUM;
+      p.process(Array.from({ length: 5 }, () => []), [[new Float32Array(QUANTUM), new Float32Array(QUANTUM)]]);
+    }
+    p.next = from + Math.ceil((seconds * RATE) / QUANTUM) * QUANTUM;
+  };
+  const about = (p) => {
+    p.receive({ type: 'probe', id: 1 });
+    const m = p.sent.filter((x) => x.type === 'probe').pop();
+    return { text: m.about, tag: m.picksTag };
+  };
+  const events = (p) => p.sent.filter((m) => m.type === 'events').flatMap((m) => m.events);
+  // The Own event and the seed of the Loop after it, from `from` on.
+  const own = (ev, from = 0) => {
+    for (let i = from; i < ev.length; i += 4) {
+      if (ev[i + 1] === KIND.own && ev[i + 5] === KIND.loop) return { tag: ev[i + 2], seed: ev[i + 6], time: ev[i], at: i };
+    }
+    return null;
+  };
+  const request = { vibes: ['cozy', 'rainy'], tempo: [77, 77], length: 12 };
+  const sent = picksAsk(request);
+  const p = make();
+  p.receive({ type: 'playDraws', seed: 9501 });
+  p.receive({ type: 'playPicks', ask: sent.ask, tag: 3 });
+  const reply = p.sent.find((m) => m.type === 'picks');
+  check('the core holds the picks and says so', reply && reply.tag === 3 && reply.met === true && reply.why === null && about(p).tag === 3, JSON.stringify(reply));
+  const first = newSpec(424242);
+  p.receive({ type: 'playLoad', seed: first.seed, ask: askOf(first), at: 0 });
+  p.receive({ type: 'playTrack', kind: 1, count: 1, arm: null });
+  const pass = (first.bars * (first.stepsPerBar || 16) * 60) / first.bpm / 4;
+  render(p, pass + 2);
+  let ev = events(p);
+  const o = own(ev);
+  const ended = ev.some((v, i) => i % 4 === 1 && v === KIND.end);
+  check('a track that ends with nothing armed hands over to a loop of the core\'s own, with the picks\' number', ended && o && o.tag === 3 && o.seed !== first.seed, JSON.stringify(o));
+  const page = newSpec(o.seed, request);
+  const q = make();
+  q.receive({ type: 'playLoad', seed: page.seed, ask: askOf(page), at: 0 });
+  render(q, 0.5);
+  check('it is the loop the page\'s generator makes from that seed and the picks', about(p).text === about(q).text && page.bpm === 77 && page.bars === 12, `${about(p).text.slice(0, 80)} | ${about(q).text.slice(0, 80)}`);
+  // A pick made while it plays: the loop playing stays, the next takes it.
+  const before = about(p).text;
+  const later = { vibes: ['glacial'], tempo: [140, 140] };
+  p.receive({ type: 'playPicks', ask: picksAsk(later).ask, tag: 4 });
+  render(p, 1);
+  check('a pick made while a loop plays leaves it as it is', about(p).text === before);
+  const mark = events(p).length;
+  p.receive({ type: 'playNext', moment: MOMENT.now, fade: CHANGE_FADE });
+  render(p, 1.5);
+  ev = events(p);
+  const n = own(ev, mark - (mark % 4));
+  const nextPage = n && newSpec(n.seed, later);
+  check('Next makes the next of the core\'s own, with the new picks', n && n.tag === 4 && nextPage.bpm === 140 && /bpm=140/.test(about(p).text), JSON.stringify(n));
+  // A loop armed by the page wins; dropped (an arm of null), the core's own
+  // loop follows instead.
+  const armed = newSpec(777001);
+  const r2 = make();
+  r2.receive({ type: 'playDraws', seed: 9502 });
+  r2.receive({ type: 'playPicks', ask: sent.ask, tag: 5 });
+  r2.receive({ type: 'playLoad', seed: first.seed, ask: askOf(first), at: 0 });
+  r2.receive({ type: 'playTrack', kind: 1, count: 1, arm: { seed: armed.seed, ask: askOf(armed), fade: END_FADE, track: [0, 0] } });
+  r2.receive({ type: 'playArm', arm: null });
+  render(r2, pass + 2);
+  const o2 = own(events(r2));
+  check('an arm of null drops the page\'s loop, and the core\'s own follows', o2 && o2.tag === 5 && o2.seed !== armed.seed >>> 0, JSON.stringify(o2));
+  // The same seed to draw from, the same loops.
+  const r3 = make();
+  r3.receive({ type: 'playDraws', seed: 9501 });
+  r3.receive({ type: 'playPicks', ask: sent.ask, tag: 3 });
+  r3.receive({ type: 'playLoad', seed: first.seed, ask: askOf(first), at: 0 });
+  r3.receive({ type: 'playTrack', kind: 1, count: 1, arm: null });
+  render(r3, pass + 2);
+  check('the core\'s own seeds are a function of the seed the page gave', own(events(r3)).seed === o.seed);
+  // Picks the core can't meet: their vibes alone, and why, in its words.
+  const bad = make();
+  bad.receive({ type: 'playPicks', ask: { ...sent.ask, tempo: [20, 30] }, tag: 6 });
+  const no = bad.sent.find((m) => m.type === 'picks');
+  check('picks the core can\'t meet are held as their vibes alone, and it says why', no && no.met === false && no.why === 'tempo must be 32 to 190 bpm' && bad.refused === 0, JSON.stringify(no));
+  const unread = picksAsk({ vibes: ['cozy'], tempo: [20, 30] });
+  check('picks the reader refuses are sent as their vibes alone', unread.vibesOnly && unread.why === 'tempo must be 32 to 190 bpm' && !unread.ask.tempo && unread.ask.vibes.length === 1);
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

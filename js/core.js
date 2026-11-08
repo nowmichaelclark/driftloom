@@ -344,6 +344,8 @@ export class CoreHost {
     this.player = core.player === undefined ? PLAYER : !!core.player;
     this.playerAt = null;
     this.onevents = null;
+    // The core's answer to the picks (queue item 95): { tag, met, why }.
+    this.onpicks = null;
     this.eventsLost = 0;
     this.refused = 0;
     this._probes = new Map();
@@ -495,9 +497,28 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'playTrack', kind, count, arm });
   }
 
-  // The loop that follows when the track ends (`MOMENT.end`), alone.
+  // The loop that follows when the track ends (`MOMENT.end`), alone; with
+  // `arm.track` ([kind, count]) the track it plays; null drops the one
+  // waiting, so the core's own loop follows (queue item 95).
   playArm(arm) {
     this.node.port.postMessage({ type: 'playArm', arm });
+  }
+
+  // The picks (queue item 95): the New loops panel's request (`picksAsk` in
+  // js/player.js), held by the core for every loop it makes itself and
+  // numbered `tag`; the core answers (`onpicks`) whether it can meet them.
+  playPicks(ask, tag) {
+    this.node.port.postMessage({ type: 'playPicks', ask, tag });
+  }
+
+  // The seed the core draws its own loops' seeds from (0, none of its own).
+  playDraws(seed) {
+    this.node.port.postMessage({ type: 'playDraws', seed });
+  }
+
+  // A new loop of the core's own at `moment`, the old falling over `fade`.
+  playNext(moment, fade) {
+    this.node.port.postMessage({ type: 'playNext', moment, fade });
   }
 
   // The Sound panel's tone, gliding there from now.
@@ -606,6 +627,7 @@ export class CoreHost {
       if (m.refused != null) this.refused = m.refused;
       if (this.onevents) this.onevents(m);
     }
+    if (m.type === 'picks' && this.onpicks) this.onpicks(m);
     if (m.type === 'probe') {
       if (m.player) this.playerAt = m.player;
       const resolve = this._probes.get(m.id);

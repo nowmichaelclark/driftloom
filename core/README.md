@@ -266,10 +266,19 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   - *`set_tone`*, and *`set_track(Track)`*: the length slider, whole passes
     or bars to the next phrase line, counted from the step heard;
     `Moment::End` is a change that waits for it (ringing out at a pass's
-    end, the crossfade inside one).
+    end, the crossfade inside one); `change_with_track` also says how long
+    that loop's own track plays, and `drop_change(moment)` drops one.
+  - *The picks and the core's own loops* (queue item 95): `set_picks(request,
+    tag)` holds the host's picks, `set_draws(seed)` gives the core a seed to
+    draw its own loops' seeds from. `next(moment, handover)` changes to a
+    loop of its own, and a track that ends with nothing waiting for it hands
+    over to one by itself (`END_FADE` inside a pass), so the page may sleep
+    through it; each plays on until the host sets its track. A pick never
+    changes the loop playing. Its `Loop` event comes after an `Own` carrying
+    the picks' tag, so the host knows which loop it is.
   - *Events* (`player/events.rs`, `event()`): a loop's first step, a pass, a
-    piece's section, a phrase line, each step, a re-roll and the track's end,
-    each at the time it is heard, decided up to a lookahead ahead.
+    piece's section, a phrase line, each step, a re-roll, the track's end and
+    a loop of the core's own, each at the time it is heard, decided up to a lookahead ahead.
   - *Reports* (`player/about.rs`): `grid(layer)`, the layers' grid of the pass
     being decided; `notes`/`note`, the loop as composed note by note (the
     MIDI export's); `describe`, plain ASCII lines of what a card, a cover

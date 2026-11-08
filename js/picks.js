@@ -146,9 +146,23 @@ export function requestFor(state) {
   return { vibes: state.vibes.slice(), tempo, length, key, scale, style, voices, layers };
 }
 
+// The picks as the core holds them (queue item 95: `state.held`, its answer
+// to the last sent), so what Now Playing shows is what the core will play:
+// { vibes, picks }, the picks all "any" where it could hold only the vibes.
+// Before the core has answered for the picks as they stand (no core yet, or
+// a page engine), the panel's own.
+export function heldPicks(state) {
+  const h = state.held;
+  if (!h || h.tag !== state.picksTag) return { vibes: state.vibes, picks: state.picks };
+  return { vibes: h.vibes, picks: h.met === false ? cleanPicks(null) : h.picks };
+}
+
 // The "can't do that" line for the picks (a short plain line, its look a
-// Painter question), or null when the request can be met.
+// Painter question), or null when the request can be met: the core's own
+// words where it has answered for the picks as they stand (queue item 95).
 export function pickProblem(state) {
+  const h = state.held;
+  if (h && h.tag === state.picksTag && h.met != null) return h.met ? null : (h.coreWhy || h.why);
   try {
     readRequest(requestFor(state));
     return null;
@@ -182,8 +196,9 @@ function fitPills(host) {
 export function renderNowPicks() {
   const { state } = api;
   const b = el('nowPicks');
-  const moods = state.vibes;
-  const { tempo, length, key, scale, style, voices, layers } = state.picks;
+  const held = heldPicks(state);
+  const moods = held.vibes;
+  const { tempo, length, key, scale, style, voices, layers } = held.picks;
   b.textContent = '';
   const spokenParts = [];
   if (moods.length) {
@@ -381,7 +396,7 @@ function playTime(bars) {
   const { state } = api;
   const spec = state.spec;
   const spb = (spec && spec.stepsPerBar) || 16;
-  const t = state.picks.tempo || [spec ? spec.bpm : 80, spec ? spec.bpm : 80];
+  const t = heldPicks(state).picks.tempo || [spec ? spec.bpm : 80, spec ? spec.bpm : 80];
   return pieceTime(bars, spb, t);
 }
 

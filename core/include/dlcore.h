@@ -181,6 +181,26 @@ void dl_player_load(dl_player *player, uint32_t seed);
    own. With nothing playing it is a load. 1 if asked, 0 for no such moment. */
 int dl_player_change(dl_player *player, uint32_t seed, uint32_t moment, double crossfade);
 
+/* dl_player_change, and how long the loop's track plays once it starts
+   (`kind` and `count` as dl_player_track takes them): a host arming the loop
+   that follows a track's end gives it its own length this way. */
+int dl_player_change_track(dl_player *player, uint32_t seed, uint32_t moment, double crossfade, uint32_t kind, uint32_t count);
+
+/* The core's own loops (queue item 95): a host that lets the core choose
+   what plays next gives it a seed to draw their seeds from (dl_player_draws;
+   0, none) and the picks every one of them asks (dl_player_picks: what was
+   asked since the last load, numbered `tag`). dl_player_next changes to one
+   at `moment` (1 if asked); a track that ends with nothing waiting for it
+   hands over to one by itself (fading over DL_END_FADE at a phrase line).
+   Each plays on until the host sets its track. Its DL_LOOP event, with its
+   seed, comes after a DL_OWN event carrying the picks' `tag`.
+   dl_player_drop drops the change waiting for `moment`. */
+#define DL_END_FADE 1.0
+void dl_player_draws(dl_player *player, uint32_t seed);
+void dl_player_picks(dl_player *player, uint32_t tag);
+int dl_player_next(dl_player *player, uint32_t moment, double crossfade);
+int dl_player_drop(dl_player *player, uint32_t moment);
+
 /* When the next change waiting starts its loop, in seconds on the core's
    clock (frames rendered over the rate); -1 if none is worked out yet (it
    is once the next block is rendered). */
@@ -273,9 +293,11 @@ int64_t dl_player_track_end(dl_player *player);
    time. `number` is the step in its pass (DL_STEP, DL_PHRASE), the pass
    (DL_PASS; in a piece, its round), the section (DL_SECTION, a piece's), the
    seed (DL_LOOP: a new loop's first step; DL_REVISED: the loop made again
-   in place), or 0 (DL_END: the track's end); `step` is from the loop's load.
+   in place), or 0 (DL_TRACK_END: the track's end), or the picks' tag (DL_OWN:
+   the loop whose DL_LOOP comes next is the core's own); `step` is from the
+   loop's load.
    256 wait at most; dl_player_events_lost counts the ones lost. */
-enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6 };
+enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6, DL_OWN = 7 };
 typedef struct dl_event {
     double time;
     uint32_t kind;

@@ -3,7 +3,7 @@ import { Synth } from './synth.js';
 import { ENGINE, PAGE_ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
 import * as quality from './quality.js';
 import { Engine } from './engine.js';
-import { PlayerEngine } from './player.js';
+import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
 import * as share from './share.js';
@@ -11,7 +11,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v150';
+const BUILD = 'v151';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -135,6 +135,14 @@ const state = {
   // A new loop drawn ahead (queue item 94b): the one the core's player is
   // armed with for the end of a track, so the next new loop is that one.
   upcoming: null,
+  // The picks as sent to the core (queue item 95): each sending numbered,
+  // what it held (the vibes, the picks, the request read, and whether only
+  // the vibes could be sent), the last sent, and the one the core says it
+  // holds, which Now Playing's pills and the panel's line show.
+  picksTag: 0,
+  sentPicks: new Map(),
+  lastPicks: null,
+  held: null,
   history: [],            // array of specs (max 5)
   historyIndex: -1,       // current position in history
 };
@@ -224,6 +232,10 @@ function makeAudio() {
   engine.onStep = onStep;
   engine.onLoop = onLoop;
   engine.onTrackEnd = onTrackEnd;
+  // The core's own loops and its answer to the picks (queue item 95).
+  engine.onOwn = onOwn;
+  engine.onPicks = onPicksHeld;
+  if (engine.setPicks && state.lastPicks) engine.setPicks(state.lastPicks.ask, state.lastPicks.tag);
   // The worst render-ahead this device has seen (queue item 47), planned
   // from while hidden.
   engine.deviceAhead = Number(store.getPrefs().renderAheadWorst) || 0;
@@ -447,6 +459,9 @@ function nextForEnd() {
     return entry ? cloneSpec(entry.spec) : null;
   }
   if (state.historyIndex < state.history.length - 1) return cloneSpec(state.history[state.historyIndex + 1]);
+  // On the core's player the next new loop is the core's own, with the
+  // picks it holds (queue item 95): nothing of the page's is armed.
+  if (state.engine && state.engine.ownLoops) return null;
   if (!state.upcoming) state.upcoming = drawNew();
   return state.upcoming;
 }
@@ -962,6 +977,7 @@ function renderVibes() {
 function setVibes(list) {
   state.vibes = vibeSelection(list);
   store.setPrefs({ vibes: state.vibes });
+  sendPicks();
   // A loop drawn ahead leaned the old way: drawn again with the new vibes.
   state.upcoming = null;
   armNext();
@@ -978,10 +994,78 @@ function setVibes(list) {
 function setPicks(next) {
   state.picks = picks.cleanPicks({ ...state.picks, ...next });
   store.setPrefs({ picks: state.picks });
+  sendPicks();
   state.upcoming = null;
   armNext();
   if (state.view === 'now') renderNow();
   if (state.view === 'vibe') picks.renderPanel();
+}
+
+// The panel's request sent to the core as a command (queue item 95): it holds
+// it for every loop it makes itself. Each sending is numbered, so a loop the
+// core made says which picks it took (`onOwn`); a request the reader can't
+// read goes as its vibes alone, as the page's own draw kept the moods of one
+// it could not meet. On the page's engine (`?engine=page`, `?engine=js`) the
+// page still draws new loops with them, until item 97.
+function sendPicks() {
+  const request = picks.requestFor(state);
+  const sent = picksAsk(request);
+  const tag = ++state.picksTag;
+  state.sentPicks.set(tag, {
+    tag, vibes: state.vibes.slice(), picks: { ...state.picks }, request, vibesOnly: sent.vibesOnly, why: sent.why, met: null,
+  });
+  // Kept: the last few, and the one the core says it holds.
+  for (const t of state.sentPicks.keys()) {
+    if (state.sentPicks.size <= 32) break;
+    if (!state.held || t !== state.held.tag) state.sentPicks.delete(t);
+  }
+  state.lastPicks = { ask: sent.ask, tag };
+  if (state.engine && state.engine.setPicks) state.engine.setPicks(sent.ask, tag);
+}
+
+// The core's answer to the picks numbered `tag`: held whole (`met`), or only
+// their vibes, and why not in its own words.
+function onPicksHeld({ tag, met, why }) {
+  const entry = state.sentPicks.get(tag);
+  if (!entry) return;
+  entry.met = met && !entry.vibesOnly;
+  entry.coreWhy = why;
+  state.held = entry;
+  if (state.view === 'now') renderNow();
+  if (state.view === 'vibe') picks.renderPanel();
+}
+
+// What the picks numbered `tag` asked of the core: the request it held.
+function heldRequest(entry) {
+  if (!entry) return state.vibes.slice();
+  return entry.vibesOnly || entry.met === false ? entry.vibes.slice() : entry.request;
+}
+
+// A loop the core made itself has started (queue item 95): at Next, or where
+// the length slider's time ran out with nothing of the page's armed. The
+// page draws the same spec for its card, history and share codes from the
+// seed and the picks the core took (the generation goldens hold the two
+// generators to the same loop), and loads it: the engine sees the core has
+// it and sends nothing.
+function onOwn(seed, tag) {
+  setTimeout(() => {
+    let spec;
+    try {
+      spec = drawSpec(seed, heldRequest(state.sentPicks.get(tag)));
+    } catch (e) {
+      if (!(e instanceof RequestError)) throw e;
+      spec = drawSpec(seed, state.vibes);
+    }
+    state.playlist = null;
+    if (state.spec) {
+      const last = state.history[state.history.length - 1];
+      if (!last || JSON.stringify(last) !== JSON.stringify(state.spec)) pushHistory(state.spec);
+    }
+    pushHistory(spec);
+    loadSpec(spec, { pushToHistory: false });
+    ui.toast(`New loop: ${spec.name}`);
+    updateHistoryButtons();
+  }, 0);
 }
 
 // An unlit any key puts its line back to chance. Line two holds tempo and
@@ -1368,11 +1452,17 @@ function togglePlay() {
   } else {
     state.media.start();
     state.engine.start();
-    if (!state.frameHandle) state.frameHandle = requestAnimationFrame(frameLoop);
-    syncMediaMetadata();
-    state.media.setPlaybackState(true);
-    setPlayButton(true);
+    nowPlaying();
   }
+}
+
+// What the page does when it starts playing: the frames drawn, the phone
+// told, the button.
+function nowPlaying() {
+  if (!state.frameHandle) state.frameHandle = requestAnimationFrame(frameLoop);
+  syncMediaMetadata();
+  state.media.setPlaybackState(true);
+  setPlayButton(true);
 }
 
 function setPlayButton(playing) {
@@ -1387,6 +1477,23 @@ function setPlayButton(playing) {
 function newLoop() {
   // Making something new is leaving the album.
   state.playlist = null;
+  ensureAudio();
+  if (state.engine.ownLoops) {
+    // On the core's player (queue item 95) the core makes it, with the picks
+    // it holds; the page catches up when it starts (`onOwn`), which keeps
+    // the history and says its name.
+    const was = state.engine.playing;
+    if (!state.engine.spec && state.spec) {
+      resetHistory(state.spec);
+      loadSpec(state.spec, { pushToHistory: false });
+    }
+    state.engine.next();
+    if (!was) {
+      state.media.start();
+      nowPlaying();
+    }
+    return;
+  }
   // Save the current loop to history before creating a new one (if it exists)
   if (state.spec) {
     // Avoid duplicate if the current spec is already the last in history
@@ -1912,6 +2019,8 @@ function wire() {
   const prefs = store.getPrefs();
   state.vibes = vibeSelection(prefs.vibes);
   state.picks = picks.cleanPicks(prefs.picks);
+  // The picks go to the core as it starts (and survive a reload as prefs).
+  sendPicks();
   updateVibesKey();
   // The listener's choice; else the app's own, if it has moved (queue item
   // 87b); else the first guess, from the cores.

@@ -32,6 +32,12 @@ pub const LOAD_BLOCKS: usize = 160;
 pub const CROSSFADE: f64 = 1.0;
 /// The longest crossfade asked for is held to this, in seconds.
 pub const CROSSFADE_MAX: f64 = 30.0;
+/// How long the old loop falls to nothing when a track ends at a phrase
+/// line inside a pass and the core makes the next loop itself (queue item
+/// 95; the app's `END_FADE`, queue item 88b): the same second as a change's
+/// crossfade. At a pass's end the old loop rings out, as for any change at
+/// the track's end. For Mikey's ears.
+pub const END_FADE: f64 = 1.0;
 
 /// The bars a phrase takes, at most (`Moment::Phrase`): the tune's phrases
 /// are two or four bars (`genMelody`'s `barsPerPhrase`), and a four-bar
@@ -128,7 +134,11 @@ impl Default for Handover {
 /// moment, promise 11): the loop asked for, how it hands over, when it was
 /// asked (the latest for a boundary wins), and the step it starts on, from
 /// the loop playing's load (none until worked out against the loop that
-/// plays).
+/// plays). A change for a loop of the core's own (`own`, queue item 95)
+/// draws its seed and takes the host's picks when it starts, not when it
+/// was asked, so a pick made meanwhile is heard in it; and a change may say
+/// how long its loop's track plays (`sets_track`), so a host asleep at the
+/// boundary still has the length it would have set.
 #[derive(Clone, Copy)]
 pub(super) struct Change {
     pub seed: u32,
@@ -136,6 +146,9 @@ pub(super) struct Change {
     pub handover: Handover,
     pub asked: u32,
     pub target: Option<u64>,
+    pub own: bool,
+    pub sets_track: bool,
+    pub track: super::Track,
 }
 
 /// The grid a moment's boundaries lie on, in steps of the loop playing:
@@ -161,7 +174,16 @@ pub fn unit(moment: Moment, beat: f64, spb: f64, total: f64) -> Option<f64> {
 
 impl crate::generator::list::Empty for Change {
     const EMPTY: Self =
-        Change { seed: 0, request: super::Request::new(), handover: Handover::RingOut, asked: 0, target: None };
+        Change {
+            seed: 0,
+            request: super::Request::new(),
+            handover: Handover::RingOut,
+            asked: 0,
+            target: None,
+            own: false,
+            sets_track: false,
+            track: super::Track::Always,
+        };
 }
 
 #[cfg(test)]

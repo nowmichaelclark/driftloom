@@ -635,6 +635,14 @@ impl Request {
         self
     }
 
+    /// The same request with only its vibes (queue item 95): what the
+    /// app's picks become when the rest of them can't be met, as the page's
+    /// `drawNew` leaves a request out and keeps the moods.
+    #[must_use]
+    pub fn vibes_only(&self) -> Self {
+        Request { asked: self.asked, weights: self.weights, ..Request::new() }
+    }
+
     /// A request read from its text (the module's doc says how it is
     /// written); a vibe or a pin named twice keeps the last.
     ///

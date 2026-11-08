@@ -399,6 +399,63 @@ pub extern "C" fn dl_player_change(player: *mut Engine, seed: u32, moment: u32, 
     1
 }
 
+/// `dl_player_change`, and how long the loop's track plays once it starts
+/// (`Player::change_with_track`; queue item 95): `kind` and `count` as
+/// `dl_player_track` takes them. 1 if it was asked, 0 for a moment or a kind
+/// with no such number.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_change_track(player: *mut Engine, seed: u32, moment: u32, crossfade: f64, kind: u32, count: u32) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    let Some(track) = track_of(kind, count) else { return 0 };
+    let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+    e.player.change_with_track(seed, &e.request, m, handover, Some(track));
+    e.request = Request::new();
+    1
+}
+
+/// A new loop of the core's own at `moment` (`Player::next`; queue item
+/// 95): its seed the next drawn from `dl_player_draws`', with the picks
+/// (`dl_player_picks`), crossfading as `dl_player_change` does. 1 if asked;
+/// 0 for no such moment, or with no seed given to draw from.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_next(player: *mut Engine, moment: u32, crossfade: f64) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+    c_int::from(e.player.next(m, handover))
+}
+
+/// Drop the change waiting for `moment` (`Player::drop_change`). 1 if there
+/// is such a moment.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_drop(player: *mut Engine, moment: u32) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    e.player.drop_change(m);
+    1
+}
+
+/// Hold what was asked since the last load as the picks, numbered `tag`
+/// (`Player::set_picks`; queue item 95): every loop the core makes itself
+/// asks them, and its `DL_OWN` event carries `tag`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_picks(player: *mut Engine, tag: u32) {
+    if let Some(e) = engine(player) {
+        e.player.set_picks(&e.request, tag);
+        e.request = Request::new();
+    }
+}
+
+/// Give the core a seed to draw its own loops' seeds from
+/// (`Player::set_draws`); 0, none of its own.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_draws(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.player.set_draws(seed);
+    }
+}
+
 /// When the next change waiting starts its loop, in seconds on the core's
 /// clock (`Player::next_change`; a host lining up a picture with it); -1
 /// if none is worked out yet (it is by the next block rendered).
@@ -606,14 +663,19 @@ pub extern "C" fn dl_player_tone(player: *mut Engine, warmth: f64, space: f64, w
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_track(player: *mut Engine, kind: u32, count: u32) -> c_int {
     let Some(e) = engine(player) else { return 0 };
-    let track = match kind {
-        0 => crate::player::Track::Always,
-        1 => crate::player::Track::Passes(count.max(1)),
-        2 => crate::player::Track::Bars(count.max(1)),
-        _ => return 0,
-    };
+    let Some(track) = track_of(kind, count) else { return 0 };
     e.player.set_track(&e.core, track);
     1
+}
+
+/// The track `kind` and `count` say (`dl_player_track`'s numbers).
+fn track_of(kind: u32, count: u32) -> Option<crate::player::Track> {
+    match kind {
+        0 => Some(crate::player::Track::Always),
+        1 => Some(crate::player::Track::Passes(count.max(1))),
+        2 => Some(crate::player::Track::Bars(count.max(1))),
+        _ => None,
+    }
 }
 
 /// The step from the loop's load the track ends at (`Player::track_end`);

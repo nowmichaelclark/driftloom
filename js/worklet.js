@@ -300,6 +300,31 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'playArm':
         if (core && this.player) this.arm(m.arm);
         return;
+      // The picks (queue item 95): the New loops panel's request, held by the
+      // core for every loop it makes itself, numbered by the page. The page
+      // hears whether they could be met whole (if not, the core holds their
+      // vibes only) and why not, in the core's own words.
+      case 'playPicks':
+        if (core && this.player && core.dl_play_picks) {
+          this.ask(m.ask, false);
+          const met = core.dl_play_picks(m.tag >>> 0) === 1;
+          const n = core.dl_play_refusal();
+          const why = n ? String.fromCharCode(...new Uint8Array(core.memory.buffer, core.dl_play_refusal_at(), n)) : null;
+          this.port.postMessage({ type: 'picks', tag: m.tag >>> 0, met, why });
+        }
+        return;
+      // The seed the core draws its own loops' seeds from (queue item 95).
+      case 'playDraws':
+        if (core && this.player && core.dl_play_draws) core.dl_play_draws(m.seed >>> 0);
+        return;
+      // A new loop of the core's own (the app's Next at the end of its
+      // history), with the picks.
+      case 'playNext':
+        if (core && this.player && core.dl_play_next) {
+          core.dl_play_next(m.moment >>> 0, m.fade);
+          this.urgent = true;
+        }
+        return;
       case 'playTone':
         if (core && this.player) core.dl_play_tone(m.warmth, m.space, m.wobble);
         return;
@@ -313,6 +338,7 @@ class DriftloomCore extends AudioWorkletProcessor {
             type: 'probe', id: m.id, about: text, lanes: core.dl_lanes(),
             player: { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() },
             trackEnd: core.dl_play_track_end(), nextChange: core.dl_play_next_change(), lost: core.dl_play_events_lost(), refused: this.refused,
+            picksTag: core.dl_play_picks_tag ? core.dl_play_picks_tag() : null,
           });
         } else {
           this.port.postMessage({ type: 'probe', id: m.id, about: null });
@@ -365,14 +391,16 @@ class DriftloomCore extends AudioWorkletProcessor {
 
   // What a loop asks for (queue item 94b; `askOf` in js/player.js): the
   // request, then a code's edits, each a call the core may refuse (counted
-  // in `refused`, for Diagnostics).
-  ask(a) {
+  // in `refused`, for Diagnostics, unless `count` is false: the picks say
+  // their own refusals).
+  ask(a, count = true) {
     const core = this.core;
     if (!core || !a) return;
     let refused = 0;
     const take = (ok) => { if (!ok) refused++; };
-    // Each vibe with its weight, the tempo (queue item 85).
-    for (const [i, w] of a.vibes || []) take(core.dl_play_weight(i, w));
+    // Each vibe with its weight, or none (a listener's pick, queue item 95),
+    // the tempo (queue item 85).
+    for (const [i, w] of a.vibes || []) take(w == null ? core.dl_play_vibe(i) : core.dl_play_weight(i, w));
     if (a.tempo) take(core.dl_play_ask_tempo(a.tempo[0], a.tempo[1]));
     // Its pins (queue item 85b): [number, value] pairs.
     for (const [i, v] of a.pins || []) take(core.dl_play_pin(i, v));
@@ -393,17 +421,24 @@ class DriftloomCore extends AudioWorkletProcessor {
     for (const [layer, seed, rolled] of a.seeds || []) take(core.dl_play_seed(layer, seed >>> 0, rolled ? 1 : 0));
     (a.tone || []).forEach((v, which) => take(core.dl_play_edit_tone(which, v)));
     if (a.bpm != null) take(core.dl_play_edit_bpm(a.bpm));
-    this.refused += refused;
+    if (count) this.refused += refused;
   }
 
   // The loop that follows when the track ends (queue item 94b): a change
   // waiting for the track's end, the old loop falling to nothing over `fade`
-  // at a phrase line inside a pass (ringing out at a pass's end).
+  // at a phrase line inside a pass (ringing out at a pass's end), with the
+  // track that loop plays (`track`, [kind, count]; queue item 95). None
+  // (null) drops the one waiting, so the core's own loop follows instead.
   arm(arm) {
     const core = this.core;
-    if (!core || !arm) return;
+    if (!core) return;
+    if (!arm) {
+      if (core.dl_play_drop) core.dl_play_drop(END);
+      return;
+    }
     this.ask(arm.ask);
-    core.dl_play_change(arm.seed >>> 0, END, arm.fade);
+    if (arm.track && core.dl_play_change_track) core.dl_play_change_track(arm.seed >>> 0, END, arm.fade, arm.track[0] >>> 0, arm.track[1] >>> 0);
+    else core.dl_play_change(arm.seed >>> 0, END, arm.fade);
   }
 
   // The player's events from the block just rendered (queue item 94b): taken

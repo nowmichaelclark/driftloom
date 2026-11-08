@@ -74,13 +74,14 @@ use crate::generator::{Generator, Layer};
 use crate::{Core, Error, MAX_RATE, MIN_RATE};
 
 use change::{Change, END_SLOT, LOAD_BLOCKS, SLOTS};
-pub use change::{CROSSFADE, Handover, Moment};
+pub use change::{CROSSFADE, END_FADE, Handover, Moment};
 pub use events::{Event, Kind};
 use events::Events;
 use crate::generator::load::Load;
 pub use track::Track;
 use host::Host;
 use crate::generator::list::{Biased, Maybe};
+use crate::generator::rng::Rng;
 use sequencer::{Loop, ORGAN_FALL, Sequencer, channel_of};
 use synth::Synth;
 
@@ -204,6 +205,18 @@ pub struct Player {
     /// Whether the load being made is a loop resumed on a new core
     /// (`load_resumed`): it doesn't wait out its lateFloor a second time.
     resumed: bool,
+    /// The host's picks (queue item 95, `set_picks`): what every loop the
+    /// core makes itself asks, and the number the host gave them.
+    picks: Request,
+    picks_tag: u32,
+    /// The seed of the core's own loops' seeds (`set_draws`; 0, none of its
+    /// own), and how many it has drawn from it.
+    draws: u32,
+    drawn: u32,
+    /// Whether the loop being made is one of the core's own, and the picks'
+    /// number it took (told as `Kind::Own` when it starts).
+    own: bool,
+    own_tag: u32,
     /// What the player tells the host (`event`).
     events: Events,
 }
@@ -247,6 +260,12 @@ impl Player {
             count_from: 0,
             ended: false,
             resumed: false,
+            picks: Request::new(),
+            picks_tag: 0,
+            draws: 0,
+            drawn: 0,
+            own: false,
+            own_tag: 0,
             events: Events::new(),
         }
     }
@@ -294,6 +313,11 @@ impl Player {
         self.full = full;
         self.units.set(-1.0);
         self.kept = Maybe::NONE;
+        self.picks = Request::new();
+        self.picks_tag = 0;
+        self.draws = 0;
+        self.drawn = 0;
+        self.own = false;
         self.events.clear();
         let now = self.now(host);
         self.synth.start(host, rate, !full, now);
@@ -329,6 +353,7 @@ impl Player {
         self.resume_at = None;
         self.tempo = None;
         self.resumed = false;
+        self.own = false;
     }
 
     /// `load_at` for a loop that was already playing on another core (queue
@@ -356,16 +381,47 @@ impl Player {
     /// one in its place (at the same moment), and the others wait for it to
     /// play.
     pub fn change(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover) {
+        self.change_with_track(seed, request, moment, handover, None);
+    }
+
+    /// `change`, and the track its loop plays once it starts (`set_track`,
+    /// counted from its first step), or none to keep the track as it is
+    /// (queue item 95). The app arms the loop that follows a track's end
+    /// this way, with that loop's own length, so a page asleep at the
+    /// boundary leaves the core playing what it would have set.
+    pub fn change_with_track(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<Track>) {
+        let change = Change {
+            seed,
+            request: *request,
+            handover,
+            asked: 0,
+            target: None,
+            own: false,
+            sets_track: track.is_some(),
+            track: track.unwrap_or(Track::Always),
+        };
+        self.ask(change, moment);
+    }
+
+    /// Ask for `change` at `moment` (`change`'s doc says how); a change of
+    /// the core's own (`next`) draws its seed and takes the picks here when
+    /// it is for now, and when it starts when it waits.
+    fn ask(&mut self, mut change: Change, moment: Moment) {
         let making = self.state == State::Loading || self.state == State::Wandering;
         let live = self.state == State::Playing || making;
+        if change.own && (!live || moment.slot().is_none()) {
+            change.seed = self.draw_seed();
+            change.request = self.picks;
+        }
+        let (seed, handover) = (change.seed, change.handover);
         match moment.slot() {
             _ if !live => {
-                self.load_at(seed, request, 0.0);
+                self.load_at(seed, &change.request, 0.0);
                 self.handover = handover;
                 self.asked_by = Asked::Now;
             }
             None if making => {
-                self.generator.begin_with(seed, request);
+                self.generator.begin_with(seed, &change.request);
                 self.state = State::Loading;
                 self.resumed = false;
                 self.handover = handover;
@@ -375,18 +431,107 @@ impl Player {
             }
             None => {
                 let pending = self.pending;
-                self.load_at(seed, request, 0.0);
+                self.load_at(seed, &change.request, 0.0);
                 self.pending = pending;
                 self.handover = handover;
                 self.asked_by = Asked::Now;
             }
             Some(slot) => {
                 self.asked = self.asked.wrapping_add(1);
+                change.asked = self.asked;
                 if let Some(p) = self.pending.get_mut(slot) {
-                    *p = Maybe::some(Change { seed, request: *request, handover, asked: self.asked, target: None });
+                    *p = Maybe::some(change);
                 }
+                return;
             }
         }
+        // A change now: it is the loop being made.
+        self.own = change.own;
+        self.own_tag = self.picks_tag;
+        if change.sets_track {
+            self.track = change.track;
+            self.ended = false;
+        }
+    }
+
+    /// Change to a new loop of the core's own (queue item 95; the app's
+    /// Next, at the end of its history): its seed the next drawn from the
+    /// host's (`set_draws`), with the host's picks (`set_picks`), at
+    /// `moment`, handing over by `handover`; it plays on (its track
+    /// `Track::Always`), as a new loop does in the app until its length
+    /// slider is moved. A change that waits takes its seed and the picks
+    /// when it starts, so a pick made meanwhile is heard in it. The host
+    /// learns its seed from its `Kind::Loop` event, after a `Kind::Own` with
+    /// the picks' number. False, and nothing asked, while the host has given
+    /// no seed to draw from.
+    pub fn next(&mut self, moment: Moment, handover: Handover) -> bool {
+        if self.draws == 0 {
+            return false;
+        }
+        self.ask(Self::own_change(handover), moment);
+        true
+    }
+
+    /// A change for a loop of the core's own, its seed and request to be
+    /// drawn when it is made.
+    fn own_change(handover: Handover) -> Change {
+        Change {
+            seed: 0,
+            request: Request::new(),
+            handover,
+            asked: 0,
+            target: None,
+            own: true,
+            sets_track: true,
+            track: Track::Always,
+        }
+    }
+
+    /// Drop the change waiting for `moment` (queue item 95; nothing for
+    /// `Moment::Now`, which never waits). The app drops the one armed for
+    /// the track's end when nothing it holds comes next, so the core's own
+    /// loop follows instead (`set_draws`).
+    pub fn drop_change(&mut self, moment: Moment) {
+        if let Some(p) = moment.slot().and_then(|slot| self.pending.get_mut(slot)) {
+            *p = Maybe::NONE;
+        }
+    }
+
+    /// Hold `request` as the host's picks (queue item 95; the app's New
+    /// loops panel), numbered `tag` by the host: every loop the core makes
+    /// itself from now on asks it (`next`, and a track's end with nothing
+    /// waiting for it). The loop playing never changes for it, nor does a
+    /// change asked already with its own request; a re-roll of the loop
+    /// playing keeps the request that loop was made with, and each pass
+    /// wanders inside it. They hold until set again, across loads.
+    pub fn set_picks(&mut self, request: &Request, tag: u32) {
+        self.picks = *request;
+        self.picks_tag = tag;
+    }
+
+    /// The host's picks and their number (`set_picks`).
+    #[must_use]
+    pub fn picks(&self) -> (&Request, u32) {
+        (&self.picks, self.picks_tag)
+    }
+
+    /// Give the core a seed to draw its own loops' seeds from (queue item 95;
+    /// the app draws one at random each time it starts a core): the loops
+    /// it makes itself are then a pure function of this seed and the picks
+    /// (promise 3). 0 takes the core's own loops away: a track's end with
+    /// nothing waiting for it plays on, as before.
+    pub fn set_draws(&mut self, seed: u32) {
+        self.draws = seed;
+        self.drawn = 0;
+    }
+
+    /// The next seed of the core's own, from the host's (`set_draws`): the
+    /// generator's stream, keyed by the seed and the count, so each is its
+    /// own however the ones before were spent.
+    fn draw_seed(&mut self) -> u32 {
+        let mut r = Rng::new(self.draws ^ self.drawn.wrapping_mul(0x9e37_79b9));
+        self.drawn = self.drawn.wrapping_add(1);
+        r.seed32()
     }
 
     /// The loop playing, made again with `request` and kept in its place
@@ -711,6 +856,10 @@ impl Player {
         // The track counts from the new loop's first step.
         self.count_from = 0;
         self.ended = false;
+        if self.own {
+            self.own = false;
+            self.events.push(Event { time: start, kind: Kind::Own, number: u64::from(self.own_tag), step: 0 });
+        }
         self.events.push(Event { time: start, kind: Kind::Loop, number: u64::from(self.generator.spec().seed), step: 0 });
         self.state = State::Playing;
     }
@@ -853,6 +1002,20 @@ impl Player {
     /// last), and the next loop is made from the next block on, to start
     /// there. Returns the steps decided, if it began one.
     fn arm<H: Host>(&mut self, host: &mut H, now: f64) -> Option<usize> {
+        // A track that ends with nothing waiting for it hands over to a loop
+        // of the core's own, where the host gave a seed to draw from (queue
+        // item 95), so the page may sleep through it.
+        if self.draws != 0
+            && self.track != Track::Always
+            && self.pending.get(END_SLOT).is_some_and(|p| p.get().is_none())
+        {
+            self.asked = self.asked.wrapping_add(1);
+            let mut c = Self::own_change(Handover::Crossfade(END_FADE));
+            c.asked = self.asked;
+            if let Some(p) = self.pending.get_mut(END_SLOT) {
+                *p = Maybe::some(c);
+            }
+        }
         for slot in 0..self.pending.len() {
             if self.pending[slot].get().is_some_and(|c| c.target.is_none()) {
                 let t = self.resolve(slot, now);
@@ -898,10 +1061,17 @@ impl Player {
             }
         }
         let pending = self.pending;
-        self.load_at(change.seed, &change.request, start);
+        // A loop of the core's own takes its seed and the picks now.
+        let (seed, request) = if change.own { (self.draw_seed(), self.picks) } else { (change.seed, change.request) };
+        self.load_at(seed, &request, start);
         self.pending = pending;
         self.handover = handover;
         self.asked_by = Asked::Moment;
+        self.own = change.own;
+        self.own_tag = self.picks_tag;
+        if change.sets_track {
+            self.track = change.track;
+        }
         Some(n)
     }
 

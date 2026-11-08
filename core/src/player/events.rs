@@ -21,7 +21,7 @@ use crate::generator::list::Empty;
 pub const EVENTS_MAX: usize = 256;
 
 /// What an event says. The numbers hosts know them by are their places here
-/// (0 to 6).
+/// (0 to 7).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum Kind {
@@ -48,11 +48,17 @@ pub enum Kind {
     /// run. `number` is 0. If a change waits for it (`Moment::End`), its
     /// loop starts here; if not, the loop plays on.
     End = 6,
+    /// The loop whose `Loop` comes next, at the same time, is one the core
+    /// made itself (queue item 95: `Player::next`, or a track's end with
+    /// nothing waiting for it): its seed drawn from the host's
+    /// (`Player::set_draws`), with the picks the host numbered `number`
+    /// (`Player::set_picks`), so the host knows which loop it is.
+    Own = 7,
 }
 
 impl Kind {
     /// Every kind, in the hosts' numbering.
-    pub const ALL: [Kind; 7] = [Kind::Step, Kind::Pass, Kind::Section, Kind::Phrase, Kind::Loop, Kind::Revised, Kind::End];
+    pub const ALL: [Kind; 8] = [Kind::Step, Kind::Pass, Kind::Section, Kind::Phrase, Kind::Loop, Kind::Revised, Kind::End, Kind::Own];
 }
 
 /// An event: what it says, when it is heard, and where the loop is then.
