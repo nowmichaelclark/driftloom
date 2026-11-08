@@ -1,0 +1,122 @@
+[
+ {
+  "name": "dottedPulse-undertow45-none",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "dottedPulse-undertow45-pulse",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "pulse"
+  }
+ },
+ {
+  "name": "dottedPulse-undertow45-kick332",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "kick332"
+  }
+ },
+ {
+  "name": "dottedPulse-dust69-none",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "dottedPulse-dust69-pulse",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "pulse"
+  }
+ },
+ {
+  "name": "dottedPulse-dust69-kick332",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "kick332"
+  }
+ },
+ {
+  "name": "dottedPulse-grove47-none",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "dottedPulse-grove47-pulse",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "pulse"
+  }
+ },
+ {
+  "name": "dottedPulse-grove47-kick332",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "kick332"
+  }
+ },
+ {
+  "name": "dottedPulse-undertow1-none",
+  "corpus": [
+   20261009,
+   1
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "dottedPulse-undertow1-pulse",
+  "corpus": [
+   20261009,
+   1
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "pulse"
+  }
+ },
+ {
+  "name": "dottedPulse-undertow1-kick332",
+  "corpus": [
+   20261009,
+   1
+  ],
+  "seconds": 45,
+  "force": {
+   "dottedPulse": "kick332"
+  }
+ }
+]

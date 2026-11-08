@@ -1,0 +1,52 @@
+[
+ {
+  "name": "everything13b-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  }
+ },
+ {
+  "name": "everything13b-thaw71-mononone",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 50,
+  "layout": 1,
+  "set": {
+   "chords.RETUNE": 1
+  }
+ },
+ {
+  "name": "everything13b-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1,
+   "master.CENTS": -20
+  },
+  "sketch": true
+ },
+ {
+  "name": "everything13b-thaw71-monowith",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 50,
+  "layout": 1,
+  "set": {
+   "chords.RETUNE": 1,
+   "master.CENTS": -20
+  },
+  "sketch": true
+ }
+]

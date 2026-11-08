@@ -1,0 +1,78 @@
+[
+ {
+  "name": "dropSpotlight-dust9-swell",
+  "corpus": [
+   20261009,
+   9
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "dropSpotlight-glade21-swell",
+  "corpus": [
+   20261009,
+   21
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "dropSpotlight-tide39-swell",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "dropSpotlight-grove47-swell",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ }
+]

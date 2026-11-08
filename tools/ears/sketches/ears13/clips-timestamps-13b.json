@@ -1,0 +1,594 @@
+{
+ "00-everything-13b-without.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 0.26
+  },
+  {
+   "loop": "shrine0",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 6.96
+  },
+  {
+   "loop": "grove47",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 5.31
+  },
+  {
+   "loop": "thaw71",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 10.24
+  },
+  {
+   "loop": "tide39",
+   "at": 204.0,
+   "seconds": 50.0,
+   "gain_dB": 5.01
+  }
+ ],
+ "00-everything-13b-with.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 1.0
+  },
+  {
+   "loop": "shrine0",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 6.82
+  },
+  {
+   "loop": "grove47",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 5.35
+  },
+  {
+   "loop": "thaw71",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 10.11
+  },
+  {
+   "loop": "tide39",
+   "at": 204.0,
+   "seconds": 50.0,
+   "gain_dB": 7.65
+  }
+ ],
+ "01-tripletKit-without.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  },
+  {
+   "loop": "bloom74",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 4.52
+  },
+  {
+   "loop": "tide52",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 2.09
+  },
+  {
+   "loop": "undertow75",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.16
+  }
+ ],
+ "01-tripletKit-with.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 0.82
+  },
+  {
+   "loop": "bloom74",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 4.56
+  },
+  {
+   "loop": "tide52",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 2.12
+  },
+  {
+   "loop": "undertow75",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.16
+  }
+ ],
+ "02-widePad-without.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.22
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "undertow45",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  },
+  {
+   "loop": "grove62",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  }
+ ],
+ "02-widePad-with.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.1
+  },
+  {
+   "loop": "thaw71",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 10.04
+  },
+  {
+   "loop": "undertow45",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 0.99
+  },
+  {
+   "loop": "grove62",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 3.5
+  }
+ ],
+ "03-dottedPulse-without.opus": [
+  {
+   "loop": "undertow45",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  },
+  {
+   "loop": "dust69",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  },
+  {
+   "loop": "grove47",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 5.44
+  },
+  {
+   "loop": "undertow1",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.99
+  }
+ ],
+ "03-dottedPulse-with-pulse.opus": [
+  {
+   "loop": "undertow45",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 1.01
+  },
+  {
+   "loop": "dust69",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  },
+  {
+   "loop": "grove47",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 5.45
+  },
+  {
+   "loop": "undertow1",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 1.99
+  }
+ ],
+ "03-dottedPulse-with-kick332.opus": [
+  {
+   "loop": "undertow45",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 1.35
+  },
+  {
+   "loop": "dust69",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 0.4
+  },
+  {
+   "loop": "grove47",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 5.48
+  },
+  {
+   "loop": "undertow1",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 2.05
+  }
+ ],
+ "04-slowOpening-without.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 100.0,
+   "gain_dB": 0.77
+  },
+  {
+   "loop": "tide39",
+   "at": 101.0,
+   "seconds": 100.0,
+   "gain_dB": 5.17
+  },
+  {
+   "loop": "dust49",
+   "at": 202.0,
+   "seconds": 100.0,
+   "gain_dB": -0.16
+  }
+ ],
+ "04-slowOpening-approved-lateFloor.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 100.0,
+   "gain_dB": 1.96
+  },
+  {
+   "loop": "tide39",
+   "at": 101.0,
+   "seconds": 100.0,
+   "gain_dB": 5.74
+  },
+  {
+   "loop": "dust49",
+   "at": 202.0,
+   "seconds": 100.0,
+   "gain_dB": 0.62
+  }
+ ],
+ "04-slowOpening-with.opus": [
+  {
+   "loop": "dust69",
+   "at": 0.0,
+   "seconds": 100.0,
+   "gain_dB": 4.86
+  },
+  {
+   "loop": "tide39",
+   "at": 101.0,
+   "seconds": 100.0,
+   "gain_dB": 7.64
+  },
+  {
+   "loop": "dust49",
+   "at": 202.0,
+   "seconds": 100.0,
+   "gain_dB": 3.04
+  }
+ ],
+ "05-planingSevenths-without.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.22
+  },
+  {
+   "loop": "tide39",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 5.05
+  },
+  {
+   "loop": "thaw71",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  },
+  {
+   "loop": "grove47",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 5.44
+  }
+ ],
+ "05-planingSevenths-with.opus": [
+  {
+   "loop": "shrine0",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 7.23
+  },
+  {
+   "loop": "tide39",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 4.76
+  },
+  {
+   "loop": "thaw71",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 10.32
+  },
+  {
+   "loop": "grove47",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 6.59
+  }
+ ],
+ "06-dropSpotlight-without.opus": [
+  {
+   "loop": "dust9",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 2.06
+  },
+  {
+   "loop": "glade21",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 0.51
+  },
+  {
+   "loop": "tide39",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 5.04
+  },
+  {
+   "loop": "grove47",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 5.31
+  }
+ ],
+ "06-dropSpotlight-with.opus": [
+  {
+   "loop": "dust9",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 2.16
+  },
+  {
+   "loop": "glade21",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 0.54
+  },
+  {
+   "loop": "tide39",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 5.01
+  },
+  {
+   "loop": "grove47",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 5.35
+  }
+ ],
+ "06-dropSpotlight-with-swell.opus": [
+  {
+   "loop": "dust9",
+   "at": 0.0,
+   "seconds": 50.0,
+   "gain_dB": 2.14
+  },
+  {
+   "loop": "glade21",
+   "at": 51.0,
+   "seconds": 50.0,
+   "gain_dB": 0.55
+  },
+  {
+   "loop": "tide39",
+   "at": 102.0,
+   "seconds": 50.0,
+   "gain_dB": 5.03
+  },
+  {
+   "loop": "grove47",
+   "at": 153.0,
+   "seconds": 50.0,
+   "gain_dB": 5.35
+  }
+ ],
+ "07-tuningOffset-without.opus": [
+  {
+   "loop": "vapor4",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 11.18
+  },
+  {
+   "loop": "dust69",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 0.17
+  },
+  {
+   "loop": "shrine0",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 7.22
+  },
+  {
+   "loop": "haven38",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 7.32
+  }
+ ],
+ "07-tuningOffset-with.opus": [
+  {
+   "loop": "vapor4",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 11.22
+  },
+  {
+   "loop": "dust69",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 0.23
+  },
+  {
+   "loop": "shrine0",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 7.3
+  },
+  {
+   "loop": "haven38",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 7.62
+  }
+ ],
+ "08-twang-without.opus": [
+  {
+   "loop": "vapor70",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 9.97
+  },
+  {
+   "loop": "thaw10",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 9.11
+  },
+  {
+   "loop": "shrine13",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 9.39
+  },
+  {
+   "loop": "thaw71",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 10.05
+  }
+ ],
+ "08-twang-with-soft.opus": [
+  {
+   "loop": "vapor70",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 9.91
+  },
+  {
+   "loop": "thaw10",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 9.16
+  },
+  {
+   "loop": "shrine13",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 9.35
+  },
+  {
+   "loop": "thaw71",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 10.09
+  }
+ ],
+ "08-twang-with-slow.opus": [
+  {
+   "loop": "vapor70",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 9.93
+  },
+  {
+   "loop": "thaw10",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 9.17
+  },
+  {
+   "loop": "shrine13",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 9.36
+  },
+  {
+   "loop": "thaw71",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 10.08
+  }
+ ],
+ "08-twang-with-bright.opus": [
+  {
+   "loop": "vapor70",
+   "at": 0.0,
+   "seconds": 45.0,
+   "gain_dB": 9.91
+  },
+  {
+   "loop": "thaw10",
+   "at": 46.0,
+   "seconds": 45.0,
+   "gain_dB": 9.15
+  },
+  {
+   "loop": "shrine13",
+   "at": 92.0,
+   "seconds": 45.0,
+   "gain_dB": 9.37
+  },
+  {
+   "loop": "thaw71",
+   "at": 138.0,
+   "seconds": 45.0,
+   "gain_dB": 10.08
+  }
+ ]
+}

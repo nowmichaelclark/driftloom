@@ -1,0 +1,60 @@
+[
+ {
+  "name": "everything13b-tide39-none",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 80,
+  "force": {
+   "lateFloor": "today"
+  },
+  "from": 30
+ },
+ {
+  "name": "everything13b-tide39-mononone",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 80,
+  "layout": 1,
+  "force": {
+   "lateFloor": "today"
+  },
+  "from": 30
+ },
+ {
+  "name": "everything13b-tide39-with",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 80,
+  "force": {
+   "lateFloor": "on"
+  },
+  "set": {
+   "latefloor.SECONDS_MAX": 90,
+   "latefloor.FADE": 12
+  },
+  "from": 30
+ },
+ {
+  "name": "everything13b-tide39-monowith",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 80,
+  "layout": 1,
+  "force": {
+   "lateFloor": "on"
+  },
+  "set": {
+   "latefloor.SECONDS_MAX": 90,
+   "latefloor.FADE": 12
+  },
+  "from": 30
+ }
+]

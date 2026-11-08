@@ -1,0 +1,2 @@
+# Ears 13b twang: on the chords channel (chords.RETUNE=1): the melody channel hears no note events.
+channel chords

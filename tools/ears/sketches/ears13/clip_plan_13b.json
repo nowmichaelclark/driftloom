@@ -1,0 +1,11 @@
+[
+ {"file": "00-everything-13b", "candidate": "everything13b", "loops": ["dust69", "shrine0", "grove47", "thaw71", "tide39"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "01-tripletKit", "candidate": "tripletKit", "loops": ["dust69", "bloom74", "tide52", "undertow75"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "02-widePad", "candidate": "widePad", "loops": ["shrine0", "thaw71", "undertow45", "grove62"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "03-dottedPulse", "candidate": "dottedPulse", "loops": ["undertow45", "dust69", "grove47", "undertow1"], "tags": ["none", "pulse", "kick332"], "names": {"none": "without", "pulse": "with-pulse", "kick332": "with-kick332"}},
+ {"file": "04-slowOpening", "candidate": "slowOpening", "loops": ["dust69", "tide39", "dust49"], "tags": ["none", "approved", "with"], "names": {"none": "without", "approved": "approved-lateFloor"}},
+ {"file": "05-planingSevenths", "candidate": "planingSevenths", "loops": ["shrine0", "tide39", "thaw71", "grove47"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "06-dropSpotlight", "candidate": "dropSpotlight", "loops": ["dust9", "glade21", "tide39", "grove47"], "tags": ["none", "with", "swell"], "names": {"none": "without", "swell": "with-swell"}},
+ {"file": "07-tuningOffset", "candidate": "tuningOffset", "loops": ["vapor4", "dust69", "shrine0", "haven38"], "tags": ["none", "with"], "names": {"none": "without"}},
+ {"file": "08-twang", "candidate": "twang", "loops": ["vapor70", "thaw10", "shrine13", "thaw71"], "tags": ["none", "soft", "slow", "bright"], "names": {"none": "without", "soft": "with-soft", "slow": "with-slow", "bright": "with-bright"}}
+]

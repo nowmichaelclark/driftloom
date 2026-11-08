@@ -1,0 +1,78 @@
+[
+ {
+  "name": "planingSevenths-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "planingSevenths-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45,
+  "force": {
+   "planingSevenths": "on"
+  }
+ },
+ {
+  "name": "planingSevenths-tide39-none",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "planingSevenths-tide39-with",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 45,
+  "force": {
+   "planingSevenths": "on"
+  }
+ },
+ {
+  "name": "planingSevenths-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "planingSevenths-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45,
+  "force": {
+   "planingSevenths": "on"
+  }
+ },
+ {
+  "name": "planingSevenths-grove47-none",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "planingSevenths-grove47-with",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 45,
+  "force": {
+   "planingSevenths": "on"
+  }
+ }
+]
