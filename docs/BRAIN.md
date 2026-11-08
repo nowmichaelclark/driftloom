@@ -320,9 +320,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   Animal Crossing and three Nonlocal Forecast cards); Ears 12b done (#332,
   2026-11-08: *Triangular Reformat*, *Pyramid*, six more K.K. songs, and
   `theory.py`'s colors reading past the seventh). Ears 13 (the second
-  synthesis, sketches on the core with item 83's folder) prompt given in
-  Session 30; it runs during phase 3, and its approved batch is built after
-  phase 3, the second synthesis (Opus 5.5, high).
+  synthesis) done in a cloud session (#336, 2026-11-08): batch 6, twelve
+  candidates; five sketched on the core (lowBell, padWow, colorTone,
+  deepDuck, wideSweep), clips on the throwaway branch `ears13-clips`
+  (deleted after Mikey's verdicts); seven wait on hooks, queued as item 99
+  (the sketch build only), then an Ears 13b sketches them. The approved
+  batch is built after phase 3, the second synthesis (Opus 5.5, high).
   Mikey asked (2026-11-07) whether the ears must finish by a phase: no; Ears
   12-13 by the end of phase 3, for the batch after it; piles 7-18 have no
   deadline (phase 5's block catalogue, long-form composing, phase 8).

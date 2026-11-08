@@ -207,6 +207,46 @@ the testers in plain words, one paste each.
 **Then the brain:** its phase check, and a control album (today's app
 against the app before phase 3, the same codes): it should sound the same.
 
+## 99. The sketch levers for Ears 13b (alongside phase 3)
+
+**Hands:** Sonnet 5.5, high. After 94a merges, from the latest `main`; it
+may run alongside 94b. The sketch build only (`--features sketch`): the
+app's and the player's modules stay byte for byte (`tools/build-core.sh
+--check`), and nothing that plays moves (goldens, seeds, baseline).
+
+**Why:** Ears 13 (`docs/ears/batch-6.md`, "Levers wanted") sketched five of
+its twelve candidates; the other seven need a hook item 83's levers don't
+have. The ears session never writes core code, so the hands add the hooks
+and an Ears 13b sketches with them.
+
+**What,** each as small as the batch's table says, in `core/sketch/`'s way
+(a forced choice, a `tuning.rs` name, a pin, or a clip lever in
+`tools/clips.mjs`), all under `#[cfg(feature = "sketch")]`:
+- **tripletKit:** a forceable choice that re-times the kit's hats and ghost
+  hits from four sixteenths to three thirds of the beat (no straight
+  eighth), the kick on the beat.
+- **dottedPulse:** a forceable choice adding a soft part (a rim or a tuned
+  tick) every three eighths, or the kick on a 3-3-2.
+- **planingSevenths:** a forceable option of the progression draw: every
+  chord a major seventh, roots a whole step or a minor third apart.
+- **slowOpening:** `latefloor.SECONDS_MAX` and `latefloor.FADE` in
+  `tuning.rs`'s `NAMES`.
+- **tuningOffset:** `master.CENTS` in `NAMES`, read where a note becomes Hz.
+- **widePad:** the side reaches whole-channel blocks in a stereo render
+  (`render_side`, as the buses get it), or a clip lever that sets a space
+  setting past its range; take whichever is smaller.
+- **dropSpotlight:** the sketch hears the floor drop (a route into the
+  sketch's `MODS`, as subDuck is keyed, or a floor-drop event to the
+  channels).
+- **Chord sketches:** in the sketch build, the chords channel gets a
+  retune at every chord (today only while the organ plays), so a chord
+  sketch sees arpeggiated chords whole without a silent organ.
+
+**Yardsticks:** each lever tested under `--features sketch` (it moves what
+it says, and off it is bit for bit today); `core/sketch/README.md` and the
+header of `tools/clips.mjs` document the new levers; clippy pedantic clean
+with the feature; the standing checks unchanged.
+
 ## After phase 3 (brain, 2026-11-07)
 
 - **Ears 13's sound batch** (the second synthesis, piles 3-6), built and
@@ -222,6 +262,13 @@ against the app before phase 3, the same codes): it should sound the same.
   aim: the chords sit within about a fifth to an octave under the tune,
   never pushed down to about 17 semitones under it. A small listening check
   on more of 84's downward movers before it merges.
+- **The player's stack** (item 94a, PR #337): its calls take 56 to 60 KB
+  of the caller's stack (wasm32, measured; `main` the same), near
+  Emscripten's 64 KB default; the header says `-sSTACK_SIZE`. Fine for the
+  browser (1 MB) and native games. Before a port to a small device (the
+  charter's handhelds and consoles), an item trims the generator's frames
+  with a measured aim; for Broken Friends' web build, the header's line is
+  enough.
 
 ## For phase 3 (from item 82; brain, Session 28)
 
