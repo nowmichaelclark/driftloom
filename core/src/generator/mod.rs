@@ -363,6 +363,25 @@ impl Generator {
         self.render.force(id, option)
     }
 
+    /// The request the loop was made with (its edits among it).
+    #[must_use]
+    pub fn request(&self) -> &request::Request {
+        &self.request
+    }
+
+    /// The tone the listener set on the loop made (the Sound panel; queue
+    /// item 94a, `Player::set_tone`), as the app sets `spec.tone`: it is what
+    /// the loop reports. Nothing made moves.
+    pub fn set_tone(&mut self, tone: [f64; 3]) {
+        self.spec.tone = tone;
+    }
+
+    /// Keep `late` as the loop's lateFloor (a re-roll keeps the wait it was
+    /// in: `Player::revise`).
+    pub fn keep_late(&mut self, late: Option<choices::LateFloor>) {
+        self.settings.late = late;
+    }
+
     /// The stage the load is at.
     #[must_use]
     pub fn stage(&self) -> Stage {

@@ -53,13 +53,16 @@
     clippy::too_many_arguments
 )]
 
+pub mod about;
 pub mod ahead;
 pub mod budget;
 pub mod change;
+pub mod events;
 pub mod formant;
 pub mod host;
 pub mod sequencer;
 pub mod synth;
+pub mod track;
 
 use crate::generator::js;
 use crate::generator::piece::Piece;
@@ -70,8 +73,12 @@ pub use crate::generator::request::Length;
 use crate::generator::{Generator, Layer};
 use crate::{Core, Error, MAX_RATE, MIN_RATE};
 
-use change::{Change, LOAD_BLOCKS};
+use change::{Change, END_SLOT, LOAD_BLOCKS, SLOTS};
 pub use change::{CROSSFADE, Handover, Moment};
+pub use events::{Event, Kind};
+use events::Events;
+use crate::generator::load::Load;
+pub use track::Track;
 use host::Host;
 use crate::generator::list::{Biased, Maybe};
 use sequencer::{Loop, ORGAN_FALL, Sequencer, channel_of};
@@ -110,12 +117,14 @@ pub enum State {
 /// How the loop being made was asked for: by a load (the app's way, its
 /// first pass drawn at the pass count the last loop reached), or by a change
 /// now or at a moment (its first pass its own first; at a moment, its tone,
-/// level and echo glide in at the boundary rather than when it is made).
+/// level and echo glide in at the boundary rather than when it is made), or
+/// as the loop playing made again in its place (`revise`, a re-roll).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Asked {
     Load,
     Now,
     Moment,
+    InPlace,
 }
 
 /// What `decide` did before a block, so a host timing its blocks (`dlrender
@@ -164,7 +173,7 @@ pub struct Player {
     tempo: Option<f64>,
     /// The changes waiting for their boundaries (queue item 86), one for
     /// each kind of moment but `Now`, and how many have been asked.
-    pending: [Maybe<Change>; 4],
+    pending: [Maybe<Change>; SLOTS],
     asked: u32,
     /// How the loop being made takes over from the one that played, and
     /// how it was asked for.
@@ -184,6 +193,16 @@ pub struct Player {
     /// Whether the loop playing began after a lead-in (`START`, a load with
     /// nothing playing): its first pass, for `pass_frames`, takes it in.
     lead_in: bool,
+    /// The loop's setups before a re-roll (`revise`), to send again only
+    /// those that differ, as the app's engine does.
+    kept: Maybe<Load>,
+    /// How long the track plays (queue item 94a, `set_track`), the step from
+    /// the load it counts from, and whether its end was told.
+    track: Track,
+    count_from: u64,
+    ended: bool,
+    /// What the player tells the host (`event`).
+    events: Events,
 }
 
 impl Player {
@@ -210,7 +229,7 @@ impl Player {
             start_at: 0.0,
             resume_at: None,
             tempo: None,
-            pending: [Maybe::NONE; 4],
+            pending: [Maybe::NONE; SLOTS],
             asked: 0,
             handover: Handover::RingOut,
             asked_by: Asked::Load,
@@ -220,6 +239,11 @@ impl Player {
             pass_from: 0.0,
             units: Biased::DEFAULT,
             lead_in: false,
+            kept: Maybe::NONE,
+            track: Track::Always,
+            count_from: 0,
+            ended: false,
+            events: Events::new(),
         }
     }
 
@@ -260,11 +284,13 @@ impl Player {
         self.was_playing = false;
         self.wandering = false;
         self.next_drawn = false;
-        self.pending = [Maybe::NONE; 4];
+        self.pending = [Maybe::NONE; SLOTS];
         self.handover = Handover::RingOut;
         self.asked_by = Asked::Load;
         self.full = full;
         self.units.set(-1.0);
+        self.kept = Maybe::NONE;
+        self.events.clear();
         let now = self.now(host);
         self.synth.start(host, rate, !full, now);
     }
@@ -289,7 +315,7 @@ impl Player {
     /// if not, or for `at` 0. Any change waiting (`change`) is dropped: a
     /// load starts afresh.
     pub fn load_at(&mut self, seed: u32, request: &Request, at: f64) {
-        self.pending = [Maybe::NONE; 4];
+        self.pending = [Maybe::NONE; SLOTS];
         self.handover = Handover::RingOut;
         self.asked_by = Asked::Load;
         self.was_playing = self.state == State::Playing || self.was_playing;
@@ -346,6 +372,100 @@ impl Player {
         }
     }
 
+    /// The loop playing, made again with `request` and kept in its place
+    /// (queue item 94a; the app's re-roll, `loadSpec(next, { keepPosition:
+    /// true })`): the seed's loop with a layer's new seed, say
+    /// (`Request::with_layer_seed`). It is made a stage a block as a load is
+    /// and takes over at the next step the old loop would have decided,
+    /// going on from that step and pass; the setups the loop holds (the
+    /// organ, the wash, the arc and the rest) are sent again only where they
+    /// differ, and the lateFloor wait it was in stays. The tempo stays the
+    /// one playing, unless the request edits it. The changes waiting stay.
+    /// With nothing playing it is a change now.
+    pub fn revise(&mut self, seed: u32, request: &Request) {
+        if self.state != State::Playing {
+            self.change(seed, request, Moment::Now, Handover::RingOut);
+            return;
+        }
+        self.kept = Maybe::some(*self.generator.settings());
+        let pending = self.pending;
+        let tempo = self.seq.bpm;
+        self.load_at(seed, request, 0.0);
+        self.pending = pending;
+        self.asked_by = Asked::InPlace;
+        if request.edits().bpm().is_none() {
+            self.tempo = Some(tempo);
+        }
+    }
+
+    /// How long the track plays (queue item 94a; the app's length slider):
+    /// whole passes or bars, counted from the step heard now (the pass
+    /// playing as the first), or from a new loop's first step. It holds
+    /// across loads until set again. When it has run, the player tells the
+    /// host (`Kind::End`) and starts the change waiting for it
+    /// (`Moment::End`), if one does.
+    pub fn set_track<H: Host>(&mut self, host: &H, track: Track) {
+        self.track = track;
+        self.ended = false;
+        let now = self.now(host);
+        let sd = self.seq.step_dur();
+        let ahead = if self.state == State::Playing && sd.is_finite() && sd > 0.0 {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a few steps
+            let n = js::round((self.seq.next_step_time - now) / sd).max(0.0) as u64;
+            n
+        } else {
+            0
+        };
+        self.count_from = self.seq.abs_step.saturating_sub(ahead);
+        if let Some(c) = self.pending.get_mut(END_SLOT).and_then(Maybe::as_mut) {
+            c.target = None;
+        }
+    }
+
+    /// The track's length (`set_track`).
+    #[must_use]
+    pub fn track(&self) -> Track {
+        self.track
+    }
+
+    /// The step from the loop's load the track ends at, as it stands; none
+    /// while it plays on (or nothing plays).
+    #[must_use]
+    pub fn track_end(&self) -> Option<u64> {
+        if self.state != State::Playing {
+            return None;
+        }
+        self.track.end_step(self.generator.spec(), self.count_from)
+    }
+
+    /// The tone (warmth, space and wobble, 0 to 1 each), as the Sound panel
+    /// sets it: it glides there from now, and the loop reports it
+    /// (`describe`). A new loop plays its own.
+    pub fn set_tone<H: Host>(&mut self, host: &mut H, tone: [f64; 3]) {
+        if !tone.iter().all(|t| t.is_finite()) {
+            return;
+        }
+        let tone = tone.map(|t| t.clamp(0.0, 1.0));
+        let now = self.now(host);
+        self.synth.set_tone(host, tone, now);
+        if self.state == State::Playing || (self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done) {
+            self.generator.set_tone(tone);
+        }
+    }
+
+    /// The oldest event waiting for the host (`events`' module says what
+    /// they are), taken.
+    pub fn event(&mut self) -> Option<Event> {
+        self.events.pop()
+    }
+
+    /// Events lost for want of room since the player started (0 for a host
+    /// that takes them after each render).
+    #[must_use]
+    pub fn events_lost(&self) -> u32 {
+        self.events.lost()
+    }
+
     /// How long before its boundary a change begins making its loop, in
     /// seconds: the lookahead, and `LOAD_BLOCKS` blocks at the core's rate.
     #[must_use]
@@ -368,7 +488,7 @@ impl Player {
     /// silence at once cancels it, `Core::cancel`). The changes waiting are
     /// dropped.
     pub fn stop(&mut self) {
-        self.pending = [Maybe::NONE; 4];
+        self.pending = [Maybe::NONE; SLOTS];
         if self.state == State::Loading || self.state == State::Wandering {
             self.state = State::Idle;
             self.was_playing = false;
@@ -475,7 +595,7 @@ impl Player {
                 self.wandering = self.wander.get() > 0.0;
                 if self.wandering {
                     let piece = self.generator.spec().length.is_some();
-                    let n = if self.asked_by == Asked::Load && !piece { self.seq.loop_count } else { 0 };
+                    let n = if (self.asked_by == Asked::Load && !piece) || self.asked_by == Asked::InPlace { self.seq.loop_count } else { 0 };
                     self.draw(0, n);
                 }
                 self.begin(host);
@@ -499,6 +619,13 @@ impl Player {
     /// clock; its first step `START` on (or, after a loop that was playing,
     /// where that one's next step would have fallen).
     fn begin<H: Host>(&mut self, host: &mut H) {
+        if self.asked_by == Asked::InPlace
+            && let Some(was) = self.kept.get()
+        {
+            self.begin_in_place(host, &was);
+            return;
+        }
+        self.kept = Maybe::NONE;
         let now = self.now(host);
         let at = self.seq.next_step_time;
         let sd = self.seq.step_dur();
@@ -559,6 +686,61 @@ impl Player {
         for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
             c.target = None;
         }
+        // The track counts from the new loop's first step.
+        self.count_from = 0;
+        self.ended = false;
+        self.events.push(Event { time: start, kind: Kind::Loop, number: u64::from(self.generator.spec().seed), step: 0 });
+        self.state = State::Playing;
+    }
+
+    /// `begin` for the loop playing made again in its place (`revise`): it
+    /// takes the next step the old one would have decided, at that step's
+    /// time (or the first of its steps still to come, the steps passed while
+    /// it was made counted on), its setups sent again only where they differ
+    /// from `was`.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a few steps
+    fn begin_in_place<H: Host>(&mut self, host: &mut H, was: &Load) {
+        let now = self.now(host);
+        if let Some(bpm) = self.tempo.take() {
+            self.seq.bpm = bpm;
+        } else {
+            self.seq.bpm = self.generator.spec().bpm;
+        }
+        let sd = self.seq.step_dur();
+        let mut start = self.seq.next_step_time;
+        let mut skip = 0;
+        if !(start > now) && sd.is_finite() && sd > 0.0 {
+            let k = js::floor((now - start) / sd) + 1.0;
+            skip = k.clamp(0.0, 4096.0) as u32;
+            start += f64::from(skip) * sd;
+        }
+        self.generator.keep_late(was.late);
+        let g = &self.generator;
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings() };
+        self.seq.revise(host, &mut self.synth, &lp, now, was);
+        let count = self.seq.loop_count;
+        for _ in 0..skip {
+            self.seq.advance(&lp);
+        }
+        if self.wandering && self.seq.loop_count != count {
+            self.draw(self.current, self.seq.loop_count);
+        }
+        self.seq.next_step_time = start;
+        self.lead_in = false;
+        self.pass_held = self.synth.budget.held();
+        self.pass_from = start;
+        self.units.set(-1.0);
+        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        self.seq.pass_begins(&lp);
+        self.next_drawn = false;
+        self.was_playing = false;
+        self.asked_by = Asked::Load;
+        self.handover = Handover::RingOut;
+        self.kept = Maybe::NONE;
+        for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
+            c.target = None;
+        }
+        self.events.push(Event { time: start, kind: Kind::Revised, number: u64::from(self.generator.spec().seed), step: self.seq.abs_step });
         self.state = State::Playing;
     }
 
@@ -594,6 +776,17 @@ impl Player {
     fn resolve(&self, slot: usize, now: f64) -> Option<u64> {
         let moment = Moment::ALL.get(slot + 1).copied()?;
         let g = &self.generator;
+        if moment == Moment::End {
+            // The first step the track ends on that is the lead away.
+            let sd = self.seq.step_dur();
+            if !(sd.is_finite() && sd > 0.0) {
+                return None;
+            }
+            let need = js::ceil((now + self.lead() - self.seq.next_step_time) / sd).max(0.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
+            let first = self.seq.abs_step + need as u64;
+            return self.track.next_end(g.spec(), self.count_from, first);
+        }
         let spb = g.spec().steps_per_bar;
         let total = g.spec().bars * spb;
         let u = change::unit(moment, self.beat.get(), spb, total)? as u64;
@@ -647,6 +840,8 @@ impl Player {
                             c.target = Some(t);
                         }
                     }
+                    // A change for the track's end waits while it has none.
+                    None if slot == END_SLOT => {}
                     None => self.pending[slot] = Maybe::NONE,
                 }
             }
@@ -667,10 +862,23 @@ impl Player {
             }
         }
         let start = self.seq.next_step_time;
+        // At the track's end the old loop hands over as the app's does: its
+        // notes ring out at a pass's end, and fall over the crossfade asked
+        // at a phrase line inside one.
+        let mut handover = change.handover;
+        if slot == END_SLOT {
+            if !self.ended {
+                self.ended = true;
+                self.events.push(Event { time: start, kind: Kind::End, number: 0, step: target });
+            }
+            if track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) {
+                handover = Handover::RingOut;
+            }
+        }
         let pending = self.pending;
         self.load_at(change.seed, &change.request, start);
         self.pending = pending;
-        self.handover = change.handover;
+        self.handover = handover;
         self.asked_by = Asked::Moment;
         Some(n)
     }
@@ -679,6 +887,7 @@ impl Player {
     /// the next pass (unless the step it reaches is `last`, where the loop
     /// playing hands over).
     fn step_once<H: Host>(&mut self, host: &mut H, now: f64, last: u64) {
+        self.tell();
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.schedule_step(host, &mut self.synth, &lp, now);
         if self.seq.advance(&lp) {
@@ -686,6 +895,35 @@ impl Player {
             if self.seq.abs_step != last {
                 self.next_pass();
             }
+        }
+    }
+
+    /// The events of the step about to be decided, at its time: a pass, a
+    /// piece's section, a phrase line, the step, and the track's end.
+    fn tell(&mut self) {
+        let spec = self.generator.spec();
+        let (time, step, abs) = (self.seq.next_step_time, self.seq.step, self.seq.abs_step);
+        let ev = |kind, number| Event { time, kind, number, step: abs };
+        let n = u64::from(self.seq.loop_count);
+        if step == 0 {
+            match Piece::of(spec) {
+                Some(p) => {
+                    if p.end.map_or(n == 0, |(sections, _)| n.is_multiple_of(sections)) {
+                        let rounds = p.end.map_or(0, |(sections, _)| n / sections.max(1));
+                        self.events.push(ev(Kind::Pass, rounds));
+                    }
+                    self.events.push(ev(Kind::Section, n));
+                }
+                None => self.events.push(ev(Kind::Pass, n)),
+            }
+        }
+        if track::phrase_line(spec, abs) == abs {
+            self.events.push(ev(Kind::Phrase, step));
+        }
+        self.events.push(ev(Kind::Step, step));
+        if !self.ended && self.track.ends_at(spec, self.count_from, abs) {
+            self.ended = true;
+            self.events.push(ev(Kind::End, 0));
         }
     }
 

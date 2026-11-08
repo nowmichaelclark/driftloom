@@ -161,6 +161,37 @@ impl Loop<'_> {
         own.chain(self.pass.and_then(Pass::ghost).map(|g| (g.vel, g.inst.get(), g)))
     }
 
+    /// Every note of `layer` as the pass plays it: its step and velocity
+    /// (`p.tracks[layer]`, the drums' ghost hit among them), for the layers'
+    /// grid (queue item 94a).
+    pub fn each_velocity(&self, layer: Layer, mut f: impl FnMut(f64, f64)) {
+        match layer {
+            Layer::Drums => self.drums().for_each(|(vel, _, e)| f(e.step, vel)),
+            Layer::Bass => {
+                for (i, e) in self.base.bass.iter().enumerate() {
+                    f(e.step, self.pass.map_or(e.vel, |p| p.bass(i, e).0));
+                }
+            }
+            Layer::Chords => {
+                for (i, e) in self.base.chords.iter().enumerate() {
+                    f(e.step, self.chord(i, e).0);
+                }
+            }
+            Layer::Melody => {
+                for (i, e) in self.base.melody.iter().enumerate() {
+                    f(e.step, self.pass.map_or(e.vel, |p| p.melody(i, e).0));
+                }
+            }
+            Layer::Texture => self.base.texture.iter().for_each(|e| f(e.step, e.vel)),
+        }
+    }
+
+    /// A layer's own cycle in steps (`p.cycles[layer] || p.totalSteps`).
+    #[must_use]
+    pub fn layer_cycle(&self, layer: Layer) -> f64 {
+        self.cycle(layer)
+    }
+
     /// Chord `i` as the pass plays it: its velocity and its notes.
     fn chord(&self, i: usize, e: &ChordEvent) -> (f64, Chord) {
         let (vel, opened) = self.pass.map_or((e.vel, None), |p| p.chord(i, e));
@@ -325,6 +356,54 @@ impl Sequencer {
         self.origin = 0;
         self.pass_steps = Piece::of(lp.spec).map_or_else(|| lp.total(), |p| p.bars_of(0) * lp.spec.steps_per_bar);
         self.hold = NO_HOLD;
+        self.kick_kind = s.kick.map(|k| k.kind);
+    }
+
+    /// `Engine.load(spec, { keepPosition: true })`, a re-roll (queue item
+    /// 94a, `Player::revise`): the loop made again keeps its place (the step,
+    /// the pass, the round, the organ's hold) and the tempo it plays at
+    /// (`bpm`, which the caller sets first); each per-loop setup is sent
+    /// again at its first step only where it differs from `was`, the loop's
+    /// before, as the engine compares them; the tone, the level, the echo and
+    /// the mutes at `now`. The lateFloor the loop was in stays (the caller
+    /// keeps it in the settings).
+    pub fn revise<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, now: f64, was: &Load) {
+        self.organ_fall.set(ORGAN_FALL);
+        let s = lp.settings;
+        let on = |id: &str| lp.base.choice(id) == Some("on");
+        self.organ_change = s.organ != was.organ;
+        self.wash_change = s.wash != was.wash;
+        self.arc_change = s.arc != was.arc;
+        self.sub_duck_change = s.sub_duck != was.sub_duck;
+        self.pad_sweep_change = s.pad_sweep != was.pad_sweep;
+        self.bass_lift_change = s.bass_lift != was.bass_lift;
+        self.space_change = s.space != was.space;
+        self.had_organ = s.organ.is_some();
+        self.had_wash = s.wash.is_some();
+        self.had_arc = s.arc.is_some();
+        self.had_sub_duck = s.sub_duck.is_some();
+        self.had_pad_sweep = s.pad_sweep.is_some();
+        self.glass = on("glass");
+        self.choir = lp.spec.choir().is_some();
+        synth.set_tone(host, lp.spec.tone, now);
+        synth.set_level(host, s.level.get(), now);
+        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats.get(), now);
+        for layer in LAYERS {
+            let bit = 1u8 << layer as usize;
+            if lp.spec.layers_off & bit != 0 {
+                self.mutes[layer as usize] = true;
+            } else if lp.spec.layers_on & bit != 0 {
+                self.mutes[layer as usize] = false;
+            }
+        }
+        for layer in LAYERS {
+            synth.set_mute(host, channel_of(layer) as usize, self.mutes[layer as usize], now);
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole steps
+        let total = lp.total() as u64;
+        if total > 0 && Piece::of(lp.spec).is_none() {
+            self.step %= total;
+        }
         self.kick_kind = s.kick.map(|k| k.kind);
     }
 
