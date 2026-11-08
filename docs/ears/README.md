@@ -20,8 +20,9 @@ hands are in `docs/EARS.md`.
 | `cards-pile-3.md` | Pile 3 album cards (Ears 9): Aphex Twin 1996-2001. |
 | `cards-pile-4.md` | Pile 4 album cards (Ears 10 and 10b), all six: ambient and digital haze, with long-form readings (`tools/ears/longform.py`) and how a game score changes at its moments (Mirror's Edge). |
 | `cards-pile-5.md` | Pile 5 album cards (Ears 11 and 12), all six: electronica, with triplet kits, tape offsets, phase-inverted tracks and Synthesist (Grosskopf, the track with opposite-polarity channels). |
-| `cards-pile-6.md` | Pile 6 album cards (Ears 12, in progress; Triangular Reformat and Pyramid wait for Ears 12b): Animal Crossing (the 24 hours as one table, Winter and Cherry as the same tune in other clothes) and the three Nonlocal Forecast records. |
+| `cards-pile-6.md` | Pile 6 album cards (Ears 12 and 12b, all six, with *Triangular Reformat*, *Pyramid* and the colors reading): Animal Crossing (the 24 hours as one table, Winter and Cherry as the same tune in other clothes) and the three Nonlocal Forecast records. |
 | `batch-5.md` | The first synthesis (Ears 8): ten candidates ranked from the 16 cards, seven sketched and rendered, all seven approved (2026-10-18), with Mikey's note on how they go in. |
+| `batch-6.md` | The second synthesis (Ears 13): twelve candidates from piles 3 to 6, five sketched on the core, the levers the rest need, and Animal Crossing's hours for Broken Friends. Verdicts pending. |
 | `prompt-ears-*.md` | The opening message for a coming ears session, to paste. |
 | `prototypes.md` | The first sketches (Ears 1; the app branch they lived on went wrong, so ideas only). |
 | `space-sketch.md` | The stereo recipes as a diff (Ears 2; a reference, never app code). |

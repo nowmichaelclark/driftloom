@@ -1,0 +1,30 @@
+== kit-colorTone
+sketch/thirteen                      -36.43   -29.52     0.0%  0.110%
+sketch/thirteen@retune               -55.77   -33.24     0.0%  0.017%
+sketch/thirteen@release              -58.23   -37.42     0.0%  0.010%
+== kit-lowBell
+sketch/struck                        -48.09   -27.11     0.0%  0.093%
+sketch/swell                         -50.79   -32.70     0.0%  0.090%
+sketch/struck@retune                 -41.57   -23.32     0.0%  0.217%
+sketch/swell@retune                  -45.66   -27.64     0.1%  0.215%
+sketch/struck@release                -51.25   -27.11     0.0%  0.011%
+sketch/swell@release                 -59.82   -34.71     0.0%  0.011%
+== kit-lowBellSwell
+sketch/struck                        -48.09   -27.11     0.0%  0.100%
+sketch/swell                         -50.79   -32.70     0.0%  0.170%
+sketch/struck@retune                 -41.57   -23.32     0.0%  0.209%
+sketch/swell@retune                  -45.66   -27.64     0.1%  0.211%
+sketch/struck@release                -51.25   -27.11     0.0%  0.011%
+sketch/swell@release                 -59.82   -34.71     0.0%  0.010%
+== kit-padWow
+sketch/gentle                        -20.42    -8.87    34.4%  0.149%
+sketch/records                       -20.47    -8.98    34.4%  0.128%
+sketch/gentle=depth                  -20.48    -8.81    34.6%  0.128%
+sketch/records=depth                 -20.50    -8.95    34.7%  0.140%
+== kit-widePad
+sketch/wide                          -20.27    -8.81    34.1%  0.010%
+sketch/open                          -20.27    -8.81    34.1%  0.009%
+== kit-everything (bcw)
+sketch/all  -38.71 -23.56 0.0% 0.338%
+sketch/all@retune -37.84 -19.95 0.0% 0.360%
+sketch/all@release -47.70 -23.56 0.0% 0.147%

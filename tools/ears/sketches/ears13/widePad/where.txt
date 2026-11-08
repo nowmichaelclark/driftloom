@@ -1,0 +1,2 @@
+# Ears 13 widePad: on the whole chords channel, side only.
+channel chords

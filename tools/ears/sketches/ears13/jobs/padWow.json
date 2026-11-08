@@ -1,0 +1,70 @@
+[
+ {
+  "name": "padWow-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "padWow-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "padWow-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "padWow-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "padWow-undertow45-none",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "padWow-undertow45-with",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "padWow-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "padWow-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ }
+]

@@ -1,0 +1,150 @@
+[
+ {
+  "name": "deepDuck-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "today"
+  }
+ },
+ {
+  "name": "deepDuck-grove62-approved",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  }
+ },
+ {
+  "name": "deepDuck-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  },
+  "pin": {
+   "sub_duck.depth": 14,
+   "sub_duck.recover": 0.6
+  }
+ },
+ {
+  "name": "deepDuck-undertow45-none",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "today"
+  }
+ },
+ {
+  "name": "deepDuck-undertow45-approved",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  }
+ },
+ {
+  "name": "deepDuck-undertow45-with",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  },
+  "pin": {
+   "sub_duck.depth": 14,
+   "sub_duck.recover": 0.6
+  }
+ },
+ {
+  "name": "deepDuck-halcyon48-none",
+  "corpus": [
+   20261009,
+   48
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "today"
+  }
+ },
+ {
+  "name": "deepDuck-halcyon48-approved",
+  "corpus": [
+   20261009,
+   48
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  }
+ },
+ {
+  "name": "deepDuck-halcyon48-with",
+  "corpus": [
+   20261009,
+   48
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  },
+  "pin": {
+   "sub_duck.depth": 14,
+   "sub_duck.recover": 0.6
+  }
+ },
+ {
+  "name": "deepDuck-dust69-none",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "today"
+  }
+ },
+ {
+  "name": "deepDuck-dust69-approved",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  }
+ },
+ {
+  "name": "deepDuck-dust69-with",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45.0,
+  "force": {
+   "subDuck": "on"
+  },
+  "pin": {
+   "sub_duck.depth": 14,
+   "sub_duck.recover": 0.6
+  }
+ }
+]

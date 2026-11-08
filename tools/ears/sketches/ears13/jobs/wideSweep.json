@@ -1,0 +1,226 @@
+[
+ {
+  "name": "wideSweep-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "today"
+  }
+ },
+ {
+  "name": "wideSweep-grove62-approved",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  }
+ },
+ {
+  "name": "wideSweep-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 380,
+   "pad_sweep.oct": 4.2,
+   "pad_sweep.period": 16,
+   "pad_sweep.q": 1.0
+  }
+ },
+ {
+  "name": "wideSweep-grove62-fast",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 550,
+   "pad_sweep.oct": 2.6,
+   "pad_sweep.period": 6.5,
+   "pad_sweep.q": 0.9
+  }
+ },
+ {
+  "name": "wideSweep-undertow45-none",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "today"
+  }
+ },
+ {
+  "name": "wideSweep-undertow45-approved",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  }
+ },
+ {
+  "name": "wideSweep-undertow45-with",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 380,
+   "pad_sweep.oct": 4.2,
+   "pad_sweep.period": 16,
+   "pad_sweep.q": 1.0
+  }
+ },
+ {
+  "name": "wideSweep-undertow45-fast",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 550,
+   "pad_sweep.oct": 2.6,
+   "pad_sweep.period": 6.5,
+   "pad_sweep.q": 0.9
+  }
+ },
+ {
+  "name": "wideSweep-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "today"
+  }
+ },
+ {
+  "name": "wideSweep-shrine0-approved",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  }
+ },
+ {
+  "name": "wideSweep-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 380,
+   "pad_sweep.oct": 4.2,
+   "pad_sweep.period": 16,
+   "pad_sweep.q": 1.0
+  }
+ },
+ {
+  "name": "wideSweep-shrine0-fast",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 550,
+   "pad_sweep.oct": 2.6,
+   "pad_sweep.period": 6.5,
+   "pad_sweep.q": 0.9
+  }
+ },
+ {
+  "name": "wideSweep-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "today"
+  }
+ },
+ {
+  "name": "wideSweep-thaw71-approved",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  }
+ },
+ {
+  "name": "wideSweep-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 380,
+   "pad_sweep.oct": 4.2,
+   "pad_sweep.period": 16,
+   "pad_sweep.q": 1.0
+  }
+ },
+ {
+  "name": "wideSweep-thaw71-fast",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "force": {
+   "padSweep": "on"
+  },
+  "pin": {
+   "pad_sweep.lo": 550,
+   "pad_sweep.oct": 2.6,
+   "pad_sweep.period": 6.5,
+   "pad_sweep.q": 0.9
+  }
+ }
+]

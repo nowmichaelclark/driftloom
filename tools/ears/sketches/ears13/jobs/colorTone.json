@@ -1,0 +1,134 @@
+[
+ {
+  "name": "colorTone-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "colorTone-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ },
+ {
+  "name": "colorTone-vapor4-none",
+  "corpus": [
+   20261009,
+   4
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "colorTone-vapor4-with",
+  "corpus": [
+   20261009,
+   4
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ },
+ {
+  "name": "colorTone-tide39-none",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "colorTone-tide39-with",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ },
+ {
+  "name": "colorTone-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  }
+ },
+ {
+  "name": "colorTone-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "force": {
+   "organ": "on"
+  },
+  "pin": {
+   "organ.level": 0,
+   "organ.verb": 0,
+   "organ.dry": 0
+  },
+  "sketch": true
+ }
+]

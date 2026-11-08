@@ -1,0 +1,146 @@
+[
+ {
+  "name": "widePad-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "widePad-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "widePad-shrine0-mono",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "layout": 1
+ },
+ {
+  "name": "widePad-shrine0-monowith",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45.0,
+  "sketch": true,
+  "layout": 1
+ },
+ {
+  "name": "widePad-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "widePad-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "widePad-thaw71-mono",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "layout": 1
+ },
+ {
+  "name": "widePad-thaw71-monowith",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45.0,
+  "sketch": true,
+  "layout": 1
+ },
+ {
+  "name": "widePad-undertow45-none",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "widePad-undertow45-with",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "widePad-undertow45-mono",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "layout": 1
+ },
+ {
+  "name": "widePad-undertow45-monowith",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45.0,
+  "sketch": true,
+  "layout": 1
+ },
+ {
+  "name": "widePad-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0
+ },
+ {
+  "name": "widePad-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "sketch": true
+ },
+ {
+  "name": "widePad-grove62-mono",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "layout": 1
+ },
+ {
+  "name": "widePad-grove62-monowith",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45.0,
+  "sketch": true,
+  "layout": 1
+ }
+]
