@@ -12,24 +12,29 @@ Let the loop wander on, the approved stereo baseline, 45 s a loop (the
 sampler 50 s), every segment matched to -18 LUFS. The sketches, their jobs
 and the scripts are in `tools/ears/sketches/ears13/`; `core/sketch/` is back
 to the veil demonstration and `core/` is unchanged. The clips are on the
-branch `ears13-clips` (below), which is deleted after the verdicts.
+branch `ears13-clips` (below), deleted after the verdicts (2026-11-08); `tools/ears/sketches/ears13/README.md` rebuilds them.
 
 ## Verdicts
 
-Left blank for Mikey. Seven candidates could not be sketched yet: each needs a
-lever the sketch build doesn't have (see "Levers wanted"), and their clips
-wait for an Ears 13b.
+**Mikey, 2026-11-08:** everything sounded fine, no notes: the sampler and all
+five sketched candidates approved, at the sketched levels. Where a candidate
+has two versions (lowBell struck and swelling, wideSweep wide and fast),
+both go in as options weighted by the vibes (his taste: weighted by vibe or
+somewhat random). Nothing stood out, so the in-app album after the build is
+where any of them can still be tuned or dropped. Seven candidates could not
+be sketched yet: each needs a lever the sketch build doesn't have (see
+"Levers wanted", queue item 99), and their clips wait for an Ears 13b.
 
 | # | Candidate | What it is | Clip | Verdict |
 |---|---|---|---|---|
-| 0 | 00-everything | The sampler: each loop with one or two of the sketched five | 00 | |
+| 0 | 00-everything | The sampler: each loop with one or two of the sketched five | 00 | Approved |
 | 1 | tripletKit | A kit in threes: hats and ghost hits on the thirds of the beat, a 12/8 shuffle at 77 to 127 BPM | (lever wanted) | |
-| 2 | lowBell | A struck low bell (D2 to C#3) on each chord's root; a swelling kind too | 01 | |
-| 3 | padWow | A slow tape-like wow on the chord layer only (14 cents at 0.5 Hz), the kick and bass steady | 02 | |
+| 2 | lowBell | A struck low bell (D2 to C#3) on each chord's root; a swelling kind too | 01 | Approved, both versions |
+| 3 | padWow | A slow tape-like wow on the chord layer only (14 cents at 0.5 Hz), the kick and bass steady | 02 | Approved |
 | 4 | widePad | The chord layer much wider, on the side only, so mono stays the same (batch 5's) | (lever wanted) | |
-| 5 | colorTone | A held 13th over major chords and an 11th over minor ones, on about half the chords | 03 | |
-| 6 | deepDuck | subDuck's deep, long kind: the bass dips 14 dB at each kick and takes 0.6 s to come back | 04 | |
-| 7 | wideSweep | padSweep's two far ends: a 4-octave ride every 16 s, and a 2.6-octave swing every 6.5 s | 05 | |
+| 5 | colorTone | A held 13th over major chords and an 11th over minor ones, on about half the chords | 03 | Approved |
+| 6 | deepDuck | subDuck's deep, long kind: the bass dips 14 dB at each kick and takes 0.6 s to come back | 04 | Approved |
+| 7 | wideSweep | padSweep's two far ends: a 4-octave ride every 16 s, and a 2.6-octave swing every 6.5 s | 05 | Approved, both versions |
 | 8 | dottedPulse | A part every three eighths, or a 3-3-2 kick (batch 5's) | (lever wanted) | |
 | 9 | slowOpening | lateFloor's long end: the floor arriving 40 to 90 s in, fading up | (lever wanted) | |
 | 10 | planingSevenths | Major sevenths moving in parallel, a whole step apart | (lever wanted) | |
