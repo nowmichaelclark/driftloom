@@ -104,6 +104,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## How the project runs
 
+- 2026-11-08 -- **Ears sessions that don't measure his records run in the cloud (Mikey, 2026-11-08):** syntheses and sketch rounds (Ears 13 on) run in a cloud Claude Code session like the hands, which has Rust, Node and ffmpeg; card sessions that measure the audio on his computer stay there. Clips reach him on a throwaway branch with only the clips, deleted after his verdicts; audio never merges.
 - 2026-09-23 -- **Old share codes, saved loops and albums may change or break** while the app is in testing (2026-09-23). Keep draws stable where it's free, only because it keeps A/B albums comparing the same loops.
 - 2026-10-29 -- **No compatibility bloat (Mikey, 2026-10-29):** "There's zero need to try to preserve old codes. The app is still in it's testing phase. Old codes and old programming code is fine to change and or get rid of. We don't want to build bloat for no reason." No retired slots, shims or fallbacks kept for old codes.
 - by 2026-10-16 -- **Merging before an A/B is fine**, and the hands merge their own PRs under the queue's policy. Production is testers only; merges can be reverted.
