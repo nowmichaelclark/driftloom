@@ -286,3 +286,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   and loads only with `?engine=player` (try it: Diagnostics, late and dropped
   notes). The rest is for the hands: a new player is all zero bytes
   (`tests/zeros.rs`), and one module can replace the two at 94b.
+- #337, everything the app does as a command or an event (item 94a, v149, no
+  app change), preview URL: <https://33d5bb10-driftloom.nowmichaelclark.workers.dev>
+  (commit 0727c51): nothing should sound different (the baseline, the 80
+  seeds and the generation goldens' 4,884 cases are unchanged). Nothing to
+  hear yet: the new commands (a re-roll in place, the tone, the length
+  slider's end, a code's edits) and events (step, pass, phrase, section) are
+  for 94b. For Mikey's ears in 94b: a re-roll on the player comes in up to a
+  quarter second later than today's. The PR's table maps each control and
+  display to its command.
