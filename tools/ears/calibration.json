@@ -1949,5 +1949,190 @@
   "unit": "dB",
   "ok": true,
   "note": ""
+ },
+ {
+  "tool": "colors",
+  "test": "false colors on plain triads and sevenths with 10 harmonics, dry",
+  "truth": 0.0,
+  "measured": 0.0,
+  "error": null,
+  "tolerance": [
+   0,
+   0.1
+  ],
+  "unit": "share of chords",
+  "ok": true,
+  "note": ""
+ },
+ {
+  "tool": "colors",
+  "test": "a held 12-note cluster (a wash): time with all three colors held",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share",
+  "ok": true,
+  "note": "share_with_a_color 0.0"
+ },
+ {
+  "tool": "colors",
+  "test": "false colors on plain triads and sevenths (5 types x 4 roots), dry",
+  "truth": 0.0,
+  "measured": 0.0,
+  "error": null,
+  "tolerance": [
+   0,
+   0.1
+  ],
+  "unit": "share of chords",
+  "ok": true,
+  "note": ""
+ },
+ {
+  "tool": "colors",
+  "test": "add9 (C E G D): color found, dry",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "maj9 (C E G B D): color found, dry",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "m9 (C Eb G Bb D): color found, dry",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "m11 (C Eb G Bb F): color found, dry",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "dominant 13 (C E Bb A): color found, dry",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "6/9 (C E G A D): color found, dry",
+  "truth": 1.0,
+  "measured": 0.75,
+  "error": -0.25,
+  "tolerance": "limit",
+  "unit": "share of 4 roots",
+  "ok": null,
+  "note": "a 6/9 reads as a minor seventh on the sixth, so its colors are lost"
+ },
+ {
+  "tool": "colors",
+  "test": "false colors on plain triads and sevenths (5 types x 4 roots), reverb 1.5 s",
+  "truth": 0.0,
+  "measured": 0.0,
+  "error": null,
+  "tolerance": [
+   0,
+   0.1
+  ],
+  "unit": "share of chords",
+  "ok": true,
+  "note": ""
+ },
+ {
+  "tool": "colors",
+  "test": "add9 (C E G D): color found, reverb 1.5 s",
+  "truth": 1.0,
+  "measured": 0.75,
+  "error": -0.25,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "maj9 (C E G B D): color found, reverb 1.5 s",
+  "truth": 1.0,
+  "measured": 1.0,
+  "error": 0.0,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "m9 (C Eb G Bb D): color found, reverb 1.5 s",
+  "truth": 1.0,
+  "measured": 0.75,
+  "error": -0.25,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "m11 (C Eb G Bb F): color found, reverb 1.5 s",
+  "truth": 1.0,
+  "measured": 0.75,
+  "error": -0.25,
+  "tolerance": 0.3,
+  "unit": "share of 4 roots",
+  "ok": true,
+  "note": "0/4 chords report an extra color"
+ },
+ {
+  "tool": "colors",
+  "test": "dominant 13 (C E Bb A): color found, reverb 1.5 s",
+  "truth": 1.0,
+  "measured": 0.5,
+  "error": -0.5,
+  "tolerance": "limit",
+  "unit": "share of 4 roots",
+  "ok": null,
+  "note": "reverb smears the 13 and the label slips"
+ },
+ {
+  "tool": "colors",
+  "test": "6/9 (C E G A D): color found, reverb 1.5 s",
+  "truth": 1.0,
+  "measured": 0.0,
+  "error": -1.0,
+  "tolerance": "limit",
+  "unit": "share of 4 roots",
+  "ok": null,
+  "note": "a 6/9 reads as a minor seventh on the sixth, so its colors are lost"
  }
 ]

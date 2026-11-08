@@ -433,4 +433,79 @@ def cal_form(row):
         row("form", f"same, bar length {pct}% off: lag 8 still found", 1, int(8 in lags), tol, "", f"lags {lags}; bars drift out of step as the error adds up over a track")
 
 
-TESTS = {"chords": cal_chords, "key": cal_key, "meter": cal_meter, "bass": cal_bass, "lead": cal_lead, "form": cal_form}
+# --- chord colors (Ears 12b) ---------------------------------------------------------------------
+# tones as semitones above the root (the voicing), the colors a reader should report, and the label
+# chords() should give. 6 and 6/9 chords are the same notes as a minor seventh on the sixth: a known limit.
+COLOR_CASES = [
+    ("add9 (C E G D)",        [0, 4, 7, 14],         {"9"},       0.7),
+    ("maj9 (C E G B D)",      [0, 4, 7, 11, 14],     {"9"},       0.7),
+    ("m9 (C Eb G Bb D)",      [0, 3, 7, 10, 14],     {"9"},       0.7),
+    ("m11 (C Eb G Bb F)",     [0, 3, 7, 10, 17],     {"11"},      0.7),
+    ("dominant 13 (C E Bb A)", [0, 4, 10, 21],       {"13"},      0.7),
+    ("6/9 (C E G A D)",       [0, 4, 7, 9 + 12, 14], {"9", "13"}, "limit"),
+]
+PLAIN_CASES = [("major triad", [0, 4, 7]), ("minor triad", [0, 3, 7]), ("dominant 7", [0, 4, 7, 10]),
+               ("maj7", [0, 4, 7, 11]), ("min7", [0, 3, 7, 10])]
+COLOR_ROOTS = (0, 5, 7, 2)
+
+
+def color_sig(root, semis, L=3.0, nh=6, ext_amp=0.8):
+    y = np.zeros(int(L * SR))
+    for i, d in enumerate(semis):
+        a = 0.08 * (ext_amp if d >= 12 else 1.0)
+        y += tone(48 + root + d, L, nh, a)
+    return y + tone(36 + root, L, nh, 0.08)
+
+
+def read_colors(sig):
+    c = TH.chords(sig)
+    return c, TH.colors(sig, c)
+
+
+def cal_colors(row):
+    # a bright instrument (10 harmonics): its harmonics land on 9ths and 11ths; false colors must stay rare
+    fp = n = 0
+    for name, semis in PLAIN_CASES:
+        for r in COLOR_ROOTS:
+            _, col = read_colors(np.tile(color_sig(r, semis, nh=10), 2))
+            n += 1; fp += col["share_with_a_color"] + col["share_all_three"] > 0.25
+    row("colors", "false colors on plain triads and sevenths with 10 harmonics, dry", 0.0, fp / n, (0, 0.1), "share of chords")
+    # a held cluster of all twelve notes (a dense wash): it must show all three colors, not read as a voicing
+    y = np.tile(color_sig(0, list(range(12))), 2)
+    col = read_colors(y)[1]
+    row("colors", "a held 12-note cluster (a wash): time with all three colors held", 1.0, col["share_all_three"], 0.3, "share",
+        f"share_with_a_color {col['share_with_a_color']}")
+    for tag, rv in (("dry", False), ("reverb 1.5 s", True)):
+        # false positives: plain triads and sevenths must report no color (18 chords per case, 4 roots)
+        fp = n = 0
+        worst = {}
+        for name, semis in PLAIN_CASES:
+            hits = 0
+            for r in COLOR_ROOTS:
+                y = color_sig(r, semis)
+                y = reverb(y) if rv else y
+                _, col = read_colors(np.concatenate([y, y]))
+                n += 1
+                if col["share_with_a_color"] + col["share_all_three"] > 0.25:
+                    fp += 1; hits += 1
+            worst[name] = hits
+        row("colors", f"false colors on plain triads and sevenths (5 types x 4 roots), {tag}", 0.0, fp / n, (0, 0.1), "share of chords",
+            "; ".join(f"{k} {v}/4" for k, v in worst.items() if v))
+        # detection: each rich chord must report its color, and only its own
+        for name, semis, want, tol in COLOR_CASES:
+            got_all = right = extra = 0
+            for r in COLOR_ROOTS:
+                y = color_sig(r, semis)
+                y = reverb(y) if rv else y
+                _, col = read_colors(np.concatenate([y, y]))
+                said = {k for k, v in col["by_color_share"].items() if v > 0.25}
+                got_all += 1
+                right += want <= said
+                extra += bool(said - want)
+            if rv and name.startswith("dominant"):
+                tol = "limit"          # the reverb smears the 13 and the label slips
+            note = "a 6/9 reads as a minor seventh on the sixth, so its colors are lost" if name.startswith("6/9") else "reverb smears the 13 and the label slips" if tol == "limit" else f"{extra}/4 chords report an extra color"
+            row("colors", f"{name}: color found, {tag}", 1.0, right / got_all, "limit" if tol == "limit" else 1 - tol, "share of 4 roots", note)
+
+
+TESTS = {"chords": cal_chords, "key": cal_key, "meter": cal_meter, "bass": cal_bass, "lead": cal_lead, "form": cal_form, "colors": cal_colors}
