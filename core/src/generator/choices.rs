@@ -17,6 +17,7 @@
 use super::character::Vibes;
 use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, Table};
 use super::js;
+use super::list::{Empty, Maybe};
 use super::layers::DrumEvent;
 use super::request::Pins;
 use super::rng::Rng;
@@ -268,7 +269,7 @@ struct Walking {
 
 impl Walk {
     const EMPTY: Walk =
-        Walk { k: HARD, f1: 0.0, landed: [0.0; 3], sweep: [[0.0; 3]; SWEEP_STEPS], punch: [0.0; PUNCH_STEPS], built: 0, t: 0.0 };
+        Walk { k: Today { f0: 0.0, end: 0.0, sweep: 0.0, att: 0.0 }, f1: 0.0, landed: [0.0; 3], sweep: [[0.0; 3]; SWEEP_STEPS], punch: [0.0; PUNCH_STEPS], built: 0, t: 0.0 };
 
     /// A walk of kick `k` landing on `f1`, its tables still to build.
     fn start(k: Today, f1: f64) -> Self {
@@ -367,12 +368,12 @@ struct Fitting {
     k: u32,
     tlo: f64,
     thi: f64,
-    walking: Option<Walking>,
+    walking: Maybe<Walking>,
 }
 
 impl Fitting {
     fn new(long: bool, dbps: f64, refs: [f64; 3]) -> Self {
-        Fitting { long, dbps, refs, lift: None, k: 0, tlo: 0.001, thi: 1.0, walking: None }
+        Fitting { long, dbps, refs, lift: None, k: 0, tlo: 0.001, thi: 1.0, walking: Maybe::NONE }
     }
 
     /// `ok`'s test, band by band: `lift * lift * e <= room * ref * 1.0001`.
@@ -392,7 +393,7 @@ impl Fitting {
         if self.lift.is_none() {
             let w = self.walking.get_or_insert_with(|| walk.begin(1.0, if long { PUNCH } else { dbps }, None));
             let punch = walk.walk(w, budget)?.unwrap_or([f64::NAN; 3]);
-            self.walking = None;
+            self.walking = Maybe::NONE;
             let bound = self.bounds(KICK.loud);
             let (mut lo, mut hi) = (0.0, 1.5);
             for _ in 0..24 {
@@ -414,7 +415,7 @@ impl Fitting {
             let m = math::sqrt(self.tlo * self.thi);
             let w = self.walking.get_or_insert_with(|| walk.begin(m, dbps, Some((punch * punch, bound))));
             let e = walk.walk(w, budget)?;
-            self.walking = None;
+            self.walking = Maybe::NONE;
             if e.is_some_and(|e| Self::fits(punch, &e, &bound)) {
                 self.tlo = m;
             } else {
@@ -444,9 +445,9 @@ pub struct KickFit {
     /// measured: today's kick's energies, each fit's lift and tail.
     stage: u8,
     walks: [Walk; 2],
-    walking: Option<Walking>,
+    walking: Maybe<Walking>,
     todays: [[f64; 3]; 2],
-    fitting: Option<Fitting>,
+    fitting: Maybe<Fitting>,
     fits: [(f64, f64); 4],
 }
 
@@ -461,9 +462,9 @@ impl KickFit {
         hz: 0.0,
         stage: 0,
         walks: [Walk::EMPTY; 2],
-        walking: None,
+        walking: Maybe::NONE,
         todays: [[0.0; 3]; 2],
-        fitting: None,
+        fitting: Maybe::NONE,
         fits: [(0.0, 0.0); 4],
     };
 
@@ -505,7 +506,7 @@ impl KickFit {
                 2 | 5 => {
                     let w = self.walking.get_or_insert_with(|| self.walks[0].begin(1.0, PUNCH, None));
                     let Some(e) = self.walks[0].walk(w, &mut left) else { return false };
-                    self.walking = None;
+                    self.walking = Maybe::NONE;
                     self.todays[usize::from(self.stage == 5)] = e.unwrap_or([0.0; 3]);
                     self.stage += 1;
                 }
@@ -526,7 +527,7 @@ impl KickFit {
                     let (dbps, refs) = (if long { self.long_rate } else { self.short_rate }, self.todays[slot]);
                     let f = self.fitting.get_or_insert_with(|| Fitting::new(long, dbps, refs));
                     let Some(fit) = f.step(&self.walks[slot], &mut left) else { return false };
-                    self.fitting = None;
+                    self.fitting = Maybe::NONE;
                     self.fits[n] = fit;
                     self.stage += 1;
                 }
@@ -709,6 +710,15 @@ pub fn echo_time_of(seed: u32, v: Option<&Vibes>) -> f64 {
 /// drum anywhere in it, else the other.
 #[must_use]
 pub fn bass_lift_of(drums: &[DrumEvent]) -> f64 {
-    let kick = drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst, "kick" | "softkick" | "frame"));
+    let kick = drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame"));
     if kick { BASS_LIFT.kick } else { BASS_LIFT.no_kick }
+}
+
+impl Empty for Walking {
+    const EMPTY: Self = Walking { t: 0.0, i: 0, e: [0.0; 3], t1: 0.0, end: 0.0, tail: 0.0, rate: 0.0, stop: None };
+}
+
+impl Empty for Fitting {
+    const EMPTY: Self =
+        Fitting { long: false, dbps: 0.0, refs: [0.0; 3], lift: None, k: 0, tlo: 0.0, thi: 0.0, walking: Maybe::NONE };
 }

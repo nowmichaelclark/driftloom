@@ -45,6 +45,15 @@ on every PR.
 
 - Nothing allocates, locks or frees after `Core::new`; nothing reachable
   from rendering can panic. Say how you checked.
+- **The player starts as zeros** (queue item 93). `Player::new()` is all
+  zero bytes, so `js/dlplayer.wasm` keeps it in `.bss` and not in the file
+  (it was 1.5 MB of the module). Every type a `List` or a `Maybe` holds says
+  what its empty value is (`impl Empty`, `generator/list.rs`), and that value
+  is all zero bytes where a player holds one. Other fields: `Word` for a
+  `&'static str`, `Biased` for a number that starts at a default, an enum
+  whose first variant is the empty state. No `unsafe` for this. If one
+  is not zero, `a_new_player_is_all_zeros` (`tests/zeros.rs`) fails, with
+  the offset.
 - Every public item the PR touches is documented, with the reason, not
   only the what. `cargo clippy --all-targets -- -W clippy::pedantic` reports
   zero in every file, and CI holds it there (`-D warnings`); allow a lint

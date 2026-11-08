@@ -17,6 +17,7 @@ use super::canon::{Sink, Writer};
 use super::choices;
 use super::data::FLOORDROP;
 use super::js;
+use super::list::{Empty, Maybe};
 use super::layers::{self, BASS_MAX, BassEvent, DRUMS_MAX, DrumEvent};
 use super::melody::{MELODY_MAX, MelodyEvent};
 use super::plan::{self, CHORD_EVENTS_MAX, ChordEvent, Cx, Plan};
@@ -77,13 +78,13 @@ pub struct Pass {
     pub number: Option<u32>,
     drums: [u8; DRUMS_MAX],
     /// The extra ghost hit, after the loop's own.
-    ghost: Option<DrumEvent>,
+    ghost: Maybe<DrumEvent>,
     /// The bass's marks and pitches.
     bass: [(u8, f64); BASS_MAX],
     chords: [u8; CHORD_EVENTS_MAX],
     /// The tune's marks and pitches.
     melody: [(u8, f64); MELODY_MAX],
-    pub floor_drop: Option<FloorDrop>,
+    pub floor_drop: Maybe<FloorDrop>,
     /// The tuned kick this pass plays, in a loop with one.
     pub kick: Option<&'static str>,
 }
@@ -95,11 +96,11 @@ impl Pass {
         Pass {
             number: None,
             drums: [0; DRUMS_MAX],
-            ghost: None,
+            ghost: Maybe::NONE,
             bass: [(0, 0.0); BASS_MAX],
             chords: [0; CHORD_EVENTS_MAX],
             melody: [(0, 0.0); MELODY_MAX],
-            floor_drop: None,
+            floor_drop: Maybe::NONE,
             kick: None,
         }
     }
@@ -156,13 +157,13 @@ impl Pass {
             }
         }
         // An extra ghost hit, on whichever kit the loop is playing.
-        self.ghost = None;
+        self.ghost = Maybe::NONE;
         if rng.chance(0.4 * a) && !base.drums.is_empty() {
             let step = rng.int(0.0, total - 1.0);
             let inst = rng.pick(&["rim", "shaker", "hat"]).unwrap_or("rim");
             let vel = 0.16 + rng.f() * 0.14;
             let inst = if base.drums_out.kit == "hand" { layers::hand(inst) } else { inst };
-            self.ghost = Some(DrumEvent { step, inst, vel, vel0: vel, roll: false, micro: None });
+            self.ghost = Maybe::some(DrumEvent { step, inst: inst.into(), vel, vel0: vel, roll: false, micro: None });
         }
         // Occasionally the kick sits one out.
         if rng.chance(0.18 * a) {
@@ -227,7 +228,7 @@ impl Pass {
         // draws the shapes shapes its drop at the very end of these draws.
         let shapes = base.choice("floorDrop") == Some("shapes");
         let mut drop_at = None;
-        self.floor_drop = None;
+        self.floor_drop = Maybe::NONE;
         if rng.chance(FLOOR_DROP_RATE * a) {
             let bars = js::max(1.0, js::floor(total / spb));
             if bars >= 4.0 {
@@ -241,7 +242,7 @@ impl Pass {
                     drop_at = Some((start, span, bars));
                 } else {
                     self.floor_out(base, start * spb, (start + span) * spb, true);
-                    self.floor_drop = Some(FloorDrop::single(start, span));
+                    self.floor_drop = Maybe::some(FloorDrop::single(start, span));
                 }
             }
         }
@@ -271,7 +272,7 @@ impl Pass {
                             *m |= SILENT;
                         }
                     }
-                    if let Some(g) = &mut self.ghost
+                    if let Some(g) = self.ghost.as_mut()
                         && inside(g.step)
                     {
                         g.vel = 0.0;
@@ -280,7 +281,7 @@ impl Pass {
             }
         }
         if let Some((start, span, bars)) = drop_at {
-            self.floor_drop = Some(self.shape_drop(cx, base, rng, start, span, bars));
+            self.floor_drop = Maybe::some(self.shape_drop(cx, base, rng, start, span, bars));
         }
         // A pedal bass's passing tones, drawn last of all, so even a drop's
         // shape is the one its loop's own bass gets.
@@ -312,7 +313,7 @@ impl Pass {
         let inside = |step: f64| step >= from && step < to;
         if kit {
             for (m, e) in self.drums.iter_mut().zip(base.drums.iter()) {
-                if FLOOR_DRUMS.contains(&e.inst) && inside(e.step) {
+                if FLOOR_DRUMS.contains(&e.inst.get()) && inside(e.step) {
                     *m |= SILENT;
                 }
             }
@@ -378,7 +379,7 @@ impl Pass {
     #[must_use]
     pub fn drum(&self, i: usize, e: &DrumEvent) -> (f64, &'static str) {
         let m = self.drums.get(i).copied().unwrap_or(0);
-        let inst = if (m & OPEN) != 0 { if e.inst == "hat" { "ohat" } else { "ojingle" } } else { e.inst };
+        let inst = if (m & OPEN) != 0 { if e.inst.get() == "hat" { "ohat" } else { "ojingle" } } else { e.inst.get() };
         (if (m & SILENT) != 0 { 0.0 } else { e.vel }, inst)
     }
 
@@ -429,7 +430,7 @@ impl Pass {
         base.write_choices(w);
         w.key("cycles");
         render::write_cycles(w, cx);
-        if let Some(d) = &self.floor_drop {
+        if let Some(d) = self.floor_drop.as_ref() {
             w.key("floorDrop");
             write_drop(w, d);
         }
@@ -471,7 +472,7 @@ impl Pass {
         w.list();
         for (i, e) in base.drums.iter().enumerate() {
             let (vel, inst) = self.drum(i, e);
-            render::write_drum(w, &DrumEvent { inst, vel, ..*e });
+            render::write_drum(w, &DrumEvent { inst: inst.into(), vel, ..*e });
         }
         if let Some(g) = self.ghost() {
             render::write_drum(w, g);
@@ -536,4 +537,8 @@ pub(crate) fn neighbour_in_scale(midi: f64, root: f64, steps: &[f64], dir: f64) 
         }
     }
     midi
+}
+
+impl Empty for FloorDrop {
+    const EMPTY: Self = FloorDrop { bar: 0.0, bars: 0.0, kind: None, late: None, count: None, len: None };
 }

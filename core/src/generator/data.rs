@@ -340,3 +340,11 @@ pub fn resolve_key(key: &str) -> usize {
 pub fn vibe_index(id: &str) -> Option<usize> {
     VIBES.iter().position(|v| v.id == id)
 }
+
+impl super::list::Empty for Gait {
+    const EMPTY: Self = Gait { weight: 0.0, metre: "", steps_per_bar: 0.0, bpm: [0.0; 2] };
+}
+
+impl super::list::Empty for Degree {
+    const EMPTY: Self = Degree::plain(0);
+}

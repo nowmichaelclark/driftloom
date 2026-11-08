@@ -4177,3 +4177,26 @@ layers is welcome variety).
 - Levels: pinned-voice loops land on the catalog's level spread
   (`measure.mjs --profile`), no layer louder than its median allows.
 - Refusals on full and lite no worse than the catalog.
+
+## 93. The player's module at the core's size
+
+**Hands:** Sonnet 5.5, high.
+
+**What:** `js/dlplayer.wasm` is 1.9 MB against `js/dlcore.wasm`'s 251 KB
+because `Player::new()` is not all zeros and its state is stored in the
+module ("For phase 3", below). Make it zeros, as `Core::new()` is, so the
+module the app will load first is small. Then say what else in it costs
+bytes, and whether one module (the player with the core inside) can replace
+the two the page loads today.
+
+**Yardsticks:** the module's size, before and after (aim: within 50 KB of
+`dlcore.wasm`'s); every golden, the 80 seeds, the browser comparisons and
+the core baseline unchanged; `tools/build-core.sh --check` for both.
+
+**Built (hands, 2026-11-07):** `Player::new()` is all zero bytes, so
+`js/dlplayer.wasm` is 636,125 bytes (it was 1,938,596; the player's 1.5 MB is
+`.bss`), not within 50 KB of `dlcore.wasm`'s 252,292: the generator and the
+player are about 300 KB of code. One module can replace the two (it exports
+every call the worklet makes). Gzipped, the module is 217 KB (it was 222 KB). The brain accepted the size
+(Session 30).
+All in `docs/notes/93-module-size.md`.

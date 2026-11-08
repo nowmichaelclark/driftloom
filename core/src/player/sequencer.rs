@@ -12,6 +12,7 @@
 use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
 use crate::generator::js;
+use crate::generator::list::Biased;
 use crate::generator::layers::DrumEvent;
 use crate::generator::piece::Piece;
 use crate::generator::load::{Load, Stab};
@@ -108,11 +109,11 @@ struct Hold {
     key: Option<Chord>,
     until: f64,
     held: Option<Chord>,
-    last: f64,
+    last: Biased<{ f64::NEG_INFINITY.to_bits() }>,
     on: bool,
 }
 
-const NO_HOLD: Hold = Hold { key: None, until: 0.0, held: None, last: f64::NEG_INFINITY, on: false };
+const NO_HOLD: Hold = Hold { key: None, until: 0.0, held: None, last: Biased::DEFAULT, on: false };
 
 /// A JavaScript number's truth: not 0, not NaN.
 fn truthy(x: f64) -> bool {
@@ -142,12 +143,12 @@ impl Loop<'_> {
     /// A layer's own cycle in steps (`p.cycles[layer]`): the loop's length
     /// unless the layer has its own.
     fn cycle(&self, layer: Layer) -> f64 {
-        self.spec.cycles.and_then(|c| c[layer as usize]).filter(|&c| truthy(c)).unwrap_or_else(|| self.total())
+        self.spec.cycles.of(layer as usize).filter(|&c| truthy(c)).unwrap_or_else(|| self.total())
     }
 
     /// Drum hit `i` as the pass plays it.
     fn drum(&self, i: usize, e: &DrumEvent) -> (f64, &'static str) {
-        self.pass.map_or((e.vel, e.inst), |p| p.drum(i, e))
+        self.pass.map_or((e.vel, e.inst.get()), |p| p.drum(i, e))
     }
 
     /// Every drum hit as the pass plays it, its own ghost hit last: the
@@ -157,7 +158,7 @@ impl Loop<'_> {
             let (vel, inst) = self.drum(i, e);
             (vel, inst, e)
         });
-        own.chain(self.pass.and_then(Pass::ghost).map(|g| (g.vel, g.inst, g)))
+        own.chain(self.pass.and_then(Pass::ghost).map(|g| (g.vel, g.inst.get(), g)))
     }
 
     /// Chord `i` as the pass plays it: its velocity and its notes.
@@ -217,7 +218,7 @@ pub struct Sequencer {
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
-    organ_fall: f64,
+    organ_fall: Biased<{ ORGAN_FALL.to_bits() }>,
     /// The loop's: glass on, a choir's ensemble, and the tuned kick's kind
     /// this pass plays.
     glass: bool,
@@ -252,7 +253,7 @@ impl Sequencer {
             had_arc: false,
             had_sub_duck: false,
             had_pad_sweep: false,
-            organ_fall: ORGAN_FALL,
+            organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
             kick_kind: None,
@@ -282,7 +283,7 @@ impl Sequencer {
     /// the mutes are sent again at `now` (as they stand), and the last
     /// loop's organ lets go over `organ_fall` seconds at the first step.
     pub fn load_at<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, now: f64, at: f64, organ_fall: f64) {
-        self.organ_fall = organ_fall;
+        self.organ_fall.set(organ_fall);
         let s = lp.settings;
         let on = |id: &str| lp.base.choice(id) == Some("on");
         self.organ_change = s.organ.is_some() || self.had_organ;
@@ -301,8 +302,8 @@ impl Sequencer {
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
         synth.set_tone(host, lp.spec.tone, at);
-        synth.set_level(host, s.level, at);
-        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats, at);
+        synth.set_level(host, s.level.get(), at);
+        Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats.get(), at);
         // A layer the request asked off is muted, as the listener's mute
         // would (queue item 91), one asked on is not; the others stay as the
         // host left them (a mute holds across loads until brought back).
@@ -370,7 +371,7 @@ impl Sequencer {
         if lp.base.quiet.iter().any(|&q| js::num(q) == bar) {
             return true;
         }
-        let Some(form) = &lp.base.form else { return false };
+        let Some(form) = lp.base.form.as_ref() else { return false };
         for layer in LAYERS {
             let sched = &form[layer as usize];
             let n = js::num(sched.len());
@@ -399,7 +400,7 @@ impl Sequencer {
 
         // A new loop's setups, from its first step decided.
         if self.organ_change {
-            Synth::organ_off(host, time, self.organ_fall);
+            Synth::organ_off(host, time, self.organ_fall.get());
             synth.organ_setup(host, s.organ.as_ref(), time);
             self.organ_change = false;
             self.hold = NO_HOLD;
@@ -523,7 +524,7 @@ impl Sequencer {
                 if drone {
                     synth.budget.keep();
                 }
-                synth.bass(host, key, midi, t, e.dur * sd, vel, e.glide, e.voice, e.chug);
+                synth.bass(host, key, midi, t, e.dur * sd, vel, e.glide, e.voice.get(), e.chug);
                 synth.budget.end();
             }
         }
@@ -566,7 +567,7 @@ impl Sequencer {
                         let strummed = Opts { strum: true, ..opts };
                         let k = key_of(Layer::Chords);
                         synth.budget.begin(Some(Layer::Chords), k);
-                        synth.voice(host, k, e.voice, f64::from(string), t + slip + at, dur, vel * spread * weight, CHORDS, &strummed);
+                        synth.voice(host, k, e.voice.get(), f64::from(string), t + slip + at, dur, vel * spread * weight, CHORDS, &strummed);
                         synth.budget.end();
                     }
                     continue;
@@ -576,7 +577,7 @@ impl Sequencer {
                     let at = t + slip + js::num(k) * 0.011;
                     let k = key_of(Layer::Chords);
                     synth.budget.begin(Some(Layer::Chords), k);
-                    synth.voice(host, k, e.voice, f64::from(n), at, dur, vel * spread, CHORDS, &opts);
+                    synth.voice(host, k, e.voice.get(), f64::from(n), at, dur, vel * spread, CHORDS, &opts);
                     synth.budget.end();
                 }
             }
@@ -605,11 +606,11 @@ impl Sequencer {
                     continue;
                 }
                 let dur = e.dur * sd;
-                let vowel = (!e.vowel.is_empty()).then_some(e.vowel);
+                let vowel = (!e.vowel.is_empty()).then_some(e.vowel.get());
                 let opts = Opts { vowel, detune: e.detune, prev: e.prev, ..Opts::default() };
                 let k = key_of(Layer::Melody);
                 synth.budget.begin(Some(Layer::Melody), k);
-                synth.voice(host, k, e.voice, midi, t + slip, dur, vel, MELODY, &opts);
+                synth.voice(host, k, e.voice.get(), midi, t + slip, dur, vel, MELODY, &opts);
                 synth.budget.end();
                 // Asked for after the note, so where the budget is short it
                 // is the decoration that yields, never the tune.
@@ -618,7 +619,7 @@ impl Sequencer {
                 if let Some(under) = harmony_of(e.harm, midi, root, mode) {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
-                    synth.voice(host, k, e.voice, under, t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
+                    synth.voice(host, k, e.voice.get(), under, t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
                     synth.budget.end();
                 }
                 let (graces, n) = graces_of(e.orn, midi, root, mode);
@@ -626,7 +627,7 @@ impl Sequencer {
                     let at = t + slip - GRACE * js::num(n - k);
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
-                    synth.voice(host, k, e.voice, g, js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
+                    synth.voice(host, k, e.voice.get(), g, js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
                     synth.budget.end();
                 }
             }
@@ -639,7 +640,7 @@ impl Sequencer {
                 }
                 let k = key_of(Layer::Texture);
                 synth.budget.begin(Some(Layer::Texture), k);
-                synth.texture(host, k, e.kind, &e.notes, t, e.dur * sd, e.vel, e.band);
+                synth.texture(host, k, e.kind.get(), &e.notes, t, e.dur * sd, e.vel, e.band);
                 synth.budget.end();
             }
         }
@@ -679,11 +680,11 @@ impl Sequencer {
                 let a = held.notes();
                 let b = chord.notes();
                 let shared = b.iter().filter(|&&x| a.iter().any(|&y| pc(y) == pc(x))).count();
-                if abs - h.last < spb || (a.first().map(|&n| pc(n)) == b.first().map(|&n| pc(n)) && shared >= 2) {
+                if abs - h.last.get() < spb || (a.first().map(|&n| pc(n)) == b.first().map(|&n| pc(n)) && shared >= 2) {
                     continue;
                 }
             }
-            let mut hold = Hold { key: Some(chord), until: abs + (next - s), held: Some(chord.sorted()), last: abs, on: true };
+            let mut hold = Hold { key: Some(chord), until: abs + (next - s), held: Some(chord.sorted()), last: Biased::of(abs), on: true };
             synth.organ_chord(host, &chord.notes()[..chord.len.min(NOTES)], t);
             if next_any - s > 2.0 * spb {
                 let off = js::max(if truthy(e.dur) { e.dur } else { 0.0 }, spb);

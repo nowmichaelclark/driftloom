@@ -52,7 +52,7 @@ pub fn selection(picked: &[usize]) -> [bool; data::VIBE_COUNT] {
 /// none.
 #[must_use]
 pub fn draw_vibes(seed: u32, request: &Request) -> Option<Vibes> {
-    let mut ids = List::<usize, { data::VIBE_COUNT }>::filled(0);
+    let mut ids = List::<usize, { data::VIBE_COUNT }>::new();
     for i in 0..data::VIBE_COUNT {
         if request.vibe(i).is_some() {
             ids.push(i);
@@ -65,7 +65,7 @@ pub fn draw_vibes(seed: u32, request: &Request) -> Option<Vibes> {
     if request.weighted() {
         return weighed_vibes(&mut r, request, &ids);
     }
-    let mut picked = List::<usize, VIBE_MAX>::filled(0);
+    let mut picked = List::<usize, VIBE_MAX>::new();
     if ids.len() <= VIBE_MAX {
         for &i in ids.iter() {
             picked.push(i);
@@ -88,7 +88,7 @@ pub fn draw_vibes(seed: u32, request: &Request) -> Option<Vibes> {
         total += d;
     }
     let spare = 1.0 - VIBE_FLOOR * js::num(picked.len());
-    let mut list = List::filled((0, 0.0));
+    let mut list = List::new();
     for (k, &id) in picked.iter().enumerate() {
         let w = if picked.len() == 1 { 1.0 } else { q8(VIBE_FLOOR + spare * (draws[k] / total)) };
         list.push((id, w));
@@ -104,7 +104,7 @@ const VIBE_ROUNDING: f64 = 3.0 / 255.0;
 /// weight means). The strength is drawn as for the same vibes unweighted,
 /// so a loop's own weights sent back make that loop again.
 fn weighed_vibes(r: &mut Rng, request: &Request, ids: &[usize]) -> Option<Vibes> {
-    let mut all = List::<(usize, f64), { data::VIBE_COUNT }>::filled((0, 0.0));
+    let mut all = List::<(usize, f64), { data::VIBE_COUNT }>::new();
     for &i in ids {
         let w = request.vibe(i).flatten().unwrap_or(1.0);
         if w > 0.0 {
@@ -112,7 +112,7 @@ fn weighed_vibes(r: &mut Rng, request: &Request, ids: &[usize]) -> Option<Vibes>
         }
     }
     // The five heaviest, ties to the earlier, back in the frozen order.
-    let mut list = List::<(usize, f64), VIBE_MAX>::filled((0, 0.0));
+    let mut list = List::<(usize, f64), VIBE_MAX>::new();
     if all.len() <= VIBE_MAX {
         for &e in all.iter() {
             list.push(e);
@@ -145,7 +145,7 @@ fn weighed_vibes(r: &mut Rng, request: &Request, ids: &[usize]) -> Option<Vibes>
         total += e.1;
     }
     let scale = if total > 1.0 + VIBE_ROUNDING { total } else { 1.0 };
-    let mut out = List::filled((0, 0.0));
+    let mut out = List::new();
     for &(i, w) in list.iter() {
         let share = q8(w / scale);
         if share > 0.0 {
@@ -201,11 +201,11 @@ pub type Names = List<(&'static str, f64), POOL_MAX>;
 pub type Nums = List<(f64, f64), POOL_MAX>;
 
 fn names(p: Option<Pool>) -> Option<Names> {
-    p.map(|p| List::from_slice(("", 0.0), p))
+    p.map(List::from_slice)
 }
 
 fn nums(p: Option<NumPool>) -> Option<Nums> {
-    p.map(|p| List::from_slice((0.0, 0.0), p))
+    p.map(List::from_slice)
 }
 
 /// A loop's profile: one profile, or a blend, with the vibes' leans
@@ -292,7 +292,7 @@ impl Char {
             textures: names(c.textures),
             polymeter: c.polymeter,
             micro_loop: c.micro_loop,
-            gaits: c.gaits.map(|g| List::from_slice(g[0], g)),
+            gaits: c.gaits.map(List::from_slice),
             kits: c.kits,
             progressions: c.progressions,
             drone: c.drone,
@@ -318,7 +318,7 @@ pub fn blend(mix: &[(usize, f64)]) -> Char {
             total += w;
         }
     }
-    let mut w: List<(usize, f64), 8> = List::filled((0, 0.0));
+    let mut w: List<(usize, f64), 8> = List::new();
     if total == 0.0 || total.is_nan() {
         w.push((data::resolve_key("dust"), 1.0));
     } else {
@@ -362,7 +362,7 @@ pub fn blend(mix: &[(usize, f64)]) -> Char {
         if v == 0.0 || v.is_nan() { None } else { Some(v) }
     };
     let pool = |get: fn(&Character) -> Option<Pool>| {
-        let mut acc: Names = List::filled(("", 0.0));
+        let mut acc: Names = List::new();
         for i in 0..w.len() {
             for &(name, weight) in get(ch(i)).unwrap_or(&[]) {
                 if let Some(e) = acc.iter_mut().find(|e| e.0 == name) {
@@ -376,7 +376,7 @@ pub fn blend(mix: &[(usize, f64)]) -> Char {
         Some(acc)
     };
     let numpool = |get: fn(&Character) -> Option<NumPool>| {
-        let mut acc: Nums = List::filled((0.0, 0.0));
+        let mut acc: Nums = List::new();
         for i in 0..w.len() {
             for &(name, weight) in get(ch(i)).unwrap_or(&[]) {
                 if let Some(e) = acc.iter_mut().find(|e| e.0 == name) {
@@ -441,7 +441,7 @@ pub fn blend(mix: &[(usize, f64)]) -> Char {
         textures: pool(|c| c.textures),
         polymeter: Some(l.polymeter.unwrap_or(false)),
         micro_loop: Some(l.micro_loop.unwrap_or(false)),
-        gaits: l.gaits.map(|g| List::from_slice(g[0], g)),
+        gaits: l.gaits.map(List::from_slice),
         kits: l.kits,
         progressions: l.progressions,
         drone: l.drone,

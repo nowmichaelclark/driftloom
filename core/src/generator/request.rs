@@ -152,12 +152,16 @@ pub const LENGTH_MOST: f64 = 9_007_199_254_740_991.0;
 
 /// How long the piece asked for is (promise 11, queue item 88): a number of
 /// bars, any whole number from 1 up, or one that never ends.
+// The discriminants start at 1 so that an `Option<Length>` that is `None` is
+// all zero bytes (the niche is 0): a spec, and the player holding one, start
+// as zeros, which the module keeps as `.bss` (queue item 93).
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
 pub enum Length {
     /// This many bars, a whole number from 1 to `LENGTH_MOST`.
-    Bars(f64),
+    Bars(f64) = 1,
     /// Never ends.
-    Endless,
+    Endless = 2,
 }
 
 /// A request: the vibes asked, each with its weight or none, the tempo
@@ -167,7 +171,9 @@ pub enum Length {
 pub struct Request {
     /// Whether each vibe (by its number, `data::VIBES`) is asked.
     asked: [bool; VIBE_COUNT],
-    /// Each asked vibe's weight; NaN where it was asked without one.
+    /// Each asked vibe's weight; NaN where it was asked without one. Read
+    /// only where `asked` is true, so an unasked vibe's slot is zero, and a
+    /// request of nothing is all zero bytes (queue item 93).
     weights: [f64; VIBE_COUNT],
     /// The tempo asked, [low, high] in whole bpm (equal when pinned).
     tempo: Option<[f64; 2]>,
@@ -199,7 +205,7 @@ impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [f64::NAN; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0 }
+        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0 }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its

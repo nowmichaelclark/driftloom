@@ -18,6 +18,7 @@ use super::LAYERS;
 use super::canon::{Sink, Writer};
 use super::choices::{self, Arc, Fall, LateFloor, PadSweep, SubDuck, TunedKick};
 use super::js;
+use super::list::Biased;
 use super::plan::Cx;
 use super::render::Render;
 use super::rng::Rng;
@@ -78,6 +79,12 @@ pub struct Kick {
 /// How many settings the organ sends: its nine drawbars, then `ORGAN_KEYS`.
 pub const ORGAN_SETTINGS: usize = 21;
 
+/// The bits of 0.75, the echo's time in beats before any loop is loaded
+/// (`Load::echo_beats`), and of 1.0, the level (`Load::level`).
+pub const ECHO_BEATS_BITS: u64 = 0x3FE8_0000_0000_0000;
+/// See `ECHO_BEATS_BITS`.
+pub const LEVEL_BITS: u64 = 0x3FF0_0000_0000_0000;
+
 /// Everything the engine decides at load, each `None` where the loop's
 /// choices leave it out.
 #[derive(Clone, Copy, Debug)]
@@ -97,11 +104,13 @@ pub struct Load {
     pub bass_lift: f64,
     pub late: Option<LateFloor>,
     pub space: Space,
-    /// The echo's time, in beats.
-    pub echo_beats: f64,
+    /// The echo's time, in beats (stored against 0.75, the unloaded loop's,
+    /// so that nothing loaded is all zero bytes: queue item 93).
+    pub echo_beats: Biased<ECHO_BEATS_BITS>,
     /// The profile's pump, and its level (`setCharacterLevel`).
     pub pump: f64,
-    pub level: f64,
+    /// Its level, stored against 1.0 as `echo_beats` is against 0.75.
+    pub level: Biased<LEVEL_BITS>,
     /// The loop's tempo and tone, for the calls.
     bpm: f64,
     tone: [f64; 3],
@@ -124,9 +133,9 @@ impl Load {
         bass_lift: 0.0,
         late: None,
         space: Space { seed: 0, busy: 0.0, wet: 0.0, light: false, pins: [None; crate::space::n::COUNT] },
-        echo_beats: 0.75,
+        echo_beats: Biased::DEFAULT,
         pump: 0.0,
-        level: 1.0,
+        level: Biased::DEFAULT,
         bpm: 0.0,
         tone: [0.0; 3],
         muted: 0,
@@ -180,12 +189,12 @@ impl Load {
                 busy,
                 // `spec.tone.space || 0`
                 wet: if space == 0.0 || space.is_nan() { 0.0 } else { space },
-                light: matches!(r.texture_kind, "bells" | "chime" | "drops"),
+                light: matches!(r.texture_kind.get(), "bells" | "chime" | "drops"),
                 pins: core::array::from_fn(|i| p.space(i)),
             },
-            echo_beats: p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v)),
+            echo_beats: Biased::of(p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v))),
             pump: cx.c.pump.unwrap_or(0.0),
-            level: cx.c.level.unwrap_or(1.0),
+            level: Biased::of(cx.c.level.unwrap_or(1.0)),
             bpm: spec.bpm,
             tone: spec.tone,
             muted: spec.layers_off,
@@ -195,7 +204,7 @@ impl Load {
     /// The echo's time in seconds, as the engine sends it.
     #[must_use]
     pub fn echo_seconds(&self) -> f64 {
-        (60.0 / self.bpm) * self.echo_beats
+        (60.0 / self.bpm) * self.echo_beats.get()
     }
 
     /// The canonical text (`load` in `tools/gen-golden.mjs`): every
@@ -209,7 +218,7 @@ impl Load {
         w.key("calls");
         self.write_calls(w);
         w.key("echoBeats");
-        w.num(self.echo_beats);
+        w.num(self.echo_beats.get());
         w.key("glassScale");
         w.num(self.glass_scale);
         w.key("kick");
@@ -252,7 +261,7 @@ impl Load {
         w.end_list();
         w.list();
         w.str("setCharacterLevel");
-        w.num(self.level);
+        w.num(self.level.get());
         w.end_list();
         w.list();
         w.str("setEchoTime");
