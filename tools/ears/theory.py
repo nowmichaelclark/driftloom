@@ -378,6 +378,70 @@ def chords(y, sr=SR, bass=None, change_cost=0.6, hop=2048):
     return res
 
 
+# --- chord colors (Ears 12b) --------------------------------------------------------------------
+# A reading beside chords(), not new templates: over each chord segment chords() found, which tones
+# past the chord's own are present and held. The labels do not move.
+COLOR_BASE = ("maj", "min", "7", "maj7", "min7", "sus2", "sus4")
+COLOR_SEMIS = {2: "9", 5: "11", 9: "13"}     # over a triad, 9 and 11 are an add9 and add11, and 13 is the 6
+COLOR_PRESENT = 0.5      # a tone counts in a frame at half the other chord tones' mean level or more (see cal_theory)
+COLOR_HELD = 0.6         # ... and is "held" when it counts in 60% or more of the segment's frames
+
+
+def colors(y, chords_res=None, sr=SR, hop=2048, min_len=1.5):
+    """Colors past the chord, per chord and overall. y: the harmonic mix chords() read. A color is reported
+    when it is present (>= COLOR_PRESENT of the mean level of the chord's tones but its root) in COLOR_HELD of a segment's
+    frames; strength is its median level against the chord tones (1.0 = as loud as the chord's other tones).
+    Only maj, min, 7, maj7, min7, sus2 and sus4 segments of min_len seconds or more are read.
+    share_with_a_color counts the time with one or two of the three held (a voicing); share_all_three is the time
+    with 9, 11 and 13 all held, which a dense pad or a wash gives (a scale or a cluster of notes): read it as a texture, not a chord. On a dense diatonic
+    pad even one or two held colors only say the scale's other notes are there."""
+    if chords_res is None:
+        chords_res = chords(y, sr, hop=hop)
+    ch, hop_s = chroma_of(y, sr, hop)
+    names = {NOTE_NAMES[r] + ("" if ty == "maj" else ty): (r, ty) for ty in COLOR_BASE for r in range(12)}
+    per, total, anysec, washsec = {}, 0.0, 0.0, 0.0
+    for g in chords_res["segments"]:
+        if g["chord"] not in names or g["t1"] - g["t0"] < min_len:
+            continue
+        r, ty = names[g["chord"]]
+        i0 = int(g["t0"] / hop_s)
+        seg = ch[:, i0:max(int(g["t1"] / hop_s), i0 + 1)]
+        base = seg[[(r + d) % 12 for d in CHORD_TYPES[ty][1:]]].mean(axis=0)       # the root is left out: a bass and every harmonic stack on it
+        ok = base > 1e-6
+        if ok.sum() < 3:
+            continue
+        dur = g["t1"] - g["t0"]
+        total += dur
+        e = per.setdefault(g["chord"], {"seconds": 0.0, "col": {}})
+        e["seconds"] += dur
+        found = 0
+        for d, nm in COLOR_SEMIS.items():
+            if d in CHORD_TYPES[ty]:
+                continue
+            ratio = seg[(r + d) % 12][ok] / base[ok]
+            if (ratio >= COLOR_PRESENT).mean() >= COLOR_HELD:
+                c = e["col"].setdefault(nm, {"seconds": 0.0, "sx": 0.0})
+                c["seconds"] += dur
+                c["sx"] += float(np.median(ratio)) * dur
+                found += 1
+        if 1 <= found <= 2:
+            anysec += dur
+        elif found == 3:
+            washsec += dur
+    by_color, rows = {}, []
+    for name, e in sorted(per.items(), key=lambda kv: -kv[1]["seconds"]):
+        rows.append({"chord": name, "share": round(e["seconds"] / total, 3),
+                     "colors": {k: {"share_of_chord": round(v["seconds"] / e["seconds"], 2), "strength": round(v["sx"] / v["seconds"], 2)}
+                                for k, v in e["col"].items()}})
+        for k, v in e["col"].items():
+            by_color[k] = by_color.get(k, 0.0) + v["seconds"]
+    return {"chord_seconds_read": round(total, 1),
+            "share_with_a_color": round(anysec / total, 3) if total else 0.0,
+            "share_all_three": round(washsec / total, 3) if total else 0.0,
+            "by_color_share": {k: round(v / total, 3) for k, v in sorted(by_color.items())} if total else {},
+            "by_chord": rows[:8]}
+
+
 def chord_changes_old(y, sr=SR):
     """analyze.py's counter (2-s averaged chroma, similarity < 0.85), kept for comparison."""
     import librosa
@@ -606,6 +670,7 @@ def run(stem_dir, mix_file, out_json):
     res["key"] = key_mode(ch, bass_pc)
     res["chords"] = chords(harm)
     res["chords"]["old_counter_per_min"] = chord_changes_old(harm)
+    res["colors"] = colors(harm, res["chords"])
     other = mono(stems["other"])
     notes, hop_s, _ = lead_line(other)
     res["lead"] = lead_summary(notes)
