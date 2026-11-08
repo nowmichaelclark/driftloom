@@ -279,3 +279,10 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   `wander: 2.2, unrepeatable (salt N)`. For Mikey's ears: where the range
   starts (2.0, the top sixth), and whether a code shared from such a play
   should replay the sharer's wander (today it draws its own).
+- #331, the player's module at 636 KB (item 93, v149, no app change), preview
+  URL: <https://f7cc7064-driftloom.nowmichaelclark.workers.dev> (commit
+  e5635c1): nothing should sound different (the baseline and the 80 seeds are
+  bit-identical); `js/dlplayer.wasm` is 636,125 bytes, down from 1,938,596,
+  and loads only with `?engine=player` (try it: Diagnostics, late and dropped
+  notes). The rest is for the hands: a new player is all zero bytes
+  (`tests/zeros.rs`), and one module can replace the two at 94b.
