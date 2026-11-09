@@ -429,9 +429,26 @@ carries everything 1.0 has; **from 1.0 on, codes stay stable** (Mikey,
 "Share codes, version 2": short plain codes (what was pinned beside the
 seed, nothing else), plain links that open the loop, an album from one
 seed, and plain "needs a newer version" lines. Old codes stop working
-(Mikey, 2026-10-12: that's fine before 1.0). **Yardsticks:** a loop with
-nothing pinned has a code under about 20 characters; every pick, length,
-journey and edit round-trips; the generation goldens hold.
+(Mikey, 2026-10-12: that's fine before 1.0).
+
+**Room to grow** (Mikey, 2026-11-10): a code carries a version; everything
+in it is named by a stable id, never by its place in a list, and ids and
+lengths are variable-width, so new instruments, profiles, vibes, styles,
+picks and later a modder's recipe fit without a new format. **Additions
+leave old codes as they sound:** each instrument, profile, vibe and option
+records the version it joined, and a code's draws see only what existed at
+its version (a pool is filtered by version before the draw, so a newer
+member can't shift an older code's picks). A deliberate improvement to an
+existing sound still changes old codes, and the release notes say so. A
+code naming something this app doesn't have says "needs a newer version",
+never plays the wrong thing.
+
+**Yardsticks:** a loop with nothing pinned has a code under about 20
+characters; every pick, length, journey and edit round-trips; the
+generation goldens hold; a test adds a dummy instrument, profile and vibe
+at a later version and shows every golden code renders bit for bit the
+same, while a new code can draw them; a code from a "newer" version is
+refused plainly.
 
 ## 107. The Android app, on F-Droid
 

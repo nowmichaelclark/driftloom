@@ -105,6 +105,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## How the project runs
 
+- 2026-11-10 -- **Old codes keep their sound as things are added (Mikey, 2026-11-10):** after 1.0, a new instrument, profile, vibe or option joins at a version, and a code made before it never draws it, so additions leave old codes sounding the same; a deliberate improvement to an existing sound still changes them, said in the release notes. Codes name things by stable ids with room to grow (item 105).
 - 2026-11-10 -- **What 1.0 holds (Mikey, 2026-11-10):** the Android app on F-Droid is part of 1.0; short codes (version 2) land before 1.0 and codes stay stable from 1.0 on; the hands build plain screens for new features in the app's style (export, long pieces, links), and a Painter may restyle them later.
 - 2026-11-10 -- **The app's 1.0 before the game (Mikey, 2026-11-10):** the music app is finished first; putting the core into Broken Friends (phase 4) and other games waits until after, since the core is already known to work in Broken Friends. The road is in `docs/QUEUE.md`, "The road to 1.0".
 - 2026-11-10 -- **No session waits on the slow renders until 1.0 (Mikey, 2026-11-10):** the cross-target golden renders and the other slow checks run nightly and never hold a merge (item 103); they come back as merge gates once the app is 1.0 and on F-Droid.
