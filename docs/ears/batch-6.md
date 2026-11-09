@@ -25,7 +25,7 @@ loop wander on, the stereo baseline, every segment at -18 LUFS; 45 s a loop
 (slowOpening 100 s, dropSpotlight and the sampler 50 s). Each section below
 ends with its **Ears 13b sketch**; "What the levers did" says plainly where a
 lever falls short and what would do. The clips are on the branch
-`ears13b-clips`, deleted after the verdicts.
+`ears13b-clips`, deleted after the verdicts (2026-11-09).
 
 ## Verdicts
 
@@ -38,23 +38,33 @@ where any of them can still be tuned or dropped. Seven candidates could not
 be sketched yet: each needs a lever the sketch build doesn't have (see
 "Levers wanted", queue item 99), and their clips wait for an Ears 13b.
 
+**Mikey, 2026-11-09 (Ears 13b):** "all the clips sound great": the 13b
+sampler and all eight approved, every version (dottedPulse's pulse and
+kick332, dropSpotlight struck and swelling, twang soft, slow and bright), at
+the sketched levels. As with the first five, the versions go in as options
+weighted by the vibes. What a lever could not do yet ("What the levers did":
+tripletKit on eighth-note kits, the quiet pulse, kick332 on most kits, the
+tune under planing sevenths, the drop's late bell, twang on the melody) is
+the build's to settle, with the levers' other halves; the clips are what was
+approved.
+
 | # | Candidate | What it is | Clip | Verdict |
 |---|---|---|---|---|
 | 0 | 00-everything | The sampler: each loop with one or two of the sketched five | 00 | Approved |
-| 1 | tripletKit | A kit in threes: hats and ghost hits on the thirds of the beat, a 12/8 shuffle at 77 to 127 BPM | 13b 01 | |
+| 1 | tripletKit | A kit in threes: hats and ghost hits on the thirds of the beat, a 12/8 shuffle at 77 to 127 BPM | 13b 01 | Approved |
 | 2 | lowBell | A struck low bell (D2 to C#3) on each chord's root; a swelling kind too | 01 | Approved, both versions |
 | 3 | padWow | A slow tape-like wow on the chord layer only (14 cents at 0.5 Hz), the kick and bass steady | 02 | Approved |
-| 4 | widePad | The chord layer much wider, on the side only, so mono stays the same (batch 5's) | 13b 02 | |
+| 4 | widePad | The chord layer much wider, on the side only, so mono stays the same (batch 5's) | 13b 02 | Approved |
 | 5 | colorTone | A held 13th over major chords and an 11th over minor ones, on about half the chords | 03 | Approved |
 | 6 | deepDuck | subDuck's deep, long kind: the bass dips 14 dB at each kick and takes 0.6 s to come back | 04 | Approved |
 | 7 | wideSweep | padSweep's two far ends: a 4-octave ride every 16 s, and a 2.6-octave swing every 6.5 s | 05 | Approved, both versions |
-| 8 | dottedPulse | A part every three eighths, or a 3-3-2 kick (batch 5's) | 13b 03 (two versions) | |
-| 9 | slowOpening | lateFloor's long end: the floor arriving 40 to 90 s in, fading up | 13b 04 | |
-| 10 | planingSevenths | Major sevenths moving in parallel, a whole step apart | 13b 05 | |
-| 11 | dropSpotlight | A low bell or held lead alone in a floor drop (batch 5's) | 13b 06 (two versions) | |
-| 12 | tuningOffset | A whole loop a little off A440 (up to about 40 cents), drawn per loop | 13b 07 | |
-| 13 | twang | New (Ears 13b): a synth in the spirit of a tremolo baritone guitar, picking each chord low and slow | 13b 08 (three versions) | |
-| 0b | 00-everything-13b | The 13b sampler: five loops, each with one or two of the eight | 13b 00 | |
+| 8 | dottedPulse | A part every three eighths, or a 3-3-2 kick (batch 5's) | 13b 03 (two versions) | Approved, both versions |
+| 9 | slowOpening | lateFloor's long end: the floor arriving 40 to 90 s in, fading up | 13b 04 | Approved |
+| 10 | planingSevenths | Major sevenths moving in parallel, a whole step apart | 13b 05 | Approved |
+| 11 | dropSpotlight | A low bell or held lead alone in a floor drop (batch 5's) | 13b 06 (two versions) | Approved, both versions |
+| 12 | tuningOffset | A whole loop a little off A440 (up to about 40 cents), drawn per loop | 13b 07 | Approved |
+| 13 | twang | New (Ears 13b): a synth in the spirit of a tremolo baritone guitar, picking each chord low and slow | 13b 08 (three versions) | Approved, all three versions |
+| 0b | 00-everything-13b | The 13b sampler: five loops, each with one or two of the eight | 13b 00 | Approved |
 
 **Listen in this order:** `00-everything` (without, then with), then `01` to
 `05`. Each candidate has one file per version, `-without` first: every file of
