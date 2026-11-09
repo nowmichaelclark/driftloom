@@ -322,7 +322,14 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   allowed for the site only as a test; Mikey: that's a bandaid. Item 100
   fixes it in the app: a render-ahead cushion when lite falls behind, then
   a 24 kHz tier, a plain line last. Waits on the friend's `busiest:` line
-  with JIT off (peaks or average).
+  with JIT off (peaks or average). Confirmed (9.3% with JIT); Mikey then
+  chose a plain line pointing to the app instead (item 100 rewritten).
+  **2026-11-10, the road to 1.0** (Mikey): the app's 1.0 before the game;
+  Ears 13b approved all eight (twang included); no waiting on slow renders
+  (item 103, a fast gate, the slow ones nightly until 1.0 on F-Droid); a
+  long autonomous Fable 5.2 hands run takes the road (`docs/QUEUE.md`):
+  103, 96, 97, 100, 98's hands part, 101 (batch 6), 84b, 102 (long pieces,
+  composed), polish; its list for Mikey is `docs/notes/for-mikey.md`.
 - **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); the blind album's in-app checklist for bars and length (88b),

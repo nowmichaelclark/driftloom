@@ -105,6 +105,10 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## How the project runs
 
+- 2026-11-10 -- **The app's 1.0 before the game (Mikey, 2026-11-10):** the music app is finished first; putting the core into Broken Friends (phase 4) and other games waits until after, since the core is already known to work in Broken Friends. The road is in `docs/QUEUE.md`, "The road to 1.0".
+- 2026-11-10 -- **No session waits on the slow renders until 1.0 (Mikey, 2026-11-10):** the cross-target golden renders and the other slow checks run nightly and never hold a merge (item 103); they come back as merge gates once the app is 1.0 and on F-Droid.
+- 2026-11-10 -- **A browser too slow even on lite gets a plain line pointing to the Driftloom app (Mikey, 2026-11-10):** no browser workarounds asked of the listener (GrapheneOS's JIT toggle), and no render-ahead cushion or lower tier (item 100).
+- 2026-11-10 -- **Long runs on Fable 5.2 (Mikey, 2026-11-10):** a hands session may run the road to 1.0 on its own, item after item, merging under the policy, gathering what needs his ears or a decision into one list and one album rather than stopping for it.
 - 2026-11-08 -- **Ears sessions that don't measure his records run in the cloud (Mikey, 2026-11-08):** syntheses and sketch rounds (Ears 13 on) run in a cloud Claude Code session like the hands, which has Rust, Node and ffmpeg; card sessions that measure the audio on his computer stay there. Clips reach him on a throwaway branch with only the clips, deleted after his verdicts; audio never merges.
 - 2026-09-23 -- **Old share codes, saved loops and albums may change or break** while the app is in testing (2026-09-23). Keep draws stable where it's free, only because it keeps A/B albums comparing the same loops.
 - 2026-10-29 -- **No compatibility bloat (Mikey, 2026-10-29):** "There's zero need to try to preserve old codes. The app is still in it's testing phase. Old codes and old programming code is fine to change and or get rid of. We don't want to build bloat for no reason." No retired slots, shims or fallbacks kept for old codes.
