@@ -301,9 +301,13 @@ with the feature; the standing checks unchanged.
 
 **The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends
 and the other games wait (the core already works in Broken Friends); the
-music app is finished first. Order, after 103: phase 3's 96, 97, 100 and
-98's hands part; then 101, 84b and 102; then the known issues and the
-polish a 1.0 needs. Each sound change merges under the policy and is
+music app is finished first, and **1.0 includes the Android app on
+F-Droid** (Mikey, 2026-11-10). Order, after 103: phase 3's 96, 97, 100 and
+98's hands part; then 101, 84b and 102; then 106, 104 and 105; then 107;
+then the known issues, the polish, and 108. **Screens:** the hands build
+plain ones in the app's current style, keeping `docs/PAINTER.md`'s rules
+(one screen, no new settings, scrolling in its two places); a Painter
+session may restyle any of them later (Mikey, 2026-11-10). Each sound change merges under the policy and is
 gathered into one listening album for Mikey; what needs his ears or a
 decision goes in `docs/notes/for-mikey.md` and the work moves on.
 
@@ -390,6 +394,65 @@ number; then, for Mikey, a listening set: a few pieces each at 64, 256 and
 1,024 bars and Endless, as album codes he plays in the app, with short
 excerpts (the start, a quarter, half, three quarters, the close) so a piece
 can be judged in minutes.
+
+## 106. Long pieces on screen
+
+**Hands:** any, high. After 102. Plain screens (above), from
+`docs/PAINTER.md`, "Long pieces": where you are (bar 812 of 3,072, time
+played and left; for Endless, time played), moving within a piece (a jump
+to a section or a point, from the seed and the section's number, promise
+11), section markers from 102's piece map, and a piece's length or
+duration in the Library. **Yardsticks:** a jump to three hours in starts
+within a second, nothing late (`tools/rows.mjs` gains the rows).
+
+## 104. Audio export
+
+**Hands:** Opus or Fable, high. `docs/CORE.md` phase 7, "Exports, safe
+first" (Mikey, 2026-10-13), and `docs/PAINTER.md`, "Exporting audio": the
+core renders in small chunks straight to the file (memory the same for a
+minute or three hours); free space checked first; progress with Cancel;
+it survives the app going to the background. **Lossless** (FLAC, written
+by the core) and **small** (Opus, through the browser's own encoder where it
+has one, else that choice is hidden); the format chosen in the export sheet
+each time; "lighter on processor" sets the speed (on: gentle; off: as fast
+as is safe). Endless asks how much. **Yardsticks:** a three-hour lossless
+export on the Moto-class figures in `tools/autolite.mjs`'s slow case
+finishes with flat memory and nothing glitching in what plays; the file
+decodes and nulls against a straight render; cancel and a full disk leave
+nothing broken.
+
+## 105. Short codes and links (codes, version 2)
+
+**Hands:** Opus or Fable, high. Before 1.0, after 102 and 104, so it
+carries everything 1.0 has; **from 1.0 on, codes stay stable** (Mikey,
+2026-11-10). `docs/CORE.md` phase 6 and promise 8, `docs/PAINTER.md`,
+"Share codes, version 2": short plain codes (what was pinned beside the
+seed, nothing else), plain links that open the loop, an album from one
+seed, and plain "needs a newer version" lines. Old codes stop working
+(Mikey, 2026-10-12: that's fine before 1.0). **Yardsticks:** a loop with
+nothing pinned has a code under about 20 characters; every pick, length,
+journey and edit round-trips; the generation goldens hold.
+
+## 107. The Android app, on F-Droid
+
+**Hands:** Fable, high. After 105. Mikey (2026-10-12): from the same Rust
+core, with the web screens inside it; the website stays. The core native,
+on Android's own audio (AAudio, through a small Rust layer or Oboe) at a
+high priority, the page's screens in a WebView talking to it by the same
+commands and events as the worklet (94a); no Google services, nothing
+F-Droid's rules refuse. Built in CI (GitHub's runners have the Android
+SDK), an APK Mikey can install, `fastlane` metadata, and an F-Droid build
+recipe with reproducible-build notes. **For Mikey:** the submission to
+F-Droid (his account) and the signing choice. Then item 100's link points
+at the listing. **Yardsticks:** the Moto and the tablet play with nothing
+late (Diagnostics in the app), the screen off for ten minutes, a long
+piece and an export; the APK builds from a clean checkout.
+
+## 108. 1.0
+
+**Hands:** then Mikey. The version named 1.0 in the app and the APK, a short
+changelog, codes frozen (105), the nightly's checks back as merge gates
+(103), and `docs/notes/for-mikey.md` empty or answered.
 
 **Also noted, not on the road to 1.0:**
 
