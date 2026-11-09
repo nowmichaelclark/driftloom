@@ -200,9 +200,10 @@ interpreter (DrumBrake), several times slower. The skips are the audio
 output running dry, which the core's own counts can't see; dropped chunks
 make the music lurch forward. On lite there is nothing lower today. Mikey
 (2026-11-10): asking users to allow JIT is a bandaid; fix it in the app.
-**First:** the friend's Diagnostics after three minutes with JIT off (the
-`busiest:` line) says whether it is peaks (busiest past 100%, average about
-55%) or the average; the brain adds it here before the item starts.
+**Confirmed** (2026-11-10): with JIT allowed for the site, the same Pixel
+renders at 9.3% of real time on lite (54.7% interpreted): about 6x. **Waits
+on Mikey** (now in phase 3, or after it); if it goes ahead, the friend's
+`busiest:` line after three minutes with JIT off says peaks or average.
 
 **What,** in this order, each only where the one before isn't enough:
 1. **Render ahead when behind:** when the switch's measure says lite is
