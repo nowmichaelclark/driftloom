@@ -1,0 +1,72 @@
+[
+ {
+  "name": "everything13b-grove47-none",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  }
+ },
+ {
+  "name": "everything13b-grove47-mononone",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "layout": 1,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  }
+ },
+ {
+  "name": "everything13b-grove47-with",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes",
+   "dottedPulse": "pulse"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "everything13b-grove47-monowith",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "layout": 1,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes",
+   "dottedPulse": "pulse"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ }
+]

@@ -1,0 +1,134 @@
+[
+ {
+  "name": "dropSpotlight-dust9-none",
+  "corpus": [
+   20261009,
+   9
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  }
+ },
+ {
+  "name": "dropSpotlight-dust9-with",
+  "corpus": [
+   20261009,
+   9
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "dropSpotlight-glade21-none",
+  "corpus": [
+   20261009,
+   21
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  }
+ },
+ {
+  "name": "dropSpotlight-glade21-with",
+  "corpus": [
+   20261009,
+   21
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "dropSpotlight-tide39-none",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  }
+ },
+ {
+  "name": "dropSpotlight-tide39-with",
+  "corpus": [
+   20261009,
+   39
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ },
+ {
+  "name": "dropSpotlight-grove47-none",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  }
+ },
+ {
+  "name": "dropSpotlight-grove47-with",
+  "corpus": [
+   20261009,
+   47
+  ],
+  "seconds": 50,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "force": {
+   "floorDrop": "shapes"
+  },
+  "sketch": true,
+  "route": {
+   "sketch": "drums",
+   "sketch.1": "bass"
+  }
+ }
+]

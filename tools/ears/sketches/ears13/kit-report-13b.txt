@@ -1,0 +1,34 @@
+== kit-twang (soft at 60 BPM as REST; probes: soft, slow at 58 BPM, bright at 67)
+sketch/soft                          -43.12   -17.79     2.6%  0.214%
+sketch/slow                          -43.79   -18.79     1.5%  0.216%
+sketch/bright                        -43.27   -18.27     4.7%  0.215%
+sketch/soft@retune                   -37.65   -14.33     5.2%  0.295%
+sketch/slow@retune                   -38.68   -17.12     2.6%  0.293%
+sketch/bright@retune                 -38.42   -14.82     7.1%  0.295%
+sketch/soft@release                  -45.74   -17.79     4.2%  0.098%
+sketch/slow@release                  -46.27   -18.79     2.0%  0.098%
+sketch/bright@release                -45.81   -18.27     7.7%  0.099%
+== kit-dropSpotlight
+sketch/struck                        -48.09   -27.11     0.0%  0.082%
+sketch/swell                         -50.79   -32.70     0.0%  0.079%
+sketch/struck~drums                  -53.95   -27.97     0.0%  0.076%
+sketch/swell~drums                   -61.89   -40.54     0.0%  0.077%
+sketch/struck~bass                   -53.95   -27.97     0.0%  0.071%
+sketch/swell~bass                    -61.89   -40.54     0.0%  0.068%
+sketch/struck@retune                 -41.57   -23.32     0.0%  0.182%
+sketch/swell@retune                  -45.66   -27.64     0.1%  0.183%
+sketch/struck@release                -51.25   -27.11     0.0%  0.009%
+sketch/swell@release                 -59.82   -34.71     0.0%  0.009%
+clippy warnings: 0
+== kit-dropSpotlightSwell
+sketch/struck                        -48.09   -27.11     0.0%  0.084%
+sketch/swell                         -50.79   -32.70     0.0%  0.082%
+sketch/struck~drums                  -53.95   -27.97     0.0%  0.079%
+sketch/swell~drums                   -61.89   -40.54     0.0%  0.078%
+sketch/struck~bass                   -53.95   -27.97     0.0%  0.071%
+sketch/swell~bass                    -61.89   -40.54     0.0%  0.070%
+sketch/struck@retune                 -41.57   -23.32     0.0%  0.190%
+sketch/swell@retune                  -45.66   -27.64     0.1%  0.185%
+sketch/struck@release                -51.25   -27.11     0.0%  0.009%
+sketch/swell@release                 -59.82   -34.71     0.0%  0.009%
+clippy warnings: 0

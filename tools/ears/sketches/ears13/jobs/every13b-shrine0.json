@@ -1,0 +1,50 @@
+[
+ {
+  "name": "everything13b-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 50
+ },
+ {
+  "name": "everything13b-shrine0-mononone",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 50,
+  "layout": 1
+ },
+ {
+  "name": "everything13b-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 50,
+  "force": {
+   "planingSevenths": "on"
+  },
+  "space": {
+   "spread-chords": 1.4,
+   "spread-max": 2,
+   "spread-cutoff": 250,
+   "ceiling-busy": -4,
+   "ceiling-sparse": -5,
+   "ceiling-very-sparse": -7
+  }
+ },
+ {
+  "name": "everything13b-shrine0-monowith",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 50,
+  "layout": 1,
+  "force": {
+   "planingSevenths": "on"
+  }
+ }
+]

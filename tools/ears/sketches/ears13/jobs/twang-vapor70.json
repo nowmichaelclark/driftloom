@@ -1,0 +1,49 @@
+[
+ {
+  "name": "twang-vapor70-none",
+  "corpus": [
+   20261009,
+   70
+  ],
+  "seconds": 45,
+  "set": {
+   "chords.RETUNE": 1
+  }
+ },
+ {
+  "name": "twang-vapor70-soft",
+  "corpus": [
+   20261009,
+   70
+  ],
+  "seconds": 45,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "sketch": true
+ },
+ {
+  "name": "twang-vapor70-slow",
+  "corpus": [
+   20261009,
+   70
+  ],
+  "seconds": 45,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "sketch": true
+ },
+ {
+  "name": "twang-vapor70-bright",
+  "corpus": [
+   20261009,
+   70
+  ],
+  "seconds": 45,
+  "set": {
+   "chords.RETUNE": 1
+  },
+  "sketch": true
+ }
+]

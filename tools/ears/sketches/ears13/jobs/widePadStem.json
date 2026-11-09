@@ -1,0 +1,106 @@
+[
+ {
+  "name": "widePadStem-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off"
+ },
+ {
+  "name": "widePadStem-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off",
+  "space": {
+   "spread-chords": 1.4,
+   "spread-max": 2,
+   "spread-cutoff": 250,
+   "ceiling-busy": -4,
+   "ceiling-sparse": -5,
+   "ceiling-very-sparse": -7
+  }
+ },
+ {
+  "name": "widePadStem-thaw71-none",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off"
+ },
+ {
+  "name": "widePadStem-thaw71-with",
+  "corpus": [
+   20261009,
+   71
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off",
+  "space": {
+   "spread-chords": 1.4,
+   "spread-max": 2,
+   "spread-cutoff": 250,
+   "ceiling-busy": -4,
+   "ceiling-sparse": -5,
+   "ceiling-very-sparse": -7
+  }
+ },
+ {
+  "name": "widePadStem-undertow45-none",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off"
+ },
+ {
+  "name": "widePadStem-undertow45-with",
+  "corpus": [
+   20261009,
+   45
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off",
+  "space": {
+   "spread-chords": 1.4,
+   "spread-max": 2,
+   "spread-cutoff": 250,
+   "ceiling-busy": -4,
+   "ceiling-sparse": -5,
+   "ceiling-very-sparse": -7
+  }
+ },
+ {
+  "name": "widePadStem-grove62-none",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off"
+ },
+ {
+  "name": "widePadStem-grove62-with",
+  "corpus": [
+   20261009,
+   62
+  ],
+  "seconds": 45,
+  "request": "layer.melody=off,layer.bass=off,layer.drums=off,layer.texture=off",
+  "space": {
+   "spread-chords": 1.4,
+   "spread-max": 2,
+   "spread-cutoff": 250,
+   "ceiling-busy": -4,
+   "ceiling-sparse": -5,
+   "ceiling-very-sparse": -7
+  }
+ }
+]

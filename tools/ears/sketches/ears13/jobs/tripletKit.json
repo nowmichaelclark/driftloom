@@ -1,0 +1,78 @@
+[
+ {
+  "name": "tripletKit-dust69-none",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tripletKit-dust69-with",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45,
+  "force": {
+   "tripletKit": "on"
+  }
+ },
+ {
+  "name": "tripletKit-bloom74-none",
+  "corpus": [
+   20261009,
+   74
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tripletKit-bloom74-with",
+  "corpus": [
+   20261009,
+   74
+  ],
+  "seconds": 45,
+  "force": {
+   "tripletKit": "on"
+  }
+ },
+ {
+  "name": "tripletKit-tide52-none",
+  "corpus": [
+   20261009,
+   52
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tripletKit-tide52-with",
+  "corpus": [
+   20261009,
+   52
+  ],
+  "seconds": 45,
+  "force": {
+   "tripletKit": "on"
+  }
+ },
+ {
+  "name": "tripletKit-undertow75-none",
+  "corpus": [
+   20261009,
+   75
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tripletKit-undertow75-with",
+  "corpus": [
+   20261009,
+   75
+  ],
+  "seconds": 45,
+  "force": {
+   "tripletKit": "on"
+  }
+ }
+]

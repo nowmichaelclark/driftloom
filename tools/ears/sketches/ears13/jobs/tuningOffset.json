@@ -1,0 +1,78 @@
+[
+ {
+  "name": "tuningOffset-vapor4-none",
+  "corpus": [
+   20261009,
+   4
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tuningOffset-vapor4-with",
+  "corpus": [
+   20261009,
+   4
+  ],
+  "seconds": 45,
+  "set": {
+   "master.CENTS": -32
+  }
+ },
+ {
+  "name": "tuningOffset-dust69-none",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tuningOffset-dust69-with",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 45,
+  "set": {
+   "master.CENTS": 18
+  }
+ },
+ {
+  "name": "tuningOffset-shrine0-none",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tuningOffset-shrine0-with",
+  "corpus": [
+   20261009,
+   0
+  ],
+  "seconds": 45,
+  "set": {
+   "master.CENTS": -24
+  }
+ },
+ {
+  "name": "tuningOffset-haven38-none",
+  "corpus": [
+   20261009,
+   38
+  ],
+  "seconds": 45
+ },
+ {
+  "name": "tuningOffset-haven38-with",
+  "corpus": [
+   20261009,
+   38
+  ],
+  "seconds": 45,
+  "set": {
+   "master.CENTS": 27
+  }
+ }
+]

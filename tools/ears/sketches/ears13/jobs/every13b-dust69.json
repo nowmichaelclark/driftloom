@@ -1,0 +1,48 @@
+[
+ {
+  "name": "everything13b-dust69-none",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 50
+ },
+ {
+  "name": "everything13b-dust69-mononone",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 50,
+  "layout": 1
+ },
+ {
+  "name": "everything13b-dust69-with",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 50,
+  "force": {
+   "tripletKit": "on"
+  },
+  "set": {
+   "master.CENTS": 18
+  }
+ },
+ {
+  "name": "everything13b-dust69-monowith",
+  "corpus": [
+   20261009,
+   69
+  ],
+  "seconds": 50,
+  "layout": 1,
+  "force": {
+   "tripletKit": "on"
+  },
+  "set": {
+   "master.CENTS": 18
+  }
+ }
+]

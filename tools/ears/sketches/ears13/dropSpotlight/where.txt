@@ -1,0 +1,2 @@
+# Ears 13b dropSpotlight: on the chords channel (chords.RETUNE=1), the drums and the bass routed in.
+channel chords

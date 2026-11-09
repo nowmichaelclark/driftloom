@@ -14,6 +14,19 @@ and the scripts are in `tools/ears/sketches/ears13/`; `core/sketch/` is back
 to the veil demonstration and `core/` is unchanged. The clips are on the
 branch `ears13-clips` (below), deleted after the verdicts (2026-11-08); `tools/ears/sketches/ears13/README.md` rebuilds them.
 
+**Ears 13b** (Opus 5.5, high), 2026-11-08, in a cloud Claude Code session,
+on `main` at d9190bf: the seven candidates that waited on levers, sketched
+with queue item 99's levers in the ranked order, and one new instrument,
+**twang** (#13). Five are levers alone (no block): tripletKit, dottedPulse
+and planingSevenths are forced levers, slowOpening and tuningOffset moved
+constants, widePad a space pin. dropSpotlight and twang are blocks in
+`core/sketch/` (`chords.RETUNE=1`, no silent organ). The same corpus, Let the
+loop wander on, the stereo baseline, every segment at -18 LUFS; 45 s a loop
+(slowOpening 100 s, dropSpotlight and the sampler 50 s). Each section below
+ends with its **Ears 13b sketch**; "What the levers did" says plainly where a
+lever falls short and what would do. The clips are on the branch
+`ears13b-clips`, deleted after the verdicts (2026-11-09).
+
 ## Verdicts
 
 **Mikey, 2026-11-08:** everything sounded fine, no notes: the sampler and all
@@ -25,21 +38,33 @@ where any of them can still be tuned or dropped. Seven candidates could not
 be sketched yet: each needs a lever the sketch build doesn't have (see
 "Levers wanted", queue item 99), and their clips wait for an Ears 13b.
 
+**Mikey, 2026-11-09 (Ears 13b):** "all the clips sound great": the 13b
+sampler and all eight approved, every version (dottedPulse's pulse and
+kick332, dropSpotlight struck and swelling, twang soft, slow and bright), at
+the sketched levels. As with the first five, the versions go in as options
+weighted by the vibes. What a lever could not do yet ("What the levers did":
+tripletKit on eighth-note kits, the quiet pulse, kick332 on most kits, the
+tune under planing sevenths, the drop's late bell, twang on the melody) is
+the build's to settle, with the levers' other halves; the clips are what was
+approved.
+
 | # | Candidate | What it is | Clip | Verdict |
 |---|---|---|---|---|
 | 0 | 00-everything | The sampler: each loop with one or two of the sketched five | 00 | Approved |
-| 1 | tripletKit | A kit in threes: hats and ghost hits on the thirds of the beat, a 12/8 shuffle at 77 to 127 BPM | (lever wanted) | |
+| 1 | tripletKit | A kit in threes: hats and ghost hits on the thirds of the beat, a 12/8 shuffle at 77 to 127 BPM | 13b 01 | Approved |
 | 2 | lowBell | A struck low bell (D2 to C#3) on each chord's root; a swelling kind too | 01 | Approved, both versions |
 | 3 | padWow | A slow tape-like wow on the chord layer only (14 cents at 0.5 Hz), the kick and bass steady | 02 | Approved |
-| 4 | widePad | The chord layer much wider, on the side only, so mono stays the same (batch 5's) | (lever wanted) | |
+| 4 | widePad | The chord layer much wider, on the side only, so mono stays the same (batch 5's) | 13b 02 | Approved |
 | 5 | colorTone | A held 13th over major chords and an 11th over minor ones, on about half the chords | 03 | Approved |
 | 6 | deepDuck | subDuck's deep, long kind: the bass dips 14 dB at each kick and takes 0.6 s to come back | 04 | Approved |
 | 7 | wideSweep | padSweep's two far ends: a 4-octave ride every 16 s, and a 2.6-octave swing every 6.5 s | 05 | Approved, both versions |
-| 8 | dottedPulse | A part every three eighths, or a 3-3-2 kick (batch 5's) | (lever wanted) | |
-| 9 | slowOpening | lateFloor's long end: the floor arriving 40 to 90 s in, fading up | (lever wanted) | |
-| 10 | planingSevenths | Major sevenths moving in parallel, a whole step apart | (lever wanted) | |
-| 11 | dropSpotlight | A low bell or held lead alone in a floor drop (batch 5's) | (lever wanted) | |
-| 12 | tuningOffset | A whole loop a little off A440 (up to about 40 cents), drawn per loop | (lever wanted) | |
+| 8 | dottedPulse | A part every three eighths, or a 3-3-2 kick (batch 5's) | 13b 03 (two versions) | Approved, both versions |
+| 9 | slowOpening | lateFloor's long end: the floor arriving 40 to 90 s in, fading up | 13b 04 | Approved |
+| 10 | planingSevenths | Major sevenths moving in parallel, a whole step apart | 13b 05 | Approved |
+| 11 | dropSpotlight | A low bell or held lead alone in a floor drop (batch 5's) | 13b 06 (two versions) | Approved, both versions |
+| 12 | tuningOffset | A whole loop a little off A440 (up to about 40 cents), drawn per loop | 13b 07 | Approved |
+| 13 | twang | New (Ears 13b): a synth in the spirit of a tremolo baritone guitar, picking each chord low and slow | 13b 08 (three versions) | Approved, all three versions |
+| 0b | 00-everything-13b | The 13b sampler: five loops, each with one or two of the eight | 13b 00 | Approved |
 
 **Listen in this order:** `00-everything` (without, then with), then `01` to
 `05`. Each candidate has one file per version, `-without` first: every file of
@@ -48,6 +73,17 @@ a candidate holds the same four loops at the same times (0:00, 0:46, 1:32 and
 at the same point. `timestamps.json` in the download lists them. Every segment
 is matched to -18 LUFS, so a change in loudness is not what you hear; a
 change in balance is.
+
+**Ears 13b, listen in this order:** `00-everything-13b` (without, then
+with), then `01` to `08` in the batch's ranked order (tripletKit, widePad,
+dottedPulse, slowOpening, planingSevenths, dropSpotlight, tuningOffset) and
+twang last. As before, every file of a candidate holds the same loops at the
+same times (0:00, 0:46, 1:32, 2:18; the sampler 0:00, 0:51, 1:42, 2:33,
+3:24; dropSpotlight 0:00, 0:51, 1:42, 2:33; slowOpening 0:00, 1:41, 3:22),
+listed in the download's `timestamps.json`. A re-timing lever (tripletKit,
+kick332, planing, tuning) changes notes rather than adding a part, so its
+"part" reading in the measurements is the difference of two renders, not
+something added.
 
 **How they would go in, if approved** (the rule Mikey set on 2026-10-18 for
 batch 5): today's behavior stays one option of every choice; each approved
@@ -84,7 +120,7 @@ Each lead the brief named, checked against what Driftloom does today:
 
 ## Candidates, ranked
 
-### 1. tripletKit: a kit in threes (not sketched: lever wanted)
+### 1. tripletKit: a kit in threes (sketched in Ears 13b)
 
 - **Records (5):** Lifeforms, Vertical Pig (1,475 drum onsets: 52% on the three
   thirds of the 122.6 BPM beat, 0% on a straight eighth); Animal Crossing's 3AM
@@ -118,6 +154,20 @@ Each lead the brief named, checked against what Driftloom does today:
 - **How it would go in:** an option of a seeded per-loop choice (today's kit
   first), weighted by the vibes; the generator's drum patterns gain a
   three-to-a-beat family.
+- **Ears 13b sketch** (`"force": {"tripletKit": "on"}`; dust #69 at 76 BPM,
+  bloom #74 at 87, tide #52 at 92, undertow #75 at 118, kits that play
+  sixteenths): from the player's own note list (`dlrender --calls`), every
+  hit off the beat lands on a third (the straight eighth 0 to 1%, the
+  sixteenths 0 to 1%, against 32 to 41% and 27 to 37% today), and the kick
+  stays on the beat (100%; tide #52's hand kit has none). The thirds hold 62%
+  of the non-kick hits on dust #69 and 40 to 52% on the others, where the
+  hats on the beat stay: the 60% yardstick holds on one loop of four. The kit
+  loses about a third of its hits (dust #69 116 to 69, bloom #74 180 to 124),
+  since the eighths are dropped, not moved. The 2-5 kHz share no higher (0.1
+  to 0.0%, 0.3 to 0.2%); loudness -0.65 to -0.01 LU; no notes stolen beyond
+  today's (75 to 72 on dust #69, the same elsewhere); the render's time within
+  its noise. **It does not do what the batch needs on most kits** (see "What
+  the levers did").
 
 ### 2. lowBell: a struck low bell on the chord's root (sketched)
 
@@ -205,7 +255,7 @@ Each lead the brief named, checked against what Driftloom does today:
 - **How it would go in:** an option of a seeded per-loop choice on the chords
   channel, today's none first, weighted toward the hazy vibes.
 
-### 4. widePad: the chords wide on the side only (batch 5's; not sketched: lever wanted)
+### 4. widePad: the chords wide on the side only (batch 5's; sketched in Ears 13b)
 
 - **Records:** batch 5's eight (piles 1 and 2), and 10 more here: Far Away
   Trains Passing By (Trees' pad at correlation 0.04 at 1 to 2 kHz; 2.1 dB mono
@@ -240,6 +290,25 @@ Each lead the brief named, checked against what Driftloom does today:
 - **How it would go in:** a space option, drawn per loop by the vibes, beside the
   baseline; its late-opening kind (width growing over 60 to 120 s) as a second
   option.
+- **Ears 13b sketch** (no block: `"space"` pins `spread-chords` 1.4,
+  `spread-max` 2, the width ceiling raised to -4, -5 and -7 dB for busy,
+  sparse and very sparse loops, and `spread-cutoff` 250 Hz; shrine #0, thaw
+  #71, undertow #45, grove #62). `spread-chords` alone stops at the ceiling:
+  the chord stem reached -6.0 to -8.8 dB however far it went. With the
+  ceiling raised, the chord layer alone (the other layers asked off, a close
+  stand-in for its stem) goes from -10.9 to -18.5 dB to -5.1 (shrine), -8.7
+  (thaw, the sparse one, so the narrow end), -3.6 (undertow) and -1.8 dB
+  (grove: wider than the yardstick's -4, for Mikey's ears). The whole mix:
+  the fold to mono is exact (0.00 LU, every octave 0.00 dB: the spread is side
+  only); side under 120 Hz -31.9 to -71.4 dB (with the baseline's 200 Hz
+  highpass grove read -27.7, so the 250 Hz one is needed for the -30
+  yardstick); correlation's 5th percentile 0.71 to 0.92 (median 0.93 to
+  1.00); the side above 200 Hz from -16.0 to -31.5 dB to -12.4 to -25.6;
+  balance within 0.1 dB; stereo loudness +0.00 to +0.14 LU. The image moves
+  more on shrine #0 (bounce 0.8 to 2.6 dB, the spread's slow sway made wider);
+  under 0.5 dB more elsewhere. No block, so no cost of its own (the render
+  within its timing's noise). The late-opening kind cannot be sketched: see
+  "What the levers did".
 
 ### 5. colorTone: a held 11th or 13th over the chord (sketched)
 
@@ -371,7 +440,7 @@ Each lead the brief named, checked against what Driftloom does today:
 - **How it would go in:** two more options of padSweep's setting ("wide",
   "fast"), each with its ranges, drawn per loop by the vibes.
 
-### 8. dottedPulse: a part every three eighths (batch 5's; not sketched: lever wanted)
+### 8. dottedPulse: a part every three eighths (batch 5's; sketched in Ears 13b)
 
 - **Records:** batch 5's three (GAK 1 and 2, Analogue Bubblebath 4 and 5), and
   five more here: Bubble Universe! (Planck Lengths' kick every 0.625 s, 1.5 beats
@@ -388,8 +457,24 @@ Each lead the brief named, checked against what Driftloom does today:
   beats); the beat still clear (the meter tool on the right tempo).
 - **How it would go in:** an option of a seeded per-loop choice in the drum
   patterns, today's first.
+- **Ears 13b sketch** (`"force": {"dottedPulse": "pulse"}` and `"kick332"`;
+  undertow #45 at 129 BPM, dust #69 at 76, grove #47 at 105, undertow #1 at 94,
+  all 16 steps a bar). **pulse:** a rim every six steps, 32 to 66 more notes
+  in 45 s; the rims alone repeat at 1.5 beats (0.29 to 0.88), while the whole
+  kit's strongest repeat stays at 1, 2 or 4 beats (the lilt is a layer under
+  the beat, as the records have it). At velocity 0.2 it is 38 to 43 LU under
+  the loop: a phone would play it (98% above 150 Hz), but it is likely too
+  quiet to hear as a lilt, for Mikey's ears. **kick332:** on undertow #45's
+  four on the floor the kick's repeat moves from 1 beat (0.82) to 1.5 beats
+  (0.63), a 3-3-2; on the other three it only moves the kicks the loop has to
+  the nearest of 0, 6 and 12, so a kit with no kick near the bar's middle
+  gets 0 and 12 (dust #69: the kick on a 3-beat repeat; grove #47 and undertow
+  #1: 1.5-beat repeats 0.00 and 0.24). Loudness -0.03 to -0.34 LU; on dust #69
+  the 20-60 Hz share rises 6.7 to 8.4% (kicks moved together), past the low
+  guard's 1 dB on its loudest window (+7.3 dB). No notes stolen beyond
+  today's; the render's time within its noise.
 
-### 9. slowOpening: the floor arrives late and slowly (not sketched: lever wanted)
+### 9. slowOpening: the floor arrives late and slowly (sketched in Ears 13b)
 
 - **Records (9):** 2814 (01: 90 s of pad alone, the floor at 1:29.5; the title
   track's bass at 1:28.5, the low end full by 1:48.5), Mirror's Edge
@@ -412,8 +497,20 @@ Each lead the brief named, checked against what Driftloom does today:
   reroll); a long wait only under the calm vibes; the fade never over 20 s.
 - **How it would go in:** a wider range and a fade in lateFloor's setting
   (`data/choices.txt`, `[setting latefloor]`), the long end leaned by the vibes.
+- **Ears 13b sketch** (`"force": {"lateFloor": "on"}`, `"set":
+  {"latefloor.SECONDS_MAX": 90, "latefloor.FADE": 12}`; dust #69, tide #39,
+  dust #49, 100 s each, against today and the approved lateFloor). From the
+  note list: the bass and the kit arrive at 56.9 and 69.5 s (dust #69), 51.7
+  and 54.6 s (tide #39), 62.3 s (dust #49), where the approved lateFloor brings
+  them at 19 to 32 s; at their first hits their velocity is 0.03 to 0.22 of
+  the loop's, about 0.4 six seconds on, and full by 12 to 14 s. Something
+  plays from the first second (the first note at 0.1 s). The 100 s are 2.5 to
+  4.1 LU quieter than today's (the floor is out longer; the approved: 0.6 to
+  1.2), and the clips match each segment's loudness, so the floorless start is
+  played louder than it would be in the app: listen for the arrival. No notes
+  stolen beyond today's; no cost (a wait). It does what the batch needs.
 
-### 10. planingSevenths: major sevenths a step apart (not sketched: lever wanted)
+### 10. planingSevenths: major sevenths a step apart (sketched in Ears 13b)
 
 - **Records (4):** Holographic (My Incomplete T.O.E.: Gmaj7, Fmaj7, Amaj7, with
   their 11s and 13s, over a G bass), Triangular Reformat (She Was Me: C#maj7,
@@ -431,8 +528,23 @@ Each lead the brief named, checked against what Driftloom does today:
   sits over.
 - **How it would go in:** an option of the progression's per-loop draw, today's
   first.
+- **Ears 13b sketch** (`"force": {"planingSevenths": "on"}`; shrine #0, tide
+  #39, thaw #71, grove #47; the chords read from the retunes of
+  `chords.RETUNE=1`, the tune from the note list). Every chord is a major
+  seventh (100% of the chord time, 0% today). The roots move a whole step or
+  a minor third in 50 to 100% of the changes (thaw 100%, shrine 86%, grove
+  76%, tide 50%; a chord repeated not counted); the rest are 1, 4 or 5 semitones, where the progression's
+  cycle turns back to the tonic. **The clash is real:** the tune keeps the
+  key's scale, so the share of its time a semitone over a chord tone goes from
+  0 to 19% (grove), 9.6 to 15.8% (shrine) and 0 to 47% (thaw), and from 38% to
+  0.1% on tide #39, where the planed chords happen to suit the tune better
+  than today's. The four-note chords take more of the budget: notes stolen 3
+  to 15 (grove), 1 to 5 (shrine). Loudness -1.15 to +0.29 LU; the bass follows
+  the new roots (its loudest window under 60 Hz up 8 to 19 dB on shrine and
+  tide, the whole loop's 20-60 Hz share within 0.8 points). The loop's other
+  choices drew the same here. Render time within its noise.
 
-### 11. dropSpotlight: one part alone in the floor drop (batch 5's; not sketched: lever wanted)
+### 11. dropSpotlight: one part alone in the floor drop (batch 5's; sketched in Ears 13b)
 
 - **Records:** batch 5's five (Polygon Window, Bradley's Robot, Analogue
   Bubblebath 3, Caustic Window, Alberto Balsalm). Piles 3 to 6 add drops but not
@@ -441,8 +553,26 @@ Each lead the brief named, checked against what Driftloom does today:
   kit and bass drop.
 - **How it would go in:** with floorDrop's shapes and lowBell, a share of the
   drops in a loop that plays the bell.
+- **Ears 13b sketch** (`dropSpotlight/block.rs`, on the chords channel; the
+  drums routed into its mod 0 and the bass into mod 1: `"route": {"sketch":
+  "drums", "sketch.1": "bass"}`; floorDrop's shapes forced; dust #9, glade #21,
+  tide #39, grove #47, 50 s). The approved lowBell (its partials and register,
+  D2 to C#3), struck only in a drop: it hears the floor as the drums' kick
+  band (twice through a 150 Hz lowpass, so hats that keep playing in a drop
+  do not count) plus the bass, and when both stay 25 dB under their recent
+  peak for 1.2 s it strikes the chord's root, and each new root while the drop
+  lasts; the floor's return damps it over 1.5 s. A second version swells in
+  over 0.4 s (lowBell's swelling kind). **Measured:** 100% of its energy
+  inside the drops (plus a 2 s ring) on all four loops; it catches every drop
+  of 3 s or more, 1.5 to 2 s after it starts (it must hear the floor go
+  quiet first). The part 15.5 to 19.2 LU under the loop (swell 19.1 to 22.3);
+  in a drop its loudest 3 s are 1.0 to 8.1 dB under what is left (glade #21:
+  nearly as loud as the drop, for Mikey's ears); loudness within 0.11 LU; the
+  whole loop's 20-60 Hz unchanged (its loudest added window 17 to 36 dB under
+  the loop's median one). Cost on the kit 0.07 to 0.19% (lowBell's 0.09 to
+  0.22).
 
-### 12. tuningOffset: a whole loop a little off A440 (not sketched: lever wanted)
+### 12. tuningOffset: a whole loop a little off A440 (sketched in Ears 13b)
 
 - **Records (6):** Music Has the Right to Children (-47 to +46 cents by track,
   median +6.5), Lifeforms (-44 to +28), Kankyo Ongaku (-49 to +45, a
@@ -458,6 +588,66 @@ Each lead the brief named, checked against what Driftloom does today:
   not warm); never when a loop must sit with another (a game's own sounds);
   weighted toward the hazy vibes only.
 - **How it would go in:** a per-loop draw at load, beside echoTime's.
+- **Ears 13b sketch** (`"set": {"master.CENTS": ...}`, drawn by hand to cover
+  both ways inside ±40: vapor #4 -32, dust #69 +18, shrine #0 -24, haven #38
+  +27). The tuning read from each render (`librosa.estimate_tuning`, good to
+  about 8 cents) moves -31, +14, -26 and +28 cents (dust #69's tuned kick and
+  noises keep their pitch, so it reads short). Loudness -0.30 to -0.04 LU; the
+  bands within 2 points; no cost. The "without" file has all four at A440, the
+  "with" file each at its own offset, so it is heard as Next would play them:
+  one loop after another, each a little off. It does what the batch needs.
+
+### 13. twang: a tremolo baritone guitar's spirit, picking each chord (new, Ears 13b)
+
+- **What it is:** not from a record; Mikey's instrument idea, on the line he
+  drew on 2026-11-08 (`docs/DECISIONS.md`, "The music": a synth in the spirit
+  of a real instrument, never an imitation). Low and mid register, a bright
+  plucked attack falling quickly into a rounder tail, a slow amplitude
+  tremolo, at home in a big room with the wobble.
+- **The sketch** (`twang/block.rs`, on the chords channel with
+  `chords.RETUNE=1`): nothing sampled. Each string is two band-limited saws 4
+  cents apart through a two-pole lowpass whose cutoff starts at a multiple of
+  the note and falls over 0.12 s to a rounder one, a two-stage fall (most of
+  the pluck gone in a quarter second, a tail of about 3 s), and a pitch
+  settling from 8 cents sharp over 40 ms. At each chord it picks the chord
+  slowly, a beat apart: the lowest note's pitch class between E2 and D#3 (82
+  to 156 Hz), its fifth, then its tenth; six strings ring. One tremolo moves
+  everything that rings. **Three versions:** soft (4.5 Hz, 35% deep, the
+  pick's cutoff 18 times the note), slow (tempo-synced, two cycles a beat, 55%
+  deep, rounder: 12 times), bright (5.5 Hz, 45% deep, 30 times). Its level
+  follows the chord layer's, as lowBell's does.
+- **Why the chords and not the melody:** the melody channel hears no note
+  events at all (the core sends a channel only retunes, damps, bends and
+  chokes, and the melody none of them), so a source there cannot follow the
+  tune. It follows the chord layer's events, as lowBell does; see "What the
+  levers did" for what a melody twang needs.
+- **Measured** (no kit, slow, big rooms: vapor #70 at 53 BPM, thaw #10 at 67,
+  shrine #13 at 45, thaw #71 at 58; one build per version and loop, since the
+  picks and the synced tremolo need the tempo): the part 14.5 to 18.7 LU under
+  the loop (bright and soft the loudest, slow the quietest), its loudest 3 s
+  1.2 to 15.8 dB under; loudness within 0.07 LU. Its energy 62 to 77% at 60 to
+  250 Hz and 23 to 35% at 250 Hz to 1 kHz (low and mid); 20-60 Hz unchanged
+  (0.0 to 0.2%), 60-120 Hz within 0.8 points. The tremolo, read from the
+  part's level where the picks leave room for it: 4.50 and 4.54 Hz (soft),
+  5.42 and 5.50 Hz (bright), 1.93 Hz on thaw #71 at 58 BPM and 1.61 Hz on
+  shrine #13 at 45 (slow: two a beat); depth read 0.30 to 0.52 against 0.35 to
+  0.55 asked; on the busier loops the picks' own rhythm hides it in that
+  reading. The pick against the tail, on the kit's probes: 7.2% of the energy
+  above 1 kHz in the first 50 ms against 1.4% at 0.3 s (soft), 4.0 against
+  0.1% (slow), 9.1 against 3.4% (bright). Cost on the kit 0.21 to 0.30%.
+- **Yardstick (for the build):** a note at each chord change on the chord's
+  root, fifth and tenth, a beat apart, 82 to 400 Hz; the pick's share above 1
+  kHz falling to a third or less by 0.3 s; the level swinging 30 to 55% at 4 to
+  6 Hz or one or two cycles a beat; 14 to 19 LU under the loop; energy under 60
+  Hz within 1 dB of the loop without it.
+- **Guards:** the low-end guard (its register starts at E2); centered; never
+  over a kit busier than a soft one at first (it was heard on loops with none);
+  a level that follows the loop; never in a full stop (a release damps it).
+- **Closest today:** the nylon's strum (a plucked chord, brighter and higher)
+  and the harp; nothing with a tremolo.
+- **How it would go in:** a voice of the core, as a sound a layer plays (the
+  chords' or the melody's, once a voice can follow the tune), drawn per loop
+  like glass, today's none first, its three versions weighted by the vibes.
 
 ## Levers wanted
 
@@ -474,6 +664,21 @@ sketch build only (`--features sketch`), as item 83's levers do.
 | dropSpotlight | a sketch that hears the floor drop | a clip lever `--route sketch=drums` (`Core::route` into the sketch's `MODS`, as subDuck is keyed), or a floor-drop event sent to the channels |
 | tuningOffset | the loop's tuning | `master.CENTS` in NAMES, read where the core turns a note into Hz |
 | (every chord sketch) | the chords, without the organ | in the sketch build, send the chords channel a retune at every chord (today only while the organ plays), so a chord sketch needs no silent organ and sees arpeggiated chords whole |
+
+### What the levers did (Ears 13b)
+
+| Candidate | Did the lever do what the batch needs? | What would |
+|---|---|---|
+| tripletKit | Only on kits that play sixteenths. It re-times the hits on a beat's second and fourth sixteenths and drops the eighth, so an eighth-note kit loses its off-beats and gains no thirds (dust #9: 101 hits to 44, 98% on the beat, none on a third; dust #32 and halcyon #17 alike). Of the corpus's 27 kits in 16 steps, 21 have under 20% of their off-beat hits on sixteenths. In a 6/8 loop its thirds of the dotted beat are the eighths it already plays, so it only thins the hats (grove #62: 239 to 164, no thirds). | A lever that writes the triplet hats itself (three a beat at the loop's hat velocities) and moves the eighth to two thirds of the beat (the shuffle's place) rather than dropping it; 6/8 left alone |
+| widePad | Yes, with the width ceiling raised too: `spread-chords` alone stops at it (the chord stem at -6 to -9 dB). Its 250 Hz highpass is needed for the side under 120 Hz | The late-opening kind needs a space setting that moves over the loop (`spread-chords` from the baseline to the wide value over 60 to 120 s); a space pin holds one value |
+| dottedPulse, pulse | The rim repeats every 1.5 beats, but at velocity 0.2 it is 38 to 43 LU under the loop | Its velocity as a constant (`dottedpulse.VEL` in `tuning.rs`'s NAMES), or a tuned tick of its own |
+| dottedPulse, kick332 | Only on a four-on-the-floor kick (undertow #45). It moves the kicks a loop has to the nearest of 0, 6 and 12, so one with no kick near the bar's middle gets 0 and 12 | Writing the 3-3-2 kick itself (all three hits) rather than moving the loop's |
+| slowOpening | Yes | (none) |
+| planingSevenths | The chords, yes; the tune keeps the key's scale, so it clashes (up to 47% of its time a semitone over a chord tone) | A melody that follows the planed chord (its tones, the ninth, and the chord's own Lydian or Ionian scale), the lever's other half |
+| dropSpotlight | Yes, 1.5 to 2 s late: the sketch must hear the floor go quiet before it knows a drop has begun | A floor-drop event sent to the channels when a drop starts and ends (the other hook this table named) |
+| tuningOffset | Yes | (none) |
+| twang (new) | Not on the melody: the melody channel hears no note events, so it follows the chords | A note event to the melody channel in the sketch build (as `chords.RETUNE` sends the chords a retune), or item 83's sketch voice |
+| (every job) | `"force": {"CHOICE": "today"}` does not force a choice off: `dlrender` reads `today` as not forced, so a loop that drew the choice keeps it (shrine #0 drew lateFloor, so its "today" render was the approved one; slowOpening's clips use loops that draw none). `tools/clips.mjs`'s header says `today` is the first option | `dlrender --force` passing `today` through as the option's name (it is the first option's name in `data/choices.txt`), and a separate word for not forced |
 
 ## Dropped, one line each
 
@@ -532,6 +737,9 @@ never 0; a vibe not named keeps x1.
 | planingSevenths | dreamy x2, floating x2, jazzy x1.5, cosmic x1.5, wondrous x1.5, bubbly x1.5 | earthy x0.5, reverent x0.5, minimal x0.5 | Yes. |
 | dropSpotlight | mysterious x1.5, reflective x1.5, spacious x1.5, chiming x1.5 | (none) | Yes. |
 | tuningOffset | hazy x2, wistful x2, dusky x1.5, misty x1.5 | crisp x0.3, frosty x0.4, bright x0.5, chiming x0.5 | Yes, within ±40 cents. |
+| twang, soft | dusky x2, wistful x2, moonlit x1.5, spacious x1.5, mellow x1.5, cruising x1.5, reflective x1.5, swaying x1.5, hazy x1.5 | zany x0.4, goofy x0.4, bouncy x0.5, frosty x0.5, crisp x0.5, sour x0.5 | Yes: low, round and slow. |
+| twang, slow | meditative x2, dusky x1.5, droning x1.5, floating x1.5, dreamy x1.5, moonlit x1.5 | the same as soft, and lively x0.5 | Yes. |
+| twang, bright | cruising x2, plucky x1.5, golden x1.5, warm x1.5, adventurous x1.5, dusky x1.5 | the same as soft, and hushed x0.5 | Yes; the pick's brightness is the guard (a third or less above 1 kHz by 0.3 s). |
 
 **New profile:** the Windows 96 card's hazy-beats character (slow heavy beats,
 min7 vamps, a high tuned kick, the bass's tape drift) now has three of its
@@ -591,6 +799,21 @@ Every guard passes, as today's do. The side below 120 Hz rises on thaw #71
 (-71.8 to -47.6 dB) because the space's chord spread takes a little of the low
 bell; it stays 27 dB inside the limit. Nothing the guards see is placed: every
 sketch is centered.
+
+**Ears 13b's sampler** (dust #69, shrine #0, grove #47, thaw #71, tide #39,
+each with its draws below), mono against stereo as above:
+
+| Measure (5 loops) | Today | With the 13b sampler | Limit |
+|---|---|---|---|
+| Fold to mono, loudness; worst octave | 0.00 LU; 0.00 dB | 0.00 LU; 0.00 dB | ±0.5; ±1 |
+| Side under mid below 120 Hz | -38.1 to -71.8 dB | -34.3 to -56.1 dB | -20 or lower |
+| Side/mid above 200 Hz | -11.3 to -31.1 dB | -10.4 to -29.9 dB | (baseline -18) |
+| Correlation, median / 5th pct | 0.94 to 1.00 / 0.72 to 0.99 | 0.89 to 1.00 / 0.70 to 0.98 | 0.7+ / 0.3+ |
+| Balance | within 0.12 dB | within 0.17 dB | within ±2 |
+
+Every guard passes. Shrine #0 (widePad) is the one that widens (-23.5 to
+-12.4 dB above 200 Hz); thaw #71's side below 120 Hz rises (-71.8 to -48.8
+dB), the chords' spread taking a little of twang as it took of lowBell.
 
 ## Broken Friends: what Animal Crossing's hours say
 
@@ -665,6 +888,39 @@ rebuild every clip (`tools/ears/sketches/ears13/README.md`). Opus at 96 kbps,
   `-with-fast`; shrine #0, thaw #71, grove #62, undertow #45). Clearest on the
   first two.
 
+**Ears 13b** (the branch `ears13b-clips`, a `clips/` folder and nothing
+else, never opened as a PR or merged): download
+<https://github.com/nowmichaelclark/driftloom/archive/refs/heads/ears13b-clips.zip>.
+Deleted after Mikey's verdicts; `tools/ears/sketches/ears13/README.md` ("Ears
+13b") rebuilds every clip. Opus at 96 kbps, 23 files and `timestamps.json`,
+about 62 MB.
+
+- **00-everything-13b** (`-without`, `-with`; 0:00 dust #69 with tripletKit
+  and tuningOffset +18 cents; 0:51 shrine #0 with planingSevenths and widePad;
+  1:42 grove #47 with dropSpotlight and dottedPulse's pulse, its floor drops
+  forced; 2:33 thaw #71 with twang soft and tuningOffset -20; 3:24 tide #39
+  with slowOpening, from 30 s in, so the floor arrives about 22 s into its
+  segment). Chosen by hand to cover all eight.
+- **01-tripletKit** (`-without`, `-with`; dust #69, bloom #74, tide #52,
+  undertow #75: kits that play sixteenths, where the lever works).
+- **02-widePad** (`-without`, `-with`; shrine #0, thaw #71, undertow #45,
+  grove #62). Headphones or two speakers; in mono the two files are the same.
+- **03-dottedPulse** (`-without`, `-with-pulse`, `-with-kick332`; undertow
+  #45, dust #69, grove #47, undertow #1). The pulse is very quiet; kick332 is
+  clearest on the first loop.
+- **04-slowOpening** (`-without`, `-approved-lateFloor`, `-with`; 0:00 dust
+  #69, 1:41 tide #39, 3:22 dust #49, 100 s each). The floor arrives 52 to 70 s
+  into each.
+- **05-planingSevenths** (`-without`, `-with`; shrine #0, tide #39, thaw #71,
+  grove #47). Listen for the tune rubbing against the chords on thaw #71.
+- **06-dropSpotlight** (`-without`, `-with`, `-with-swell`; 0:00 dust #9, 0:51
+  glade #21, 1:42 tide #39, 2:33 grove #47; every file with floorDrop's shapes
+  forced, so the drops are the same).
+- **07-tuningOffset** (`-without`, `-with`; vapor #4 -32, dust #69 +18,
+  shrine #0 -24, haven #38 +27 cents).
+- **08-twang** (`-without`, `-with-soft`, `-with-slow`, `-with-bright`; vapor
+  #70, thaw #10, shrine #13, thaw #71: no kit, slow, big rooms).
+
 ## Not checked yet
 
 A phone's cost of the core build (the kit's cost column is a desktop's), the
@@ -674,6 +930,10 @@ voice (the core's player has no per-voice report yet; every sketch here is a
 channel block outside the voice budget, or a pinned setting of one, so neither
 can turn a note away), and lowBell and colorTone on arpeggiated loops (they hear
 chords through the organ, which hears one note at a time there).
+For Ears 13b's: twang and dropSpotlight on loops with a busy kit, twang on a
+6/8 loop and over long chords, renders longer than 100 s (slowOpening's wait
+plus a minute), the levers on a phone, and tripletKit's and dottedPulse's
+beat by the meter tool (read here from the note list, not the audio).
 
 ## For the brain (if approved; see the note under Verdicts)
 
@@ -697,6 +957,19 @@ chords through the organ, which hears one note at a time there).
   block gets no side in a stereo render (`blocks/mod.rs`, `whole`); the core
   writes mono renders as one channel, and `stereo_guard.py` wants two.
 
+- **Ears 13b, if approved:** slowOpening and tuningOffset as their
+  levers are (a wider lateFloor range with a fade; a tuning draw at load).
+  widePad as a space option with the ceiling raised and a 250 Hz highpass;
+  its late-opening kind needs a moving space setting first. dropSpotlight as
+  lowBell keyed by the generator's floor drop (an event, so it strikes on the
+  drop's first beat). twang as a voice of the core. tripletKit, dottedPulse
+  and planingSevenths need their levers' other halves (above) before a build
+  can be judged fairly; the clips show what each does today.
+- **For a hands session:** `dlrender --force CHOICE=today` does not force a
+  choice off (`examples/dlrender/clip.rs`); the melody channel gets no note
+  events; a sketch's own settings cannot be pinned, so a tempo-reading sketch
+  needs a build per loop (twang's twelve).
+
 ## Files
 
 `tools/ears/sketches/ears13/`: one folder per sketch (`block.rs`, `where.txt`),
@@ -704,4 +977,8 @@ chords through the organ, which hears one note at a time there).
 `ab.py` (a clips index as a render2 one, for `sketch_check.py` and
 `low_guard.py`), `make_clips.py`, `clip_plan.json`, `kit-report.txt`,
 `clips-timestamps.json` and a README. The measurements are in
-`docs/ears/raw/ears13-synthesis-raw.tar.gz` (no audio).
+`docs/ears/raw/ears13-synthesis-raw.tar.gz` (no audio). Ears 13b added
+`dropSpotlight/`, `dropSpotlightSwell/`, `twang/` (with `variant.py`),
+`make_jobs_13b.py`, `clip_plan_13b.json`, `kit-report-13b.txt` and
+`clips-timestamps-13b.json`; its measurements are in
+`docs/ears/raw/batch-6b-raw.tar.gz` (no audio).

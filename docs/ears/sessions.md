@@ -243,6 +243,24 @@ the brain and hands counter (Session 1, 2, ... in `docs/BRAIN.md`).
   numpy, scipy, librosa and soundfile hung for 8 minutes at low CPU; killed
   and run again it finished in a minute (add pyloudnorm for the guards). A
   worker restart kept the scratch folder and the builds.
+- **Ears 13b (the levered sketches, a cloud session): read the loop before the
+  lever.** Check each loop's meter and kit before choosing it for a rhythm
+  lever: 36 of the corpus's 80 loops are 12 steps a bar, and most 4/4 kits
+  play eighths, where tripletKit has nothing to move (`dlgen --show SEED -`
+  prints `stepsPerBar`, the kit and every part). Measure a lever from the
+  player's own notes, not the audio: `dlrender --calls DIR` writes every note
+  (voice, channel, time, pitch, length, velocity) and every retune, which gave
+  the triplet grid, the dotted repeats, the planed chords against the tune and
+  the floor's arrival exactly. Check what a loop draws on its own before
+  using it as a "without": `"force": {"X": "today"}` does not turn off a
+  choice the loop drew (shrine #0's lateFloor). A sketch that reads the tempo
+  needs a build per loop (twang: twelve builds, about 8 minutes). Two setup
+  notes: `cargo clippy` needed `rustup component add clippy` for the pinned
+  toolchain; and the session's safety check refuses `rm -rf ./*` after a
+  `cd`, so make the clips' orphan branch without a worktree or a removal:
+  `GIT_INDEX_FILE=/tmp/i git --work-tree=DIR add clips`, `git write-tree`,
+  `git commit-tree`, `git branch -f`. A worker restart kept the scratch folder
+  again.
 - **Long form needs minutes, not seconds (Ears 10).** The deep pass's
   sections and sweeps are at the scale of seconds; on beatless ambient its
   "sweeps" are mostly notes changing register. `tools/ears/longform.py` reads

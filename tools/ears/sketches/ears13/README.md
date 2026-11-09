@@ -13,8 +13,12 @@ copy a sketch in only to hear it, and put the folder back after
 | `lowBellSwell/` | the same with a 0.4 s attack | chords |
 | `colorTone/` | a held 13 over major chords, an 11 over minor ones | chords |
 | `padWow/` | a slow wow on the chord layer only | chords (whole channel) |
-| `widePad/` | the chord layer's side: renders nothing in stereo yet (a whole-channel block gets no side; batch 6, Levers wanted) | chords |
+| `widePad/` | the chord layer's side: renders nothing in stereo (a whole-channel block gets no side). Superseded in Ears 13b by item 99's `space` lever, no block | chords |
 | `everything/` | the sampler: lowBell, colorTone and padWow in one block; `use.sh b|c|w...` writes a variant with its parts beside it | chords |
+
+| `dropSpotlight/` | Ears 13b: lowBell alone in a floor drop, keyed by the drums (mod 0) and the bass (mod 1) routed in | chords |
+| `dropSpotlightSwell/` | the same with lowBell's swelling attack (0.4 s) | chords |
+| `twang/` | Ears 13b: a synth in the spirit of a tremolo baritone guitar, picking each chord; `variant.py VERSION BPM` writes soft, slow or bright for one loop's tempo | chords |
 
 deepDuck and wideSweep are not blocks: they are the approved subDuck and
 padSweep with their settings pinned (`jobs/deepDuck.json`, `jobs/wideSweep.json`).
@@ -59,3 +63,40 @@ organ hears one note at a time.
 `KIT=report cargo test --release --lib --features sketch every_block` (rms,
 peak, the 2-5 kHz share, cost). `clips-timestamps.json`: where each loop starts
 in each clip.
+
+## Ears 13b (batch 6's levered candidates, and twang)
+
+`make_jobs_13b.py OUTDIR` writes the job lists for the seven candidates that
+waited on item 99's levers, twang and the sampler (`docs/ears/batch-6.md`
+says what each measured). Five are levers only and render on any sketch
+build without `"sketch"`: tripletKit, dottedPulse and planingSevenths are
+forced levers, slowOpening and tuningOffset are `set` constants, widePad is
+a `space` pin (with the width ceiling raised too: `spread-chords` alone
+stops at the ceiling). dropSpotlight needs its build (and
+`dropSpotlightSwell/` for the swelling kind), twang one build per version
+and loop:
+
+```sh
+python3 -P tools/ears/sketches/ears13/make_jobs_13b.py /tmp/j
+node tools/clips.mjs /tmp/j/tripletKit.json /tmp/r/tripletKit     # and the other levers
+cp tools/ears/sketches/ears13/dropSpotlight/{block.rs,where.txt} core/sketch/
+cd core && cargo build --release --locked --features sketch --example dlrender && cd ..
+cp core/target/release/examples/dlrender /tmp/dl-drop
+node tools/clips.mjs /tmp/j/dropSpotlight.json /tmp/r/dropSpotlight --bin /tmp/dl-drop
+python3 -P tools/ears/sketches/ears13/twang/variant.py slow 58   # thaw #71's tempo
+cd core && cargo build --release --locked --features sketch --example dlrender && cd ..
+git checkout core/sketch
+```
+
+widePad's 13b jobs are `widePad-13b.json` (Ears 13's `widePad.json` is its
+block's). twang's loops and tempos: vapor #70 53, thaw #10 67, shrine #13 45, thaw #71
+58 BPM; its jobs are `twang-<loop>.json` (the `none` tag on any build). The
+sampler's five `every13b-*.json` render with the plain build except grove #47
+(the dropSpotlight build) and thaw #71 (twang soft at 58). The clips:
+`make_clips.py clip_plan_13b.json RENDERDIR CLIPDIR` (twang's renders from
+`RENDERDIR/twang/`, the sampler's from `RENDERDIR/everything13b/`).
+`kit-report-13b.txt` has the two blocks' kit lines.
+
+Every dropSpotlight and twang job sets `chords.RETUNE=1` (no silent organ).
+The melody channel hears no note events at all, so twang follows the chords,
+as lowBell does; a melody voice needs a lever (batch 6, "Levers wanted").
