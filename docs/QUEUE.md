@@ -187,6 +187,41 @@ loop carries its own track (`change_with_track`), so a page asleep at a
 hand-over leaves the core playing what it would have set. The opening loop
 (before Play) is still drawn on the page: there is no core before a tap.
 
+## 100. When the core can't keep up, even on lite (GrapheneOS)
+
+**Hands:** Sonnet 5.5, high. App only; alongside 96, before 97.
+
+**Why** (brain, Session 30, 2026-11-10): a friend's Pixel 9 on GrapheneOS
+played "too fast and really skippy" (v151): the player on lite at 54.7% of
+real time (auto: fell behind at full), late, missed and dropped all 0,
+outputLatency 0.568 s. GrapheneOS's browser, Vanadium, turns off JIT
+compilation by default for every site, so WebAssembly runs on its
+interpreter (DrumBrake), several times slower; allowing "JavaScript JIT"
+for the site is the fix. The skips are the audio output running dry, which
+the core's own counts can't see; dropped chunks make the music lurch
+forward. Today the app, on lite, has nothing lower to switch to and keeps
+playing broken sound. (Pending: the friend's Diagnostics with JIT allowed;
+if the render share doesn't fall to a few percent, stop and leave a note.)
+
+**What:**
+- **Notice it:** a cost past the line on lite (the switch's own measure; the
+  hands pick the line from the tablet's and the phones' figures, so
+  Mikey's tablet never trips it), or fill-ins where the browser reports
+  them (`playoutStats`).
+- **Say it, plainly:** one line where the "can't play Driftloom" line goes
+  (Mikey, 2026-11-07), conservative wording for Mikey: "This browser is too
+  slow to play Driftloom smoothly. On GrapheneOS, allow JavaScript JIT for
+  this site." Play still works; the line stays until the cost is back
+  under the line. No new setting, no pop-up.
+- **Diagnostics:** a line naming it (`slow: lite past the line, Ns`), so a
+  copy says so.
+
+**Yardsticks:** `tools/autolite.mjs` with a new case (`stuck`: so much
+added per block that lite can't keep up) shows the line, and "steady",
+"slow" and "yours" never show it; `tools/rows.mjs` passes; on the friend's
+Pixel with JIT off, the line shows; with JIT allowed, it doesn't (for
+Mikey, from the friend). BUILD and CACHE together.
+
 ## 96. The checks on the player
 
 **Hands:** Sonnet 5.5, high.
