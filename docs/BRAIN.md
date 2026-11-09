@@ -319,8 +319,10 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   **2026-11-10:** a friend's Pixel 9 on GrapheneOS played "too fast and
   skippy": Vanadium runs WebAssembly interpreted (JIT off by default), the
   player at 55% of real time on lite. The friend tries "JavaScript JIT"
-  allowed for the site; queued item 100 (the app says so, rather than
-  playing broken sound).
+  allowed for the site only as a test; Mikey: that's a bandaid. Item 100
+  fixes it in the app: a render-ahead cushion when lite falls behind, then
+  a 24 kHz tier, a plain line last. Waits on the friend's `busiest:` line
+  with JIT off (peaks or average).
 - **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); the blind album's in-app checklist for bars and length (88b),
