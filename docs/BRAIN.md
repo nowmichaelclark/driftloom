@@ -316,6 +316,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   brain's next check is the phase's end after 98. Ears 13b (the seven
   levered candidates, plus a tremolo-twang synth voice in the spirit of a
   baritone guitar) prompt given in Session 30.
+  **2026-11-10:** a friend's Pixel 9 on GrapheneOS played "too fast and
+  skippy": Vanadium runs WebAssembly interpreted (JIT off by default), the
+  player at 55% of real time on lite. The friend tries "JavaScript JIT"
+  allowed for the site; queued item 100 (the app says so, rather than
+  playing broken sound).
 - **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); the blind album's in-app checklist for bars and length (88b),
