@@ -349,7 +349,7 @@ one before it.
    is ready; `main` keeps the fallback until then. *Done when:* promise
    1's stall test is clean and the testers' phones report zero late
    notes.
-4. **The game: Broken Friends** (Mikey, 2026-10-24; was Luanti).
+4. **The game: Broken Friends** (Mikey, 2026-10-24; was Luanti; after the app's 1.0, Mikey, 2026-11-10).
    Pulled forward so a real game tests the host API while it is still
    cheap to change: the Godot extension, a native audio output, and
    steering (the game tells the core which creature, what time and what

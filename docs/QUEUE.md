@@ -7,14 +7,15 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-08:** `main` is at v149. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-10:** `main` is at v149. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
 (2026-11-07). **Phase 3: item 93 done** (the player's module, 636 KB; the
 brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
 (#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
-and **95** (the picks through the core's commands); **next: 96**. Item
+and **95** (the picks through the core's commands); Ears 13b approved
+(2026-11-09). **Next: 103 (the fast gate), then 96** and "The road to 1.0". Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -187,51 +188,31 @@ loop carries its own track (`change_with_track`), so a page asleep at a
 hand-over leaves the core playing what it would have set. The opening loop
 (before Play) is still drawn on the page: there is no core before a tap.
 
-## 100. When the core can't keep up, even on lite (GrapheneOS)
+## 100. When a browser is too slow even on lite
 
-**Hands:** Opus 5.5, high. App and worklet; alongside 96, before 97.
+**Hands:** any. App only; after 97.
 
-**Why** (brain, Session 30, 2026-11-10): a friend's Pixel 9 on GrapheneOS
-played "too fast and really skippy" (v151): the player on lite at 54.7% of
-real time (auto: fell behind at full), late, missed and dropped all 0,
-outputLatency 0.568 s. GrapheneOS's browser, Vanadium, turns off JIT
-compilation by default for every site, so WebAssembly runs on its
-interpreter (DrumBrake), several times slower. The skips are the audio
-output running dry, which the core's own counts can't see; dropped chunks
-make the music lurch forward. On lite there is nothing lower today. Mikey
-(2026-11-10): asking users to allow JIT is a bandaid; fix it in the app.
-**Confirmed** (2026-11-10): with JIT allowed for the site, the same Pixel
-renders at 9.3% of real time on lite (54.7% interpreted): about 6x. **Waits
-on Mikey** (now in phase 3, or after it); if it goes ahead, the friend's
-`busiest:` line after three minutes with JIT off says peaks or average.
+**Why:** a friend's Pixel 9 on GrapheneOS played "too fast and really
+skippy" (v151, 2026-11-10): its browser, Vanadium, runs WebAssembly on an
+interpreter unless JIT is allowed for the site; the player took 54.7% of
+real time on lite interpreted and 9.3% with JIT allowed (about 6x). The
+skips are the audio output running dry, which the core's counts can't see.
+**Mikey (2026-11-10):** no browser workarounds and no cushion or lower tier;
+a browser too slow even on lite gets a plain line telling them to get the
+Driftloom app.
 
-**What,** in this order, each only where the one before isn't enough:
-1. **Render ahead when behind:** when the switch's measure says lite is
-   falling behind, the worklet spends its spare time rendering ahead into a
-   cushion (aim 150 to 300 ms, grown and shrunk by what the device needs),
-   so peaks come out of the cushion instead of the output running dry.
-   Events and the cursor are shifted by the cushion, so what the page shows
-   stays what is heard; a command is heard a cushion later, only on such a
-   device (fast devices keep no cushion and today's response).
-2. **A lightest tier below lite, automatic:** the core at 24 kHz (a new core
-   at the other rate, as the lite switch does today; the browser
-   resamples), roughly half the cost; only when the cushion can't hold.
-   For Mikey's ears: the top end is a little duller.
-3. **Last, a plain line** where the "can't play Driftloom" line goes
-   (Mikey, 2026-11-07) if even that falls behind: "This browser is too
-   slow to play Driftloom smoothly." (On GrapheneOS it may add: allowing
-   JavaScript JIT for this site helps.) No pop-up, no new setting.
-- **Diagnostics** names each step taken (`cushion: N ms`, `tier: 24 kHz`),
-  and the fill-ins where the browser reports them (`playoutStats`).
+**What:** notice it (lite past a line on the switch's own measure, set from
+the tablet's and the phones' figures so Mikey's tablet never trips it; or
+fill-ins where `playoutStats` reports them); one line where the "can't play
+Driftloom" line goes (Mikey, 2026-11-07): "This browser is too slow to play
+Driftloom smoothly. Get the Driftloom app." The link is one constant, empty
+until the Android app has a page (F-Droid), and the second sentence shows
+only when it is set. Play still works; no pop-up, no new setting.
+Diagnostics: `slow: lite past the line, Ns`.
 
-**Yardsticks:** `tools/autolite.mjs` with new cases (`peaks`: bursts past a
-block's length on an average under it, played with no fill-in once the
-cushion is up; `stuck`: lite can't keep up, the tier takes over, then the
-line), and "steady", "slow" and "yours" unchanged (no cushion on a device
-that keeps up); `tools/rows.mjs` and `tools/stalls.mjs` pass; nothing that
-plays moves on a fast device (the baseline). On the friend's Pixel with JIT
-off it plays smoothly (for Mikey, from the friend). BUILD and CACHE
-together.
+**Yardsticks:** `tools/autolite.mjs` with a `stuck` case shows the line;
+"steady", "slow" and "yours" never show it; `tools/rows.mjs` passes. BUILD
+and CACHE together.
 
 ## 96. The checks on the player
 
@@ -316,11 +297,57 @@ it says, and off it is bit for bit today); `core/sketch/README.md` and the
 header of `tools/clips.mjs` document the new levers; clippy pedantic clean
 with the feature; the standing checks unchanged.
 
-## After phase 3 (brain, 2026-11-07)
+## The road to 1.0 (Mikey, 2026-11-10)
 
-- **Ears 13's sound batch** (the second synthesis, piles 3-6), built and
-  heard before phase 4 (Mikey, 2026-10-15: more instruments, sounds and
-  vibes before the game). With one generator, each change is made once.
+**The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends
+and the other games wait (the core already works in Broken Friends); the
+music app is finished first. Order, after 103: phase 3's 96, 97, 100 and
+98's hands part; then 101, 84b and 102; then the known issues and the
+polish a 1.0 needs. Each sound change merges under the policy and is
+gathered into one listening album for Mikey; what needs his ears or a
+decision goes in `docs/notes/for-mikey.md` and the work moves on.
+
+## 103. The fast gate (first)
+
+**Hands:** any. CI only.
+
+**Why** (Mikey, 2026-11-10): no session waits on the slow renders until the
+app is 1.0 and on F-Droid. On a recent PR: the powerpc golden renders 70
+min, the core job 44, aarch64 24, armv7 19, wasm32 17, endless 12.
+
+**What:** split `.github/workflows/core.yml`. **The gate**, on every PR and
+push, aims under 15 minutes: `build-core.sh --check`, `cargo test --locked`
+(and the sketch build), clippy pedantic, the Node tests,
+`gen-golden.mjs --check` in Node, and the core baseline if its own time is
+a few minutes (it is the "nothing moved" guard; measure each step and say).
+**The nightly**, on a schedule and by hand (`workflow_dispatch`), never
+gating a merge: every target's golden renders, endless 24 hours,
+`gen-golden --chromium`, `ahead --sweep`, `rates.mjs`, the balance lock's
+long run, and any core-job step over a few minutes. A red nightly is fixed
+by the next session that sees it. Locally, sessions run the gate's set,
+not the slow renders. The merge policy below says so. **Back as gates at
+1.0 on F-Droid.**
+
+## 101. Batch 6, built
+
+**Hands:** Opus or Fable, high. After 97 (one generator, so each change is
+made once). Split as 101a, 101b and on, one PR each, in batch-6's ranked
+order or the order the code wants.
+
+**What:** the fourteen approved (`docs/ears/batch-6.md`, Verdicts; Mikey,
+2026-11-08 and 2026-11-09, all at the sketched levels, every version as an
+option weighted by the vibes): tripletKit, lowBell (struck, swelling),
+padWow, widePad, colorTone, deepDuck, wideSweep (wide, fast), dottedPulse
+(pulse, kick332), slowOpening, planingSevenths, dropSpotlight (struck,
+swelling), tuningOffset, and twang (soft, slow, bright), each as its
+section and "For the brain" say. Batch 5's rule (Mikey, 2026-10-18): today's
+behavior stays one option of every choice; weights from the batch's
+[JUDGMENT] lines, never 0. Where a lever fell short ("What the levers
+did"), the build finishes it and says how. The standing rules for sound
+items (level, cost, the coffee-shop probe, refusals); the balance lock and
+the baseline move on purpose, said in each PR. Then the batch album
+(Session 26's way): loops with each, for Mikey.
+
 - **84b, the chords nearer the tune** (Mikey's blind album, 2026-11-07): of
   item 84's octave moves he preferred, wherever he heard a difference, the
   chords nearer the melody: where 84 lifted the chords up toward the tune
@@ -329,8 +356,43 @@ with the feature; the standing checks unchanged.
   sung-hal, "a slight difference, but I might not"). Keep 84's rule (the
   octave read from the progression, so a pin can't flip it) and change its
   aim: the chords sit within about a fifth to an octave under the tune,
-  never pushed down to about 17 semitones under it. A small listening check
-  on more of 84's downward movers before it merges.
+  never pushed down to about 17 semitones under it. It merges under the
+  policy; more of 84's downward movers go in the album for Mikey, and a
+  revert follows if he hears worse.
+
+## 102. Long pieces, composed
+
+**Hands:** Fable, high. After 101; the composing work promise 11 left for
+later (`docs/CORE.md`, "Any length, up to endless";
+`core/src/generator/piece.rs`).
+
+**Why** (Mikey, 2026-11-10): the longer lengths should sound composed.
+Today a piece past 32 bars is its loop played section after section, each
+the loop's next wandered pass: one idea, wandering. Mikey wants both
+journeys (2026-10-13): **an arc**, as a symphony's (themes that return,
+changed; a build and a release; related keys; a close), and **long, slow
+wandering** (one thing at a time moving, long held states, nothing
+abrupt), chosen per piece by the vibes and somewhat at random (his taste),
+and pinnable by a request.
+
+**Rules:** promise 11 holds: any section reached straight from the seed and
+its number, the same memory and cost for 64 bars or Endless; Endless never
+ends (arcs in turn, or the wander); loops of up to 32 bars play exactly as
+today (the balance lock holds); changes at phrase lines, never mid-phrase;
+music computers are good at, not copies (Mikey, 2026-11-08). The
+generation goldens' long-length cases move on purpose, said in the PR.
+
+**Yardsticks:** a piece map (`dlgen --map SEED REQUEST`: each section's key,
+tempo, energy, theme and journey) for any length; corpus checks that an
+arc's themes return and its energy rises and falls, that a wander moves at
+most one thing a section, and that a section's cost doesn't grow with its
+number; then, for Mikey, a listening set: a few pieces each at 64, 256 and
+1,024 bars and Endless, as album codes he plays in the app, with short
+excerpts (the start, a quarter, half, three quarters, the close) so a piece
+can be judged in minutes.
+
+**Also noted, not on the road to 1.0:**
+
 - **The player's stack** (item 94a, PR #337): its calls take 56 to 60 KB
   of the caller's stack (wasm32, measured; `main` the same), near
   Emscripten's 64 KB default; the header says `-sSTACK_SIZE`. Fine for the
@@ -489,3 +551,6 @@ Mikey decides this line:
 
 - (yes, from Mikey) When CI is green and every check above passes, Claude
   Code merges its own PR and starts the next item.
+- (Mikey, 2026-11-10) Until the app is 1.0 and on F-Droid, "CI is green"
+  means the fast gate (item 103); the nightly's slow renders never hold a
+  merge, and a red nightly is fixed by the next session that sees it.
