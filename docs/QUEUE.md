@@ -189,38 +189,48 @@ hand-over leaves the core playing what it would have set. The opening loop
 
 ## 100. When the core can't keep up, even on lite (GrapheneOS)
 
-**Hands:** Sonnet 5.5, high. App only; alongside 96, before 97.
+**Hands:** Opus 5.5, high. App and worklet; alongside 96, before 97.
 
 **Why** (brain, Session 30, 2026-11-10): a friend's Pixel 9 on GrapheneOS
 played "too fast and really skippy" (v151): the player on lite at 54.7% of
 real time (auto: fell behind at full), late, missed and dropped all 0,
 outputLatency 0.568 s. GrapheneOS's browser, Vanadium, turns off JIT
 compilation by default for every site, so WebAssembly runs on its
-interpreter (DrumBrake), several times slower; allowing "JavaScript JIT"
-for the site is the fix. The skips are the audio output running dry, which
-the core's own counts can't see; dropped chunks make the music lurch
-forward. Today the app, on lite, has nothing lower to switch to and keeps
-playing broken sound. (Pending: the friend's Diagnostics with JIT allowed;
-if the render share doesn't fall to a few percent, stop and leave a note.)
+interpreter (DrumBrake), several times slower. The skips are the audio
+output running dry, which the core's own counts can't see; dropped chunks
+make the music lurch forward. On lite there is nothing lower today. Mikey
+(2026-11-10): asking users to allow JIT is a bandaid; fix it in the app.
+**First:** the friend's Diagnostics after three minutes with JIT off (the
+`busiest:` line) says whether it is peaks (busiest past 100%, average about
+55%) or the average; the brain adds it here before the item starts.
 
-**What:**
-- **Notice it:** a cost past the line on lite (the switch's own measure; the
-  hands pick the line from the tablet's and the phones' figures, so
-  Mikey's tablet never trips it), or fill-ins where the browser reports
-  them (`playoutStats`).
-- **Say it, plainly:** one line where the "can't play Driftloom" line goes
-  (Mikey, 2026-11-07), conservative wording for Mikey: "This browser is too
-  slow to play Driftloom smoothly. On GrapheneOS, allow JavaScript JIT for
-  this site." Play still works; the line stays until the cost is back
-  under the line. No new setting, no pop-up.
-- **Diagnostics:** a line naming it (`slow: lite past the line, Ns`), so a
-  copy says so.
+**What,** in this order, each only where the one before isn't enough:
+1. **Render ahead when behind:** when the switch's measure says lite is
+   falling behind, the worklet spends its spare time rendering ahead into a
+   cushion (aim 150 to 300 ms, grown and shrunk by what the device needs),
+   so peaks come out of the cushion instead of the output running dry.
+   Events and the cursor are shifted by the cushion, so what the page shows
+   stays what is heard; a command is heard a cushion later, only on such a
+   device (fast devices keep no cushion and today's response).
+2. **A lightest tier below lite, automatic:** the core at 24 kHz (a new core
+   at the other rate, as the lite switch does today; the browser
+   resamples), roughly half the cost; only when the cushion can't hold.
+   For Mikey's ears: the top end is a little duller.
+3. **Last, a plain line** where the "can't play Driftloom" line goes
+   (Mikey, 2026-11-07) if even that falls behind: "This browser is too
+   slow to play Driftloom smoothly." (On GrapheneOS it may add: allowing
+   JavaScript JIT for this site helps.) No pop-up, no new setting.
+- **Diagnostics** names each step taken (`cushion: N ms`, `tier: 24 kHz`),
+  and the fill-ins where the browser reports them (`playoutStats`).
 
-**Yardsticks:** `tools/autolite.mjs` with a new case (`stuck`: so much
-added per block that lite can't keep up) shows the line, and "steady",
-"slow" and "yours" never show it; `tools/rows.mjs` passes; on the friend's
-Pixel with JIT off, the line shows; with JIT allowed, it doesn't (for
-Mikey, from the friend). BUILD and CACHE together.
+**Yardsticks:** `tools/autolite.mjs` with new cases (`peaks`: bursts past a
+block's length on an average under it, played with no fill-in once the
+cushion is up; `stuck`: lite can't keep up, the tier takes over, then the
+line), and "steady", "slow" and "yours" unchanged (no cushion on a device
+that keeps up); `tools/rows.mjs` and `tools/stalls.mjs` pass; nothing that
+plays moves on a fast device (the baseline). On the friend's Pixel with JIT
+off it plays smoothly (for Mikey, from the friend). BUILD and CACHE
+together.
 
 ## 96. The checks on the player
 
