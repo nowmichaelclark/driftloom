@@ -112,6 +112,35 @@ console.log('the hand-off');
   check('fades out to it', calls.some((c) => c[0] === 'fadeOut' && c[1] === 4.5 && c[2] === 5));
 }
 
+console.log('too slow even on lite (queue item 100)');
+{
+  // Reports of two seconds, eight quarter-seconds each, `behind` of them
+  // over their whole time; `fills` the device's count so far.
+  const run = (reports, quality = 'lite') => {
+    const busy = new q.Busy();
+    let t = 0;
+    const add = (r) => { busy.add({ max: r.max ?? 0.7, behind: r.behind || 0, windows: 8, seconds: 2 }, true, t, r.fills ?? null); t += 2; };
+    for (let i = 0; i < 3; i++) add({});
+    reports.forEach(add);
+    return q.stuck({ quality, busy });
+  };
+  const of = (n, r) => Array.from({ length: n }, () => r);
+  check('nothing before the span has played', run(of(5, { behind: 8 })) === null);
+  check('every quarter-second behind: too slow', /quarter-seconds behind/.test((run(of(10, { behind: 8 })) || {}).why || ''));
+  check(`${q.STUCK_BEHIND} behind in the span: too slow`, run([...of(9, {}), { behind: q.STUCK_BEHIND }]) !== null);
+  check('one fewer: not yet', run([...of(9, {}), { behind: q.STUCK_BEHIND - 1 }]) === null);
+  check('busy but never behind (the slow case, 60 to 95%): never', run(of(40, { max: 0.95 })) === null);
+  check('behind long ago, fine since: not now', run([{ behind: 8 }, { behind: 8 }, ...of(12, {})]) === null);
+  check('on full it is the switch\'s business, not this', run(of(10, { behind: 8 }), 'full') === null);
+  check('fill-ins where the browser counts them: too slow', /fill-ins/.test((run(Array.from({ length: 10 }, (_, i) => ({ fills: i }))) || {}).why || ''));
+  check('a few fill-ins: not yet', run(Array.from({ length: 10 }, (_, i) => ({ fills: Math.floor(i / 2) }))) === null);
+  check('no count of fill-ins: only the render says', run(of(10, { fills: null })) === null);
+  const busy = new q.Busy();
+  for (let t = 0; t < 40; t += 2) busy.add({ max: 1.2, behind: 8, windows: 8, seconds: 2 }, true, t);
+  busy.add({ max: 0.2, behind: 0, windows: 8, seconds: 2 }, false);
+  check('a pause starts the count again', q.stuck({ quality: 'lite', busy }) === null);
+}
+
 if (failures) {
   console.log(`\n${failures} failed`);
   process.exit(1);

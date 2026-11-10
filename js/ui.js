@@ -397,11 +397,19 @@ export function setColumnsLive(on) {
 // --------------------------------------------------------------- misc
 
 // A plain line in the info card's place (queue item 97; Mikey, 2026-11-07):
-// what a browser that cannot run the core is told. `null` brings the card
-// back.
-export function plainLine(text) {
+// what a browser that cannot run the core is told, or one too slow to play
+// it smoothly (queue item 100), with a second sentence that is a link
+// (`link`: { text, href }) where there is one. `null` brings the card back.
+export function plainLine(text, link = null) {
   const line = el('plainLine');
   line.textContent = text || '';
+  if (text && link && link.href) {
+    const a = document.createElement('a');
+    a.href = link.href;
+    a.textContent = link.text;
+    a.rel = 'noopener';
+    line.append(' ', a);
+  }
   line.hidden = !text;
   el('card').classList.toggle('plain', !!text);
 }
