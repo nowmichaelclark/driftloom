@@ -22,7 +22,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `core/AGENTS.md` | The core's standing rules, and the rules for sound items. | hands (core) |
 | `docs/QUEUE.md` | The work queue: status, standing rules, the open items, known issues, the merge policy. | hands, brain |
 | `docs/DONE.md` | One line for each merged PR since #277. | hands (to add), brain |
-| `docs/notes/` | One file for each note from the hands (`<item>-<name>.md`). | brain |
+| `docs/notes/` | One file for each note from the hands (`<item>-<name>.md`); `for-mikey.md` is the one list of what waits for Mikey's ears, phone, accounts or a decision. | brain, Mikey |
 | `docs/BRAIN.md` | How the work is organized, getting oriented, "Start here", listening albums, methods, tools. | brain |
 | `docs/DECISIONS.md` | What Mikey has decided: one dated line each, by topic. | brain, hands |
 | `ROADMAP.md` | What is still ahead, what was decided against, the contribution rules. | brain |

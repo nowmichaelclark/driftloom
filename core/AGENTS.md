@@ -16,7 +16,8 @@ core, and how to add a block, is `core/README.md`.
   `test/core-baseline.json`; `--update` on purpose, saying what moved). It
   needs Playwright's Chromium: `npm install --no-save playwright@1.56.1`.
 - `tools/golden.sh --strict wasm32-unknown-unknown` (also `--flush`,
-  `--blocks`, `--rates`, `--stereo`; CI runs every target).
+  `--blocks`, `--rates`, `--stereo`; the nightly runs every target, and
+  nothing here waits on it: `tools/gate.sh` is the gate, queue item 103).
   `node tools/rates.mjs`.
 - `node tools/stats.mjs --check` (the balance lock) when generation moves.
 - `tools/gen-core.sh [TARGET]`: the Rust generator (`src/generator/`, phase

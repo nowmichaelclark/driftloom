@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-10:** `main` is at v149. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-10:** `main` is at v151. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
@@ -15,7 +15,9 @@ checked by the brain's Session 29 and heard by Mikey in its blind album
 brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
 (#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
 and **95** (the picks through the core's commands); Ears 13b approved
-(2026-11-09). **Next: 103 (the fast gate), then 96** and "The road to 1.0". Item
+(2026-11-09). **The road to 1.0 (a long hands run, 2026-11-10; what waits
+for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate).
+**Next: 96**, then 97, 100, 98's hands part, 101, 84b, 102. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -311,26 +313,20 @@ session may restyle any of them later (Mikey, 2026-11-10). Each sound change mer
 gathered into one listening album for Mikey; what needs his ears or a
 decision goes in `docs/notes/for-mikey.md` and the work moves on.
 
-## 103. The fast gate (first)
+## 103. The fast gate (done, hands, 2026-11-10)
 
-**Hands:** any. CI only.
-
-**Why** (Mikey, 2026-11-10): no session waits on the slow renders until the
-app is 1.0 and on F-Droid. On a recent PR: the powerpc golden renders 70
-min, the core job 44, aarch64 24, armv7 19, wasm32 17, endless 12.
-
-**What:** split `.github/workflows/core.yml`. **The gate**, on every PR and
-push, aims under 15 minutes: `build-core.sh --check`, `cargo test --locked`
-(and the sketch build), clippy pedantic, the Node tests,
-`gen-golden.mjs --check` in Node, and the core baseline if its own time is
-a few minutes (it is the "nothing moved" guard; measure each step and say).
-**The nightly**, on a schedule and by hand (`workflow_dispatch`), never
-gating a merge: every target's golden renders, endless 24 hours,
-`gen-golden --chromium`, `ahead --sweep`, `rates.mjs`, the balance lock's
-long run, and any core-job step over a few minutes. A red nightly is fixed
-by the next session that sees it. Locally, sessions run the gate's set,
-not the slow renders. The merge policy below says so. **Back as gates at
-1.0 on F-Droid.**
+**Built:** `.github/workflows/core.yml` is the gate, on every PR and push,
+its jobs side by side, each one part of `tools/gate.sh` (what a session runs
+locally): `core` (`build-core.sh --check`, `cargo test --locked`, clippy
+pedantic), `sketch` (the same, sketch build), `node` (every
+`test/*.test.mjs`, `gen-golden.mjs --check`, the balance lock on the Rust
+generator) and `baseline` (the "nothing moved" guard, 11 minutes in one
+piece, so in four groups of its parts). `.github/workflows/nightly.yml`, on
+a schedule and by hand, never gating: every target's golden renders,
+Emscripten, Endless for 24 hours, `gen-golden --chromium`, `ahead --sweep`,
+`rates.mjs` and `stats.mjs --check`. A session looks at the nightly's
+latest run before it starts an item and fixes a red one first. **Back as
+gates at 1.0 on F-Droid** (item 108).
 
 ## 101. Batch 6, built
 
@@ -632,5 +628,6 @@ Mikey decides this line:
 - (yes, from Mikey) When CI is green and every check above passes, Claude
   Code merges its own PR and starts the next item.
 - (Mikey, 2026-11-10) Until the app is 1.0 and on F-Droid, "CI is green"
-  means the fast gate (item 103); the nightly's slow renders never hold a
+  means the fast gate (item 103: the `core` and `docs` workflows, locally
+  `tools/gate.sh`); the nightly's slow renders (`nightly.yml`) never hold a
   merge, and a red nightly is fixed by the next session that sees it.

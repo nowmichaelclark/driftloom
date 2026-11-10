@@ -60,6 +60,9 @@ that changes how it sounds.
 
 - Page: `python3 -m http.server 8000`, then <http://localhost:8000>
   (ES modules don't load over `file://`).
+- **The gate** (item 103): `tools/gate.sh` runs what CI holds a merge to
+  (`core`, `sketch`, `node`, `baseline`, `docs`, or all); the slow renders
+  are the nightly's (`.github/workflows/nightly.yml`) and hold nothing.
 - Tests (Node 22; run the generator's three times, it uses random seeds):
   `node test/generator.test.mjs`, and `worklet`, `core-host`, `engine`,
   `dials`, `fit`, `golden`, `draw`, `picks`, `dlmath`, `budget`, `quality`, `player`, each as
