@@ -1,5 +1,18 @@
 # Long pieces, composed: the brief for sessions 11 to 16
 
+**Changed by brain B1 (2026-11-11), after reading the code:** two rules
+added (the wander slider and the pins, rules 6 and 7), "Time, not
+sections", "Endings that land", "Movements" and three musical ideas (the
+return prepared on the fifth, a call and response, the arc block as one
+control), the cost on the audio thread, and the listening set as rendered
+excerpts with a before-and-after pair. Why: a section is the wander's pass
+at the slider's amount (`Generator::section(n, amount)`), so at 0 a long
+piece would stop moving; a section is the loop's own 4 to 32 bars, 8
+seconds to 2.5 minutes, so a plan in sections alone breathes at the wrong
+speed; the length slider can end a piece before its close; and until
+sessions 17 and 18 the app can neither jump inside a piece nor take a
+journey, so Mikey can't hear "three quarters in" there.
+
 Queue item 102. Written by the hands (Fable 5.2), 2026-11-10, from the code
 as it stood after item 97, for the sessions that build it. **A starting
 design, not a specification:** session 11 tests it against the code,
@@ -58,6 +71,20 @@ This is where his heart is; take the time it needs.
 5. **Wholesome and calm.** Nothing that would bother people in a coffee
    shop: a build is a gentle swell, not a drop. No loudness swing past
    what the catalog already has (batch 6 turned down a 12.9 dB arc).
+6. **The journey is the piece; the wander slider is its breathing.** Today
+   section `n` is the pass drawn at the slider's amount, so with the slider
+   at 0 a long piece is the loop over and over. The plan (journey, roles,
+   themes, keys, energy, the wander's holds and moves) is drawn from the
+   seed and the request alone and plays at any slider setting; the slider
+   sets only how much each section breathes inside its role (today's pass
+   marks). Above 2.0 (item 92's unrepeatable range) the salt varies that
+   breathing, never the plan, so a code's piece stays its piece (for
+   Mikey's ears).
+7. **What was asked is never moved.** A pinned voice, layer, tempo, key,
+   scale or style, a muted layer, and a code's edits (layers re-rolled, the
+   tone) hold for the whole piece. A pinned key is the home key: an arc may
+   visit related keys and comes home; a pinned scale rules out the parallel
+   mode. A wander's move never picks a pinned thing.
 
 ## A starting design
 
@@ -173,6 +200,52 @@ held chord across the line (a pivot the two keys share); a bar of the
 tune alone; a breath of air. Chosen by what changes and by the energy
 either side.
 
+### Time, not sections
+
+A section is the loop's own bars: 4 bars at 120 bpm is 8 seconds, 32 at 50
+is 2.5 minutes. So the plan's spans are set in **time** and turned into
+sections at the loop's tempo: an arc of about 4 to 15 minutes (leaned by the
+vibes; a symphony's movement is about 10), a wander's hold of about 1 to 5
+minutes, roles as shares of the arc. Where a piece has fewer sections than
+its form needs (64 bars of a 32-bar loop is two sections), the plan's unit
+is the **phrase line** inside a section, still found by arithmetic from the
+section's number and the phrase's. A last section cut short (a length the
+loop doesn't divide) still plays the close: the close is a role, fitted to
+the bars that are left.
+
+### Endings that land
+
+The length slider decides when a track stops (Mikey, 2026-11-03), and it
+can stop a long piece before its close; today that is a cut at a phrase
+line with a short fade. The player knows the bar it will stop at (the
+spec's `playBars` or `playFor`), so the plan takes it: the phrase before
+that bar plays the close (thinned, on the tonic, ringing out) instead of a
+fade. The same for Endless with the slider set. With the slider off nothing
+changes: rounds come round. Session 15 builds it; for Mikey's ears.
+
+### Movements (finite pieces of several arcs)
+
+Mikey's 3,072 bars came from Beethoven's Ninth: one work in movements whose
+finale looks back at what came before. So in a finite piece that holds
+several arcs, the arcs are movements of one piece: they share theme A (the
+loop's tune), each brings its own second theme (arc `k`'s B from the seed
+and `k`), and the last arc, before its close, recalls fragments of earlier
+arcs' B themes, reached by number in closed form. A shape, not a quotation
+(Mikey, 2026-11-08). Endless's arcs stay free of this: nothing ends.
+
+### Three ideas for the arc
+
+- **The return prepared:** in the bars before theme A comes home, the bass
+  holds the fifth of the home key (the chords over it), so the return is
+  felt coming. One join among the others, chosen for returns.
+- **A call and response:** in the development, B's fragment answers A's in
+  A's rests (one voice, so no second melody's cost), rather than both
+  stacked.
+- **The arc block as one control:** the loop's slow muffled swing (the arc,
+  which Mikey likes) and the piece's energy both move brightness. Make the
+  energy curve the arc block's slow aim (its centre and depth) rather than a
+  second filter beside it, so the two never fight or cancel.
+
 ### Cost
 
 - A section still costs one loop's making, as today. A theme-B section
@@ -181,6 +254,14 @@ either side.
   several loops to compare.
 - The player holds two passes and the generator's lists today; the plan
   adds a few numbers. Check `tests/zeros.rs` and the baseline's costs.
+- **On the audio thread.** The player makes the next pass in the blocks
+  before it, in stages (`Generator::step`, a load's way). A theme-B section
+  makes another seed's tune, and a variation more work: spread them the
+  same way, a section ahead, so no block at a section line costs more than
+  the loop's own worst audio block. Mikey's tablet has about 1.8 times
+  headroom on lite before item 100's too-slow line (`js/quality.js`), and
+  it lost notes at new loops before phase 3: measure a section line on
+  `tools/autolite.mjs`'s slow case too.
 
 ## Yardsticks (the queue's, made concrete)
 
@@ -196,9 +277,17 @@ either side.
   section 1 to section 10^9 (timed).
 - Promise 11's existing tests (`tests/length.rs`) still pass; loops of up
   to 32 bars hash as before; the balance lock holds.
-- For Mikey: pieces at 64, 256 and 1,024 bars and Endless as album codes
-  he plays in the app, each with excerpt times (the start, a quarter,
-  half, three quarters, the close), so a piece is judged in minutes.
+- For Mikey (session 15, then brain B3): **rendered excerpts**, since the
+  app can't jump inside a piece or take a journey until sessions 17 and
+  18. About eight pieces (64, 256 and 1,024 bars and Endless; arcs and
+  wanders; several styles), each as excerpts of about 40 s where something
+  happens (the start, B's entry, the peak, the return, the close; a
+  wander's moves), plus one 64-bar piece whole; under about 30 minutes in
+  all. And **a blind pair or two:** the same seed and length before item
+  102 (today's wandered sections) and after, so his ears answer the real
+  question, whether composed beats today's. Clips go on a throwaway branch
+  (the Ears' way: only the clips, deleted after his verdicts); brain B3
+  builds the page.
 
 ## Left open (decide by measuring, or mark for Mikey's ears)
 

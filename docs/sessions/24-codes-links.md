@@ -1,5 +1,7 @@
 # Session 24: codes: links, an album from one seed, and the plain lines (105c)
 
+**Changed by brain B1 (2026-11-11):** the name and address from one place, for the rename at 1.0.
+
 - **Model:** Sonnet 5.5. **Effort:** medium.
 - **Start after:** session 23.
 - **Queue item:** item 105.
@@ -16,7 +18,7 @@ Check your place: in docs/sessions/README.md every row above session 24 should b
 The work, one PR (BUILD and CACHE), plain screens in the app's style:
 
 - Share as a link: the site's address with the code in it (in the fragment or a query: choose the one that keeps the code out of server logs and works with the service worker offline; say why), opening the loop or the album ready to play. Sharing uses the system share sheet where there is one, else copies.
-- A link preview: the static title, description and image Discord and others show for the site's address (one image for every link: there is no server to draw one per loop). Use the app's existing artwork; a Painter may replace it.
+- A link preview: the static title, description and image Discord and others show for the site's address (one image for every link: there is no server to draw one per loop). Use the app's existing artwork; a Painter may replace it. The app's name and address in the preview and the link come from one place (the page's one constant and the manifest), since the app is renamed at 1.0 (session 31a).
 - An album from one seed: a small sheet to make one (how many tracks; the picks they share are the picks now set), giving session 22's short album code.
 - The plain lines: "needs a newer version of Driftloom", "needs an instrument this device doesn't have" (the second can't happen yet: wire the line to the core's refusal so it shows when it can), and the older-code line from session 23, each in the place the app shows such lines.
 

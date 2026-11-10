@@ -22,8 +22,9 @@ retired: one generator, one engine, the core's, #356)**, 100 done (the
 too-slow line).
 **Next: the sessions in `docs/sessions/README.md`** (Mikey, 2026-11-10: the
 rest of the road cut into sessions, each with its prompt, its model and its
-place in the order; the items below stay the briefs). First: brain B1 and
-hands session 01 (98's hands part). Item
+place in the order; the items below stay the briefs). Brain B1 done
+(2026-11-11: 97 and 100 checked, phase 3's control rendered, the plan
+reviewed); next: hands session 01 (98's hands part). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -203,7 +204,8 @@ lower tier; a plain line telling them to get the Driftloom app.
 quarter-seconds in the last 20 s of playing each took longer than the
 audio it made, or the device filled in 8 times in them where the browser
 counts (`playoutStats`), the card's place says "This browser is too slow
-to play Driftloom smoothly." (`quality.stuck`, js/quality.js, which says
+to play Driftloom smoothly." (Mikey, 2026-11-11: "This browser is too
+slow."; session 01 makes it) (`quality.stuck`, js/quality.js, which says
 how the line was set from the tablet's and the Pixel's figures). "Get the
 Driftloom app." follows as a link once `APP_LINK` in js/main.js is set
 (item 107); Play goes on, and Diagnostics reads `slow: lite past the line,
@@ -234,7 +236,8 @@ and notes from one more instance of `js/dlplayer.wasm` (`js/gen.js`; the
 request and the record are `js/request.js`), and `js/output.js` takes the
 core's node to the speakers. A browser that can't run the core shows the
 plain line in the card's place; a module that never arrives says
-"Driftloom couldn't load. Check the connection and reload." The page's
+"Driftloom couldn't load. Check the connection and reload." (Mikey,
+2026-11-11: "Please refresh."; session 01 makes it) The page's
 JavaScript went from 19,538 lines (835 KB) to 9,166 (363 KB), and 252 KB of
 `.wasm` less. The tools read what the generator decides from the tools'
 build (`tools/gen-lib.mjs`, `tools/build-core.sh --tools`): the generation
@@ -254,6 +257,15 @@ the testers in plain words, one paste each.
 
 **Then the brain:** its phase check, and a control album (today's app
 against the app before phase 3, the same codes): it should sound the same.
+**Brain B1 (2026-11-11):** on `main` at v153 (d9d6ffe): `build-core.sh
+--check`, the generation goldens (5,124 of 5,124, the Rust generator alone),
+the balance lock (22 of 22), the Node tests, `tools/rows.mjs` (29 of 29), the core baseline (nothing
+moved) and CI's gate all pass; the page's JavaScript 835,298 bytes (31 files) before
+97, 362,742 (28) after, 125,911 gzipped against 272,991. The control: 30
+corpus loops rendered by v149's own Engine and Synth on the core and by
+today's player: names and starts the same, 28 null at -82 dB or lower, two
+differ after a silent bar at the same loudness (session 01 explains them).
+The album, "Phase 3 Control", is out (`docs/ALBUMS.md`).
 
 ## 99. The sketch levers for Ears 13b (alongside phase 3)
 
@@ -309,7 +321,8 @@ session may restyle any of them later (Mikey, 2026-11-10). Each sound change mer
 gathered into one listening album for Mikey; what needs his ears or a
 decision goes in `docs/notes/for-mikey.md` and the work moves on.
 
-**In sessions** (`docs/sessions/README.md`, 2026-11-10): 98 is session 01;
+**In sessions** (`docs/sessions/README.md`, 2026-11-10, reviewed by brain B1
+2026-11-11): 98 is session 01;
 101 is 101a to 101h (sessions 02 to 09: the far ends, pitch, width, the
 kit, colorTone, planingSevenths, lowBell with dropSpotlight, twang and the
 batch's locks); 84b is session 10; 102 is 102a to 102f (sessions 11 to 16:
@@ -317,7 +330,8 @@ the plan and its map, the wander, the arc's energy, its themes and keys,
 the joins and the listening set, then tuning from Mikey's notes;
 `docs/sessions/long-pieces-brief.md`); 106 is 106a and 106b (17, 18); 104
 is 104a to 104c (19 to 21); 105 is 105a to 105c (22 to 24); 107 is 107a to
-107e (25 to 29); the polish is 30 and 108 is 31. Five brain sessions (B1 to
+107e (25 to 29); the polish is 30, the new name is 31a (Mikey, 2026-11-11: the app is
+renamed at 1.0, kept from the testers until then) and 108 is 31. Five brain sessions (B1 to
 B5) check the work between them.
 
 ## 103. The fast gate (done, hands, 2026-11-10)
@@ -388,6 +402,16 @@ ends (arcs in turn, or the wander); loops of up to 32 bars play exactly as
 today (the balance lock holds); changes at phrase lines, never mid-phrase;
 music computers are good at, not copies (Mikey, 2026-11-08). The
 generation goldens' long-length cases move on purpose, said in the PR.
+
+**Added by brain B1 (2026-11-11), from the code** (the brief has each):
+the journey plays at any wander setting (a section is today's pass at the
+slider's amount; the slider becomes only its breathing); pins, mutes and a
+code's edits are never moved; the plan's spans in time, in phrases where
+sections are few; endings that land when the length slider stops a piece
+before its close; movements (a finite piece's last arc looks back);
+theme B's making spread across blocks (the tablet's margin); and the
+listening set as rendered excerpts with a blind before-and-after pair,
+since the app can't jump or take a journey until 106.
 
 **Yardsticks:** a piece map (`dlgen --map SEED REQUEST`: each section's key,
 tempo, energy, theme and journey) for any length; corpus checks that an
@@ -463,14 +487,17 @@ commands and events as the worklet (94a); no Google services, nothing
 F-Droid's rules refuse. Built in CI (GitHub's runners have the Android
 SDK), an APK Mikey can install, `fastlane` metadata, and an F-Droid build
 recipe with reproducible-build notes. **For Mikey:** the submission to
-F-Droid (his account) and the signing choice. Then item 100's link points
+F-Droid (his account, after 1.0: the merge request is public and carries
+the new name) and the signing choice. Test builds use a working id; the
+release id and name come with the rename (31a). Then item 100's link points
 at the listing. **Yardsticks:** the Moto and the tablet play with nothing
 late (Diagnostics in the app), the screen off for ten minutes, a long
 piece and an export; the APK builds from a clean checkout.
 
 ## 108. 1.0
 
-**Hands:** then Mikey. The version named 1.0 in the app and the APK, a short
+**Hands:** then Mikey. First the new name (session 31a, built and left open
+until this moment, since a merge deploys). The version named 1.0 in the app and the APK, a short
 changelog, codes frozen (105), the nightly's checks back as merge gates
 (103), and `docs/notes/for-mikey.md` empty or answered.
 
@@ -598,6 +625,9 @@ operations in the same order per lane (no fused multiply-add, no reordered
 sums), proven on the goldens on every target; worth an item once phase 3
 is done, or sooner if a phone needs it. A native Android app's own audio
 (AAudio through Oboe, a fast core, a high priority) is its platform phase's.
+
+The melody twang (Mikey, 2026-11-11: after 1.0): batch 6's twang voice
+playing the tune, beside session 09's chord twang.
 
 A sketch voice for a layer (archive/notes/83-sketch-voice.md): option 1, sketches
 stay channel sources until an ears session needs a voice's note-by-note play

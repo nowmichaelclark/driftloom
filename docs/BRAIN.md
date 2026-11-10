@@ -59,13 +59,13 @@ colliding:
   sessions don't share a branch.
 - **Free any time:** the look (`css/`, `design/`, icons, themes),
   menus and views that don't touch playback, Library, covers, text.
-- **Vibe tuning** (`data/vibes.txt`): free again since item 78 (v130): the
-  vibes are plain text both generators read, so tuning never waits for the
-  port (`docs/VIBES.md`, "How to edit a vibe").
-- **Generator changes** (`js/generator.js`, profiles, moods): since the
-  port (items 77-82), made in both, `js/` and `core/src/generator/`, in one
-  PR, held together by the generation goldens; Rust only once phase 3 retires
-  the JavaScript generator. Hands' work, through the queue.
+- **Vibe tuning** (`data/vibes.txt`): free since item 78 (v130): the vibes
+  are plain text the core's generator compiles in (`docs/VIBES.md`, "How to
+  edit a vibe").
+- **Generator changes** (profiles, moods, choices): since item 97 there is
+  one generator, the core's (`core/src/generator/`, its data in
+  `data/*.txt`), held by the generation goldens. Hands' work, through the
+  queue.
 - **Audio bugs:** in `core/`, they go through the brain into the core
   track's queue (the hands there own those files); in the JavaScript
   synth, only if testers actually hear the fallback.
@@ -168,10 +168,15 @@ default. Move text, don't rewrite decisions.
 The app's **Paste a code** button takes an album code (`DLA1-...`) and
 imports every loop in order.
 
-- `js/share.js` exports `encodeAlbum(title, specs)` and `decodeAlbum`.
-  Build specs with `newSpec()`, filter on `render(spec)` (e.g.
-  `meta.melodyVoice`, `meta.kit`, `developmentOf(spec)`), encode, and
-  round-trip-check the order.
+- `js/share.js` exports `encodeAlbum(title, specs)` and `decodeAlbum`, and
+  runs in Node. Since item 97 the specs come from the core: in Node,
+  `tools/gen-lib.mjs`'s `newSpec(seed, request)` and `render(spec)` (the
+  tools' build, `tools/build-core.sh --tools`; filter on `meta`, `choices`),
+  or `decodeSong(code)`; encode, and round-trip-check the order. To render
+  what the app plays: `tools/play-lib.mjs` (`player`, `render`), in Node.
+  To render an old build's app, a worktree of it and its own page in
+  Chromium (B1's scratch was a copy of that build's `tools/golden-export.mjs`
+  writing the core node's stereo output).
 - **Never type a code out.** Print it in tool output and copy it from
   there, then decode what you are about to send. The first brain session
   produced a plausible code from nothing; the app's checksum rejected it.
@@ -277,59 +282,39 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-08
+## State -- 2026-11-11
 
 ### Start here (for the next brain)
 
-- **Session 30 (brain, Opus 5.5, from 2026-11-08): phase 3.** Item 93 built
-  on `claude/serene-archimedes-eclxle` (85fc8fe, no PR yet): the player starts
-  as zeros, `js/dlplayer.wasm` 1,938,596 to 636,731 bytes (215 KB gzipped,
-  222 before), `dlcore.wasm` byte-identical; the brain confirmed the sizes,
-  `build-core.sh --check` for both, and the generation goldens.
-  **Answered** (`docs/notes/93-module-size.md`): the size is accepted. The
-  50 KB aim was the brain's mistake: it counted the stored state and forgot
-  that the generator and the sequencer (about 300 KB of code) live in this
-  module. Item 97 takes about 155 KB gzipped of page JavaScript away, so a
-  first visit after phase 3 (one 215 KB module) weighs less than today's
-  (91 KB core plus that JavaScript). Neither `opt-level` `s` (slower voices,
-  and the tablet is phase 3's weak device) nor a second build without the
-  canonical text (about 4 KB gzipped). One module: yes, at 94b; `dlcore.wasm`
-  goes at 97. **Before the merge:** the `unsafe` the commit adds in
-  `core/src/generator/list.rs` (`List`'s and `Maybe`'s `MaybeUninit`) comes
-  out (promise 6: `unsafe` only at the C boundary; on `main` it is only in
-  `capi.rs` and `wasm.rs`), done safely with a zero value per held type,
-  which `a_new_player_is_all_zeros` already guards. **Merged** (#331,
-  2026-11-08, `d5af578`): `unsafe` gone (an `Empty` trait; the zeros test in
-  `core/tests/zeros.rs`), 636,125 bytes (217 KB gzipped), baseline "Nothing
-  moved", the 80 seeds bit-identical, all 10 CI checks green; Done line #333.
-  **Next: 94a.**
-- **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-07): phase 2 is done
-  and proven.** Checked through item 87 on the way (#298-#311), then at the
-  phase's end on `main` at v149 (da42200): every check passes, and Mikey's
-  blind album (2026-11-07) heard no harm (the log; `docs/ALBUMS.md`). Phase
-  3 is written (items 93-98, `docs/QUEUE.md`), with "After phase 3": Ears
-  13's sound batch, then 84b (the chords nearer the tune, from the album).
-  94b merged (#343, 2026-11-08, v150) after Mikey's check; 99 merged (#341,
-  the sketch levers). **The brain's check after 94b, done:** on `main`,
-  `tools/rows.mjs` 25 of 25 on the player (late, missed and dropped 0, no
-  event lost), and the player, engine and worklet tests pass. Next: 95; the
-  brain's next check is the phase's end after 98. Ears 13b (the seven
-  levered candidates, plus a tremolo-twang synth voice in the spirit of a
-  baritone guitar) prompt given in Session 30.
-  **2026-11-10:** a friend's Pixel 9 on GrapheneOS played "too fast and
-  skippy": Vanadium runs WebAssembly interpreted (JIT off by default), the
-  player at 55% of real time on lite. The friend tries "JavaScript JIT"
-  allowed for the site only as a test; Mikey: that's a bandaid. Item 100
-  fixes it in the app: a render-ahead cushion when lite falls behind, then
-  a 24 kHz tier, a plain line last. Waits on the friend's `busiest:` line
-  with JIT off (peaks or average). Confirmed (9.3% with JIT); Mikey then
-  chose a plain line pointing to the app instead (item 100 rewritten).
-  **2026-11-10, the road to 1.0** (Mikey): the app's 1.0 before the game;
-  Ears 13b approved all eight (twang included); no waiting on slow renders
-  (item 103, a fast gate, the slow ones nightly until 1.0 on F-Droid); a
-  long autonomous Fable 5.2 hands run takes the road (`docs/QUEUE.md`):
-  103, 96, 97, 100, 98's hands part, 101 (batch 6), 84b, 102 (long pieces,
-  composed), polish; its list for Mikey is `docs/notes/for-mikey.md`.
+- **Brain B1 (Opus 5.5, 2026-11-11): the road to 1.0's kickoff.** The plan
+  is `docs/sessions/README.md`; each brain session has its prompt there.
+  **Checked on `main` at v153 (d9d6ffe), not taken from the reports:** items
+  97 and 100 (the queue's item 98 has the figures); the plain lines and the
+  too-slow rule: the switch to lite resets the count and skips 5 s of
+  warm-up, and the tablet (busiest about 55% of its time on lite) needs to
+  run about 1.8 times slower for 2 s in 20 to trip it, so it is safe today;
+  the margin is now a rule for every session (the README). **The control
+  album** ("Phase 3 Control", `docs/ALBUMS.md`) is out; 28 of 30 renders
+  null, two differ after a silent bar (session 01 explains). **The plan
+  reviewed:** sessions 11 and 14 on Fable 5.2; the long pieces' brief gained
+  the slider and pins rules, time not sections, endings that land,
+  movements, three musical ideas, the cost on the audio thread, and the
+  listening set as rendered excerpts with a blind before-and-after pair;
+  session 31a (the new name) added; smaller fixes in 01, 09, 22, 24, 25, 29,
+  30, 31 and B3, each file saying what changed at its top. **Mikey decided**
+  (`docs/DECISIONS.md`, 2026-11-11): the two plain lines shorter; the melody
+  twang after 1.0; the app is renamed at 1.0, a surprise for the testers, so
+  the name stays out of the repo (it is in the Project's private doc
+  `claude/new-name-at-1-0.md`, with the brain's plan: domain at Cloudflare
+  Registrar, release id from the domain, test builds on a working id).
+  **Next:** hands session 01; then 02 onward. The next brain is B2.
+- **Not done in B1:** the commit previews couldn't be fetched from here (no
+  approval for WebFetch while Mikey was away); the v149 link in the album is
+  from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
+  left to CI (green on `main`).
+- Sessions 29 and 30's "Start here" bullets (phase 2's proof, phase 3's
+  items, the road to 1.0 written): `docs/archive/brain-log.md`, "Start here
+  before B1".
 - **Waiting on Mikey, not urgent:** the Full Room Album (85e,
   <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
   account); the blind album's in-app checklist for bars and length (88b),
