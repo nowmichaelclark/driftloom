@@ -1,0 +1,217 @@
+# The nightly (queue item 103): the slow checks, on a schedule and by hand,
+# never holding a merge until the app is 1.0 and on F-Droid (Mikey,
+# 2026-11-10). A red nightly is fixed by the next session that sees it:
+# look at this workflow's latest run on main before starting an item. At
+# 1.0 these come back as merge gates (queue item 108).
+#
+# `golden` renders the golden note lists (core/golden/, queue item 42) on
+# every target the core is meant to run on and compares the hashes with the
+# ones kept for that target: wasm32 in Node, x86-64 natively, and aarch64,
+# 32-bit ARM and big-endian 32-bit PowerPC under QEMU's user mode. The
+# targets run side by side, and the slowest (QEMU renders about 20 times
+# slower than the machine) sets the wall time. Since the core carries its
+# own math (item 43) every target must make exactly wasm32's hashes
+# (--strict), and x86-64 renders them once more with the processor flushing
+# subnormal numbers to zero, as Chromium's audio threads do, which must
+# change nothing (--flush). The stereo render (queue item 64) has its own
+# hash files and goes through the same steps (--stereo). And the Rust
+# generator (queue item 79 on) makes the generation goldens' hashes on every
+# target (tools/gen-core.sh), and the core's player (queue item 82) plays
+# loops from their seeds to WAVs, the same samples on every target
+# (tools/seeds.sh): natively and in its .wasm the baseline's loops equal the
+# browser's renders, and a C host plays them through the C header alone.
+# `emscripten` builds the core as a web game links it (queue item 87) and
+# holds it to the same hashes. `endless` renders an Endless piece for 24
+# hours at speed on the player (queue item 88, `dlrender --endless`): no
+# drift, no growth. `slow` is what left the gate's own jobs: the other
+# sample rates, the generation goldens in Chromium, rendering ahead's sweep
+# and the balance lock's own corpus.
+name: nightly
+
+on:
+  schedule:
+    # 07:23 UTC, every day: after a working day's merges, off the hour.
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golden:
+    name: golden renders (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    # The PowerPC job, under QEMU, renders the plain goldens mono and
+    # stereo: about 70 minutes.
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: wasm32-unknown-unknown
+          - target: x86_64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-gnu
+            packages: qemu-user gcc-aarch64-linux-gnu
+          - target: armv7-unknown-linux-gnueabihf
+            packages: qemu-user gcc-arm-linux-gnueabihf
+          - target: powerpc-unknown-linux-gnu
+            packages: qemu-user gcc-powerpc-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: QEMU and the cross linker
+        if: matrix.packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.packages }}
+      # The first cargo call installs the pinned toolchain; then its
+      # standard library for the target (the wasm32 job needs no Rust: it
+      # renders the committed js/dlcore.wasm in Node).
+      - name: The target's standard library
+        if: matrix.target != 'wasm32-unknown-unknown'
+        working-directory: core
+        run: |
+          cargo --version
+          rustup target add ${{ matrix.target }}
+      - name: Render the golden note lists
+        run: tools/golden.sh --strict ${{ matrix.target }}
+      - name: The same, flushing subnormal numbers
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: tools/golden.sh --strict --flush ${{ matrix.target }}
+      # The speaker output must not depend on how many frames a host asks
+      # for a call (queue item 45): every list on x86-64 and wasm32, three
+      # short ones under QEMU on aarch64 and armv7. The PowerPC job (the
+      # slowest by far) renders the plain goldens only (Mikey, 2026-10-14).
+      - name: The same at every block size
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --blocks ${{ (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown') && 'all' || '' }} ${{ matrix.target }}
+      # And at other sample rates, one hash file for every target.
+      - name: The same at 22,050 to 192,000 Hz
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --rates ${{ matrix.target }}
+      # The stereo render (queue item 64), held to its own hashes the same
+      # way: plain on every target, and the modes where the mono render
+      # runs them.
+      - name: Stereo, the golden note lists
+        run: tools/golden.sh --stereo --strict ${{ matrix.target }}
+      - name: Stereo, flushing subnormal numbers
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: tools/golden.sh --stereo --strict --flush ${{ matrix.target }}
+      - name: Stereo, at every block size
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --stereo --blocks ${{ (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown') && 'all' || '' }} ${{ matrix.target }}
+      - name: Stereo, at 22,050 to 192,000 Hz
+        if: matrix.target != 'powerpc-unknown-linux-gnu'
+        run: tools/golden.sh --stereo --rates ${{ matrix.target }}
+      # The Rust generator (phase 2, queue items 79 on) against the generation
+      # goldens, every case on every target: every part, the load and the
+      # wandered passes too, must equal the stored hashes (on wasm32
+      # through a build with the generator's exports, which the app's .wasm
+      # leaves out).
+      - name: The generation goldens, on the Rust generator
+        run: tools/gen-core.sh ${{ matrix.target }}
+      # The player (queue item 82): the corpus's first 80 loops from their
+      # seeds, each to a WAV, against core/golden/seeds.hashes; under QEMU the
+      # first few, the same samples on every target.
+      - name: Loops from their seeds
+        # (The QEMU targets' flag is the expression's true branch: an empty
+        # string there would be falsy, and every target would get it.)
+        run: tools/seeds.sh ${{ (matrix.target != 'x86_64-unknown-linux-gnu' && matrix.target != 'wasm32-unknown-unknown') && '--first 3' || '' }} ${{ matrix.target }}
+      # The baseline's 40 loops, full and lite, mono and stereo, from their
+      # seeds: bit for bit the browser's renders (test/core-baseline.json's
+      # player part), natively and in js/dlplayer.wasm.
+      - name: The baseline's loops from their seeds, against the browser's
+        if: matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'wasm32-unknown-unknown'
+        run: tools/seeds.sh --browser ${{ matrix.target }}
+      # Promise 4: a tiny C program plays them through core/include/dlcore.h
+      # alone, and writes dlrender's WAV.
+      - name: Loops from their seeds, through the C header
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: tools/seeds.sh --c --first 8
+
+  # Emscripten (queue item 87): the core as Broken Friends' web build links
+  # it (Godot's web export, panic=abort, no threads), held to the same
+  # golden hashes as wasm32 (--strict), mono and stereo; the player's loops
+  # from their seeds; and the C host built with emcc against the header
+  # alone, straight through and a pass at a time. Programs run in Node
+  # (core/.cargo/config.toml).
+  emscripten:
+    name: golden renders (wasm32-unknown-emscripten)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Pinned, as the Rust toolchain is.
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.10
+      - name: The target's standard library
+        working-directory: core
+        run: |
+          cargo --version
+          emcc --version
+          rustup target add wasm32-unknown-emscripten
+      - name: Render the golden note lists
+        run: tools/golden.sh --strict wasm32-unknown-emscripten
+      - name: Stereo, the golden note lists
+        run: tools/golden.sh --stereo --strict wasm32-unknown-emscripten
+      - name: Loops from their seeds
+        run: tools/seeds.sh --first 8 wasm32-unknown-emscripten
+      - name: Loops from their seeds, through the C header, built with emcc
+        run: tools/seeds.sh --c --first 8 wasm32-unknown-emscripten
+
+  # Endless (queue item 88): an Endless piece rendered for 24 hours of music
+  # at speed, natively, on the player (`dlrender --endless 24`: 22,050 Hz,
+  # lite, mono, about 13 minutes): the step grid doesn't drift, and no hour
+  # costs or sounds unlike the first.
+  endless:
+    name: endless, 24 hours
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: 24 hours of Endless
+        working-directory: core
+        run: cargo run --release --locked --example dlrender -- --endless 24
+
+  # What left the gate's own jobs (queue item 103), with the times they took
+  # there: the other sample rates (1.5 min), the generation goldens in
+  # Chromium (1 min), rendering ahead's sweep (1 min), and the balance lock
+  # on the page's own corpus.
+  slow:
+    name: rates, Chromium goldens, ahead, the balance lock
+    # Pinned for Playwright 1.56.1, as the gate's baseline job is.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Level, tone and what folds back at 22,050 to 192,000 Hz against 48 kHz
+      # (queue item 45); makes the 192 kHz build of the core for itself.
+      - name: The core at other sample rates
+        run: node tools/rates.mjs
+      - name: Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: The generation goldens, in Chromium
+        run: node tools/gen-golden.mjs --check --chromium
+      # Rendering ahead (queue item 87): the player in js/dlplayer.wasm
+      # rendered in chunks of every size from 128 to 256 frames and rising
+      # sizes up to a pass, and a pass at a time, against straight through,
+      # sample for sample; with the wander and with a change waiting.
+      - name: Rendering ahead, chunked against straight through
+        run: node tools/ahead.mjs --sweep
+      - name: The balance lock, on the page's generator
+        run: node tools/stats.mjs --check
