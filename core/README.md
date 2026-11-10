@@ -434,7 +434,7 @@ waiting notes in no fixed order (a note that starts takes the last one's
 place), so which voice a note takes, and the order the voices are summed in,
 depend on what is waiting. The player's way is fixed (a block at a time,
 `LOOKAHEAD` ahead), so its renders are the same everywhere; handing a whole
-render over before it starts, as `tools/measure.mjs` does, sums the same
+render over before it starts, as `tools/measure-js.mjs` does, sums the same
 notes in another order (inaudibly: about 88 dB under the render).
 
 Nothing allocates (the generator's lists, two passes and the budget are

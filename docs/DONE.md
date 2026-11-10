@@ -312,3 +312,8 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   slider's time runs out, so a hand-over plays with the screen off. Listen
   for: Next and a length's end feel as before; a new loop's card comes up
   about a tenth of a second after the tap.
+- #354, the fast gate (item 103, no version: CI only), commit 94e34b8: CI on
+  a PR is now `tools/gate.sh`'s parts side by side, 10 minutes (it was 70,
+  behind the PowerPC renders); every target's golden renders, Endless for 24
+  hours and the other slow checks run nightly (`nightly.yml`) and hold no
+  merge until 1.0. Listen for nothing. No album loop.

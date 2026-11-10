@@ -10,9 +10,11 @@
 #   tools/seeds.sh --wav DIR [TARGET]   keep the WAVs in DIR (else a temporary one)
 #   tools/seeds.sh --browser [TARGET]   the baseline's 40 loops, full and lite, mono
 #                                       and stereo (160 renders), against the
-#                                       browser's: test/core-baseline.json's `player`
-#                                       part, which tools/baseline.mjs renders in
-#                                       Chromium with the app's own engine
+#                                       baseline's: test/core-baseline.json's `player`
+#                                       part, which tools/baseline.mjs renders on
+#                                       js/dlplayer.wasm, the module a browser plays
+#                                       (until queue item 96, in Chromium with the
+#                                       page's own engine: the same fingerprints)
 #   tools/seeds.sh --c [--first N] [wasm32-unknown-emscripten]
 #                                       the C host (core/examples/c/seed.c, built
 #                                       against core/include/dlcore.h alone) against
@@ -71,7 +73,7 @@ render() {
 }
 
 if [ "$browser" = yes ]; then
-  # The four ways, against the browser's hashes: every render the same, to
+  # The four ways, against the baseline's hashes: every render the same, to
   # the bit, or the loop and the way that differ.
   : > "$tmp/lines"
   for way in '' '--stereo' '--lite' '--lite --stereo'; do
@@ -91,9 +93,9 @@ if [ "$browser" = yes ]; then
       const e = bySeed.get(`${f.seed} ${f.quality}`);
       const want = !e ? null : f.layout === "stereo" ? `left=${e.left} right=${e.right}` : `out=${e.out}`;
       const got = f.layout === "stereo" ? `left=${f.left} right=${f.right}` : `out=${f.out}`;
-      if (want === got) same++; else bad.push(`  ${f.name} ${f.quality} ${f.layout}: ${got}, the browser ${want || "(none)"}`);
+      if (want === got) same++; else bad.push(`  ${f.name} ${f.quality} ${f.layout}: ${got}, the baseline ${want || "(none)"}`);
     }
-    console.log(`seeds: ${process.argv[3]}: ${same} of ${same + bad.length} renders equal the browser'"'"'s, bit for bit`);
+    console.log(`seeds: ${process.argv[3]}: ${same} of ${same + bad.length} renders equal the baseline'"'"'s, bit for bit`);
     if (bad.length) { console.log(bad.join("\n")); process.exit(1); }
   ' "$root/test/core-baseline.json" "$tmp/lines" "$target"
   exit 0

@@ -104,7 +104,7 @@ pub struct Budget {
     older: [Older; HOLDS],
     /// Every hold's cost times how long it holds, summed since the start
     /// (`held`; queue item 87): the work the voices asked for.
-    held: f64,
+    held: f64, #[cfg(feature = "tools")] counts: Counts,
 }
 
 impl Budget {
@@ -127,7 +127,7 @@ impl Budget {
             calls: 0,
             stolen: [0; 5],
             older: [Older { group: NO_GROUP, start: 0.0, cost: 0.0, released: false }; HOLDS],
-            held: 0.0,
+            held: 0.0, #[cfg(feature = "tools")] counts: Counts::NONE,
         }
     }
 
@@ -146,7 +146,7 @@ impl Budget {
     /// can let them go together. `None` for a part that plays for no layer.
     pub fn begin(&mut self, layer: Option<Layer>, key: Key) {
         self.calls = self.calls.wrapping_add(1);
-        self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0, kept: false }).into();
+        self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0, kept: false }).into(); #[cfg(feature = "tools")] self.counts.begin();
     }
 
     /// The voice call being made is never let go for a newer note (queue
@@ -161,7 +161,7 @@ impl Budget {
 
     /// The voice call is over.
     pub fn end(&mut self) {
-        self.current = Maybe::NONE;
+        #[cfg(feature = "tools")] self.counts.end(self.current.get().map(|g| g.layer)); self.current = Maybe::NONE;
     }
 
     /// The voice call handed a note to the core's `channel` (`_toCore`):
@@ -229,7 +229,7 @@ impl Budget {
         let reserve = js::min(LATE_LAYER_RESERVE, js::round(ceiling * RESERVE_SHARE));
         let cap = if soft { js::max(40.0, ceiling - reserve) } else { ceiling };
         if spent + cost > cap {
-            return self.steal(host, time, cost, cap, spent);
+            let fits = self.steal(host, time, cost, cap, spent); #[cfg(feature = "tools")] self.counts.answer(fits); return fits;
         }
         true
     }
@@ -399,6 +399,51 @@ impl Default for Budget {
 
 impl Empty for Group {
     const EMPTY: Self = NO_GROUP;
+}
+
+/// What the measuring tools read of the budget (queue item 96; the tools
+/// build only): each layer's voice calls and how many were refused room,
+/// in `Layer`'s order. Its lines in `Budget` share a line with the code
+/// they sit beside, as the sketch build's do in the sequencer: a line added
+/// above shipped code would move its panic locations, and the app's .wasm
+/// would no longer be the bytes it was.
+#[cfg(feature = "tools")]
+#[derive(Clone, Copy)]
+pub struct Counts {
+    /// Voice calls made, by layer.
+    pub asked: [u32; 5],
+    /// Voice calls any of whose asks was refused, by layer.
+    pub refused: [u32; 5],
+    failed: bool,
+}
+
+#[cfg(feature = "tools")]
+impl Counts {
+    const NONE: Counts = Counts { asked: [0; 5], refused: [0; 5], failed: false };
+
+    fn begin(&mut self) {
+        self.failed = false;
+    }
+
+    fn answer(&mut self, fits: bool) {
+        self.failed |= !fits;
+    }
+
+    fn end(&mut self, layer: Option<Layer>) {
+        if let Some(layer) = layer {
+            self.asked[layer as usize] += 1;
+            self.refused[layer as usize] += u32::from(self.failed);
+        }
+    }
+}
+
+#[cfg(feature = "tools")]
+impl Budget {
+    /// The voice calls made and refused so far, by layer.
+    #[must_use]
+    pub fn counts(&self) -> Counts {
+        self.counts
+    }
 }
 
 #[cfg(test)]

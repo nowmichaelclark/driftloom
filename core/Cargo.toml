@@ -44,6 +44,13 @@ generator = ["web"]
 # without it until phase 3.
 player = ["web"]
 
+# The measuring tools' build (queue item 96): the player's module with the
+# generator's exports and the tools' own (`src/wasm.rs`, `dl_tools_*`: a
+# request as text, the voice probe, the budget's counts), which
+# tools/build-core.sh --tools writes to core/target/dltools.wasm. Never
+# shipped: the app's modules stay the bytes they were.
+tools = ["generator", "player"]
+
 # The C face (`src/capi.rs`, `include/dlcore.h`; promise 4, queue item 82): a
 # native static library with the player's calls and the library's panic
 # handler, built with `cargo rustc --release --lib --features capi

@@ -24,9 +24,14 @@
 //
 // Where each figure comes from:
 //
-//   late ticks        the engine's own counter, read from Diagnostics
+//   late ticks        the page engine's own counter, read from Diagnostics
 //                     (`lateTicks`, `worstLateMs`): the scheduler woke after
-//                     a step it should already have queued.
+//                     a step it should already have queued. On the player
+//                     (the app's engine since queue item 94b) the page has
+//                     no scheduler and this is 0 by construction; what can
+//                     go wrong there is the core's own count, read from
+//                     Diagnostics' `engine:` line and reported beside it:
+//                     notes the core took late, left out or dropped.
 //   device fill-ins   AudioContext.playoutStats (Chromium, behind a Blink
 //                     feature this tool turns on): frames the audio device
 //                     had to fill because the graph did not deliver in time.
@@ -308,6 +313,10 @@ async function launch(chromePath) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// The core's late, left-out and dropped notes over a run's window, for the
+// log: nothing where Diagnostics gave none (the JavaScript synth).
+const coreNotes = (r) => (r.coreLate == null ? '' : ` (the core: late ${r.coreLate}, left out ${r.coreMissed}, dropped ${r.coreDropped})`);
 
 // The whole machine's CPU over a window, from /proc/stat (Linux only):
 // how busy it was, and how much the host took back (steal), each as a
@@ -619,6 +628,16 @@ class Tab {
       const m = line.match(/^([A-Za-z]+):\s*(.*)$/);
       if (m) out[m[1]] = /^-?\d+(\.\d+)?$/.test(m[2]) ? Number(m[2]) : m[2];
     }
+    // The core's own counts (queue item 96): on the player no note passes
+    // the page and the page has no scheduler, so "late" is what the core
+    // says of itself: notes it took late, left out, or dropped.
+    const engine = String(out.engine || '');
+    if (/late: \d+/.test(engine)) {
+      const count = (re) => Number((engine.match(re) || [0, 0])[1]);
+      out.coreLate = count(/late: (\d+)/);
+      out.coreMissed = count(/(?:missed:|left out) (\d+)/);
+      out.coreDropped = count(/dropped: (\d+)/);
+    }
     return out;
   }
 }
@@ -910,7 +929,7 @@ async function run(opts, chromePath, cfg) {
       await sleep(3000); // let the page notice and retune
     }
 
-    await tab.diagnostics({ reset: true });
+    const diag0 = await tab.diagnostics({ reset: true });
     if (cfg.jsProfile) {
       await tab.send('Profiler.enable');
       await tab.send('Profiler.setSamplingInterval', { interval: 500 });
@@ -971,6 +990,10 @@ async function run(opts, chromePath, cfg) {
     }
     Object.assign(result, perSecond(m0, m1, s0, s1, trace, cfg.seconds), {
       lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs, ticks: diag.ticks, clock: diag.clock,
+      // The core's late, left-out and dropped notes over the window.
+      coreLate: diag.coreLate == null ? null : diag.coreLate - (diag0.coreLate || 0),
+      coreMissed: diag.coreMissed == null ? null : diag.coreMissed - (diag0.coreMissed || 0),
+      coreDropped: diag.coreDropped == null ? null : diag.coreDropped - (diag0.coreDropped || 0),
       visibility: s1.visibility, split, fillTimes, machine: cpuShare(cpu0, cpu1),
     });
     return result;
@@ -1444,6 +1467,8 @@ function abReport(data, opts) {
   out.push('\nAudio health (A / B):');
   out.push(`  runs ${hA.runs} / ${hB.runs}, of them run first in their pair ${hA.firstRuns} / ${hB.firstRuns}`);
   out.push(`  runs with device fill-ins ${hA.fillRuns} / ${hB.fillRuns} (${hA.fills} / ${hB.fills} events)`);
+  const coreSum = (x) => { const rs = ok.filter((r) => r.side === x && r.coreLate != null); return rs.length ? rs.reduce((a, r) => a + r.coreLate + r.coreMissed + r.coreDropped, 0) : '-'; };
+  out.push(`  the core's late, left-out and dropped notes ${coreSum('A')} / ${coreSum('B')}`);
   out.push(`  worst render quantum, median ${hA.median.toFixed(1)} / ${hB.median.toFixed(1)} ms, 90th percentile ${hA.p90.toFixed(1)} / ${hB.p90.toFixed(1)} ms; runs with one over 20 ms ${hA.long} / ${hB.long}`);
   out.push('\nPer loop, audio render ms (A -> B):');
   for (const r of ok.filter((x) => x.side === 'B')) {
@@ -1536,7 +1561,7 @@ async function main() {
       try {
         const r = { ...(await run(optsA, chromePath, cfg)), side: 'A', first };
         data.runs.push(r);
-        log(`  late ${r.lateTicks}, fill-ins ${r.fillEvents}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms`);
+        log(`  late ${r.lateTicks}${coreNotes(r)}, fill-ins ${r.fillEvents}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms`);
       } catch (err) {
         log(`  failed: ${err.message}`);
         data.runs.push({ ...cfg, loop: cfg.loop.name, error: err.message, side: 'A', first });
@@ -1547,7 +1572,7 @@ async function main() {
       try {
         const r = { ...(await run(optsB, chromePath, cfg)), ...(optsA ? { side: 'B', first } : {}) };
         data.runs.push(r);
-        log(`  late ${r.lateTicks}, fill-ins ${r.fillEvents}${r.fillTimes && r.fillTimes.length ? ` at ${r.fillTimes.map((f) => `${f.inWindow}s (ctx ${f.ctxTime}s)`).join(', ')}` : ''}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms, worst callback ${(r.worstCallbackMs ?? 0).toFixed(2)} ms, main ${f1(r.taskMs)} ms/s, nodes ${f0(r.nodesPerSec)}/s, tap ${f0(r.coldMs)}/${f0(r.warmMs)} ms`);
+        log(`  late ${r.lateTicks}${coreNotes(r)}, fill-ins ${r.fillEvents}${r.fillTimes && r.fillTimes.length ? ` at ${r.fillTimes.map((f) => `${f.inWindow}s (ctx ${f.ctxTime}s)`).join(', ')}` : ''}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms, worst callback ${(r.worstCallbackMs ?? 0).toFixed(2)} ms, main ${f1(r.taskMs)} ms/s, nodes ${f0(r.nodesPerSec)}/s, tap ${f0(r.coldMs)}/${f0(r.warmMs)} ms`);
       } catch (err) {
         log(`  failed: ${err.message}`);
         data.runs.push({ ...cfg, loop: cfg.loop.name, error: err.message, ...(optsA ? { side: 'B', first } : {}) });
