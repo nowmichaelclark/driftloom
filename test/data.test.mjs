@@ -7,7 +7,7 @@ import { parseData, number, flag, readBlock, DATA, FILES } from '../js/data.js';
 import { CHARACTERS } from '../js/characters.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { MOODS } from '../js/moods.js';
-import { LAYERS, LAYER_LABELS } from '../js/generator.js';
+import { LAYERS, LAYER_LABELS } from '../js/request.js';
 import { SCALES } from '../js/theory.js';
 import { CHOICES, CHANGE_COUNTS, ARC, KICK, SUBDUCK, LATEFLOOR, FLOORDROP, PEDAL, PADSWEEP, ECHO, BASS_LIFT } from '../js/choices.js';
 

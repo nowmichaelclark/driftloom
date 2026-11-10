@@ -17,8 +17,8 @@
 // here and nothing to seed: same options, same numbers, to the bit.
 //
 // Until item 96 this tool drove the page's Engine and Synth in headless
-// Chromium (now tools/measure-js.mjs, for the JavaScript fallback until it
-// retires). For the same loops the two agree to 0.01 dB in every figure
+// Chromium (that tool retired with the JavaScript synth, queue item 97).
+// For the same loops the two agree to 0.01 dB in every figure
 // both report (the PR of item 96 has the table).
 //
 // The voice probe, the request as text and the budget's counts need the

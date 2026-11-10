@@ -10,11 +10,11 @@ runs from a single folder on a cheap Android phone.
 
 The engine is a small Rust core, compiled to WebAssembly, so the same engine
 can one day run a phone app (roadmap 16). Every voice, the mix and the master
-chain play from it by default. The JavaScript synth stays as the fallback, for
-a browser without AudioWorklet or WebAssembly, a core that fails to load or
-fails while playing; Diagnostics says which engine plays and why, and
-`?engine=js` asks for the JavaScript synth on purpose. The built
-`js/dlcore.wasm` is committed, so there is still no build step.
+chain play from it, and it generates every loop and decides every note. A
+browser without AudioWorklet or WebAssembly is told in one plain line that
+it can't play Driftloom (there is no JavaScript synth to fall back to since
+queue item 97); Diagnostics says what the core is doing. The built
+`js/dlplayer.wasm` is committed, so there is still no build step.
 
 Live at <https://driftloom.nowmichaelclark.workers.dev/>.
 
@@ -162,7 +162,7 @@ overall character when pools change.
   in the repo, not only in the Project (Mikey, 2026-10-17).
 - `docs/archive/perf-baseline.md` -- the performance baseline and what came
   of it.
-- `core/` -- the Rust core's source; `js/dlcore.wasm` is built from it.
+- `core/` -- the Rust core's source; `js/dlplayer.wasm` is built from it.
 - `docs/theory-sheets.md` -- music theory notes.
 
 ## License

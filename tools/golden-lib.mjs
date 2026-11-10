@@ -1,6 +1,6 @@
 // The golden renders' shared code (queue item 42): the note-list text
 // format, the hash, and a host that renders a note list
-// through js/dlcore.wasm in Node, with the same calls the worklet makes.
+// through js/dlplayer.wasm in Node, with the same calls the worklet makes.
 //
 // The format is documented where the native host reads it
 // (core/examples/dlrender/notelist.rs); this file is its other reader and

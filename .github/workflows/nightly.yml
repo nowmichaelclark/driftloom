@@ -24,8 +24,9 @@
 # holds it to the same hashes. `endless` renders an Endless piece for 24
 # hours at speed on the player (queue item 88, `dlrender --endless`): no
 # drift, no growth. `slow` is what left the gate's own jobs: the other
-# sample rates, the generation goldens in Chromium, rendering ahead's sweep
-# and the balance lock's own corpus.
+# sample rates and rendering ahead's sweep. (The generation goldens in
+# Chromium and the balance lock on the page's own generator went with the
+# JavaScript generator, queue item 97: the gate holds both on the core's.)
 name: nightly
 
 on:
@@ -72,7 +73,7 @@ jobs:
           sudo apt-get install -y ${{ matrix.packages }}
       # The first cargo call installs the pinned toolchain; then its
       # standard library for the target (the wasm32 job needs no Rust: it
-      # renders the committed js/dlcore.wasm in Node).
+      # renders the committed js/dlplayer.wasm in Node).
       - name: The target's standard library
         if: matrix.target != 'wasm32-unknown-unknown'
         working-directory: core
@@ -184,12 +185,10 @@ jobs:
         run: cargo run --release --locked --example dlrender -- --endless 24
 
   # What left the gate's own jobs (queue item 103), with the times they took
-  # there: the other sample rates (1.5 min), the generation goldens in
-  # Chromium (1 min), rendering ahead's sweep (1 min), and the balance lock
-  # on the page's own corpus.
+  # there: the other sample rates (1.5 min) and rendering ahead's sweep (1
+  # min).
   slow:
-    name: rates, Chromium goldens, ahead, the balance lock
-    # Pinned for Playwright 1.56.1, as the gate's baseline job is.
+    name: rates, ahead
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -201,17 +200,9 @@ jobs:
       # (queue item 45); makes the 192 kHz build of the core for itself.
       - name: The core at other sample rates
         run: node tools/rates.mjs
-      - name: Chromium
-        run: |
-          npm install --no-save playwright@1.56.1
-          npx playwright install --with-deps chromium
-      - name: The generation goldens, in Chromium
-        run: node tools/gen-golden.mjs --check --chromium
       # Rendering ahead (queue item 87): the player in js/dlplayer.wasm
       # rendered in chunks of every size from 128 to 256 frames and rising
       # sizes up to a pass, and a pass at a time, against straight through,
       # sample for sample; with the wander and with a change waiting.
       - name: Rendering ahead, chunked against straight through
         run: node tools/ahead.mjs --sweep
-      - name: The balance lock, on the page's generator
-        run: node tools/stats.mjs --check

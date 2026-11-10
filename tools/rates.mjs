@@ -66,7 +66,7 @@ if (!fs.existsSync(WIDE)) {
   const made = spawnSync('sh', [path.join(ROOT, 'tools', 'build-core.sh'), '--wide'], { stdio: 'inherit' });
   if (made.status !== 0) process.exit(1);
 }
-const WEB = fs.readFileSync(path.join(ROOT, 'js', 'dlcore.wasm'));
+const WEB = fs.readFileSync(path.join(ROOT, 'js', 'dlplayer.wasm'));
 const WIDE_BYTES = fs.readFileSync(WIDE);
 const coreFor = (rate) => (rate > 96000 ? WIDE_BYTES : WEB);
 

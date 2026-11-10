@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-10:** `main` is at v151. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-10:** `main` is at v152. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
@@ -16,8 +16,10 @@ brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
 (#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
 and **95** (the picks through the core's commands); Ears 13b approved
 (2026-11-09). **The road to 1.0 (a long hands run, 2026-11-10; what waits
-for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate, #354), 96 done (the checks on the player).
-**Next: 97**, then 100, 98's hands part, 101, 84b, 102. Item
+for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate,
+#354), 96 done (the checks on the player, #355), **97 done (the JavaScript
+retired: one generator, one engine, the core's)**.
+**Next: 100**, then 98's hands part, 101, 84b, 102. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -50,9 +52,7 @@ tracks").
   difference from `test/core-baseline.json`. A change that is not meant to
   change the sound must leave it passing; one that is runs `node
   tools/baseline.mjs --update` in the same PR and says in the body what
-  moved and why. The JavaScript synth is the fallback until item 97 and
-  keeps passing its own checks (`tools/measure-js.mjs --engine js` with
-  `--refusals`, `--clicks`, `--endings`) when its code is touched.
+  moved and why.
 - **The balance lock:** run `stats.mjs --check`. If a locked figure moves,
   report which and by how much, re-baseline at `--n 10000`, and say so.
 - **Existing loops:** say exactly what changes for specs that already
@@ -100,12 +100,10 @@ removed. If 48 kHz must move, stop and leave a note for a decision.
 
 `docs/CORE.md`, phase 3: the whole core runs on the audio side; the page
 sends commands and draws what the core reports. The scheduler, the
-lookahead and the JavaScript synth and generator retire at the end of this
-phase. *Done when:* promise 1's stall test is clean and the testers' phones
+lookahead and the JavaScript synth and generator retired in item 97.
+*Done when:* promise 1's stall test is clean and the testers' phones
 report zero late notes. The notes under "For phase 3" below are part of
-every item here; item 53's brief (below them) is item 95's. Until 97, the
-standing rule holds: a change to what is generated goes into both
-generators.
+every item here; item 53's brief (below them) is item 95's.
 
 **Decided for phase 3 (Mikey, 2026-11-07):** once the JavaScript synth is
 gone, a browser that can't run the core (no WebAssembly or no AudioWorklet)
@@ -230,24 +228,22 @@ the baseline's `voices`, `player` and `costs` parts did not move, and
 purpose. `tools/perf.mjs` and `tools/views.mjs` drive the app, which plays
 the player since 94b.
 
-## 97. The JavaScript retires
+## 97. The JavaScript retires (done, hands, 2026-11-10)
 
-**Hands:** Opus 5.5, high.
-
-**What:** `js/synth.js`'s JavaScript voices, the page's scheduler and
-lookahead (`js/engine.js`, `js/clock.js`), and the JavaScript generator
-(`js/generator.js` and what only it uses: vibes, moods, characters,
-theory, choices, pins on the page) are removed, with their tests and the
-`?engine=js` and `?engine=page` paths; the generation goldens stay, held
-by the Rust generator alone (`tools/gen-golden.mjs` keeps `--check`
-against the hashes). The plain line for a browser that can't run the core
-(Decided, above). Data the page still reads (`data/vibes.txt` for the
-picker's words, and the like) comes from the core or stays as data.
-
-**Yardsticks:** the page's JavaScript before and after (lines and bytes);
-every test that remains passes; the generation goldens in Rust; the app on
-Mikey's phone and tablet as in 94b; the plain line shown in a browser with
-WebAssembly turned off.
+**Built (v152):** `js/synth.js`, `js/engine.js`, `js/clock.js`,
+`js/generator.js`, `js/draw.js`, `js/dlmath.js` and `js/dlcore.wasm` are
+gone, with `?engine=js` and `?engine=page`. The page reads a loop's record
+and notes from one more instance of `js/dlplayer.wasm` (`js/gen.js`; the
+request and the record are `js/request.js`), and `js/output.js` takes the
+core's node to the speakers. A browser that can't run the core shows the
+plain line in the card's place; a module that never arrives says
+"Driftloom couldn't load. Check the connection and reload." The page's
+JavaScript went from 19,538 lines (835 KB) to 9,166 (363 KB), and 252 KB of
+`.wasm` less. The tools read what the generator decides from the tools'
+build (`tools/gen-lib.mjs`, `tools/build-core.sh --tools`): the generation
+goldens (all 5,124 cases, `gen-golden.mjs --check`, the file now the list
+of cases), the balance lock (`stats.mjs --check`), the dials, the octave
+check. `tools/rows.mjs` gained the plain line's two rows.
 
 ## 98. The phase's proof
 

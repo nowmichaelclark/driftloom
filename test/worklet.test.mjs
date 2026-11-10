@@ -1,22 +1,24 @@
 // Tests for the core's worklet (js/worklet.js) that need no browser: the real
-// worklet module and the real js/dlcore.wasm, with the few globals an
+// worklet module and the real js/dlplayer.wasm, with the few globals an
 // AudioWorkletGlobalScope gives it stubbed.
 // Run with:  node test/worklet.test.mjs
 //
-// What they pin down is which block the worklet asks the core to render
+// What they pin down: which block the worklet asks the core to render
 // (queue item 31b): the frame count that rides out Chromium's stale
 // `currentFrame`, and (item 32) never goes backward, however long the clock
-// stays stale.
+// stays stale; the Mono switch; how busy the audio thread is; and the
+// player's commands and events as the app sends and reads them (94b, 95).
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { newSpec, rerollLayer, vibeSelection, LAYERS } from '../js/generator.js';
+import { newSpec } from '../js/gen.js';
+import { rerollLayer, vibeSelection, LAYERS } from '../js/request.js';
 import { askOf, picksAsk, KIND, END_FADE, MOMENT, CHANGE_FADE } from '../js/player.js';
 import { Rng } from '../js/rng.js';
 
 const QUANTUM = 128;
 const RATE = 44100;
-const wasm = fs.readFileSync(fileURLToPath(new URL('../js/dlcore.wasm', import.meta.url)));
+const wasm = fs.readFileSync(fileURLToPath(new URL('../js/dlplayer.wasm', import.meta.url)));
 
 let processors = [];
 globalThis.sampleRate = RATE;
@@ -45,7 +47,7 @@ function make() {
   });
   const blocks = [];
   const real = processor.core;
-  processor.core = { ...real, dl_process: (block) => { blocks.push(block); return real.dl_process(block); } };
+  processor.core = { ...real, dl_play_process: (block) => { blocks.push(block); return real.dl_play_process(block); } };
   return { processor, blocks };
 }
 
@@ -116,153 +118,20 @@ console.log('\nWhich block the worklet renders');
     blocks.join() === [100, 101, 102, 103, 200, 201].map((b) => b * QUANTUM).join(), blocks.join());
 }
 
-console.log('\nNotes handed over ahead (queue item 39)');
-
-// The loudest sample from `from` to `to` seconds, a kalimba note handed
-// over for 0.5 s and, if `cancel`, everything waiting dropped at once.
-// With `cancel` a time, only what waits to start then or later (queue item
-// 40).
-function loudest(cancel, from, to) {
-  const { processor } = make();
-  processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [] });
-  if (cancel === true) processor.receive({ type: 'cancel' });
-  else if (cancel !== false) processor.receive({ type: 'cancel', from: cancel });
-  let peak = 0;
-  for (let b = 0; b * QUANTUM < to * RATE; b++) {
-    globalThis.currentFrame = b * QUANTUM;
-    const outputs = [[new Float32Array(QUANTUM)]];
-    processor.process(Array.from({ length: 5 }, () => []), outputs);
-    if (b * QUANTUM >= from * RATE) for (const x of outputs[0][0]) peak = Math.max(peak, Math.abs(x));
-  }
-  return peak;
-}
-
-{
-  const kept = loudest(false, 0.5, 1);
-  const cancelled = loudest(true, 0.5, 1);
-  check('a note handed over ahead sounds at its time', kept > 0.01, String(kept));
-  check('and cancelled before it starts, it never does', cancelled === 0, String(cancelled));
-}
-
-{
-  const later = loudest(0.6, 0.5, 1);
-  const from = loudest(0.5, 0.5, 1);
-  check('cancelled from after its time, it sounds', later > 0.01, String(later));
-  check('cancelled from its time, it never does', from === 0, String(from));
-}
-
-console.log('\nHow notes arrive (queue item 41)');
-
-{
-  const { processor } = make();
-  for (let b = 0; b < 40; b++) call(processor, b * QUANTUM);
-  // The core has rendered 40 blocks (116 ms). A note the page posted at 50
-  // ms for 300 ms: on time, and the core was 66 ms past the page's clock.
-  const note = (time, sent) => processor.receive({
-    type: 'note', voice: 0, channel: 0, time, midi: 69, dur: 0.2, vel: 0.5, parts: 1, extra: [], sent,
-  });
-  note(0.3, 0.05);
-  // Handed over ahead of its time (sent at 50 ms for 100 ms), but behind
-  // what the core had rendered: late, inside the buffer, and played.
-  note(0.1, 0.05);
-  // Handed over after its time (a stall), and more than 30 ms late: left
-  // out, and counted apart.
-  note(0.02, 0.06);
-  const counts = processor.sent.filter((m) => m.type === 'counts').pop();
-  check('late notes are split by why, and the one too late is left out',
-    counts && counts.late === 2 && counts.lateBuffer === 1 && counts.lateStall === 1 && counts.missed === 1 && counts.dropped === 0,
-    JSON.stringify(counts));
-  for (let b = 40; b < 160; b++) call(processor, b * QUANTUM);
-  const report = processor.sent.find((m) => m.type === 'arrivals');
-  check('the worklet reports how far past the page\'s clock it had rendered', report && Math.abs(report.reach - (40 * QUANTUM / RATE - 0.05)) < 1e-9,
-    JSON.stringify(report));
-  check('and the least time a note had to spare (negative: late)', report && report.early < -0.09 && report.n === 3);
-}
-
-console.log('\nWhere a note sits in its loop (queue item 44)');
-
-// The speaker output of notes posted with `keys`, one a hat (it plays the
-// noise, and draws where in it to start and how fast) at 0.05 s, for 0.4 s.
-function hats(...keys) {
-  const { processor } = make();
-  keys.forEach((key, i) => processor.receive({
-    type: 'note', voice: 21, channel: 4, time: 0.05 + i * 0.1, midi: 0, dur: 0, vel: 0.8, parts: 0, extra: [], key,
-  }));
-  const out = [];
-  for (let b = 0; b * QUANTUM < 0.4 * RATE; b++) {
-    globalThis.currentFrame = b * QUANTUM;
-    const outputs = [[new Float32Array(QUANTUM)]];
-    processor.process(Array.from({ length: 5 }, () => []), outputs);
-    out.push(...outputs[0][0]);
-  }
-  return out;
-}
 const same = (a, b) => a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
-
-{
-  const key = { seed: 7, pass: 1, step: 4, ord: 2 };
-  const a = hats(key);
-  check('a noise voice sounds with no noise handed over: the core makes its own', a.some((x) => Math.abs(x) > 1e-4));
-  check('the same key, the same samples', same(a, hats({ ...key })));
-  check('another pass of the loop, other draws', !same(a, hats({ ...key, pass: 2 })));
-  check('another seed, other draws', !same(a, hats({ ...key, seed: 8 })));
-  check('another place at the step, other draws', !same(a, hats({ ...key, ord: 3 })));
-}
-
-{
-  // The key reaches the core before the note it belongs to.
-  const { processor } = make();
-  const calls = [];
-  const real = processor.core;
-  processor.core = {
-    ...real,
-    dl_key: (...a) => { calls.push(['key', ...a]); return real.dl_key(...a); },
-    dl_note: (...a) => { calls.push(['note']); return real.dl_note(...a); },
-  };
-  processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.5, midi: 60, dur: 0.4, vel: 0.8, parts: 3, extra: [], key: { seed: 5, pass: 6, step: 7, ord: 8 } });
-  check('the key goes to the core first, as whole numbers', JSON.stringify(calls[0]) === '["key",5,6,7,8]' && calls[1][0] === 'note', JSON.stringify(calls));
-}
-
-console.log('\nThe stereo render (queue item 64)');
-{
-  // A worklet asked for the stereo layout fills two channels of its output,
-  // and with nothing placed each is the mono worklet's, bit for bit.
-  const play = (layout) => {
-    const processor = new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout } });
-    processor.receive({ type: 'note', voice: 21, channel: 4, time: 0.05, midi: 0, dur: 0, vel: 0.8, parts: 0, extra: [], key: { seed: 7, pass: 0, step: 0, ord: 0 } });
-    processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.1, midi: 72, dur: 0.3, vel: 0.7, parts: 3, extra: [], key: { seed: 7, pass: 0, step: 1, ord: 0 } });
-    const sides = Array.from({ length: layout }, () => []);
-    for (let b = 0; b * QUANTUM < 0.5 * RATE; b++) {
-      globalThis.currentFrame = b * QUANTUM;
-      const outputs = [Array.from({ length: layout }, () => new Float32Array(QUANTUM))];
-      processor.process(Array.from({ length: 5 }, () => []), outputs);
-      outputs[0].forEach((o, c) => sides[c].push(...o));
-    }
-    return sides;
-  };
-  const [mono] = play(1);
-  const [left, right] = play(2);
-  check('the mono render sounds', mono.some((x) => Math.abs(x) > 1e-4));
-  check('stereo: two channels, each the mono render bit for bit', same(left, mono) && same(right, mono));
-}
 
 console.log('\nThe Mono switch (queue item 66)');
 {
   // The app's node has two output channels whatever the layout (js/core.js,
   // CoreHost): in mono each is the mono render. A `layout` message switches
   // it as it plays; the core fades, and the output follows its lanes.
-  const { MIX, SET } = await import('../js/core.js');
   const play = (layout, switches = []) => {
     const processor = new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout } });
-    for (const [id, value] of [[MIX.spaceSeed, 7], [MIX.spaceBusy, 4], [MIX.spaceWet, 0.6], [MIX.spaceLight, 0], [MIX.spaceStart, 1]]) {
-      processor.receive({ type: 'param', id, op: SET, value, time: 0, tau: 0 });
-    }
-    for (let i = 0; i < 30; i++) {
-      processor.receive({ type: 'note', voice: 0, channel: 0, time: 0.05 + i * 0.06, midi: 60 + (i % 12), dur: 0.3, vel: 0.7, parts: 3, extra: [], key: { seed: 7, pass: 0, step: i, ord: 0 } });
-    }
+    processor.receive({ type: 'playWander', amount: 0, salt: 0 });
+    processor.receive({ type: 'playLoad', seed: 20261009, ask: {}, at: 0 });
     const sides = [[], []];
     const lanes = [];
-    for (let b = 0; b * QUANTUM < 2.1 * RATE; b++) {
+    for (let b = 0; b * QUANTUM < 4.1 * RATE; b++) {
       const t = (b * QUANTUM) / RATE;
       while (switches.length && switches[0][0] <= t) processor.receive({ type: 'layout', channels: switches.shift()[1] });
       globalThis.currentFrame = b * QUANTUM;
@@ -276,14 +145,14 @@ console.log('\nThe Mono switch (queue item 66)');
   const mono = play(1);
   const [left, right] = mono.sides;
   check('mono into two channels: the mono render in each', left.some((x) => Math.abs(x) > 1e-4) && same(left, right));
-  const into = Math.round(0.3 * RATE / QUANTUM) * QUANTUM;
-  const switched = play(1, [[0.3, 2], [1.2, 1]]);
+  const into = Math.round(1.3 * RATE / QUANTUM) * QUANTUM;
+  const switched = play(1, [[1.3, 2], [3.0, 1]]);
   const [sl, sr] = switched.sides;
   check('until the switch, the mono render bit for bit', same(sl.slice(0, into), left.slice(0, into)) && same(sr.slice(0, into), left.slice(0, into)));
   const apart = (from, to) => Math.max(...sl.slice(from, to).map((x, i) => Math.abs(x - sr[from + i])));
-  check('switched to stereo, the sides part', apart(Math.round(0.6 * RATE), Math.round(1.2 * RATE)) > 1e-4);
+  check('switched to stereo, the sides part', apart(Math.round(1.8 * RATE), Math.round(3.0 * RATE)) > 1e-4);
   const back = switched.lanes.lastIndexOf(2) + 1;
-  check('back to mono, one lane again within half a second', back > 0 && back * QUANTUM < 1.7 * RATE && switched.lanes.slice(back).every((n) => n === 1), `${back}`);
+  check('back to mono, one lane again within half a second', back > 0 && back * QUANTUM < 3.5 * RATE && switched.lanes.slice(back).every((n) => n === 1), `${back}`);
   check('and the same in both channels after it', apart(back * QUANTUM, sl.length) === 0);
   const cost = switched.sent.filter((m) => m.type === 'cost').pop();
   check('the worklet reports what each layout cost', cost && cost.seconds[0] > 0.5 && cost.seconds[1] > 0.5 && cost.ms.every((x) => x >= 0), JSON.stringify(cost));
@@ -322,8 +191,7 @@ console.log('\nThe core\'s player (queue item 94b)');
   // plays its edits; the events reach the page, with the grids of each
   // pass; the loop armed for the track's end starts there; a resumed load
   // doesn't wait out its lateFloor again.
-  const player = fs.readFileSync(fileURLToPath(new URL('../js/dlplayer.wasm', import.meta.url)));
-  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: player, quality: 'full', layout: 2, player: true } });
+  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout: 2 } });
   // `seconds` of blocks from the processor's next, the output's left lane.
   const render = (p, seconds) => {
     const out = [];
@@ -341,7 +209,6 @@ console.log('\nThe core\'s player (queue item 94b)');
     const m = p.sent.filter((x) => x.type === 'probe').pop();
     return Object.fromEntries(m.about.split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
   };
-  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
   const r = new Rng(94);
   let whole = true;
   let detail = '';
@@ -421,8 +288,7 @@ console.log('\nThe picks through the core (queue item 95)');
   // track's end with nothing armed and at Next (`playNext`), and say which
   // picks they took (an Own event, then the Loop with the seed). The page's
   // generator makes the same loop from that seed and request.
-  const player = fs.readFileSync(fileURLToPath(new URL('../js/dlplayer.wasm', import.meta.url)));
-  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: player, quality: 'full', layout: 2, player: true } });
+  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout: 2 } });
   const render = (p, seconds) => {
     const from = p.next || 0;
     for (let b = 0; b * QUANTUM < seconds * RATE; b++) {

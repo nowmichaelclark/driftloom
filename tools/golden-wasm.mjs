@@ -1,5 +1,5 @@
 // The golden renders on the WebAssembly target (queue item 42): every note
-// list in core/golden/ rendered through js/dlcore.wasm in Node, with the
+// list in core/golden/ rendered through js/dlplayer.wasm in Node, with the
 // same exports the worklet calls, and hashed.
 //
 //   node tools/golden-wasm.mjs                  print the hash lines
@@ -35,7 +35,7 @@ let twice = false;
 let wavDir = null;
 let rate = null;
 let blocks = [];
-let wasm = path.join(ROOT, 'js', 'dlcore.wasm');
+let wasm = path.join(ROOT, 'js', 'dlplayer.wasm');
 let layout = 1;
 const lists = [];
 for (let i = 0; i < argv.length; i++) {

@@ -317,3 +317,8 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   behind the PowerPC renders); every target's golden renders, Endless for 24
   hours and the other slow checks run nightly (`nightly.yml`) and hold no
   merge until 1.0. Listen for nothing. No album loop.
+- #355, the checks on the player (item 96, no version: tools only), commit
+  ca8fe56: `tools/measure.mjs` and `tools/baseline.mjs` play loops from
+  their seeds on `js/dlplayer.wasm` in Node, no browser; the old path and
+  the player agree to 0.005 dB on the same 40 loops. Listen for nothing. No
+  album loop.

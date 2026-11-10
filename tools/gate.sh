@@ -4,12 +4,12 @@
 # (.github/workflows/core.yml) and a session runs here before it pushes.
 #
 #   tools/gate.sh                 every part, one after another
-#   tools/gate.sh core            the committed .wasm files are their source;
-#                                 the core's tests; clippy pedantic at zero
+#   tools/gate.sh core            the committed .wasm is its source; the
+#                                 core's tests; clippy pedantic at zero
 #   tools/gate.sh sketch          the same tests and clippy, sketch build
-#   tools/gate.sh node            the Node tests, the generation goldens in
-#                                 Node, and the balance lock on the Rust
-#                                 generator
+#   tools/gate.sh node            the Node tests, the generation goldens and
+#                                 the balance lock, on the core's generator
+#                                 (the tools' build: it makes it first)
 #   tools/gate.sh baseline [PARTS]
 #                                 the core against its baseline ("nothing
 #                                 moved"); PARTS as baseline.mjs --only takes
@@ -17,10 +17,9 @@
 #   tools/gate.sh docs            the live docs' sizes
 #
 # What is not here runs nightly (.github/workflows/nightly.yml) and never
-# holds a merge: every target's golden renders, Endless for 24 hours, the
-# generation goldens in Chromium, rendering ahead's sweep, the other sample
-# rates and the balance lock's own corpus. A red nightly is fixed by the next
-# session that sees it.
+# holds a merge: every target's golden renders, Endless for 24 hours,
+# rendering ahead's sweep and the other sample rates. A red nightly is fixed
+# by the next session that sees it.
 #
 # Nothing here needs a browser: the baseline plays the player in Node (queue
 # item 96).
@@ -46,13 +45,15 @@ sketch() {
 }
 
 node_part() {
+  # The tools' build: the generator's parts, for the tests and tools that
+  # read them (tools/gen-lib.mjs).
+  tools/build-core.sh --tools
   for t in test/*.test.mjs; do
     echo "gate: node $t"
     node "$t"
   done
   node tools/gen-golden.mjs --check
-  tools/gen-core.sh wasm32-unknown-unknown
-  node tools/stats.mjs --check --core
+  node tools/stats.mjs --check
 }
 
 baseline() {

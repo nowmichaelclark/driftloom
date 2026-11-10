@@ -968,8 +968,7 @@ function setPicks(next) {
 // it for every loop it makes itself. Each sending is numbered, so a loop the
 // core made says which picks it took (`onOwn`); a request the reader can't
 // read goes as its vibes alone, as the page's own draw kept the moods of one
-// it could not meet. On the page's engine (`?engine=page`, `?engine=js`) the
-// page still draws new loops with them, until item 97.
+// it could not meet.
 function sendPicks() {
   const request = picks.requestFor(state);
   const sent = picksAsk(request);

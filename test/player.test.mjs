@@ -1,20 +1,60 @@
-// The player's commands and events in js/dlplayer.wasm (queue item 94a)
-// against what the page's own generator and engine make of the same loop:
-// what the core describes (the info card's, the cover's and a share code's
-// fields), the notes as the MIDI export reads them, the layers' grid of each pass as it wanders (`stepsForBar`'s
-// velocities), the events that say where the loop is, a code's edits (a
-// layer re-rolled as `rerollLayer` makes it, the tone, the tempo), a re-roll
-// in its place and the track's end. No browser: Node runs the module.
+// The page's reader of the core's generator (js/gen.js, queue item 97) and
+// the player's commands and events in js/dlplayer.wasm (queue item 94a),
+// against the core's own account of the same loop (tools/gen-lib.mjs: the
+// canonical texts the generation goldens hash, from the tools' build): the
+// page's record of a loop is the core's spec, field for field; its notes are
+// the core's tracks; the layers' grid of each pass as it wanders is the
+// core's wandered pass; a code's edits (a layer re-rolled, the tone, the
+// tempo) are made as the core makes them; and the events say where the loop
+// is, through a re-roll in its place and the track's end. No browser: Node
+// runs the modules. Needs core/target/dltools.wasm (tools/build-core.sh
+// --tools; the gate builds it).
 // Run with:  node test/player.test.mjs
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Rng } from '../js/rng.js';
-import { render, choirOf, LAYERS, parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState } from '../js/generator.js';
-import { Engine } from '../js/engine.js';
+import { newSpec, render } from '../js/gen.js';
+import { LAYERS, parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState, cloneSpec } from '../js/request.js';
 import { VIBE_IDS } from '../js/vibes.js';
 import { pinNumbers } from '../js/pins.js';
-import { cases, edited } from '../tools/gen-golden-lib.mjs';
+import { casesOf, canonical } from '../tools/gen-golden-lib.mjs';
+import * as core from '../tools/gen-lib.mjs';
+
+try {
+  core.open();
+} catch (err) {
+  console.error(`player.test: ${err.message}`);
+  process.exit(3);
+}
+const CASES = casesOf(fs.readFileSync(fileURLToPath(new URL('../core/golden/generation.hashes', import.meta.url)), 'utf8'));
+
+// The page's record of `seed` with `request` (text or null), its `edit.`
+// items made as the app makes them (queue item 94a): a re-roll as
+// `rerollLayer` makes it (a copy, the layer's seed, `forceLayers`), a seed
+// alone, the Sound panel's tone, the tempo slider's bpm.
+function edited(seed, request) {
+  if (typeof request !== 'string' || !request.includes('edit.')) return newSpec(seed, request);
+  const items = request.split(',');
+  const asked = items.filter((x) => !x.startsWith('edit.')).join(',');
+  let spec = cloneSpec(newSpec(seed, asked || null));
+  for (const item of items.filter((x) => x.startsWith('edit.'))) {
+    const [name, value] = item.slice(5).split('=');
+    const [kind, layer] = name.split('.');
+    if (kind === 'roll') {
+      spec = cloneSpec(spec);
+      spec.layerSeeds[layer] = Number(value) >>> 0;
+      spec.forceLayers = { ...(spec.forceLayers || {}), [layer]: true };
+    } else if (kind === 'seed') {
+      spec.layerSeeds[layer] = Number(value) >>> 0;
+    } else if (kind === 'bpm') {
+      spec.bpm = parseInt(value, 10);
+    } else {
+      spec.tone[kind] = parseFloat(value);
+    }
+  }
+  return spec;
+}
 
 let failures = 0;
 function check(label, condition, detail = '') {
@@ -129,33 +169,35 @@ function pageGrid(p, layer) {
   return out;
 }
 
-// The page's engine on a loop, with a synth that does nothing.
-function pageEngine(spec) {
-  const synth = new Proxy({ queuesAhead: true, channels: Object.fromEntries(LAYERS.map((l) => [l, {}])) }, {
-    get: (t, k) => (k in t ? t[k] : () => {}),
-  });
-  const engine = new Engine({ currentTime: 0, state: 'running', sampleRate: 48000 }, synth);
-  engine.driftOn = true;
-  engine.driftAmount = 1;
-  engine.load(spec);
-  return engine;
-}
-
 const num = (s) => Number(s);
 const weights = (s) => Object.fromEntries((s || '').split('|').filter(Boolean).map((p) => [p.split(':')[0], num(p.split(':')[1])]));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// The description against the page's spec.
-function describes(label, x, spec) {
+// The core's tracks, as the page's `render` hands them over: each note's
+// step, length, loudness and pitches (a drum hit's name and micro-timing).
+function coreNotes(tracks, layer) {
+  return tracks[layer].map((e) => ({
+    step: e.step, dur: layer === 'drums' ? 0 : e.dur, vel: e.vel, micro: layer === 'drums' ? e.micro || 0 : 0,
+    notes: layer === 'drums' ? [] : e.notes ? e.notes.slice() : e.midi != null ? [e.midi] : [], drum: layer === 'drums' ? e.inst : '',
+  }));
+}
+
+// The page's record and notes, and what the player describes, against the
+// core's spec and tracks for the same seed and request.
+function describes(label, x, spec, c) {
   const d = about(x);
   const p = render(spec);
+  const made = core.parts(c.seed, c.request);
+  check(`${label}: the page's record is the core's spec`, canonical(spec) === canonical(made.spec), `\n    page ${canonical(spec).slice(0, 300)}\n    core ${canonical(made.spec).slice(0, 300)}`);
+  check(`${label}: the page's notes are the core's tracks`, LAYERS.every((l) => same(pageNotes(p, l), coreNotes(made, l))));
+  check(`${label}: the page's form and choir`, p.form === !!made.form.form && p.choir === !!made.meta.choir && p.totalSteps === made.form.totalSteps && p.stepsPerBar === made.form.stepsPerBar, `${p.form} ${p.choir}`);
   const want = {
     seed: spec.seed >>> 0, name: spec.name, root: spec.root, scale: spec.scale, bpm: spec.bpm, steps_per_bar: spec.stepsPerBar,
     bars: spec.bars, swing: spec.swing, coherence: spec.coherence,
     feel: [spec.feel.lift, spec.feel.energy, spec.feel.warmth].join('|'),
     tone: TONE.map((k) => spec.tone[k]),
     layer_seeds: LAYERS.map((l) => spec.layerSeeds[l] >>> 0),
-    airy: p.form ? 1 : 0, drifting: spec.cycles ? 1 : 0, choir: choirOf(spec) ? 1 : 0,
+    airy: p.form ? 1 : 0, drifting: spec.cycles ? 1 : 0, choir: p.choir ? 1 : 0,
   };
   const got = {
     seed: num(d.seed), name: d.name, root: num(d.root), scale: d.scale, bpm: num(d.bpm), steps_per_bar: num(d.steps_per_bar),
@@ -164,7 +206,7 @@ function describes(label, x, spec) {
     tone: d.tone.split('|').map(num), layer_seeds: d.layer_seeds.split('|').map(num),
     airy: num(d.airy), drifting: num(d.drifting), choir: num(d.choir),
   };
-  check(`${label}: the notes`, LAYERS.every((l) => same(notes(x, l), pageNotes(p, l))));
+  check(`${label}: the player's notes`, LAYERS.every((l) => same(notes(x, l), pageNotes(p, l))));
   check(`${label}: the description`, same(got, want), `\n    got  ${JSON.stringify(got)}\n    want ${JSON.stringify(want)}`);
   check(`${label}: the mix`, same(weights(d.mix), spec.mix), `${d.mix} ${JSON.stringify(spec.mix)}`);
   check(`${label}: the moods`, same(weights(d.moods), spec.feelMix), `${d.moods} ${JSON.stringify(spec.feelMix)}`);
@@ -174,47 +216,59 @@ function describes(label, x, spec) {
   check(`${label}: the layers re-rolled`, d.rolled === rolled, `${d.rolled} ${rolled}`);
 }
 
-// Pass 0 and the next few passes' grids, read as each pass begins (in a
-// piece, any loop with a length asked: `pieceOf`, each section, as it
-// wanders a section at a time), against the
-// page's engine's wandered passes.
-function grids(label, x, spec, passes = 3) {
-  const engine = pageEngine(spec);
-  const wanted = (n) => engine._wander(n);
-  let ok = LAYERS.every((l) => same(grid(x, l), pageGrid(wanted(0), l)));
+// The next few passes' grids, read as each pass begins (in a piece, any
+// loop with a length asked, each section, as it wanders a section at a
+// time), against the core's wandered passes (the goldens' `passes`, pass 1
+// on, at the app's default amount). The first pass is not among them: it
+// plays the loop as composed but for what its own pass draws (the goldens
+// hold it through the player's renders, tools/seeds.sh).
+function grids(label, x, spec, c, passes = 3) {
+  const made = core.parts(c.seed, c.request);
+  let ok = LAYERS.every((l) => grid(x, l).length === ((made.form.cycles && made.form.cycles[l]) || made.form.totalSteps));
   let n = 0;
   for (let frame = 0; n < passes && frame < RATE * 600; frame += QUANTUM) {
     x.dl_play_process(frame);
     for (const e of events(x)) {
       if (e.kind === (spec.length != null ? 2 : 1) && e.number > 0) {
         n = e.number;
-        ok = ok && LAYERS.every((l) => same(grid(x, l), pageGrid(wanted(n), l)));
+        ok = ok && LAYERS.every((l) => same(grid(x, l), pageGrid(made.passes[n - 1], l)));
       }
     }
   }
-  check(`${label}: the grid of ${passes + 1} passes`, ok && n === passes);
-  engine.clock.dispose();
+  check(`${label}: the grid of the next ${passes} passes`, ok && n === passes, `${ok} ${n}`);
 }
 
-console.log('\nThe description and the grid, against the page (24 corpus loops)');
+console.log('\nThe page\'s record, its notes and the grid, against the core (24 corpus loops)');
 {
-  const r = new Rng(1);
-  for (let i = 0; i < 24; i++) {
-    const seed = r.seed32();
-    const x = start(seed);
-    describes(`corpus:${i}`, x, edited(seed, null));
-    grids(`corpus:${i}`, x, edited(seed, null), i < 10 ? 3 : 1);
+  const corpus = CASES.filter((c) => c.set === 'corpus').slice(0, 24);
+  corpus.forEach((c, i) => {
+    const x = start(c.seed);
+    describes(c.name, x, edited(c.seed, null), c);
+    grids(c.name, x, edited(c.seed, null), c, i < 10 ? 3 : 1);
+  });
+}
+
+console.log('Every kind of request (the goldens\' cases, a dozen of each set)');
+{
+  for (const set of ['vibes', 'request', 'pins', 'theme', 'rest', 'length', 'key', 'style', 'voice']) {
+    for (const c of CASES.filter((k) => k.set === set).slice(0, 12)) {
+      const spec = edited(c.seed, c.request);
+      const made = core.parts(c.seed, c.request);
+      const p = render(spec);
+      check(`${c.name}: the page's record is the core's spec`, canonical(spec) === canonical(made.spec), `\n    page ${canonical(spec).slice(0, 400)}\n    core ${canonical(made.spec).slice(0, 400)}`);
+      check(`${c.name}: the page's notes are the core's tracks`, LAYERS.every((l) => same(pageNotes(p, l), coreNotes(made, l))));
+    }
   }
 }
 
-console.log('A code\'s edits, against the page\'s (the generation goldens\' edit cases)');
+console.log('A code\'s edits, against the core\'s (the generation goldens\' edit cases)');
 {
-  const edits = cases([]).filter((c) => c.set === 'edit').slice(0, 48);
+  const edits = CASES.filter((c) => c.set === 'edit').slice(0, 48);
   for (const c of edits) {
     const x = start(c.seed, c.request);
     const spec = edited(c.seed, c.request);
-    describes(`edit:${c.index}`, x, spec);
-    grids(`edit:${c.index}`, x, spec, 1);
+    describes(c.name, x, spec, c);
+    grids(c.name, x, spec, c, 1);
   }
 }
 
@@ -222,7 +276,7 @@ console.log('The events, a re-roll in place and the track\'s end');
 {
   const seed = 1063107040;
   const x = start(seed);
-  const spec = edited(seed, null);
+  const spec = newSpec(seed);
   const total = spec.bars * spec.stepsPerBar;
   const sd = 60 / spec.bpm / 4;
   x.dl_play_track(1, 2);

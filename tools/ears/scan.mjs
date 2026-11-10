@@ -4,13 +4,15 @@
 // clips (busy and sparse, with and without drums) before anything renders.
 //
 // Usage: node scan.mjs REPO [SEED] [N] > scan.json
-// The corpus is the one render2.mjs uses: master Rng(SEED), N specs.
+// The corpus is the ears' own: master Rng(SEED), N specs, from the core's
+// generator (REPO's tools/gen-lib.mjs: build it with tools/build-core.sh
+// --tools there).
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const [REPO, SEED = '20261009', N = '80'] = process.argv.slice(2);
 const at = (f) => pathToFileURL(path.resolve(REPO, f)).href;
-const { newSpec, render } = await import(at('js/generator.js'));
+const { newSpec, render } = await import(at('tools/gen-lib.mjs'));
 const { Rng } = await import(at('js/rng.js'));
 
 const master = new Rng(Number(SEED));

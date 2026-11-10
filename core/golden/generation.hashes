@@ -1,8 +1,8 @@
-# The generation goldens (queue item 77): one case a line, written by
-# tools/gen-golden.mjs, which documents the format, the canonical text the
-# hashes are taken over and the cases. CI checks the JavaScript generator
-# against it (`node tools/gen-golden.mjs --check`, in Node and Chromium);
-# the Rust generator (phase 2) is held to it.
+# The generation goldens (queue item 77): one case a line. tools/gen-golden.mjs
+# documents the format, the canonical text the hashes are taken over and the
+# cases, writes the hashes, and checks the core's generator against them
+# (`node tools/gen-golden.mjs --check`, in the gate); tools/gen-core.sh checks
+# them natively on any target. This file is the list of cases.
 corpus:0 2693262067 - spec=4bce1d9914cd1451 plan=ef91283e360724ed form=65134032ed74e22e drums=6295271fa19d8445 bass=bdfddff12c35a4e5 chords=1f4e673b10bfc334 melody=09612b07b5ecb5a5 texture=827572294d7462af meta=48b1def411b8a77c choices=f1fcbd6822229db1 load=c58a8c791527c124 passes=d6479b982ddfdb16,872df3cd75c606f6,6a8dbc9041bc0afb,adaee2f61269e203,09f2e51c073653c7,5ea100015047cff7,7dce6ae7aee6c0a2,4f15d3148cb5712a
 corpus:1 11749833 - spec=268b3a9a4d6cbb2d plan=ff17db354d4622f1 form=e70937bf44db428b drums=82c5d21fcd957b76 bass=23a7001b652af231 chords=bda730f8c6168d5c melody=3cd939489b40d4eb texture=f6def6576fbb314f meta=2302ff521fcc2c59 choices=8723eb98962c0ed7 load=64b4549989764425 passes=54c192ccc8467012,30b5609eb8d1f54b,bb22fe9ace83bdfe,3ba21a67ae17101e,d2ec6bdb50d22840,f0b427365b56959e,52cde0305c82a08d,1b141f15c9a297f3
 corpus:2 2265367787 - spec=4c8c2bb77faf370d plan=760eceb4e4f1461f form=55d182cabc7df8fe drums=6eaf3b48e0b2a72a bass=d26a128f30e2764b chords=c544fe5f07406f48 melody=30399725f3ef235c texture=c8a236afcdbe21d2 meta=b9228727ba6ee3d9 choices=f1fcbd6822229db1 load=00684af3c579c0d4 passes=36d7f1645ac561d5,844b6be9fc476e46,a620710f5808b6d1,be38228a73002e2c,e4bc8656108837d7,0e33af1895e2d8e5,718c5e2e214e4dce,07e87f99f490fce8

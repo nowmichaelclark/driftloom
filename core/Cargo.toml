@@ -39,9 +39,8 @@ web = []
 generator = ["web"]
 
 # The player's WebAssembly exports (`src/wasm.rs`, `dl_play_*`; queue item
-# 82): the build tools/build-core.sh writes to js/dlplayer.wasm, which the app
-# plays with `?engine=player` for testing. The app's own js/dlcore.wasm stays
-# without it until phase 3.
+# 82): the build tools/build-core.sh writes to js/dlplayer.wasm, the module
+# the app plays (its only one since queue item 97).
 player = ["web"]
 
 # The measuring tools' build (queue item 96): the player's module with the

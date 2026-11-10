@@ -18,7 +18,10 @@ here.
 
 ## Phone and tablet
 
-(none yet)
+- **The app with the JavaScript gone (item 97, v152):** on the Moto and the
+  tablet, play a few loops, Next a few times, a long loop and the screen
+  off; Diagnostics should read `late: 0  missed: 0  dropped: 0`. Trouble
+  means a revert of that PR.
 
 ## Accounts
 
@@ -26,4 +29,6 @@ here.
 
 ## Decisions
 
-(none yet)
+- **A new plain line (item 97):** when the core's module doesn't arrive (no
+  connection on a first visit), the card's place says "Driftloom couldn't
+  load. Check the connection and reload." Keep, or reword?

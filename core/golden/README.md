@@ -8,7 +8,7 @@ on every device. This directory is how that is measured (queue item 42).
 | `codes.txt` | The fixed set of loops: 20 that between them play every voice on every channel, and one long busy one. One line each: name, seconds to render, quality, share code. |
 | `NAME.dlnotes` | A loop as the core hears it: every call the app's host makes to the core, in order, as plain text. Everything needed to render it with no JavaScript, and nothing left to chance: each note is preceded by its `key` (the loop's seed, the pass, the step and its place among its layer's notes), and the core draws everything the note leaves to chance from that (queue item 44). The format is documented in `examples/dlrender/notelist.rs`. |
 | `TARGET.hashes` | What each list renders to on that target: one line a list, with the FNV-1a 64 hash of the speaker output, of each of the five channels as it enters the mix, and of the signal at the bus compressor. |
-| `generation.hashes` | The generation goldens (queue item 77): for 3,060 cases (seeds, with and without vibes), FNV-1a 64 hashes of everything the JavaScript generator decides: the spec, each layer's events, the choices, what the engine draws at load, and eight wandered passes. `node tools/gen-golden.mjs --check` checks it, in Node and with `--chromium` in Chromium (CI runs both); the Rust generator (phase 2) is held to it. The format, the canonical text and the cases are documented in `tools/gen-golden.mjs`. |
+| `generation.hashes` | The generation goldens (queue item 77): for 3,060 cases (seeds, with and without vibes), FNV-1a 64 hashes of everything the JavaScript generator decides: the spec, each layer's events, the choices, what the engine draws at load, and eight wandered passes. `node tools/gen-golden.mjs --check` checks the core's generator against it (the gate runs it); the Rust generator (phase 2) is held to it. The format, the canonical text and the cases are documented in `tools/gen-golden.mjs`. |
 | `blocks.txt` | The building blocks' test kit (queue item 46): every block in the registry played alone, one line a probe, with the hash of its samples, its level and its 2-5 kHz share. `cargo test` checks it (`src/blocks/kit.rs`); `KIT=update cargo test --lib kit` rewrites it when a block's sound changes on purpose. |
 
 ## Checking
@@ -63,18 +63,20 @@ of the app's audio export (roadmap 17).
 
 ## Changing a golden
 
-A sound that moves on purpose moves its hashes. Re-export the lists if the
-app's host calls changed, then re-render on every target and say in the PR
-what moved and why:
+A sound that moves on purpose moves its hashes. The lists are kept as they
+are (they are note lists: a host's calls, written down); re-render on every
+target and say in the PR what moved and why. What the player makes of a
+seed is held by `tools/seeds.sh` and the core baseline, which move the same
+way:
 
 ```sh
-node tools/golden-export.mjs                           # the lists, from codes.txt (needs Chromium)
-tools/golden.sh --update wasm32-unknown-unknown        # and the same for each target in CI
+tools/golden.sh --update wasm32-unknown-unknown        # and the same for each target in the nightly
 ```
 
-`golden-export.mjs` plays each code through the real Synth and Engine in
-headless Chromium, records the host's calls, and checks the list: rendered in
-Node through `js/dlcore.wasm`, its speaker output and its bus must hash to
+`golden-export.mjs` (retired with the page's engine in queue item 97; the
+lists it wrote are kept as they are) played each code through the page's
+Synth and Engine in headless Chromium, recorded the host's calls, and
+checked the list: rendered in Node through the core's module, its speaker output and its bus must hash to
 exactly what the page rendered. (The channel taps need not: Chromium turns on
 flush-to-zero on its audio threads, which the worklet's WebAssembly runs on,
 so a tail decaying through subnormal numbers was zero in the page and not

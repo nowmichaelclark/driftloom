@@ -40,8 +40,6 @@
 //
 // Options:
 //   --loops <names>     shatter,hollow (default; a busy loop and a sung one)
-//   --engines <list>    player (default; the app's engine since queue item
-//                       94b), page (?engine=page; `core` names it too), js
 //   --throttle <list>   CPU slowdown factors                 (default 4,6)
 //   --quality <list>    full,lite                       (default full,lite)
 //   --changes           also time the changes that must be heard at once
@@ -72,12 +70,12 @@
 
 import fs from 'node:fs';
 import {
-  LOOPS, findChrome, sleep, launch, startServer, INSTRUMENT, openTab, loadCode, engineUrl, postsNotes,
+  LOOPS, findChrome, sleep, launch, startServer, INSTRUMENT, openTab, loadCode, engineUrl,
 } from './stalls.mjs';
 
 function parseArgs(argv) {
   const o = {
-    loops: ['shatter', 'hollow'], engines: ['player'], throttle: [4, 6], quality: ['full', 'lite'],
+    loops: ['shatter', 'hollow'], throttle: [4, 6], quality: ['full', 'lite'],
     port: 8754, chrome: null, json: null, md: null, changes: false, report: false,
     buffer: null, graphics: ['default'], phases: null, delay: 0,
   };
@@ -87,7 +85,6 @@ function parseArgs(argv) {
     const next = () => argv[++i];
     switch (a) {
       case '--loops': o.loops = list(next()); break;
-      case '--engines': o.engines = list(next()); break;
       case '--throttle': o.throttle = list(next()).map(Number); break;
       case '--quality': o.quality = list(next()); break;
       case '--port': o.port = Number(next()); break;
@@ -220,7 +217,7 @@ const extra = (lite, buffer) => `(() => {
 // Thirty saved loops and five albums of six, drawn by the app's own
 // generator from a fixed seed, written where the app keeps them.
 const SEED_LIBRARY = `(async () => {
-  const g = await import('/js/generator.js');
+  const g = await import('/js/gen.js');
   const store = await import('/js/storage.js');
   if (store.loadAll().length >= 30) return store.loadAll().length;
   const ids = [];
@@ -392,14 +389,12 @@ async function phase(tab, engine, ph, loop) {
   const after = await tab.evaluate(`(() => { const S = window.__stalls; const m = ${JSON.stringify(mark)};
     return { ...S.since(m), frames: S.frames.slice(m.frames), reads: window.__reads.slice(m.reads),
       early: (window.__early || []).slice(m.early) }; })()`);
-  const events = postsNotes(engine) ? after.notes : after.starts;
+  const events = after.starts;
   // Notes handed over during the phase, late or not.
   const handed = events.filter(([, h]) => h >= mark.ctx);
   const coreLate = before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null;
   // On the player no note passes the page: the core's own count.
-  const late = engine === 'player' ? coreLate : postsNotes(engine)
-    ? handed.filter(([t, h]) => t < h).length
-    : new Set(handed.filter(([t, h]) => t < h).map(([t]) => Math.round(t * 1000))).size;
+  const late = coreLate;
   let gap = 0;
   for (let i = 1; i < after.ticks.length; i++) gap = Math.max(gap, after.ticks[i] - after.ticks[i - 1]);
   const lt = longTasks(after.frames);
@@ -415,7 +410,7 @@ async function phase(tab, engine, ph, loop) {
     view: ph.view,
     longTasks: lt.count, longestMs: lt.longest, what: lt.what,
     // The player has no clock on the page (queue item 94b).
-    gapMs: engine === 'player' ? '-' : Math.round(gap),
+    gapMs: '-',
     lateNotes: late,
     coreLate,
     lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs,
@@ -445,7 +440,7 @@ async function changes(tab, engine, loop) {
     const lateNow = await coreLate();
     const late = lateMark != null && lateNow != null ? lateNow - lateMark : null;
     const S = await tab.evaluate('(() => { const S = window.__stalls; return { notes: S.notes, starts: S.starts, froms: S.froms || [] }; })()');
-    const ev = postsNotes(engine) ? S.notes : S.starts;
+    const ev = S.starts;
     const fresh = ev.filter(([t, h]) => h >= t0 && t >= t0).map(([t]) => t).sort((a, b) => a - b);
     const first = fresh.length ? Math.round((fresh[0] - t0) * 1000) : null;
     const cut = S.froms.find(([sent]) => sent >= t0);
@@ -509,8 +504,7 @@ async function session(opts, chromePath, loop, engine, throttle, quality, graphi
     const diag = await tab.diagnostics();
     const lite = /lite: true/.test(diag.text);
     if (lite !== (quality === 'lite')) throw new Error(`lite is ${lite}, asked for ${quality}`);
-    if (engine !== 'js' && !/^rust/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
-    if (engine === 'player' && !/the core's player/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
+    if (!/the core's player/.test(String(diag.engine))) throw new Error(`engine: ${diag.engine}`);
     const out = await tab.evaluate(`(() => { const c = window.__stalls.ctx; return { base: c.baseLatency, out: c.outputLatency, rate: c.sampleRate }; })()`);
     log(`  audio: baseLatency ${out.base.toFixed(4)} s, outputLatency ${out.out.toFixed(3)} s, ${out.rate} Hz; graphics ${graphics}`);
     const rows = [];
@@ -584,7 +578,7 @@ async function main() {
   const server = await startServer(opts.port, delayWorklet(opts.delay));
   const rows = [];
   try {
-    for (const graphics of opts.graphics) for (const loop of opts.loops) for (const engine of opts.engines) for (const throttle of opts.throttle) for (const quality of opts.quality) {
+    for (const graphics of opts.graphics) for (const loop of opts.loops) for (const engine of ['player']) for (const throttle of opts.throttle) for (const quality of opts.quality) {
       log(`${loop} ${engine} ${throttle}x ${quality} ${graphics}${opts.buffer ? ` buffer ${opts.buffer}` : ''}${opts.delay ? ` delay ${opts.delay} ms` : ''}`);
       try {
         rows.push(...await session(opts, chromePath, loop, engine, throttle, quality, graphics));

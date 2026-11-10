@@ -1,4 +1,4 @@
-# Pinned to an exact release, never "stable": the committed js/dlcore.wasm
+# Pinned to an exact release, never "stable": the committed js/dlplayer.wasm
 # is checked byte for byte against a fresh build (tools/build-core.sh
 # --check), and a different compiler builds different bytes.
 [toolchain]

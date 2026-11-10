@@ -7,10 +7,11 @@
 // Run with:  node tools/stalls.mjs [options]
 //
 // Nothing in js/ is touched. The stalls are made from outside, by a script
-// the harness runs before the page's own (as tools/core-paths.mjs injects
-// its traps), so nothing here ships:
+// the harness runs before the page's own (as tools/rows.mjs injects
+// its hooks), so nothing here ships:
 //
-//   ticks      the page's one Worker is its clock (js/clock.js). Its
+//   ticks      the page's Workers (the page's own clock was one, until
+//              queue item 97; the cover's is another). Their
 //              messages are dropped while a stall is on, as a throttled
 //              worker would send none. Each stall pattern runs `--each`
 //              times: "now and then" (a stall, then 6 s of normal ticks) and
@@ -34,12 +35,8 @@
 //   late ticks   the engine's own counter (Diagnostics `lateTicks`,
 //                `worstLateMs`): the scheduler woke after a step it should
 //                already have queued, so its steps were skipped.
-//   late notes   notes handed to the synth after their start time: on the
-//                page's engine, notes posted to the worklet (it starts them
-//                at once, late and bunched); on ?engine=js, distinct source
-//                start times already past (Web Audio starts them at once);
-//                on the player, which posts none, the core's own count of
-//                notes it took late (Diagnostics' engine line).
+//   late notes   the core's own count of notes it took late (Diagnostics'
+//                engine line): the page hands the player no notes.
 //   silent s     music that never sounded: gaps between notes that touch a
 //                stall (or the second after it), beyond the longest gap in
 //                the same loop unstalled (the control run). Rests the loop
@@ -52,9 +49,6 @@
 //   --loops <names>     shatter,cinder (default), hollow, undertow, from
 //                       tools/perf.mjs's set; piece (shatter's seed, 32,768
 //                       bars) and endless (the same, Endless)
-//   --engines <list>    player (the app's default, queue item 94b), page
-//                       (?engine=page, the page's engine on the core; `core`
-//                       names it too) and js        (default player,page,js)
 //   --throttle <list>   CPU slowdown factors                 (default 4,6)
 //   --lengths <list>    stall lengths in seconds        (default 0.5,1,2,5)
 //   --modes <list>      ticks,main,freeze,hidden,jumps  (default ticks,main,freeze)
@@ -89,7 +83,7 @@ export const LOOPS = {
 
 function parseArgs(argv) {
   const o = {
-    loops: ['shatter', 'cinder'], engines: ['player', 'page', 'js'], throttle: [4, 6], lengths: [0.5, 1, 2, 5],
+    loops: ['shatter', 'cinder'], engines: ['player'], throttle: [4, 6], lengths: [0.5, 1, 2, 5],
     modes: ['ticks', 'main', 'freeze'], each: 3, quality: 'full', port: 8753, chrome: null, json: null, md: null,
   };
   const list = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
@@ -98,7 +92,6 @@ function parseArgs(argv) {
     const next = () => argv[++i];
     switch (a) {
       case '--loops': o.loops = list(next()); break;
-      case '--engines': o.engines = list(next()); break;
       case '--throttle': o.throttle = list(next()).map(Number); break;
       case '--lengths': o.lengths = list(next()).map(Number); break;
       case '--modes': o.modes = list(next()); break;
@@ -141,16 +134,14 @@ export function findChrome(explicit) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// The app's URL for an engine (queue item 94b): the player is the default,
-// `page` (or `core`, its old name here) the page's engine on the core.
-export function engineUrl(port, engine) {
-  const q = engine === 'js' ? '?engine=js' : engine === 'page' || engine === 'core' ? '?engine=page' : '';
-  return `http://127.0.0.1:${port}/${q}`;
+// The app's URL. There is one engine, the core's player (queue item 97).
+export function engineUrl(port) {
+  return `http://127.0.0.1:${port}/`;
 }
 
-// Whether the page posts notes to the core on this engine (the page's
-// engine), or starts them in Web Audio (js); the player posts none.
-export const postsNotes = (engine) => engine === 'page' || engine === 'core';
+// Whether the page posts notes to the core: never, since the player decides
+// its own (the tools' older counts of posted notes read as none).
+export const postsNotes = () => false;
 
 // `args`: more Chromium switches (tools/views.mjs's graphics modes).
 export async function launch(chromePath, args = []) {

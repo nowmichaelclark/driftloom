@@ -1,7 +1,7 @@
 // Tests for the ten dials (queue item 34, tools/dials.mjs).
 // Run with:  node test/dials.test.mjs
 
-import { newSpec, render } from '../js/generator.js';
+import { newSpec, render } from '../js/gen.js';
 import { encodeSong } from '../js/share.js';
 import { DIALS, CLOUD_DIALS, dialsOf, loadScale, buildScale } from '../tools/dials.mjs';
 

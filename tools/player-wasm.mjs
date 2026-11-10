@@ -52,7 +52,7 @@ const way = {
 const wasm = path.resolve(flag('--wasm', path.join(ROOT, 'js', 'dlplayer.wasm')));
 const bytes = fs.readFileSync(wasm);
 const { VIBE_IDS } = await import('../js/vibes.js');
-const { parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState, LAYERS } = await import('../js/generator.js');
+const { parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState, LAYERS } = await import('../js/request.js');
 // The request, read as the core reads it (`Request::parse`), handed over
 // call by call as the worklet hands it.
 const asked = parseRequest(way.request ?? '');

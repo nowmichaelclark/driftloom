@@ -7,13 +7,13 @@ Read first by every Claude session in this repo (`CLAUDE.md` points here).
 
 A procedural loop machine at <https://driftloom.nowmichaelclark.workers.dev/>:
 relaxing, nostalgic loops, generated and synthesized in the browser, played
-forever. A loop is a small spec (`js/generator.js`); since item 94b the
-core's player (`core/`, a Rust audio core compiled to WebAssembly, built to
-the committed `js/dlplayer.wasm`) decides and plays its notes in an
-AudioWorklet, and the page (`js/player.js`) sends it commands and draws its
-events; `?engine=page` keeps the page's own engine on the core
-(`js/engine.js`, `js/dlcore.wasm`) for comparison until item 97, and the
-JavaScript synth is the fallback (`?engine=js`). The page has no build step and no dependencies, and it
+forever. A loop is a seed and a request; the core (`core/`, a Rust audio
+core compiled to WebAssembly, built to the committed `js/dlplayer.wasm`)
+generates it, and its player decides and plays the notes in an
+AudioWorklet. The page sends commands and draws events (`js/player.js`),
+and reads a loop's record and notes from the same module (`js/gen.js`).
+Since item 97 there is no JavaScript generator or synth: a browser that
+can't run the core gets one plain line. The page has no build step and no dependencies, and it
 deploys as static files (`wrangler.jsonc`; pushing to `main` deploys). Mikey
 (nowmichaelclark) owns it. His ears are the acceptance test for anything
 that changes how it sounds.
@@ -63,18 +63,17 @@ that changes how it sounds.
 - **The gate** (item 103): `tools/gate.sh` runs what CI holds a merge to
   (`core`, `sketch`, `node`, `baseline`, `docs`, or all); the slow renders
   are the nightly's (`.github/workflows/nightly.yml`) and hold nothing.
-- Tests (Node 22; run the generator's three times, it uses random seeds):
-  `node test/generator.test.mjs`, and `worklet`, `core-host`, `engine`,
-  `dials`, `fit`, `golden`, `draw`, `picks`, `dlmath`, `budget`, `quality`, `player`, each as
-  `node test/<name>.test.mjs`.
-- Generation goldens (item 77): `node tools/gen-golden.mjs --check` (and
-  `--chromium`); after a change meant to move what is generated, run it
-  without `--check` and say in the PR which cases moved. The generator's
-  paths call `js/dlmath.js` (the core's math), never `Math.pow`, `log`,
-  `sin` and the rest.
+- Tests (Node 22): `worklet`, `core-host`, `data`, `dials`, `fit`,
+  `golden`, `picks`, `quality`, `player`, each as
+  `node test/<name>.test.mjs`. Those that read what the generator decides
+  (and `stats`, `dials`, `gen-golden`, `octave`: `tools/gen-lib.mjs`) need
+  the tools' build first: `tools/build-core.sh --tools`.
+- Generation goldens (item 77): `node tools/gen-golden.mjs --check`; after
+  a change meant to move what is generated, run it without `--check` and
+  say in the PR which cases moved.
 - Balance lock: `node tools/stats.mjs --check`. Core baseline:
   `node tools/baseline.mjs` (`--update` on purpose, saying what moved).
-- Core: `tools/build-core.sh` rebuilds `js/dlcore.wasm`, and `--check`
+- Core: `tools/build-core.sh` rebuilds `js/dlplayer.wasm`, and `--check`
   proves it matches the source; `cd core && cargo test --locked`; golden
   renders `tools/golden.sh --strict <target>`. More in `core/AGENTS.md`.
 - Measuring: `tools/measure.mjs` (on the player, in Node: loudness, the

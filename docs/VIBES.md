@@ -79,8 +79,7 @@ melody = flute 9.9, sine 2.8,            # a long line goes on the next,
   of its own.
 - **And the player's module moves with it** (since item 82): `js/dlplayer.wasm`
   compiles the vibes in, so run `tools/build-core.sh` and commit the rebuilt
-  file in the same PR, or CI's `build-core.sh --check` fails (`js/dlcore.wasm`
-  has no generator in it until phase 3, so it doesn't move). The brain's
+  file in the same PR, or CI's `build-core.sh --check` fails. The brain's
   container has Node, the pinned Rust and Chromium (Session 28 ran all three),
   so a brain vibe PR does both steps itself.
 
@@ -114,7 +113,7 @@ the block below is the copy it started from. Where the brief left a reading open
 - **Weights** (item 85, the request): a game or a developer can give each
   vibe a weight, the share of the loop it steers, in place of the drawn
   ones; shares past 1 are scaled to 1, less is a lighter touch. The
-  strength is still drawn. `readRequest` in `js/generator.js` and
+  strength is still drawn. `readRequest` in `js/request.js` and
   `core/src/generator/request.rs` say how.
 - **The tuning tool:** `node tools/stats.mjs --vibes a,b,c` (one
   selection against none) and `--vibe-each` (a line per vibe);

@@ -3,7 +3,11 @@
 // length, the loop's own up to 32 bars, sections past that, or Endless).
 // Run with:  node test/picks.test.mjs
 
-import { newSpec, render, pieceOf, sectionBars, pieceSeconds, pieceTime } from '../js/generator.js';
+import { newSpec, render } from '../js/gen.js';
+import { pieceOf, pieceSeconds, pieceTime } from '../js/request.js';
+
+// The bars a round's section `i` plays: the last may be short.
+const sectionBars = (piece, i) => (i === piece.sections - 1 ? piece.last : piece.bars);
 import { cleanPicks, moodsText, tempoText, lengthText, keyText, styleText, voicesText, clampBars, requestFor, pickProblem } from '../js/picks.js';
 
 let failures = 0;
@@ -147,11 +151,12 @@ console.log('\nVoices and layers in the request (queue item 91)');
     const state = { vibes: ['cozy'], picks: { tempo: [70, 85], length: 16, voices: { melody: ['kalimba', 'marimba'], bass: ['sub'] }, layers: { drums: 'off', texture: 'on' } } };
     const spec = newSpec(9700 + s, requestFor(state));
     const rb = render(spec);
-    const mel = rb.tracks.melody.filter((e) => e.vel);
-    if (spec.bpm < 70 || spec.bpm > 85 || !spec.mutes.drums || spec.mutes.melody || rb.tracks.bass.some((e) => e.voice !== 'sub')
-      || mel.some((e) => !['kalimba', 'marimba'].includes(e.voice))) { ok = false; bad = `${s} ${spec.bpm} ${JSON.stringify(spec.mutes)}`; }
+    // Which voice plays each note is the core's to say and to test
+    // (core/tests/voices.rs): the page's record keeps what was asked.
+    if (spec.bpm < 70 || spec.bpm > 85 || !spec.mutes.drums || spec.mutes.melody || !rb.tracks.texture.length
+      || JSON.stringify(spec.askVoices) !== '{"bass":["sub"],"melody":["kalimba","marimba"]}') { ok = false; bad = `${s} ${spec.bpm} ${JSON.stringify(spec.mutes)} ${JSON.stringify(spec.askVoices)}`; }
   }
-  check('kalimba or marimba melody, a sub bass, no drums, texture always, with a tempo and a length: all honored', ok, bad);
+  check('kalimba or marimba melody, a sub bass, no drums, texture always, with a tempo and a length: taken, and kept in the record', ok, bad);
   check('nothing picked for the voices asks for nothing', JSON.stringify(newSpec(9800, requestFor({ vibes: [], picks: { tempo: null, length: null, voices: null, layers: null } }))) === JSON.stringify(newSpec(9800)));
   check('a voice or a layer the core cannot play says so', pickProblem({ vibes: [], picks: { voices: { melody: ['nope'] } } }) === 'no such voice'
     && pickProblem({ vibes: [], picks: { layers: { drums: 'off', bass: 'off', chords: 'off', melody: 'off', texture: 'off' } } }) === 'all layers off'

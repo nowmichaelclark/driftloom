@@ -4,8 +4,9 @@
 //
 // Roadmap item 1 asks for the measurement harnesses to stop living in
 // throwaway scripts. This is the generation half of that: it draws a corpus
-// of loops the same way the app does -- newSpec() then render() -- and
-// reports what actually came out. The audio half (peak, RMS, ring time,
+// of loops from the core's generator (tools/gen-lib.mjs, the tools' build:
+// tools/build-core.sh --tools) -- newSpec() then render() -- and reports
+// what actually came out. The audio half (peak, RMS, ring time,
 // per-voice cost) is a separate tool and needs a different kind of harness.
 //
 // Everything is counted on the rendered pattern, after entry schedules and
@@ -18,13 +19,21 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { newSpec, render, choirOf, STEPS_PER_BAR } from '../js/generator.js';
+import { newSpec, render, parts, SCALE_BRIGHTNESS } from './gen-lib.mjs';
 import { Rng } from '../js/rng.js';
-import { SCALES, SCALE_BRIGHTNESS } from '../js/theory.js';
+import { SCALES } from '../js/theory.js';
 import { encodeSong } from '../js/share.js';
 import { VIBE_IDS } from '../js/vibes.js';
-import { CHOICES, CHANGE_COUNTS, changesIn, arcOf } from '../js/choices.js';
-import { canonical, parseCanonical } from './gen-golden-lib.mjs';
+import { CHOICES } from '../js/choices.js';
+import { blockOf, readBlock } from '../js/data.js';
+
+// The default, for a spec that says nothing (4/4).
+const STEPS_PER_BAR = 16;
+// How many of the sound batch's changes a loop draws, with the weights
+// (data/choices.txt, `changes`), and how many a loop got: the choices not
+// at today's option.
+const CHANGE_COUNTS = readBlock(blockOf('choices', 'choices', 'all'), { changes: 'numpool', lean: 'range' }, 'data/choices.txt').changes;
+const changesIn = (choices) => CHOICES.filter((c) => choices[c.id] !== c.options[0][0]).length;
 
 // ------------------------------------------------------------ arguments
 
@@ -69,13 +78,6 @@ driftloom generation statistics
                                                       (default --n 400)
   --choices           the per-loop choices: loops by how many changes
                       they got, and by choice and option (default --n 10000)
-  --core [wasm]       draw the corpus from the Rust generator (queue item 80),
-                      through a build with its exports (default
-                      core/target/dlcore-generator.wasm, which
-                      tools/gen-core.sh wasm32-unknown-unknown makes): every
-                      figure from its tracks, and a failure unless each
-                      loop's figures equal the JavaScript's. With the report
-                      or --check.
   --write-baseline [file]  write the balance lock      (default ${BASELINE_DEFAULT})
   --check [file]      rerun the locked corpus against it; non-zero exit on a miss
   --help              this
@@ -222,8 +224,8 @@ function parseArgs(argv) {
       case '--choices':
         opts.choices = true;
         break;
+      // Since item 97 there is one generator, the core's: the old flag asks for nothing.
       case '--core':
-        opts.core = text('core/target/dlcore-generator.wasm');
         break;
       case '--write-baseline':
         opts.writeBaseline = text(BASELINE_DEFAULT);
@@ -315,7 +317,7 @@ function measure(spec, pattern = render(spec)) {
     // Drawn on purpose (item 12) rather than by collision. A loop can have
     // sameVoice without this, and that is exactly the case the item was
     // written to stop forcing into unison.
-    choir: !!choirOf(spec),
+    choir: !!pattern.meta.choir,
   };
 
   if (notes.length) {
@@ -454,41 +456,9 @@ function collect(opts) {
   const records = [];
   for (let i = 0; i < opts.n; i++) {
     const seed = master.seed32();
-    records.push(opts.core ? measureCore(opts.core, seed) : measure(newSpec(seed)));
+    records.push(measure(newSpec(seed)));
   }
   return records;
-}
-
-// --core (queue item 80): the loop as the Rust generator makes it, read
-// back from its canonical texts (tools/gen-golden.mjs), measured the same
-// way; and the same loop measured from the JavaScript, which must give the
-// very same record, or the tool stops there.
-let coreGen = null;
-function measureCore(file, seed) {
-  if (!coreGen) {
-    if (!fs.existsSync(file)) fail(`${file} is missing: build it with  tools/gen-core.sh wasm32-unknown-unknown`);
-    const x = new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(file)), {}).exports;
-    const part = (i) => {
-      const len = x.dl_gen_part(i);
-      if (!len) fail(`the core wrote no text for part ${i}`);
-      return parseCanonical(new TextDecoder('ascii').decode(new Uint8Array(x.memory.buffer, x.dl_gen_text(), len)));
-    };
-    coreGen = { x, part };
-  }
-  const { x, part } = coreGen;
-  if (!x.dl_gen_load(seed >>> 0, 0)) fail(`the core could not load ${seed}`);
-  // The parts in the core's order (Part::ALL): spec, plan, form, the five
-  // layers, meta, choices.
-  const spec = newSpec(seed);
-  if (canonical(spec) !== canonical(part(0))) fail(`loop ${seed}: the core's spec is not the JavaScript's`);
-  const form = part(2);
-  const tracks = {};
-  ['drums', 'bass', 'chords', 'melody', 'texture'].forEach((layer, i) => { tracks[layer] = part(3 + i); });
-  const pattern = { tracks, meta: part(8), cycles: form.cycles, totalSteps: form.totalSteps };
-  const rec = measure(spec, pattern);
-  const js = measure(spec);
-  if (canonical(rec) !== canonical(js)) fail(`loop ${seed}: the figures from the core's tracks differ from the JavaScript's`);
-  return rec;
 }
 
 // ------------------------------------------------------------ summaries
@@ -855,7 +825,7 @@ function check(opts) {
     console.error(`stats: cannot read the baseline ${opts.check} -- ${err.message}`);
     process.exit(2);
   }
-  const { figures, summary } = lockedFigures(collect({ n: baseline.n, seed: baseline.seed, core: opts.core }));
+  const { figures, summary } = lockedFigures(collect({ n: baseline.n, seed: baseline.seed }));
 
   const out = [''];
   out.push('driftloom balance lock');
@@ -942,7 +912,7 @@ function quiz(opts) {
     if (choirs.length >= QUIZ_CHOIRS && others.length >= QUIZ_TOTAL - QUIZ_CHOIRS) break;
     const seed = master.seed32();
     const spec = newSpec(seed);
-    const bucket = choirOf(spec) ? choirs : others;
+    const bucket = render(spec).meta.choir ? choirs : others;
     const want = bucket === choirs ? QUIZ_CHOIRS : QUIZ_TOTAL - QUIZ_CHOIRS;
     if (bucket.length < want) bucket.push(spec);
   }
@@ -1304,7 +1274,7 @@ function choicesReport(opts) {
       byOption.set(key, (byOption.get(key) || 0) + 1);
     }
     if (choices.arc === 'on') {
-      const { shape } = arcOf(spec.seed, null);
+      const { shape } = parts(spec.seed).load.arc;
       shapes.set(shape, (shapes.get(shape) || 0) + 1);
     }
   }

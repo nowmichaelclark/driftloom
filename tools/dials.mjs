@@ -28,9 +28,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newSpec, render, STEPS_PER_BAR, metreOf } from '../js/generator.js';
+import { newSpec, render, metreOf, SCALE_BRIGHTNESS } from './gen-lib.mjs';
 import { Rng } from '../js/rng.js';
-import { SCALE_BRIGHTNESS, SCALES } from '../js/theory.js';
+import { SCALES } from '../js/theory.js';
+
+// The default, for a spec that says nothing (4/4).
+const STEPS_PER_BAR = 16;
 import { decodeSong } from '../js/share.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -49,7 +52,7 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 // What each voice is like, for the two dials that are about sound. Two
 // figures, both the hands' reading of the voice as built (docs/EARS.md and
-// the voice comments in js/synth.js), not measurements:
+// the voices' comments in core/src/blocks/), not measurements:
 //   attack  1 struck or plucked (the note starts with a click or a hit and
 //           decays), 0 sustained (bowed, blown, sung, a pad), 0.5 between;
 //   bright  0 dark and round to 1 glassy, where its energy sits.
