@@ -13,10 +13,10 @@
 #   node      the Node tests (test/*.test.mjs), the generation goldens in
 #             Node (queue item 77), and the balance lock on the Rust
 #             generator (queue item 80)
-#   baseline  the core's renders against test/core-baseline.json (queue item
-#             32), the "nothing moved" guard, in four groups of its parts:
-#             any change to what the core plays fails here until a PR updates
-#             the baseline on purpose
+#   baseline  the player's renders against test/core-baseline.json (queue
+#             items 32 and 96), the "nothing moved" guard, in three groups of
+#             its parts: any change to what the core plays fails here until a
+#             PR updates the baseline on purpose
 #
 # Everything slower is in nightly.yml and never holds a merge: every target's
 # golden renders, Emscripten, Endless for 24 hours, the generation goldens in
@@ -74,26 +74,19 @@ jobs:
 
   baseline:
     name: baseline (${{ matrix.parts }})
-    # Pinned: Playwright 1.56.1 (below, the baseline's Chromium) can't
-    # install Chromium's dependencies on ubuntu-latest since it became
-    # 26.04 ("does not support chromium on ubuntu26.04-x64").
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        # `repeat` renders `loops` again, so they share a job.
-        parts: ['loops,repeat,costs', 'voices,refusals', 'stereo', 'player']
+        # The loops, the stereo render and the player's fingerprints read
+        # the same renders, so they share a job.
+        parts: ['loops,stereo,player,costs', 'voices', 'refusals']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Playwright pinned to the version whose Chromium the baseline was
-      # rendered with; the tool is a dependency of the tools, not the app.
-      - name: Chromium, for the baseline
-        run: |
-          npm install --no-save playwright@1.56.1
-          npx playwright install --with-deps chromium
+      # On the player in Node since queue item 96: no browser.
       - name: The core against its baseline
         run: tools/gate.sh baseline ${{ matrix.parts }}

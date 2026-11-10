@@ -16,8 +16,8 @@ brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
 (#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
 and **95** (the picks through the core's commands); Ears 13b approved
 (2026-11-09). **The road to 1.0 (a long hands run, 2026-11-10; what waits
-for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate).
-**Next: 96**, then 97, 100, 98's hands part, 101, 84b, 102. Item
+for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate, #354), 96 done (the checks on the player).
+**Next: 97**, then 100, 98's hands part, 101, 84b, 102. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -44,15 +44,14 @@ tracks").
   requested loop the rule is read per profile: a request may not make any
   profile's lite refusals worse than that profile's own (brain, 2026-10-31;
   `docs/archive/notes/85-fast-pins-lite.md`).
-- **The core baseline (item 32):** run `node tools/baseline.mjs`. It renders
-  a fixed set on the core (40 loops full and lite, every voice, the
-  refusals, the costs) and fails on any difference from
-  `test/core-baseline.json`. A change that is not meant to change the sound
-  must leave it passing; one that is runs `node tools/baseline.mjs
-  --update` in the same PR and says in the body what moved and why.
-  Nulling against JavaScript (`measure.mjs --null`) is no longer the gate
-  for the core; the JavaScript synth is the fallback a phone without the
-  core hears and keeps passing its own checks (`--engine js` with
+- **The core baseline (items 32 and 96):** run `node tools/baseline.mjs`.
+  It plays a fixed set on the player in Node (40 loops full and lite, mono
+  and stereo, every voice, the refusals, the costs) and fails on any
+  difference from `test/core-baseline.json`. A change that is not meant to
+  change the sound must leave it passing; one that is runs `node
+  tools/baseline.mjs --update` in the same PR and says in the body what
+  moved and why. The JavaScript synth is the fallback until item 97 and
+  keeps passing its own checks (`tools/measure-js.mjs --engine js` with
   `--refusals`, `--clicks`, `--endings`) when its code is touched.
 - **The balance lock:** run `stats.mjs --check`. If a locked figure moves,
   report which and by how much, re-baseline at `--n 10000`, and say so.
@@ -216,16 +215,20 @@ Diagnostics: `slow: lite past the line, Ns`.
 "steady", "slow" and "yours" never show it; `tools/rows.mjs` passes. BUILD
 and CACHE together.
 
-## 96. The checks on the player
+## 96. The checks on the player (done, hands, 2026-11-10)
 
-**Hands:** Sonnet 5.5, high.
-
-**What:** the core baseline's older parts (`tools/baseline.mjs`'s loops,
-refusals and the rest), `tools/measure.mjs`, `tools/perf.mjs` and
-`tools/views.mjs` render and measure through the player, so one way of
-playing is checked ("For phase 3": the up-front harness retires for the
-core). Say what each tool's figures were on the old path and on the
-player, for the same loops, and update the baseline on purpose.
+**Built:** `tools/measure.mjs` and `tools/baseline.mjs` play loops from
+their seeds on `js/dlplayer.wasm` in Node (`tools/play-lib.mjs`, the meters
+in `tools/meter.mjs`): no browser, and the up-front harness is gone for the
+core (the old tool is `tools/measure-js.mjs`, for the JavaScript fallback
+until 97). The voice probe, a request as text and the budget's counts are
+the core's `tools` feature (`tools/build-core.sh --tools`, never shipped;
+`player/probe.rs` hands the sequencer a loop of one note). For the same 40
+loops the old path and the player agree to 0.005 dB in loudness and peak;
+the baseline's `voices`, `player` and `costs` parts did not move, and
+`loops`, `stereo` and `refusals` are now the player's 45 s renders, on
+purpose. `tools/perf.mjs` and `tools/views.mjs` drive the app, which plays
+the player since 94b.
 
 ## 97. The JavaScript retires
 

@@ -500,12 +500,12 @@ mod player {
     unsafe impl Sync for Asked {}
     static REQUEST: Asked = Asked(UnsafeCell::new(Request::new()));
 
-    fn player() -> &'static mut Player {
+    pub(super) fn player() -> &'static mut Player {
         // SAFETY: single-threaded, and no export keeps the reference.
         unsafe { &mut *PLAYER.0.get() }
     }
 
-    fn request() -> &'static mut Request {
+    pub(super) fn request() -> &'static mut Request {
         // SAFETY: single-threaded, and no export keeps the reference.
         unsafe { &mut *REQUEST.0.get() }
     }
@@ -518,7 +518,7 @@ mod player {
     unsafe impl Sync for Refused {}
     static REFUSED: Refused = Refused(UnsafeCell::new(None));
 
-    fn refused() -> &'static mut Option<&'static str> {
+    pub(super) fn refused() -> &'static mut Option<&'static str> {
         // SAFETY: single-threaded, and no export keeps the reference.
         unsafe { &mut *REFUSED.0.get() }
     }
@@ -1149,5 +1149,117 @@ mod player {
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_time() -> f64 {
         player().position().2
+    }
+}
+
+/// The measuring tools' exports (queue item 96; the `tools` feature, a build
+/// the tools make for themselves and the app never ships): a request as
+/// text, as the C host's `dl_player_ask` takes one; one note of one voice
+/// through its layer's path (`player::probe`); and what the voice budget
+/// was asked and refused, by layer.
+#[cfg(feature = "tools")]
+mod tools {
+    use core::cell::UnsafeCell;
+
+    use super::core;
+    use super::player::{player, refused, request};
+    use crate::generator::LAYERS;
+    use crate::player::Request;
+    use crate::player::probe::{Note, Room, VOICES};
+    use crate::player::synth::Synth;
+
+    struct Bytes(UnsafeCell<[u8; 1024]>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Bytes {}
+    static INPUT: Bytes = Bytes(UnsafeCell::new([0; 1024]));
+
+    struct Probe(UnsafeCell<(Room, Synth, bool)>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Probe {}
+    static PROBE: Probe = Probe(UnsafeCell::new((Room::new(), Synth::new(), false)));
+
+    /// Where the host writes a request's text (`dl_tools_ask`), and reads a
+    /// voice's name (`dl_tools_voice`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_input() -> *mut u8 {
+        INPUT.0.get().cast()
+    }
+
+    /// Ask the next `dl_play_load` for the request whose text is the first
+    /// `length` bytes at `dl_tools_input` (`Request::parse`), in place of
+    /// anything asked so far. 1 if it can be met; else 0, the request left
+    /// as it was and the refusal noted (`dl_play_refusal`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_ask(length: u32) -> u32 {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let input = unsafe { &*INPUT.0.get() };
+        let bytes = &input[..(length as usize).min(input.len())];
+        match core::str::from_utf8(bytes).map(Request::parse) {
+            Ok(Ok(r)) => {
+                *request() = r;
+                1
+            }
+            Ok(Err(why)) => {
+                refused().get_or_insert(why);
+                0
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// How many voices the probe knows in `layer` (`probe::VOICES`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_voices(layer: u32) -> u32 {
+        VOICES.get(layer as usize).map_or(0, |v| u32::try_from(v.len()).unwrap_or(0))
+    }
+
+    /// The name of voice `index` of `layer`, written at `dl_tools_input`;
+    /// its length, 0 for none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_voice(layer: u32, index: u32) -> u32 {
+        let Some(name) = VOICES.get(layer as usize).and_then(|v| v.get(index as usize)) else { return 0 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *INPUT.0.get() };
+        buf[..name.len()].copy_from_slice(name.as_bytes());
+        u32::try_from(name.len()).unwrap_or(0)
+    }
+
+    /// Hand the core one note of voice `index` of `layer` at `at` seconds,
+    /// through the layer's own path (`probe::Room::play`): `midi`, `vel`,
+    /// held `seconds`, its draws from `seed`, a sung voice on vowel `vowel`.
+    /// The synth is started on the first call. 1 if the voice exists.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::too_many_arguments)] // the note's own fields
+    pub extern "C" fn dl_tools_probe(layer: u32, index: u32, midi: f64, vel: f64, seconds: f64, seed: u32, vowel: u32, at: f64) -> u32 {
+        let (Some(&at_layer), Some(&voice)) = (LAYERS.get(layer as usize), VOICES.get(layer as usize).and_then(|v| v.get(index as usize))) else {
+            return 0;
+        };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let (room, synth, started) = unsafe { &mut *PROBE.0.get() };
+        let core = core();
+        if !*started {
+            let rate = core.context().rate;
+            synth.start(core, rate, false, 0.0);
+            *started = true;
+        }
+        room.play(core, synth, &Note { layer: at_layer, voice, midi, vel, seconds, seed, vowel: vowel as usize }, at);
+        1
+    }
+
+    /// The voice calls the player's budget was asked for `layer` (0), those
+    /// it refused room (1), and those it let go for newer notes (2), since
+    /// the player was attached.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_budget(layer: u32, which: u32) -> u32 {
+        let l = layer as usize;
+        if l >= 5 {
+            return 0;
+        }
+        let (counts, stolen) = player().budget_counts();
+        match which {
+            0 => counts.asked[l],
+            1 => counts.refused[l],
+            _ => stolen[l],
+        }
     }
 }

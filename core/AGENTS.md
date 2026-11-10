@@ -12,9 +12,12 @@ core, and how to add a block, is `core/README.md`.
   `js/dlplayer.wasm`; `--check` fails if either committed file is not
   exactly what the source builds. Commit them with the source.
 - `cd core && cargo test --locked`
-- `node tools/baseline.mjs` (the core's renders against
-  `test/core-baseline.json`; `--update` on purpose, saying what moved). It
-  needs Playwright's Chromium: `npm install --no-save playwright@1.56.1`.
+- `node tools/baseline.mjs` (the player's renders against
+  `test/core-baseline.json`; `--update` on purpose, saying what moved). In
+  Node, no browser (queue item 96); its voices and refusals play the tools'
+  build, `tools/build-core.sh --tools` (`core/target/dltools.wasm`, the
+  `tools` feature: the player with a request as text, the voice probe and
+  the budget's counts; never shipped).
 - `tools/golden.sh --strict wasm32-unknown-unknown` (also `--flush`,
   `--blocks`, `--rates`, `--stereo`; the nightly runs every target, and
   nothing here waits on it: `tools/gate.sh` is the gate, queue item 103).
@@ -61,6 +64,12 @@ on every PR.
   zero in every file, and CI holds it there (`-D warnings`); allow a lint
   locally, with a one-line reason, only where following it would make the
   code worse.
+- **A line added above shipped code moves the app's bytes** (queue item
+  96): panic locations carry line numbers, so `js/dlplayer.wasm` changes
+  even when the new line is compiled out. Code for the `tools` or `sketch`
+  builds goes at a file's end, or shares a line with the code it sits
+  beside (as in `player/sequencer.rs` and `player/budget.rs`);
+  `tools/build-core.sh --check` says if it moved.
 - No dependencies in `core/` (dev-only tools in CI are fine).
 - Everything the core emits (names, errors, logs) is plain ASCII.
 - Costs: the core baseline's render costs may not rise by more than 5%

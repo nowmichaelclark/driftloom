@@ -59,7 +59,7 @@ pub mod budget;
 pub mod change;
 pub mod events;
 pub mod formant;
-pub mod host;
+pub mod host; #[cfg(feature = "tools")] pub mod probe;
 pub mod sequencer;
 pub mod synth;
 pub mod track;
@@ -1284,5 +1284,16 @@ fn loop_of<'a>(g: &'a Generator, passes: &'a [Pass; 2], slot: Option<usize>) -> 
 impl Default for Player {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(feature = "tools")]
+impl Player {
+    /// The voice calls the budget was asked and refused, by layer, and
+    /// those it let go (`Budget::counts`, `Budget::stolen`), for the
+    /// measuring tools (queue item 96; the tools build only).
+    #[must_use]
+    pub fn budget_counts(&self) -> (budget::Counts, [u32; 5]) {
+        (self.synth.budget.counts(), self.synth.budget.stolen())
     }
 }

@@ -77,7 +77,8 @@ that changes how it sounds.
 - Core: `tools/build-core.sh` rebuilds `js/dlcore.wasm`, and `--check`
   proves it matches the source; `cd core && cargo test --locked`; golden
   renders `tools/golden.sh --strict <target>`. More in `core/AGENTS.md`.
-- Measuring: `tools/measure.mjs`, `tools/perf.mjs`, `tools/views.mjs`;
+- Measuring: `tools/measure.mjs` (on the player, in Node: loudness, the
+  voice probe, refusals, endings), `tools/perf.mjs`, `tools/views.mjs`;
   usage in the queue's standing rules and the file headers. The app's
   controls on the player, a check each: `node tools/rows.mjs` (`--long`
   adds the length slider's minute).

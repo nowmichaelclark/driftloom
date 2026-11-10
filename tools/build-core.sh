@@ -6,6 +6,11 @@
 #                                js/dlplayer.wasm
 #   tools/build-core.sh --check  build, and fail if either differs from its
 #                                build by a single byte
+#   tools/build-core.sh --tools  build the measuring tools' module (queue item
+#                                96: the player's, with the generator's
+#                                exports, a request as text, the voice probe
+#                                and the budget's counts), to
+#                                core/target/dltools.wasm (not committed)
 #   tools/build-core.sh --wide   build the 192 kHz variant, to
 #                                core/target/dlcore-wide.wasm (not committed:
 #                                the tools that render goldens above 96 kHz
@@ -27,11 +32,13 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 check=no
 wide=no
+tools=no
 case "${1:-}" in
   --check) check=yes ;;
   --wide) wide=yes ;;
+  --tools) tools=yes ;;
   '') ;;
-  *) echo "usage: tools/build-core.sh [--check | --wide]" >&2; exit 2 ;;
+  *) echo "usage: tools/build-core.sh [--check | --wide | --tools]" >&2; exit 2 ;;
 esac
 
 cd "$root/core"
@@ -53,6 +60,12 @@ if [ "$wide" = yes ]; then
   cargo rustc --release --locked --target wasm32-unknown-unknown --features web --crate-type cdylib,rlib
   cp "$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm" "$root/core/target/dlcore-wide.wasm"
   echo "build-core: wrote core/target/dlcore-wide.wasm ($(wc -c < "$root/core/target/dlcore-wide.wasm" | tr -d ' ') bytes)"
+  exit 0
+fi
+if [ "$tools" = yes ]; then
+  cargo rustc -q --release --locked --target wasm32-unknown-unknown --no-default-features --features tools --crate-type cdylib,rlib
+  cp "$root/core/target/wasm32-unknown-unknown/release/dlcore.wasm" "$root/core/target/dltools.wasm"
+  echo "build-core: wrote core/target/dltools.wasm ($(wc -c < "$root/core/target/dltools.wasm" | tr -d ' ') bytes)"
   exit 0
 fi
 # Two modules: the app's (the `web` feature), and the player's (queue item

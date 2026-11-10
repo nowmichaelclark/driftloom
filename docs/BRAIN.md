@@ -159,9 +159,9 @@ default. Move text, don't rewrite decisions.
   queue and the branch make resuming cheap.
 - The brain's container: one core; `/tmp` does not survive between
   sessions; a background run must start with `setsid` or it dies when the
-  tool call returns; `measure.mjs` takes a few seconds per loop, so 100
-  loops is a background job. Playwright is installed globally
-  (`NODE_PATH=$(npm root -g)`).
+  tool call returns; `measure.mjs` takes a second or two per loop (in Node,
+  on the player), so 100 loops is a few minutes. Playwright, for the tools
+  that drive the app, is installed globally (`NODE_PATH=$(npm root -g)`).
 
 ## Listening albums
 
@@ -262,13 +262,13 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   `--check` and `--write-baseline` (the balance lock,
   `test/stats-baseline.json`, n=10000), `--drums <profiles>` (drum
   variety), `--depth` (composition depth, developing vs simple).
-- `tools/measure.mjs` -- offline audio through the real Engine and Synth in
-  headless Chromium: peak, RMS, LUFS, LRA, crest, per-layer levels,
-  punch figures, drums over the music; `--voice all|names` (tone and
-  level by layer, `--note` for note length), `--refusals [code]`
-  (`--quality lite`), `--profile <id>`, `--endings` (cut-off notes),
-  `--retire` (voices letting go changes nothing), `--selftest`,
-  `--json`, `--jobs`, `--seed`. Seeded: same seed, same numbers.
+- `tools/measure.mjs` -- offline audio on the player, in Node (no
+  browser; queue item 96): LUFS, LRA, peak, crest, per-layer levels, punch
+  figures, what the master chain did; `--voice all|names` (tone and level
+  by layer, `--note` for note length), `--refusals` (`--quality lite`),
+  `--profile <id>`, `--vibes`, `--request`, `--vibe-mix`, `--stereo`,
+  `--endings` (cut-off notes), `--json`, `--seed`. Same options, same
+  numbers, to the bit. `node tools/meter.mjs --selftest` checks the meter.
 - `tools/perf.mjs` -- live performance in headless Chromium under CPU
   throttling: audio health, main-thread cost, graph churn, memory, time
   to first sound, page weight, hidden tab; `--ab` for before/after.

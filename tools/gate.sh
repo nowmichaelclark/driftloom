@@ -22,7 +22,8 @@
 # rates and the balance lock's own corpus. A red nightly is fixed by the next
 # session that sees it.
 #
-# The baseline needs Playwright's Chromium (tools/baseline.mjs says how).
+# Nothing here needs a browser: the baseline plays the player in Node (queue
+# item 96).
 
 set -eu
 
@@ -34,7 +35,8 @@ core() {
   (cd core && cargo test --locked)
   (cd core && rustup component add clippy >/dev/null 2>&1 || true
    cargo clippy --all-targets --locked -- -W clippy::pedantic -D warnings
-   cargo clippy --lib --locked --features capi -- -W clippy::pedantic -D warnings)
+   cargo clippy --lib --locked --features capi -- -W clippy::pedantic -D warnings
+   cargo clippy --lib --locked --features tools -- -W clippy::pedantic -D warnings)
 }
 
 sketch() {
