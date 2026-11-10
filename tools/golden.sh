@@ -154,7 +154,7 @@ if [ "$rates" = yes ]; then
         [ -f "$root/core/target/dlcore-wide.wasm" ] || "$root/tools/build-core.sh" --wide >&2
         module="$root/core/target/dlcore-wide.wasm"
       else
-        module="$root/js/dlcore.wasm"
+        module="$root/js/dlplayer.wasm"
       fi
       (cd "$root" && node tools/golden-wasm.mjs --twice $stereo --wasm "$module" --rate "$rate" $files) >> "$tmp"
     else

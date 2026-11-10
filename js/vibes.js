@@ -3,9 +3,11 @@
 // The recipes are data now: data/vibes.txt, a [vibe name] block each, in the
 // text format of js/data.js. The brain edits that file (docs/DECISIONS.md,
 // "The words and vibes"); docs/VIBES.md keeps the reasoning, the history and
-// "How a recipe works" and "How to edit a vibe". The generator reads these
-// in js/generator.js (`newSpec` and `characterOf`); test/data.test.mjs
-// checks every key and every name in them and fails on an unknown one.
+// "How a recipe works" and "How to edit a vibe". The core's generator reads
+// the same file, compiled in (`core/build.rs`); the page reads it for the
+// vibes' names and their order (the picker, a request, a share code).
+// test/data.test.mjs checks every key and every name in them and fails on an
+// unknown one.
 
 import { blockOf, blocksOf, READ, readBlock } from './data.js';
 

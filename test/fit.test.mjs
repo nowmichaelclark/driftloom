@@ -1,7 +1,7 @@
 // Tests for fitting the words and building word albums (queue item 35).
 // Run with:  node test/fit.test.mjs
 
-import { newSpec } from '../js/generator.js';
+import { newSpec } from '../js/gen.js';
 import { encodeSong, decodeAlbum } from '../js/share.js';
 import { Rng } from '../js/rng.js';
 import { dialsOf, loadScale } from '../tools/dials.mjs';

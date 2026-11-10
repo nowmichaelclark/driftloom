@@ -13,7 +13,14 @@
 // (which track is which) is re-derived by running the same line again and
 // never needs writing down.
 
-import { newSpec, render, patternSteps } from '../js/generator.js';
+import { newSpec } from '../js/gen.js';
+
+// A loop's length in steps: its bars, or its longest layer's cycle.
+function patternSteps(spec) {
+  const base = spec.bars * (spec.stepsPerBar || 16);
+  if (!spec.cycles) return base;
+  return Math.max(base, ...Object.values(spec.cycles).filter(Boolean));
+}
 import { encodeAlbum } from '../js/share.js';
 import { SCALES } from '../js/theory.js';
 import { CHARACTERS } from '../js/characters.js';

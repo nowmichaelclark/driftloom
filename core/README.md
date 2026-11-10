@@ -166,8 +166,8 @@ the whole table.
 
 ## The generator (phase 2)
 
-`src/generator/` is `js/generator.js` in Rust, ported note for note (queue
-items 79 to 81): a loop's spec, the plan `render` draws before the layers,
+`src/generator/` is the generator, ported note for note from the app's old
+JavaScript one (`js/generator.js`, retired in item 97; queue items 79 to 81): a loop's spec, the plan `render` draws before the layers,
 the layers themselves and `render`'s choices, each choice's own draws
 (`js/choices.js`), what the engine decides at load (`Engine.load`: the
 per-loop settings the host sends the core) and each wandered pass
@@ -193,8 +193,8 @@ for the checks.
 ## The player (phase 2)
 
 `src/player/` plays a loop from its seed with no JavaScript (queue item 82):
-the generator makes it, the sequencer (`sequencer.rs`, `Engine` in
-`js/engine.js`) walks it step by step, pass after pass, wandering as the
+the generator makes it, the sequencer (`sequencer.rs`, once the page's
+`Engine`) walks it step by step, pass after pass, wandering as the
 app's does, and the synth's note calls (`synth.rs`, with the voice budget,
 `budget.rs`, and the sung voices' trims, `formant.rs`) hand each note to the
 core with everything it carries. The baseline's 40 loops, full and lite,
@@ -218,7 +218,7 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   `dl_play_wander_salt`, `dlrender --salt`): the wander's stream salted from
   the next pass, so a host that sends a new salt each play hears a loop
   wander differently each time (the app does across its wander slider's
-  upper range, `UNREPEATABLE_FROM` in `js/engine.js`). 0, the default, is
+  upper range, `UNREPEATABLE_FROM` in `js/player.js`). 0, the default, is
   the wander every code has always had; the same seed, request and salt
   make the same samples.
 
@@ -351,7 +351,7 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   a day of Endless at speed (CI's `endless` job: no drift, no growth), and
   `tests/length.rs` holds the rest (every profile, 1 to 32,768 bars, a
   section reached straight or through). `piece::time` is the play time the
-  app's Bars picker shows (`pieceTime` in `js/generator.js`). The length is
+  app's Bars picker shows (`pieceTime` in `js/request.js`). The length is
   how many bars the loop is, never when it ends (queue item 88b): the player
   plays round after round and hands the host no end; the app's length slider
   decides when a track hands over, and one that ends inside a pass lets the
@@ -422,8 +422,8 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
   a whole C host, a seed to a WAV.
 - **On the web** the `player` feature builds `js/dlplayer.wasm` with the
   `dl_play_*` exports; the app plays it by default since queue item 94b
-  (`js/player.js` sends the commands and draws the events; `?engine=page`
-  plays `js/dlcore.wasm` under the page's own engine). The module is
+  (`js/player.js` sends the commands and draws the events), and it is the
+  app's only module since item 97. The module is
   665 KB (226 KB gzipped) against the core alone's 252 KB (91 KB gzipped): the
   generator and the player's code, 547 KB of the module before gzip. The player is all
   zero bytes when new (`a_new_player_is_all_zeros`), so its 1.5 MB is `.bss`,
@@ -434,7 +434,7 @@ waiting notes in no fixed order (a note that starts takes the last one's
 place), so which voice a note takes, and the order the voices are summed in,
 depend on what is waiting. The player's way is fixed (a block at a time,
 `LOOKAHEAD` ahead), so its renders are the same everywhere; handing a whole
-render over before it starts, as `tools/measure-js.mjs` does, sums the same
+render over before it starts, as the old measuring harness did, sums the same
 notes in another order (inaudibly: about 88 dB under the render).
 
 Nothing allocates (the generator's lists, two passes and the budget are
@@ -467,6 +467,6 @@ on and the sketch off, every loop renders bit for bit as before.
 - **`golden/`:** whole loops as the app plays them. Each must hash the same on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every block size and at other rates (`golden/README.md`).
 - **`tools/gen-core.sh [TARGET]`:** the Rust generator against the generation goldens (`golden/generation.hashes`): every case, every part (the load and the eight wandered passes too) equal to the JavaScript's hash, on every target CI renders (`examples/dlgen`; wasm32 through a `generator` build in Node). `node tools/stats.mjs --check --core` draws the balance lock's corpus from that build and fails unless every loop's figures equal the JavaScript's.
 - **`tools/seeds.sh [TARGET]`:** the corpus's first 80 loops from their seeds, each to a WAV, against `golden/seeds.hashes`, the same on every target (the first few under QEMU); `--browser` holds the baseline's 40 loops in the four ways to the browser's renders (`tools/baseline.mjs`'s `player` part), natively and in `js/dlplayer.wasm`; `--c` builds the C host against the header alone and holds it to the same hashes.
-- **`tools/baseline.mjs`:** the core in the real app, in Chromium: every voice, 40 loops, the refusals, and the 40 loops played from their seeds as the player plays them (`tools/player.mjs`).
-- **`tools/build-core.sh --check`:** the committed `js/dlcore.wasm` and `js/dlplayer.wasm` are exactly what this source builds. Run `tools/build-core.sh` after any change here.
+- **`tools/baseline.mjs`:** the core in the real app, in Chromium: every voice, 40 loops, the refusals, and the 40 loops played from their seeds as the player plays them.
+- **`tools/build-core.sh --check`:** the committed `js/dlplayer.wasm` is exactly what this source builds. Run `tools/build-core.sh` after any change here.
 - **Clippy, pedantic:** run `cargo clippy --all-targets -- -W clippy::pedantic`; it reports zero, and CI fails on any warning (queue item 74). Every public item has a doc comment that gives the reason, not only the what.

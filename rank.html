@@ -58,9 +58,10 @@
 </div>
 
 <script type="module">
-import { newSpec } from './js/generator.js';
-import { Synth } from './js/synth.js';
-import { Engine } from './js/engine.js';
+import { newSpec } from './js/gen.js';
+import { Output } from './js/output.js';
+import { PlayerEngine } from './js/player.js';
+import { loadCore, newContext } from './js/core.js';
 import { Rng } from './js/rng.js';
 import { encodeSong, decodeSong } from './js/share.js';
 import { getPrefs } from './js/storage.js';
@@ -163,16 +164,22 @@ let cur = null;
 
 function startAudio() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
-  ctx = new Ctx({ latencyHint: 'playback' });
-  // The app's own choices on this device: lite or full, and the volume.
+  ctx = newContext(Ctx, { latencyHint: 'playback' });
+  // The app's own choices on this device: lite or full, mono or stereo, and
+  // the volume. Played by the core's player, as the app plays (queue item
+  // 97; until then this page built the JavaScript synth).
   const prefs = getPrefs();
   quality = (prefs.lite ?? (navigator.hardwareConcurrency || 4) <= 4) ? 'lite' : 'full';
-  const synth = new Synth(ctx, quality);
-  synth.setVolume(prefs.volume ?? 0.85);
-  engine = new Engine(ctx, synth);
+  const output = new Output(ctx, quality, { layout: prefs.mono ? 1 : 2 });
+  output.setVolume(prefs.volume ?? 0.85);
+  engine = new PlayerEngine(ctx, output);
   // The loop as composed, never wandering, so its code is exactly what was
   // heard.
   engine.driftOn = false;
+  loadCore(ctx).then((core) => {
+    output.attachCore(core);
+    engine.coreArrived();
+  }).catch(() => {});
 }
 
 // The build stamp lives in main.js, which starts the whole app when it is
@@ -279,7 +286,6 @@ $('clear').addEventListener('click', () => {
 
 document.addEventListener('visibilitychange', () => {
   if (ctx && ctx.state === 'suspended') ctx.resume();
-  if (engine) engine.retune();
 });
 
 show();

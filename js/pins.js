@@ -1,5 +1,5 @@
 // The request's pins (queue item 85b): the named settings a host may fix for
-// the loops it asks for, beside the vibes and the tempo (js/generator.js,
+// the loops it asks for, beside the vibes and the tempo (js/request.js,
 // `readRequest`). The game's and the ears' levers: any of item 54's choices
 // to one of its options, and the settings each choice draws by (the arc, the
 // tuned kick, subDuck, lateFloor, padSweep), the echo's time and the space
@@ -154,26 +154,4 @@ export function pinNumbers(pins) {
     const p = PINS[BY_NAME.get(n)];
     return [p.number, p.words ? p.words.indexOf(v) : v];
   });
-}
-
-// One group's settings from a spec's pins ({ shape, period } for 'arc'), for
-// the draws' `pins` arguments; {} for none.
-export function pinsFor(spec, group) {
-  const out = {};
-  const pins = spec && spec.pins;
-  if (!pins) return out;
-  const head = `${group}.`;
-  for (const [n, v] of Object.entries(pins)) if (n.startsWith(head)) out[n.slice(head.length)] = v;
-  return out;
-}
-
-// The option a spec's pins fix for choice `id`, or undefined.
-export function choicePin(spec, id) {
-  return spec && spec.pins ? spec.pins[id] : undefined;
-}
-
-// The space recipe's pins, as [setting number, value] pairs.
-export function spacePins(spec) {
-  const s = pinsFor(spec, 'space');
-  return SPACE_SETTINGS.map(([name], i) => [i, s[name]]).filter(([, v]) => v !== undefined);
 }

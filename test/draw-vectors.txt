@@ -1,4 +1,4 @@
-# Draws that the core (core/src/rng.rs) and the page (js/draw.js) must both make:
+# Draws that the core (core/src/rng.rs) must make (and the page's js/draw.js did, until queue item 97):
 # seed pass step channel ord salt index  ->  the 32-bit hash, in hex.
 # Made by a third implementation (Python), so neither side vouches for the other.
 0 0 0 0 0 0 0 bd06a9d6

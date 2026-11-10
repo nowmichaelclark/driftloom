@@ -1,4 +1,4 @@
-# The Rust core's build output. Only js/dlcore.wasm, copied out by
+# The Rust core's build output. Only js/dlplayer.wasm, copied out by
 # tools/build-core.sh, is committed.
 core/target/
 node_modules/

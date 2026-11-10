@@ -30,7 +30,7 @@
 // So `scales = dorian 3, aeolian 3` is two rows of a word and a number, a
 // weighted pool (the weights are relative), and `bpm = 61 88` one row of two
 // numbers, a range. The readers in js/characters.js, js/vibes.js,
-// js/moods.js, js/choices.js and js/synth.js say, per key, which they
+// js/moods.js and js/choices.js say, per key, which they
 // expect, and fail with the file, block and key when something is not.
 //
 // The numbers parse to exactly the doubles the old tables in code held, and

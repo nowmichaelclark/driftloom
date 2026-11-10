@@ -5,23 +5,22 @@
 # lines; the parts run side by side and the slowest sets the wall time, aimed
 # under 15 minutes.
 #
-#   core      the committed js/dlcore.wasm and js/dlplayer.wasm are exactly
-#             what their source builds (tools/build-core.sh --check), the
+#   core      the committed js/dlplayer.wasm is exactly what its source
+#             builds (tools/build-core.sh --check), the
 #             core's own tests, and clippy pedantic at zero
 #   sketch    the same tests and clippy with the sketch folder built in
 #             (queue item 83); never in the app's .wasm
-#   node      the Node tests (test/*.test.mjs), the generation goldens in
-#             Node (queue item 77), and the balance lock on the Rust
-#             generator (queue item 80)
+#   node      the Node tests (test/*.test.mjs), the generation goldens (queue
+#             item 77) and the balance lock (queue item 80), all on the
+#             core's generator, the only one since queue item 97
 #   baseline  the player's renders against test/core-baseline.json (queue
 #             items 32 and 96), the "nothing moved" guard, in three groups of
 #             its parts: any change to what the core plays fails here until a
 #             PR updates the baseline on purpose
 #
 # Everything slower is in nightly.yml and never holds a merge: every target's
-# golden renders, Emscripten, Endless for 24 hours, the generation goldens in
-# Chromium, rendering ahead's sweep, the other sample rates and the balance
-# lock's own corpus. They come back as gates at 1.0 on F-Droid.
+# golden renders, Emscripten, Endless for 24 hours, rendering ahead's sweep
+# and the other sample rates. They come back as gates at 1.0 on F-Droid.
 #
 # The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
 # the runner, installs that exact version and its wasm32 target on first
@@ -69,7 +68,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: The Node tests, the generation goldens, the balance lock on the Rust generator
+      - name: The Node tests, the generation goldens, the balance lock
         run: tools/gate.sh node
 
   baseline:

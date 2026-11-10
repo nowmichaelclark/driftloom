@@ -7,9 +7,9 @@ import { parseData, number, flag, readBlock, DATA, FILES } from '../js/data.js';
 import { CHARACTERS } from '../js/characters.js';
 import { VIBES, VIBE_IDS } from '../js/vibes.js';
 import { MOODS } from '../js/moods.js';
-import { LAYERS, LAYER_LABELS } from '../js/generator.js';
+import { LAYERS, LAYER_LABELS } from '../js/request.js';
 import { SCALES } from '../js/theory.js';
-import { CHOICES, CHANGE_COUNTS, ARC, KICK, SUBDUCK, LATEFLOOR, FLOORDROP, PEDAL, PADSWEEP, ECHO, BASS_LIFT } from '../js/choices.js';
+import { CHOICES, ARC, KICK, SUBDUCK, LATEFLOOR, PADSWEEP, ECHO } from '../js/choices.js';
 
 let failures = 0;
 function check(label, condition, detail = '') {
@@ -125,24 +125,23 @@ const KNOWN_DEFAULT = new Set(['none', 'bells', 'drops', 'swell', 'wind']);
 }
 
 console.log('\nThe choice tables');
+// What the page reads of data/choices.txt (js/choices.js: the choices and
+// the settings a request or a code can pin). The core's build reads the
+// whole file, strictly (core/build.rs), and its tests hold the draws.
 {
   const ids = CHOICES.map((c) => c.id);
   check('the choices are the eleven, in the draw\'s order',
     JSON.stringify(ids) === '["glass","dubStab","organ","wash","arc","tunedKick","subDuck","lateFloor","floorDrop","pedalBass","padSweep"]', ids.join());
-  check('each has an eligibility test and today first', CHOICES.every((c) => typeof c.eligible === 'function' && c.options[0][0] === 'today' && c.options.every(([, w]) => w > 0)));
+  check('each has today first, and positive weights', CHOICES.every((c) => c.options[0][0] === 'today' && c.options.every(([, w]) => w > 0)));
   check('every vibe a choice leans exists', CHOICES.every((c) => leansOk(c.vibes || {}) && Object.values(c.optionVibes || {}).every(leansOk)));
   check('every option a vibe leans is an option of the choice', CHOICES.every((c) => Object.keys(c.optionVibes || {}).every((o) => c.options.some(([x]) => x === o))));
-  check('the change counts are four, weighted', CHANGE_COUNTS.length === 4 && CHANGE_COUNTS.every(([n, w]) => Number.isInteger(n) && w > 0));
   check('the arc\'s vibe lists are vibes', [ARC.calm, ARC.bright, ARC.glacialNear].every((l) => l.every((v) => vibeSet.has(v))));
   check('the arc\'s shape tables name its shapes', Object.keys(ARC.shapeVibes).every((s) => ARC.shapes.some(([x]) => x === s)) && Object.values(ARC.shapeVibes).every(leansOk));
   check('the arc\'s periods are ranges, in seconds, low to high', Object.values(ARC.period).every(([a, b]) => a > 0 && a <= b));
-  check('the kick, subDuck and padSweep ranges run low to high', [KICK.note, KICK.short, KICK.long, SUBDUCK.depth, SUBDUCK.recover, PADSWEEP.lo, PADSWEEP.oct, PADSWEEP.period, PADSWEEP.q, PEDAL.share, LATEFLOOR.seconds].every(([a, b]) => a <= b));
+  check('the kick, subDuck, padSweep and lateFloor ranges run low to high', [KICK.note, KICK.short, KICK.long, SUBDUCK.depth, SUBDUCK.recover, PADSWEEP.lo, PADSWEEP.oct, PADSWEEP.period, PADSWEEP.q, LATEFLOOR.seconds].every(([a, b]) => a <= b));
   check('lateFloor\'s vibes and orders', leansOk(LATEFLOOR.longVibes) && LATEFLOOR.orders.map(([o]) => o).join() === 'together,kitFirst,bassFirst');
-  check('floorDrop\'s shapes and the ones that need a bass', FLOORDROP.needBass.every((s) => FLOORDROP.shapes.some(([x]) => x === s)) && Object.values(FLOORDROP.shapeVibes).every(leansOk));
-  check('pedalBass\'s styles, rhythms and neighbors', PEDAL.styles.length === 4 && PEDAL.rhythms.length === 4 && PEDAL.neighbors.every(([n]) => Number.isInteger(n)) && Object.values(PEDAL.neighborVibes).every(leansOk));
   check('padSweep\'s sustained voices are named once each', new Set(PADSWEEP.sustained).size === PADSWEEP.sustained.length && PADSWEEP.sustained.includes('pad'));
   check('the echo\'s times: today\'s dotted eighth first, two thirds a quotient', ECHO.beats[0][0] === 0.75 && ECHO.beats[3][0] === 2 / 3 && Object.values(ECHO.vibes).every(leansOk));
-  check('the bass lift has its two values', BASS_LIFT.kick === 3 && BASS_LIFT.noKick === 0);
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll good.');

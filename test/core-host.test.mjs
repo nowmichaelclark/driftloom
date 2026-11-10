@@ -2,10 +2,9 @@
 // the real module, with a stub for the AudioWorkletNode it builds.
 // Run with:  node test/core-host.test.mjs
 //
-// What they pin down (queue item 32): which engine a URL asks for, why a
-// browser cannot run the core, and that a disposed host hears nothing more
-// from its node (a processor error queued just before a rebuild must not
-// reach the synth that is gone).
+// What they pin down (queue item 32): why a browser cannot run the core, and
+// that a disposed host hears nothing more from its node (a processor error
+// queued just before a rebuild must not reach an output that is gone).
 
 let failures = 0;
 function check(label, condition, detail = '') {
@@ -26,15 +25,6 @@ class FakeNode {
 globalThis.AudioWorkletNode = FakeNode;
 
 const { CoreHost, coreUnsupported, newContext, CORE_MAX_RATE, CORE_FALLBACK_RATE } = await import('../js/core.js');
-
-console.log('\nThe engine a URL asks for');
-for (const [search, want] of [['', 'rust'], ['?engine=rust', 'rust'], ['?engine=js', 'js'], ['?engine=nonsense', 'rust'], ['?x=1&engine=js', 'js']]) {
-  // ENGINE is read once, as the module loads: a fresh copy for each URL.
-  globalThis.location = { search };
-  const { ENGINE } = await import(`../js/core.js?${encodeURIComponent(search)}`);
-  check(`'${search}' asks for ${want}`, ENGINE === want, ENGINE);
-}
-delete globalThis.location;
 
 console.log('\nWhy a browser cannot run the core');
 check('with both, it can', coreUnsupported() === null, String(coreUnsupported()));
@@ -95,7 +85,7 @@ console.log('\nA context faster than the core holds (queue item 45)');
   check('and the fast one is closed', made[0].closed && !made[1].closed);
   made.length = 0;
   const stuck = newContext(browser(192000, true));
-  check('a browser that will not do that keeps the first (the synth falls back to JavaScript)', stuck.sampleRate === 192000 && !stuck.closed);
+  check('a browser that will not do that keeps the first (the page then says it cannot play)', stuck.sampleRate === 192000 && !stuck.closed);
   check(`the limit is the web build's, ${CORE_MAX_RATE} Hz`, CORE_MAX_RATE === 96000);
 }
 

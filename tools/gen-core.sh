@@ -9,7 +9,7 @@
 #
 # TARGET is a Rust target triple, or wasm32-unknown-unknown: a build of the
 # core with the generator's exports (the `generator` feature, which the app's
-# js/dlcore.wasm leaves out), run in Node (tools/gen-golden-wasm.mjs). The
+# js/dlplayer.wasm leaves out), run in Node (tools/gen-golden.mjs). The
 # others run the native host, core/examples/dlgen, directly (x86_64) or under
 # QEMU's user mode, as core/.cargo/config.toml says. It defaults to this
 # machine's.
@@ -23,7 +23,7 @@ if [ "$target" = wasm32-unknown-unknown ]; then
   cargo rustc -q --release --locked --target wasm32-unknown-unknown --no-default-features --features generator --crate-type cdylib,rlib
   cp target/wasm32-unknown-unknown/release/dlcore.wasm target/dlcore-generator.wasm
   cd "$root"
-  node tools/gen-golden-wasm.mjs --wasm core/target/dlcore-generator.wasm core/golden/generation.hashes
+  node tools/gen-golden.mjs --check --wasm core/target/dlcore-generator.wasm
 else
   cargo run -q --release --locked --example dlgen --target "$target" -- --check golden/generation.hashes
 fi

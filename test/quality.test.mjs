@@ -100,7 +100,7 @@ console.log('the hand-off');
   const calls = [];
   const old = {
     engine: { until: Infinity },
-    synth: {
+    output: {
       ctx: { currentTime: 3 },
       cancelFrom: (t) => calls.push(['cancelFrom', t]),
       fadeOut: (a, b) => calls.push(['fadeOut', a, b]),

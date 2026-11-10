@@ -15,7 +15,7 @@
 //               and when the first sound reached the speakers
 //
 // `--root` serves another folder (a worktree of an older build, say), and
-// `--query` goes on its URL: v82 needs  --query engine=rust.
+// `--query` goes on its URL.
 // The figures are the medians over the runs. Nothing in js/ is touched; the
 // instrumentation is a script run before the page's own.
 
@@ -82,7 +82,7 @@ const INSTRUMENT = `(() => {
   const realFetch = window.fetch;
   window.fetch = function (input, ...rest) {
     const p = realFetch.call(this, input, ...rest);
-    if (String((input && input.url) || input).endsWith('dlcore.wasm')) p.then(() => { if (t.wasm == null) t.wasm = now(); });
+    if (String((input && input.url) || input).endsWith('dlplayer.wasm')) p.then(() => { if (t.wasm == null) t.wasm = now(); });
     return p;
   };
   const addModule = AudioWorklet.prototype.addModule;

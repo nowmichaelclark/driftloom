@@ -1,6 +1,6 @@
 # The core: standing rules
 
-For any session that touches `core/` (the Rust engine; `js/dlcore.wasm` is
+For any session that touches `core/` (the Rust engine; `js/dlplayer.wasm` is
 built from it). Read the root `AGENTS.md` first. The queue's standing rules
 (`docs/QUEUE.md`) apply too; these come on top. The charter is
 `docs/CORE.md` (ten promises, each with its measure); how a host drives the
@@ -8,9 +8,9 @@ core, and how to add a block, is `core/README.md`.
 
 ## Commands
 
-- `tools/build-core.sh` rebuilds `js/dlcore.wasm` and the player's
-  `js/dlplayer.wasm`; `--check` fails if either committed file is not
-  exactly what the source builds. Commit them with the source.
+- `tools/build-core.sh` rebuilds `js/dlplayer.wasm` (the app's one module:
+  the core, its generator and its player); `--check` fails if the committed
+  file is not exactly what the source builds. Commit it with the source.
 - `cd core && cargo test --locked`
 - `node tools/baseline.mjs` (the player's renders against
   `test/core-baseline.json`; `--update` on purpose, saying what moved). In
@@ -24,20 +24,16 @@ core, and how to add a block, is `core/README.md`.
   `node tools/rates.mjs`.
 - `node tools/stats.mjs --check` (the balance lock) when generation moves.
 - `tools/gen-core.sh [TARGET]`: the Rust generator (`src/generator/`, phase
-  2) against `golden/generation.hashes`, every case; CI runs it on every
-  target. A generator, vibe or data change made in the JavaScript is made
-  in the Rust too, in the same PR (the data is shared: `build.rs` compiles
-  `data/*.txt` in).
+  2) against `golden/generation.hashes`, every case; the nightly runs it on
+  every target, and the gate holds the same file in Node
+  (`node tools/gen-golden.mjs --check`). The core's generator is the only
+  one (queue item 97); `build.rs` compiles `data/*.txt` in, and the page
+  reads the same files for its labels and ranges.
 - `tools/seeds.sh [TARGET]`: the player (`src/player/`, item 82) plays the
   corpus's first 80 loops from their seeds to WAVs, against
   `golden/seeds.hashes`; `--browser` holds the baseline's 40 loops to the
-  browser's renders (the baseline's `player` part), `--c` the C host
-  (`include/dlcore.h`). CI runs them. The app plays the player since item
-  94b; until `?engine=page` retires (item 97), a change to what
-  `js/engine.js` or `js/synth.js` does between the generator's events and
-  the core's notes is made in `src/player/` too, in the same PR: the
-  baseline's `player` part moves with the page, and `--browser` fails until
-  the player follows.
+  baseline's `player` part, `--c` the C host (`include/dlcore.h`). The
+  nightly runs them.
 
 - `cargo test --locked --features sketch` and `cargo clippy --all-targets
   --features sketch`: the sketch folder (`core/sketch/`, item 83) as it stands,
@@ -74,8 +70,6 @@ on every PR.
 - Everything the core emits (names, errors, logs) is plain ASCII.
 - Costs: the core baseline's render costs may not rise by more than 5%
   on any loop without a note saying why it is worth it.
-- The JavaScript synth is the fallback until the end of phase 3: leave it
-  working, untouched unless an item says otherwise.
 - The core is no longer a copy of Chromium. Where a doc comment says a
   block "follows Chromium to the sample", leave it if still true, but
   new work is judged by the charter's measures, not by nulling.
@@ -87,16 +81,11 @@ The sound batch's rules (items 54-73, 2026-10-18; the items are in
 block or mixing choice.
 
 - **Where it is decided, where it sounds:** *when* a sound plays and
-  *which loops* get it is the JavaScript side's (the generator, or the
-  engine at load where the sketch decides it), allowed until phase 2
-  starts and then ported with everything else, as part of what the port
-  must match. *What* plays is the core's: each new sound a block or a
-  voice in `core/src/blocks/`, one file and one line, probed by the kit,
-  with its stored render.
-- **Core only.** The JavaScript synth (the fallback) builds nothing new:
-  for a new voice number it plays the nearest existing voice, or leaves
-  the part out where nothing fits; each item says which. `js/core.js`
-  mirrors the new numbers.
+  *which loops* get it is the generator's (`src/generator/`, with its data
+  in `data/*.txt`) or the player's at load (`src/player/`); *what* plays
+  is a block or a voice in `core/src/blocks/`, one file and one line,
+  probed by the kit, with its stored render. The page builds nothing: a
+  new choice or pin it should offer is a line of data it reads.
 - **Mikey's rules for every choice** (2026-10-18): today's behavior stays
   one option in every choice, never replaced; each choice is drawn per
   loop, seeded from the loop's code on a stream of its own (so no other
@@ -107,9 +96,9 @@ block or mixing choice.
   approved; the stereo baseline is every loop's.
 - **Measured against the ears.** Each new sound is measured the way its
   report measured the sketch, on the report's corpus loops (corpus seed
-  20261009; `tools/ears/`: `render2.mjs`, `sketch_check.py`, `warmth.py`,
-  `low_guard.py`, `kick_check.py`, `stereo_guard.py`), core build against
-  sketch: level by ear (its loudest 3 s against the loop, K-weighted)
+  20261009; renders from `tools/measure.mjs` or `tools/clips.mjs`, read by
+  `tools/ears/`: `sketch_check.py`, `warmth.py`, `low_guard.py`,
+  `kick_check.py`, `stereo_guard.py`), core build against sketch: level by ear (its loudest 3 s against the loop, K-weighted)
   within 1.5 LU of the sketch's figure, its own tone figure (centroid,
   attack, band shares) where the report gives one, and refused notes no
   more than the sketch's (none, in every report). Plus the standing

@@ -2,7 +2,7 @@
 // item 94a's table (every control and display against its command or
 // event), in the real app, in headless Chromium, playing in real time.
 //
-//   node tools/rows.mjs [--engine player|page] [--long] [--port 8771]
+//   node tools/rows.mjs [--long] [--port 8771]
 //
 // Nothing in js/ is touched. The page is read from outside, before its own
 // scripts run: every AudioWorkletNode it builds is kept, with what the core
@@ -37,12 +37,11 @@
 //   share code          the code decodes to the loop the core plays
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
+//   plain line          a browser with no WebAssembly, and a module that
+//                       never arrives: one plain line each, nothing played
 //   length (--long)     a minute: the track ends on its line and the core's
 //                       own loop starts there, with the picks (queue item
 //                       95), the card following; Now Playing counts down
-//
-// With --engine page, the rows that make sense on the page's engine
-// (?engine=page) run as a comparison; the probe has nothing to say there.
 //
 // Chromium from Playwright (npm install --no-save playwright@1.56.1).
 
@@ -63,10 +62,8 @@ const flag = (name, dflt) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : dflt;
 };
-const ENGINE = flag('--engine', 'player');
 const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
-const PLAYER = ENGINE === 'player';
 
 function loadPlaywright() {
   const require = createRequire(import.meta.url);
@@ -173,7 +170,7 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.addInitScript(HOOK);
-    await page.goto(`http://127.0.0.1:${PORT}/${PLAYER ? '' : '?engine=page'}`);
+    await page.goto(`http://127.0.0.1:${PORT}/`);
     await page.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
     await sleep(1500);
     const ev = (fn, arg) => page.evaluate(fn, arg);
@@ -217,18 +214,16 @@ async function main() {
       return out;
     };
 
-    console.log(`\nThe app's controls and displays on the ${PLAYER ? 'core\'s player' : 'page\'s engine (?engine=page)'} (queue item 94b)`);
+    console.log(`\nThe app's controls and displays on the core's player (queue item 94b)`);
     // Play.
     await page.click('#playBtn');
     await sleep(3500);
     let p = await probe();
     const first = await name();
-    if (PLAYER) {
+    {
       row('Play: the core plays the loop on the card', p && p.player.state === 3 && p.d.name === first, `${p && p.d && p.d.name} / ${first}`);
       const detail = await ev(() => document.getElementById('loopDetail').textContent);
       row('info card: its key, tempo and name as the core describes the loop', detail.includes(`${p.d.bpm} bpm`) && p.d.name === first, detail.replace(/\s+/g, ' '));
-    } else {
-      row('Play: the page plays', (await level()) > 1e-4);
     }
     row('cover: drawn', await ev(() => {
       const c = document.getElementById('cover');
@@ -245,16 +240,15 @@ async function main() {
     row('sound: something plays', (await level()) > 1e-4);
 
     // Pause and Play again.
-    const before = PLAYER ? (await steps()).filter((e) => e[1] === kinds.step).pop() : null;
+    const before = (await steps()).filter((e) => e[1] === kinds.step).pop();
     await key('Space');
     await sleep(800);
     p = await probe();
     const quiet = await level();
-    if (PLAYER) row('Pause: the core stops, the output silent', p.player.state === 0 && quiet < 1e-4, `state ${p.player.state}, level ${quiet.toExponential(1)}`);
-    else row('Pause: the output silent', quiet < 1e-4);
+    row('Pause: the core stops, the output silent', p.player.state === 0 && quiet < 1e-4, `state ${p.player.state}, level ${quiet.toExponential(1)}`);
     await key('Space');
     await sleep(1500);
-    if (PLAYER) {
+    {
       p = await probe();
       const after = (await steps()).filter((e) => e[1] === kinds.step).pop();
       row('Play again: the core goes on from where it stood', p.player.state === 3 && after[3] > before[3] && (await name()) === first, `step ${before[3]} -> ${after[3]}`);
@@ -266,25 +260,24 @@ async function main() {
     const second = await name();
     p = await probe();
     const asked = await ev(() => window.__rows.posts.filter((m) => m.type === 'playNext' && m.moment === 0).pop());
-    if (PLAYER) {
+    {
       row('Next: the core\'s own loop, crossfading, the card following', second !== first && p.d.name === second && asked && asked.fade === 1, `${p.d.name} / ${second}`);
       const own = (await owns()).pop();
       const sent = await lastPicks();
       row('Next: the core says its own loop began, by its seed and the picks it took', own && own.seed === Number(p.d.seed) && sent && own.tag === sent.tag, JSON.stringify(own));
-    } else row('Next: a new loop', second !== first);
+    }
     await clickId('prevBtn');
     await sleep(3000);
     p = await probe();
-    if (PLAYER) row('Previous: back to the loop before', (await name()) === first && p.d.name === first, p.d.name);
-    else row('Previous: back to the loop before', (await name()) === first);
+    row('Previous: back to the loop before', (await name()) === first && p.d.name === first, p.d.name);
 
     // Roll a layer (key 1, the drums): made again in place.
     await ev(() => document.getElementById('viewBtn').click());
-    const seedsBefore = PLAYER ? p.d.layer_seeds.split('|') : null;
-    const stepBefore = PLAYER ? (await steps()).filter((e) => e[1] === kinds.step).pop()[3] : 0;
+    const seedsBefore = p.d.layer_seeds.split('|');
+    const stepBefore = (await steps()).filter((e) => e[1] === kinds.step).pop()[3];
     await key('1');
     await sleep(2000);
-    if (PLAYER) {
+    {
       p = await probe();
       const seeds = p.d.layer_seeds.split('|');
       const revised = (await steps()).some((e) => e[1] === kinds.revised);
@@ -309,7 +302,7 @@ async function main() {
     await setRange('space', 0.77);
     await setRange('wobble', 0.21);
     await sleep(2500);
-    if (PLAYER) {
+    {
       p = await probe();
       const st = (await steps()).filter((e) => e[1] === kinds.step).slice(-6);
       const gaps = st.slice(1).map((e, i) => e[0] - st[i][0]);
@@ -322,11 +315,11 @@ async function main() {
     await sleep(300);
     const wander = await ev(() => window.__rows.posts.filter((m) => m.type === 'playWander').pop());
     const wline = (await diag()).split('\n').find((l) => l.startsWith('wander:'));
-    if (PLAYER) row('wander: the amount, and a salt across the upper range', wander && wander.amount === 2.4 && wander.salt > 0 && /unrepeatable/.test(wline), wline);
+    row('wander: the amount, and a salt across the upper range', wander && wander.amount === 2.4 && wander.salt > 0 && /unrepeatable/.test(wline), wline);
     await setRange('driftAmount', 0);
     await sleep(300);
     const off = await ev(() => window.__rows.posts.filter((m) => m.type === 'playWander').pop());
-    if (PLAYER) row('wander off: none', off && off.amount === 0 && off.salt === 0);
+    row('wander off: none', off && off.amount === 0 && off.salt === 0);
     await setRange('driftAmount', 1);
 
     // Volume.
@@ -341,17 +334,17 @@ async function main() {
     // Mono.
     await clickId('monoMode');
     await sleep(600);
-    const mono = PLAYER ? (await probe()).lanes : null;
+    const mono = (await probe()).lanes;
     await clickId('monoMode');
     await sleep(600);
-    const stereo = PLAYER ? (await probe()).lanes : null;
-    if (PLAYER) row('mono: one lane, then two again', mono === 1 && stereo === 2, `${mono}, ${stereo}`);
+    const stereo = (await probe()).lanes;
+    row('mono: one lane, then two again', mono === 1 && stereo === 2, `${mono}, ${stereo}`);
 
     // The layers' grid: the dots of the bar shown are a bar of the core's
     // grid of the pass heard.
     await ev(() => { if (document.querySelector('.view:not([hidden])').dataset.view !== 'layers') document.getElementById('viewBtn').click(); });
     await sleep(2500);
-    if (PLAYER) {
+    {
       const res = await ev(() => {
         const R = window.__rows;
         const last = R.nodes.length - 1;
@@ -375,7 +368,7 @@ async function main() {
     }
 
     // Picks: a vibe, then Next.
-    const playingSeed = PLAYER ? (await probe()).d.seed : null;
+    const playingSeed = (await probe()).d.seed;
     const vibe = await ev(() => {
       document.getElementById('vibesBtn').click();
       document.querySelector('#picksList .pk-line-mood .pk-val').click();
@@ -383,7 +376,7 @@ async function main() {
       b.click();
       return b.dataset.vibe;
     });
-    if (PLAYER) {
+    {
       await sleep(500);
       p = await probe();
       const sent = await lastPicks();
@@ -393,7 +386,7 @@ async function main() {
     // N, a new loop (Next would walk forward through the history first).
     await key('n');
     await sleep(3000);
-    if (PLAYER) {
+    {
       p = await probe();
       const own = (await owns()).pop();
       row('picks: the next new loop is the core\'s own and leans on them', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name())
@@ -416,9 +409,8 @@ async function main() {
     const code = await ev(() => window.__rows.clip);
     let shared = null;
     try { shared = decodeSong(code); } catch (err) { shared = { error: err.message }; }
-    p = PLAYER ? await probe() : null;
-    if (PLAYER) row('share code: it decodes to the loop the core plays', shared && shared.seed >>> 0 === Number(p.d.seed) && shared.name === p.d.name, `${code && code.slice(0, 24)}...`);
-    else row('share code: a code', !!(shared && shared.seed));
+    p = await probe();
+    row('share code: it decodes to the loop the core plays', shared && shared.seed >>> 0 === Number(p.d.seed) && shared.name === p.d.name, `${code && code.slice(0, 24)}...`);
 
     // Lighter on processor: a new core at the other quality, the loop again.
     const nodes = await ev(() => window.__rows.nodes.length);
@@ -427,25 +419,25 @@ async function main() {
     await clickId('liteMode');
     await sleep(3500);
     const built = await ev(() => window.__rows.nodes.slice(-1)[0].quality);
-    if (PLAYER) {
+    {
       p = await probe();
       const loops = (await steps()).filter((e) => e[1] === kinds.loop);
       row('lighter on processor: a new core at the other quality plays the same loop from its top', (await ev(() => window.__rows.nodes.length)) === nodes + 1
         && built === (lite === 'true' ? 'full' : 'lite') && p.player.state === 3 && p.d.name === card && loops.length === 1, `${lite} -> ${built}`);
-    } else row('lighter on processor: a new core', built === (lite === 'true' ? 'full' : 'lite'));
+    }
     await clickId('liteMode');
     await sleep(3000);
 
     // Diagnostics.
     const text = await diag();
     const engineLine = text.split('\n').find((l) => l.startsWith('engine:')) || '';
-    if (PLAYER) {
+    {
       row('Diagnostics: the core\'s player, nothing late, missed or dropped, no event lost, no edit refused', /the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0/.test(engineLine)
         && /playerEventsLost: 0/.test(text) && /playerRefused: 0/.test(text), `${engineLine}; ${text.split('\n').filter((l) => /^player(EventsLost|Refused)/.test(l)).join(', ')}`);
-    } else row('Diagnostics: the page\'s engine on the core', /^engine: rust\s+late: 0/.test(engineLine), engineLine);
+    }
 
     // The length slider: the shortest stop, a minute.
-    if (LONG && PLAYER) {
+    if (LONG) {
       await ev(() => document.getElementById('nowBtn').click());
       await sleep(500);
       await setRange('trackLen', 1);
@@ -476,7 +468,7 @@ async function main() {
     }
     // The picks survive a reload (kept as the vibes are, in the prefs), and
     // go to the new core as it starts.
-    if (PLAYER) {
+    {
       await ev(() => {
         document.getElementById('vibesBtn').click();
         document.querySelector('#picksList .pk-line-mood .pk-val').click();
@@ -494,6 +486,29 @@ async function main() {
       row('picks: held again by the core after a reload', kept && again && p.picksTag === again.tag && JSON.stringify(again.ask.vibes) === JSON.stringify(kept.ask.vibes), JSON.stringify(again && again.ask.vibes));
     }
     row('no page errors', errors.length === 0, errors.join('; '));
+
+    // The plain line (queue item 97; Mikey, 2026-11-07): a browser that
+    // can't run the core says so in the card's place and plays nothing;
+    // there is no fallback synth. A page with WebAssembly taken away
+    // before its scripts run, and one whose module never arrives.
+    const plain = async (setup) => {
+      const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+      const bad = [];
+      tab.on('pageerror', (e) => bad.push(e.message));
+      await setup(tab);
+      await tab.goto(`http://127.0.0.1:${PORT}/`);
+      await sleep(2500);
+      const seen = await tab.evaluate(() => {
+        const line = document.getElementById('plainLine');
+        return { text: line.textContent.trim(), shown: !line.hidden && getComputedStyle(line).display !== 'none' };
+      });
+      await tab.close();
+      return { ...seen, bad };
+    };
+    const none = await plain((tab) => tab.addInitScript(() => { Object.defineProperty(globalThis, 'WebAssembly', { value: undefined }); }));
+    row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'This browser can\'t play Driftloom; try a recent Chrome, Firefox or Safari' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
+    const lost = await plain((tab) => tab.route('**/js/dlplayer.wasm', (r) => r.abort('failed')));
+    row('plain line: a module that never arrives says to reload', lost.shown && lost.text === 'Driftloom couldn\'t load. Check the connection and reload.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
   } finally {
     await browser.close();
     server.close();

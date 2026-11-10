@@ -1,49 +1,34 @@
 // The Rust core's host in the browser (queue item 21, roadmap 16).
 //
-// One AudioWorkletProcessor around one instance of js/dlcore.wasm. The
-// main thread decides every note, as it always has, and posts each one
-// here with its absolute start time on the context's clock; the core
-// queues it and starts it on its exact sample within the block. Notes
-// starting at the 128-frame block boundary instead were enough to wreck
-// the match against Web Audio in the brain's probe (-0.1 dB residual
-// against -55.6).
+// One AudioWorkletProcessor around one instance of js/dlplayer.wasm: the
+// core with its generator and its player (queue items 82 and 94b). The
+// player decides every note itself, here on the audio thread, a block at a
+// time before the block is rendered; the page sends commands (a loop's
+// seed and request, a change, the controls) and is posted what the player
+// decided as events (js/player.js draws them). Nothing the page does can
+// make a note late: there are no notes on the page (queue item 97).
 //
 // The module arrives as bytes in processorOptions and is compiled here,
-// synchronously: it is small, and passing a compiled WebAssembly.Module
-// across is less certain on iOS Safari, the target. No SharedArrayBuffer,
-// no threads, nothing that needs special headers.
+// synchronously: passing a compiled WebAssembly.Module across is less
+// certain on iOS Safari, the target. No SharedArrayBuffer, no threads,
+// nothing that needs special headers.
 //
-// Since queue item 29 the core mixes too: one input per channel, where the
-// synth's own notes for that channel arrive (a note the core could not
-// take), and one output: since item 31 the whole of it, the mix -- the
-// channel gains, the sends, the duck, the echo and the reverb -- through
-// the master chain -- the wobble, saturator, tone and highpass (item 30),
-// the bus compressor, the master and kill gains and the ceiling -- for the
-// speakers.
-// With `taps`, seven more outputs carry each of the core's six channels as
-// it went into the mix (the five layers' and, since queue item 62, the
-// wash's), and the signal as it reached the bus compressor (the measure
-// harness reads them). The node's inputs are the five layers': nothing the
-// page plays goes into the wash's.
+// The node has no inputs and one output: the whole of the core's mix
+// through its master chain, for the speakers.
 //
 // Stereo (queue item 64): with `layout: 2` in processorOptions the core
-// renders its stereo render, and the first output carries two channels,
-// left then right; otherwise it renders mono, as it always has, into every
-// channel the output has. A `layout` message switches it while it plays
-// (queue item 66, the listener's Mono switch): the core fades the side in
-// or out, and the output follows the lanes it renders (`dl_lanes`).
+// renders its stereo render, and the output carries two channels, left
+// then right; otherwise it renders mono into every channel the output
+// has. A `layout` message switches it while it plays (queue item 66, the
+// listener's Mono switch): the core fades the side in or out, and the
+// output follows the lanes it renders (`dl_lanes`).
 
 const QUANTUM = 128;
-const CHANNELS = 6;
 
 // `n` runs of a block each, from `at` in the core's memory.
 function runs(buffer, at, n) {
   return Array.from({ length: n }, (_, c) => new Float32Array(buffer, at + c * QUANTUM * 4, QUANTUM));
 }
-// Core::note's answers (core/src/lib.rs, Taken).
-const LATE = 1;
-const FULL = 2;
-const MISSED = 4;
 // The causes Core::dropped_by counts, in its order.
 const CAUSES = 3;
 // The player's events (core/src/player/events.rs, queue item 94a): the most
@@ -60,9 +45,6 @@ const LAYER_COUNT = 5;
 const EVENTS_EVERY = 0.05;
 // A change at the track's end (`Moment::End`).
 const END = 5;
-// How often the worklet says how early its notes arrive (queue item 41), in
-// seconds of audio.
-const REPORT_EVERY = 0.25;
 // The core's output lanes (core/src/master.rs, OUT): its out buffer holds
 // this many runs whatever it renders.
 const LANES = 2;
@@ -90,18 +72,6 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.alive = true;
     this.core = null;
     this.views = null;
-    this.taps = options.numberOfOutputs > 1;
-    // How notes arrive (queue item 41), since the last report: the furthest
-    // the core had rendered past the page's clock as it posted a note
-    // (`reach`), the least time to spare any note had (`early`, negative
-    // for a late one), and how far the core's count ran ahead of the
-    // context's own clock. And the late notes by why: the page handed it
-    // over after its time had passed (a stall), or ahead of it but behind
-    // what the core had already rendered (inside the buffer).
-    this.arrivals = { n: 0, reach: -Infinity, early: Infinity, lead: 0 };
-    this.lateStall = 0;
-    this.lateBuffer = 0;
-    this.reportAt = 0;
     // What rendering has cost since the node was built, mono then stereo:
     // milliseconds spent, and seconds of audio made.
     this.cost = { ms: [0, 0], seconds: [0, 0] };
@@ -136,16 +106,13 @@ class DriftloomCore extends AudioWorkletProcessor {
       const module = new WebAssembly.Module(options.processorOptions.bytes);
       this.core = new WebAssembly.Instance(module, {}).exports;
       this.core.dl_init(sampleRate);
-      // The mix as the synth builds it: three combs on lite, six on full.
+      // The mix: three combs on lite, six on full.
       if (!this.core.dl_quality(options.processorOptions.quality === 'lite' ? 0 : 1)) {
         throw new Error(`no mix at ${sampleRate} Hz`);
       }
       if (options.processorOptions.layout === 2 && !this.core.dl_layout(2)) {
         throw new Error('no stereo render');
       }
-      // `?engine=player` (queue item 82): the core's player on the core, which
-      // decides each block's steps before the block (dl_play_process).
-      this.player = !!options.processorOptions.player && typeof this.core.dl_play_attach === 'function';
       // The player's events waiting to be posted, the grids read with them,
       // the requests it refused, and when the events are next posted.
       this.events = [];
@@ -153,11 +120,13 @@ class DriftloomCore extends AudioWorkletProcessor {
       this.urgent = false;
       this.eventsAt = 0;
       this.refused = 0;
-      if (options.processorOptions.player && !this.player) throw new Error('no player in this module');
-      if (this.player) this.core.dl_play_attach(options.processorOptions.quality === 'lite' ? 0 : 1);
+      if (typeof this.core.dl_play_attach !== 'function') throw new Error('no player in this module');
+      // The core's player on the core: it decides each block's steps
+      // before the block (dl_play_process).
+      this.core.dl_play_attach(options.processorOptions.quality === 'lite' ? 0 : 1);
     } catch (err) {
       // Too old a browser for the module, most likely (it needs Safari 15
-      // or later). The synth hears this and plays everything in JS.
+      // or later). The page hears this and says it cannot play.
       this.core = null;
       this.port.postMessage({ type: 'failed', message: String(err && err.message || err) });
     }
@@ -167,80 +136,11 @@ class DriftloomCore extends AudioWorkletProcessor {
   receive(m) {
     const core = this.core;
     switch (m.type) {
-      case 'note': {
-        if (!core) return;
-        // Where the note sits in its loop goes first: the core draws
-        // everything the note leaves to chance from it (core/src/rng.rs).
-        const k = m.key;
-        if (k) core.dl_key(k.seed >>> 0, k.pass >>> 0, k.step >>> 0, k.ord >>> 0);
-        const rendered = (this.next !== undefined ? this.next : currentFrame) / sampleRate;
-        const a = this.arrivals;
-        a.n++;
-        a.early = Math.min(a.early, m.time - rendered);
-        if (m.sent != null) a.reach = Math.max(a.reach, rendered - m.sent);
-        const x = m.extra;
-        const taken = core.dl_note(
-          m.voice, m.channel, m.time, m.midi, m.dur, m.vel, m.parts,
-          x[0] ?? NaN, x[1] ?? NaN, x[2] ?? NaN, x[3] ?? NaN, x[4] ?? NaN, x[5] ?? NaN, x[6] ?? NaN, x[7] ?? NaN,
-          x[8] ?? NaN, x[9] ?? NaN, x[10] ?? NaN, x[11] ?? NaN,
-        );
-        if (taken === LATE || taken === MISSED) {
-          const inside = m.sent != null && m.sent < m.time;
-          if (inside) this.lateBuffer++;
-          else this.lateStall++;
-          // Rare, so worth a message each: Diagnostics counts them, and logs
-          // each late one with what decided it (queue item 47).
-          this.port.postMessage({
-            ...this.counts(),
-            note: { time: m.time, sent: m.sent, rendered, why: m.why, missed: taken === MISSED, inside },
-          });
-          return;
-        }
-        if (taken === FULL) this.port.postMessage(this.counts());
-        return;
-      }
-      case 'damp':
-        if (core) core.dl_damp(m.channel, m.time);
-        return;
-      // The voice budget taking room from a layer's oldest notes (queue
-      // item 85c; Core::steal).
-      case 'steal': {
-        const k = m.key;
-        if (core) core.dl_steal(m.channel, k.seed >>> 0, k.pass >>> 0, k.step >>> 0, k.ord >>> 0, m.from, m.to);
-        return;
-      }
       // The listener's Mono switch (queue item 66): Core::set_layout, which
       // fades while the core plays.
       case 'layout':
         if (core) core.dl_layout(m.channels);
         return;
-      // A space setting's range (queue item 65): Core::space_range.
-      case 'spaceRange':
-        if (core) core.dl_space_range(m.which, m.lo, m.hi);
-        return;
-      // The bass layer's lift in dB for the loop (queue item 76c):
-      // Core::bass_lift.
-      case 'bassLift':
-        if (core) core.dl_bass_lift(m.db);
-        return;
-      // A setting of one of a channel's own blocks for the loop, a channel
-      // event and a retune (queue items 46c and 61): Core::set, Core::event
-      // and Event::retune, waiting in the core for their time.
-      case 'set':
-        if (core) core.dl_set(m.channel, m.block, m.setting, m.value, m.time);
-        return;
-      case 'route':
-        if (core) core.dl_route(m.channel, m.block, m.setting, m.from, m.bus, m.time);
-        return;
-      case 'event':
-        if (core) core.dl_event(m.channel, m.kind, m.time, m.value);
-        return;
-      case 'retune': {
-        if (!core) return;
-        const n = m.notes;
-        core.dl_retune(m.channel, m.time, n[0] ?? NaN, n[1] ?? NaN, n[2] ?? NaN, n[3] ?? NaN, n[4] ?? NaN, n[5] ?? NaN);
-        return;
-      }
       case 'cancel':
         if (core) {
           if (m.from == null) core.dl_cancel();
@@ -249,10 +149,6 @@ class DriftloomCore extends AudioWorkletProcessor {
         return;
       case 'param':
         if (core) core.dl_param(m.id, m.op, m.value, m.time, m.tau);
-        return;
-      // A track ending inside a pass (queue item 88b): Core::fade_all.
-      case 'fadeAll':
-        if (core) core.dl_fade_all(m.from, m.to);
         return;
       case 'dispose':
         // Clear everything, and let go of the instance so its memory can be
@@ -270,20 +166,20 @@ class DriftloomCore extends AudioWorkletProcessor {
       // the rest): what a loop asks for (`ask`), then the load, the change or
       // the re-roll that takes it.
       case 'playLoad':
-        if (core && this.player) {
+        if (core) {
           this.ask(m.ask);
-          if (m.resumed && core.dl_play_load_resumed) core.dl_play_load_resumed(m.seed >>> 0, m.at || 0);
+          if (m.resumed) core.dl_play_load_resumed(m.seed >>> 0, m.at || 0);
           else core.dl_play_load(m.seed >>> 0, m.at || 0);
         }
         return;
       case 'playChange':
-        if (core && this.player) {
+        if (core) {
           this.ask(m.ask);
           core.dl_play_change(m.seed >>> 0, m.moment >>> 0, m.fade);
         }
         return;
       case 'playRevise':
-        if (core && this.player) {
+        if (core) {
           this.ask(m.ask);
           core.dl_play_revise(m.seed >>> 0);
         }
@@ -291,21 +187,21 @@ class DriftloomCore extends AudioWorkletProcessor {
       // The length slider (queue item 94b): the track's length, and the loop
       // that follows when it has run (a change at the track's end, 5).
       case 'playTrack':
-        if (core && this.player) {
+        if (core) {
           core.dl_play_track(m.kind >>> 0, m.count >>> 0);
           this.arm(m.arm);
           this.urgent = true;
         }
         return;
       case 'playArm':
-        if (core && this.player) this.arm(m.arm);
+        if (core) this.arm(m.arm);
         return;
       // The picks (queue item 95): the New loops panel's request, held by the
       // core for every loop it makes itself, numbered by the page. The page
       // hears whether they could be met whole (if not, the core holds their
       // vibes only) and why not, in the core's own words.
       case 'playPicks':
-        if (core && this.player && core.dl_play_picks) {
+        if (core) {
           this.ask(m.ask, false);
           const met = core.dl_play_picks(m.tag >>> 0) === 1;
           const n = core.dl_play_refusal();
@@ -315,22 +211,22 @@ class DriftloomCore extends AudioWorkletProcessor {
         return;
       // The seed the core draws its own loops' seeds from (queue item 95).
       case 'playDraws':
-        if (core && this.player && core.dl_play_draws) core.dl_play_draws(m.seed >>> 0);
+        if (core) core.dl_play_draws(m.seed >>> 0);
         return;
       // A new loop of the core's own (the app's Next at the end of its
       // history), with the picks.
       case 'playNext':
-        if (core && this.player && core.dl_play_next) {
+        if (core) {
           core.dl_play_next(m.moment >>> 0, m.fade);
           this.urgent = true;
         }
         return;
       case 'playTone':
-        if (core && this.player) core.dl_play_tone(m.warmth, m.space, m.wobble);
+        if (core) core.dl_play_tone(m.warmth, m.space, m.wobble);
         return;
       // What the player says about the loop now, for the checks.
       case 'probe':
-        if (core && this.player) {
+        if (core) {
           const n = core.dl_play_describe();
           const text = String.fromCharCode(...new Uint8Array(core.memory.buffer, core.dl_play_about_at(), n));
           this.port.postMessage({
@@ -338,33 +234,33 @@ class DriftloomCore extends AudioWorkletProcessor {
             type: 'probe', id: m.id, about: text, lanes: core.dl_lanes(),
             player: { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() },
             trackEnd: core.dl_play_track_end(), nextChange: core.dl_play_next_change(), lost: core.dl_play_events_lost(), refused: this.refused,
-            picksTag: core.dl_play_picks_tag ? core.dl_play_picks_tag() : null,
+            picksTag: core.dl_play_picks_tag(),
           });
         } else {
           this.port.postMessage({ type: 'probe', id: m.id, about: null });
         }
         return;
       case 'playStop':
-        if (core && this.player) core.dl_play_stop();
+        if (core) core.dl_play_stop();
         return;
       case 'playResume':
-        if (core && this.player) core.dl_play_resume(m.at || 0);
+        if (core) core.dl_play_resume(m.at || 0);
         return;
       case 'playWander':
-        if (core && this.player) {
+        if (core) {
           core.dl_play_wander(m.amount);
           // And its salt (queue item 92): 0, every code's own wander.
           core.dl_play_wander_salt((m.salt || 0) >>> 0);
         }
         return;
       case 'playMute':
-        if (core && this.player) core.dl_play_mute(m.layer, m.muted ? 1 : 0);
+        if (core) core.dl_play_mute(m.layer, m.muted ? 1 : 0);
         return;
       case 'playTempo':
-        if (core && this.player) core.dl_play_tempo(m.bpm);
+        if (core) core.dl_play_tempo(m.bpm);
         return;
       case 'playVolume':
-        if (core && this.player) core.dl_play_volume(m.volume);
+        if (core) core.dl_play_volume(m.volume);
         return;
       case 'ping':
         // Every message before this one has been taken: the measure
@@ -382,7 +278,7 @@ class DriftloomCore extends AudioWorkletProcessor {
           deepest: core ? [core.dl_deepest(0), core.dl_deepest(1)] : [0, 0],
           // The core's player (queue item 82): where it is (0 idle, 1 making a
           // loop, 2 its first pass, 3 playing) and the step it decides next.
-          player: core && this.player ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null,
+          player: core ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null,
         });
         return;
       default:
@@ -433,11 +329,11 @@ class DriftloomCore extends AudioWorkletProcessor {
     const core = this.core;
     if (!core) return;
     if (!arm) {
-      if (core.dl_play_drop) core.dl_play_drop(END);
+      core.dl_play_drop(END);
       return;
     }
     this.ask(arm.ask);
-    if (arm.track && core.dl_play_change_track) core.dl_play_change_track(arm.seed >>> 0, END, arm.fade, arm.track[0] >>> 0, arm.track[1] >>> 0);
+    if (arm.track) core.dl_play_change_track(arm.seed >>> 0, END, arm.fade, arm.track[0] >>> 0, arm.track[1] >>> 0);
     else core.dl_play_change(arm.seed >>> 0, END, arm.fade);
   }
 
@@ -483,31 +379,14 @@ class DriftloomCore extends AudioWorkletProcessor {
   counts() {
     const core = this.core;
     const by = [];
-    for (let c = 0; c < CAUSES; c++) by.push(core && core.dl_dropped_by ? core.dl_dropped_by(c) : 0);
+    for (let c = 0; c < CAUSES; c++) by.push(core ? core.dl_dropped_by(c) : 0);
     return {
       type: 'counts',
       late: core ? core.dl_late() : 0,
-      missed: core && core.dl_missed ? core.dl_missed() : 0,
-      lateStall: this.lateStall,
-      lateBuffer: this.lateBuffer,
+      missed: core ? core.dl_missed() : 0,
       dropped: core ? core.dl_dropped() : 0,
       droppedBy: by,
     };
-  }
-
-  // How the notes since the last report arrived, every REPORT_EVERY
-  // seconds while any are arriving.
-  arrivalReport(block) {
-    const a = this.arrivals;
-    a.lead = Math.max(a.lead, block - currentFrame);
-    if (block < this.reportAt) return;
-    this.reportAt = block + Math.round(REPORT_EVERY * sampleRate);
-    if (!a.n) return;
-    this.port.postMessage({
-      type: 'arrivals', n: a.n, reach: a.reach === -Infinity ? null : a.reach, early: a.early,
-      lead: a.lead / sampleRate, rendered: block / sampleRate,
-    });
-    this.arrivals = { n: 0, reach: -Infinity, early: Infinity, lead: 0 };
   }
 
   // What the block just rendered cost, counted with the lanes it had; and
@@ -530,16 +409,14 @@ class DriftloomCore extends AudioWorkletProcessor {
     if (block < this.costAt) return;
     this.costAt = block + Math.round(COST_EVERY * sampleRate);
     const core = this.core;
-    // And, with the core's player (queue item 82), where it is.
-    const player = core && this.player ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null;
+    // And where the player is.
+    const player = core ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null;
     const busy = { max: b.max, behind: b.behind, windows: b.windows, seconds: b.windows * BUSY_WINDOW };
     b.max = 0;
     b.behind = 0;
     b.windows = 0;
-    // The player's counts ride with it (queue item 94b): the page posts no
-    // notes whose answers would bring them.
-    const counts = this.player ? this.counts() : {};
-    this.port.postMessage({ ...counts, type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice(), player, busy });
+    // The core's counts ride with it: its late, left-out and dropped notes.
+    this.port.postMessage({ ...this.counts(), type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice(), player, busy });
   }
 
   // The test's slow device (`burn`): arithmetic the optimizer can't drop,
@@ -559,7 +436,7 @@ class DriftloomCore extends AudioWorkletProcessor {
     }
   }
 
-  process(inputs, outputs) {
+  process(_inputs, outputs) {
     if (!this.alive) return false;
     const core = this.core;
     if (!core) return true;
@@ -570,19 +447,10 @@ class DriftloomCore extends AudioWorkletProcessor {
       const buffer = core.memory.buffer;
       this.views = {
         buffer,
-        inputs: runs(buffer, core.dl_inputs(), CHANNELS),
         out: runs(buffer, core.dl_out(), LANES),
-        bus: runs(buffer, core.dl_bus(), LANES),
-        channels: null,
       };
     }
     const views = this.views;
-    // The synth's own notes, channel by channel. An input with nothing
-    // connected has no channels; the core clears what it took.
-    for (let c = 0; c < CHANNELS; c++) {
-      const input = inputs[c] && inputs[c][0];
-      if (input && input.length === QUANTUM) views.inputs[c].set(input);
-    }
     // The block to render: `currentFrame`, unless it says a block the core
     // has already rendered. Chromium sometimes hands a process() call the
     // last block's frame while it renders the next (seen in offline
@@ -597,10 +465,9 @@ class DriftloomCore extends AudioWorkletProcessor {
     // it counted late.
     const block = this.next !== undefined && this.next > currentFrame ? this.next : currentFrame;
     this.next = block + QUANTUM;
-    this.arrivalReport(block);
     const began = clock();
-    const at = this.player ? core.dl_play_process(block) : core.dl_process(block);
-    if (this.player) this.takeEvents(block);
+    core.dl_play_process(block);
+    this.takeEvents(block);
     if (this.burn) this.burnFor();
     // Each of the output's channels from a lane the core rendered: the
     // mono render in every one, or left and right.
@@ -612,15 +479,6 @@ class DriftloomCore extends AudioWorkletProcessor {
       }
     }
     this.costReport(lanes, clock() - began, block);
-    if (this.taps) {
-      if (!views.channels) views.channels = runs(views.buffer, at, CHANNELS);
-      for (let c = 0; c < CHANNELS; c++) {
-        const tap = outputs[c + 1] && outputs[c + 1][0];
-        if (tap && tap.length === QUANTUM) tap.set(views.channels[c]);
-      }
-      const bus = outputs[CHANNELS + 1] && outputs[CHANNELS + 1][0];
-      if (bus && bus.length === QUANTUM) bus.set(views.bus[0]);
-    }
     return true;
   }
 }

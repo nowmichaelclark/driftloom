@@ -1,11 +1,11 @@
 #!/bin/sh
-# Build the Rust core (core/) to WebAssembly and copy it to js/dlcore.wasm,
-# and the player's build of it to js/dlplayer.wasm (queue item 82).
+# Build the Rust core (core/) to WebAssembly and copy it to
+# js/dlplayer.wasm, the module the app plays (queue items 82 and 97: the
+# core with its generator and its player).
 #
-#   tools/build-core.sh          build, and replace js/dlcore.wasm and
-#                                js/dlplayer.wasm
-#   tools/build-core.sh --check  build, and fail if either differs from its
-#                                build by a single byte
+#   tools/build-core.sh          build, and replace js/dlplayer.wasm
+#   tools/build-core.sh --check  build, and fail if the committed file
+#                                differs from its build by a single byte
 #   tools/build-core.sh --tools  build the measuring tools' module (queue item
 #                                96: the player's, with the generator's
 #                                exports, a request as text, the voice probe
@@ -68,13 +68,11 @@ if [ "$tools" = yes ]; then
   echo "build-core: wrote core/target/dltools.wasm ($(wc -c < "$root/core/target/dltools.wasm" | tr -d ' ') bytes)"
   exit 0
 fi
-# Two modules: the app's (the `web` feature), and the player's (queue item
-# 82: the `player` feature, the generator and the player with their exports),
-# which the app plays only with ?engine=player, for testing, until phase 3.
-# Each is built and kept beside the other; the app's stays the same bytes
-# whatever the player does.
+# The app's module (queue item 82: the `player` feature, the generator and
+# the player with their exports). Until item 97 a second one, js/dlcore.wasm
+# (the `web` feature alone), played the page's own engine.
 status=0
-for module in dlcore:web dlplayer:player; do
+for module in dlplayer:player; do
   name=${module%%:*}
   feature=${module#*:}
   cargo rustc --release --locked --target wasm32-unknown-unknown --no-default-features --features "$feature" --crate-type cdylib,rlib

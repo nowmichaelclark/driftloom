@@ -1,19 +1,26 @@
 // The generation goldens (queue item 77): for a fixed set of seeds and
-// vibes, hashes of everything the JavaScript generator decides, so the Rust
-// port (phase 2, items 79-82) can be held to it step by step, as the core's
-// synth was held to its golden renders.
+// requests, hashes of everything the generator decides. They were taken from
+// the JavaScript generator, and the Rust port (phase 2, items 79-82) was held
+// to them step by step; since item 97 the core's generator is the only one,
+// and the file holds it where it is: nothing that is generated moves unless
+// a PR means it to and says so.
 //
-//   node tools/gen-golden.mjs              write core/golden/generation.hashes
-//   node tools/gen-golden.mjs --check      fail on any line that differs from the file
-//   node tools/gen-golden.mjs --chromium   the same, run in headless Chromium (with
-//                                          --check, or alone to print the lines)
+//   node tools/gen-golden.mjs              write the hashes of every case in
+//                                          core/golden/generation.hashes again
+//   node tools/gen-golden.mjs --check      fail on any case whose hashes differ from the file
 //   node tools/gen-golden.mjs --show CASE [PART]
 //                                          print a case's canonical texts (CASE as the
 //                                          file names it, corpus:12; PART one of the
-//                                          hashes' names), to see where a port differs
+//                                          hashes' names), to see what a change moved
 //   node tools/gen-golden.mjs --corpus N   print the lines of the first N corpus loops
 //                                          (stdout; for counting what a change moves)
-//   options:  --chrome PATH;  --port N
+//   options:  --wasm FILE   the module to read (default core/target/dltools.wasm,
+//                           which tools/build-core.sh --tools writes;
+//                           tools/gen-core.sh passes the generator's own build)
+//
+// The file is the list of cases: a new case is a line of its first three
+// fields (SET:INDEX SEED REQUEST), and a run without --check writes its
+// hashes. tools/gen-core.sh checks the same file natively, on any target.
 //
 // The file. One case a line, after '#' comments:
 //
@@ -21,8 +28,8 @@
 //     texture=H meta=H choices=H load=H passes=H1,...,H8
 //
 // SEED is the loop's seed (unsigned), VIBES the request (queue item 85) as
-// its text (`parseRequest`): the vibes asked for, in the frozen order
-// (`vibeSelection`), comma-separated, each with its weight or not
+// its text (`Request::parse`): the vibes asked for, in the frozen order,
+// comma-separated, each with its weight or not
 // ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
 // ("theme=1234"), the pins ("organ=on", "arc.period=240"; js/pins.js), the
 // length ("bars=1024", "bars=endless"), the key ("key=D", "key=D|G") and the
@@ -30,9 +37,11 @@
 // "style=tide|shrine"), a layer's voices ("voice.melody=kalimba|marimba")
 // and a layer on or off ("layer.drums=off", "layer.melody=on"); '-' for
 // nothing.
-// The loop is `newSpec(SEED, VIBES)`. Each H is an FNV-1a 64 hash (16 hex
-// digits) of a canonical text (below) of:
-//   spec     the spec, as newSpec makes it (and the edit cases edit it);
+// The loop is the one SEED and that request make. The parts' names are the
+// JavaScript generator's, which the port kept (`Part::ALL`,
+// core/src/generator/canon.rs). Each H is an FNV-1a 64 hash (16 hex digits)
+// of a canonical text (below) of:
+//   spec     the spec (and, in the edit cases, with its edits made);
 //   plan     what render plans before any layer plays (`planOf`, queue item
 //            79): the development's sections (null for a loop that does not
 //            develop), the harmony as drawn, before the register work moves
@@ -75,7 +84,8 @@
 // No spaces anywhere. FNV-1a 64 runs over the text's bytes: offset basis
 // 0xcbf29ce484222325, prime 0x100000001b3.
 //
-// The cases (tools/gen-golden-lib.mjs):
+// The cases, as they were drawn when the file was first written (the
+// drawing code retired with the JavaScript generator; the file keeps them):
 //   corpus:0-1999   the first 2,000 loops of corpus seed 1 (Rng(1).seed32(),
 //                   as tools/stats.mjs draws its corpus), no vibes;
 //   vibes:0-999     1,000 seeds from Rng(77), each with 1, 3 or 5 vibes in
@@ -133,16 +143,17 @@
 //                   request's, the edits then made on it as the app makes
 //                   them (`edited`).
 //
-// Run it after any change to the generator, the vibes, the choices or the
-// engine's load. A change that is meant to move what is generated writes the
-// file again in the same PR and says in the body which cases moved and why.
-// CI checks the file in Node and in Chromium.
+// Run it after any change to the generator, the vibes, the choices or what
+// is drawn at load. A change that is meant to move what is generated writes
+// the file again in the same PR and says in the body which cases moved and
+// why. The gate checks the file (tools/gate.sh node).
 
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { casesOf, lineOf, fnv1a64 } from './gen-golden-lib.mjs';
+import * as gen from './gen-lib.mjs';
+import { Rng } from '../js/rng.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FILE = path.join(ROOT, 'core', 'golden', 'generation.hashes');
@@ -156,39 +167,30 @@ if (argv.includes('--help') || argv.includes('-h')) {
   process.exit(0);
 }
 
-const HEADER = `# The generation goldens (queue item 77): one case a line, written by
-# tools/gen-golden.mjs, which documents the format, the canonical text the
-# hashes are taken over and the cases. CI checks the JavaScript generator
-# against it (\`node tools/gen-golden.mjs --check\`, in Node and Chromium);
-# the Rust generator (phase 2) is held to it.
-`;
-
-// The golden lists' [name, seed, vibes], from their codes.
-async function goldenCodes() {
-  const { decodeSong } = await import('../js/share.js');
-  const out = [];
-  for (const line of fs.readFileSync(path.join(ROOT, 'core', 'golden', 'codes.txt'), 'utf8').split('\n')) {
-    if (!line.trim() || line.startsWith('#')) continue;
-    const [name, , , code] = line.trim().split(/\s+/);
-    const spec = decodeSong(code);
-    out.push([name, spec.seed >>> 0, spec.vibes ? Object.keys(spec.vibes) : null]);
-  }
-  return out;
+try {
+  gen.open(flag('--wasm', gen.TOOLS_WASM));
+} catch (err) {
+  console.error(`gen-golden: ${err.message}`);
+  process.exit(3);
 }
-
-const lib = await import('./gen-golden-lib.mjs');
+const text = fs.readFileSync(FILE, 'utf8');
+const header = text.split('\n').filter((l) => l.startsWith('#')).join('\n');
+const cases = casesOf(text);
+// The corpus's seed (tools/stats.mjs draws its corpus the same way).
+const CORPUS_SEED = 1;
 
 // ------------------------------------------------------------- --show
 
 if (argv.includes('--show')) {
   const want = flag('--show', '');
   const part = argv[argv.indexOf('--show') + 2];
-  const c = lib.cases(await goldenCodes()).find((x) => `${x.set}:${x.index}` === want);
+  const c = cases.find((x) => x.name === want);
   if (!c) {
     console.error(`gen-golden: no case ${want}`);
     process.exit(2);
   }
-  const { hashes, texts } = lib.hashCase(c, true);
+  const texts = gen.parts(c.seed, c.request, true);
+  const { hashes } = gen.hashes(c.seed, c.request);
   for (const [k, t] of Object.entries(texts)) {
     if (part && part !== k) continue;
     if (k === 'passes') t.forEach((x, i) => console.log(`passes[${i}] ${hashes.passes[i]}\n${x}\n`));
@@ -201,125 +203,50 @@ if (argv.includes('--show')) {
 
 if (argv.includes('--corpus')) {
   const n = Number(flag('--corpus', 0));
-  const { Rng } = await import('../js/rng.js');
-  const r = new Rng(lib.CORPUS_SEED);
-  for (let i = 0; i < n; i++) console.log(lib.lineFor({ set: 'corpus', index: i, seed: r.seed32(), vibes: null }));
+  const r = new Rng(CORPUS_SEED);
+  for (let i = 0; i < n; i++) {
+    const c = { name: `corpus:${i}`, seed: r.seed32(), request: null };
+    console.log(lineOf(c, gen.hashes(c.seed, null).hashes));
+  }
   process.exit(0);
 }
 
 // ------------------------------------------------------------- the lines
 
-async function inNode(golden) {
-  return lib.cases(golden).map(lib.lineFor);
-}
-
-function loadPlaywright() {
-  const require = createRequire(import.meta.url);
-  for (const id of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright']) {
-    try { return require(id); } catch { /* try the next one */ }
-  }
-  try {
-    const root = require('node:child_process').execSync('npm root -g', { encoding: 'utf8' }).trim();
-    return require(path.join(root, 'playwright'));
-  } catch { /* fall through */ }
-  console.error('gen-golden: Playwright is not installed.  npm install --no-save playwright@1.56.1 && npx playwright install chromium');
-  process.exit(3);
-  return null;
-}
-
-const PAGE = `<!doctype html><meta charset="utf-8"><title>gen-golden</title>
-<script type="module">
-import * as lib from '/tools/gen-golden-lib.mjs';
-window.lines = (golden) => lib.cases(golden).map(lib.lineFor);
-window.ready = true;
-</script>`;
-
-async function inChromium(golden) {
-  const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.wasm': 'application/wasm' };
-  const server = http.createServer((req, res) => {
-    const url = decodeURIComponent(req.url.split('?')[0]);
-    if (url === '/__gen.html') {
-      res.writeHead(200, { 'content-type': 'text/html' });
-      return res.end(PAGE);
-    }
-    const file = path.join(ROOT, path.normalize(url));
-    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      res.writeHead(404);
-      return res.end('not found');
-    }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
-    return fs.createReadStream(file).pipe(res);
-  });
-  const port = Number(flag('--port', 8777));
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', resolve);
-  });
-  const { chromium } = loadPlaywright();
-  const browser = await chromium.launch({ executablePath: flag('--chrome', undefined), args: ['--no-sandbox'] });
-  try {
-    const page = await browser.newPage();
-    const errors = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    await page.goto(`http://127.0.0.1:${port}/__gen.html`);
-    try {
-      await page.waitForFunction(() => window.ready === true, null, { timeout: 20000 });
-    } catch {
-      console.error(`gen-golden: the page never loaded the modules.\n  ${errors.join('\n  ')}`);
-      process.exit(1);
-    }
-    console.error(`gen-golden: in ${browser.version ? `Chromium ${browser.version()}` : 'Chromium'}`);
-    return await page.evaluate((g) => window.lines(g), golden);
-  } finally {
-    await browser.close();
-    server.close();
-  }
-}
-
-const golden = await goldenCodes();
-const chromium = argv.includes('--chromium');
 const t0 = Date.now();
-const lines = chromium ? await inChromium(golden) : await inNode(golden);
+const check = argv.includes('--check');
+let bad = 0;
+const lines = [];
+for (const c of cases) {
+  let made;
+  try {
+    made = gen.hashes(c.seed, c.request);
+  } catch (err) {
+    console.error(`gen-golden: ${c.name}: ${err.message}`);
+    process.exit(1);
+  }
+  const h = made.hashes;
+  lines.push(lineOf(c, h));
+  if (!check) continue;
+  // Which hashes moved, by name (a pass by its number); the spec read as
+  // text and hashed here too, so the host's call is checked; and a list
+  // that lost an item is never right.
+  const moved = Object.keys(h).filter((k) => k !== 'passes' && c.want[k] !== h[k]);
+  h.passes.forEach((x, i) => { if ((c.want.passes || [])[i] !== x) moved.push(`pass ${i + 1}`); });
+  if (fnv1a64(gen.parts(c.seed, c.request, true).spec) !== c.want.spec && !moved.includes('spec')) moved.push('the spec as text');
+  if (made.lost) moved.push('lost items');
+  if (!moved.length) continue;
+  bad++;
+  if (bad <= 40) console.log(`  moved ${c.name}: ${moved.join(', ')}`);
+}
 const seconds = ((Date.now() - t0) / 1000).toFixed(1);
 
-if (argv.includes('--check')) {
-  const kept = fs.readFileSync(FILE, 'utf8').split('\n').filter((l) => l && !l.startsWith('#'));
-  const byCase = new Map(kept.map((l) => [l.split(' ')[0], l]));
-  let bad = 0;
-  for (const line of lines) {
-    const name = line.split(' ')[0];
-    const was = byCase.get(name);
-    byCase.delete(name);
-    if (was === line) continue;
-    bad++;
-    if (bad > 40) continue;
-    if (!was) {
-      console.log(`  new   ${name}`);
-      continue;
-    }
-    // Which hashes moved, by name (a pass by its number).
-    const fields = (l) => Object.fromEntries(l.split(' ').slice(3).map((f) => f.split('=')));
-    const [a, b] = [fields(was), fields(line)];
-    const moved = Object.keys(b).filter((k) => k !== 'passes' && a[k] !== b[k]);
-    const pa = (a.passes || '').split(',');
-    const pb = b.passes.split(',');
-    pb.forEach((h, i) => { if (pa[i] !== h) moved.push(`pass ${i + 1}`); });
-    if (was.split(' ').slice(0, 3).join(' ') !== line.split(' ').slice(0, 3).join(' ')) moved.unshift('the case itself');
-    console.log(`  moved ${name}: ${moved.join(', ')}`);
-  }
-  for (const name of byCase.keys()) {
-    bad++;
-    console.log(`  gone  ${name}`);
-  }
+if (check) {
   if (bad > 40) console.log(`  ... and ${bad - 40} more`);
-  console.log(bad ? `gen-golden: ${bad} of ${lines.length} cases differ from ${path.relative(ROOT, FILE)} (${seconds} s)`
-    : `gen-golden: all ${lines.length} cases equal ${path.relative(ROOT, FILE)}${chromium ? ', in Chromium' : ''} (${seconds} s)`);
+  console.log(bad ? `gen-golden: ${bad} of ${cases.length} cases differ from ${path.relative(ROOT, FILE)} (${seconds} s)`
+    : `gen-golden: all ${cases.length} cases equal ${path.relative(ROOT, FILE)} (${seconds} s)`);
   process.exit(bad ? 1 : 0);
 }
 
-if (chromium) {
-  console.log(lines.join('\n'));
-  process.exit(0);
-}
-fs.writeFileSync(FILE, HEADER + lines.join('\n') + '\n');
+fs.writeFileSync(FILE, `${header}\n${lines.join('\n')}\n`);
 console.log(`gen-golden: wrote ${lines.length} cases to ${path.relative(ROOT, FILE)} (${seconds} s)`);
