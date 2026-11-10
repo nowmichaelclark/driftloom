@@ -4,6 +4,32 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Phase 3 Control" (brain B1, 2026-11-11, v149 against v153) -- out
+
+Item 98's control: the same album code in the app before phase 3 and in
+today's, labeled (not blind: the brain's renders already answer the
+question, so this is his check, not the test). It should sound the same.
+
+- **Before** (v149, the page's Engine and Synth on the core):
+  <https://f280ce1a-driftloom.nowmichaelclark.workers.dev>
+- **Now** (v153, the core's player, no JavaScript synth):
+  <https://driftloom.nowmichaelclark.workers.dev>
+- Code (Paste a code, in each):
+
+```
+DLA1-0C7N0-T31ED-JJ0CS-08DQP-WX3JD-XP001-G0380-GJ40C-1E635-ZJSRT-FXQ0M-FYKE3-NAR9K-XCNWY-77DJV-GN0JV-BC1G8-5R02C-1DA0G-6PW04-H9AVG-55BJ9-80000-00000-7R1G0-10G5A-JE49X-HBDNX-TC71B-70AV7-F0VXX-9Y700-QSYPN-YAK9C-100Z0-9GC0G-9ZWYD-V8QD7-HJ000-00000-0210M-1G820-88V2E-X9781-8QNPN-X6HAX-N4V8E-WTSQD-E8DDM-X1ZW9-E0625-G1WAG-EEG20-2F0ER-DEPJD-NZ21G-00000-00000-AGC2G-820B7-59ETS-F19YA-2AGTZ-BSD7M-KRZZC-DYKJT-G1JZ6-Q5450-41WX1-HH040-7308E-CD25K-HP950-00000-00001-G0820-841DF-KZQX5-5BRQN-GCNXQ-3TNA7-GA5V9-FEPZG-EV421-P11Y0-84NY0-50040-ZZJC5-RYRT9-40000-00000-05W40-J60C1-YMASW-XAFQW-GW7J6-N45V9-552CP-TETKK-EJKNC-8C4GJ-81G1E-G27R4-GE0G6-ZM205-2JVVE-6CPS0-00000-003AJ-R
+```
+
+Tracks: tui-doask, sith-fai, shai-soung, soath-wa, le-ra, glur-va (corpus
+20261009, loops 3, 2, 25, 28, 10 and 29 counting from 1; nothing asked). The brain rendered 30
+corpus loops both ways (v149 in Chromium through its own Engine and Synth on
+the core; v153's player in Node; 45 s, full, stereo, wander 1, 48 kHz): every
+name the same, every start the same sample; 28 null at -82 to -90 dB (float
+rounding); tui-doask and soath-wa differ after their silent bars (from 31.1 s
+and 27.3 s), 25 to 50 dB under the music and fading over about ten seconds,
+loudness within 0.08 dB: a phase or a held state, not a level (session 01
+finds which). One word a loop from Mikey.
+
 ## "Phase 2 Blind Album" (brain, 2026-11-07, v128 against v149) -- heard 2026-11-07
 
 Page: <https://claude.ai/artifact/Ako2hvWjfw2kXvRWe6TWxC> (private to its

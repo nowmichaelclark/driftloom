@@ -6,6 +6,88 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B1, the road to 1.0's kickoff (Opus 5.5, 2026-11-11).** On `main` at
+v153 (d9d6ffe), not taken from the reports:
+- **Checks:** `build-core.sh --check` (668,322 bytes); the generation
+  goldens, 5,124 of 5,124 on the Rust generator alone; the balance lock, 22
+  of 22; the core baseline, "Nothing moved"; every `test/*.test.mjs`; `tools/rows.mjs`, 29 of 29 (the two plain
+  lines among them); CI's gate green, the nightly's latest run (ca8fe56) green. The page's JavaScript:
+  31 files, 835,298 bytes (272,991 gzipped) before item 97; 28 files,
+  362,742 (125,911) after; `js/dlcore.wasm` (252,292) gone. Stale: the
+  Painter's test kit imports `js/generator.js` (session 30 fixes it).
+- **The too-slow rule** (`js/quality.js`): on lite, 8 quarter-seconds behind
+  real time in 20 s, or 8 fill-ins; the count restarts at every new output
+  (the switch to lite included) and skips 5 s of warm-up; the tablet, at
+  about 55% busiest on lite, would need to run about 1.8 times slower to
+  trip it. Safe today; the margin became a rule for every session.
+- **The control** (item 98): 30 corpus loops (20261009), the v149 app's own
+  Engine and Synth on the core in Chromium against v153's player in Node,
+  45 s, full, stereo, wander 1, 48 kHz: names and starts the same; 28 null
+  at -82 to -90 dB; tui-doask and soath-wa differ after their silent bars
+  (25 to 50 dB under the music, fading in about 10 s, loudness within 0.08
+  dB): to session 01. Album "Phase 3 Control" out, labeled.
+- **The plan reviewed** (`docs/sessions/`): the long pieces' brief and
+  sessions 11 to 16 rewritten where the code disagreed (a section is the
+  wander's pass at the slider's amount; sections are 8 s to 2.5 min; the
+  slider can stop a piece before its close; the app can't jump or take a
+  journey before 106), with movements and three musical ideas added; 11 and
+  14 on Fable 5.2; session 31a (the new name) added.
+- **Mikey:** the plain lines shorter; the melody twang after 1.0; the app is
+  renamed at 1.0, a surprise for the testers (the name is in the Project's
+  private doc, not the repo).
+
+**Start here before B1** (Sessions 29 and 30's bullets, as they stood):
+
+- **Session 30 (brain, Opus 5.5, from 2026-11-08): phase 3.** Item 93 built
+  on `claude/serene-archimedes-eclxle` (85fc8fe, no PR yet): the player starts
+  as zeros, `js/dlplayer.wasm` 1,938,596 to 636,731 bytes (215 KB gzipped,
+  222 before), `dlcore.wasm` byte-identical; the brain confirmed the sizes,
+  `build-core.sh --check` for both, and the generation goldens.
+  **Answered** (`docs/notes/93-module-size.md`): the size is accepted. The
+  50 KB aim was the brain's mistake: it counted the stored state and forgot
+  that the generator and the sequencer (about 300 KB of code) live in this
+  module. Item 97 takes about 155 KB gzipped of page JavaScript away, so a
+  first visit after phase 3 (one 215 KB module) weighs less than today's
+  (91 KB core plus that JavaScript). Neither `opt-level` `s` (slower voices,
+  and the tablet is phase 3's weak device) nor a second build without the
+  canonical text (about 4 KB gzipped). One module: yes, at 94b; `dlcore.wasm`
+  goes at 97. **Before the merge:** the `unsafe` the commit adds in
+  `core/src/generator/list.rs` (`List`'s and `Maybe`'s `MaybeUninit`) comes
+  out (promise 6: `unsafe` only at the C boundary; on `main` it is only in
+  `capi.rs` and `wasm.rs`), done safely with a zero value per held type,
+  which `a_new_player_is_all_zeros` already guards. **Merged** (#331,
+  2026-11-08, `d5af578`): `unsafe` gone (an `Empty` trait; the zeros test in
+  `core/tests/zeros.rs`), 636,125 bytes (217 KB gzipped), baseline "Nothing
+  moved", the 80 seeds bit-identical, all 10 CI checks green; Done line #333.
+  **Next: 94a.**
+- **Session 29 (brain, Opus 5.5, 2026-11-01 to 11-07): phase 2 is done
+  and proven.** Checked through item 87 on the way (#298-#311), then at the
+  phase's end on `main` at v149 (da42200): every check passes, and Mikey's
+  blind album (2026-11-07) heard no harm (the log; `docs/ALBUMS.md`). Phase
+  3 is written (items 93-98, `docs/QUEUE.md`), with "After phase 3": Ears
+  13's sound batch, then 84b (the chords nearer the tune, from the album).
+  94b merged (#343, 2026-11-08, v150) after Mikey's check; 99 merged (#341,
+  the sketch levers). **The brain's check after 94b, done:** on `main`,
+  `tools/rows.mjs` 25 of 25 on the player (late, missed and dropped 0, no
+  event lost), and the player, engine and worklet tests pass. Next: 95; the
+  brain's next check is the phase's end after 98. Ears 13b (the seven
+  levered candidates, plus a tremolo-twang synth voice in the spirit of a
+  baritone guitar) prompt given in Session 30.
+  **2026-11-10:** a friend's Pixel 9 on GrapheneOS played "too fast and
+  skippy": Vanadium runs WebAssembly interpreted (JIT off by default), the
+  player at 55% of real time on lite. The friend tries "JavaScript JIT"
+  allowed for the site only as a test; Mikey: that's a bandaid. Item 100
+  fixes it in the app: a render-ahead cushion when lite falls behind, then
+  a 24 kHz tier, a plain line last. Waits on the friend's `busiest:` line
+  with JIT off (peaks or average). Confirmed (9.3% with JIT); Mikey then
+  chose a plain line pointing to the app instead (item 100 rewritten).
+  **2026-11-10, the road to 1.0** (Mikey): the app's 1.0 before the game;
+  Ears 13b approved all eight (twang included); no waiting on slow renders
+  (item 103, a fast gate, the slow ones nightly until 1.0 on F-Droid); a
+  long autonomous Fable 5.2 hands run takes the road (`docs/QUEUE.md`):
+  103, 96, 97, 100, 98's hands part, 101 (batch 6), 84b, 102 (long pieces,
+  composed), polish; its list for Mikey is `docs/notes/for-mikey.md`.
+
 **Session 29, the phase's end (brain, Opus 5.5, 2026-11-07): phase 2 done
 (items 77-92) and proven.** On `main` at v149 (da42200), not taken from the
 reports:

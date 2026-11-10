@@ -1,7 +1,10 @@
 # The sessions to 1.0
 
 Written by the hands (Fable 5.2) on 2026-11-10, at Mikey's request, after
-items 97 and 100 merged: every session left on the road to 1.0 (the app on
+items 97 and 100 merged; reviewed by brain B1 on 2026-11-11 (each file it
+changed says what and why at its top; here: sessions 11 and 14 on Fable,
+session 31a for the new name, the F-Droid submission after 1.0, and two
+rules below): every session left on the road to 1.0 (the app on
 F-Droid), as a prompt to copy and paste, in the order to start them. One
 file per prompt in this folder; each file says the model, the effort, what
 must be merged before it starts, and holds the prompt in a block.
@@ -18,7 +21,7 @@ says the work goes on meanwhile.
 
 | # | File | What | Model, effort | Done |
 |---|---|---|---|---|
-| B1 | `brain-1-kickoff.md` | Brain: check 97 and 100, phase 3's check, adopt this plan | Opus 5.5, high | |
+| B1 | `brain-1-kickoff.md` | Brain: check 97 and 100, phase 3's check, adopt this plan | Opus 5.5, high | yes, 2026-11-11 |
 | 01 | `01-phase-3-proof.md` | Item 98's hands part; the tools made steady | Sonnet 5.5, high | |
 | | **you** | The testers' steps from 01 (your phone, tablet, the friends' Pixels). The work goes on meanwhile. | | |
 | 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | |
@@ -32,11 +35,11 @@ says the work goes on meanwhile.
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | |
 | B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
-| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Opus 5.5, high | |
+| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, high | |
 | 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | |
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
-| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys | Opus 5.5, high | |
-| 15 | `15-long-joins.md` | 102e: the joins, Endless, the measures, the listening set | Opus 5.5, high | |
+| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, high | |
+| 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
 | B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief | Opus 5.5, high | |
 | | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** Sessions 17 to 24 may go on meanwhile; run 16 as soon as your notes are in. | | |
 | 16 | `16-long-tuning.md` | 102f: long pieces tuned from Mikey's notes | Opus 5.5, high | |
@@ -55,12 +58,14 @@ says the work goes on meanwhile.
 | | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | |
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | |
 | 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | |
-| | **you** | The signing choice and the F-Droid submission (`docs/notes/for-mikey.md` will have the steps). | | |
+| | **you** | The signing choice (`docs/notes/for-mikey.md` will have the steps); buy the new name's domain and attach it to the Worker, if not done. | | |
 | 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | |
-| 31 | `31-one-point-oh.md` | 108: 1.0 | Sonnet 5.5, medium | |
+| 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | |
+| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 31a first) | Sonnet 5.5, medium | |
+| | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | |
 
-Thirty-one hands sessions and five brain sessions. Sessions 25 (the Android
+Thirty-two hands sessions and five brain sessions. Sessions 25 (the Android
 shell) and 19 (the FLAC writer) touch nothing the others do until they
 merge, so either may run alongside another session if you want to save
 days; everything else runs one at a time, because each takes the next
@@ -109,6 +114,18 @@ queue's standing rules and merge policy, and `core/AGENTS.md`.
   line current, tick your row in the table above, and end with a plain
   summary for Mikey: what merged (PR numbers), what to listen for, what
   waits in `for-mikey.md`.
+- **The tablet's margin.** Mikey's Lenovo tablet, the weakest device he
+  supports, has about 1.8 times headroom on lite before item 100's
+  too-slow line (its busiest quarter-second about 55% of its time;
+  `js/quality.js`). Anything that adds work on the audio thread (a voice, a
+  block, a section line's making) reports the baseline's costs and keeps
+  them within 5% unless the PR says why; spread new making across blocks
+  as a load is.
+- **The app's name from one place.** The app is renamed at 1.0 (session
+  31a). Write its visible name and address from one place (the page's name
+  constant and the manifest; Android's one resource; fastlane's title),
+  never into new text where the rename would have to hunt for it, and never
+  into the code format (session 22).
 - **Sound items** name, in their Done line, two corpus loops (corpus seed
   20261009) that draw the new sound, with a time, so the brain can build
   the album without searching.
@@ -130,6 +147,10 @@ Things earlier sessions learned:
 - The local gate takes about 35 minutes (the core's tests are slow in a
   debug build); CI runs the same parts side by side in about ten. Push
   early so both run at once.
+- Album codes: `js/share.js`'s `encodeAlbum(title, specs)` with specs from
+  `js/gen.js`'s `newSpec(seed, request)` (in the page) or `decodeSong(code)`;
+  in Node, `tools/gen-lib.mjs`'s `newSpec` and `render` read the tools'
+  build. Round-trip with `decodeAlbum` before giving a code to anyone.
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.
