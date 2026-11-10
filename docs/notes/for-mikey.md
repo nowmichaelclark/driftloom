@@ -6,11 +6,17 @@ to listen for or decide. The hands add lines as they go and never wait on
 them; an answered line is removed (or moved to `docs/DECISIONS.md` by the
 brain). Empty or answered at 1.0 (queue item 108).
 
+## What to start next
+
+The rest of the road is cut into sessions, each with a prompt to paste:
+`docs/sessions/README.md` has the order, the model and effort for each, and
+the points where the next step is yours.
+
 ## The listening album
 
-Not built yet: it gathers batch 6 (101), 84b's movers and 102's long
-pieces, as album codes for the app. The codes and what to listen for go
-here.
+Not built yet. Brain session B2 builds batch 6's and 84b's; hands session
+15 and brain session B3 the long pieces'; B4 makes them again in the new
+codes. The codes and what to listen for go here.
 
 ## Ears
 

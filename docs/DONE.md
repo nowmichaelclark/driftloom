@@ -326,3 +326,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   and one generator, the core's; the page's JavaScript 19,538 lines to
   9,166; a browser that can't run the core gets a plain line. Listen for
   nothing: it should sound as v151 did. No album loop.
+- #357, the too-slow line (item 100, v153), commit 30a23b9: on lite, when
+  the render runs behind real time for two seconds in twenty (or the device
+  fills in that often), the card's place says the browser is too slow to
+  play Driftloom smoothly; Play goes on. Listen for nothing. No album loop.

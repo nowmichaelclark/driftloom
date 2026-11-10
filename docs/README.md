@@ -10,7 +10,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 |---|---|---|
 | Any agent | `AGENTS.md` (the root) | the role's start below |
 | Brain | `docs/BRAIN.md`, "Start here" | `docs/DECISIONS.md`, `docs/QUEUE.md`, `ROADMAP.md` |
-| Hands | `docs/QUEUE.md` | `core/AGENTS.md` for `core/`; `docs/notes/` for open notes |
+| Hands | `docs/QUEUE.md` | `core/AGENTS.md` for `core/`; `docs/notes/` for open notes; on the road to 1.0, the session's own prompt in `docs/sessions/` |
 | Ears | `docs/ears/sessions.md` | `docs/ears/plan.md`, `docs/EARS.md`, `tools/ears/README.md` |
 | Painter | `docs/PAINTER.md` | `design/README.md`, `design/next-picks.md` |
 
@@ -22,6 +22,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `core/AGENTS.md` | The core's standing rules, and the rules for sound items. | hands (core) |
 | `docs/QUEUE.md` | The work queue: status, standing rules, the open items, known issues, the merge policy. | hands, brain |
 | `docs/DONE.md` | One line for each merged PR since #277. | hands (to add), brain |
+| `docs/sessions/` | The road to 1.0 as sessions: `README.md` is the order and the rules for every session; one file per session holds its prompt, model and effort; `long-pieces-brief.md` is where item 102's design starts. | Mikey (to paste), hands, brain |
 | `docs/notes/` | One file for each note from the hands (`<item>-<name>.md`); `for-mikey.md` is the one list of what waits for Mikey's ears, phone, accounts or a decision. | brain, Mikey |
 | `docs/BRAIN.md` | How the work is organized, getting oriented, "Start here", listening albums, methods, tools. | brain |
 | `docs/DECISIONS.md` | What Mikey has decided: one dated line each, by topic. | brain, hands |
@@ -30,7 +31,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `docs/PAINTER.md`, `design/` | What there is to paint; the design spec and the picks' brief. | Painter |
 | `docs/EARS.md`, `docs/ears/`, `tools/ears/` | What the ears sessions found and the yardsticks; their plan, reports, album cards and tools. `docs/ears/README.md` indexes the folder. | ears, brain |
 | `docs/MOODS.md`, `docs/VIBES.md` | The mood words, and the vibe recipes (the source is `data/vibes.txt`; `docs/VIBES.md` says how to edit one). | brain |
-| `data/` | The generation data as plain text, read by both generators: profiles, vibes, moods, the voice table and the choice tables. The format is in `js/data.js`'s header. | hands, brain (vibes) |
+| `data/` | The generation data as plain text, read by the core's generator (compiled in) and by the page for its labels and ranges: profiles, vibes, moods, the voice table and the choice tables. The format is in `js/data.js`'s header. | hands, brain (vibes) |
 | `docs/ALBUMS.md` | Listening albums out for Mikey. | brain |
 | `README.md`, `core/README.md`, `core/golden/README.md` | The public front page; how a host drives the core and how to add a block; the golden renders. | everyone; core developers |
 | `Mikey's Thoughts.md` | His. | Mikey |
