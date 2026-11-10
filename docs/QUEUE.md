@@ -20,7 +20,10 @@ for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate,
 #354), 96 done (the checks on the player, #355), **97 done (the JavaScript
 retired: one generator, one engine, the core's, #356)**, 100 done (the
 too-slow line).
-**Next: 98's hands part**, then 101, 84b, 102. Item
+**Next: the sessions in `docs/sessions/README.md`** (Mikey, 2026-11-10: the
+rest of the road cut into sessions, each with its prompt, its model and its
+place in the order; the items below stay the briefs). First: brain B1 and
+hands session 01 (98's hands part). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -305,6 +308,17 @@ plain ones in the app's current style, keeping `docs/PAINTER.md`'s rules
 session may restyle any of them later (Mikey, 2026-11-10). Each sound change merges under the policy and is
 gathered into one listening album for Mikey; what needs his ears or a
 decision goes in `docs/notes/for-mikey.md` and the work moves on.
+
+**In sessions** (`docs/sessions/README.md`, 2026-11-10): 98 is session 01;
+101 is 101a to 101h (sessions 02 to 09: the far ends, pitch, width, the
+kit, colorTone, planingSevenths, lowBell with dropSpotlight, twang and the
+batch's locks); 84b is session 10; 102 is 102a to 102f (sessions 11 to 16:
+the plan and its map, the wander, the arc's energy, its themes and keys,
+the joins and the listening set, then tuning from Mikey's notes;
+`docs/sessions/long-pieces-brief.md`); 106 is 106a and 106b (17, 18); 104
+is 104a to 104c (19 to 21); 105 is 105a to 105c (22 to 24); 107 is 107a to
+107e (25 to 29); the polish is 30 and 108 is 31. Five brain sessions (B1 to
+B5) check the work between them.
 
 ## 103. The fast gate (done, hands, 2026-11-10)
 
