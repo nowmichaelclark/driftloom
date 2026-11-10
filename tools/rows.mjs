@@ -237,7 +237,9 @@ async function main() {
       await sleep(70);
     }
     row('cursor: lit and moving with the steps', seen.size >= 3 && !seen.has(-1), [...seen].join(','));
-    row('sound: something plays', (await level()) > 1e-4);
+    // The first loop is drawn at random, and a sparse one can rest for a
+    // second: listen for six.
+    row('sound: something plays', (await level(6000)) > 1e-4);
 
     // Pause and Play again.
     const before = (await steps()).filter((e) => e[1] === kinds.step).pop();
