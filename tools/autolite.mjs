@@ -4,7 +4,7 @@
 // renders; the DevTools CPU throttle slows only the page's thread, not the
 // audio's).
 //
-//   node tools/autolite.mjs [--burn 1700] [--near 850] [--minutes 10] [--only NAME]
+//   node tools/autolite.mjs [--burn 1700] [--near 850] [--stuck 4500] [--minutes 10] [--only NAME]
 //
 // The cases, each in a fresh profile:
 //
@@ -20,6 +20,12 @@
 //              machine measured, full's own busiest is 15-25% of a block, so
 //              850 us more at 44.1 kHz puts it near 50%), for --minutes: at
 //              most one move.
+//   stuck      a burn longer than a block's own time (--stuck: a block is
+//              2,902 us at 44.1 kHz), so lite too renders behind real time
+//              (queue item 100): the app moves to lite, and then says, in
+//              the card's place, that this browser is too slow to play
+//              Driftloom smoothly; Play goes on; Diagnostics says
+//              `slow: lite past the line`. The other cases never show it.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,6 +46,7 @@ const flag = (name, dflt) => {
 const BURN = Number(flag('--burn', 1700));
 const MINUTES = Number(flag('--minutes', 10));
 const NEAR = Number(flag('--near', 850));
+const STUCK = Number(flag('--stuck', 4500));
 const ONLY = flag('--only', null);
 const PREFS = 'driftloom.prefs.v1';
 
@@ -108,6 +115,13 @@ const lateOf = (text) => {
   return m ? Number(m[1]) : null;
 };
 const line = (text, key) => (text.match(new RegExp(`^${key}: .*$`, 'm')) || [''])[0];
+// The plain line in the card's place, if it shows (queue item 100).
+const plain = (page) => page.evaluate(() => { const l = document.getElementById('plainLine'); return l && !l.hidden ? l.textContent.trim() : null; });
+const TOO_SLOW = 'This browser is too slow to play Driftloom smoothly.';
+async function neverSlow(page, text) {
+  const shown = await plain(page);
+  check('the too-slow line never shows', shown === null && /^slow: no$/m.test(text), `${shown} / ${line(text, 'slow')}`);
+}
 
 async function slow() {
   console.log(`\nslow: burn ${BURN} us a block`);
@@ -121,8 +135,15 @@ async function slow() {
   }
   check('it moves to lite by itself', moved && moved.lite === true, JSON.stringify(moved));
   if (moved) console.log(`        after ${moved.after.toFixed(0)} s: ${moved.why}`);
+  // The move is heard at the loop's next pass (or bar): wait for the new
+  // core, however long this loop's pass is.
+  let text = await diag(t.page);
+  for (let waited = 0; waited < 120000 && !/\(lite;/.test(line(text, 'busiest')); waited += 4000) {
+    await sleep(4000);
+    text = await diag(t.page);
+  }
   await sleep(8000);
-  const text = await diag(t.page);
+  text = await diag(t.page);
   console.log(`        ${line(text, 'cores')}\n        ${line(text, 'busiest')}`);
   check('Diagnostics says why', /lite: true, auto \(busiest \d+% at full\)/.test(text) || /lite: true, auto \(fell behind/.test(text), line(text, 'cores'));
   const playing = await t.page.evaluate(() => document.getElementById('playBtn').getAttribute('aria-label'));
@@ -130,6 +151,9 @@ async function slow() {
   check('no note late', lateOf(text) === 0, `${lateOf(text)}: ${line(text, 'engine')}`);
   const shown = await t.page.evaluate(() => { const h = document.getElementById('liteAuto'); return h && !h.hidden ? h.textContent : null; });
   check('the switch\'s line says it was set by itself', !!shown, shown);
+  // Busy on lite, never behind: not too slow (queue item 100).
+  await sleep(30000);
+  await neverSlow(t.page, await diag(t.page));
   await t.page.reload();
   await t.page.waitForSelector('#playBtn');
   await sleep(500);
@@ -150,6 +174,7 @@ async function steady() {
   const p = await prefsOf(t.page);
   check('full stays full', !p.liteAuto && /lite: false/.test(text), JSON.stringify(p.liteAuto));
   check('no note late', lateOf(text) === 0, `${lateOf(text)}`);
+  await neverSlow(t.page, text);
   await t.context.close();
 }
 
@@ -161,12 +186,14 @@ async function yours() {
   let text = await diag(t.page);
   console.log(`        ${line(text, 'busiest')}`);
   check('full, chosen, stays full however busy', !p.liteAuto && /lite: false, yours/.test(text), line(text, 'cores'));
+  await neverSlow(t.page, text);
   await t.context.close();
   const u = await open({ prefs: { lite: true } });
   await sleep(75000);
   p = await prefsOf(u.page);
   text = await diag(u.page);
   check('lite, chosen, stays lite however quiet', !p.liteAuto && /lite: true, yours/.test(text), line(text, 'cores'));
+  await neverSlow(u.page, text);
   await u.context.close();
 }
 
@@ -193,7 +220,31 @@ async function near() {
   await t.context.close();
 }
 
-const cases = { slow, steady, yours, near };
+async function stuck() {
+  console.log(`\nstuck: burn ${STUCK} us a block, more than a block's time`);
+  const t = await open({ burn: STUCK });
+  const t0 = Date.now();
+  let shown = null;
+  while (Date.now() - t0 < 180000 && !shown) {
+    await sleep(2000);
+    shown = await plain(t.page);
+  }
+  const after = (Date.now() - t0) / 1000;
+  const text = await diag(t.page);
+  console.log(`        ${line(text, 'cores')}\n        ${line(text, 'busiest')}\n        ${line(text, 'slow')}`);
+  check('the app moved to lite first', /lite: true, auto \(/.test(text), line(text, 'cores'));
+  check(`the line shows in the card's place (after ${after.toFixed(0)} s)`, shown === TOO_SLOW, String(shown));
+  check('with no second sentence while the app has no page', shown !== null && !/Get the Driftloom app/.test(shown));
+  check('Diagnostics says so', /^slow: lite past the line, \d+s \(/m.test(text), line(text, 'slow'));
+  const playing = await t.page.evaluate(() => document.getElementById('playBtn').getAttribute('aria-label'));
+  check('Play goes on', playing === 'Pause', playing);
+  await t.page.click('#nextBtn');
+  await sleep(3000);
+  check('and Next still works, the line staying', (await plain(t.page)) === TOO_SLOW);
+  await t.context.close();
+}
+
+const cases = { slow, steady, yours, near, stuck };
 try {
   for (const [name, fn] of Object.entries(cases)) if (!ONLY || ONLY.split(',').includes(name)) await fn();
 } finally {

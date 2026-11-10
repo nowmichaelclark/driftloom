@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-10:** `main` is at v152. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-10:** `main` is at v153. Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
@@ -18,8 +18,9 @@ and **95** (the picks through the core's commands); Ears 13b approved
 (2026-11-09). **The road to 1.0 (a long hands run, 2026-11-10; what waits
 for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate,
 #354), 96 done (the checks on the player, #355), **97 done (the JavaScript
-retired: one generator, one engine, the core's)**.
-**Next: 100**, then 98's hands part, 101, 84b, 102. Item
+retired: one generator, one engine, the core's, #356)**, 100 done (the
+too-slow line).
+**Next: 98's hands part**, then 101, 84b, 102. Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -187,31 +188,24 @@ loop carries its own track (`change_with_track`), so a page asleep at a
 hand-over leaves the core playing what it would have set. The opening loop
 (before Play) is still drawn on the page: there is no core before a tap.
 
-## 100. When a browser is too slow even on lite
-
-**Hands:** any. App only; after 97.
+## 100. When a browser is too slow even on lite (done, hands, 2026-11-10)
 
 **Why:** a friend's Pixel 9 on GrapheneOS played "too fast and really
-skippy" (v151, 2026-11-10): its browser, Vanadium, runs WebAssembly on an
-interpreter unless JIT is allowed for the site; the player took 54.7% of
-real time on lite interpreted and 9.3% with JIT allowed (about 6x). The
-skips are the audio output running dry, which the core's counts can't see.
-**Mikey (2026-11-10):** no browser workarounds and no cushion or lower tier;
-a browser too slow even on lite gets a plain line telling them to get the
-Driftloom app.
+skippy" (v151): its browser runs WebAssembly on an interpreter unless JIT
+is allowed for the site (54.7% of real time on lite interpreted, 9.3% with
+JIT). **Mikey (2026-11-10):** no browser workarounds and no cushion or
+lower tier; a plain line telling them to get the Driftloom app.
 
-**What:** notice it (lite past a line on the switch's own measure, set from
-the tablet's and the phones' figures so Mikey's tablet never trips it; or
-fill-ins where `playoutStats` reports them); one line where the "can't play
-Driftloom" line goes (Mikey, 2026-11-07): "This browser is too slow to play
-Driftloom smoothly. Get the Driftloom app." The link is one constant, empty
-until the Android app has a page (F-Droid), and the second sentence shows
-only when it is set. Play still works; no pop-up, no new setting.
-Diagnostics: `slow: lite past the line, Ns`.
-
-**Yardsticks:** `tools/autolite.mjs` with a `stuck` case shows the line;
-"steady", "slow" and "yours" never show it; `tools/rows.mjs` passes. BUILD
-and CACHE together.
+**Built (v153):** on lite, however it was chosen, when 8 of the
+quarter-seconds in the last 20 s of playing each took longer than the
+audio it made, or the device filled in 8 times in them where the browser
+counts (`playoutStats`), the card's place says "This browser is too slow
+to play Driftloom smoothly." (`quality.stuck`, js/quality.js, which says
+how the line was set from the tablet's and the Pixel's figures). "Get the
+Driftloom app." follows as a link once `APP_LINK` in js/main.js is set
+(item 107); Play goes on, and Diagnostics reads `slow: lite past the line,
+Ns (why)`. `tools/autolite.mjs` has the `stuck` case, and its other cases
+check the line never shows.
 
 ## 96. The checks on the player (done, hands, 2026-11-10)
 

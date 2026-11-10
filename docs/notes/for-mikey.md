@@ -22,6 +22,13 @@ here.
   tablet, play a few loops, Next a few times, a long loop and the screen
   off; Diagnostics should read `late: 0  missed: 0  dropped: 0`. Trouble
   means a revert of that PR.
+- **The too-slow line never shows on the tablet (item 100, v153):** play ten
+  minutes on the tablet on lite; the card should stay, and Diagnostics
+  should read `slow: no`. If "This browser is too slow to play Driftloom
+  smoothly." shows there, tell the hands the `slow:` line.
+- **The friend's Pixel 9 on GrapheneOS (item 100):** with JIT off for the
+  site the line should show within about a minute of playing; send its
+  `slow:` and `busiest:` lines either way.
 
 ## Accounts
 
@@ -32,3 +39,6 @@ here.
 - **A new plain line (item 97):** when the core's module doesn't arrive (no
   connection on a first visit), the card's place says "Driftloom couldn't
   load. Check the connection and reload." Keep, or reword?
+- **Where the too-slow line sits (item 100):** it takes the card's place,
+  as the can't-play line does, so the loop's name and key are hidden while
+  it shows (until a reload). Say if it should sit above the card instead.

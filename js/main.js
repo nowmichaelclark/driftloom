@@ -11,7 +11,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v152';
+const BUILD = 'v153';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -29,6 +29,13 @@ const CANT_PLAY = "This browser can't play Driftloom; try a recent Chrome, Firef
 // first visit with no connection, a server error): not the browser's fault,
 // so not the line above.
 const NOT_LOADED = "Driftloom couldn't load. Check the connection and reload.";
+// And one that plays it, but too slowly even on lite (queue item 100; Mikey,
+// 2026-11-10): the line, and where the Driftloom app is. The link is empty
+// until the Android app has a page (F-Droid, queue item 107); the second
+// sentence shows only when it is set.
+const TOO_SLOW = 'This browser is too slow to play Driftloom smoothly.';
+const GET_APP = 'Get the Driftloom app.';
+const APP_LINK = '';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -118,6 +125,8 @@ const state = {
   // cores or fewer) started it on lite, and the switch under way, if one is.
   busy: new quality.Busy(),
   busyPlaying: false,
+  // Set once lite is past the line (queue item 100): { at, why }.
+  slow: null,
   liteGuess: false,
   switching: null,
   // The Mono switch (queue item 66): the listener's, kept in the prefs and
@@ -286,9 +295,19 @@ function buildAudio() {
 function onBusy(output, report) {
   if (output !== state.output || state.switching) return;
   const playing = !!(state.engine && state.engine.playing);
-  state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000);
+  state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000, fillIns());
   state.busyPlaying = playing;
   if (!output.core || output.core.failed) return;
+  // Too slow even on lite (queue item 100): said once, in the card's place.
+  // Play goes on.
+  if (!state.slow && !state.coreError) {
+    const s = quality.stuck({ quality: output.quality, busy: state.busy });
+    if (s) {
+      state.slow = { at: performance.now(), why: s.why };
+      ui.plainLine(TOO_SLOW, APP_LINK ? { text: GET_APP, href: APP_LINK } : null);
+      awayEvent(`too slow even on lite (${s.why})`);
+    }
+  }
   const prefs = store.getPrefs();
   const d = quality.decide({ quality: output.quality, yours: prefs.lite, auto: prefs.liteAuto, guess: state.liteGuess, busy: state.busy });
   if (d) autoQuality(d);
@@ -1805,6 +1824,9 @@ function wire() {
       const b60 = state.busy.busiest(quality.UNDER_FOR);
       const p = (x) => (x === null ? 'not yet' : `${Math.round(x * 100)}%`);
       lines.push(`busiest: ${p(b20)} over ${quality.OVER_FOR} s, ${p(b60)} over ${quality.UNDER_FOR} s (${state.output ? state.output.quality : '?'}; switches to lite past ${Math.round(quality.OVER * 100)}%)`);
+      // Too slow even on lite (queue item 100): how long ago the line was
+      // shown, and what tripped it.
+      lines.push(state.slow ? `slow: lite past the line, ${Math.round((performance.now() - state.slow.at) / 1000)}s (${state.slow.why})` : 'slow: no');
     }
     // The core's player, with the notes it took late, left out or dropped;
     // or why there is none.

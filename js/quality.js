@@ -17,6 +17,22 @@
 //   the Moto G Power), so that leaves full well under OVER.
 // - Once the app has moved, it never moves again (no back and forth); and a
 //   listener's own choice is never changed.
+//
+// Too slow even on lite (queue item 100; Mikey, 2026-11-10: no workarounds,
+// no cushion, no lower tier: a plain line). On lite, however it was chosen,
+// when STUCK_BEHIND of the quarter-seconds in the last STUCK_FOR seconds of
+// playing each took longer than the audio it made (the render behind real
+// time, so the output runs dry), or the device filled in that often where
+// the browser says (`playoutStats`), the browser is too slow to play
+// Driftloom smoothly, and the page says so (js/main.js). The line is set
+// from what is known of the devices: the weakest we support, Mikey's Lenovo
+// tablet, renders lite's busiest loops at 2.0 to 3.1 times real time (item
+// 87: its quarter-seconds at a third to a half of their time), so it would
+// have to run at half its measured speed for two seconds in twenty to trip
+// this; a Pixel 9 on a browser that interprets WebAssembly took 55% of real
+// time on average and skipped throughout. A busy share short of the whole
+// quarter-second never trips it: `tools/autolite.mjs`'s slow case sits at
+// 60 to 80% on lite and must not.
 
 // The share of a block's deadline past which full is too much, over the
 // seconds of playing it is read across.
@@ -34,6 +50,11 @@ export const WARM = 5;
 export const FADE = 0.5;
 // The least time from the decision to the start of the fade, in seconds.
 export const PREP = 0.5;
+// Too slow even on lite: over this many seconds of playing, this many
+// quarter-seconds behind real time, or this many of the device's fill-ins.
+export const STUCK_FOR = 20;
+export const STUCK_BEHIND = 8;
+export const STUCK_FILLS = 8;
 
 // What the worklet has said, while playing, as one record a report:
 // { at (seconds, the page's clock), seconds (of audio), max, behind }.
@@ -45,8 +66,10 @@ export class Busy {
     this.played = 0;
   }
 
-  // One report: `playing` says whether the loop played throughout it.
-  add(report, playing, at = 0) {
+  // One report: `playing` says whether the loop played throughout it;
+  // `fills` is the device's count of fill-ins so far, where the browser
+  // reports one (null where it doesn't).
+  add(report, playing, at = 0, fills = null) {
     if (!playing) {
       this.reset();
       return;
@@ -55,7 +78,7 @@ export class Busy {
     if (!report || !(report.seconds > 0)) return;
     this.played += report.seconds;
     if (this.played <= WARM) return;
-    this.runs.push({ at, seconds: report.seconds, max: report.max, behind: report.behind || 0 });
+    this.runs.push({ at, seconds: report.seconds, max: report.max, behind: report.behind || 0, fills });
     // A minute and a half is more than any rule reads.
     let total = 0;
     for (let i = this.runs.length - 1; i >= 0; i--) {
@@ -81,6 +104,24 @@ export class Busy {
       total += this.runs[i].seconds;
       max = Math.max(max, this.runs[i].max);
       if (total >= seconds) return max;
+    }
+    return null;
+  }
+
+  // The quarter-seconds that took longer than their audio over the last
+  // `seconds` of unbroken playing, and the device's fill-ins across them
+  // (null where the browser reports none): { behind, fills }; or null if
+  // there have not been that many seconds.
+  over(seconds) {
+    let total = 0;
+    let behind = 0;
+    for (let i = this.runs.length - 1; i >= 0; i--) {
+      total += this.runs[i].seconds;
+      behind += this.runs[i].behind;
+      if (total >= seconds) {
+        const [a, b] = [this.runs[i].fills, this.runs[this.runs.length - 1].fills];
+        return { behind, fills: a == null || b == null ? null : Math.max(0, b - a) };
+      }
     }
     return null;
   }
@@ -112,6 +153,17 @@ export function decide({ quality, yours, auto, guess, busy }) {
     const b = busy.busiest(UNDER_FOR);
     if (b !== null && b < UNDER) return { lite: false, why: `busiest ${pct(b)} on lite`, at: 'pass' };
   }
+  return null;
+}
+
+// Whether the browser is too slow even on lite (queue item 100), or null:
+// { why }, in a tester's words for Diagnostics.
+export function stuck({ quality, busy }) {
+  if (quality !== 'lite') return null;
+  const o = busy.over(STUCK_FOR);
+  if (!o) return null;
+  if (o.behind >= STUCK_BEHIND) return { why: `${o.behind} quarter-seconds behind in ${STUCK_FOR} s` };
+  if (o.fills !== null && o.fills >= STUCK_FILLS) return { why: `${o.fills} fill-ins in ${STUCK_FOR} s` };
   return null;
 }
 

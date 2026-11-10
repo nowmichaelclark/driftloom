@@ -99,6 +99,7 @@ h1, h2, h3, h4, h5, p { margin: 0; }
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 1rem; line-height: 1.35; font-weight: 500;
 }
+.plain-line a { color: inherit; text-decoration: underline; }
 .info-inner.plain > .info-row,
 .info-inner.plain > .playhead { display: none; }
 

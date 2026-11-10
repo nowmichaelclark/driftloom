@@ -322,3 +322,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #287 are in
   their seeds on `js/dlplayer.wasm` in Node, no browser; the old path and
   the player agree to 0.005 dB on the same 40 loops. Listen for nothing. No
   album loop.
+- #356, the JavaScript retires (item 97, v152), commit c9af54e: one engine
+  and one generator, the core's; the page's JavaScript 19,538 lines to
+  9,166; a browser that can't run the core gets a plain line. Listen for
+  nothing: it should sound as v151 did. No album loop.
