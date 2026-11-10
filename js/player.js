@@ -19,16 +19,18 @@
 // trackChanged), the cursor (visualStep), Now Playing's clock
 // (audibleSteps, endStep, roundSteps) and Diagnostics (report).
 //
-// What it still asks of the JavaScript generator is for the page to show,
-// never what plays: `render(spec)` for the info card and the first grid,
-// until the core's own arrives. The spec is the page's record of a loop
-// (history, saves, share codes); what the core plays is that spec's seed,
-// request and edits, which make the same spec in the Rust generator (the
-// generation goldens, and test/player.test.mjs).
+// What the page shows before the core's own events arrive (the info card,
+// the first grid) it asks of the core's generator on the page (js/gen.js):
+// the same module, so the same loop. The spec is the page's record of a
+// loop (history, saves, share codes; js/request.js); what the core plays is
+// that record's seed, request and edits.
 
-import { render, LAYERS, requestOf, readRequest, RequestError, keyMask, scaleMask, styleMask, voiceMask, layerState, pieceOf, loopBars } from './generator.js';
-import { VIBE_IDS } from './vibes.js';
-import { pinNumbers } from './pins.js';
+import { render } from './gen.js';
+import { LAYERS, askOf, picksAsk, pieceOf, loopBars } from './request.js';
+
+// The core's numbers for a record and for the picks, for the modules that
+// took them from here.
+export { askOf, picksAsk };
 
 // Where "Let the loop wander" stops repeating itself (queue item 92; Mikey,
 // 2026-10-18: all the way to the right it should feel experimental, not
@@ -64,67 +66,6 @@ export const END_FADE = 1.0;
 // The cursor's and the grids' queues, at most.
 const QUEUE_MOST = 512;
 const GRIDS_MOST = 16;
-
-// What the core is asked for a spec's loop (`CoreHost.playLoad` and the
-// rest): its request (`requestOf`: the vibes with the weights it drew, so the
-// loop a selection of five or fewer made, the tempo, pins, theme, length,
-// keys, modes, styles, voices and layers), and a code's edits (queue item
-// 94a): every layer's seed, with whether it was re-rolled, the tone and the
-// tempo. The edits are sent whole, whether or not they differ from what the
-// seed draws: an edit to the value drawn makes the same loop
-// (test/player.test.mjs holds it), and the page need not draw the loop to
-// tell.
-export function askOf(spec) {
-  const asked = requestOf(spec);
-  const vibes = Object.entries(asked.vibes || {}).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0);
-  const seeds = spec.layerSeeds
-    ? LAYERS.map((l, i) => [i, spec.layerSeeds[l] >>> 0, !!(spec.forceLayers && spec.forceLayers[l])]).filter(([, s]) => Number.isFinite(s))
-    : [];
-  const tone = spec.tone ? [spec.tone.warmth, spec.tone.space, spec.tone.wobble].map((v) => (Number.isFinite(v) ? v : null)) : null;
-  return {
-    vibes,
-    tempo: asked.tempo,
-    pins: pinNumbers(asked.pins),
-    theme: asked.theme,
-    length: asked.length,
-    keys: keyMask(asked.key),
-    scales: scaleMask(asked.scale),
-    styles: styleMask(asked.style),
-    voices: LAYERS.map((l) => voiceMask(asked.voices, l)),
-    layers: LAYERS.map((l) => layerState(asked.layers, l)),
-    seeds,
-    tone: tone && tone.every((v) => v != null) ? tone : null,
-    bpm: Number.isFinite(spec.bpm) ? spec.bpm : null,
-  };
-}
-
-// The New loops panel's request as the core takes it (queue item 95,
-// `Player::set_picks`): the request read (`readRequest`, the reader both
-// generators share) and put in the core's numbers, the vibes a listener's
-// selection, each with no weight. A request that can't be read is sent as
-// its vibes alone, as the page's own draw kept the moods of one it could not
-// meet: { ask, vibesOnly, why }.
-export function picksAsk(request) {
-  const out = (asked) => ({
-    vibes: (asked.vibes || []).map(([id, w]) => [VIBE_IDS.indexOf(id), w]).filter(([i]) => i >= 0),
-    tempo: asked.tempo,
-    pins: pinNumbers(asked.pins),
-    theme: asked.theme,
-    length: asked.length,
-    keys: keyMask(asked.key),
-    scales: scaleMask(asked.scale),
-    styles: styleMask(asked.style),
-    voices: LAYERS.map((l) => voiceMask(asked.voices, l)),
-    layers: LAYERS.map((l) => layerState(asked.layers, l)),
-  });
-  try {
-    return { ask: out(readRequest(request)), vibesOnly: false, why: null };
-  } catch (e) {
-    if (!(e instanceof RequestError)) throw e;
-    const vibes = request && Array.isArray(request.vibes) ? request.vibes : [];
-    return { ask: out(readRequest(vibes)), vibesOnly: true, why: e.message };
-  }
-}
 
 // The length slider's track as the core takes it (`Player::set_track`):
 // [kind, count], 0 on and on, 1 whole passes (`spec.playFor`), 2 bars to the

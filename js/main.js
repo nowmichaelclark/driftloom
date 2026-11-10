@@ -1,4 +1,5 @@
-import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
+import { newSpec as drawSpec, render, unavailable as noGenerator } from './gen.js';
+import { RequestError, vibeSelection, rerollLayer, cloneSpec, LAYERS, STEPS_PER_BAR } from './request.js';
 import { Output } from './output.js';
 import { loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES } from './core.js';
 import * as quality from './quality.js';
@@ -24,6 +25,10 @@ const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
 // core will not run is told so in a plain line, in the info card's place
 // (Mikey, 2026-11-07).
 const CANT_PLAY = "This browser can't play Driftloom; try a recent Chrome, Firefox or Safari";
+// And where the browser could run the core but the core did not arrive (a
+// first visit with no connection, a server error): not the browser's fault,
+// so not the line above.
+const NOT_LOADED = "Driftloom couldn't load. Check the connection and reload.";
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -1814,7 +1819,7 @@ function wire() {
     // One loop in thirty is a deliberate doubling (roadmap item 12), and
     // "is this one of them?" is otherwise only answerable by ear, which is
     // no use at all when the question is whether it fired.
-    lines.push(`choir: ${state.spec && choirOf(state.spec) ? 'yes' : 'no'}`);
+    lines.push(`choir: ${state.pattern && state.pattern.choir ? 'yes' : 'no'}`);
     if (state.media) push(state.media.report());
     else lines.push('media: not built yet (press Play)');
     if (state.engine && state.engine.spec) push(state.engine.report());
@@ -1980,15 +1985,21 @@ function wire() {
   window.addEventListener('resize', () => ui.fitName());
 }
 
-wire();
-// The core is fetched and loaded ahead, so it is ready by the time Play is
-// pressed. A browser that refuses a context before a gesture still gets the
-// bytes now, and the context on the first tap.
-if (coreUnsupported()) {
-  cantPlay(coreUnsupported());
+if (noGenerator) {
+  // No loop can be made or shown here (js/gen.js): the page is the line.
+  state.coreError = noGenerator;
+  ui.plainLine(coreUnsupported() ? CANT_PLAY : NOT_LOADED);
 } else {
-  fetchCore().catch(() => {});
-  try { prepareAudio(); } catch { state.ctx = null; }
+  wire();
+  // The core is fetched and loaded ahead, so it is ready by the time Play is
+  // pressed. A browser that refuses a context before a gesture still gets
+  // the bytes now, and the context on the first tap.
+  if (coreUnsupported()) {
+    cantPlay(coreUnsupported());
+  } else {
+    fetchCore().catch(() => {});
+    try { prepareAudio(); } catch { state.ctx = null; }
+  }
 }
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

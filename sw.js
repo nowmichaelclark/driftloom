@@ -43,17 +43,16 @@ const FILES = [
   './js/player.js',
   './js/output.js',
   './js/quality.js',
-  './js/generator.js',
+  // The core's generator on the page, and a loop's record and request.
+  './js/gen.js',
+  './js/request.js',
   './js/theory.js',
   './js/moods.js',
   './js/vibes.js',
-  // The per-loop choices: which of the sound batch's changes a loop gets.
+  // The per-loop choices' tables, for the pins a request carries.
   './js/choices.js',
   './js/pins.js',
   './js/rng.js',
-  // The core's math in JavaScript: what the generator calls for pow, log,
-  // sin and the rest, so a loop is the same in every browser.
-  './js/dlmath.js',
   // The generation data (queue item 78): the reader, and the text it reads
   // at start (profiles, vibes, moods, the voice table, the choice tables).
   './js/data.js',

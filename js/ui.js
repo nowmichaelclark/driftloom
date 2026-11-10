@@ -1,4 +1,4 @@
-import { LAYERS, LAYER_LABELS, STEPS_PER_BAR, loopBars } from './generator.js';
+import { LAYERS, LAYER_LABELS, STEPS_PER_BAR, loopBars } from './request.js';
 import { CHARACTERS, resolveKey } from './characters.js';
 import { NOTE_NAMES, SCALES } from './theory.js';
 import { moodWord, pointWord } from './moods.js';
