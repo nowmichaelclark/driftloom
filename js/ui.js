@@ -396,6 +396,16 @@ export function setColumnsLive(on) {
 
 // --------------------------------------------------------------- misc
 
+// A plain line in the info card's place (queue item 97; Mikey, 2026-11-07):
+// what a browser that cannot run the core is told. `null` brings the card
+// back.
+export function plainLine(text) {
+  const line = el('plainLine');
+  line.textContent = text || '';
+  line.hidden = !text;
+  el('card').classList.toggle('plain', !!text);
+}
+
 let toastTimer = null;
 export function toast(message) {
   const t = el('toast');

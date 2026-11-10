@@ -1,46 +1,14 @@
 // The Rust core, main-thread side (queue item 21, roadmap 16).
 //
-// The core is Driftloom's engine (queue item 32), and since queue item 94b
-// the app plays the core's player by default: the core decides every note
-// itself, on the audio thread (core/src/player/, through js/dlplayer.wasm),
-// and the page sends it commands and draws what it reports (js/player.js).
-// `?engine=page` asks for the page's own engine on the core instead, the way
-// the app played before 94b (js/engine.js decides the notes and hands them
-// to js/dlcore.wasm), for comparison until queue item 97 retires it; and
-// `?engine=js` for the JavaScript synth. An old `?engine=rust` or
-// `?engine=player` link keeps working: it asks for what is already the
-// default. On the page's engine the synth hands every voice to an
-// AudioWorkletNode running js/dlcore.wasm, and since queue item 29 the mix
-// as well: the channels, sends, duck, echo and reverb; since item 30 the
-// wobble, the saturator, the tone and the highpass; since item 31 the bus
-// compressor, the master and kill gains and the ceiling, so its output goes
-// straight to the speakers. It keeps everything else: scheduling, the voice
-// budget; and, since queue item 44, none of the chance in a note: where each
-// note sits in its loop goes with it (a key), and the core draws from that.
-// The JavaScript synth stays, as the fallback: a browser without
-// AudioWorklet or WebAssembly, a core that fails to load, a core that traps
-// while playing (Diagnostics says which, `js (fallback: ...)`), and what
-// `?engine=js` asks for (`js (asked)`).
-
-function engineAsked() {
-  try {
-    return new URLSearchParams(globalThis.location?.search || '').get('engine');
-  } catch {
-    return null;
-  }
-}
-
-export const ENGINE = engineAsked() === 'js' ? 'js' : 'rust';
-
-// `?engine=page` (queue item 94b): the page's own engine on the core, as the
-// app played before the player became its default.
-export const PAGE_ENGINE = engineAsked() === 'page';
-
-// `?engine=player` asked for by name (queue item 82). The app plays the
-// player by default (js/main.js decides, from ENGINE and PAGE_ENGINE); this
-// is the default for a CoreHost built by anything else (the measure
-// harnesses build their own, on js/dlcore.wasm, unless a page asks).
-export const PLAYER = engineAsked() === 'player';
+// The core is Driftloom's engine, and the app plays the core's player: the
+// core decides every note itself, on the audio thread (core/src/player/,
+// through js/dlplayer.wasm in js/worklet.js), plays them, mixes them and
+// finishes them, so its node goes straight to the speakers. The page sends
+// it commands and draws what it reports (js/player.js). Since queue item 97
+// there is nothing else: the page's own engine and the JavaScript synth it
+// fell back to are gone, and a browser without AudioWorklet or WebAssembly,
+// or one whose core fails to load or traps while playing, is told so in a
+// plain line (Mikey, 2026-11-07; Diagnostics says which, `none (...)`).
 
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
@@ -54,18 +22,18 @@ export function coreUnsupported() {
 // (core/src/lib.rs, MAX_RATE without the `wide` feature), and the rate asked
 // for instead when a context comes up faster (queue item 45): 48 kHz, which
 // the browser resamples to the device. Without it a device whose default is
-// 192 kHz would play everything in JavaScript.
+// 192 kHz would play nothing.
 export const CORE_MAX_RATE = 96000;
 export const CORE_FALLBACK_RATE = 48000;
 
 // A new audio context from `Ctx` with `options`, on a rate the core can
 // run at: if the browser's default is above CORE_MAX_RATE, a context at
 // CORE_FALLBACK_RATE instead, and the fast one closed. If the browser will
-// not make that one, the first stands and the synth falls back to
-// JavaScript, as it always has for a core that will not run.
+// not make that one, the first stands, the core says it cannot mix at that
+// rate, and the page says it cannot play.
 export function newContext(Ctx, options = {}) {
   const ctx = new Ctx(options);
-  if (ENGINE !== 'rust' || !(ctx.sampleRate > CORE_MAX_RATE)) return ctx;
+  if (!(ctx.sampleRate > CORE_MAX_RATE)) return ctx;
   try {
     const slower = new Ctx({ ...options, sampleRate: CORE_FALLBACK_RATE });
     try { ctx.close(); } catch { /* already gone */ }
@@ -75,178 +43,48 @@ export function newContext(Ctx, options = {}) {
   }
 }
 
-// The voices the core plays, by the number it knows them by
-// (the registry, core/src/blocks/mod.rs), and the parts of a kalimba note
-// (core/src/blocks/kalimba.rs).
-export const CORE_VOICES = {
-  kalimba: 0, fiddle: 1, pad: 2, fm: 3, sine: 4, tubular: 5,
-  softpad: 6, analogpad: 7, analoglead: 8, sawpluck: 9, beep: 10, moog: 11, whistle: 12,
-  nylon: 13, accordion: 14,
-  stab: 15, ocarina: 16, flute: 17, panflute: 18, knock: 19, templebell: 20, hat: 21,
-  bass: 22, texture: 23, drum: 24,
-  vowel: 25, hum: 26, choir: 27,
-  dubstab: 28, tunedkick: 29,
-};
-// A channel's own blocks, by the number the core knows them by (`own` in
-// core/src/blocks/mod.rs, the registry's `channel` list), for Core::set;
-// and the chapel organ's settings, in its `set` order
-// (core/src/blocks/organ.rs, queue item 61).
-export const CORE_OWN = { organ: 3, wash: 4, subDuck: 5, padSweep: 6 };
-export const ORGAN_SETTINGS = [
-  'bar16', 'bar5', 'bar8', 'bar4', 'bar2_3', 'bar2', 'bar1_3_5', 'bar1_1_3', 'bar1',
-  'speak', 'chiff', 'celeste', 'celesteLevel', 'release', 'tone', 'low', 'carve', 'shimmer', 'level', 'verb', 'dry',
-];
-// How many channels the core mixes (CHANNELS in core/src/lib.rs): the five
-// layers', which the synth's channels feed (the node's inputs), and the
-// wash's (WASH_CHANNEL, queue item 62), which only the core plays into.
-export const CORE_CHANNEL_COUNT = 6;
-export const WASH_CHANNEL = 5;
-// The wash's settings (core/src/blocks/wash.rs, `set`, queue item 62): its
-// period, level, tint (Hz, two gains in dB, a Q), then the follower's weight
-// for each layer's channel, in the core's channel order (CORE_LAYERS), each
-// routed into the wash's input of the same number.
-export const WASH_SETTINGS = ['period', 'level', 'tint', 'tintGain', 'tintHigh', 'tintQ'];
-export const WASH_WEIGHT = 6;
-// subDuck's settings (core/src/blocks/sub_duck.rs, queue item 68): its depth
-// in dB and its recovery in seconds; its key is the drums' channel, routed
-// into its input 0.
-export const SUB_DUCK_SETTINGS = ['depth', 'recover'];
-// padSweep's settings (core/src/blocks/pad_sweep.rs, queue item 72): where it
-// closes in Hz, how far it opens in octaves, its period in seconds and its Q
-// in dB. Each starts the sweep again, closed; `oct` is sent last, and 0 lets
-// the last loop's glide open and stop.
-export const PAD_SWEEP_SETTINGS = ['lo', 'oct', 'period', 'q'];
-// The kinds of channel event (core/src/block.rs, `event`).
-export const EVENTS = { damp: 0, release: 1, bend: 2, retune: 3, choke: 4 };
-// A sung note's vowel and where it drifts to, as the core numbers them
-// (core/src/blocks/sung.rs); 4 is a hum opening.
-export const SUNG_VOWELS = { a: 0, e: 1, o: 2, u: 3 };
-export const SUNG_OPEN_HUM = 4;
-// The longest sung note the core takes (sung::LONGEST): its detune holds
-// the jitter's steps for this long. Longer ones play in JavaScript.
-export const SUNG_LONGEST = 13.5;
-// A bass note's voice in `parts`, and its two flags (core/src/blocks/bass.rs); a
-// name that is not here is the original, `sub`, as the JavaScript voice has it.
-export const BASS_KINDS = { sub: 0, round: 1, fifths: 2, pluckbass: 3, moogbass: 4 };
-export const BASS_GLIDE = 8;
-export const BASS_CHUG = 16;
-// A texture note's, in `parts` (core/src/blocks/texture.rs).
-export const TEXTURE_KINDS = { swell: 0, drop: 1, wind: 2, waves: 3 };
-// A drum's, in `parts` (core/src/blocks/drum.rs); the hats are the hat voice,
-// and their kinds (core/src/blocks/struck.rs) are `parts` of their own.
-export const DRUM_KINDS = {
-  kick: 0, softkick: 1, snare: 2, clap: 3, rim: 4, frame: 5, tap: 6, jingle: 7, ojingle: 8,
-};
-export const HAT_KINDS = { hat: 0, ohat: 1, shaker: 2 };
-// The longest noise the core holds (NOISE_MAX, core/src/noise.rs): two
-// seconds at 96 kHz. It makes the noise itself, two seconds of it, as it
-// starts; a context faster than this keeps its noise voices in JavaScript.
-export const CORE_NOISE_MAX = 192000;
-export const CORE_NOISE_SECONDS = 2;
-export const KALIMBA_STRIKE = 1;
-export const KALIMBA_BODY = 2;
-
-// The mix's parameters and the master chain's, by the number the core
-// knows them by (core/src/mix.rs, core/src/lib.rs): each one AudioParam of
-// the synth's graph (the combs' one of each comb, which setTone moves
-// together). `gains` is the first of five, one per channel in the core's
-// order. `master` is the master gain (setVolume, setCharacterLevel) and
-// `kill` the kill gain (silence, unsilence). Four are not AudioParams:
-// `drive`, the value setTone hands tanhCurve() for the saturator's new
-// curve; `lfoStart`, when the synth started the wobble's LFOs (the call's
-// time); and `bypass`, which routes around both compressors when its value
-// is not 0 (the measure harness's 'bypass'); and `cold`, which starts both
-// compressors as Chromium's start, not warm, when its value is not 0, before
-// the first block (the harness's, to null them against Chromium's own).
-// The arc's are not AudioParams either (queue items 63 and 63b; ARC_FROM and
-// the rest in core/src/lib.rs): `arcFrom`, where on its swing it starts, 0 to
-// 1; `arcShape`, 0 the deep swing and 1 the dip; `arcFloor`, the dip's floor
-// in Hz; `arcDip`, the dip's share of the swing; and last `arcPeriod`, its
-// period from the call's time, 0 for none, which starts it. The width
-// ceiling's settings start at `widthTarget` (queue item 64; WIDTH_TARGET to
-// WIDTH_UP), and the loop's space (queue item 65; SPACE_SEED and on): its
-// seed, how busy and wet it is, whether its texture is light, then
-// `spaceStart`, which draws it and takes it from the call's time.
-export const MIX = {
-  gains: 0, pump: 5, tails: 6, echo: 7, combFb: 8, combFreq: 9, combSum: 10, reverbOut: 11,
-  tone: 12, wow: 13, flutter: 14, drive: 15, lfoStart: 16, master: 17, kill: 18, bypass: 19, cold: 20,
-  arcFrom: 21, arcPeriod: 22, arcShape: 23, arcFloor: 24, arcDip: 25,
-  widthTarget: 26, spaceSeed: 31, spaceBusy: 32, spaceWet: 33, spaceLight: 34, spaceStart: 35,
-};
+// The mix's parameters the page still sets, by the number the core knows
+// them by (core/src/mix.rs, core/src/lib.rs): `kill`, the kill gain (the
+// transport's silence, js/output.js), and the two whose events a switch of
+// quality cancels, the kicks' duck (`pump`) and the tails' fades. The
+// player sets everything else itself.
+export const MIX = { pump: 5, tails: 6, kill: 18 };
 // The AudioParam calls a parameter takes. HOLD is two: cancelScheduledValues
 // at the time, then setValueAtTime there with the parameter's `value`
 // attribute, holding it where it is.
 export const SET = 0;
 export const LINEAR = 1;
-export const TARGET = 2;
 export const CANCEL = 3;
 export const HOLD = 4;
 
 // Why the core dropped a note, in Core::dropped_by's order.
 export const DROP_CAUSES = ['queue full', 'voices busy', 'sung voices busy'];
 
-// The render-ahead (queue item 41): how far past the page's clock the core
-// has already rendered by the time a note posted now reaches it. Taken as
-// the worst of what the core reports, at once, and let back down only this
-// fast (seconds a second), so one quiet spell does not undo a phone's
-// buffer.
-const AHEAD_EASE = 0.02;
-
-// A log of the render-ahead's jumps and of each late note (queue item 47),
-// for Diagnostics: kept for the page, across every core it builds, the last
-// LOG_MOST of them. Each entry has `at`, when it happened on the page's
-// clock (performance.now(), ms since the page began), and its `kind`:
-// 'jump', the render-ahead measured past what was planned from by more than
-// JUMP (`reachMs`, `wasMs`); or 'late', a note that reached the core after
-// its time (`lateMs` behind what the core had rendered, `spareMs` ahead of
-// the page's clock as it was posted, `why` it was decided, whether it was
-// `missed`: left out, and whether it came `inside` the buffer rather than
-// after a stall). `onjump(reach)` is called with each jump, so the page can
-// keep the worst for this device.
-export const coreLog = { entries: [], total: 0, onjump: null };
-const LOG_MOST = 40;
-const JUMP = 0.1;
-
-function logEntry(entry) {
-  coreLog.total++;
-  coreLog.entries.push(entry);
-  if (coreLog.entries.length > LOG_MOST) coreLog.entries.shift();
-}
-
-// The core's module: the player's build (js/dlplayer.wasm, the core with its
-// generator and sequencer) or the core alone (js/dlcore.wasm, for the page's
-// engine).
-const WASM_URLS = {
-  player: new URL('./dlplayer.wasm', import.meta.url),
-  core: new URL('./dlcore.wasm', import.meta.url),
-};
+// The core's module (js/dlplayer.wasm: the core with its generator and its
+// player), fetched once a page and shared by every context.
+const WASM_URL = new URL('./dlplayer.wasm', import.meta.url);
 const WORKLET_URL = new URL('./worklet.js', import.meta.url);
 
-// Each fetched once per page, however many contexts and synths come and go.
-const fetched = {};
-export function fetchCore(player = PLAYER) {
-  const which = player ? 'player' : 'core';
-  if (!fetched[which]) {
-    const url = WASM_URLS[which];
-    fetched[which] = fetch(url).then((res) => {
-      if (!res.ok) throw new Error(`${url.pathname.split('/').pop()}: HTTP ${res.status}`);
+let fetched = null;
+export function fetchCore() {
+  if (!fetched) {
+    fetched = fetch(WASM_URL).then((res) => {
+      if (!res.ok) throw new Error(`${WASM_URL.pathname.split('/').pop()}: HTTP ${res.status}`);
       return res.arrayBuffer();
     });
-    // A failed fetch can be tried again.
-    fetched[which].catch(() => { fetched[which] = null; });
+    // A failed fetch is tried again by the next context.
+    fetched.catch(() => { fetched = null; });
   }
-  return fetched[which];
+  return fetched;
 }
 
-// The worklet module, added once per context.
+// The contexts the worklet's module has been added to.
 const modules = new WeakMap();
 
-// Everything a Synth needs to build its core node on this context: the
-// module's bytes, with the worklet already added. Async, so the app calls
-// it as soon as it has a context and the synth takes it when it arrives.
-// `player`: the player's module (queue item 94b), which the CoreHost must
-// then be built for.
-export async function loadCore(ctx, player = PLAYER) {
+// What a context needs to build cores: the worklet's module added to it,
+// and the core's bytes. Resolves with `{ bytes }` for CoreHost; rejects
+// with why the core cannot run here.
+export async function loadCore(ctx) {
   if (typeof WebAssembly !== 'object') throw new Error('no WebAssembly in this browser');
   if (!ctx.audioWorklet) throw new Error('no AudioWorklet in this browser');
   let added = modules.get(ctx);
@@ -254,138 +92,64 @@ export async function loadCore(ctx, player = PLAYER) {
     added = ctx.audioWorklet.addModule(WORKLET_URL);
     modules.set(ctx, added);
   }
-  const [wasm] = await Promise.all([fetchCore(player), added]);
-  return { bytes: wasm, player: !!player };
+  const [wasm] = await Promise.all([fetchCore(), added]);
+  return { bytes: wasm };
 }
 
-// A note carries up to twelve of its voice's own values (EXTRA in
-// core/src/lib.rs); what it leaves out reaches the core as NaN.
-const NO_EXTRA = [];
-
-// Where a note sits when nothing says (core/src/rng.rs, Key).
-const NO_KEY = { seed: 0, pass: 0, step: 0, ord: 0 };
-
-// One core node for one synth. `dests` are the synth's five channels in
-// the core's order, each a voice's destination: what a voice the core
-// takes would have played into, and, for a note it cannot take, where the
-// synth plays it instead -- connected by the synth into the node's input
-// for that channel. The node's one output is the mix through the whole
-// master chain, for the speakers; with `taps`, five more carry the channels
-// as they went into the mix, and one more the signal as it reached the bus
-// compressor.
-// `quality` is the synth's: the mix has six combs on 'full', three on
-// 'lite'. `key` is a function giving where the note about to be sent sits
-// in its loop, `{ seed, pass, step, ord }` (core/src/rng.rs): the core
-// draws everything a note leaves to chance from it. `layout` is 1 for the
+// One core and its player in one AudioWorkletNode. `layout` is 1 for the
 // mono render or 2 for the stereo one (queue item 64), and `setLayout`
-// switches it while it plays (item 66, the Mono switch): the node's first
-// output carries two channels either way, the mono render in both, so the
-// switch never rebuilds it. With `taps` (the measure harness) it carries
-// as many as the layout, as it always has.
-// On the player's module (`core.player`, queue item 94b) the core's player
-// decides the notes, and the node takes its commands (`playLoad` and the
-// rest) and reports what it decides as events (`onevents`).
+// switches it while it plays (item 66, the Mono switch): the node's output
+// carries two channels either way, the mono render in both, so the switch
+// never rebuilds it. The node takes the player's commands (`playLoad` and
+// the rest) and reports what it decides as events (`onevents`).
 export class CoreHost {
-  constructor(ctx, core, dests, { quality = 'full', taps = false, key = null, layout = 1, burn = 0 } = {}) {
+  constructor(ctx, core, { quality = 'full', layout = 1, burn = 0 } = {}) {
     this.ctx = ctx;
-    this.dests = dests;
-    this.taps = taps;
     this.layout = layout === 2 ? 2 : 1;
-    this.keyOf = key || (() => NO_KEY);
     // Called once if the core turns out not to run (too old a browser).
     this.onfail = null;
-    // Whether the core has the noise its noise voices play: it makes two
-    // seconds of it as it starts, if it holds that many samples.
-    this.noise = Math.floor(ctx.sampleRate * CORE_NOISE_SECONDS) <= CORE_NOISE_MAX;
+    // What the core says of its own notes: those it took late, those it
+    // left out for being too late, and those it dropped, by cause.
     this.late = 0;
-    this.dropped = 0;
-    // Queue item 41: the late notes left out (more than the core's MISS
-    // late), and the late ones by why (the page's stall, or a note handed
-    // over ahead of its time that still landed behind what the core had
-    // rendered); the dropped ones by cause (DROP_CAUSES).
     this.missed = 0;
-    this.lateStall = 0;
-    this.lateBuffer = 0;
+    this.dropped = 0;
     this.droppedBy = DROP_CAUSES.map(() => 0);
-    // The render-ahead, measured (null until notes have arrived), the most
-    // it has been, the least time any note had to spare when it reached
-    // the core, and how far the core's count has run past the context's
-    // clock.
-    this.ahead = null;
-    this.worstAhead = 0;
-    this.earliest = Infinity;
-    this.clockLead = 0;
-    this._aheadAt = 0;
-    // What decided the notes posted next (queue item 47): the engine says,
-    // through the synth, and each note carries it.
-    this.why = null;
-    // Called with each report of how notes arrive (`arrivals`).
-    this.onarrivals = null;
-    // The compressors' gain reduction in dB, as of the last flush(); and
-    // how hard the signal has pressed each since this node was built, the
-    // deepest its curve has gone under the line.
-    this.reduction = [0, 0];
-    this.deepest = [0, 0];
     this.failed = null;
-    // What rendering has cost (queue item 66), mono then stereo, as the
-    // worklet last said: milliseconds spent, seconds of audio made.
+    // What the core's render costs, each layout apart (queue item 66): the
+    // milliseconds its blocks took and the seconds of sound they made.
     this.cost = { ms: [0, 0], seconds: [0, 0] };
-    // Called with each report of how busy the audio thread was (queue item
-    // 87b): { max, behind, windows, seconds } since the last.
+    // How busy the audio thread is (queue item 87b): called with each of
+    // the worklet's reports.
     this.onbusy = null;
     this._pings = new Map();
     this._ping = 0;
-    // On the player's module (queue items 82 and 94b): whether the core's
-    // player decides the notes; where it was as of its last report,
-    // { state, step, time }; the events it reports, as they come (each
-    // message's `events`, four numbers an event: time, kind, number, step;
-    // `grids`, the layers' grids read with the events that begin a pass;
-    // `trackEnd`, `lost`); and the requests it refused (a code's edit, say).
-    this.player = core.player === undefined ? PLAYER : !!core.player;
+    // Where the player is, as last reported ({ state, step, time }); its
+    // events (`onevents`), its answer to the picks (`onpicks`), the events
+    // it had no room for and the parts of a request it refused.
     this.playerAt = null;
     this.onevents = null;
-    // The core's answer to the picks (queue item 95): { tag, met, why }.
     this.onpicks = null;
     this.eventsLost = 0;
     this.refused = 0;
     this._probes = new Map();
-    const outputs = taps ? 2 + CORE_CHANNEL_COUNT : 1;
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
-      numberOfInputs: dests.length,
-      numberOfOutputs: outputs,
-      outputChannelCount: new Array(outputs).fill(1).map((n, i) => (i === 0 ? (taps ? this.layout : 2) : n)),
-      // The inputs (the synth's own notes) are mono.
-      channelCount: 1,
-      channelCountMode: 'explicit',
-      // Copied, not moved: the page keeps its copy for the next synth.
-      processorOptions: { bytes: core.bytes, quality, layout: this.layout, player: this.player, burn },
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      processorOptions: { bytes: core.bytes, quality, layout: this.layout, burn },
     });
     this.node.port.onmessage = (e) => this._receive(e.data);
-    // The processor threw while playing (a trap in the core, say): the node
-    // is silent for good, and the synth's JavaScript mix takes over.
+    // A throw inside the worklet (the module would not compile, a trap).
     this.node.onprocessorerror = (e) => this._fail((e && e.message) || 'processor error');
   }
 
-  // The output carrying channel `channel` as it went into the mix (`taps`).
-  tapOf(channel) {
-    return this.taps ? 1 + channel : -1;
-  }
-
-  // The output carrying the signal as it reached the bus compressor
-  // (`taps`).
-  beforeComp() {
-    return this.taps ? 1 + CORE_CHANNEL_COUNT : -1;
-  }
-
-  // Render mono (1) or stereo (2) from now (queue item 66): the core fades
-  // between them, so a loop playing goes on without a click.
+  // The render from now: mono (1) or stereo (2), faded by the core.
   setLayout(layout) {
     this.layout = layout === 2 ? 2 : 1;
     this.node.port.postMessage({ type: 'layout', channels: this.layout });
   }
 
-  // What rendering has cost, for Diagnostics: the share of real time the
-  // worklet spent rendering each layout, and how long it played in each.
+  // For Diagnostics: what the render costs this device, each layout apart.
   costReport() {
     const { ms, seconds } = this.cost;
     const time = (x) => (x < 10 ? x.toFixed(1) : Math.round(x));
@@ -393,80 +157,10 @@ export class CoreHost {
     return `mono ${one(0)}, stereo ${one(1)}`;
   }
 
-  // Narrow or pin one of the space recipe's settings (queue item 65;
-  // core/src/space.rs, SETTINGS, by number) to draw from `lo` to `hi`, from
-  // the next loop's space: what a request, a slider or a game sets.
-  spaceRange(which, lo, hi) {
-    this.node.port.postMessage({ type: 'spaceRange', which, lo, hi });
-  }
-
-  // The bass layer's level for the loop, in dB over today's (queue item
-  // 76c; Core::bass_lift): sent at each load, it rides on every bass note
-  // that arrives after it.
-  bassLift(db) {
-    this.node.port.postMessage({ type: 'bassLift', db });
-  }
-
-  // Move one of the mix's parameters (MIX) by an AudioParam call (SET,
-  // LINEAR, TARGET, CANCEL), as the synth would move its own node's:
-  // `value` at `time`, with time constant `tau` for a target.
+  // One of the mix's parameters (`MIX`), by one of the AudioParam calls
+  // (`SET` and the rest), at `time` on the context's clock.
   param(id, op, value, time, tau = 0) {
     this.node.port.postMessage({ type: 'param', id, op, value, time, tau });
-  }
-
-  // The core's channel number for this destination, or -1.
-  channelOf(dest) {
-    return this.failed ? -1 : this.dests.indexOf(dest);
-  }
-
-  // `extra` is the voice's own numbers (core/src/lib.rs): for the fiddle,
-  // the note it is joined to and its vibrato; for the pad, how many notes
-  // the chord has; for fm, its five options. What a voice leaves to chance
-  // is not here: the core draws it from the note's `key`.
-  note(voice, channel, time, midi, dur, vel, parts, extra = NO_EXTRA) {
-    // `sent`: the page's clock as it posts, so the worklet can say how far
-    // past it the core had already rendered when the note arrived.
-    this.node.port.postMessage({ type: 'note', voice, channel, time, midi, dur, vel, parts, extra, key: this.keyOf(), sent: this.ctx.currentTime, why: this.why });
-  }
-
-  // A new strum into `channel` at `time`: the last strum's nylon strings
-  // still held let go (Synth.damp, Core::damp).
-  damp(channel, time) {
-    this.node.port.postMessage({ type: 'damp', channel, time });
-  }
-
-  // Let the notes of `channel` keyed `key` (as the note calls carried it)
-  // go, falling to nothing from `from` to `to` (queue item 85c: the voice
-  // budget taking room from a layer's oldest notes; Core::steal).
-  steal(channel, key, from, to) {
-    this.node.port.postMessage({ type: 'steal', channel, key, from, to });
-  }
-
-  // Setting number `setting` of `channel`'s own block number `block`
-  // (CORE_OWN) to `value` at `time`, for the loop (Core::set, queue item
-  // 46c).
-  set(channel, block, setting, value, time) {
-    this.node.port.postMessage({ type: 'set', channel, block, setting, value, time });
-  }
-
-  // Route `from`'s signal (a channel, as it goes into the mix) into setting
-  // `setting` (its MODS) of `channel`'s own block number `block` from `time`
-  // (Core::route); `from` null undoes the route.
-  route(channel, block, setting, from, time) {
-    const none = 4294967295;
-    this.node.port.postMessage({ type: 'route', channel, block, setting, from: from == null ? none : from, bus: none, time });
-  }
-
-  // A channel event of `kind` (EVENTS) at `time`, with `value`: a release's
-  // fall, in seconds (Core::event).
-  event(channel, kind, time, value = 0) {
-    this.node.port.postMessage({ type: 'event', channel, kind, time, value });
-  }
-
-  // A retune of `channel` to `notes` (six at most) at `time`: what the
-  // instrument it holds plays from then (Event::retune).
-  retune(channel, time, notes) {
-    this.node.port.postMessage({ type: 'retune', channel, time, notes: notes.slice(0, 6) });
   }
 
   // The core's player (queue items 82 and 94b). `ask` is a loop's request
@@ -562,12 +256,6 @@ export class CoreHost {
     });
   }
 
-  // Every note handed over, sounding or waiting, falls from `from` to
-  // nothing at `to` and ends (queue item 88b; Core::fade_all).
-  fadeAll(from, to) {
-    this.node.port.postMessage({ type: 'fadeAll', from, to });
-  }
-
   // Every note handed over that has not started yet, dropped; the ones
   // sounding carry on (queue item 39). With `from`, only those asked for
   // at that time or later (queue item 40).
@@ -585,8 +273,7 @@ export class CoreHost {
   }
 
   // Nothing the node says afterwards is heard: an error queued just before a
-  // rebuild must not reach the synth that is gone (it would put the
-  // JavaScript chain back on a disposed synth).
+  // rebuild must not reach an output that is gone.
   dispose() {
     this.onfail = null;
     this.onevents = null;
@@ -597,27 +284,18 @@ export class CoreHost {
   }
 
   _receive(m) {
-    // The player's reports carry the counts too (queue item 94b): no notes
-    // posted by the page bring them.
-    if (m.type === 'counts' || m.type === 'pong' || (m.type === 'cost' && m.late != null)) {
-      this.late = m.late;
-      this.dropped = m.dropped;
+    if (m.type === 'counts' || m.type === 'pong' || m.type === 'cost' || m.type === 'probe') {
+      if (m.late != null) this.late = m.late;
+      if (m.dropped != null) this.dropped = m.dropped;
       if (m.missed != null) this.missed = m.missed;
-      if (m.lateStall != null) this.lateStall = m.lateStall;
-      if (m.lateBuffer != null) this.lateBuffer = m.lateBuffer;
       if (m.droppedBy) this.droppedBy = m.droppedBy;
+      if (m.player) this.playerAt = m.player;
     }
-    if (m.note) this._late(m.note);
-    if (m.type === 'arrivals') this._arrivals(m);
     if (m.type === 'cost') {
       this.cost = { ms: m.ms, seconds: m.seconds };
-      if (m.player) this.playerAt = m.player;
       if (m.busy && this.onbusy) this.onbusy(m.busy);
     }
     if (m.type === 'pong') {
-      if (m.player) this.playerAt = m.player;
-      if (m.reduction) this.reduction = m.reduction;
-      if (m.deepest) this.deepest = this.deepest.map((d, i) => Math.min(d, m.deepest[i]));
       const resolve = this._pings.get(m.id);
       this._pings.delete(m.id);
       if (resolve) resolve(m);
@@ -629,7 +307,6 @@ export class CoreHost {
     }
     if (m.type === 'picks' && this.onpicks) this.onpicks(m);
     if (m.type === 'probe') {
-      if (m.player) this.playerAt = m.player;
       const resolve = this._probes.get(m.id);
       this._probes.delete(m.id);
       if (resolve) resolve(m);
@@ -637,46 +314,8 @@ export class CoreHost {
     if (m.type === 'failed') this._fail(m.message);
   }
 
-  // How the last few notes reached the core: the render-ahead follows the
-  // worst at once and eases down slowly.
-  _arrivals(m) {
-    const now = this.ctx.currentTime;
-    if (m.reach != null && Number.isFinite(m.reach)) {
-      const eased = this.ahead == null ? 0 : Math.max(0, this.ahead - AHEAD_EASE * Math.max(0, now - this._aheadAt));
-      // Past what the page was planning from: a jump, for the log.
-      if (m.reach > eased + JUMP) {
-        logEntry({ kind: 'jump', at: this._pageTime(m.rendered), reachMs: Math.round(m.reach * 1000), wasMs: Math.round(eased * 1000) });
-        if (coreLog.onjump) coreLog.onjump(m.reach);
-      }
-      this.ahead = Math.max(eased, m.reach);
-      this._aheadAt = now;
-      this.worstAhead = Math.max(this.worstAhead, m.reach);
-    }
-    if (Number.isFinite(m.early)) this.earliest = Math.min(this.earliest, m.early);
-    if (Number.isFinite(m.lead)) this.clockLead = Math.max(this.clockLead, m.lead);
-    if (this.onarrivals) this.onarrivals(m);
-  }
-
-  // A note that reached the core after its time (queue item 47), for the
-  // log: how far behind what the core had rendered, how far ahead of the
-  // page's clock it was posted, and why it was decided.
-  _late(n) {
-    const ms = (x) => (Number.isFinite(x) ? Math.round(x * 1000) : null);
-    logEntry({
-      kind: 'late', at: this._pageTime(n.rendered), lateMs: ms(n.rendered - n.time), spareMs: ms(n.time - n.sent),
-      why: n.why || null, missed: !!n.missed, inside: !!n.inside,
-    });
-  }
-
-  // When the core was at `rendered` (its own count, seconds), on the page's
-  // clock: as long before now as the context's clock is past it.
-  _pageTime(rendered) {
-    const behind = Number.isFinite(rendered) ? Math.max(0, this.ctx.currentTime - rendered) : 0;
-    return Math.round(performance.now() - behind * 1000);
-  }
-
-  // The core does not run, at load or while playing. Once: the synth hears
-  // it and plays everything in JS.
+  // The core does not run, at load or while playing. Once: the output hears
+  // it, and the page says it cannot play.
   _fail(message) {
     if (this.failed) return;
     this.failed = message;

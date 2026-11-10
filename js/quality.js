@@ -25,7 +25,7 @@ export const OVER_FOR = 20;
 // The share under which lite may move up to full, over its seconds.
 export const UNDER = 0.15;
 export const UNDER_FOR = 60;
-// The seconds of a new synth's playing left out at its start: the browser
+// The seconds of a new output's playing left out at its start: the browser
 // compiles the core's code again, faster, once it has run a while, and the
 // first blocks read slower than the device is.
 export const WARM = 5;
@@ -37,7 +37,7 @@ export const PREP = 0.5;
 
 // What the worklet has said, while playing, as one record a report:
 // { at (seconds, the page's clock), seconds (of audio), max, behind }.
-// Anything else (paused, a new synth's first seconds, the page asleep) ends
+// Anything else (paused, a new output's first seconds, the page asleep) ends
 // the run: only an unbroken run of playing counts.
 export class Busy {
   constructor() {
@@ -94,7 +94,7 @@ export class Busy {
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 
-// What to do now, or null. `quality` is the synth's ('full' or 'lite');
+// What to do now, or null. `quality` is the output's ('full' or 'lite');
 // `yours` the listener's own choice (true, false, or undefined for none);
 // `auto` the app's last move, if it has made one ({ lite, why }); `guess`
 // whether the first guess started it on lite. Returns { lite, why, at }:
@@ -142,18 +142,18 @@ export function boundary(engine, unit, after) {
 }
 
 // The old quality's part of a switch (queue item 87b): `old` ({ engine,
-// synth }) decides nothing from `at` on, drops what it handed over for `at`
+// output }) decides nothing from `at` on, drops what it handed over for `at`
 // or later, and fades out over `fade` seconds to it. The caller then lets it
 // go and starts the new quality, which takes the loop from its top as soon as
-// it can: the new synth is built only once the old one is silent and gone,
+// it can: the new output is built only once the old one is silent and gone,
 // because building it (its worklet compiles the core) works on the very
 // audio thread the old one plays on, and two cores at once is what a slow
 // device can least afford. So the switch is a fade, a breath and the loop
 // again, never a cut.
 export function handOff(old, at, fade = FADE) {
   old.engine.until = at;
-  old.synth.cancelFrom(at);
-  old.synth.fadeOut(Math.max(old.synth.ctx.currentTime, at - fade), at);
+  old.output.cancelFrom(at);
+  old.output.fadeOut(Math.max(old.output.ctx.currentTime, at - fade), at);
 }
 
 // Call `fn` once the context's clock reaches `at`: an alarm on the audio

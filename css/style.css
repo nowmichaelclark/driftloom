@@ -92,6 +92,16 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 }
 .info-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 
+/* A plain line in the card's place (queue item 97): what a browser that
+   cannot run the core is told. The card's own contents step aside. */
+.plain-line {
+  margin: auto 6px; text-align: center;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1rem; line-height: 1.35; font-weight: 500;
+}
+.info-inner.plain > .info-row,
+.info-inner.plain > .playhead { display: none; }
+
 .name {
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-style: normal;

@@ -13,11 +13,11 @@
 // length slider's time runs out with nothing of the page's armed: the page
 // learns its seed from the core's events (`onOwn`) and draws nothing.
 //
-// It has the shape of js/engine.js's Engine (the page's engine, which
-// `?engine=page` keeps for comparison until queue item 97), so js/main.js
-// drives either: load, start, stop, the controls (setMute, setTempo,
-// setTone, setWander, trackChanged), the cursor (visualStep), Now Playing's
-// clock (audibleSteps, endStep, roundSteps) and Diagnostics (report).
+// It is the only engine since queue item 97 (the page's own, which decided
+// the notes and handed them over, is gone). js/main.js drives it: load,
+// start, stop, the controls (setMute, setTempo, setTone, setWander,
+// trackChanged), the cursor (visualStep), Now Playing's clock
+// (audibleSteps, endStep, roundSteps) and Diagnostics (report).
 //
 // What it still asks of the JavaScript generator is for the page to show,
 // never what plays: `render(spec)` for the info card and the first grid,
@@ -136,9 +136,9 @@ export function trackOf(spec) {
 }
 
 export class PlayerEngine {
-  constructor(ctx, synth) {
+  constructor(ctx, output) {
     this.ctx = ctx;
-    this.synth = synth;
+    this.output = output;
     this.spec = null;
     // The loop as composed (the page's render, for the card and the first
     // grid) and the grid shown: the pass heard, as the core reports it.
@@ -168,9 +168,9 @@ export class PlayerEngine {
     this.visualQueue = [];
     this.visualOffset = 0;
     this.latency = null;
-    // Kept for main.js's reports, which read them from either engine: the
-    // page's clock and its spells while hidden are the page engine's.
-    this.deviceAhead = 0;
+    // For Diagnostics, which keeps the lines a page with a scheduler of its
+    // own had (the tools and the testers' reports read them): this page has
+    // none, so no tick is ever late and no hidden spell starves one.
     this.lateTicksEver = 0;
     this.spell = null;
     // What Play must ask the core: 'load' (a loop not yet given it),
@@ -201,8 +201,8 @@ export class PlayerEngine {
 
   // The core's node, when it is the one playing.
   _core() {
-    const c = this.synth.core;
-    return c && !c.failed && c.player ? c : null;
+    const c = this.output.core;
+    return c && !c.failed ? c : null;
   }
 
   // Listen to the core's events (once a node: a core that arrives later is
@@ -213,11 +213,6 @@ export class PlayerEngine {
     this._hooked = c;
     c.onevents = (m) => this._receive(m);
     c.onpicks = (m) => { if (this.onPicks) this.onPicks(m); };
-  }
-
-  // Every new loop is the core's own on this engine (queue item 95).
-  get ownLoops() {
-    return true;
   }
 
   // The New loops panel's request (`picksAsk(request).ask`), numbered `tag`:
@@ -250,7 +245,7 @@ export class PlayerEngine {
     this.wantOwn = true;
     if (!this.playing) {
       this.playing = true;
-      this.synth.unsilence();
+      this.output.unsilence();
       this._begin();
       return;
     }
@@ -372,7 +367,7 @@ export class PlayerEngine {
   start() {
     if (this.playing || !this.spec) return;
     this.playing = true;
-    this.synth.unsilence();
+    this.output.unsilence();
     this._begin();
   }
 
@@ -383,7 +378,7 @@ export class PlayerEngine {
     this._hook();
     const core = this._core();
     if (!core || !this.playing) return;
-    if (this.synth.userVolume != null) core.playVolume(this.synth.userVolume);
+    if (this.output.userVolume != null) core.playVolume(this.output.userVolume);
     // The picks, held by this core for the loops it makes itself.
     this._sendPicks();
     // The wander and its salt before the loop: its first pass is drawn with them.
@@ -425,7 +420,7 @@ export class PlayerEngine {
       core.playStop();
       core.cancel();
     }
-    this.synth.silence();
+    this.output.silence();
     this.visualQueue = [];
     this.gridQueue = [];
   }
@@ -471,14 +466,8 @@ export class PlayerEngine {
     return false;
   }
 
-  reset() {}
-
-  // The page shown or hidden, frozen or back: nothing to plan here, the core
-  // decides on the audio thread.
-  retune() {}
-
-  setFrozen() {}
-
+  // Diagnostics' Reset: the page keeps no counts of its own to clear (the
+  // core's are the core's).
   clearMetrics() {}
 
   takeGap() {

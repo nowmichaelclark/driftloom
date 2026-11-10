@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v151';
+const CACHE = 'driftloom-v152';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -24,7 +24,6 @@ const FILES = [
   './fonts/space-grotesk-600.woff2',
   './js/main.js',
   './js/ui.js',
-  './js/clock.js',
   './js/characters.js',
   './js/media.js',
   './js/share.js',
@@ -39,11 +38,11 @@ const FILES = [
   // KB of a first visit for a file that never played. The WAV stays in the
   // element as a fallback, from the network.
   './audio/keepalive.flac',
-  './js/engine.js',
-  // The app's engine on the core's player (queue item 94b).
+  // The app's engine on the core's player (queue item 94b), and the core's
+  // node into the speakers.
   './js/player.js',
+  './js/output.js',
   './js/quality.js',
-  './js/synth.js',
   './js/generator.js',
   './js/theory.js',
   './js/moods.js',
@@ -63,14 +62,10 @@ const FILES = [
   './data/moods.txt',
   './data/voices.txt',
   './data/choices.txt',
-  // Where a note sits in its loop: the draws the page still takes itself.
-  './js/draw.js',
   './js/midi.js',
   './js/storage.js',
   // The Rust core with its player, the engine since queue item 94b (665 KB,
-  // about 225 KB gzipped): so it plays offline too. Not js/dlcore.wasm, the
-  // core alone, which only ?engine=page plays (for comparison, until queue
-  // item 97): it is kept as it passes, like any file fetched.
+  // about 225 KB gzipped): so it plays offline too.
   './js/core.js',
   './js/worklet.js',
   './js/dlplayer.wasm',

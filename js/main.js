@@ -1,8 +1,7 @@
 import { newSpec as drawSpec, RequestError, vibeSelection, rerollLayer, cloneSpec, render, choirOf, LAYERS, STEPS_PER_BAR } from './generator.js';
-import { Synth } from './synth.js';
-import { ENGINE, PAGE_ENGINE, loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES, coreLog } from './core.js';
+import { Output } from './output.js';
+import { loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES } from './core.js';
 import * as quality from './quality.js';
-import { Engine } from './engine.js';
 import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { MediaBridge } from './media.js';
@@ -11,7 +10,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v151';
+const BUILD = 'v152';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -21,15 +20,10 @@ const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
 
 // The app plays the core's player (queue item 94b): the core decides every
 // note on the audio thread, and js/player.js sends it commands and draws its
-// events. `?engine=page` keeps the page's own engine on the core (js/engine.js,
-// as before 94b) for comparison until queue item 97, and `?engine=js` the
-// JavaScript synth. A browser whose core will not run plays the JavaScript
-// synth on the page's engine, as ever (`usePlayer`).
-const WANT_PLAYER = ENGINE === 'rust' && !PAGE_ENGINE;
-
-function usePlayer() {
-  return WANT_PLAYER && !state.coreError;
-}
+// events. There is nothing else to play on (queue item 97): a browser whose
+// core will not run is told so in a plain line, in the info card's place
+// (Mikey, 2026-11-07).
+const CANT_PLAY = "This browser can't play Driftloom; try a recent Chrome, Firefox or Safari";
 
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
@@ -83,7 +77,7 @@ import * as picks from './picks.js';
 
 const state = {
   ctx: null,
-  synth: null,
+  output: null,
   engine: null,
   spec: null,
   pattern: null,
@@ -132,9 +126,6 @@ const state = {
   coreError: null,        // why it will not come, if it will not
   // The last time the page was hidden, for Diagnostics (queue item 39).
   away: null,
-  // A new loop drawn ahead (queue item 94b): the one the core's player is
-  // armed with for the end of a track, so the next new loop is that one.
-  upcoming: null,
   // The picks as sent to the core (queue item 95): each sending numbered,
   // what it held (the vibes, the picks, the request read, and whether only
   // the vibes could be sent), the last sent, and the one the core says it
@@ -157,115 +148,113 @@ let cells = null;
 // the first tap: a context starts suspended until a gesture resumes it, and
 // the core needs only the context to be added to, so by the time Play is
 // pressed it has almost always arrived and the first note plays on it.
-// Until it does the synth plays its voices in JS, and counts them; a later
-// synth (the quality toggle) takes it from the start.
+// Until it does Play waits for it; a later output (the quality toggle)
+// takes it from the start.
 function prepareAudio() {
   if (state.ctx) return;
   const Ctx = window.AudioContext || window.webkitAudioContext;
   state.ctx = newContext(Ctx, { latencyHint: 'playback' });
   state.ctx.addEventListener('statechange', () => awayEvent(`audio ${state.ctx.state}`));
-  if (ENGINE !== 'rust') return;
   const ctx = state.ctx;
   const why = coreUnsupported();
   if (why) {
-    state.coreError = why;
+    cantPlay(why);
     return;
   }
-  loadCore(ctx, WANT_PLAYER).then((core) => {
+  loadCore(ctx).then((core) => {
     if (state.ctx !== ctx) return;
     state.core = core;
     state.coreAt = Math.round(performance.now());
-    if (state.synth) state.synth.attachCore(core);
+    if (state.output) state.output.attachCore(core);
     // The player, waiting for it (Play came first), is given the loop now.
     if (state.engine && state.engine.coreArrived) state.engine.coreArrived();
   }).catch((err) => {
     if (state.ctx !== ctx) return;
-    // Everything plays in JS, and Diagnostics says why. A later synth (the
-    // quality toggle) starts with the same answer.
-    state.coreError = String((err && err.message) || err);
-    if (state.synth) state.synth.coreFailed(err);
-    playerFailed();
+    cantPlay(String((err && err.message) || err));
   });
 }
 
-// The core's player will not play here after all (its module did not load,
-// or it failed while playing): the page's engine takes the loop, on the
-// JavaScript synth.
-function playerFailed() {
-  if (!(state.engine instanceof PlayerEngine)) return;
-  setTimeout(() => { if (state.engine instanceof PlayerEngine && !usePlayer()) buildAudio(); }, 0);
+// The core will not play here (no WebAssembly or no AudioWorklet, its
+// module did not load, or it failed while playing): the music stops, the
+// info card's place says so in a plain line, and Diagnostics says why. The
+// answer holds for the session.
+function cantPlay(why) {
+  if (state.coreError) return;
+  state.coreError = why;
+  if (state.engine && state.engine.playing) {
+    state.engine.stop();
+    state.media.stop();
+    state.media.setPlaybackState(false);
+    setPlayButton(false);
+  }
+  ui.plainLine(CANT_PLAY);
 }
 
 function ensureAudio() {
   prepareAudio();
   if (state.ctx.state === 'suspended') state.ctx.resume();
-  if (!state.synth) buildAudio();
+  if (!state.output) buildAudio();
 }
 
-// A synth, its media bridge and an engine on it, at the quality the app is
+// An output, its media bridge and an engine on it, at the quality the app is
 // on, wired to the app's controls: what buildAudio installs, and what a
 // quality switch builds beside the one playing (queue item 87b).
 function makeAudio() {
   // A core that has failed (loading, or while playing) stays failed for the
-  // session: the new synth is not handed it, and says why.
-  const synth = new Synth(state.ctx, state.lite ? 'lite' : 'full', {
-    engine: ENGINE,
+  // session: the new output is not handed it, and says why.
+  const output = new Output(state.ctx, state.lite ? 'lite' : 'full', {
     layout: state.mono ? 1 : 2,
     core: state.coreError ? null : state.core,
     coreError: state.coreError,
-    onCoreError: (message) => { state.coreError = message; playerFailed(); },
+    onCoreError: (message) => cantPlay(message),
     burn: BURN,
   });
-  synth.onBusy = (busy) => onBusy(synth, busy);
+  output.onBusy = (busy) => onBusy(output, busy);
   // Route the mix through a media element so the phone gives us lock-screen
   // controls and stops treating us as an idle tab.
   const media = new MediaBridge(state.ctx);
   media.onchange = awayEvent;
-  media.attach(synth.output);
+  media.attach(output.output);
   media.setHandlers({
     onPlay: () => { if (!state.engine.playing) togglePlay(); },
     onPause: () => { if (state.engine.playing) togglePlay(); },
     onNext: () => goForward(),
     onPrev: () => goBack(),
   });
-  const engine = usePlayer() ? new PlayerEngine(state.ctx, synth) : new Engine(state.ctx, synth);
+  const engine = new PlayerEngine(state.ctx, output);
   engine.onStep = onStep;
   engine.onLoop = onLoop;
   engine.onTrackEnd = onTrackEnd;
   // The core's own loops and its answer to the picks (queue item 95).
   engine.onOwn = onOwn;
   engine.onPicks = onPicksHeld;
-  if (engine.setPicks && state.lastPicks) engine.setPicks(state.lastPicks.ask, state.lastPicks.tag);
-  // The worst render-ahead this device has seen (queue item 47), planned
-  // from while hidden.
-  engine.deviceAhead = Number(store.getPrefs().renderAheadWorst) || 0;
-  engine.setFrozen(pageFrozen);
+  if (state.lastPicks) engine.setPicks(state.lastPicks.ask, state.lastPicks.tag);
   engine.visualOffset = (parseInt(ui.el('playheadSync').value, 10) || 0) / 1000;
   const wander = parseFloat(ui.el('driftAmount').value);
   engine.driftOn = wander > 0;
   engine.driftAmount = wander > 0 ? wander : 1;
-  synth.setVolume(parseFloat(ui.el('volume').value));
-  return { synth, media, engine };
+  output.setVolume(parseFloat(ui.el('volume').value));
+  return { output, media, engine };
 }
 
-// Let an old synth, its bridge and its engine go.
-function dropAudio({ synth, media, engine }) {
+// Let an old output, its bridge and its engine go.
+function dropAudio({ output, media, engine }) {
   if (engine) engine.stop();
-  // Tear the graph down, or each rebuild leaves a whole synth wired to the
+  // Tear the graph down, or each rebuild leaves a whole output wired to the
   // speakers and another keepalive element in the DOM.
   if (media) media.dispose();
-  if (synth) synth.dispose();
+  if (output) output.dispose();
 }
 
 function buildAudio() {
   const wasPlaying = state.engine ? state.engine.playing : false;
-  // A quality switch under way is overtaken: the old synth (the one
+  // A quality switch under way is overtaken: the old output (the one
   // playing) goes now, at the quality already chosen.
   state.switching = null;
   // The play's wander salt (queue item 92) goes on under the new engine.
   const salt = state.engine ? state.engine.salt : null;
-  dropAudio({ synth: state.synth, media: state.media, engine: state.engine });
-  ({ synth: state.synth, media: state.media, engine: state.engine } = makeAudio());
+  dropAudio({ output: state.output, media: state.media, engine: state.engine });
+  ({ output: state.output, media: state.media, engine: state.engine } = makeAudio());
   if (salt != null) state.engine.salt = salt;
   state.busy.reset();
   if (state.spec) {
@@ -289,16 +278,14 @@ function buildAudio() {
 
 // A report from the worklet of how busy the audio thread was (queue item
 // 87b): kept while the loop played through it, and held to the rule.
-function onBusy(synth, report) {
-  if (synth !== state.synth || state.switching) return;
+function onBusy(output, report) {
+  if (output !== state.output || state.switching) return;
   const playing = !!(state.engine && state.engine.playing);
   state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000);
   state.busyPlaying = playing;
-  // On the core only (the player, or the page's engine on it): the
-  // JavaScript synth has no worklet to measure.
-  if (!synth.core || synth.core.failed) return;
+  if (!output.core || output.core.failed) return;
   const prefs = store.getPrefs();
-  const d = quality.decide({ quality: synth.quality, yours: prefs.lite, auto: prefs.liteAuto, guess: state.liteGuess, busy: state.busy });
+  const d = quality.decide({ quality: output.quality, yours: prefs.lite, auto: prefs.liteAuto, guess: state.liteGuess, busy: state.busy });
   if (d) autoQuality(d);
 }
 
@@ -316,8 +303,8 @@ function autoQuality({ lite, why, at }) {
   awayEvent(`lighter on processor: ${lite ? 'on' : 'off'} by itself (${why})`);
   const engine = state.engine;
   if (!engine || !engine.playing || !state.spec) {
-    // Nothing playing: the next synth is simply built at the new quality.
-    if (state.synth) buildAudio();
+    // Nothing playing: the next output is simply built at the new quality.
+    if (state.output) buildAudio();
     return;
   }
   const now = state.ctx.currentTime;
@@ -328,7 +315,7 @@ function autoQuality({ lite, why, at }) {
     buildAudio();
     return;
   }
-  const old = { synth: state.synth, media: state.media, engine };
+  const old = { output: state.output, media: state.media, engine };
   quality.handOff(old, when);
   const alarm = quality.alarm(state.ctx, when, () => {
     if (!state.switching || state.switching.old !== old) return;
@@ -459,11 +446,9 @@ function nextForEnd() {
     return entry ? cloneSpec(entry.spec) : null;
   }
   if (state.historyIndex < state.history.length - 1) return cloneSpec(state.history[state.historyIndex + 1]);
-  // On the core's player the next new loop is the core's own, with the
-  // picks it holds (queue item 95): nothing of the page's is armed.
-  if (state.engine && state.engine.ownLoops) return null;
-  if (!state.upcoming) state.upcoming = drawNew();
-  return state.upcoming;
+  // The next new loop is the core's own, with the picks it holds (queue
+  // item 95): nothing of the page's is armed.
+  return null;
 }
 
 function armNext() {
@@ -482,15 +467,15 @@ function armNext() {
 // thread, not a starved page), and every change in the audio context's
 // state and in what the phone was told is playing.
 function coreLate() {
-  return state.synth && state.synth.core ? state.synth.core.late : null;
+  return state.output && state.output.core ? state.output.core.late : null;
 }
 
 // The core's late and dropped notes by kind (queue item 41), for the views'
 // report; null without the core.
 function coreCounts() {
-  const c = state.synth && state.synth.core;
+  const c = state.output && state.output.core;
   if (!c) return null;
-  return { late: c.late, stall: c.lateStall, buffer: c.lateBuffer, missed: c.missed, dropped: c.dropped, by: c.droppedBy.slice() };
+  return { late: c.late, missed: c.missed, dropped: c.dropped, by: c.droppedBy.slice() };
 }
 
 function fillIns() {
@@ -562,21 +547,11 @@ function awayReport() {
 // change. The tester's late notes fell in neither the views' report nor the
 // last hidden spell's.
 const pageEvents = [[0, 'opened']];
-let pageFrozen = false;
 
 function pageEvent(what) {
   pageEvents.push([performance.now(), what]);
   if (pageEvents.length > 400) pageEvents.splice(1, 1);
 }
-
-// The worst render-ahead seen, kept for this device: the next session
-// plans for it from the moment the page is hidden.
-function rememberAhead(reach = 0) {
-  const worst = Math.max(reach, state.synth ? state.synth.worstAhead || 0 : 0);
-  const kept = Number(store.getPrefs().renderAheadWorst) || 0;
-  if (worst > kept + 0.01) store.setPrefs({ renderAheadWorst: Math.round(worst * 1000) / 1000 });
-}
-coreLog.onjump = rememberAhead;
 
 const HIDE_WORDS = { hidden: 'hiding', shown: 'showing', frozen: 'freezing', resumed: 'resuming', pagehide: 'pagehide', pageshow: 'pageshow' };
 
@@ -594,22 +569,10 @@ function whereAt(t) {
   return `${hidden ? 'hidden' : 'visible'}${by}`;
 }
 
-function aheadLog() {
-  const list = coreLog.entries;
-  const lines = [`late notes and render-ahead jumps (since the page began; ${coreLog.total}${coreLog.total > list.length ? `, the last ${list.length}` : ''}):`];
-  if (!list.length) lines.push('  none');
-  for (const e of list) {
-    const when = `${(e.at / 1000).toFixed(1)} s, ${whereAt(e.at)}`;
-    if (e.kind === 'jump') lines.push(`  ${when}: render-ahead ${e.reachMs} ms (was ${e.wasMs})`);
-    else {
-      lines.push(`  ${when}: late note, ${e.lateMs} ms behind the core, posted ${e.spareMs} ms ahead`
-        + `${e.inside ? ' (inside the buffer)' : ' (stall)'}${e.missed ? ', left out' : ''}; decided by ${e.why || '-'}`);
-    }
-  }
+function pageLog() {
   const visits = pageEvents.filter(([, w]) => w !== 'opened').slice(-12)
-    .map(([at, w]) => `${w} ${(at / 1000).toFixed(1)}`);
-  lines.push(`page events (s): ${visits.length ? visits.join(', ') : 'none'}`);
-  return lines;
+    .map(([at, w]) => `${w} ${(at / 1000).toFixed(1)} (${whereAt(at)})`);
+  return [`page events (s): ${visits.length ? visits.join(', ') : 'none'}`];
 }
 
 // ------------------------------------------------------- per view
@@ -628,7 +591,7 @@ function viewStats(view) {
     views.stats[view] = {
       ms: 0, longTasks: 0, longestTask: 0, worstGapMs: 0, lateNotes: 0, lateTicks: 0, fillIns: null,
       // Queue item 41: the late notes by why, and the dropped ones by cause.
-      lateStall: 0, lateBuffer: 0, missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0),
+      missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0),
     };
   }
   return views.stats[view];
@@ -651,12 +614,10 @@ function viewFlush(hiding = false) {
     if (late != null && o.late != null) v.lateNotes += Math.max(0, late - o.late);
     v.lateTicks += Math.max(0, ticks - o.ticks);
     if (fills != null && o.fills != null) v.fillIns = (v.fillIns || 0) + Math.max(0, fills - o.fills);
-    // A synth built again meanwhile starts its counts from zero: only what
+    // A output built again meanwhile starts its counts from zero: only what
     // went up is counted.
     const a = o.counts;
     if (counts && a) {
-      v.lateStall += Math.max(0, counts.stall - a.stall);
-      v.lateBuffer += Math.max(0, counts.buffer - a.buffer);
       v.missed += Math.max(0, counts.missed - a.missed);
       v.dropped += Math.max(0, counts.dropped - a.dropped);
       counts.by.forEach((n, i) => { v.droppedBy[i] += Math.max(0, n - (a.by[i] || 0)); });
@@ -689,7 +650,7 @@ function viewsReport() {
   for (const name of names) {
     const v = views.stats[name];
     const long = views.longTasks ? `long tasks ${v.longTasks}${v.longTasks ? ` (longest ${v.longestTask} ms)` : ''}` : 'long tasks -';
-    const why = v.lateNotes ? ` (stall ${v.lateStall}, inside the buffer ${v.lateBuffer}; left out ${v.missed})` : '';
+    const why = v.lateNotes ? ` (left out ${v.missed})` : '';
     const dropped = v.dropped
       ? ` (${DROP_CAUSES.map((c, i) => [c, v.droppedBy[i]]).filter(([, n]) => n).map(([c, n]) => `${c} ${n}`).join(', ')})` : '';
     lines.push(`  ${name}: ${clock(v.ms / 1000)} on screen, ${long}, longest tick gap ${v.worstGapMs} ms, `
@@ -978,8 +939,6 @@ function setVibes(list) {
   state.vibes = vibeSelection(list);
   store.setPrefs({ vibes: state.vibes });
   sendPicks();
-  // A loop drawn ahead leaned the old way: drawn again with the new vibes.
-  state.upcoming = null;
   armNext();
   if (state.view === 'vibes') renderVibes();
   else updateVibesKey();
@@ -995,7 +954,6 @@ function setPicks(next) {
   state.picks = picks.cleanPicks({ ...state.picks, ...next });
   store.setPrefs({ picks: state.picks });
   sendPicks();
-  state.upcoming = null;
   armNext();
   if (state.view === 'now') renderNow();
   if (state.view === 'vibe') picks.renderPanel();
@@ -1411,20 +1369,12 @@ function advancePlaylist(step) {
 
 // ------------------------------------------------------------- actions
 
-// Every new loop is drawn here, so every new loop leans toward the vibes:
-// Next at the end of the history (also a loop ending, and the N key), Play
-// before any loop exists, and the first loop when the app opens. Not the
-// loop playing, an album's tracks, a saved loop, history or a re-roll.
-// The picks are its request (queue item 85); one the generator cannot meet
-// (the panel says so) is left out, the moods kept.
+// The loop the page opens on, and Play before any loop exists, lean toward
+// the vibes: drawn here, since there is no core before a tap. Every other
+// new loop is the core's own (`newLoop`). The picks are its request (queue
+// item 85); one the generator cannot meet (the panel says so) is left out,
+// the moods kept.
 function newSpec() {
-  // The one drawn ahead, if there is one (the player is armed with it).
-  const ahead = state.upcoming;
-  state.upcoming = null;
-  return ahead || drawNew();
-}
-
-function drawNew() {
   let spec;
   try {
     spec = drawSpec(undefined, picks.requestFor(state));
@@ -1478,39 +1428,19 @@ function newLoop() {
   // Making something new is leaving the album.
   state.playlist = null;
   ensureAudio();
-  if (state.engine.ownLoops) {
-    // On the core's player (queue item 95) the core makes it, with the picks
-    // it holds; the page catches up when it starts (`onOwn`), which keeps
-    // the history and says its name.
-    const was = state.engine.playing;
-    if (!state.engine.spec && state.spec) {
-      resetHistory(state.spec);
-      loadSpec(state.spec, { pushToHistory: false });
-    }
-    state.engine.next();
-    if (!was) {
-      state.media.start();
-      nowPlaying();
-    }
-    return;
+  // The core makes it (queue item 95), with the picks it holds; the page
+  // catches up when it starts (`onOwn`), which keeps the history and says
+  // its name.
+  const was = state.engine.playing;
+  if (!state.engine.spec && state.spec) {
+    resetHistory(state.spec);
+    loadSpec(state.spec, { pushToHistory: false });
   }
-  // Save the current loop to history before creating a new one (if it exists)
-  if (state.spec) {
-    // Avoid duplicate if the current spec is already the last in history
-    const last = state.history[state.history.length - 1];
-    if (!last || JSON.stringify(last) !== JSON.stringify(state.spec)) {
-      pushHistory(state.spec);
-    }
+  state.engine.next();
+  if (!was) {
+    state.media.start();
+    nowPlaying();
   }
-  const s = newSpec();
-  // Push the new spec to history (this truncates any forward history)
-  pushHistory(s);
-  // Load the new spec without pushing it again
-  loadSpec(s, { pushToHistory: false });
-  state.engine.reset();
-  if (!state.engine.playing) togglePlay();
-  ui.toast(`New loop: ${s.name}`);
-  updateHistoryButtons();
 }
 
 function reroll(layer) {
@@ -1818,7 +1748,7 @@ function wire() {
   });
 
   ui.el('volume').addEventListener('input', (e) => {
-    if (state.synth) state.synth.setVolume(parseFloat(e.target.value));
+    if (state.output) state.output.setVolume(parseFloat(e.target.value));
     store.setPrefs({ volume: parseFloat(e.target.value) });
   });
 
@@ -1828,7 +1758,7 @@ function wire() {
     // The listener's choice: kept as theirs, and never changed by the app.
     store.setPrefs({ lite: state.lite });
     showLiteSource();
-    if (state.synth) buildAudio();
+    if (state.output) buildAudio();
   });
 
   // Mono or stereo, while a loop plays: the core fades from one to the
@@ -1837,7 +1767,7 @@ function wire() {
     state.mono = !state.mono;
     setSwitch('monoMode', state.mono);
     store.setPrefs({ mono: state.mono });
-    if (state.synth) state.synth.setLayout(state.mono ? 1 : 2);
+    if (state.output) state.output.setLayout(state.mono ? 1 : 2);
   });
 
   ui.el('exportJson').addEventListener('click', () => {
@@ -1870,14 +1800,14 @@ function wire() {
       const b20 = state.busy.busiest(quality.OVER_FOR);
       const b60 = state.busy.busiest(quality.UNDER_FOR);
       const p = (x) => (x === null ? 'not yet' : `${Math.round(x * 100)}%`);
-      lines.push(`busiest: ${p(b20)} over ${quality.OVER_FOR} s, ${p(b60)} over ${quality.UNDER_FOR} s (${state.synth ? state.synth.quality : '?'}; switches to lite past ${Math.round(quality.OVER * 100)}%)`);
+      lines.push(`busiest: ${p(b20)} over ${quality.OVER_FOR} s, ${p(b60)} over ${quality.UNDER_FOR} s (${state.output ? state.output.quality : '?'}; switches to lite past ${Math.round(quality.OVER * 100)}%)`);
     }
-    // Which synth plays the voices: the Rust core (with the notes that
-    // arrived late and the ones that fell back to JS), or JS and why.
-    lines.push(`engine: ${state.synth ? state.synth.engineReport() : ENGINE === 'js' ? 'js (asked)' : state.coreError ? `js (fallback: ${state.coreError})` : 'rust (loading)'}`);
-    if (ENGINE === 'rust') lines.push(`core: ${state.core ? `loaded ${state.coreAt} ms after the page began` : state.coreError ? 'not loaded' : 'loading'}`);
-    const host = state.synth && state.synth.core && !state.synth.core.failed ? state.synth.core : null;
-    lines.push(`layout: ${host ? (host.layout === 2 ? 'stereo' : 'mono') : 'mono (the JavaScript synth)'}  mono switch: ${state.mono ? 'on' : 'off'}`);
+    // The core's player, with the notes it took late, left out or dropped;
+    // or why there is none.
+    lines.push(`engine: ${state.output ? state.output.engineReport() : state.coreError ? `none (${state.coreError})` : 'rust (loading)'}`);
+    lines.push(`core: ${state.core ? `loaded ${state.coreAt} ms after the page began` : state.coreError ? 'not loaded' : 'loading'}`);
+    const host = state.output && state.output.core && !state.output.core.failed ? state.output.core : null;
+    lines.push(`layout: ${host ? (host.layout === 2 ? 'stereo' : 'mono') : '-'}  mono switch: ${state.mono ? 'on' : 'off'}`);
     // What the core's render costs this device, each layout apart (queue
     // item 66; docs/CORE.md, promise 9: stereo must not double it).
     if (host) lines.push(`render: ${host.costReport()}`);
@@ -1890,7 +1820,7 @@ function wire() {
     if (state.engine && state.engine.spec) push(state.engine.report());
     else lines.push('scheduler: not built yet (press Play)');
     lines.push(...awayReport());
-    lines.push(...aheadLog());
+    lines.push(...pageLog());
     lines.push(...viewsReport());
     ui.el('diagOut').textContent = lines.join('\n');
   };
@@ -1985,34 +1915,25 @@ function wire() {
     }
   });
 
-  // The scheduler queues further ahead while hidden, so it has to be told
-  // when that changes. Resume anything the system paused on the way out.
+  // Resume anything the system paused on the way out. (The core plays on
+  // whatever the page does: nothing is planned for a hidden page.)
   document.addEventListener('visibilitychange', () => {
     pageEvent(document.hidden ? 'hidden' : 'shown');
-    rememberAhead();
     if (document.hidden) awayBegin();
     else awayEnd();
     viewFlush(document.hidden);
-    if (state.synth && state.ctx.state === 'suspended') state.ctx.resume();
-    if (state.engine) state.engine.retune();
+    if (state.output && state.ctx.state === 'suspended') state.ctx.resume();
     if (document.visibilityState === 'visible' && state.media && state.engine
         && state.engine.playing) {
       state.media.resume();
     }
   });
 
-  // A page about to be frozen or put away plans for a deep buffer at once,
-  // as hidden does (queue item 47): it may wake to one.
-  const frozen = (on, what) => () => {
-    pageEvent(what);
-    pageFrozen = on;
-    if (on) rememberAhead();
-    if (state.engine) state.engine.setFrozen(on);
-  };
-  document.addEventListener('freeze', frozen(true, 'frozen'));
-  document.addEventListener('resume', frozen(false, 'resumed'));
-  window.addEventListener('pagehide', frozen(true, 'pagehide'));
-  window.addEventListener('pageshow', (e) => { if (e.persisted) frozen(false, 'pageshow')(); });
+  // A page frozen or put away, for Diagnostics' page events.
+  document.addEventListener('freeze', () => pageEvent('frozen'));
+  document.addEventListener('resume', () => pageEvent('resumed'));
+  window.addEventListener('pagehide', () => pageEvent('pagehide'));
+  window.addEventListener('pageshow', (e) => { if (e.persisted) pageEvent('pageshow'); });
 
   watchLongTasks();
   const cores = navigator.hardwareConcurrency || 4;
@@ -2063,7 +1984,9 @@ wire();
 // The core is fetched and loaded ahead, so it is ready by the time Play is
 // pressed. A browser that refuses a context before a gesture still gets the
 // bytes now, and the context on the first tap.
-if (ENGINE === 'rust' && !coreUnsupported()) {
+if (coreUnsupported()) {
+  cantPlay(coreUnsupported());
+} else {
   fetchCore().catch(() => {});
   try { prepareAudio(); } catch { state.ctx = null; }
 }
