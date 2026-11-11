@@ -22,7 +22,7 @@ use dlcore::generator::request::{Request, SETTING_OUT};
 use dlcore::generator::rng::Rng;
 use dlcore::player::host::Host;
 use dlcore::player::{Player, State};
-use dlcore::{ACCORDION, DRUM, DUBSTAB, EXTRA, FIDDLE, FLUTE, HAT, KNOCK, Key, OCARINA, QUANTUM, TEXTURE, TUNEDKICK, Tap, WHISTLE};
+use dlcore::{ACCORDION, DRUM, DUBSTAB, EXTRA, FIDDLE, FLUTE, HAT, Key, OCARINA, QUANTUM, TEXTURE, TUNEDKICK, Tap, WHISTLE};
 
 fn roomy(f: impl FnOnce() + Send + 'static) {
     std::thread::Builder::new().stack_size(64 << 20).spawn(f).expect("a thread").join().expect("the test");
@@ -168,9 +168,9 @@ fn pitches_carried(voice: u32) -> &'static [usize] {
     }
 }
 
-/// Whether the note's pitch is its own (the kit, the knock, the noises).
+/// Whether the note's pitch is its own (the kit, the noises).
 fn keeps_its_pitch(voice: u32, parts: u32) -> bool {
-    matches!(voice, DRUM | HAT | TUNEDKICK | KNOCK) || (voice == TEXTURE && parts != texture::SWELL)
+    matches!(voice, DRUM | HAT | TUNEDKICK) || (voice == TEXTURE && parts != texture::SWELL)
 }
 
 #[test]

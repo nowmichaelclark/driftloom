@@ -504,9 +504,10 @@ impl Synth {
         self.budget.note_channel(channel);
         host.key(key);
         // The loop's tuning moves every pitched voice together; the kit
-        // (the tuned kick's pitch is its own, in Hz), the knock and the
-        // texture's noises keep theirs (queue item 101b).
-        let pitched = !matches!(voice, DRUM | HAT | TUNEDKICK | KNOCK) && (voice != TEXTURE || parts == texture::SWELL);
+        // (the tuned kick's pitch is its own, in Hz) and the texture's
+        // noises keep theirs (queue item 101b). The piano's knock carries
+        // its note, tuned, though it sounds a band of its own.
+        let pitched = !matches!(voice, DRUM | HAT | TUNEDKICK) && (voice != TEXTURE || parts == texture::SWELL);
         let midi = if pitched { midi + self.tune } else { midi };
         host.note(voice, channel, time, midi, dur, vel, parts, x);
     }
