@@ -24,7 +24,7 @@ says the work goes on meanwhile.
 | B1 | `brain-1-kickoff.md` | Brain: check 97 and 100, phase 3's check, adopt this plan | Opus 5.5, high | yes, 2026-11-11 |
 | 01 | `01-phase-3-proof.md` | Item 98's hands part; the tools made steady | Sonnet 5.5, high | yes, 2026-11-11 |
 | | **you** | The testers' steps from 01 (your phone, tablet, the friends' Pixels). The work goes on meanwhile. | | |
-| 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | |
+| 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | yes, 2026-11-11 |
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | |
 | 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | |
 | 05 | `05-batch6-kit.md` | 101d: tripletKit, dottedPulse | Opus 5.5, high | |

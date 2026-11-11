@@ -865,7 +865,7 @@ const _: () = assert!(PINS_MAX <= 128, "the pins' bits are a u128");
 
 /// The settings' pins, by number from `SETTING_PINS` (`js/pins.js`, the
 /// same order; append only).
-pub const SETTINGS: [&str; 17] = [
+pub const SETTINGS: [&str; 18] = [
     "arc.shape",
     "arc.period",
     "arc.from",
@@ -883,7 +883,14 @@ pub const SETTINGS: [&str; 17] = [
     "padSweep.period",
     "padSweep.q",
     "echo.beats",
+    "lateFloor.fade",
 ];
+
+/// The least and the most of several ranges: what a setting drawn from
+/// any of them takes.
+fn span(ranges: &[[f64; 2]]) -> [f64; 2] {
+    ranges.iter().fold([f64::INFINITY, f64::NEG_INFINITY], |[lo, hi], r| [js::min(lo, r[0]), js::max(hi, r[1])])
+}
 
 /// What a pin takes.
 enum Allowed {
@@ -960,16 +967,20 @@ impl Pins {
             "kick.note" => Allowed::Range(KICK.note, true),
             "kick.short" => Allowed::Range(KICK.short, false),
             "kick.long" => Allowed::Range(KICK.long, false),
-            "subDuck.depth" => Allowed::Range(SUBDUCK.depth, false),
-            "subDuck.recover" => Allowed::Range(SUBDUCK.recover, false),
+            // A setting a choice's options each draw from their own range
+            // (queue item 101a) takes any of them; the loop then holds it to
+            // the range of the option it plays (`choices`, `held`).
+            "subDuck.depth" => Allowed::Range(span(&[SUBDUCK.depth, SUBDUCK.deep_depth]), false),
+            "subDuck.recover" => Allowed::Range(span(&[SUBDUCK.recover, SUBDUCK.deep_recover]), false),
             "lateFloor.order" => Allowed::Words(LATEFLOOR.orders),
-            "lateFloor.seconds" => Allowed::Range(LATEFLOOR.seconds, false),
+            "lateFloor.seconds" => Allowed::Range(span(&[LATEFLOOR.seconds, LATEFLOOR.slow_seconds]), false),
             "lateFloor.gap" => Allowed::Range([1.0, LATEFLOOR.max_gap], true),
-            "padSweep.lo" => Allowed::Range(PADSWEEP.lo, false),
-            "padSweep.oct" => Allowed::Range(PADSWEEP.oct, false),
-            "padSweep.period" => Allowed::Range(PADSWEEP.period, false),
-            "padSweep.q" => Allowed::Range(PADSWEEP.q, false),
+            "padSweep.lo" => Allowed::Range(span(&[PADSWEEP.lo, PADSWEEP.wide.lo, PADSWEEP.fast.lo]), false),
+            "padSweep.oct" => Allowed::Range(span(&[PADSWEEP.oct, PADSWEEP.wide.oct, PADSWEEP.fast.oct]), false),
+            "padSweep.period" => Allowed::Range(span(&[PADSWEEP.period, PADSWEEP.wide.period, PADSWEEP.fast.period]), false),
+            "padSweep.q" => Allowed::Range(span(&[PADSWEEP.q, PADSWEEP.wide.q, PADSWEEP.fast.q]), false),
             "echo.beats" => Allowed::Values(ECHO.beats),
+            "lateFloor.fade" => Allowed::Range(LATEFLOOR.slow_fade, false),
             _ => return None,
         })
     }

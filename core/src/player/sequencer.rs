@@ -568,7 +568,14 @@ impl Sequencer {
                 // the notes still counted, so no draw moves).
                 if late.is_some_and(|l| abs < l.drums) {
                     continue;
-                } #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.drums, sd));
+                }
+                // slowOpening (queue item 101a): the kit rises to its level
+                // over the fade from its arrival (none: exactly as it was),
+                // and a hit faded to nothing is not played.
+                let vel = vel * late.map_or(1.0, |l| l.rise(abs - l.drums, sd)); #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.drums, sd));
+                if vel == 0.0 {
+                    continue;
+                }
                 let jitter = if e.roll { 0.0 } else { (unit(key, DRUMS_CHANNEL, salt::HOST_JITTER, 0) - 0.5) * 0.008 };
                 let at = t + micro + jitter;
                 let kicked = inst == "kick" || inst == "softkick";
@@ -602,7 +609,12 @@ impl Sequencer {
                 let key = key_of(Layer::Bass);
                 if late.is_some_and(|l| abs < l.bass) {
                     continue;
-                } #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.bass, sd));
+                }
+                // The bass rises as the kit does.
+                let vel = vel * late.map_or(1.0, |l| l.rise(abs - l.bass, sd)); #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.bass, sd));
+                if vel == 0.0 {
+                    continue;
+                }
                 synth.budget.begin(Some(Layer::Bass), key);
                 if drone {
                     synth.budget.keep();

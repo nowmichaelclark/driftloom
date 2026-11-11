@@ -17,7 +17,7 @@ import { Rng } from '../js/rng.js';
 import { newSpec, render } from '../js/gen.js';
 import { LAYERS, parseRequest, keyMask, scaleMask, styleMask, voiceMask, layerState, cloneSpec } from '../js/request.js';
 import { VIBE_IDS } from '../js/vibes.js';
-import { pinNumbers } from '../js/pins.js';
+import { PINS, pinNumbers } from '../js/pins.js';
 import { casesOf, canonical } from '../tools/gen-golden-lib.mjs';
 import * as core from '../tools/gen-lib.mjs';
 
@@ -270,6 +270,34 @@ console.log('A code\'s edits, against the core\'s (the generation goldens\' edit
     describes(c.name, x, spec, c);
     grids(c.name, x, spec, c, 1);
   }
+}
+
+console.log('Every pin js/pins.js has, at its ends and past them, as the core takes it (queue item 101a)');
+{
+  // The page's table and the core's (request.rs, `Pins`) are two copies: a
+  // pin the page offers the core must take, at both ends of its range (or
+  // every word and value), and refuse past them; a number the page has no
+  // pin for the core refuses too.
+  const { exports: x } = new WebAssembly.Instance(module, {});
+  const takes = (n, v) => x.dl_play_pin(n, v) === 1;
+  const numbers = new Set(PINS.map((p) => p.number));
+  for (const p of PINS) {
+    if (p.words) {
+      check(`${p.name}: every word`, p.words.every((_, i) => takes(p.number, i)) && !takes(p.number, p.words.length));
+    } else if (p.values) {
+      check(`${p.name}: every value`, p.values.every((v) => takes(p.number, v)) && !takes(p.number, p.values[0] + 0.01));
+    } else {
+      const [lo, hi] = p.range;
+      const past = lo === hi ? 1e-6 : (hi - lo) * 1e-6;
+      check(`${p.name}: ${lo} to ${hi}`, takes(p.number, lo) && takes(p.number, hi) && !takes(p.number, lo - past) && !takes(p.number, hi + past));
+      if (p.whole) check(`${p.name}: whole numbers`, !takes(p.number, lo + 0.5));
+    }
+  }
+  for (let n = 0; n < 128; n++) if (!numbers.has(n)) check(`pin ${n} is no pin, to the core too`, !takes(n, 0) && !takes(n, 1));
+  check('the far ends pin (subDuck=deep, padSweep=wide and fast, lateFloor=slow and its fade)',
+    ['subDuck', 'padSweep', 'lateFloor'].every((id) => PINS.some((p) => p.name === id)) && PINS.some((p) => p.name === 'lateFloor.fade')
+    && PINS.find((p) => p.name === 'subDuck').words.includes('deep') && PINS.find((p) => p.name === 'lateFloor').words.includes('slow')
+    && ['wide', 'fast'].every((w) => PINS.find((p) => p.name === 'padSweep').words.includes(w)));
 }
 
 console.log('The events, a re-roll in place and the track\'s end');

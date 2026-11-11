@@ -23,9 +23,15 @@
 //!                            (`core/sketch/README.md`).
 //!   --from S                 the clip starts S seconds in (rendered from
 //!                            the start, written from S)
+//!   --stem LAYER             one layer's channel as it goes into the mix
+//!                            (melody, chords, bass, texture, drums), mono,
+//!                            instead of the speakers: a stem with its own
+//!                            channel blocks on it (subDuck on the bass,
+//!                            padSweep on the chords), as `tools/ears/`
+//!                            reads a record's stems (queue item 101a)
 //!
 //! The first six need a build with `--features sketch`; without it they
-//! say so. `--from` works in any build.
+//! say so. `--from` and `--stem` work in any build.
 
 use dlcore::Core;
 use dlcore::player::Player;
@@ -44,6 +50,8 @@ pub struct Clip {
     routes: Vec<(usize, u32)>,
     /// Seconds trimmed off the head of the written clip.
     pub from: f64,
+    /// The channel written instead of the speakers (`--stem`), if any.
+    pub stem: Option<u32>,
 }
 
 fn pair(word: &str, what: &str) -> Result<(String, String), String> {
@@ -80,6 +88,7 @@ impl Clip {
                 self.routes.push(resolve_route(&name, &layer)?);
             }
             "--from" => self.from = value(&next()?, "--from")?.max(0.0),
+            "--stem" => self.stem = Some(channel_of(&next()?, "--stem")?),
             _ => return Ok(false),
         }
         Ok(true)
@@ -162,15 +171,19 @@ fn resolve_route(name: &str, layer: &str) -> Result<(usize, u32), String> {
         Some(("sketch", n)) => n.parse::<usize>().map_err(|_| format!("--route: '{n}' is not a mod number"))?,
         _ => return Err(format!("--route is sketch[.N]=LAYER, not {name}={layer}")),
     };
-    let from = match layer {
+    Ok((which, channel_of(layer, "--route")?))
+}
+
+/// A layer's channel, by the layer's name.
+fn channel_of(layer: &str, what: &str) -> Result<u32, String> {
+    Ok(match layer {
         "melody" => dlcore::MELODY,
         "chords" => dlcore::CHORDS,
         "bass" => dlcore::BASS_CHANNEL,
         "texture" => dlcore::TEXTURE_CHANNEL,
         "drums" => dlcore::DRUMS_CHANNEL,
-        other => return Err(format!("--route: '{other}' is not a layer (melody, chords, bass, texture, drums)")),
-    };
-    Ok((which, from))
+        other => return Err(format!("{what}: '{other}' is not a layer (melody, chords, bass, texture, drums)")),
+    })
 }
 
 /// The channel `core/sketch/where.txt` names.

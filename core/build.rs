@@ -615,15 +615,16 @@ fn choices(out: &mut String, blocks: &[Block]) {
     out.push_str("/// The choices, in the order the draw walks them.\npub static CHOICES: &[Choice] = &[\n");
     for b in blocks.iter().filter(|b| b.kind == "choice") {
         let r = Reader { file, block: b };
-        r.only(&["options", "weight", "vibes", "optionVibes.*"]);
+        r.only(&["options", "weight", "vibes", "optionVibes.*", "ownStream"]);
         let _ = writeln!(
             out,
-            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {} }},",
+            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {}, own_stream: {} }},",
             quote(&b.name),
             r.need_pool("options"),
             opt(r.num("weight"), f),
             opt(r.table("vibes"), |s| s),
-            r.tables_by_name("optionVibes")
+            r.tables_by_name("optionVibes"),
+            r.num("ownStream").is_some_and(|x| x != 0.0)
         );
     }
     out.push_str("];\n");
@@ -662,19 +663,21 @@ fn choices(out: &mut String, blocks: &[Block]) {
         kick.need_num("swap")
     );
     let duck = find("setting", "subduck");
-    duck.only(&["depth", "recover", "beat"]);
+    duck.only(&["depth", "recover", "beat", "deep.depth", "deep.recover"]);
     let _ = writeln!(
         out,
-        "/// subDuck's settings (`[setting subduck]`).\npub static SUBDUCK: SubDuck = SubDuck {{ depth: {}, recover: {}, beat: {} }};",
+        "/// subDuck's settings (`[setting subduck]`).\npub static SUBDUCK: SubDuck = SubDuck {{ depth: {}, recover: {}, beat: {}, deep_depth: {}, deep_recover: {} }};",
         duck.need_range("depth"),
         duck.need_range("recover"),
-        duck.need_num("beat")
+        duck.need_num("beat"),
+        duck.need_range("deep.depth"),
+        duck.need_range("deep.recover")
     );
     let late = find("setting", "latefloor");
-    late.only(&["seconds", "round", "first", "orders", "gap", "maxGap", "gapLong", "longVibes"]);
+    late.only(&["seconds", "round", "first", "orders", "gap", "maxGap", "gapLong", "longVibes", "slow.seconds", "slow.fade"]);
     let _ = writeln!(
         out,
-        "/// lateFloor's settings (`[setting latefloor]`).\npub static LATEFLOOR: LateFloor = LateFloor {{ seconds: {}, round: {}, first: {}, orders: {}, gap: {}, max_gap: {}, gap_long: {}, long_vibes: {} }};",
+        "/// lateFloor's settings (`[setting latefloor]`).\npub static LATEFLOOR: LateFloor = LateFloor {{ seconds: {}, round: {}, first: {}, orders: {}, gap: {}, max_gap: {}, gap_long: {}, long_vibes: {}, slow_seconds: {}, slow_fade: {} }};",
         late.need_range("seconds"),
         late.need_num("round"),
         late.need_num("first"),
@@ -682,7 +685,9 @@ fn choices(out: &mut String, blocks: &[Block]) {
         late.need_numpool("gap"),
         late.need_num("maxGap"),
         late.need_num("gapLong"),
-        late.need_table("longVibes")
+        late.need_table("longVibes"),
+        late.need_range("slow.seconds"),
+        late.need_range("slow.fade")
     );
     let drop = find("setting", "floordrop");
     drop.only(&[
@@ -723,15 +728,26 @@ fn choices(out: &mut String, blocks: &[Block]) {
         pedal.need_num("high")
     );
     let pad = find("setting", "padsweep");
-    pad.only(&["sustained", "lo", "oct", "period", "q"]);
+    let kinds = ["wide", "fast"];
+    let mut keys = vec!["sustained".to_string(), "lo".to_string(), "oct".to_string(), "period".to_string(), "q".to_string()];
+    for k in kinds {
+        keys.extend(["lo", "oct", "period", "q"].map(|x| format!("{k}.{x}")));
+    }
+    pad.only(&keys.iter().map(String::as_str).collect::<Vec<_>>());
+    let sweep = |k: &str| {
+        let r = |x: &str| pad.need_range(&format!("{k}.{x}"));
+        format!("SweepRanges {{ lo: {}, oct: {}, period: {}, q: {} }}", r("lo"), r("oct"), r("period"), r("q"))
+    };
     let _ = writeln!(
         out,
-        "/// padSweep's settings (`[setting padsweep]`).\npub static PADSWEEP: PadSweep = PadSweep {{ sustained: {}, lo: {}, oct: {}, period: {}, q: {} }};",
+        "/// padSweep's settings (`[setting padsweep]`).\npub static PADSWEEP: PadSweep = PadSweep {{ sustained: {}, lo: {}, oct: {}, period: {}, q: {}, wide: {}, fast: {} }};",
         pad.need_words("sustained"),
         pad.need_range("lo"),
         pad.need_range("oct"),
         pad.need_range("period"),
-        pad.need_range("q")
+        pad.need_range("q"),
+        sweep("wide"),
+        sweep("fast")
     );
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);

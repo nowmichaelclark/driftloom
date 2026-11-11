@@ -14,7 +14,7 @@
 //! sketches the engine draws dubStab, the organ and the wash from are the
 //! engine's own code, not data, and are ported here as they stand.
 
-use super::LAYERS;
+use super::{LAYERS, Layer};
 use super::canon::{Sink, Writer};
 use super::choices::{self, Arc, Fall, LateFloor, PadSweep, SubDuck, TunedKick};
 use super::js;
@@ -172,6 +172,10 @@ impl Load {
         // A request's pins (queue item 85b) fix any of the settings.
         let p = &spec.pins;
         let on = |id: &str| r.choice(id) == Some("on");
+        // The option a choice with several plays (queue item 101a: subDuck's
+        // deep, padSweep's wide and fast, lateFloor's slow), or none.
+        let plays = |id: &str| r.choice(id).filter(|&o| !o.is_empty() && o != "today");
+        let step = 60.0 / spec.bpm / 4.0;
         let spb = cx.spb;
         let total = spec.bars * spb;
         let busy = r.notes_per_second(cx);
@@ -185,10 +189,14 @@ impl Load {
             wash: on("wash").then(|| wash_of(spec.seed, spec.root)),
             arc: choices::arc_plays(spec.seed, on("arc"), v, p.get("arc").is_some()).then(|| choices::arc_of(spec.seed, v, p)),
             kick,
-            sub_duck: on("subDuck").then(|| choices::sub_duck_of(spec.seed, spec.bpm, p)),
-            pad_sweep: on("padSweep").then(|| choices::pad_sweep_of(spec.seed, p)),
+            sub_duck: plays("subDuck").map(|o| {
+                let cycle = spec.cycles.of(Layer::Drums as usize).filter(|&c| c > 0.0).unwrap_or(total);
+                let deep = (o == "deep").then(|| choices::kick_spacing(&r.drums, cycle, step).unwrap_or(f64::INFINITY));
+                choices::sub_duck_of(spec.seed, spec.bpm, deep, p)
+            }),
+            pad_sweep: plays("padSweep").map(|o| choices::pad_sweep_of(spec.seed, o, p)),
             bass_lift: choices::bass_lift_of(&r.drums),
-            late: on("lateFloor").then(|| choices::late_floor_of(spec.seed, spb, 60.0 / spec.bpm / 4.0, v, js::round(total / spb), p)),
+            late: plays("lateFloor").map(|o| choices::late_floor_of(spec.seed, spb, step, v, js::round(total / spb), o == "slow", p)),
             space: Space {
                 seed: spec.seed,
                 busy,
@@ -338,6 +346,12 @@ fn write_late<S: Sink>(w: &mut Writer<S>, l: &LateFloor) {
     w.num(l.bass);
     w.key("drums");
     w.num(l.drums);
+    // slowOpening's fade (queue item 101a), only where there is one: the
+    // approved kind's text, and so its golden, is what it was.
+    if l.fade > 0.0 {
+        w.key("fade");
+        w.num(l.fade);
+    }
     w.key("gap");
     w.num(l.gap);
     w.key("order");

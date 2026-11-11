@@ -39,6 +39,10 @@ const CHOICES_MAX: usize = 16;
 #[cfg(feature = "sketch")]
 const NOT_FORCED: u8 = 0;
 
+/// The salt of a choice's own option stream (`Render::own_option`, queue
+/// item 101), plus the choice's place.
+const OWN_OPTION_SALT: u32 = 0x4f50_5400;
+
 /// How many parts `Render::run` is made of (`Render::part`).
 pub const PARTS: usize = 5;
 
@@ -486,7 +490,9 @@ impl Render {
             pool.retain(|x| x.0 != i);
             let c = &CHOICES[i];
             let others = c.options.get(1..).unwrap_or(&[]);
-            let pick = if others.len() == 1 {
+            let pick = if c.own_stream {
+                self.own_option(cx, i)
+            } else if others.len() == 1 {
                 others[0].0
             } else {
                 let mut leaned: List<(&'static str, f64), 8> = List::new();
@@ -502,14 +508,16 @@ impl Render {
         }
         // The request's pins (queue item 85b), laid over the draws once they
         // are all made: today's option always, another where the loop is
-        // eligible for it.
+        // eligible for it, and today's where it is not (a loop not eligible
+        // for the choice drew today's already; one that may play the choice
+        // but not this option, padSweep's fast with no kit, plays today's
+        // rather than what it drew: queue item 101a).
         for (i, c) in CHOICES.iter().enumerate() {
             let Some(o) = spec.pins.choice(i) else { continue };
-            if let Some(&(name, _)) = c.options.get(o)
-                && (o == 0 || self.eligible(cx, c.id))
-                && let Some(x) = self.choices.get_mut(i)
-            {
-                *x = name.into();
+            let Some(&(name, _)) = c.options.get(o) else { continue };
+            let allowed = o == 0 || self.eligible(cx, c.id) && self.option_eligible(c.id, name);
+            if let Some(x) = self.choices.get_mut(i) {
+                *x = if allowed { name } else { c.options.first().map_or("", |t| t.0) }.into();
             }
         }
         #[cfg(feature = "sketch")]
@@ -519,6 +527,37 @@ impl Render {
             if let (Some(o), Some(x)) = (option, self.choices.get_mut(i)) {
                 *x = o.0.into();
             }
+        }
+    }
+
+    /// The option choice number `i` plays once picked, for a choice whose
+    /// option is drawn on a stream of its own (`ownStream`, queue item 101):
+    /// one draw on the loop's seed salted by the choice's place, among the
+    /// options other than today's that the loop may play
+    /// (`option_eligible`), each leaned by its vibes. The choices' own
+    /// stream is left as a choice with one option leaves it, so adding
+    /// options to a choice moves no other choice's draw.
+    fn own_option(&self, cx: &Cx, i: usize) -> &'static str {
+        let c = &CHOICES[i];
+        let v = cx.spec.vibes.as_ref();
+        let others = c.options.get(1..).unwrap_or(&[]);
+        let mut leaned: List<(&'static str, f64), 8> = List::new();
+        for &(o, w) in others.iter().filter(|&&(o, _)| self.option_eligible(c.id, o)) {
+            leaned.push((o, w * lean_of(data::table_named(c.option_vibes, o), v)));
+        }
+        #[allow(clippy::cast_possible_truncation)] // a choice's place, under CHOICES_MAX
+        let mut r = Rng::new(js::salted(cx.spec.seed, OWN_OPTION_SALT + i as u32, 1));
+        r.weighted(&leaned).or_else(|| others.first().map(|o| o.0)).unwrap_or("")
+    }
+
+    /// Whether a loop may play option `option` of choice `id`, beside the
+    /// choice's own test (`eligible`): wideSweep's fast swing only on a loop
+    /// with a kit (queue item 101a). Every other option, wherever its choice
+    /// may go.
+    fn option_eligible(&self, id: &str, option: &str) -> bool {
+        match (id, option) {
+            ("padSweep", "fast") => self.drums.iter().any(|e| e.vel != 0.0),
+            _ => true,
         }
     }
 

@@ -225,10 +225,26 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
         player.load(seed, request);
         player.ready(&mut host);
     }
-    let channels = way.layout as usize;
+    let channels = if way.clip.stem.is_some() { 1 } else { way.layout as usize };
     let mut left = vec![0.0f32; frames];
     let mut right = vec![0.0f32; if channels == 2 { frames } else { 0 }];
-    {
+    if let Some(stem) = way.clip.stem {
+        // One channel as it goes into the mix, a block at a time, as
+        // `Core::render_with` decides before each.
+        let mut done = 0;
+        while done < frames {
+            let mut block = String::new();
+            {
+                let mut host = Tracer { core: &mut core, lines: &mut block, pins: &way.clip.pins };
+                player.decide(&mut host);
+            }
+            lines.push_str(&block);
+            let frame = core.next_frame();
+            let take = dlcore::QUANTUM.min(frames - done);
+            left[done..done + take].copy_from_slice(&core.process(frame)[stem as usize][..take]);
+            done += take;
+        }
+    } else {
         let mut out: Vec<&mut [f32]> = if channels == 2 { vec![&mut left, &mut right] } else { vec![&mut left] };
         let mut block = String::new();
         core.render_with(&mut out, |core| {
@@ -289,9 +305,10 @@ pub fn wav_of(r: &Rendered, way: &Way) -> Vec<u8> {
     // `--from` trims the head of the clip: rendered from the start, written
     // from there (as Session 26's renderer did), so a loop's state is the
     // one it has by then.
-    let skip = ((way.clip.from * way.rate) as usize * way.layout as usize).min(r.samples.len());
+    let layout = if way.clip.stem.is_some() { 1 } else { way.layout };
+    let skip = ((way.clip.from * way.rate) as usize * layout as usize).min(r.samples.len());
     let samples = &r.samples[skip..];
-    if way.layout == 2 { wav_channels(samples, way.rate, 2) } else { wav(samples, way.rate) }
+    if layout == 2 { wav_channels(samples, way.rate, 2) } else { wav(samples, way.rate) }
 }
 
 /// What a loop costs to play from its seed, block by block (`--costs`): the

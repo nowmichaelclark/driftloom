@@ -31,7 +31,9 @@
 //                                            //   "0.6:1.2" draws it from a range instead
 //     "route": { "sketch": "drums" },        // a layer's signal into the sketch block's mod ("sketch.1" for
 //                                            //   mod 1); the sketch must declare MODS (item 99)
-//     "sketch": true }                       // core/sketch/block.rs on, where.txt says where
+//     "sketch": true,                        // core/sketch/block.rs on, where.txt says where
+//     "stem": "bass" }                       // one layer's channel as it goes into the mix, mono,
+//                                            //   instead of the speakers (item 101a; any build)
 //
 // "force" also takes the levers that are not in the data (item 99; core/src/levers.rs):
 //   "tripletKit": "on"                       the kit's hats and ghost hits on the thirds of the beat, the kick on it
@@ -121,6 +123,7 @@ const flagsOf = (j) => {
   for (const [name, v] of Object.entries(j.space ?? {})) a.push('--space', `${name}=${v}`);
   for (const [name, v] of Object.entries(j.route ?? {})) a.push('--route', `${name}=${v}`);
   if (j.sketch) a.push('--sketch');
+  if (j.stem) a.push('--stem', j.stem);
   return a;
 };
 
@@ -153,6 +156,7 @@ for (const j of jobs) {
     space: j.space ?? {},
     route: j.route ?? {},
     sketch: Boolean(j.sketch),
+    stem: j.stem ?? null,
     hash: get('hash'),
   };
   if (opus) {

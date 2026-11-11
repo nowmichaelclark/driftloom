@@ -15,10 +15,10 @@
 //! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
-use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, Table};
+use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, SweepRanges, Table};
 use super::js;
-use super::list::{Empty, Maybe};
-use super::layers::DrumEvent;
+use super::list::{Empty, List, Maybe};
+use super::layers::{DRUMS_MAX, DrumEvent};
 use super::request::Pins;
 use super::rng::Rng;
 use crate::math;
@@ -36,6 +36,13 @@ pub fn lean_of(table: Option<Table>, v: Option<&Vibes>) -> f64 {
         m *= math::pow(js::min(hi, js::max(lo, x)), v.strength * w);
     }
     m
+}
+
+/// A pinned value held to the range the option playing draws it from: a
+/// pin's own range is every option's together (queue item 101a), and a
+/// loop plays only what its option could draw.
+fn held(x: f64, [lo, hi]: [f64; 2]) -> f64 {
+    js::clamp(x, lo, hi)
 }
 
 /// Whether a loop's vibes include `id`.
@@ -593,21 +600,63 @@ pub struct SubDuck {
 
 /// `subDuckOf(seed, bpm)`: drawn on its own stream, after the draw the
 /// sketch spent on whether the loop ducked; the recovery never longer
-/// than the setting's share of a beat. `p` may pin either.
+/// than the setting's share of a beat. `deep` (queue item 101a, deepDuck):
+/// the loop plays the deep kind, its kick spacing in seconds; its depth and
+/// recovery are drawn from its own ranges in the same two draws, and the
+/// recovery is never longer than the spacing, so the bass is back by the
+/// next kick. `p` may pin either, held to the kind's own range (and the
+/// deep recovery to the spacing).
 #[must_use]
-pub fn sub_duck_of(seed: u32, bpm: f64, p: &Pins) -> SubDuck {
+pub fn sub_duck_of(seed: u32, bpm: f64, deep: Option<f64>, p: &Pins) -> SubDuck {
     let mut r = Rng::new(js::salted(seed, SUBDUCK_SALT, 1));
     r.f();
-    let depth = r.range(SUBDUCK.depth[0], SUBDUCK.depth[1]);
-    let recover = js::min(r.range(SUBDUCK.recover[0], SUBDUCK.recover[1]), SUBDUCK.beat * 60.0 / bpm);
-    SubDuck { depth: p.get("subDuck.depth").unwrap_or(depth), recover: p.get("subDuck.recover").unwrap_or(recover) }
+    let (depths, recovers) = if deep.is_some() { (SUBDUCK.deep_depth, SUBDUCK.deep_recover) } else { (SUBDUCK.depth, SUBDUCK.recover) };
+    let depth = r.range(depths[0], depths[1]);
+    let recover = js::min(r.range(recovers[0], recovers[1]), deep.unwrap_or(SUBDUCK.beat * 60.0 / bpm));
+    let pinned = p.get("subDuck.recover").map(|x| held(x, recovers));
+    SubDuck {
+        depth: p.get("subDuck.depth").map_or(depth, |x| held(x, depths)),
+        recover: match (pinned, deep) {
+            (Some(x), Some(spacing)) => js::min(x, spacing),
+            (Some(x), None) => x,
+            (None, _) => recover,
+        },
+    }
+}
+
+/// The loop's kick spacing in seconds (deepDuck's guard, queue item 101a):
+/// the median gap between one kick and the next around the drums' own
+/// cycle (`cycle` steps of `step` seconds), as `kick_check.py duck` reads a
+/// record's; a kit with one kick a cycle has the cycle. None without a kick.
+#[must_use]
+pub fn kick_spacing(drums: &[DrumEvent], cycle: f64, step: f64) -> Option<f64> {
+    let mut at: List<f64, DRUMS_MAX> = List::new();
+    for e in drums.iter().filter(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick")) {
+        let s = ((e.step % cycle) + cycle) % cycle;
+        if !at.contains(&s) {
+            at.push(s);
+        }
+    }
+    at.sort_stable_by(|a, b| a < b);
+    let n = at.len();
+    let first = *at.first()?;
+    let mut gaps: List<f64, DRUMS_MAX> = List::new();
+    for i in 0..n {
+        let next = at.get(i + 1).copied().unwrap_or(first + cycle);
+        gaps.push(next - at[i]);
+    }
+    gaps.sort_stable_by(|a, b| a < b);
+    // The lower middle, for an even count: the shorter of the two.
+    Some(gaps[(n - 1) / 2] * step)
 }
 
 const LATEFLOOR_SALT: u32 = 0x1a7e;
 
 /// A loop's lateFloor (`lateFloorOf`): in what order the kit and the bass
-/// arrive, the wait in bars, the gap between the two arrivals in bars, and
-/// the steps from the load each sits out.
+/// arrive, the wait in bars, the gap between the two arrivals in bars, the
+/// steps from the load each sits out, and the seconds each takes to rise to
+/// its level once it arrives (slowOpening's fade, queue item 101a; 0, the
+/// approved kind, arrives at once).
 #[derive(Clone, Copy, Debug)]
 pub struct LateFloor {
     pub order: &'static str,
@@ -615,6 +664,18 @@ pub struct LateFloor {
     pub gap: f64,
     pub drums: f64,
     pub bass: f64,
+    pub fade: f64,
+}
+
+impl LateFloor {
+    /// What a hit `since` steps (of `step` seconds) after its part arrived
+    /// is played at, as a share of its velocity: rising from 0 at the
+    /// arrival to 1 at the end of the fade, as the sketch's lever did
+    /// (`levers::late_fade`); exactly 1 without a fade.
+    #[must_use]
+    pub fn rise(&self, since: f64, step: f64) -> f64 {
+        if self.fade > 0.0 { js::clamp(since * step / self.fade, 0.0, 1.0) } else { 1.0 }
+    }
 }
 
 /// `lateFloorOf(seed, spb, stepDur, {}, vibes, loopBars)`: drawn on its own
@@ -623,16 +684,19 @@ pub struct LateFloor {
 /// lean the gap's long end; the gap is drawn last (queue item 76d), so
 /// nothing before it moves, and the second arrival stays inside the loop's
 /// first pass when the first is (`loop_bars` its length in bars), else
-/// within one loop's length of the first. `p` may pin the order, the wait
-/// in seconds and the gap (still held inside the loop as above).
+/// within one loop's length of the first. `slow` (queue item 101a,
+/// slowOpening): the long kind, its wait drawn from its own seconds by the
+/// same draws, and its fade drawn after every other. `p` may pin the order,
+/// the wait in seconds (held to the kind's range), the gap (still held
+/// inside the loop as above) and a slow kind's fade.
 #[must_use]
-pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop_bars: f64, p: &Pins) -> LateFloor {
+pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop_bars: f64, slow: bool, p: &Pins) -> LateFloor {
     let mut r = Rng::new(js::salted(seed, LATEFLOOR_SALT, 1));
     r.f();
     let lean = lean_of(Some(LATEFLOOR.long_vibes), v);
     let u = r.f();
-    let [lo, hi] = LATEFLOOR.seconds; #[cfg(feature = "sketch")] let hi = crate::tuning::get("latefloor.SECONDS_MAX", hi);
-    let secs = p.get("lateFloor.seconds").unwrap_or_else(|| lo + math::pow(u, 1.0 / lean) * (hi - lo));
+    let [lo, hi] = if slow { LATEFLOOR.slow_seconds } else { LATEFLOOR.seconds }; #[cfg(feature = "sketch")] let hi = if slow { hi } else { crate::tuning::get("latefloor.SECONDS_MAX", hi) };
+    let secs = p.get("lateFloor.seconds").map_or_else(|| lo + math::pow(u, 1.0 / lean) * (hi - lo), |x| held(x, [lo, hi]));
     let order = r.weighted(LATEFLOOR.orders).unwrap_or("together");
     let order = p.word("lateFloor.order").unwrap_or(order);
     let k = LATEFLOOR.round;
@@ -643,12 +707,15 @@ pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop
     let drawn = p.get("lateFloor.gap").unwrap_or(drawn);
     let room = if bars < loop_bars { loop_bars - bars } else { loop_bars };
     let gap = js::max(1.0, js::min(js::min(drawn, LATEFLOOR.max_gap), room));
+    let [f0, f1] = LATEFLOOR.slow_fade;
+    let fade = if slow { p.get("lateFloor.fade").map_or_else(|| r.range(f0, f1), |x| held(x, [f0, f1])) } else { 0.0 };
     LateFloor {
         order,
         bars,
         gap,
         drums: (if order == "bassFirst" { bars + gap } else { bars }) * spb,
         bass: (if order == "kitFirst" { bars + gap } else { bars }) * spb,
+        fade,
     }
 }
 
@@ -676,21 +743,35 @@ pub struct PadSweep {
     pub q: f64,
 }
 
-/// `padSweepOf(seed)`: drawn on its own stream in the sketch's order,
-/// after the draw it spent on whether the loop swept. `p` may pin any.
+/// The ranges padSweep's option `kind` draws from: the approved sweep's
+/// (`on`), or wideSweep's `wide` or `fast` (queue item 101a).
 #[must_use]
-pub fn pad_sweep_of(seed: u32, p: &Pins) -> PadSweep {
+pub fn sweep_ranges(kind: &str) -> SweepRanges {
+    match kind {
+        "wide" => PADSWEEP.wide,
+        "fast" => PADSWEEP.fast,
+        _ => SweepRanges { lo: PADSWEEP.lo, oct: PADSWEEP.oct, period: PADSWEEP.period, q: PADSWEEP.q },
+    }
+}
+
+/// `padSweepOf(seed)`: drawn on its own stream in the sketch's order,
+/// after the draw it spent on whether the loop swept, from the ranges of
+/// the option it plays, `kind` (`sweep_ranges`). `p` may pin any, held to
+/// the kind's range.
+#[must_use]
+pub fn pad_sweep_of(seed: u32, kind: &str, p: &Pins) -> PadSweep {
+    let k = sweep_ranges(kind);
     let mut r = Rng::new(js::salted(seed, PADSWEEP_SALT, 1));
     r.f();
-    let lo = r.range(PADSWEEP.lo[0], PADSWEEP.lo[1]);
-    let oct = r.range(PADSWEEP.oct[0], PADSWEEP.oct[1]);
-    let period = r.range(PADSWEEP.period[0], PADSWEEP.period[1]);
-    let q = r.range(PADSWEEP.q[0], PADSWEEP.q[1]);
+    let lo = r.range(k.lo[0], k.lo[1]);
+    let oct = r.range(k.oct[0], k.oct[1]);
+    let period = r.range(k.period[0], k.period[1]);
+    let q = r.range(k.q[0], k.q[1]);
     PadSweep {
-        lo: p.get("padSweep.lo").unwrap_or(lo),
-        oct: p.get("padSweep.oct").unwrap_or(oct),
-        period: p.get("padSweep.period").unwrap_or(period),
-        q: p.get("padSweep.q").unwrap_or(q),
+        lo: p.get("padSweep.lo").map_or(lo, |x| held(x, k.lo)),
+        oct: p.get("padSweep.oct").map_or(oct, |x| held(x, k.oct)),
+        period: p.get("padSweep.period").map_or(period, |x| held(x, k.period)),
+        q: p.get("padSweep.q").map_or(q, |x| held(x, k.q)),
     }
 }
 
