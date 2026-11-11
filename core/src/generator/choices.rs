@@ -15,7 +15,7 @@
 //! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
-use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, SweepRanges, TUNING, Table};
+use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, PADWOW, SUBDUCK, SweepRanges, TUNING, Table};
 use super::js;
 use super::list::{Empty, List, Maybe};
 use super::layers::{DRUMS_MAX, DrumEvent};
@@ -773,6 +773,27 @@ pub fn pad_sweep_of(seed: u32, kind: &str, p: &Pins) -> PadSweep {
         period: p.get("padSweep.period").map_or(period, |x| held(x, k.period)),
         q: p.get("padSweep.q").map_or(q, |x| held(x, k.q)),
     }
+}
+
+const PADWOW_SALT: u32 = 0x3a0e;
+
+/// padWow (queue item 101b; batch 6's #3): the wow a loop that plays it
+/// sets on its chords channel (`blocks::pad_wow`), the main swing's depth
+/// in cents and its rate in Hz.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PadWow {
+    pub depth: f64,
+    pub rate: f64,
+}
+
+/// `padWowOf(seed)`: the loop's wow, each drawn within `[setting padwow]`'s
+/// range on a stream of its own.
+#[must_use]
+pub fn pad_wow_of(seed: u32) -> PadWow {
+    let mut r = Rng::new(js::salted(seed, PADWOW_SALT, 1));
+    let depth = r.range(PADWOW.depth[0], PADWOW.depth[1]);
+    let rate = r.range(PADWOW.rate[0], PADWOW.rate[1]);
+    PadWow { depth, rate }
 }
 
 const ECHO_SALT: u32 = 0xec40;

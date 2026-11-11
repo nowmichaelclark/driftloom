@@ -599,7 +599,7 @@ impl Reader<'_> {
 /// The choices and every setting they draw from (queue items 80 and 81):
 /// the draw's counts and leans, each choice's options and vibes, and the
 /// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
-/// shapes, the pedal, padSweep, the echo time, the tuning and the bass's level, each
+/// shapes, the pedal, padSweep, padWow, the echo time, the tuning and the bass's level, each
 /// block's keys exactly the ones `js/choices.js` reads.
 #[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
 fn choices(out: &mut String, blocks: &[Block]) {
@@ -615,16 +615,17 @@ fn choices(out: &mut String, blocks: &[Block]) {
     out.push_str("/// The choices, in the order the draw walks them.\npub static CHOICES: &[Choice] = &[\n");
     for b in blocks.iter().filter(|b| b.kind == "choice") {
         let r = Reader { file, block: b };
-        r.only(&["options", "weight", "vibes", "optionVibes.*", "ownStream"]);
+        r.only(&["options", "weight", "vibes", "optionVibes.*", "ownStream", "alone"]);
         let _ = writeln!(
             out,
-            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {}, own_stream: {} }},",
+            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {}, own_stream: {}, alone: {} }},",
             quote(&b.name),
             r.need_pool("options"),
             opt(r.num("weight"), f),
             opt(r.table("vibes"), |s| s),
             r.tables_by_name("optionVibes"),
-            r.num("ownStream").is_some_and(|x| x != 0.0)
+            r.num("ownStream").is_some_and(|x| x != 0.0),
+            opt(r.num("alone"), f)
         );
     }
     out.push_str("];\n");
@@ -748,6 +749,14 @@ fn choices(out: &mut String, blocks: &[Block]) {
         pad.need_range("q"),
         sweep("wide"),
         sweep("fast")
+    );
+    let wow = find("setting", "padwow");
+    wow.only(&["depth", "rate"]);
+    let _ = writeln!(
+        out,
+        "/// padWow's settings (`[setting padwow]`).\npub static PADWOW: Wow = Wow {{ depth: {}, rate: {} }};",
+        wow.need_range("depth"),
+        wow.need_range("rate")
     );
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);

@@ -238,6 +238,7 @@ pub struct Sequencer {
     arc_change: bool,
     sub_duck_change: bool,
     pad_sweep_change: bool,
+    pad_wow_change: bool,
     bass_lift_change: bool,
     space_change: bool,
     /// Whether the last loop had each (a new loop without one lets it go).
@@ -246,6 +247,7 @@ pub struct Sequencer {
     had_arc: bool,
     had_sub_duck: bool,
     had_pad_sweep: bool,
+    had_pad_wow: bool,
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
@@ -277,6 +279,7 @@ impl Sequencer {
             arc_change: false,
             sub_duck_change: false,
             pad_sweep_change: false,
+            pad_wow_change: false,
             bass_lift_change: false,
             space_change: false,
             had_organ: false,
@@ -284,6 +287,7 @@ impl Sequencer {
             had_arc: false,
             had_sub_duck: false,
             had_pad_sweep: false,
+            had_pad_wow: false,
             organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
@@ -322,6 +326,7 @@ impl Sequencer {
         self.arc_change = s.arc.is_some() || self.had_arc;
         self.sub_duck_change = s.sub_duck.is_some() || self.had_sub_duck;
         self.pad_sweep_change = s.pad_sweep.is_some() || self.had_pad_sweep;
+        self.pad_wow_change = s.pad_wow.is_some() || self.had_pad_wow;
         self.bass_lift_change = true;
         self.space_change = true;
         self.had_organ = s.organ.is_some();
@@ -329,6 +334,7 @@ impl Sequencer {
         self.had_arc = s.arc.is_some();
         self.had_sub_duck = s.sub_duck.is_some();
         self.had_pad_sweep = s.pad_sweep.is_some();
+        self.had_pad_wow = s.pad_wow.is_some();
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
@@ -376,6 +382,7 @@ impl Sequencer {
         self.arc_change = s.arc != was.arc;
         self.sub_duck_change = s.sub_duck != was.sub_duck;
         self.pad_sweep_change = s.pad_sweep != was.pad_sweep;
+        self.pad_wow_change = s.pad_wow != was.pad_wow;
         self.bass_lift_change = s.bass_lift != was.bass_lift;
         self.space_change = s.space != was.space;
         self.had_organ = s.organ.is_some();
@@ -383,6 +390,7 @@ impl Sequencer {
         self.had_arc = s.arc.is_some();
         self.had_sub_duck = s.sub_duck.is_some();
         self.had_pad_sweep = s.pad_sweep.is_some();
+        self.had_pad_wow = s.pad_wow.is_some();
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         synth.set_tone(host, lp.spec.tone, now);
@@ -505,6 +513,10 @@ impl Sequencer {
         if self.pad_sweep_change {
             synth.pad_sweep_setup(host, s.pad_sweep.as_ref(), time);
             self.pad_sweep_change = false;
+        }
+        if self.pad_wow_change {
+            synth.pad_wow_setup(host, s.pad_wow.as_ref(), time);
+            self.pad_wow_change = false;
         }
         if self.bass_lift_change {
             host.bass_lift(s.bass_lift);

@@ -165,3 +165,9 @@ pad_sweep/sweep=lo be39eaad978d957b -23.00 -9.89 2.7
 pad_sweep/sweep=oct 94d1671d387d6f67 -22.45 -8.65 23.7
 pad_sweep/sweep=period b39d09cedc200df2 -22.53 -9.98 29.0
 pad_sweep/sweep=q f24d15d2a9d7fc5b -21.74 -8.38 18.6
+pad_wow/gentle b27fea91956f6585 -20.42 -8.87 34.4
+pad_wow/deepest f83be2f7a444fa21 -20.47 -8.81 34.4
+pad_wow/gentle=depth 35ddab2de1b6ffd0 -20.42 -9.06 34.4
+pad_wow/deepest=depth f83be2f7a444fa21 -20.47 -8.81 34.4
+pad_wow/gentle=rate bdb7d5efb0d5da81 -20.41 -8.81 34.4
+pad_wow/deepest=rate 3da1e4d1f1cc109a -20.43 -8.92 34.3

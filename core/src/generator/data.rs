@@ -145,6 +145,9 @@ pub struct Choice {
     /// own (`ownStream`, queue item 101), so options added to a choice move
     /// no other choice's draw.
     pub own_stream: bool,
+    /// Drawn by itself for this share of the loops it may go to, not among
+    /// the changes (`alone`, queue item 101b), or `None`.
+    pub alone: Option<f64>,
 }
 
 /// pedalBass's settings (`[setting pedal]`).
@@ -283,6 +286,14 @@ pub struct SweepRanges {
     pub q: [f64; 2],
 }
 
+/// padWow's settings (`[setting padwow]`, queue item 101b): the ranges a
+/// loop draws its depth (cents) and rate (Hz) from.
+#[derive(Clone, Copy, Debug)]
+pub struct Wow {
+    pub depth: [f64; 2],
+    pub rate: [f64; 2],
+}
+
 /// echoTime's settings (`[setting echo]`).
 #[derive(Clone, Copy, Debug)]
 pub struct Echo {
@@ -330,7 +341,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, f,
+        Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

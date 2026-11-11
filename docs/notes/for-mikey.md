@@ -36,6 +36,18 @@ the points where the next step is yours.
   (x0.3 to x0.4) rather than ruling them out; and deepDuck keeps the
   sketch's line (about 12 dB down at 50 ms, 10 at 100 ms), not 12 to 16 dB
   held to 150 ms. Each is one line of `data/choices.txt` to change.
+- **Batch 6's pitch (101b, session 03, v157 and v159):** tuningOffset and
+  padWow now play in the app. To hear them before the album: tuningOffset on
+  wen-glui (corpus 20261009 #50, 32.5 cents flat) and kask-hoan (#43, 28.3
+  sharp) from 0:00; padWow on soath-wa (#27) from 0:00 and sheith-sith
+  (#47) from 0:14. Taste calls for your ears (the PRs' "For Mikey's ears"),
+  each one line of `data/choices.txt`: tuningOffset goes to 15% of loops
+  before the vibes (about 17% after; a quarter of the hazy ones), 15 to 35
+  cents either way, not the batch's 40; padWow to 15% of the loops with
+  chords (about 16%), 12 to 14.5 cents at 0.4 to 0.6 Hz around the sketch's
+  14 at 0.5 (the records' median is nearer 20). On a few loops where the
+  chords are doubled, padWow makes the mix 0.2 to 0.35 LU quieter or
+  louder, as the sketch did.
 - Batch 6's and 84b's: brain session B2. The long pieces': session 15 and
   brain session B3. B4 makes them again in the new codes.
 

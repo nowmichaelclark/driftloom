@@ -83,3 +83,30 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   waiting 40 to 90 s and fading up over 4 to 20: **rong-wuisk** (#6) from
   0:45 (the kit at 0:49, the bass at 0:53) and **gluith-vuisk** (#0) from
   1:10. A loop that draws the approved kinds plays as before.
+- #366, the nightly's stereo hashes after #361 (no app change), preview URL:
+  the branch's preview (no hash kept): nothing should sound different. #361
+  had moved three stereo goldens (06-undertow, 15-wayfare, 18-shatter) on
+  every target without updating `core/golden/*.stereo.hashes`; they are
+  regenerated on x86_64 and wasm32 (identical) and copied to the others.
+- #367, tuningOffset (item 101b, session 03, v157), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 6 (a quarter of the hazy ones, 1
+  in 12 of the crisp ones) is tuned 15 to 35 cents off A440 as a whole,
+  every pitched voice together; the kit, the tuned kick and the noises keep
+  their pitch. Two loops (corpus 20261009) that draw it: **wen-glui** (#50,
+  32.5 cents flat) and **kask-hoan** (#43, 28.3 sharp), from 0:00; against
+  a loop at A440 just before, the whole loop sits a little lower or higher,
+  no voice out of tune with another. `tuning.cents=0` holds a loop at A440.
+- #368, the nightly's Emscripten step (v158, no sound change), preview URL:
+  the branch's preview (no hash kept): nothing should sound different (the
+  goldens, the seeds and the baseline are unchanged). Since #363 the
+  player's calls took about 70 KB of a C host's stack, past Emscripten's
+  64 KB default, and the nightly's emcc host crashed on its second loop; the
+  generator's stages are now functions of their own and take 45 to 47 KB.
+- #369, padWow (item 101b, session 03, v159), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 6 with chords (a quarter of the
+  hazy ones) has a slow, tape-like wow on the chords alone, 12 to 14.5 cents
+  at 0.4 to 0.6 Hz with a slower third under it, never past 20 cents; the
+  kit and the bass stay steady. Two loops (corpus 20261009) that draw it:
+  **soath-wa** (#27, 13.0 cents at 0.58 Hz, the organ's held chords) from
+  0:00 to 0:19, and **sheith-sith** (#47, 13.4 cents at 0.54 Hz, a pad) from
+  0:14. A loop without it plays as before.

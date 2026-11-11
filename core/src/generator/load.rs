@@ -16,7 +16,7 @@
 
 use super::{LAYERS, Layer};
 use super::canon::{Sink, Writer};
-use super::choices::{self, Arc, Fall, LateFloor, PadSweep, SubDuck, TunedKick};
+use super::choices::{self, Arc, Fall, LateFloor, PadSweep, PadWow, SubDuck, TunedKick};
 use super::js;
 use super::list::Biased;
 use super::plan::Cx;
@@ -100,6 +100,8 @@ pub struct Load {
     pub kick: Option<Kick>,
     pub sub_duck: Option<SubDuck>,
     pub pad_sweep: Option<PadSweep>,
+    /// padWow's settings (queue item 101b), for a loop that plays it.
+    pub pad_wow: Option<PadWow>,
     /// The bass layer's level, in dB.
     pub bass_lift: f64,
     pub late: Option<LateFloor>,
@@ -139,6 +141,7 @@ impl Load {
         kick: None,
         sub_duck: None,
         pad_sweep: None,
+        pad_wow: None,
         bass_lift: 0.0,
         late: None,
         space: Space { seed: 0, busy: 0.0, wet: 0.0, light: false, pins: [None; crate::space::n::COUNT] },
@@ -200,6 +203,7 @@ impl Load {
                 choices::sub_duck_of(spec.seed, spec.bpm, deep, p)
             }),
             pad_sweep: plays("padSweep").map(|o| choices::pad_sweep_of(spec.seed, o, p)),
+            pad_wow: plays("padWow").map(|_| choices::pad_wow_of(spec.seed)),
             bass_lift: choices::bass_lift_of(&r.drums),
             late: plays("lateFloor").map(|o| choices::late_floor_of(spec.seed, spb, step, v, js::round(total / spb), o == "slow", p)),
             space: Space {
@@ -248,6 +252,8 @@ impl Load {
         or_null(w, self.organ.as_ref(), |w, o| w.nums(o));
         w.key("padSweep");
         or_null(w, self.pad_sweep.as_ref(), write_pad_sweep);
+        w.key("padWow");
+        or_null(w, self.pad_wow.as_ref(), write_pad_wow);
         w.key("pumpAmount");
         w.num(self.pump);
         w.key("space");
@@ -364,6 +370,15 @@ fn write_late<S: Sink>(w: &mut Writer<S>, l: &LateFloor) {
     w.num(l.gap);
     w.key("order");
     w.str(l.order);
+    w.end_obj();
+}
+
+fn write_pad_wow<S: Sink>(w: &mut Writer<S>, p: &PadWow) {
+    w.obj();
+    w.key("depth");
+    w.num(p.depth);
+    w.key("rate");
+    w.num(p.rate);
     w.end_obj();
 }
 
