@@ -33,7 +33,7 @@ reviewed); hands session 01 done (2026-11-11: the stall test clean, the
 testers' steps written, the control's two loops explained and fixed); hands
 session 02 done (2026-11-11: 101a, batch 6's far ends, #363); hands session
 03 done (2026-11-12: 101b, tuningOffset #367 and padWow #369; the nightly's
-stereo hashes #366 and Emscripten stack #368); next: session 04 (101c), and
+stereo hashes #366 and Emscripten stack #368); next: session 11 (102a; the order changed 2026-11-12: the long pieces, 11 to 16, before batch 6's 04 to 10), and
 Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.

@@ -4,7 +4,10 @@ Written by the hands (Fable 5.2) on 2026-11-10, at Mikey's request, after
 items 97 and 100 merged; reviewed by brain B1 on 2026-11-11 (each file it
 changed says what and why at its top; here: sessions 11 and 14 on Fable,
 session 31a for the new name, the F-Droid submission after 1.0, and two
-rules below): every session left on the road to 1.0 (the app on
+rules below). **Order changed 2026-11-12** (Mikey: run the Fable sessions
+while his usage allows): the long pieces, 11 to 16, come before batch 6's
+04 to 10; nothing in 11 to 16 reads batch 6's sounds, and the later batch 6
+sessions keep the long pieces' checks green: every session left on the road to 1.0 (the app on
 F-Droid), as a prompt to copy and paste, in the order to start them. One
 file per prompt in this folder; each file says the model, the effort, what
 must be merged before it starts, and holds the prompt in a block.
@@ -26,6 +29,13 @@ says the work goes on meanwhile.
 | | **you** | The testers' steps from 01 (your phone, tablet, the friends' Pixels). The work goes on meanwhile. | | |
 | 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | yes, 2026-11-11 |
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | yes, 2026-11-12 |
+| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, high | |
+| 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | |
+| 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
+| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, high | |
+| 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
+| B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | |
+| | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | |
 | 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | |
 | 05 | `05-batch6-kit.md` | 101d: tripletKit, dottedPulse | Opus 5.5, high | |
 | 06 | `06-batch6-color.md` | 101e: colorTone | Opus 5.5, high | |
@@ -35,14 +45,7 @@ says the work goes on meanwhile.
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | |
 | B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
-| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, high | |
-| 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | |
-| 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
-| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, high | |
-| 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
-| B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief | Opus 5.5, high | |
-| | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** Sessions 17 to 24 may go on meanwhile; run 16 as soon as your notes are in. | | |
-| 16 | `16-long-tuning.md` | 102f: long pieces tuned from Mikey's notes | Opus 5.5, high | |
+| 16 | `16-long-tuning.md` | 102f: long pieces tuned from Mikey's notes (runs once your notes are in, wherever the order has got to; the rows below don't wait for it) | Opus 5.5, high | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | |
 | 19 | `19-export-flac.md` | 104a: the FLAC writer in the core | Opus 5.5, high | |

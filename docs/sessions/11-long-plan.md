@@ -1,5 +1,7 @@
 # Session 11: long pieces: the plan and its map (102a)
 
+**Order changed 2026-11-12 (Mikey):** the long pieces now come before batch 6's sessions 04 to 10, so this follows session 03; batch 6's remaining sounds arrive after the long pieces and keep their checks green.
+
 **Changed by brain B1 (2026-11-11):** Fable 5.2 rather than Opus (the queue
 gave 102 to Fable, and the design that stands is written here); the plan
 set in time and in phrases where sections are few, the wander slider and
@@ -8,7 +10,7 @@ both. Why: a section is the loop's own 4 to 32 bars and today's pass at the
 slider's amount (read from `Generator::section`).
 
 - **Model:** Fable 5.2. **Effort:** high.
-- **Start after:** session 10 (brain B2 may run alongside).
+- **Start after:** session 03.
 - **Queue item:** item 102.
 
 Paste everything in the block as the session's first message.
