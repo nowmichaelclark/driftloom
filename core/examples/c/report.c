@@ -18,8 +18,8 @@
 
 static int failures = 0;
 
-/* Static, not on the stack: the player's own calls take some 60 KB of
-   stack, near Emscripten's 64 KB default, so a host's big buffers live
+/* Static, not on the stack: the player's own calls take some 48 KB of
+   stack, under Emscripten's 64 KB default, so a host's big buffers live
    elsewhere (or it sets a bigger stack: -sSTACK_SIZE). */
 static char about[4096];
 static double grid[640];

@@ -527,9 +527,10 @@ changelog, codes frozen (105), the nightly's checks back as merge gates
 
 **Also noted, not on the road to 1.0:**
 
-- **The player's stack** (item 94a, PR #337): its calls take 56 to 60 KB
-  of the caller's stack (wasm32, measured; `main` the same), near
-  Emscripten's 64 KB default; the header says `-sSTACK_SIZE`. Fine for the
+- **The player's stack** (item 94a, PR #337; the generator's stages apart
+  since 101a's frame passed it): its calls take 45 to 47 KB of the caller's
+  stack (Emscripten, measured), under its 64 KB default; the header says
+  `-sSTACK_SIZE`. Fine for the
   browser (1 MB) and native games. Before a port to a small device (the
   charter's handhelds and consoles), an item trims the generator's frames
   with a measured aim; for Broken Friends' web build, the header's line is
