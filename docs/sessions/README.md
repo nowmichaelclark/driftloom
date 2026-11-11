@@ -29,10 +29,10 @@ says the work goes on meanwhile.
 | | **you** | The testers' steps from 01 (your phone, tablet, the friends' Pixels). The work goes on meanwhile. | | |
 | 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | yes, 2026-11-11 |
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | yes, 2026-11-12 |
-| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, high | |
+| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, medium | |
 | 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | |
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
-| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, high | |
+| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | |
 | 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
 | B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | |
 | | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | |
