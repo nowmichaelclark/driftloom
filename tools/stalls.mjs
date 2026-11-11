@@ -477,7 +477,11 @@ async function session(opts, chromePath, loop, engine, throttle) {
     // top.
     {
       const lite = await tab.evaluate("document.getElementById('liteMode').getAttribute('aria-checked') === 'true'");
-      if (lite !== (opts.quality === 'lite')) {
+      // Already as asked by the page's guess is not the listener's choice
+      // yet: switch away and back, so the page's automatic switch (it moves
+      // a guessed lite up to full after a minute of room to spare) leaves it.
+      const clicks = lite !== (opts.quality === 'lite') ? 1 : 2;
+      for (let i = 0; i < clicks; i++) {
         await tab.evaluate("document.getElementById('liteMode').click()");
         await sleep(4000);
       }
