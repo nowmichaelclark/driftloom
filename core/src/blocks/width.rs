@@ -36,6 +36,11 @@ use super::filter::{Biquad, Kind};
 pub const WINDOW_MAX: f64 = 4.0;
 const SLOTS: usize = 4 * crate::MAX_FRAMES_A_SECOND / QUANTUM + 1;
 
+/// The mid's energy in the window (a sum of squares over a window's samples)
+/// under which it is taken as silence: about -140 dB of full scale a sample,
+/// far under anything heard, and far over the float dust a rest leaves.
+const SILENT: f64 = 1e-9;
+
 /// The two sections of a fourth-order Butterworth highpass, as their Q in
 /// Web Audio's dB: 0.5412 and 1.3066.
 const BUTTERWORTH_Q: [f32; 2] = [-5.333, 2.323];
@@ -206,7 +211,13 @@ impl Width {
         self.at = (self.at + 1) % self.slots.max(1);
         let [em, es] = self.sum;
         let allowed = math::pow(10.0, self.settings.target / 10.0) * em;
-        let target = if es <= allowed || es <= 0.0 { 1.0 } else { math::sqrt(allowed / es) };
+        // With next to nothing in the window there is no signal to hold the
+        // side against, and the side's share of float dust means nothing: a
+        // mid that had rounded to exactly zero beside a side that had not
+        // read as "far too wide" and took the gain to nothing, so a loop
+        // came back from a bar of rest narrow, and wider again over ten
+        // seconds (`rest_leaves_the_gain_alone`).
+        let target = if em < SILENT || es <= allowed || es <= 0.0 { 1.0 } else { math::sqrt(allowed / es) };
         let was = self.gain;
         let k = if target < was { self.fall } else { self.rise };
         self.gain = math::flush(was + (target - was) * k);
@@ -329,6 +340,28 @@ mod tests {
         }
         let r = ratio_db(&tail);
         assert!((r + 12.0).abs() < 0.3, "{r}");
+    }
+
+    #[test]
+    fn rest_leaves_the_gain_alone() {
+        let mut w = Width::new();
+        w.ready(&Settings { target: -12.0, ..REST }, RATE);
+        // Wide for three seconds: the gain comes down.
+        for b in 0..(3.0 * RATE / QUANTUM as f64) as usize {
+            let mut out = tone(b, 1.0);
+            w.process(&mut out);
+        }
+        let low = w.gain();
+        assert!(low < 0.8, "{low}");
+        // Then eight seconds of rest, with dust in the side and none in the
+        // mid (`m = (l + r) / 2` is exactly zero): nothing to hold the side
+        // against, so the gain goes back up, not down.
+        let dust = [[1.0e-9; QUANTUM], [-1.0e-9; QUANTUM]];
+        for _ in 0..(8.0 * RATE / QUANTUM as f64) as usize {
+            let mut out = dust;
+            w.process(&mut out);
+        }
+        assert!(w.gain() > 0.95, "{}", w.gain());
     }
 
     #[test]
