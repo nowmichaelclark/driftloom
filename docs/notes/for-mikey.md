@@ -31,14 +31,19 @@ the points where the next step is yours.
 
 ## Phone and tablet
 
+- **The testers' steps (item 98, session 01):** `docs/notes/98-testers.md` has
+  one paste for your Moto, one for your tablet and one for the friends'
+  Pixels on GrapheneOS (JIT allowed, then blocked). Each ends with the five
+  Diagnostics lines to copy back: build, cores, busiest, slow, engine. The
+  stall test on the shipped app is clean (the PR's table); the phones are the
+  rest of promise 1.
 - **The app with the JavaScript gone (item 97, v152):** on the Moto and the
   tablet, play a few loops, Next a few times, a long loop and the screen
   off; Diagnostics should read `late: 0  missed: 0  dropped: 0`. Trouble
   means a revert of that PR.
 - **The too-slow line never shows on the tablet (item 100, v153):** play ten
   minutes on the tablet on lite; the card should stay, and Diagnostics
-  should read `slow: no`. If "This browser is too slow to play Driftloom
-  smoothly." shows there, tell the hands the `slow:` line.
+  should read `slow: no`. If "This browser is too slow." shows there, tell the hands the `slow:` line.
 - **The friend's Pixel 9 on GrapheneOS (item 100):** with JIT off for the
   site the line should show within about a minute of playing; send its
   `slow:` and `busiest:` lines either way.

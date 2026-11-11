@@ -13,7 +13,10 @@
 // does what a listener does (a tap, a key, a slider) and checks that the
 // core plays what the page shows:
 //
-//   Play                the core plays the loop on the card (its name)
+//   Play                the core plays the loop on the card (its name); the
+//                       first loop is a fixed share code (tools/stalls.mjs's
+//                       shatter), pasted as a listener would, so no row
+//                       depends on a random draw
 //   info card           name, key, tempo as the core describes the loop
 //   cover               drawn
 //   cursor              lit from the core's steps, moving
@@ -51,6 +54,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { decodeSong } from '../js/share.js';
+import { LOOPS } from './stalls.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -215,8 +219,11 @@ async function main() {
     };
 
     console.log(`\nThe app's controls and displays on the core's player (queue item 94b)`);
-    // Play.
-    await page.click('#playBtn');
+    // Play, from a fixed loop: a share code pasted through the page's own
+    // "paste a code" (the clipboard is the harness's), which plays it. A
+    // loop drawn at random could be a sparse one, or ring on after a mute.
+    await ev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+    await clickId('pasteCode');
     await sleep(3500);
     let p = await probe();
     const first = await name();
@@ -237,8 +244,7 @@ async function main() {
       await sleep(70);
     }
     row('cursor: lit and moving with the steps', seen.size >= 3 && !seen.has(-1), [...seen].join(','));
-    // The first loop is drawn at random, and a sparse one can rest for a
-    // second: listen for six.
+    // Listen for six seconds: even this loop has its rests.
     row('sound: something plays', (await level(6000)) > 1e-4);
 
     // Pause and Play again.
@@ -291,8 +297,13 @@ async function main() {
     // Mutes: all five off, then on.
     const mutes = () => ev(() => { for (const b of document.querySelectorAll('.layer .btn-on')) b.click(); });
     await mutes();
-    await sleep(1800);
-    const muted = await level(800);
+    // A tail still ringing (the room's reverb) is not yet silence: wait for
+    // it to fall, up to twelve seconds, rather than read once.
+    let muted = Infinity;
+    for (let t = 0; t < 12000 && !(muted < 2e-3); t += 500) {
+      await sleep(500);
+      muted = await level(400);
+    }
     await mutes();
     await sleep(1500);
     const back = await level(1500);
@@ -510,7 +521,7 @@ async function main() {
     const none = await plain((tab) => tab.addInitScript(() => { Object.defineProperty(globalThis, 'WebAssembly', { value: undefined }); }));
     row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'This browser can\'t play Driftloom; try a recent Chrome, Firefox or Safari' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
     const lost = await plain((tab) => tab.route('**/js/dlplayer.wasm', (r) => r.abort('failed')));
-    row('plain line: a module that never arrives says to reload', lost.shown && lost.text === 'Driftloom couldn\'t load. Check the connection and reload.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
+    row('plain line: a module that never arrives says to refresh', lost.shown && lost.text === 'Please refresh.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
   } finally {
     await browser.close();
     server.close();

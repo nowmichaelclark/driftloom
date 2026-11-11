@@ -20,10 +20,8 @@
 // What is counted, per view (from its first action to the end of its stay):
 //
 //   long tasks   how many, the longest (ms), and the biggest part of it
-//   gap ms       the longest the page went without a clock tick
 //   late notes   notes handed to the core after their start time (the
 //                core's own `late` counter beside it, in brackets)
-//   late ticks   the scheduler's counter (Diagnostics `lateTicks`)
 //   fill-ins     frames the audio device had to fill (playoutStats): the
 //                audio thread itself ran late, whatever the page did
 //   dropped      notes the core dropped (Diagnostics' `dropped`, by cause
@@ -395,8 +393,6 @@ async function phase(tab, engine, ph, loop) {
   const coreLate = before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null;
   // On the player no note passes the page: the core's own count.
   const late = coreLate;
-  let gap = 0;
-  for (let i = 1; i < after.ticks.length; i++) gap = Math.max(gap, after.ticks[i] - after.ticks[i - 1]);
   const lt = longTasks(after.frames);
   const leads = handed.map(([t, h]) => t - h);
   const early = after.early.map(([e]) => e);
@@ -409,11 +405,8 @@ async function phase(tab, engine, ph, loop) {
     reads: readbacks(after.reads),
     view: ph.view,
     longTasks: lt.count, longestMs: lt.longest, what: lt.what,
-    // The player has no clock on the page (queue item 94b).
-    gapMs: '-',
     lateNotes: late,
     coreLate,
-    lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs,
     fills: after.fills != null && mark.fills != null ? after.fills - mark.fills : null,
     notes: handed.length,
   };
@@ -519,7 +512,7 @@ async function session(opts, chromePath, loop, engine, throttle, quality, graphi
         continue;
       }
       rows.push({ loop: name, engine, throttle, quality, graphics, ...r });
-      log(`  ${r.view}: long tasks ${r.longTasks} (longest ${r.longestMs} ms${r.what ? `, ${r.what}` : ''}), gap ${r.gapMs} ms, late notes ${r.lateNotes}${r.coreLate != null ? ` (core ${r.coreLate})` : ''}, dropped ${r.dropped}, late ticks ${r.lateTicks} (worst ${r.worstLateMs} ms), fill-ins ${r.fills}, lead ${r.minLeadMs} ms${r.minEarlyMs != null ? ` (core ${r.minEarlyMs}, render-ahead ${r.reachMs})` : ''}, readbacks ${r.reads.n} (${r.reads.ms} ms, longest ${r.reads.worst}; GPU ${r.reads.gpu}, ${r.reads.gpuMs} ms)`);
+      log(`  ${r.view}: long tasks ${r.longTasks} (longest ${r.longestMs} ms${r.what ? `, ${r.what}` : ''}), late notes ${r.lateNotes}${r.coreLate != null ? ` (core ${r.coreLate})` : ''}, dropped ${r.dropped}, fill-ins ${r.fills}, lead ${r.minLeadMs} ms${r.minEarlyMs != null ? ` (core ${r.minEarlyMs}, render-ahead ${r.reachMs})` : ''}, readbacks ${r.reads.n} (${r.reads.ms} ms, longest ${r.reads.worst}; GPU ${r.reads.gpu}, ${r.reads.gpuMs} ms)`);
     }
     if (opts.changes) for (const c of await changes(tab, engine, loop)) rows.push({ loop: name, engine, throttle, quality, graphics, change: true, ...c });
     if (opts.report) {
@@ -535,15 +528,15 @@ async function session(opts, chromePath, loop, engine, throttle, quality, graphi
 function log(s) { process.stderr.write(`${s}\n`); }
 
 function table(rows) {
-  const head = ['loop', 'cpu', 'quality', 'graphics', 'view', 'long tasks', 'longest ms', 'what', 'longest tick gap ms', 'late notes (core)', 'dropped',
-    'late ticks', 'fill-ins', 'closest lead ms (at the core)', 'readbacks: n / ms / longest (GPU n)'];
+  const head = ['loop', 'cpu', 'quality', 'graphics', 'view', 'long tasks', 'longest ms', 'what', 'late notes (core)', 'dropped',
+    'fill-ins', 'closest lead ms (at the core)', 'readbacks: n / ms / longest (GPU n)'];
   const out = [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`];
   const changed = rows.filter((r) => r.change);
   for (const r of rows.filter((x) => !x.change)) {
     const cells = r.error
-      ? [r.loop, `${r.throttle}x`, r.quality, r.graphics || '-', r.view || 'session', r.error, '', '', '', '', '', '', '', '', '']
-      : [r.loop.replace(/-.*/, ''), `${r.throttle}x`, r.quality, r.graphics, r.view, r.longTasks, r.longestMs, r.what || '-', r.gapMs,
-        `${r.lateNotes}${r.coreLate != null ? ` (${r.coreLate})` : ''}`, r.dropped, r.lateTicks, r.fills ?? '-',
+      ? [r.loop, `${r.throttle}x`, r.quality, r.graphics || '-', r.view || 'session', r.error, '', '', '', '', '', '', '']
+      : [r.loop.replace(/-.*/, ''), `${r.throttle}x`, r.quality, r.graphics, r.view, r.longTasks, r.longestMs, r.what || '-',
+        `${r.lateNotes}${r.coreLate != null ? ` (${r.coreLate})` : ''}`, r.dropped, r.fills ?? '-',
         `${r.minLeadMs ?? '-'}${r.minEarlyMs != null ? ` (${r.minEarlyMs})` : ''}`,
         `${r.reads.n} / ${r.reads.ms} / ${r.reads.worst} (${r.reads.gpu})`];
     out.push(`| ${cells.join(' | ')} |`);

@@ -11,7 +11,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v153';
+const BUILD = 'v154';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -28,12 +28,12 @@ const CANT_PLAY = "This browser can't play Driftloom; try a recent Chrome, Firef
 // And where the browser could run the core but the core did not arrive (a
 // first visit with no connection, a server error): not the browser's fault,
 // so not the line above.
-const NOT_LOADED = "Driftloom couldn't load. Check the connection and reload.";
+const NOT_LOADED = 'Please refresh.';
 // And one that plays it, but too slowly even on lite (queue item 100; Mikey,
 // 2026-11-10): the line, and where the Driftloom app is. The link is empty
 // until the Android app has a page (F-Droid, queue item 107); the second
 // sentence shows only when it is set.
-const TOO_SLOW = 'This browser is too slow to play Driftloom smoothly.';
+const TOO_SLOW = 'This browser is too slow.';
 const GET_APP = 'Get the Driftloom app.';
 const APP_LINK = '';
 
@@ -485,8 +485,7 @@ function armNext() {
 // has the phones it goes wrong on. Begun each time the page is hidden and
 // kept as it stood when it is shown again, so a tester can lock the phone
 // for a couple of minutes, unlock, and copy it from Diagnostics: how long
-// it was hidden, the longest the clock went without a tick, the notes that
-// reached the core late, the scheduler's late ticks, the times the audio
+// it was hidden, the notes that reached the core late, the times the audio
 // device had to fill in (where the browser counts them: a starved audio
 // thread, not a starved page), and every change in the audio context's
 // state and in what the phone was told is playing.
@@ -544,7 +543,6 @@ function awayReport() {
   const a = state.away;
   if (!a) return ['while hidden: not hidden yet'];
   const to = a.to ?? performance.now();
-  const s = state.engine && state.engine.spell;
   const late = a.late != null && (a.lateTo ?? coreLate()) != null ? Math.max(0, (a.lateTo ?? coreLate()) - a.late) : '-';
   const fills = a.fills != null && (a.fillsTo ?? fillIns()) != null ? Math.max(0, (a.fillsTo ?? fillIns()) - a.fills) : '-';
   const events = a.events.filter((e) => /^audio /.test(e));
@@ -553,10 +551,7 @@ function awayReport() {
     `while hidden (every time): ${awayAll.spells} times, ${(awayAll.ms / 1000).toFixed(1)} s, late notes ${awayAll.late}`,
     'while hidden (the last time):',
     `hiddenFor: ${((to - a.from) / 1000).toFixed(1)} s`,
-    `hiddenWorstGapMs: ${s ? s.worstGapMs : '-'}`,
     `hiddenLateNotes: ${late}`,
-    `hiddenLateTicks: ${s ? s.lateTicks : '-'}`,
-    `hiddenWorstLateMs: ${s ? s.worstLateMs : '-'}`,
     `hiddenFillIns: ${fills}`,
     `hiddenAudio: ${a.audio}${events.length ? `; ${events.join('; ')}` : ' throughout'}`,
     `hiddenMedia: ${a.session}${media.length ? `; ${media.join('; ')}` : ' throughout'}`,
@@ -604,16 +599,15 @@ function pageLog() {
 // A field report for the screen on (queue item 40): since Diagnostics was
 // last copied, for each view, how long it was on screen and what happened
 // meanwhile -- the main thread's long tasks (the page doing something for
-// more than 50 ms at a go), the longest the clock went without a tick, the
-// notes that reached the core late, the scheduler's late ticks (music
-// skipped) and the audio device's fill-ins (a starved audio thread). Hidden
+// more than 50 ms at a go), the notes that reached the core late, those the
+// core left out or dropped, and the audio device's fill-ins (a starved audio thread). Hidden
 // time is the "while hidden" report's, not any view's.
 const views = { since: performance.now(), stats: {}, open: null, longTasks: false };
 
 function viewStats(view) {
   if (!views.stats[view]) {
     views.stats[view] = {
-      ms: 0, longTasks: 0, longestTask: 0, worstGapMs: 0, lateNotes: 0, lateTicks: 0, fillIns: null,
+      ms: 0, longTasks: 0, longestTask: 0, lateNotes: 0, fillIns: null,
       // Queue item 41: the late notes by why, and the dropped ones by cause.
       missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0),
     };
@@ -628,15 +622,11 @@ function viewFlush(hiding = false) {
   const late = coreLate();
   const counts = coreCounts();
   const fills = fillIns();
-  const ticks = state.engine ? state.engine.lateTicksEver : 0;
-  const gap = state.engine ? state.engine.takeGap() : 0;
   const o = views.open;
   if (o && (hiding || !document.hidden)) {
     const v = viewStats(o.view);
     v.ms += now - o.at;
-    v.worstGapMs = Math.max(v.worstGapMs, gap);
     if (late != null && o.late != null) v.lateNotes += Math.max(0, late - o.late);
-    v.lateTicks += Math.max(0, ticks - o.ticks);
     if (fills != null && o.fills != null) v.fillIns = (v.fillIns || 0) + Math.max(0, fills - o.fills);
     // A output built again meanwhile starts its counts from zero: only what
     // went up is counted.
@@ -647,7 +637,7 @@ function viewFlush(hiding = false) {
       counts.by.forEach((n, i) => { v.droppedBy[i] += Math.max(0, n - (a.by[i] || 0)); });
     }
   }
-  views.open = document.hidden ? null : { view: state.view, at: now, late, fills, ticks, counts };
+  views.open = document.hidden ? null : { view: state.view, at: now, late, fills, counts };
 }
 
 function watchLongTasks() {
@@ -677,8 +667,8 @@ function viewsReport() {
     const why = v.lateNotes ? ` (left out ${v.missed})` : '';
     const dropped = v.dropped
       ? ` (${DROP_CAUSES.map((c, i) => [c, v.droppedBy[i]]).filter(([, n]) => n).map(([c, n]) => `${c} ${n}`).join(', ')})` : '';
-    lines.push(`  ${name}: ${clock(v.ms / 1000)} on screen, ${long}, longest tick gap ${v.worstGapMs} ms, `
-      + `late notes ${v.lateNotes}${why}, dropped ${v.dropped}${dropped}, late ticks ${v.lateTicks}, fill-ins ${v.fillIns ?? '-'}`);
+    lines.push(`  ${name}: ${clock(v.ms / 1000)} on screen, ${long}, `
+      + `late notes ${v.lateNotes}${why}, dropped ${v.dropped}${dropped}, fill-ins ${v.fillIns ?? '-'}`);
   }
   return lines;
 }
@@ -1844,7 +1834,7 @@ function wire() {
     if (state.media) push(state.media.report());
     else lines.push('media: not built yet (press Play)');
     if (state.engine && state.engine.spec) push(state.engine.report());
-    else lines.push('scheduler: not built yet (press Play)');
+    else lines.push('player: not built yet (press Play)');
     lines.push(...awayReport());
     lines.push(...pageLog());
     lines.push(...viewsReport());

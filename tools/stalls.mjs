@@ -32,16 +32,10 @@
 // its last stall), as the listener has it:
 //
 //   gap ms       the longest the page went without a tick (the stall, seen).
-//   late ticks   the engine's own counter (Diagnostics `lateTicks`,
-//                `worstLateMs`): the scheduler woke after a step it should
-//                already have queued, so its steps were skipped.
 //   late notes   the core's own count of notes it took late (Diagnostics'
 //                engine line): the page hands the player no notes.
-//   silent s     music that never sounded: gaps between notes that touch a
-//                stall (or the second after it), beyond the longest gap in
-//                the same loop unstalled (the control run). Rests the loop
-//                has anyway can still land there, so read it beside late
-//                ticks: with none, nothing was skipped.
+//   missed, dropped   the core's own counts of notes left out and dropped
+//                (the same line). Promise 1: all zero.
 //   fill-ins     frames the audio device had to fill (AudioContext
 //                playoutStats): the audio thread itself ran late.
 //
@@ -342,6 +336,18 @@ export async function openTab(b, url, throttle, { sources = [], setup = null } =
     }
     const late = String(out.engine || '').match(/late: (\d+)/);
     out.coreLate = late ? Number(late[1]) : null;
+    // The page's own measure of the audio thread (queue item 87b): the
+    // busiest quarter-second as a share of real time, over the last 20 s and
+    // the last 60 s. Over 100% the output runs dry: an underrun. Chromium
+    // 153 has no `playoutStats`, so this is what the tool has for them.
+    const busy = String(out.busiest || '').match(/^(\S+(?: yet)?) over [\d.]+ s, (\S+(?: yet)?) over/);
+    out.busy20 = busy && /%$/.test(busy[1]) ? parseInt(busy[1], 10) : null;
+    out.ran = (String(out.busiest || '').match(/\((full|lite);/) || [])[1] || null;
+    out.busy60 = busy && /%$/.test(busy[2]) ? parseInt(busy[2], 10) : null;
+    const missed = String(out.engine || '').match(/missed: (\d+)/);
+    out.coreMissed = missed ? Number(missed[1]) : null;
+    const dropped = String(out.engine || '').match(/dropped: (\d+)/);
+    out.coreDropped = dropped ? Number(dropped[1]) : null;
     return out;
   };
   return { send, evaluate, press, diagnostics, targetId: target.targetId };
@@ -397,20 +403,21 @@ async function measure(tab, engine, { label, run, settle = 4000, control = null 
   const from = mark.ctx + 0.5;
   // Notes are decided ahead, so the last few seconds are not all in yet.
   const to = after.ctx;
-  let gap = 0;
-  for (let i = 1; i < after.ticks.length; i++) gap = Math.max(gap, after.ticks[i] - after.ticks[i - 1]);
   const quiet = silent(events, from, to, control ? control.worstGap + 0.05 : Infinity, after.windows);
-  const coreLate = before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null;
+  const since = (a, b) => (a != null && b != null ? b - a : null);
+  const coreLate = since(before.coreLate, diag.coreLate);
   // The player's notes never pass the page: its late notes are the core's
   // count, and its silences are not seen from here.
   const player = engine === 'player';
   return {
     label, ...info,
-    // The player has no clock on the page (queue item 94b).
-    gapMs: engine === 'player' ? '-' : Math.round(gap),
-    lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs,
     lateNotes: player ? coreLate : lateCount(events, from, to, engine),
     coreLate,
+    missed: since(before.coreMissed, diag.coreMissed),
+    dropped: since(before.coreDropped, diag.coreDropped),
+    busy: Math.max(diag.busy20 ?? 0, diag.busy60 ?? 0),
+    slow: diag.slow,
+    ran: diag.ran,
     silentS: control && !player ? +quiet.sum.toFixed(2) : null,
     worstGap: +quiet.worst.toFixed(3),
     fills: after.fills != null && mark.fills != null ? after.fills - mark.fills : null,
@@ -459,14 +466,26 @@ async function session(opts, chromePath, loop, engine, throttle) {
   const rows = [];
   try {
     const tab = await openTab(b, engineUrl(opts.port, engine), throttle);
-    if (opts.quality === 'lite') {
-      const on = await tab.evaluate("document.getElementById('liteMode').checked");
-      if (!on) await tab.evaluate("document.getElementById('liteMode').click()");
-    }
     await tab.press('#playBtn');
     await sleep(1500);
     const name = await loadCode(tab, LOOPS[loop].code);
     await sleep(3000);
+    // The quality asked for, by the switch a listener has (the page guesses
+    // lite on four cores or fewer, as this machine has, until told): a
+    // choice of the listener's own, which the page's automatic switch
+    // leaves alone. A new core is built, and the loop plays again from its
+    // top.
+    {
+      const lite = await tab.evaluate("document.getElementById('liteMode').getAttribute('aria-checked') === 'true'");
+      // Already as asked by the page's guess is not the listener's choice
+      // yet: switch away and back, so the page's automatic switch (it moves
+      // a guessed lite up to full after a minute of room to spare) leaves it.
+      const clicks = lite !== (opts.quality === 'lite') ? 1 : 2;
+      for (let i = 0; i < clicks; i++) {
+        await tab.evaluate("document.getElementById('liteMode').click()");
+        await sleep(4000);
+      }
+    }
     // Hidden: another tab in front, as perf.mjs does it.
     const { targetId } = await b.send('Target.createTarget', { url: 'about:blank', newWindow: false });
     await b.send('Target.activateTarget', { targetId });
@@ -475,8 +494,8 @@ async function session(opts, chromePath, loop, engine, throttle) {
     if (vis !== 'hidden') throw new Error(`the tab is ${vis}, not hidden`);
     const control = await measure(tab, engine, { label: 'control', run: async () => { await sleep(30000); return {}; }, settle: 0 });
     rows.push(control);
-    const base = { loop: name, engine, throttle };
-    log(`  control: worst note gap ${control.worstGap} s, ${control.notes} notes, late ticks ${control.lateTicks}`);
+    const base = { loop, engine, quality: opts.quality, throttle };
+    log(`  control: worst note gap ${control.worstGap} s, ${control.notes} notes`);
     if (opts.modes.includes('jumps')) for (const r of await jumps(tab, engine)) rows.push({ ...base, ...r });
     for (const mode of opts.modes.filter((m) => m !== 'jumps')) {
       for (const len of opts.lengths) {
@@ -518,7 +537,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
             },
           });
           rows.push({ ...base, ...row });
-          log(`  ${row.label}: ${row.error ? row.error : `gap ${row.gapMs} ms, late ticks ${row.lateTicks} (worst ${row.worstLateMs} ms), late notes ${row.lateNotes}${row.coreLate != null ? ` (core ${row.coreLate})` : ''}, silent ${row.silentS} s, fill-ins ${row.fills}`}`);
+          log(`  ${row.label}: ${row.error ? row.error : `late notes ${row.lateNotes}, missed ${row.missed ?? '-'}, dropped ${row.dropped ?? '-'}, busiest ${row.busy}%, fill-ins ${row.fills ?? '-'}`}`);
         }
       }
     }
@@ -528,8 +547,9 @@ async function session(opts, chromePath, loop, engine, throttle) {
       await sleep(1500);
       log((await tab.diagnostics()).text);
     }
-    control.loop = name;
+    control.loop = loop;
     control.engine = engine;
+    control.quality = opts.quality;
     control.throttle = throttle;
     return rows;
   } finally {
@@ -540,14 +560,14 @@ async function session(opts, chromePath, loop, engine, throttle) {
 function log(s) { process.stderr.write(`${s}\n`); }
 
 function table(rows) {
-  const head = ['loop', 'engine', 'cpu', 'stall', 'longest gap ms', 'late ticks', 'worst late ms', 'late notes', 'silent s', 'fill-ins'];
+  const head = ['loop', 'quality', 'cpu', 'stall', 'late notes', 'missed', 'dropped', 'busiest %', 'slow', 'fill-ins'];
   const out = [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`];
   const jumped = rows.filter((r) => r.label && r.label.startsWith('jump'));
   rows = rows.filter((r) => !jumped.includes(r));
   for (const r of rows) {
     const cells = r.error
-      ? [r.loop, r.engine, `${r.throttle}x`, r.label, r.error, '', '', '', '', '']
-      : [r.loop, r.engine, `${r.throttle}x`, r.label, r.gapMs, r.lateTicks, r.worstLateMs, r.lateNotes, r.silentS ?? '-', r.fills ?? '-'];
+      ? [r.loop, r.quality, `${r.throttle}x`, r.label, r.error, '', '', '', '', '']
+      : [r.loop, r.ran && r.ran !== r.quality ? `${r.quality} -> ${r.ran}` : r.quality, `${r.throttle}x`, r.label, r.lateNotes ?? '-', r.missed ?? '-', r.dropped ?? '-', r.busy ?? '-', r.slow ?? '-', r.fills ?? '-'];
     out.push(`| ${cells.join(' | ')} |`);
   }
   if (jumped.length) {
@@ -569,7 +589,7 @@ async function main() {
         rows.push(...await session(opts, chromePath, loop, engine, throttle));
       } catch (err) {
         log(`  failed: ${err.message}`);
-        rows.push({ loop, engine, throttle, label: 'session', error: err.message });
+        rows.push({ loop, engine, quality: opts.quality, throttle, label: 'session', error: err.message });
       }
     }
   } finally {

@@ -23,14 +23,10 @@
 //
 // Where each figure comes from:
 //
-//   late ticks        the page engine's own counter, read from Diagnostics
-//                     (`lateTicks`, `worstLateMs`): the scheduler woke after
-//                     a step it should already have queued. On the player
-//                     (the app's engine since queue item 94b) the page has
-//                     no scheduler and this is 0 by construction; what can
-//                     go wrong there is the core's own count, read from
-//                     Diagnostics' `engine:` line and reported beside it:
-//                     notes the core took late, left out or dropped.
+//   core notes        the core's own counts, read from Diagnostics'
+//                     `engine:` line: notes it took late, left out or
+//                     dropped (the page has no scheduler of its own since
+//                     queue item 97).
 //   device fill-ins   AudioContext.playoutStats (Chromium, behind a Blink
 //                     feature this tool turns on): frames the audio device
 //                     had to fill because the graph did not deliver in time.
@@ -313,7 +309,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // The core's late, left-out and dropped notes over a run's window, for the
 // log: nothing where Diagnostics gave none (the JavaScript synth).
-const coreNotes = (r) => (r.coreLate == null ? '' : ` (the core: late ${r.coreLate}, left out ${r.coreMissed}, dropped ${r.coreDropped})`);
+const coreNotes = (r) => (r.coreLate == null ? 'core: no counts' : `core: late ${r.coreLate}, left out ${r.coreMissed}, dropped ${r.coreDropped}`);
+const coreCounts = (r) => `${r.coreLate ?? '-'} / ${r.coreMissed ?? '-'} / ${r.coreDropped ?? '-'}`;
 
 // The whole machine's CPU over a window, from /proc/stat (Linux only):
 // how busy it was, and how much the host took back (steal), each as a
@@ -986,7 +983,6 @@ async function run(opts, chromePath, cfg) {
       await b.send('Target.activateTarget', { targetId: tab.targetId });
     }
     Object.assign(result, perSecond(m0, m1, s0, s1, trace, cfg.seconds), {
-      lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs, ticks: diag.ticks, clock: diag.clock,
       // The core's late, left-out and dropped notes over the window.
       coreLate: diag.coreLate == null ? null : diag.coreLate - (diag0.coreLate || 0),
       coreMissed: diag.coreMissed == null ? null : diag.coreMissed - (diag0.coreMissed || 0),
@@ -1309,8 +1305,8 @@ function report(data, opts) {
   const vis = runs.filter((r) => r.part === 'matrix' && !r.error);
   if (vis.length) {
     out.push('\n### Playing, visible (per second of playback)\n');
-    out.push(table(['loop', 'quality', 'throttle', 'late ticks', 'worst late ms', 'device fill-ins', 'audio render ms', 'worst callback ms', 'renderer CPU ms', 'main thread ms', 'script ms', 'layout+style ms', 'paint ms', 'long tasks', 'nodes/s', 'connects/s', 'param calls/s', 'tap to sound ms (cold / warm)'],
-      vis.map((r) => [r.loop, r.quality, `${r.throttle}x`, r.lateTicks, r.worstLateMs, r.fillEvents ?? '-', f1(r.renderMs), `${f1(r.worstCallbackMs)} / ${f1(r.p99CallbackMs)}`,
+    out.push(table(['loop', 'quality', 'throttle', 'core late / left out / dropped', 'device fill-ins', 'audio render ms', 'worst callback ms', 'renderer CPU ms', 'main thread ms', 'script ms', 'layout+style ms', 'paint ms', 'long tasks', 'nodes/s', 'connects/s', 'param calls/s', 'tap to sound ms (cold / warm)'],
+      vis.map((r) => [r.loop, r.quality, `${r.throttle}x`, coreCounts(r), r.fillEvents ?? '-', f1(r.renderMs), `${f1(r.worstCallbackMs)} / ${f1(r.p99CallbackMs)}`,
         f0(r.processMs), f1(r.taskMs), f1(r.scriptMs), f1(r.layoutMs + r.styleMs), f1(r.paintMs), r.longTasks, f0(r.nodesPerSec), f0(r.connectsPerSec), f0(r.paramsPerSec),
         `${f0(r.coldMs)} / ${f0(r.warmMs)}`])));
     out.push('\n"worst callback" is the slowest audio render callback, then the 99th percentile, against a deadline of one buffer.');
@@ -1318,8 +1314,8 @@ function report(data, opts) {
   const hid = runs.filter((r) => r.part === 'hidden' && !r.error);
   if (hid.length) {
     out.push('\n### Playing, tab hidden (per second of playback)\n');
-    out.push(table(['loop', 'quality', 'throttle', 'visibility', 'late ticks', 'worst late ms', 'device fill-ins', 'audio render ms', 'renderer CPU ms', 'main thread ms', 'script ms', 'paint ms', 'nodes/s'],
-      hid.map((r) => [r.loop, r.quality, `${r.throttle}x`, r.visibility, r.lateTicks, r.worstLateMs, r.fillEvents ?? '-', f1(r.renderMs), f0(r.processMs), f1(r.taskMs), f1(r.scriptMs), f1(r.paintMs), f0(r.nodesPerSec)])));
+    out.push(table(['loop', 'quality', 'throttle', 'visibility', 'core late / left out / dropped', 'device fill-ins', 'audio render ms', 'renderer CPU ms', 'main thread ms', 'script ms', 'paint ms', 'nodes/s'],
+      hid.map((r) => [r.loop, r.quality, `${r.throttle}x`, r.visibility, coreCounts(r), r.fillEvents ?? '-', f1(r.renderMs), f0(r.processMs), f1(r.taskMs), f1(r.scriptMs), f1(r.paintMs), f0(r.nodesPerSec)])));
   }
   const muted = runs.filter((r) => r.part === 'muted' && !r.error);
   if (muted.length) {
@@ -1360,7 +1356,7 @@ function abReport(data, opts) {
   const figs = [['audio render ms', (r) => r.renderMs], ['main thread ms', (r) => r.taskMs], ['script ms', (r) => r.scriptMs],
     ['paint ms', (r) => r.paintMs], ['live audio nodes', (r) => r.audioHandlers], ['renderer CPU ms', (r) => r.processMs],
     ['nodes made /s', (r) => r.nodesPerSec]];
-  out.push(table(['part', 'quality', 'throttle', ...figs.flatMap(([n]) => [`${n} A`, 'B']), 'late ticks A / B', 'fill-ins A / B'],
+  out.push(table(['part', 'quality', 'throttle', ...figs.flatMap(([n]) => [`${n} A`, 'B']), 'core late A / B', 'fill-ins A / B'],
     groups.map((g) => {
       const [part, quality, throttle] = g.split('|');
       const side = (x) => ok.filter((r) => r.side === x && r.part === part && r.quality === quality && String(r.throttle) === throttle);
@@ -1368,7 +1364,7 @@ function abReport(data, opts) {
       const sum = (xs, f) => xs.reduce((a, r) => a + (f(r) || 0), 0);
       const [A, B] = [side('A'), side('B')];
       return [part, quality, `${throttle}x`, ...figs.flatMap(([, f]) => [f1(mean(A, f)), f1(mean(B, f))]),
-        `${sum(A, (r) => r.lateTicks)} / ${sum(B, (r) => r.lateTicks)}`, `${sum(A, (r) => r.fillEvents)} / ${sum(B, (r) => r.fillEvents)}`];
+        `${sum(A, (r) => r.coreLate)} / ${sum(B, (r) => r.coreLate)}`, `${sum(A, (r) => r.fillEvents)} / ${sum(B, (r) => r.fillEvents)}`];
     })));
   // Audio health by side: fill-ins, and the render quanta that ran long
   // (see --trace-dir), with which side ran first in each pair.
@@ -1480,7 +1476,7 @@ async function main() {
       try {
         const r = { ...(await run(optsA, chromePath, cfg)), side: 'A', first };
         data.runs.push(r);
-        log(`  late ${r.lateTicks}${coreNotes(r)}, fill-ins ${r.fillEvents}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms`);
+        log(`  ${coreNotes(r)}, fill-ins ${r.fillEvents}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms`);
       } catch (err) {
         log(`  failed: ${err.message}`);
         data.runs.push({ ...cfg, loop: cfg.loop.name, error: err.message, side: 'A', first });
@@ -1491,7 +1487,7 @@ async function main() {
       try {
         const r = { ...(await run(optsB, chromePath, cfg)), ...(optsA ? { side: 'B', first } : {}) };
         data.runs.push(r);
-        log(`  late ${r.lateTicks}${coreNotes(r)}, fill-ins ${r.fillEvents}${r.fillTimes && r.fillTimes.length ? ` at ${r.fillTimes.map((f) => `${f.inWindow}s (ctx ${f.ctxTime}s)`).join(', ')}` : ''}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms, worst callback ${(r.worstCallbackMs ?? 0).toFixed(2)} ms, main ${f1(r.taskMs)} ms/s, nodes ${f0(r.nodesPerSec)}/s, tap ${f0(r.coldMs)}/${f0(r.warmMs)} ms`);
+        log(`  ${coreNotes(r)}, fill-ins ${r.fillEvents}${r.fillTimes && r.fillTimes.length ? ` at ${r.fillTimes.map((f) => `${f.inWindow}s (ctx ${f.ctxTime}s)`).join(', ')}` : ''}, render ${f1(r.renderMs)} ms/s, worst quantum ${(r.worstRenderMs ?? 0).toFixed(2)} ms, worst callback ${(r.worstCallbackMs ?? 0).toFixed(2)} ms, main ${f1(r.taskMs)} ms/s, nodes ${f0(r.nodesPerSec)}/s, tap ${f0(r.coldMs)}/${f0(r.warmMs)} ms`);
       } catch (err) {
         log(`  failed: ${err.message}`);
         data.runs.push({ ...cfg, loop: cfg.loop.name, error: err.message, ...(optsA ? { side: 'B', first } : {}) });
