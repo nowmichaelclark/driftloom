@@ -117,7 +117,7 @@ const lateOf = (text) => {
 const line = (text, key) => (text.match(new RegExp(`^${key}: .*$`, 'm')) || [''])[0];
 // The plain line in the card's place, if it shows (queue item 100).
 const plain = (page) => page.evaluate(() => { const l = document.getElementById('plainLine'); return l && !l.hidden ? l.textContent.trim() : null; });
-const TOO_SLOW = 'This browser is too slow to play Driftloom smoothly.';
+const TOO_SLOW = 'This browser is too slow.';
 async function neverSlow(page, text) {
   const shown = await plain(page);
   check('the too-slow line never shows', shown === null && /^slow: no$/m.test(text), `${shown} / ${line(text, 'slow')}`);

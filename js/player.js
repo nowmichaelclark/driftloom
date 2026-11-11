@@ -109,11 +109,6 @@ export class PlayerEngine {
     this.visualQueue = [];
     this.visualOffset = 0;
     this.latency = null;
-    // For Diagnostics, which keeps the lines a page with a scheduler of its
-    // own had (the tools and the testers' reports read them): this page has
-    // none, so no tick is ever late and no hidden spell starves one.
-    this.lateTicksEver = 0;
-    this.spell = null;
     // What Play must ask the core: 'load' (a loop not yet given it),
     // 'resumed' (the same loop again on a new core: the quality switch), or
     // null (the loop it has stopped, to go on with).
@@ -411,10 +406,6 @@ export class PlayerEngine {
   // core's are the core's).
   clearMetrics() {}
 
-  takeGap() {
-    return 0;
-  }
-
   // What the core reports (CoreHost.onevents): its events, in order, and
   // the grids read with them.
   _receive(m) {
@@ -538,13 +529,7 @@ export class PlayerEngine {
     const p = c && c.playerAt;
     const states = ['idle', 'making a loop', 'its first pass', 'playing'];
     return {
-      clock: 'none (the core decides, on the audio thread)',
       hidden: typeof document !== 'undefined' && document.hidden,
-      lookahead: 0,
-      redecides: 0,
-      ticks: 0,
-      lateTicks: 0,
-      worstLateMs: 0,
       player: p ? `${states[p.state] || p.state}, step ${p.step}` : c ? 'starting' : 'waiting for the core',
       playerLoops: this.loops,
       playerEventsLost: c ? c.eventsLost : '-',

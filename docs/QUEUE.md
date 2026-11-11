@@ -203,9 +203,9 @@ lower tier; a plain line telling them to get the Driftloom app.
 **Built (v153):** on lite, however it was chosen, when 8 of the
 quarter-seconds in the last 20 s of playing each took longer than the
 audio it made, or the device filled in 8 times in them where the browser
-counts (`playoutStats`), the card's place says "This browser is too slow
-to play Driftloom smoothly." (Mikey, 2026-11-11: "This browser is too
-slow."; session 01 makes it) (`quality.stuck`, js/quality.js, which says
+counts (`playoutStats`), the card's place says "This browser is too slow."
+(Mikey, 2026-11-11; it first read "...too slow to play Driftloom smoothly",
+changed in v154) (`quality.stuck`, js/quality.js, which says
 how the line was set from the tablet's and the Pixel's figures). "Get the
 Driftloom app." follows as a link once `APP_LINK` in js/main.js is set
 (item 107); Play goes on, and Diagnostics reads `slow: lite past the line,
@@ -236,8 +236,8 @@ and notes from one more instance of `js/dlplayer.wasm` (`js/gen.js`; the
 request and the record are `js/request.js`), and `js/output.js` takes the
 core's node to the speakers. A browser that can't run the core shows the
 plain line in the card's place; a module that never arrives says
-"Driftloom couldn't load. Check the connection and reload." (Mikey,
-2026-11-11: "Please refresh."; session 01 makes it) The page's
+"Please refresh." (Mikey, 2026-11-11; v154, it first read "Driftloom
+couldn't load. Check the connection and reload.") The page's
 JavaScript went from 19,538 lines (835 KB) to 9,166 (363 KB), and 252 KB of
 `.wasm` less. The tools read what the generator decides from the tools'
 build (`tools/gen-lib.mjs`, `tools/build-core.sh --tools`): the generation

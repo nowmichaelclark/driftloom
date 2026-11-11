@@ -32,16 +32,10 @@
 // its last stall), as the listener has it:
 //
 //   gap ms       the longest the page went without a tick (the stall, seen).
-//   late ticks   the engine's own counter (Diagnostics `lateTicks`,
-//                `worstLateMs`): the scheduler woke after a step it should
-//                already have queued, so its steps were skipped.
 //   late notes   the core's own count of notes it took late (Diagnostics'
 //                engine line): the page hands the player no notes.
-//   silent s     music that never sounded: gaps between notes that touch a
-//                stall (or the second after it), beyond the longest gap in
-//                the same loop unstalled (the control run). Rests the loop
-//                has anyway can still land there, so read it beside late
-//                ticks: with none, nothing was skipped.
+//   missed, dropped   the core's own counts of notes left out and dropped
+//                (the same line). Promise 1: all zero.
 //   fill-ins     frames the audio device had to fill (AudioContext
 //                playoutStats): the audio thread itself ran late.
 //
@@ -342,6 +336,10 @@ export async function openTab(b, url, throttle, { sources = [], setup = null } =
     }
     const late = String(out.engine || '').match(/late: (\d+)/);
     out.coreLate = late ? Number(late[1]) : null;
+    const missed = String(out.engine || '').match(/missed: (\d+)/);
+    out.coreMissed = missed ? Number(missed[1]) : null;
+    const dropped = String(out.engine || '').match(/dropped: (\d+)/);
+    out.coreDropped = dropped ? Number(dropped[1]) : null;
     return out;
   };
   return { send, evaluate, press, diagnostics, targetId: target.targetId };
@@ -397,20 +395,18 @@ async function measure(tab, engine, { label, run, settle = 4000, control = null 
   const from = mark.ctx + 0.5;
   // Notes are decided ahead, so the last few seconds are not all in yet.
   const to = after.ctx;
-  let gap = 0;
-  for (let i = 1; i < after.ticks.length; i++) gap = Math.max(gap, after.ticks[i] - after.ticks[i - 1]);
   const quiet = silent(events, from, to, control ? control.worstGap + 0.05 : Infinity, after.windows);
-  const coreLate = before.coreLate != null && diag.coreLate != null ? diag.coreLate - before.coreLate : null;
+  const since = (a, b) => (a != null && b != null ? b - a : null);
+  const coreLate = since(before.coreLate, diag.coreLate);
   // The player's notes never pass the page: its late notes are the core's
   // count, and its silences are not seen from here.
   const player = engine === 'player';
   return {
     label, ...info,
-    // The player has no clock on the page (queue item 94b).
-    gapMs: engine === 'player' ? '-' : Math.round(gap),
-    lateTicks: diag.lateTicks, worstLateMs: diag.worstLateMs,
     lateNotes: player ? coreLate : lateCount(events, from, to, engine),
     coreLate,
+    missed: since(before.coreMissed, diag.coreMissed),
+    dropped: since(before.coreDropped, diag.coreDropped),
     silentS: control && !player ? +quiet.sum.toFixed(2) : null,
     worstGap: +quiet.worst.toFixed(3),
     fills: after.fills != null && mark.fills != null ? after.fills - mark.fills : null,
@@ -460,7 +456,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
   try {
     const tab = await openTab(b, engineUrl(opts.port, engine), throttle);
     if (opts.quality === 'lite') {
-      const on = await tab.evaluate("document.getElementById('liteMode').checked");
+      const on = await tab.evaluate("document.getElementById('liteMode').getAttribute('aria-checked') === 'true'");
       if (!on) await tab.evaluate("document.getElementById('liteMode').click()");
     }
     await tab.press('#playBtn');
@@ -475,8 +471,8 @@ async function session(opts, chromePath, loop, engine, throttle) {
     if (vis !== 'hidden') throw new Error(`the tab is ${vis}, not hidden`);
     const control = await measure(tab, engine, { label: 'control', run: async () => { await sleep(30000); return {}; }, settle: 0 });
     rows.push(control);
-    const base = { loop: name, engine, throttle };
-    log(`  control: worst note gap ${control.worstGap} s, ${control.notes} notes, late ticks ${control.lateTicks}`);
+    const base = { loop: name, engine, quality: opts.quality, throttle };
+    log(`  control: worst note gap ${control.worstGap} s, ${control.notes} notes`);
     if (opts.modes.includes('jumps')) for (const r of await jumps(tab, engine)) rows.push({ ...base, ...r });
     for (const mode of opts.modes.filter((m) => m !== 'jumps')) {
       for (const len of opts.lengths) {
@@ -518,7 +514,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
             },
           });
           rows.push({ ...base, ...row });
-          log(`  ${row.label}: ${row.error ? row.error : `gap ${row.gapMs} ms, late ticks ${row.lateTicks} (worst ${row.worstLateMs} ms), late notes ${row.lateNotes}${row.coreLate != null ? ` (core ${row.coreLate})` : ''}, silent ${row.silentS} s, fill-ins ${row.fills}`}`);
+          log(`  ${row.label}: ${row.error ? row.error : `late notes ${row.lateNotes}, missed ${row.missed ?? '-'}, dropped ${row.dropped ?? '-'}, fill-ins ${row.fills ?? '-'}`}`);
         }
       }
     }
@@ -530,6 +526,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
     }
     control.loop = name;
     control.engine = engine;
+    control.quality = opts.quality;
     control.throttle = throttle;
     return rows;
   } finally {
@@ -540,14 +537,14 @@ async function session(opts, chromePath, loop, engine, throttle) {
 function log(s) { process.stderr.write(`${s}\n`); }
 
 function table(rows) {
-  const head = ['loop', 'engine', 'cpu', 'stall', 'longest gap ms', 'late ticks', 'worst late ms', 'late notes', 'silent s', 'fill-ins'];
+  const head = ['loop', 'quality', 'cpu', 'stall', 'late notes', 'missed', 'dropped', 'fill-ins (underruns)'];
   const out = [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`];
   const jumped = rows.filter((r) => r.label && r.label.startsWith('jump'));
   rows = rows.filter((r) => !jumped.includes(r));
   for (const r of rows) {
     const cells = r.error
-      ? [r.loop, r.engine, `${r.throttle}x`, r.label, r.error, '', '', '', '', '']
-      : [r.loop, r.engine, `${r.throttle}x`, r.label, r.gapMs, r.lateTicks, r.worstLateMs, r.lateNotes, r.silentS ?? '-', r.fills ?? '-'];
+      ? [r.loop, r.quality, `${r.throttle}x`, r.label, r.error, '', '', '']
+      : [r.loop, r.quality, `${r.throttle}x`, r.label, r.lateNotes ?? '-', r.missed ?? '-', r.dropped ?? '-', r.fills ?? '-'];
     out.push(`| ${cells.join(' | ')} |`);
   }
   if (jumped.length) {
@@ -569,7 +566,7 @@ async function main() {
         rows.push(...await session(opts, chromePath, loop, engine, throttle));
       } catch (err) {
         log(`  failed: ${err.message}`);
-        rows.push({ loop, engine, throttle, label: 'session', error: err.message });
+        rows.push({ loop, engine, quality: opts.quality, throttle, label: 'session', error: err.message });
       }
     }
   } finally {

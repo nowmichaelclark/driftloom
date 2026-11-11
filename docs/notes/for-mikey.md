@@ -37,8 +37,7 @@ the points where the next step is yours.
   means a revert of that PR.
 - **The too-slow line never shows on the tablet (item 100, v153):** play ten
   minutes on the tablet on lite; the card should stay, and Diagnostics
-  should read `slow: no`. If "This browser is too slow to play Driftloom
-  smoothly." shows there, tell the hands the `slow:` line.
+  should read `slow: no`. If "This browser is too slow." shows there, tell the hands the `slow:` line.
 - **The friend's Pixel 9 on GrapheneOS (item 100):** with JIT off for the
   site the line should show within about a minute of playing; send its
   `slow:` and `busiest:` lines either way.
