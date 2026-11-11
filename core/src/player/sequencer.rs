@@ -481,6 +481,8 @@ impl Sequencer {
         #[allow(clippy::cast_precision_loss)]
         let stepf = step as f64;
 
+        // The loop's tuning, on every note this step sends (queue item 101b).
+        synth.set_tuning(s.tuning);
         // A new loop's setups, from its first step decided.
         if self.organ_change {
             Synth::organ_off(host, time, self.organ_fall.get());
@@ -999,7 +1001,7 @@ impl Sequencer {
         chord[..n].sort_unstable();
         let mut notes = [0.0; NOTES];
         for (x, &m) in notes.iter_mut().zip(&chord[..n]) {
-            *x = f64::from(m);
+            *x = f64::from(m) + lp.settings.tuning / 100.0;
         }
         host.event(CHORDS, crate::block::Event::retune(t, &notes[..n]));
     }

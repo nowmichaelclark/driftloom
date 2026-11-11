@@ -2,8 +2,8 @@
 // the loops it asks for, beside the vibes and the tempo (js/request.js,
 // `readRequest`). The game's and the ears' levers: any of item 54's choices
 // to one of its options, and the settings each choice draws by (the arc, the
-// tuned kick, subDuck, lateFloor, padSweep), the echo's time and the space
-// recipe's 32 (core/src/space.rs). `core/src/generator/request.rs` reads the
+// tuned kick, subDuck, lateFloor, padSweep), the echo's time, the loop's
+// tuning (0 holds it at A440) and the space recipe's 32 (core/src/space.rs). `core/src/generator/request.rs` reads the
 // same table, in the same order.
 //
 // **A pin chooses within what the loop could draw.** Every setting is held
@@ -25,9 +25,10 @@
 // the range of the option it plays.
 //
 // As text: `organ=on`, `tunedKick=long`, `arc.shape=deep`, `arc.period=240`,
-// `echo.beats=1`, `space.room=0.8` (numbers as JavaScript writes them).
+// `echo.beats=1`, `tuning.cents=0`, `space.room=0.8` (numbers as JavaScript
+// writes them).
 
-import { ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK } from './choices.js';
+import { ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, TUNING } from './choices.js';
 
 export class RequestError extends Error {}
 
@@ -86,6 +87,9 @@ const SETTINGS = [
   { name: 'echo.beats', values: ECHO.beats.map(([b]) => b) },
   // slowOpening's fade, in seconds (item 101a): shapes the slow kind only.
   { name: 'lateFloor.fade', range: LATEFLOOR.slow.fade },
+  // tuningOffset, in cents off A440 either way (item 101b); 0 holds a loop
+  // at A440, as a game's own sounds may need.
+  { name: 'tuning.cents', range: [-TUNING.cents[1], TUNING.cents[1]] },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [

@@ -82,6 +82,11 @@ export const PADSWEEP = {
 // choices and not counted among a loop's changes.
 export const ECHO = setting('echo', { beats: 'numpool', 'vibes.*': 'table' });
 
+// tuningOffset's settings (queue item 101b): how often a loop plays a little
+// off A440, and how far, drawn per loop outside the list of choices, as
+// echoTime is. The page reads them for the tuning pin's range.
+export const TUNING = setting('tuning', { share: 'num', cents: 'range', vibes: 'table' });
+
 // Every choice, in the file's order (the pins' order): its id and its
 // options, today's first.
 export const CHOICES = Object.keys(CHOICE_DATA).map((id) => ({ id, ...CHOICE_DATA[id] }));

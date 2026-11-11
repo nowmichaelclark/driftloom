@@ -39,7 +39,7 @@
 //! seed and the request make it, and the edits then overwrite the spec, as the
 //! app overwrites its own.
 
-use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, VIBE_COUNT};
+use super::data::{self, ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, TUNING, VIBE_COUNT};
 use super::js;
 use super::theory::SCALES;
 use crate::space;
@@ -865,7 +865,7 @@ const _: () = assert!(PINS_MAX <= 128, "the pins' bits are a u128");
 
 /// The settings' pins, by number from `SETTING_PINS` (`js/pins.js`, the
 /// same order; append only).
-pub const SETTINGS: [&str; 18] = [
+pub const SETTINGS: [&str; 19] = [
     "arc.shape",
     "arc.period",
     "arc.from",
@@ -884,6 +884,7 @@ pub const SETTINGS: [&str; 18] = [
     "padSweep.q",
     "echo.beats",
     "lateFloor.fade",
+    "tuning.cents",
 ];
 
 /// The least and the most of several ranges: what a setting drawn from
@@ -981,6 +982,9 @@ impl Pins {
             "padSweep.q" => Allowed::Range(span(&[PADSWEEP.q, PADSWEEP.wide.q, PADSWEEP.fast.q]), false),
             "echo.beats" => Allowed::Values(ECHO.beats),
             "lateFloor.fade" => Allowed::Range(LATEFLOOR.slow_fade, false),
+            // tuningOffset either way, as far as the data draws it; 0 holds
+            // the loop at A440 (queue item 101b).
+            "tuning.cents" => Allowed::Range([-TUNING.cents[1], TUNING.cents[1]], false),
             _ => return None,
         })
     }

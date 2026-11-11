@@ -434,3 +434,21 @@ vibes.0.5 = nimble 1.5, skipping 1.5, bubbly 1.5, playful 1.5
 [setting basslift]
 kick = 3
 noKick = 0
+
+# tuningOffset (queue item 101b; batch 6's #12, approved by Mikey
+# 2026-11-09): the whole loop a little off A440, the "old tape" cue at the
+# scale of a loop. Drawn per loop at load on a stream of its own, outside the
+# list of choices and not counted among a loop's changes, as echoTime is
+# (`tuningOf`). Every pitched voice moves by it together; the drums (the
+# tuned kick too) and the noises keep their pitch, as in the sketch.
+[setting tuning]
+# The share of loops off A440 before the vibes lean it; the rest play at
+# A440. 0.15 is the conservative pick (most loops none), for Mikey's ears.
+share = 0.15
+# How far off, in cents, either way (up or down, even odds). The sketch's
+# four were -32, +18, -24 and +27; the batch's guard is 40 at most.
+cents = 15 35
+# The batch's [JUDGMENT] row: toward the hazy vibes, away from the clear ones
+# (never 0). It leans the share, not the size.
+vibes = hazy 2, wistful 2, dusky 1.5, misty 1.5, crisp 0.3, frosty 0.4,
+    bright 0.5, chiming 0.5
