@@ -71,3 +71,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   20261009) that draw it: **tui-doask at 31.1 s** and **soath-wa at 27.3 s**
   (25 to 50 dB under the music, loudness the same); the baseline's ri-houng
   (full, stereo) moved too.
+- #363, batch 6's far ends (item 101a, session 02, v156), preview URL: the
+  branch's preview (no hash kept): three approved sounds, each an option of
+  the choice it extends, drawn on a stream of its own. **deepDuck**, the
+  bass dipping about 12 dB at each kick and back in 0.55 s: **loa-yer**
+  (corpus 20261009 #23) and **toam-woar** (#67), any time after 0:20.
+  **wideSweep wide**, the pads' filter riding about four octaves over 15 to
+  19 s: **brai-fei** (#46) and **sol-sham** (#77) from 0:15; **fast**, two or
+  three octaves every 5 to 8 s, only with a kit: **li-roun** (#96) and
+  **broa-glou** (#292) from 0:10. **slowOpening**, the kit and the bass
+  waiting 40 to 90 s and fading up over 4 to 20: **rong-wuisk** (#6) from
+  0:45 (the kit at 0:49, the bass at 0:53) and **gluith-vuisk** (#0) from
+  1:10. A loop that draws the approved kinds plays as before.
