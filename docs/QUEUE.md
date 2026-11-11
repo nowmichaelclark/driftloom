@@ -7,9 +7,10 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-11:** `main` is at v155 (session 01 done: v154 the tools
+**Status, 2026-11-11:** `main` is at v156 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
-plain lines; v155 the width ceiling's rest fix). Done: items 0-36 and 38-47 (13
+plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
+101a, batch 6's far ends: deepDuck, wideSweep, slowOpening). Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album

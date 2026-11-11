@@ -142,6 +142,14 @@
 //                   vibes, a request, a length or a theme. The spec is the
 //                   request's, the edits then made on it as the app makes
 //                   them (`edited`).
+//   farEnds:0-7     batch 6's far ends pinned (queue item 101a), on corpus
+//                   loops (corpus seed 20261009): subDuck's deep with the
+//                   sketch's 14 dB and 0.6 s (the recovery held to the kick
+//                   spacing on #45's 129 bpm), the approved duck with deep's
+//                   numbers (held to its own range), padSweep's wide and
+//                   fast at the sketch's settings, fast on a loop with no
+//                   kit (today's), lateFloor's slow with its wait and fade
+//                   pinned, and slow leaned by glacial.
 //
 // Run it after any change to the generator, the vibes, the choices or what
 // is drawn at load. A change that is meant to move what is generated writes

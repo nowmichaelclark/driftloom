@@ -22,6 +22,10 @@ copy a sketch in only to hear it, and put the folder back after
 
 deepDuck and wideSweep are not blocks: they are the approved subDuck and
 padSweep with their settings pinned (`jobs/deepDuck.json`, `jobs/wideSweep.json`).
+Since queue item 101a they are in the core, with slowOpening: `"force":
+{"subDuck": "deep"}`, `{"padSweep": "wide"}` or `"fast"`, `{"lateFloor":
+"slow"}` play the built ones, and a job's `"stem": "bass"` (or `"chords"`)
+writes that layer alone, as item 101a's PR measured them.
 
 ## Rebuild the clips
 

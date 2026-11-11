@@ -17,9 +17,12 @@
 // where the loop drew a change (and `arc=today` keeps a glacial loop's arc
 // away too); pinned to a change, the loop plays it where its eligibility
 // test allows (Mikey's rules for each: subDuck needs a kick and a bass line,
-// lateFloor something else from the first second), and today's where not: a
-// request bends the music, never breaks it. A setting pinned shapes its
-// choice when the loop plays it; it does not turn the choice on.
+// lateFloor something else from the first second; padSweep's fast a kit as
+// well), and today's where not: a request bends the music, never breaks it.
+// A setting pinned shapes its choice when the loop plays it; it does not
+// turn the choice on. Where a choice's options draw a setting from ranges of
+// their own (item 101a), the pin takes any of them and the loop holds it to
+// the range of the option it plays.
 //
 // As text: `organ=on`, `tunedKick=long`, `arc.shape=deep`, `arc.period=240`,
 // `echo.beats=1`, `space.room=0.8` (numbers as JavaScript writes them).
@@ -47,6 +50,11 @@ export const SPACE_SETTINGS = [
 
 const periods = Object.values(ARC.period);
 const ids = (pool) => pool.map(([id]) => id);
+// A setting a choice's options each draw from their own range (queue item
+// 101a: subDuck's deep, lateFloor's slow, padSweep's wide and fast) takes any
+// of them; the core then holds it to the range of the option the loop plays.
+const span = (...ranges) => [Math.min(...ranges.map((r) => r[0])), Math.max(...ranges.map((r) => r[1]))];
+const sweep = (key) => span(PADSWEEP[key], PADSWEEP.wide[key], PADSWEEP.fast[key]);
 
 // Every pin, in its frozen order (append only: a share code writes them by
 // name, the core's hosts by number): the choices in CHOICES' order, then the
@@ -66,16 +74,18 @@ const SETTINGS = [
   { name: 'kick.note', range: KICK.note, whole: true },
   { name: 'kick.short', range: KICK.short },
   { name: 'kick.long', range: KICK.long },
-  { name: 'subDuck.depth', range: SUBDUCK.depth },
-  { name: 'subDuck.recover', range: SUBDUCK.recover },
+  { name: 'subDuck.depth', range: span(SUBDUCK.depth, SUBDUCK.deep.depth) },
+  { name: 'subDuck.recover', range: span(SUBDUCK.recover, SUBDUCK.deep.recover) },
   { name: 'lateFloor.order', words: ids(LATEFLOOR.orders) },
-  { name: 'lateFloor.seconds', range: LATEFLOOR.seconds },
+  { name: 'lateFloor.seconds', range: span(LATEFLOOR.seconds, LATEFLOOR.slow.seconds) },
   { name: 'lateFloor.gap', range: [1, LATEFLOOR.maxGap], whole: true },
-  { name: 'padSweep.lo', range: PADSWEEP.lo },
-  { name: 'padSweep.oct', range: PADSWEEP.oct },
-  { name: 'padSweep.period', range: PADSWEEP.period },
-  { name: 'padSweep.q', range: PADSWEEP.q },
+  { name: 'padSweep.lo', range: sweep('lo') },
+  { name: 'padSweep.oct', range: sweep('oct') },
+  { name: 'padSweep.period', range: sweep('period') },
+  { name: 'padSweep.q', range: sweep('q') },
   { name: 'echo.beats', values: ECHO.beats.map(([b]) => b) },
+  // slowOpening's fade, in seconds (item 101a): shapes the slow kind only.
+  { name: 'lateFloor.fade', range: LATEFLOOR.slow.fade },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [

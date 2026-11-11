@@ -9,9 +9,11 @@ import { blockOf, blocksOf, readBlock } from './data.js';
 const WHERE = 'data/choices.txt';
 const setting = (name, schema) => readBlock(blockOf('choices', 'setting', name), schema, WHERE);
 
-// The data of every choice: { options, weight?, vibes?, optionVibes? }.
+// The data of every choice: { options, weight?, vibes?, optionVibes?,
+// ownStream? } (ownStream: the option is drawn on a stream of its own, queue
+// item 101).
 const CHOICE_DATA = Object.fromEntries(blocksOf('choices', 'choice').map((b) => [b.name, readBlock(b, {
-  options: 'pool', weight: 'num', vibes: 'table', 'optionVibes.*': 'table',
+  options: 'pool', weight: 'num', vibes: 'table', 'optionVibes.*': 'table', ownStream: 'num',
 }, WHERE)]));
 const choiceData = (id) => CHOICE_DATA[id];
 
@@ -41,32 +43,38 @@ export const KICK = {
 };
 
 // subDuck's settings (queue item 68): the bass channel alone dips at each
-// kick and comes back, so the kick and the sub take turns. The core draws
-// a loop's and plays it (core/src/blocks/sub_duck.rs).
+// kick and comes back, so the kick and the sub take turns; `deep` is
+// deepDuck's own ranges (item 101a). The core draws a loop's and plays it
+// (core/src/blocks/sub_duck.rs).
 export const SUBDUCK = {
   weight: choiceData('subDuck').weight,
   vibes: choiceData('subDuck').vibes,
-  ...setting('subduck', { depth: 'range', recover: 'range', beat: 'num' }),
+  ...setting('subduck', { depth: 'range', recover: 'range', beat: 'num', 'deep.*': 'range' }),
 };
 
 // lateFloor's settings (queue item 69): after a load the kit and the bass sit
-// out a while, then arrive. The core draws a loop's and its player
-// plays it (core/src/player/sequencer.rs).
+// out a while, then arrive; `slow` is slowOpening's wait and fade (item
+// 101a). The core draws a loop's and its player plays it
+// (core/src/player/sequencer.rs).
 export const LATEFLOOR = {
   weight: choiceData('lateFloor').weight,
   vibes: choiceData('lateFloor').vibes,
   ...setting('latefloor', {
     seconds: 'range', round: 'num', first: 'num', orders: 'pool', gap: 'numpool', maxGap: 'num', gapLong: 'num', longVibes: 'table',
+    'slow.*': 'range',
   }),
 };
 
 // padSweep's settings (queue item 72): a lowpass on the chord layer swings
-// open and shut while the rest stays as bright as it was. The core draws
+// open and shut while the rest stays as bright as it was; `wide` and `fast`
+// are wideSweep's two, each the same four ranges (item 101a). The core draws
 // a loop's and plays it (core/src/blocks/pad_sweep.rs).
 export const PADSWEEP = {
   weight: choiceData('padSweep').weight,
   vibes: choiceData('padSweep').vibes,
-  ...setting('padsweep', { sustained: 'words', lo: 'range', oct: 'range', period: 'range', q: 'range' }),
+  ...setting('padsweep', {
+    sustained: 'words', lo: 'range', oct: 'range', period: 'range', q: 'range', 'wide.*': 'range', 'fast.*': 'range',
+  }),
 };
 
 // echoTime's settings (queue item 73): the echo's time drawn per loop, in

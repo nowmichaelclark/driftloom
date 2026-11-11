@@ -141,6 +141,10 @@ pub struct Choice {
     pub vibes: Option<Table>,
     /// The vibes that lean each option, by option.
     pub option_vibes: &'static [(&'static str, Table)],
+    /// Whether the option a picked choice plays is drawn on a stream of its
+    /// own (`ownStream`, queue item 101), so options added to a choice move
+    /// no other choice's draw.
+    pub own_stream: bool,
 }
 
 /// pedalBass's settings (`[setting pedal]`).
@@ -212,6 +216,10 @@ pub struct SubDuck {
     pub recover: [f64; 2],
     /// The recovery's longest, as a share of a beat.
     pub beat: f64,
+    /// deepDuck's own ranges (`deep.depth`, `deep.recover`; queue item
+    /// 101a), its recovery held to the loop's kick spacing instead.
+    pub deep_depth: [f64; 2],
+    pub deep_recover: [f64; 2],
 }
 
 /// lateFloor's settings (`[setting latefloor]`).
@@ -229,6 +237,10 @@ pub struct LateFloor {
     /// The gaps from this many bars up are the long end the vibes lean.
     pub gap_long: f64,
     pub long_vibes: Table,
+    /// slowOpening's own wait and fade, in seconds (`slow.seconds`,
+    /// `slow.fade`; queue item 101a).
+    pub slow_seconds: [f64; 2],
+    pub slow_fade: [f64; 2],
 }
 
 /// floorDrop's shapes (`[setting floordrop]`).
@@ -251,6 +263,20 @@ pub struct FloorDrop {
 pub struct PadSweep {
     /// The chord voices it sweeps (its eligibility test).
     pub sustained: &'static [&'static str],
+    pub lo: [f64; 2],
+    pub oct: [f64; 2],
+    pub period: [f64; 2],
+    pub q: [f64; 2],
+    /// wideSweep's two (`wide.*`, `fast.*`; queue item 101a): each the same
+    /// four ranges.
+    pub wide: SweepRanges,
+    pub fast: SweepRanges,
+}
+
+/// One kind of padSweep's ranges: where it closes, how far it opens, one
+/// swing and its resonance.
+#[derive(Clone, Copy, Debug)]
+pub struct SweepRanges {
     pub lo: [f64; 2],
     pub oct: [f64; 2],
     pub period: [f64; 2],
@@ -292,7 +318,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Progressions, SubDuck, Vibe, VoiceCosts, f,
+        Progressions, SubDuck, SweepRanges, Vibe, VoiceCosts, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }
