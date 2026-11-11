@@ -9,14 +9,14 @@ the pins (the brief's rules 6 and 7, "Time, not sections"), and checks for
 both. Why: a section is the loop's own 4 to 32 bars and today's pass at the
 slider's amount (read from `Generator::section`).
 
-- **Model:** Fable 5.2. **Effort:** high.
+- **Model:** Fable 5.2. **Effort:** medium (Mikey, 2026-11-12: high costs too many tokens).
 - **Start after:** session 03.
 - **Queue item:** item 102.
 
 Paste everything in the block as the session's first message.
 
 ````text
-Hands session 11 on the road to Driftloom's 1.0 (Fable 5.2, high): long pieces: the plan and its map (102a).
+Hands session 11 on the road to Driftloom's 1.0 (Fable 5.2, medium): long pieces: the plan and its map (102a).
 
 Read first: AGENTS.md; docs/sessions/README.md (the order, and "Rules for every session": they are part of this prompt); docs/QUEUE.md (status, standing rules, merge policy, item 102); core/AGENTS.md; docs/CORE.md (promise 11, all of it); docs/sessions/long-pieces-brief.md (all of it); core/src/generator/piece.rs, wander.rs and mod.rs (Generator::section); core/src/generator/request.rs (how a request item and a pin are added; the theme); core/src/player/mod.rs (sections, events); core/examples/dlgen/main.rs; core/tests/length.rs.
 

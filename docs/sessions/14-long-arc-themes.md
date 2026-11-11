@@ -7,14 +7,14 @@ prepared on the fifth, and a call and response in the development, from the
 brief; theme B's making spread on the audio thread; pins kept in every key;
 the pieces to `docs/LONGFORM.md`, not to Mikey now.
 
-- **Model:** Fable 5.2. **Effort:** high.
+- **Model:** Fable 5.2. **Effort:** medium (Mikey, 2026-11-12: high costs too many tokens).
 - **Start after:** session 13.
 - **Queue item:** item 102.
 
 Paste everything in the block as the session's first message.
 
 ````text
-Hands session 14 on the road to Driftloom's 1.0 (Fable 5.2, high): long pieces: themes that return changed, and related keys (102d).
+Hands session 14 on the road to Driftloom's 1.0 (Fable 5.2, medium): long pieces: themes that return changed, and related keys (102d).
 
 Read first: AGENTS.md; docs/sessions/README.md (the order, and "Rules for every session": they are part of this prompt); docs/QUEUE.md (status, standing rules, merge policy, item 102); core/AGENTS.md; docs/CORE.md (promise 11, all of it); docs/sessions/long-pieces-brief.md (all of it); docs/LONGFORM.md; core/src/generator/melody.rs (the tune, its motifs, answerFigure and varyFigure, development); core/src/generator/request.rs and spec.rs (the theme, item 85d and 85f); core/tests/theme.rs.
 
