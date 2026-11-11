@@ -35,7 +35,11 @@ lean = 0.2 3
 # its own (the loop's seed and the choice's place), not on the choices'
 # stream, so options added to a choice that had one move no other choice's
 # draw. A choice without it draws its option on the choices' stream, as
-# tunedKick always has.
+# tunedKick always has. `alone = SHARE` (queue item 101b): the choice is not
+# among the changes at all. It is drawn by itself, on a stream of its own,
+# for that share of the loops it may go to (leaned by `vibes`, never to 0),
+# so adding it moves no other choice, and a loop may have it beside its
+# changes.
 
 # glass (queue item 59; the prototypes, approved by Mikey 2026-10-10): on
 # a chord's first beat, now and then, two or three of its notes ring out
@@ -169,6 +173,19 @@ optionVibes.wide = hypnotic 2, cosmic 1.5, bubbly 1.5, experimental 1.5,
     meditative 0.4
 optionVibes.fast = lively 1.5, pulsing 1.5, soaring 1.5, zesty 1.5, still 0.3,
     restful 0.3, hushed 0.3, serene 0.3, glacial 0.4, meditative 0.4
+
+# padWow (queue item 101b; batch 6's #3, approved by Mikey 2026-11-08): a
+# slow tape-like wow on the chord layer alone, the kick and the bass steady
+# (setting padwow, below). For any loop that plays a chord. Drawn alone, not
+# among the changes, for 15% of the loops that may have it before the vibes
+# lean it: the conservative share, for Mikey's ears. The batch's [JUDGMENT]
+# row: toward the hazy vibes, away from the clear and bright ones.
+[choice padWow]
+options = today 1, on 1
+alone = 0.15
+vibes = hazy 2.5, wistful 2, dreamy 2, misty 1.5, dusky 1.5, rainy 1.5,
+    mellow 1.5, foggy 1.5, crisp 0.3, bright 0.4, triumphant 0.4, frosty 0.5,
+    refreshing 0.5
 
 # The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
 # every variable of the arc, named, with the range a loop draws it from, in
@@ -407,6 +424,17 @@ fast.lo = 450 650
 fast.oct = 2 3
 fast.period = 5 8
 fast.q = 0.7 1.1
+
+# padWow's settings (queue item 101b): the main swing's depth in cents and
+# its rate in Hz, drawn per loop. The sketch Mikey approved was 14 cents at
+# 0.5 Hz (the records' median is nearer 20; 14 is the conservative pick);
+# the ranges around it are a taste call, for Mikey's ears. A third of the
+# depth swings again at 0.37 of the rate, so the chords move up to a third
+# more than the depth: at 14.5 they reach 19.5 cents, within the batch's 20,
+# which the block's guards hold every loop to (`blocks/pad_wow.rs`).
+[setting padwow]
+depth = 12 14.5
+rate = 0.4 0.6
 
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every

@@ -42,6 +42,9 @@ const NOT_FORCED: u8 = 0;
 /// The salt of a choice's own option stream (`Render::own_option`, queue
 /// item 101), plus the choice's place.
 const OWN_OPTION_SALT: u32 = 0x4f50_5400;
+/// The salt of a choice drawn alone (`alone`, queue item 101b), plus its
+/// place.
+const ALONE_SALT: u32 = 0x414c_4e00;
 
 /// How many parts `Render::run` is made of (`Render::part`).
 pub const PARTS: usize = 5;
@@ -480,7 +483,7 @@ impl Render {
         let count = r.weighted(data::CHANGE_COUNTS).unwrap_or(0.0);
         let mut pool: List<(usize, f64), CHOICES_MAX> = List::new();
         for (i, c) in CHOICES.iter().enumerate() {
-            if self.eligible(cx, c.id) {
+            if c.alone.is_none() && self.eligible(cx, c.id) {
                 pool.push((i, c.weight.unwrap_or(1.0) * lean_of(c.vibes, v)));
             }
         }
@@ -505,6 +508,24 @@ impl Render {
                 *x = pick.into();
             }
             k += 1.0;
+        }
+        // A choice drawn alone (`alone`, queue item 101b): not among the
+        // changes, on a stream of its own, so the draws above are as they
+        // were before it came.
+        for (i, c) in CHOICES.iter().enumerate() {
+            let Some(share) = c.alone else { continue };
+            if !self.eligible(cx, c.id) {
+                continue;
+            }
+            #[allow(clippy::cast_possible_truncation)] // a choice's place, under CHOICES_MAX
+            let mut r = Rng::new(js::salted(spec.seed, ALONE_SALT + i as u32, 1));
+            let leaned = share * lean_of(c.vibes, v);
+            if r.f() * (1.0 - share + leaned) < leaned {
+                let pick = if c.own_stream { self.own_option(cx, i) } else { c.options.get(1).map_or("", |o| o.0) };
+                if let Some(x) = self.choices.get_mut(i) {
+                    *x = pick.into();
+                }
+            }
         }
         // The request's pins (queue item 85b), laid over the draws once they
         // are all made: today's option always, another where the loop is
@@ -580,7 +601,8 @@ impl Render {
                 }
             }),
             "dubStab" => plays_chords && has_drums && self.notes_per_second(cx) >= 7.0,
-            "organ" => plays_chords,
+            // padWow: any loop that plays a chord (queue item 101b).
+            "organ" | "padWow" => plays_chords,
             "wash" | "arc" => true,
             "tunedKick" => has_kick,
             "subDuck" => has_kick && has_bass,

@@ -2477,6 +2477,72 @@ mod tests {
         assert!(then < -3.0, "and closed a period on: {then:.1} dB");
     }
 
+    /// padWow (queue item 101b): the chords' channel bent by its two swings
+    /// (14 cents at 0.5 Hz, a third of it at 0.185) from the time it is set
+    /// and not before; never more than 20 cents off together, however deep
+    /// and fast it is asked; a new loop's wow glides on and an ending one
+    /// fades out, with no jump; and still, it passes the channel as it is.
+    #[test]
+    #[allow(clippy::float_cmp)] // the channel untouched is the same numbers
+    fn pad_wow_bends_the_chords_slowly() {
+        use blocks::{own, pad_wow};
+        let play = |sets: &[(f64, f64, f64)], seconds: f64| -> Vec<f32> {
+            let mut core = boxed();
+            core.key(key(6, 0, 0, 0));
+            // A held tone at A4, 440 Hz.
+            core.note(SINE, CHORDS, 0.0, 69.0, seconds, 1.0, 0, NO);
+            for &(t, depth, rate) in sets {
+                assert!(core.set(CHORDS, own::PAD_WOW, pad_wow::RATE, rate, t));
+                assert!(core.set(CHORDS, own::PAD_WOW, pad_wow::DEPTH, depth, t));
+            }
+            (0..(seconds * RATE) as usize / QUANTUM).flat_map(|b| core.process((b * QUANTUM) as u64)[CHORDS as usize]).collect()
+        };
+        // The pitch from one rising zero crossing to the next, in cents off
+        // A440, with each crossing's time, over [a, b) seconds.
+        let cents = |x: &[f32], a: f64, b: f64| -> Vec<(f64, f64)> {
+            let (a, b) = (((a * RATE) as usize).max(1), ((b * RATE) as usize).min(x.len()));
+            let mut at = Vec::new();
+            for i in a..b {
+                let (p, q) = (f64::from(x[i - 1]), f64::from(x[i]));
+                if p < 0.0 && q >= 0.0 {
+                    at.push(i as f64 - 1.0 + p / (p - q));
+                }
+            }
+            at.windows(2).map(|w| (w[0] / RATE, 1200.0 * (RATE / (w[1] - w[0]) / 440.0).log2())).collect()
+        };
+        let most = |c: &[(f64, f64)]| c.iter().fold(0.0f64, |m, &(_, v)| m.max(v.abs()));
+        // The swing at `f` Hz in a run of readings: its amplitude in cents.
+        let at_rate = |c: &[(f64, f64)], f: f64| {
+            let (re, im) = c.iter().fold((0.0, 0.0), |(re, im), &(t, v)| {
+                let w = core::f64::consts::TAU * f * t;
+                (re + v * w.cos(), im - v * w.sin())
+            });
+            2.0 * re.hypot(im) / c.len() as f64
+        };
+        let plain = play(&[], 11.0);
+        let wow = play(&[(0.5, 14.0, 0.5)], 11.0);
+        let from = (0.5 * RATE) as usize;
+        assert!(plain[..from] == wow[..from], "untouched before its time");
+        assert!(most(&cents(&plain, 0.1, 10.9)) < 0.05, "the tone is A440");
+        let bent = cents(&wow, 0.6, 10.8);
+        let (swing, main) = (most(&bent), at_rate(&bent, 0.5));
+        assert!((12.0..=20.0).contains(&swing), "the chords move {swing:.1} cents");
+        assert!((main - 14.0).abs() < 1.5, "14 cents at 0.5 Hz: {main:.1}");
+        // Asked past its guards, it holds to them.
+        let wild = cents(&play(&[(0.5, 40.0, 3.0)], 6.0), 0.6, 5.8);
+        assert!(most(&wild) <= 20.05, "never past 20 cents: {:.2}", most(&wild));
+        assert!(at_rate(&wild, 1.2) > at_rate(&wild, 3.0) * 4.0, "never faster than 1.2 Hz");
+        // A new loop's wow at 4 s glides on; none at 8 s fades it out, and
+        // then the channel is as it is. No jump anywhere: frame to frame it
+        // moves no more than the tone does (and the crossfade's small step).
+        let next = play(&[(0.5, 14.0, 0.5), (4.0, 12.0, 0.4), (8.0, 0.0, 0.0)], 11.0);
+        let step = |x: &[f32]| x.windows(2).fold(0.0f32, |m, w| m.max((w[1] - w[0]).abs()));
+        assert!(step(&next) <= step(&plain) * 1.06, "no click: {} against {}", step(&next), step(&plain));
+        let after = (8.1 * RATE) as usize;
+        assert!(next[after..] == plain[after..], "still again, the channel as it is");
+        assert!(most(&cents(&next, 4.6, 7.9)) > 8.0, "the new loop's wow plays");
+    }
+
     /// The bass lift (queue item 76c): a loop's setting raises every bass
     /// voice by that many dB, a note that arrives before the next setting
     /// keeps the lift it arrived with, a note with none is today's level to

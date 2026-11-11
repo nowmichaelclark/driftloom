@@ -230,8 +230,9 @@ fn resolve_pin(name: &str, v: f64) -> Result<(usize, usize, f64), String> {
         "wash" => own::WASH,
         "sub_duck" => own::SUB_DUCK,
         "pad_sweep" => own::PAD_SWEEP,
+        "pad_wow" => own::PAD_WOW,
         "sketch" => own::SKETCH,
-        _ => return Err(format!("--pin: no channel block '{block}' (organ, wash, sub_duck, pad_sweep, sketch)")),
+        _ => return Err(format!("--pin: no channel block '{block}' (organ, wash, sub_duck, pad_sweep, pad_wow, sketch)")),
     };
     let mut names = Names { want: block, found: None };
     blocks::each(&mut names);

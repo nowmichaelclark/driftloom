@@ -10,10 +10,11 @@ const WHERE = 'data/choices.txt';
 const setting = (name, schema) => readBlock(blockOf('choices', 'setting', name), schema, WHERE);
 
 // The data of every choice: { options, weight?, vibes?, optionVibes?,
-// ownStream? } (ownStream: the option is drawn on a stream of its own, queue
-// item 101).
+// ownStream?, alone? } (ownStream: the option is drawn on a stream of its
+// own, queue item 101; alone: the choice is drawn by itself, not among the
+// changes, item 101b).
 const CHOICE_DATA = Object.fromEntries(blocksOf('choices', 'choice').map((b) => [b.name, readBlock(b, {
-  options: 'pool', weight: 'num', vibes: 'table', 'optionVibes.*': 'table', ownStream: 'num',
+  options: 'pool', weight: 'num', vibes: 'table', 'optionVibes.*': 'table', ownStream: 'num', alone: 'num',
 }, WHERE)]));
 const choiceData = (id) => CHOICE_DATA[id];
 

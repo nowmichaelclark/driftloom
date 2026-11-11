@@ -14,7 +14,7 @@ use crate::block::Event;
 use crate::block::event::{CHOKE, RELEASE};
 use crate::blocks::own;
 use crate::blocks::midi_to_freq;
-use crate::blocks::{bass, drum, kalimba, struck, texture};
+use crate::blocks::{bass, drum, kalimba, pad_wow, struck, texture};
 use crate::generator::data::{self, VOICE_COSTS};
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -227,6 +227,7 @@ pub struct Synth {
     wash_routed: bool,
     sub_duck: bool,
     pad_sweep: bool,
+    pad_wow: bool,
     /// The space recipe's settings the last loop pinned (`_spacePinned`).
     space_pinned: [bool; crate::space::n::COUNT],
     /// Each channel muted (`_asked.mutes`), in the core's channel order.
@@ -255,6 +256,7 @@ impl Synth {
             wash_routed: false,
             sub_duck: false,
             pad_sweep: false,
+            pad_wow: false,
             space_pinned: [false; crate::space::n::COUNT],
             mutes: [false; 5],
             volume: Biased::DEFAULT,
@@ -283,6 +285,7 @@ impl Synth {
         self.wash_routed = false;
         self.sub_duck = false;
         self.pad_sweep = false;
+        self.pad_wow = false;
         self.mutes = [false; 5];
         self.level.set(1.0);
         host.param(crate::LFO_START, SET, 0.0, now, 0.0);
@@ -445,6 +448,23 @@ impl Synth {
 
     /// `padSweepSetup(o, time)`: the chords' lowpass swinging, `oct` last
     /// (it starts the sweep); or none (the last one glides open).
+    /// padWow's settings for the loop (queue item 101b), on the chords
+    /// channel alone: its depth and rate from `time`, or, where the last
+    /// loop had one and this one has none, its depth to 0 (it fades out).
+    pub fn pad_wow_setup<H: Host>(&mut self, host: &mut H, wow: Option<&crate::generator::choices::PadWow>, time: f64) {
+        let had = self.pad_wow;
+        self.pad_wow = wow.is_some();
+        match wow {
+            Some(w) => {
+                host.set(CHORDS, own::PAD_WOW, pad_wow::RATE, w.rate, time);
+                host.set(CHORDS, own::PAD_WOW, pad_wow::DEPTH, w.depth, time);
+            }
+            None if had => host.set(CHORDS, own::PAD_WOW, pad_wow::DEPTH, 0.0, time),
+            None => {}
+        }
+    }
+
+    /// padSweep's settings for the loop.
     pub fn pad_sweep_setup<H: Host>(&mut self, host: &mut H, sweep: Option<&crate::generator::choices::PadSweep>, time: f64) {
         let had = self.pad_sweep;
         self.pad_sweep = sweep.is_some();
