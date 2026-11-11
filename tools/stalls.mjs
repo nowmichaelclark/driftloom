@@ -336,6 +336,14 @@ export async function openTab(b, url, throttle, { sources = [], setup = null } =
     }
     const late = String(out.engine || '').match(/late: (\d+)/);
     out.coreLate = late ? Number(late[1]) : null;
+    // The page's own measure of the audio thread (queue item 87b): the
+    // busiest quarter-second as a share of real time, over the last 20 s and
+    // the last 60 s. Over 100% the output runs dry: an underrun. Chromium
+    // 153 has no `playoutStats`, so this is what the tool has for them.
+    const busy = String(out.busiest || '').match(/^(\S+) over [\d.]+ s, (\S+) over/);
+    out.busy20 = busy && /%$/.test(busy[1]) ? parseInt(busy[1], 10) : null;
+    out.ran = (String(out.busiest || '').match(/\((full|lite);/) || [])[1] || null;
+    out.busy60 = busy && /%$/.test(busy[2]) ? parseInt(busy[2], 10) : null;
     const missed = String(out.engine || '').match(/missed: (\d+)/);
     out.coreMissed = missed ? Number(missed[1]) : null;
     const dropped = String(out.engine || '').match(/dropped: (\d+)/);
@@ -407,6 +415,9 @@ async function measure(tab, engine, { label, run, settle = 4000, control = null 
     coreLate,
     missed: since(before.coreMissed, diag.coreMissed),
     dropped: since(before.coreDropped, diag.coreDropped),
+    busy: Math.max(diag.busy20 ?? 0, diag.busy60 ?? 0),
+    slow: diag.slow,
+    ran: diag.ran,
     silentS: control && !player ? +quiet.sum.toFixed(2) : null,
     worstGap: +quiet.worst.toFixed(3),
     fills: after.fills != null && mark.fills != null ? after.fills - mark.fills : null,
@@ -514,7 +525,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
             },
           });
           rows.push({ ...base, ...row });
-          log(`  ${row.label}: ${row.error ? row.error : `late notes ${row.lateNotes}, missed ${row.missed ?? '-'}, dropped ${row.dropped ?? '-'}, fill-ins ${row.fills ?? '-'}`}`);
+          log(`  ${row.label}: ${row.error ? row.error : `late notes ${row.lateNotes}, missed ${row.missed ?? '-'}, dropped ${row.dropped ?? '-'}, busiest ${row.busy}%, fill-ins ${row.fills ?? '-'}`}`);
         }
       }
     }
@@ -537,14 +548,14 @@ async function session(opts, chromePath, loop, engine, throttle) {
 function log(s) { process.stderr.write(`${s}\n`); }
 
 function table(rows) {
-  const head = ['loop', 'quality', 'cpu', 'stall', 'late notes', 'missed', 'dropped', 'fill-ins (underruns)'];
+  const head = ['loop', 'quality', 'cpu', 'stall', 'late notes', 'missed', 'dropped', 'busiest %', 'slow', 'fill-ins'];
   const out = [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`];
   const jumped = rows.filter((r) => r.label && r.label.startsWith('jump'));
   rows = rows.filter((r) => !jumped.includes(r));
   for (const r of rows) {
     const cells = r.error
-      ? [r.loop, r.quality, `${r.throttle}x`, r.label, r.error, '', '', '']
-      : [r.loop, r.quality, `${r.throttle}x`, r.label, r.lateNotes ?? '-', r.missed ?? '-', r.dropped ?? '-', r.fills ?? '-'];
+      ? [r.loop, r.quality, `${r.throttle}x`, r.label, r.error, '', '', '', '', '']
+      : [r.loop, r.ran && r.ran !== r.quality ? `${r.quality} -> ${r.ran}` : r.quality, `${r.throttle}x`, r.label, r.lateNotes ?? '-', r.missed ?? '-', r.dropped ?? '-', r.busy ?? '-', r.slow ?? '-', r.fills ?? '-'];
     out.push(`| ${cells.join(' | ')} |`);
   }
   if (jumped.length) {
