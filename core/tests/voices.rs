@@ -225,14 +225,16 @@ fn played() {
         assert_eq!(host.notes[channel[layer]], 0, "loop {i}, seed {seed}: {} was asked off", LAYER_NAMES[layer]);
         silent += 1;
         heard_elsewhere += usize::from(host.notes.iter().enumerate().any(|(c, &n)| c != channel[layer] && n > 0));
-        // The next load asks the layer on: it is unmuted and sounds (a minute
-        // on: the lateFloor choice keeps a kit out for a while at the start).
+        // The next load asks the layer on: it is unmuted and sounds (within
+        // 160 s: the lateFloor choice keeps a kit out for a while at the
+        // start, its slow opening up to 90 s and a bar, and the second part
+        // up to eight bars after the first, a minute at 32 bpm: item 101a).
         let on = Request::new().with_layer(layer, LayerAsk::On).expect("on");
         let mut host = Counts { frame: 0, notes: [0; 5] };
         player.attach(&mut host, 48_000.0, true);
         player.load(seed, &on);
         player.ready(&mut host);
-        while host.frame < 60 * 48_000 {
+        while host.frame < 160 * 48_000 {
             player.decide(&mut host);
             host.frame += QUANTUM as u64;
         }

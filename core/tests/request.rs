@@ -53,8 +53,8 @@ impl Host for Onsets {
 /// measured from its notes' onsets: on the steps that fall on a beat (swing
 /// moves only the steps between), each step's earliest note, and the median
 /// of the slopes between every pair of beats (a step's length), so a grace
-/// or a strum cannot pull it. Played until twelve beats have sounded, or a
-/// minute.
+/// or a strum cannot pull it. Played until twelve beats have sounded, or
+/// two minutes (a slow opening's floor can wait 90 s: queue item 101a).
 fn measured_bpm(player: &mut Player, seed: u32, request: &Request) -> f64 {
     let mut host = Onsets { frame: 0, key: Key::default(), notes: Vec::new() };
     player.attach(&mut host, RATE, true);
@@ -68,8 +68,8 @@ fn measured_bpm(player: &mut Player, seed: u32, request: &Request) -> f64 {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let beat = if spb == 12.0 { 3 } else { 4 } as u64;
     let mut first: Vec<(u64, f64)> = Vec::new();
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a minute of frames
-    let most = (60.0 * RATE) as u64;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // two minutes of frames
+    let most = (120.0 * RATE) as u64;
     while host.frame < most && first.len() < 12 {
         player.decide(&mut host);
         host.frame += QUANTUM as u64;
