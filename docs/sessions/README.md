@@ -114,6 +114,12 @@ queue's standing rules and merge policy, and `core/AGENTS.md`.
   line current, tick your row in the table above, and end with a plain
   summary for Mikey: what merged (PR numbers), what to listen for, what
   waits in `for-mikey.md`.
+- **The nightly first.** The slow renders hold no merge, so a sound change
+  can leave the nightly red unseen (#361 did; session 03 fixed it in #366).
+  Before your item, look at the latest nightly run
+  (`.github/workflows/nightly.yml`); if it is red for a reason in the code,
+  fix that first, as its own PR. A PR that moves the core's sound updates
+  the stored render hashes it moves, in the same PR.
 - **The tablet's margin.** Mikey's Lenovo tablet, the weakest device he
   supports, has about 1.8 times headroom on lite before item 100's
   too-slow line (its busiest quarter-second about 55% of its time;

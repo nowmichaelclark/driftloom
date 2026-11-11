@@ -318,7 +318,13 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   the refusals moved a little (bass asked 1,368 to 1,352; lite chords
   refused 1,187 to 1,165), from slow openings, nothing worse. Its three
   choices (how often, the calm vibes, deepDuck's depth) wait for Mikey's
-  ears at B2. **Next:** session 03. The next brain is B2.
+  ears at B2. Session 03 done (#366 to #369, v159): the brain checked that
+  the stack fix (#368) moved no golden, seed or baseline; that against
+  v156's generator every one of 5,132 cases is the same apart from padWow's
+  choice (on in 776) and the load's tuning; tuningOffset on 168 of 1,000
+  corpus loops, 15 to 35 cents; goldens and balance lock pass. padWow moves
+  three baseline loops' mix past 0.2 LU, as the approved sketch does: for
+  Mikey's ears at B2. **Next:** session 04. The next brain is B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
