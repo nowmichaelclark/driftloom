@@ -266,6 +266,21 @@ corpus loops rendered by v149's own Engine and Synth on the core and by
 today's player: names and starts the same, 28 null at -82 dB or lower, two
 differ after a silent bar at the same loudness (session 01 explains them).
 The album, "Phase 3 Control", is out (`docs/ALBUMS.md`).
+**Hands session 01 (2026-11-11):** promise 1's stall test on the shipped app
+(v154; `tools/stalls.mjs`: the main thread blocked 2 s and 5 s, the page
+frozen, the tab hidden a minute; shatter, the 32,768-bar piece and Endless;
+4x and 6x CPU; full and lite) reads zero late, left-out and dropped notes in
+all 84 rows, the audio thread's busiest quarter-second at most 21% (Chromium
+153 has no `playoutStats`, so that is the figure for underruns; the PR has
+the table). The testers' steps: `docs/notes/98-testers.md`. The two loops
+the control found different (tui-doask, soath-wa) are the width ceiling's
+(`core/src/blocks/width.rs`): in a long rest its mid window rounds to
+exactly zero beside a side window of float dust, it reads "far too wide" and
+takes the side's gain toward nothing, and the loop returns narrow for about
+ten seconds. It does that in v149 and in today's player alike (the same
+samples at the player's 0.25 s hand-over); the brain's v149 renders handed
+notes over far ahead, where the dust fell the other way. Fixed in its own
+PR (a floor on the mid), not here.
 
 ## 99. The sketch levers for Ears 13b (alongside phase 3)
 
