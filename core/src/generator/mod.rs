@@ -294,63 +294,92 @@ impl Generator {
     /// Run the next stage of the load `begin` started; true once the loop
     /// is ready (and from then on, until the next `begin`).
     pub fn step(&mut self) -> bool {
+        // Each stage is a function of its own, never inlined: the stages
+        // build big values on the stack (a spec, a plan's context, the
+        // settings), and in one frame they are all held at once. That frame
+        // (31 KB after item 101a) took the player's calls past Emscripten's
+        // 64 KB default stack (`include/dlcore.h`); apart, a call holds one
+        // stage's.
         match self.stage {
             Stage::Idle | Stage::Done => {}
-            Stage::Spec => {
-                self.spec = spec::new_spec(self.seed, &self.request);
-                self.stage = Stage::Plan;
-            }
-            Stage::Plan => {
-                self.plan.make(&plan::Cx::new(&self.spec));
-                // The chords' octave is read from the progression as today's
-                // chord lengths play it, and the tune over it (`registerShift`):
-                // a loop with held chords asks for that first.
-                self.stage = if self.today.is_none() && held_chords(&self.plan) {
-                    Stage::PlanToday
-                } else {
-                    self.render.register_given = self.today;
-                    Stage::Render(0)
-                };
-            }
-            Stage::PlanToday => {
-                let mut cx = plan::Cx::new(&self.spec);
-                cx.long_chords_off = true;
-                self.plan.make(&cx);
-                self.stage = Stage::RenderToday;
-            }
-            Stage::RenderToday => {
-                let mut cx = plan::Cx::new(&self.spec);
-                cx.long_chords_off = true;
-                self.today = Some(self.render.register_of(&cx, &self.plan));
-                self.stage = Stage::Plan;
-            }
+            Stage::Spec => self.stage_spec(),
+            Stage::Plan => self.stage_plan(),
+            Stage::PlanToday => self.stage_plan_today(),
+            Stage::RenderToday => self.stage_render_today(),
             Stage::Render(part) => {
-                self.render.part(part, &plan::Cx::new(&self.spec), &self.plan);
+                self.stage_render(part);
                 if part + 1 < render::PARTS {
                     self.stage = Stage::Render(part + 1);
                     return false;
                 }
                 self.stage = Stage::Settings;
             }
-            Stage::Settings => {
-                self.settings = load::Load::without_kick(&plan::Cx::new(&self.spec), &self.render);
-                self.pass.number = None;
-                self.stage = if load::Load::kick_kind(&self.render).is_some() {
-                    self.kick = choices::KickFit::new(self.spec.seed, self.spec.root, &self.spec.pins);
-                    Stage::Kick
-                } else {
-                    Stage::Done
-                };
-            }
-            Stage::Kick => {
-                if self.kick.step(choices::KICK_SLICE) {
-                    let kick = self.kick.kick();
-                    self.settings.kick = load::Load::kick_kind(&self.render).map(|kind| load::Kick { kick, kind });
-                    self.stage = Stage::Done;
-                }
-            }
+            Stage::Settings => self.stage_settings(),
+            Stage::Kick => self.stage_kick(),
         }
         self.stage == Stage::Done
+    }
+
+    #[inline(never)]
+    fn stage_spec(&mut self) {
+        self.spec = spec::new_spec(self.seed, &self.request);
+        self.stage = Stage::Plan;
+    }
+
+    #[inline(never)]
+    fn stage_plan(&mut self) {
+        self.plan.make(&plan::Cx::new(&self.spec));
+        // The chords' octave is read from the progression as today's chord
+        // lengths play it, and the tune over it (`registerShift`): a loop
+        // with held chords asks for that first.
+        self.stage = if self.today.is_none() && held_chords(&self.plan) {
+            Stage::PlanToday
+        } else {
+            self.render.register_given = self.today;
+            Stage::Render(0)
+        };
+    }
+
+    #[inline(never)]
+    fn stage_plan_today(&mut self) {
+        let mut cx = plan::Cx::new(&self.spec);
+        cx.long_chords_off = true;
+        self.plan.make(&cx);
+        self.stage = Stage::RenderToday;
+    }
+
+    #[inline(never)]
+    fn stage_render_today(&mut self) {
+        let mut cx = plan::Cx::new(&self.spec);
+        cx.long_chords_off = true;
+        self.today = Some(self.render.register_of(&cx, &self.plan));
+        self.stage = Stage::Plan;
+    }
+
+    #[inline(never)]
+    fn stage_render(&mut self, part: usize) {
+        self.render.part(part, &plan::Cx::new(&self.spec), &self.plan);
+    }
+
+    #[inline(never)]
+    fn stage_settings(&mut self) {
+        self.settings = load::Load::without_kick(&plan::Cx::new(&self.spec), &self.render);
+        self.pass.number = None;
+        self.stage = if load::Load::kick_kind(&self.render).is_some() {
+            self.kick = choices::KickFit::new(self.spec.seed, self.spec.root, &self.spec.pins);
+            Stage::Kick
+        } else {
+            Stage::Done
+        };
+    }
+
+    #[inline(never)]
+    fn stage_kick(&mut self) {
+        if self.kick.step(choices::KICK_SLICE) {
+            let kick = self.kick.kick();
+            self.settings.kick = load::Load::kick_kind(&self.render).map(|kind| load::Kick { kick, kind });
+            self.stage = Stage::Done;
+        }
     }
 
     /// Force a choice for the loops made from now on

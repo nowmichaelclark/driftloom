@@ -29,10 +29,11 @@
  * Every call takes a null player and does nothing with it. Text the core
  * gives is plain ASCII.
  *
- * The player's calls take some 60 KB of the calling thread's stack at most
- * (56 to 60 KB measured in WebAssembly, a loop being made inside a render).
- * Emscripten's default stack is 64 KB, so a web build keeps its own big
- * buffers off the stack or sets a bigger one (-sSTACK_SIZE).
+ * The player's calls take some 48 KB of the calling thread's stack at most
+ * (45 to 47 KB measured under Emscripten with the C host's own, a loop being
+ * made inside a render). Emscripten's default stack is 64 KB, so a web build
+ * keeps its own big buffers off the stack or sets a bigger one
+ * (-sSTACK_SIZE).
  */
 #ifndef DLCORE_H
 #define DLCORE_H
