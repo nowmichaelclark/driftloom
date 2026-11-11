@@ -340,7 +340,7 @@ export async function openTab(b, url, throttle, { sources = [], setup = null } =
     // busiest quarter-second as a share of real time, over the last 20 s and
     // the last 60 s. Over 100% the output runs dry: an underrun. Chromium
     // 153 has no `playoutStats`, so this is what the tool has for them.
-    const busy = String(out.busiest || '').match(/^(\S+) over [\d.]+ s, (\S+) over/);
+    const busy = String(out.busiest || '').match(/^(\S+(?: yet)?) over [\d.]+ s, (\S+(?: yet)?) over/);
     out.busy20 = busy && /%$/.test(busy[1]) ? parseInt(busy[1], 10) : null;
     out.ran = (String(out.busiest || '').match(/\((full|lite);/) || [])[1] || null;
     out.busy60 = busy && /%$/.test(busy[2]) ? parseInt(busy[2], 10) : null;
@@ -466,14 +466,22 @@ async function session(opts, chromePath, loop, engine, throttle) {
   const rows = [];
   try {
     const tab = await openTab(b, engineUrl(opts.port, engine), throttle);
-    if (opts.quality === 'lite') {
-      const on = await tab.evaluate("document.getElementById('liteMode').getAttribute('aria-checked') === 'true'");
-      if (!on) await tab.evaluate("document.getElementById('liteMode').click()");
-    }
     await tab.press('#playBtn');
     await sleep(1500);
     const name = await loadCode(tab, LOOPS[loop].code);
     await sleep(3000);
+    // The quality asked for, by the switch a listener has (the page guesses
+    // lite on four cores or fewer, as this machine has, until told): a
+    // choice of the listener's own, which the page's automatic switch
+    // leaves alone. A new core is built, and the loop plays again from its
+    // top.
+    {
+      const lite = await tab.evaluate("document.getElementById('liteMode').getAttribute('aria-checked') === 'true'");
+      if (lite !== (opts.quality === 'lite')) {
+        await tab.evaluate("document.getElementById('liteMode').click()");
+        await sleep(4000);
+      }
+    }
     // Hidden: another tab in front, as perf.mjs does it.
     const { targetId } = await b.send('Target.createTarget', { url: 'about:blank', newWindow: false });
     await b.send('Target.activateTarget', { targetId });
@@ -482,7 +490,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
     if (vis !== 'hidden') throw new Error(`the tab is ${vis}, not hidden`);
     const control = await measure(tab, engine, { label: 'control', run: async () => { await sleep(30000); return {}; }, settle: 0 });
     rows.push(control);
-    const base = { loop: name, engine, quality: opts.quality, throttle };
+    const base = { loop, engine, quality: opts.quality, throttle };
     log(`  control: worst note gap ${control.worstGap} s, ${control.notes} notes`);
     if (opts.modes.includes('jumps')) for (const r of await jumps(tab, engine)) rows.push({ ...base, ...r });
     for (const mode of opts.modes.filter((m) => m !== 'jumps')) {
@@ -535,7 +543,7 @@ async function session(opts, chromePath, loop, engine, throttle) {
       await sleep(1500);
       log((await tab.diagnostics()).text);
     }
-    control.loop = name;
+    control.loop = loop;
     control.engine = engine;
     control.quality = opts.quality;
     control.throttle = throttle;
