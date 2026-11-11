@@ -56,3 +56,18 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   the render runs behind real time for two seconds in twenty (or the device
   fills in that often), the card's place says the browser is too slow to
   play Driftloom smoothly; Play goes on. Listen for nothing. No album loop.
+- #360, session 01: the tools made steady, the stall test on the shipped app,
+  the testers' steps (item 98's hands part, v154), preview URL: the branch's
+  preview (no hash kept): nothing should sound different. `tools/rows.mjs`
+  starts from a fixed loop (ten runs, ten passes); Diagnostics no longer prints
+  the old scheduler's lines; the module that never arrives says "Please
+  refresh." and the too-slow line says "This browser is too slow." The stall
+  table (84 rows, full and lite, the main thread blocked, the page frozen,
+  hidden a minute) reads zero late, left-out and dropped notes. The phones:
+  `docs/notes/98-testers.md`.
+- #361, the width ceiling after a rest (the control's two loops, v155), preview
+  URL: the branch's preview (no hash kept): after a long rest the stereo
+  picture comes back at once, not narrow for ten seconds. Two loops (corpus
+  20261009) that draw it: **tui-doask at 31.1 s** and **soath-wa at 27.3 s**
+  (25 to 50 dB under the music, loudness the same); the baseline's ri-houng
+  (full, stereo) moved too.
