@@ -15,7 +15,7 @@
 //! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
-use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, SweepRanges, Table};
+use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, SweepRanges, TUNING, Table};
 use super::js;
 use super::list::{Empty, List, Maybe};
 use super::layers::{DRUMS_MAX, DrumEvent};
@@ -784,6 +784,34 @@ const ECHO_SALT: u32 = 0xec40;
 pub fn echo_time_of(seed: u32, v: Option<&Vibes>) -> f64 {
     let mut r = Rng::new(js::salted(seed, ECHO_SALT, 1));
     r.weighted_index(ECHO.beats.iter().map(|&(b, w)| w * lean_of(data::table_at(ECHO.vibes, b), v))).map_or(0.75, |i| ECHO.beats[i].0)
+}
+
+const TUNING_SALT: u32 = 0x7c3e;
+
+/// tuningOffset (queue item 101b; batch 6's #12): how far the whole loop
+/// plays off A440, in cents, 0 for most loops. Drawn at load on its own
+/// stream, outside the choices, as `echo_time_of` is: whether it is off
+/// (`[setting tuning]`'s share, leaned by the vibes, never to 0), how far
+/// and which way. All three are drawn for every loop, so the stream's
+/// place never depends on the first. A request's `tuning.cents` pin plays
+/// that offset instead (0 holds the loop at A440: a game's own sounds may
+/// need it), held to the data's farthest.
+#[must_use]
+pub fn tuning_of(seed: u32, v: Option<&Vibes>, p: &Pins) -> f64 {
+    let mut r = Rng::new(js::salted(seed, TUNING_SALT, 1));
+    let share = TUNING.share * lean_of(Some(TUNING.vibes), v);
+    let off = r.f() * (1.0 - TUNING.share + share) < share;
+    let [lo, hi] = TUNING.cents;
+    let size = r.range(lo, hi);
+    let up = r.f() < 0.5;
+    let drawn = if !off {
+        0.0
+    } else if up {
+        size
+    } else {
+        -size
+    };
+    p.get("tuning.cents").map_or(drawn, |x| held(x, [-hi, hi]))
 }
 
 /// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the

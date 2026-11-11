@@ -107,6 +107,10 @@ pub struct Load {
     /// The echo's time, in beats (stored against 0.75, the unloaded loop's,
     /// so that nothing loaded is all zero bytes: queue item 93).
     pub echo_beats: Biased<ECHO_BEATS_BITS>,
+    /// How far the loop plays off A440, in cents (tuningOffset, queue item
+    /// 101b; 0, A440, for most loops). The synth adds it to every pitched
+    /// note.
+    pub tuning: f64,
     /// The profile's pump, and its level (`setCharacterLevel`).
     pub pump: f64,
     /// Its level, stored against 1.0 as `echo_beats` is against 0.75.
@@ -139,6 +143,7 @@ impl Load {
         late: None,
         space: Space { seed: 0, busy: 0.0, wet: 0.0, light: false, pins: [None; crate::space::n::COUNT] },
         echo_beats: Biased::DEFAULT,
+        tuning: 0.0,
         pump: 0.0,
         level: Biased::DEFAULT,
         bpm: 0.0,
@@ -206,6 +211,7 @@ impl Load {
                 pins: core::array::from_fn(|i| p.space(i)),
             },
             echo_beats: Biased::of(p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v))),
+            tuning: choices::tuning_of(spec.seed, v, p),
             pump: cx.c.pump.unwrap_or(0.0),
             level: Biased::of(cx.c.level.unwrap_or(1.0)),
             bpm: spec.bpm,
@@ -250,6 +256,8 @@ impl Load {
         or_null(w, self.stab.as_ref(), write_stab);
         w.key("subDuck");
         or_null(w, self.sub_duck.as_ref(), write_sub_duck);
+        w.key("tuning");
+        w.num(self.tuning);
         w.key("wash");
         or_null(w, self.wash.as_ref(), write_wash);
         w.end_obj();

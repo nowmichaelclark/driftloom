@@ -292,6 +292,18 @@ pub struct Echo {
     pub vibes: &'static [(f64, Table)],
 }
 
+/// tuningOffset's settings (`[setting tuning]`, queue item 101b): how
+/// often a loop plays off A440, how far, and the vibes that lean how often.
+#[derive(Clone, Copy, Debug)]
+pub struct Tuning {
+    /// The share of loops off A440, before the vibes lean it.
+    pub share: f64,
+    /// How far off, in cents, either way.
+    pub cents: [f64; 2],
+    /// The vibes that lean the share.
+    pub vibes: Table,
+}
+
 /// The bass layer's level in dB, with a kick and without
 /// (`[setting basslift]`).
 #[derive(Clone, Copy, Debug)]
@@ -318,7 +330,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Progressions, SubDuck, SweepRanges, Vibe, VoiceCosts, f,
+        Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

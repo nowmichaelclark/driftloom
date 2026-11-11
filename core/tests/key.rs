@@ -297,11 +297,13 @@ fn played() {
         assert_eq!(player.state(), State::Playing);
         assert_eq!((player.generator().spec().root as usize, player.generator().spec().scale), (key, scale), "loop {i}, seed {seed}");
         let cinder = CHARACTERS[player.generator().spec().character().lead].id == "cinder";
+        // The note a pitch plays, the loop's tuning (item 101b) taken out.
+        let tune = player.generator().settings().tuning / 100.0;
         while host.frame < 20 * 48_000 {
             player.decide(&mut host);
             host.frame += QUANTUM as u64;
         }
-        let in_mode = |m: f64| SCALES[scale].steps.iter().any(|&s| (key + s as usize) % 12 == pc(m));
+        let in_mode = |m: f64| SCALES[scale].steps.iter().any(|&s| (key + s as usize) % 12 == pc(m - tune));
         for &m in &host.melody {
             sounded += 1;
             if !in_mode(m) {
@@ -326,13 +328,14 @@ fn played() {
         player.load(seed, &Request::new());
         player.ready(&mut host);
         let (key, scale) = (player.generator().spec().root as usize, player.generator().spec().scale);
+        let tune = player.generator().settings().tuning / 100.0;
         while host.frame < 20 * 48_000 {
             player.decide(&mut host);
             host.frame += QUANTUM as u64;
         }
         for &m in &host.chords {
             own += 1;
-            own_out += usize::from(!SCALES[scale].steps.iter().any(|&s| (key + s as usize) % 12 == pc(m)));
+            own_out += usize::from(!SCALES[scale].steps.iter().any(|&s| (key + s as usize) % 12 == pc(m - tune)));
         }
     }
     println!("played: 60 loops, the melody {melody_out} notes outside (cinder), the chords channel {chords_out} of {chords} (the same seeds on their own modes: {own_out} of {own})");

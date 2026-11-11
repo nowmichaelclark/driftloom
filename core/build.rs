@@ -599,7 +599,7 @@ impl Reader<'_> {
 /// The choices and every setting they draw from (queue items 80 and 81):
 /// the draw's counts and leans, each choice's options and vibes, and the
 /// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
-/// shapes, the pedal, padSweep, the echo time and the bass's level, each
+/// shapes, the pedal, padSweep, the echo time, the tuning and the bass's level, each
 /// block's keys exactly the ones `js/choices.js` reads.
 #[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
 fn choices(out: &mut String, blocks: &[Block]) {
@@ -756,6 +756,15 @@ fn choices(out: &mut String, blocks: &[Block]) {
         "/// echoTime's settings (`[setting echo]`).\npub static ECHO: Echo = Echo {{ beats: {}, vibes: {} }};",
         echo.need_numpool("beats"),
         echo.tables_by_number("vibes")
+    );
+    let tuning = find("setting", "tuning");
+    tuning.only(&["share", "cents", "vibes"]);
+    let _ = writeln!(
+        out,
+        "/// tuningOffset's settings (`[setting tuning]`).\npub static TUNING: Tuning = Tuning {{ share: {}, cents: {}, vibes: {} }};",
+        tuning.need_num("share"),
+        tuning.need_range("cents"),
+        tuning.need_table("vibes")
     );
     let lift = find("setting", "basslift");
     lift.only(&["kick", "noKick"]);

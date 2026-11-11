@@ -235,6 +235,11 @@ pub struct Synth {
     pub volume: Biased<{ VOLUME.to_bits() }>,
     /// The profile's level (`_gain`).
     pub level: Biased<{ 1.0_f64.to_bits() }>,
+    /// How far the loop plays off A440, in semitones (tuningOffset, queue
+    /// item 101b; `set_tuning`): added to every pitched note it sends, and
+    /// to the pitches a note carries with it (the note a slide or a slur
+    /// comes from, a stab's other notes, the organ's chords).
+    tune: f64,
 }
 
 impl Synth {
@@ -254,7 +259,16 @@ impl Synth {
             mutes: [false; 5],
             volume: Biased::DEFAULT,
             level: Biased::DEFAULT,
+            tune: 0.0,
         }
+    }
+
+    /// The loop's tuning, in cents off A440 (`Load::tuning`), for every note
+    /// sent from here on: the sequencer sets it as it schedules each step,
+    /// so a loop's notes carry its own tuning and the last loop's, still
+    /// ringing, keep theirs. At 0 every note is the same bits as before.
+    pub fn set_tuning(&mut self, cents: f64) {
+        self.tune = cents / 100.0;
     }
 
     /// A new synth on a core started at `rate`, `lite` or full (`new
@@ -374,7 +388,7 @@ impl Synth {
         }
         let mut chord = [f64::NAN; crate::block::event::NOTES];
         for (c, &n) in chord.iter_mut().zip(notes) {
-            *c = f64::from(n);
+            *c = f64::from(n) + self.tune;
         }
         host.event(CHORDS, Event::retune(time, &chord));
     }
@@ -489,6 +503,12 @@ impl Synth {
         // The voice call notes the channel (`_toCore`, queue item 85c).
         self.budget.note_channel(channel);
         host.key(key);
+        // The loop's tuning moves every pitched voice together; the kit
+        // (the tuned kick's pitch is its own, in Hz) and the texture's
+        // noises keep theirs (queue item 101b). The piano's knock carries
+        // its note, tuned, though it sounds a band of its own.
+        let pitched = !matches!(voice, DRUM | HAT | TUNEDKICK) && (voice != TEXTURE || parts == texture::SWELL);
+        let midi = if pitched { midi + self.tune } else { midi };
         host.note(voice, channel, time, midi, dur, vel, parts, x);
     }
 
@@ -581,8 +601,8 @@ impl Synth {
         }
         let dur = 0.022 + o.decay * 1.8;
         let x = extra(&[
-            notes.get(1).copied().unwrap_or(f64::NAN),
-            notes.get(2).copied().unwrap_or(f64::NAN),
+            notes.get(1).map_or(f64::NAN, |&m| m + self.tune),
+            notes.get(2).map_or(f64::NAN, |&m| m + self.tune),
             o.decay,
             o.open,
             o.saw,
@@ -660,7 +680,8 @@ impl Synth {
     #[allow(clippy::too_many_arguments, clippy::too_many_lines)] // one arm a voice, as `voice` is
     pub fn voice<H: Host>(&mut self, host: &mut H, key: Key, name: &str, midi: f64, time: f64, dur: f64, vel: f64, channel: u32, opts: &Opts) {
         let soft = channel == CHORDS;
-        let prev = opts.prev.unwrap_or(f64::NAN);
+        // The note it is joined to, tuned as the note itself will be.
+        let prev = opts.prev.map_or(f64::NAN, |p| p + self.tune);
         let fm = |o: Fm| Fm { soft, ..o };
         match name {
             "harp" => {
@@ -859,9 +880,11 @@ impl Synth {
         }
         let corner = if humming { 1700.0 } else { 2600.0 };
         let which = if humming { HUM_REF } else { vowel_index.unwrap_or(0) };
-        let mut trim = self.refs.trim(which, &formants, corner, humming, midi);
+        // The trim is for the pitch the voice sings, the loop's tuning in it.
+        let sung = midi + self.tune;
+        let mut trim = self.refs.trim(which, &formants, corner, humming, sung);
         if let Some(target) = &target {
-            trim = self.refs.moving(trim, midi_to_freq(midi), &formants, target, depth, corner, humming);
+            trim = self.refs.moving(trim, midi_to_freq(sung), &formants, target, depth, corner, humming);
         }
         if dur > SUNG_LONGEST {
             // Longer than the core holds the jitter for: the page plays it in
