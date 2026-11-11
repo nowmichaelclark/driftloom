@@ -311,8 +311,14 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   table clean; the control's two loops were the width ceiling after a rest,
   fixed; the brain re-rendered all 30 against v149: every loop -82 dB or
   lower. Underruns can only be answered by the phones (no `playoutStats`
-  in Chromium 153): `docs/notes/98-testers.md`. **Next:** session 02. The
-  next brain is B2.
+  in Chromium 153): `docs/notes/98-testers.md`. Session 02 done (#363,
+  v156, run on Mikey's own machine): the brain checked that all 751 moved
+  golden cases (of 5,132) draw a new option (slow 415, deep 195, wide 117,
+  fast 45) and none that draws one stayed; goldens and balance lock pass;
+  the refusals moved a little (bass asked 1,368 to 1,352; lite chords
+  refused 1,187 to 1,165), from slow openings, nothing worse. Its three
+  choices (how often, the calm vibes, deepDuck's depth) wait for Mikey's
+  ears at B2. **Next:** session 03. The next brain is B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were

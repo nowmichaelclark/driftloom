@@ -146,6 +146,13 @@ Things earlier sessions learned:
 - The local gate takes about 35 minutes (the core's tests are slow in a
   debug build); CI runs the same parts side by side in about ten. Push
   early so both run at once.
+- **On Mikey's own machine** (from session 02, 2026-11-11, Fedora): Rust is
+  in `~/.cargo` (`export PATH=$HOME/.cargo/bin:$PATH` in the command if
+  `cargo` isn't found), and git has no identity there: set it on each
+  commit (`git -c user.name=Mikey -c
+  user.email=162073748+nowmichaelclark@users.noreply.github.com`), as
+  main's commits are, and change no settings. Force-pushes are refused:
+  plan one PR per branch from the start.
 - Album codes: `js/share.js`'s `encodeAlbum(title, specs)` with specs from
   `js/gen.js`'s `newSpec(seed, request)` (in the page) or `decodeSong(code)`;
   in Node, `tools/gen-lib.mjs`'s `newSpec` and `render` read the tools'
