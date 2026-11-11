@@ -27,8 +27,11 @@ the core; v153's player in Node; 45 s, full, stereo, wander 1, 48 kHz): every
 name the same, every start the same sample; 28 null at -82 to -90 dB (float
 rounding); tui-doask and soath-wa differ after their silent bars (from 31.1 s
 and 27.3 s), 25 to 50 dB under the music and fading over about ten seconds,
-loudness within 0.08 dB: a phase or a held state, not a level (session 01
-finds which). One word a loop from Mikey.
+loudness within 0.08 dB: a phase or a held state, not a level. Session 01
+found it (#361, v155): the width ceiling read a rest's zero mid as "far too
+wide" and pulled the side down, in both apps; after the fix the brain's
+renders of both loops match v149 at -88 dB, the other 28 unchanged (noar-te
+-82 dB). One word a loop from Mikey.
 
 ## "Phase 2 Blind Album" (brain, 2026-11-07, v128 against v149) -- heard 2026-11-07
 

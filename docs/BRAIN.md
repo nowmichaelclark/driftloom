@@ -307,7 +307,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   the name stays out of the repo (it is in the Project's private doc
   `claude/new-name-at-1-0.md`, with the brain's plan: domain at Cloudflare
   Registrar, release id from the domain, test builds on a working id).
-  **Next:** hands session 01; then 02 onward. The next brain is B2.
+  **After B1:** hands session 01 done (#360 v154, #361 v155): the stall
+  table clean; the control's two loops were the width ceiling after a rest,
+  fixed; the brain re-rendered all 30 against v149: every loop -82 dB or
+  lower. Underruns can only be answered by the phones (no `playoutStats`
+  in Chromium 153): `docs/notes/98-testers.md`. **Next:** session 02. The
+  next brain is B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
