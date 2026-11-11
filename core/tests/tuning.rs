@@ -114,13 +114,13 @@ fn a_pin_plays_its_offset_and_0_holds_a440() {
 /// A host that renders nothing and writes down every note (voice, channel,
 /// time, midi, parts, extra) and every retune's chord.
 #[derive(Default)]
-struct Notes {
+struct Heard {
     frame: u64,
     notes: Vec<(u32, u32, f64, f64, u32, [f64; EXTRA])>,
     retunes: Vec<Vec<f64>>,
 }
 
-impl Host for Notes {
+impl Host for Heard {
     fn frame(&self) -> u64 {
         self.frame
     }
@@ -143,9 +143,9 @@ impl Host for Notes {
     fn fade_all(&mut self, _: f64, _: f64) {}
 }
 
-fn play(seed: u32, text: &str, seconds: u64) -> Notes {
+fn play(seed: u32, text: &str, seconds: u64) -> Heard {
     let mut player = Box::new(Player::new());
-    let mut host = Notes::default();
+    let mut host = Heard::default();
     player.attach(&mut host, 48_000.0, true);
     player.load(seed, &Request::parse(text).expect("a request"));
     player.ready(&mut host);
