@@ -324,7 +324,9 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   choice (on in 776) and the load's tuning; tuningOffset on 168 of 1,000
   corpus loops, 15 to 35 cents; goldens and balance lock pass. padWow moves
   three baseline loops' mix past 0.2 LU, as the approved sketch does: for
-  Mikey's ears at B2. **Next:** session 04. The next brain is B2.
+  Mikey's ears at B2. **Order changed 2026-11-12** (Mikey): the long pieces
+  (11 to 15, 11 and 14 on Fable) before batch 6's 04 to 10. **Next:**
+  session 11. The next brain is B3, then B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were

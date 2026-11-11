@@ -1,7 +1,9 @@
 # Session 04: batch 6, width: widePad (101c)
 
+**Order changed 2026-11-12 (Mikey):** this follows the long pieces (sessions 11 to 15) now. The long pieces' checks (`tools/longform.mjs`, the piece-map goldens, `core/tests/length.rs`) are part of the gate: keep them green, and say in the PR whether the new sound changes any piece's map (it should change only what a section plays, never the plan). The same holds for 05 to 10.
+
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 03.
+- **Start after:** session 15 (brain B3 and its listening row may still be open).
 - **Queue item:** item 101.
 
 Paste everything in the block as the session's first message.

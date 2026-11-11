@@ -1,5 +1,7 @@
 # Session 10: the chords nearer the tune (84b)
 
+**Order changed 2026-11-12 (Mikey):** the long pieces (11 to 15) are built before this session, so its rule is checked inside them too.
+
 - **Model:** Opus 5.5. **Effort:** high.
 - **Start after:** session 09.
 - **Queue item:** item 101's "84b" paragraph.
@@ -17,7 +19,7 @@ The work, one PR. Item 84 reads the chords' octave from the progression, so a pi
 
 First measure: extend tools/octave.mjs (it already writes each loop's octave and the gap between the tune's and the chords' centres) to print the gap's distribution over 2,000 corpus loops, today. Then change the aim, and print it again: how many loops moved, which way, and the gap's spread before and after. The chords must not collide with the tune (the balance lock has the collision share: it must hold, or move for the better, said in the PR) and must not crowd the bass (the low guard). Where a choice is open (how near, and what happens when the tune is very low), take the conservative one and mark it for Mikey's ears.
 
-Yardsticks: no loop left with the chords more than about an octave under the tune because of the octave drop; node tools/octave.mjs: no flips; the balance lock, said figure by figure; the generation goldens and the baseline updated on purpose, with the count of cases that moved; refusals on full and lite no worse. In the Done line, name six corpus loops that moved downward under item 84 and are nearer now (three by a lot, three by a little), with times, for Mikey's album; and add the line to for-mikey.md: a revert follows if he hears worse.
+Yardsticks: no loop left with the chords more than about an octave under the tune because of the octave drop; node tools/octave.mjs: no flips; the balance lock, said figure by figure; the generation goldens and the baseline updated on purpose, with the count of cases that moved; refusals on full and lite no worse. In the Done line, name six corpus loops that moved downward under item 84 and are nearer now (three by a lot, three by a little), with times, for Mikey's album; and add the line to for-mikey.md: a revert follows if he hears worse. The long pieces came first (order changed 2026-11-12): check the rule also holds inside a long piece, in its related keys, theme B's sections and the returns' variations (tools/longform.mjs on a few arcs), not only in a loop's own passes.
 
 When you finish: add the merged PRs' lines to docs/DONE.md, keep the queue's status line current, tick session 10's row in docs/sessions/README.md, and end with a plain summary for Mikey: what merged (PR numbers), what to listen for or check, and what you added to docs/notes/for-mikey.md. Do this session's work and stop: the next session has its own prompt.
 ````
