@@ -28,8 +28,9 @@ rest of the road cut into sessions, each with its prompt, its model and its
 place in the order; the items below stay the briefs). Brain B1 done
 (2026-11-11: 97 and 100 checked, phase 3's control rendered, the plan
 reviewed); hands session 01 done (2026-11-11: the stall test clean, the
-testers' steps written, the control's two loops explained and fixed); next:
-session 02 (101a), and Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
+testers' steps written, the control's two loops explained and fixed); hands
+session 02 done (2026-11-11: 101a, batch 6's far ends, #363); next: session
+03 (101b), and Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
