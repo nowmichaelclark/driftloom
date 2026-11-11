@@ -7,7 +7,9 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-10:** `main` is at v153. Done: items 0-36 and 38-47 (13
+**Status, 2026-11-11:** `main` is at v155 (session 01 done: v154 the tools
+made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
+plain lines; v155 the width ceiling's rest fix). Done: items 0-36 and 38-47 (13
 stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
@@ -24,7 +26,9 @@ too-slow line).
 rest of the road cut into sessions, each with its prompt, its model and its
 place in the order; the items below stay the briefs). Brain B1 done
 (2026-11-11: 97 and 100 checked, phase 3's control rendered, the plan
-reviewed); next: hands session 01 (98's hands part). Item
+reviewed); hands session 01 done (2026-11-11: the stall test clean, the
+testers' steps written, the control's two loops explained and fixed); next:
+session 02 (101a), and Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -279,8 +283,11 @@ exactly zero beside a side window of float dust, it reads "far too wide" and
 takes the side's gain toward nothing, and the loop returns narrow for about
 ten seconds. It does that in v149 and in today's player alike (the same
 samples at the player's 0.25 s hand-over); the brain's v149 renders handed
-notes over far ahead, where the dust fell the other way. Fixed in its own
-PR (a floor on the mid), not here.
+notes over far ahead, where the dust fell the other way. Fixed in v155: the
+ceiling takes a window with next to no mid in it (under 1e-9 in sum of
+squares, about -140 dB a sample) as nothing to hold the side against, so its
+gain goes back up; the two loops now render within -88 dB of each other at
+either hand-over, and one baseline loop (ri-houng, full, stereo) moved.
 
 ## 99. The sketch levers for Ears 13b (alongside phase 3)
 

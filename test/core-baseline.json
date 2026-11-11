@@ -1905,8 +1905,8 @@
     "sideMidDb": -23.78
    },
    "ri-houng": {
-    "left": "bb4dcf02",
-    "right": "ee0f4ef1",
+    "left": "254d06b7",
+    "right": "cc6d977f",
     "monoOnEachSide": false,
     "foldLU": 0,
     "foldResidDb": -76.63,
@@ -2521,8 +2521,8 @@
    "ri-houng": {
     "seed": 289351446,
     "out": "b1995231",
-    "left": "bb4dcf02",
-    "right": "ee0f4ef1"
+    "left": "254d06b7",
+    "right": "cc6d977f"
    },
    "koun-nuing": {
     "seed": 1694877057,

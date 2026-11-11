@@ -22,7 +22,7 @@ says the work goes on meanwhile.
 | # | File | What | Model, effort | Done |
 |---|---|---|---|---|
 | B1 | `brain-1-kickoff.md` | Brain: check 97 and 100, phase 3's check, adopt this plan | Opus 5.5, high | yes, 2026-11-11 |
-| 01 | `01-phase-3-proof.md` | Item 98's hands part; the tools made steady | Sonnet 5.5, high | |
+| 01 | `01-phase-3-proof.md` | Item 98's hands part; the tools made steady | Sonnet 5.5, high | yes, 2026-11-11 |
 | | **you** | The testers' steps from 01 (your phone, tablet, the friends' Pixels). The work goes on meanwhile. | | |
 | 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | |
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | |
@@ -141,9 +141,8 @@ Things earlier sessions learned:
 - The generation goldens' file (`core/golden/generation.hashes`) is the
   list of cases: a new case is a line of its first three fields, and
   `node tools/gen-golden.mjs` writes the hashes.
-- `tools/rows.mjs` checks every app control in about a minute. Until
-  session 01 fixes it, two of its rows fail about one run in four on a
-  quiet random loop ("sound: something plays", "mutes"): run it again.
+- `tools/rows.mjs` checks every app control in about a minute, from a fixed
+  first loop (session 01: ten runs in a row, ten passes).
 - The local gate takes about 35 minutes (the core's tests are slow in a
   debug build); CI runs the same parts side by side in about ten. Push
   early so both run at once.

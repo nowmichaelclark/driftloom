@@ -14,6 +14,13 @@ the points where the next step is yours.
 
 ## The listening album
 
+- **Phase 3 Control, after v155 (session 01):** the two loops that differed
+  after a silent bar (tui-doask from about 0:31, soath-wa from about 0:27)
+  were the new app's fault and the old one's alike: the stereo width came
+  back narrow for about ten seconds after a long rest. v155 fixes it, so
+  **Now** is the live site as of v155; those two should sound the same as
+  **Before** or a little wider after the rest. One word as before.
+
 - **Phase 3 Control (brain B1, 2026-11-11):** six loops, one album code, in
   the app before phase 3 and in today's; they should sound the same. Code and
   links in `docs/ALBUMS.md`. On the Moto (it stays at full), headphones, the
