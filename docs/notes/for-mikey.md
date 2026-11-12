@@ -103,8 +103,8 @@ the points where the next step is yours.
 
 ## Decisions
 
-- **The arc's brightness (102c, #377):** #377 merged short of two of its
-  yardsticks, on your or the brain's say-so: brightness rises and falls on
+- **The arc's brightness (102c, #377; you merged it as it is, 2026-11-12,
+  so this is now a listening question, not a decision): brightness rises and falls on
   87% of pieces (9 in 10 asked), and one 1,024-bar piece steps 2.7 LU (2
   asked). Four loops miss: tui-doask and so-rou (nothing above about 1 kHz
   to brighten), gluith-vuisk and rong-wuisk (their own slow opening hides

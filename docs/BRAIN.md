@@ -335,7 +335,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   stretch with nothing moving now 300 s (was 587); the stall test clean on
   two wander pieces in Chromium (autolite's slow case can't ask a journey
   yet). The wander's tune hand-over waits for theme B: turned on in session
-  14. **Next:** session 13. The next brain is B3, then B2.
+  14. Session 13 done (#377, v162): two yardsticks short (brightness 87%
+  of 9 in 10; one 2.7 LU step); Mikey merged it as it is. The brain checked
+  main after: module matches, goldens 5,135 of 5,135. The step goes to
+  session 15. **Next:** session 14 (Fable 5.2, medium). The next brain is
+  B3, then B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
