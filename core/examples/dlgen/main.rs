@@ -174,11 +174,13 @@ fn clock(seconds: f64) -> String {
 fn map(args: &[String]) -> Result<(), String> {
     let mut plain = Vec::new();
     let (mut from, mut count) = (0u64, None);
+    let mut movements = false;
     let mut rest = args.iter();
     while let Some(a) = rest.next() {
         match a.as_str() {
             "--from" => from = rest.next().and_then(|x| x.parse().ok()).ok_or("--from needs a section's number")?,
             "--count" => count = Some(rest.next().and_then(|x| x.parse::<u64>().ok()).ok_or("--count needs a number")?),
+            "--movements" => movements = true,
             _ => plain.push(a),
         }
     }
@@ -223,6 +225,42 @@ fn map(args: &[String]) -> Result<(), String> {
     println!("# {length}; the {} ({how}): {journey}; the unit is the {} ({} bars, {:.1} s)", form.journey.name(), form.grain.name(), form.unit_bars, form.unit_seconds);
     let related: Vec<String> = form.related().map(|k| format!("{} ({})", key_name(k), k.relation.name())).collect();
     println!("# related keys: {}", if related.is_empty() { "none".to_string() } else { related.join(", ") });
+    let kinds: Vec<&str> = form.cycle().iter().map(|k| k.name()).collect();
+    if form.journey == Journey::Arc && kinds.len() > 1 {
+        println!("# the movements' cycle: {}{}", kinds.join(", "), if sections.is_some() { ", then a last full arc" } else { ", round and round" });
+    }
+    if movements {
+        // One line a movement: where it starts, its kind, how long it is,
+        // its second theme's seed and how its theme returns.
+        println!("# {:>9} {:>9} {:>8}  {:<10} {:>6} {:>8}  second theme, the return", "movement", "section", "time", "kind", "units", "lasts");
+        let count = count.unwrap_or_else(|| sections.unwrap_or(2000));
+        let mut last = None;
+        for n in from..from.saturating_add(count) {
+            let m = sections.map_or(n, |all| n % all);
+            for p in 0..form.units_in(n) {
+                let s = form.at(n, p);
+                if s.journey == Journey::Arc && s.role == longform::Role::Return && s.at > 0 && last == Some((s.part, false)) {
+                    println!("{:>64}the return: A {}{}", "", s.variation.name(), if form.at(n, p).changed & changed::KEY != 0 { ", the key home" } else { "" });
+                    last = Some((s.part, true));
+                }
+                if last.map(|l| l.0) == Some(s.part) {
+                    continue;
+                }
+                last = Some((s.part, false));
+                println!(
+                    "{:>11} {:>9} {:>8}  {:<10} {:>6} {:>8}  {}",
+                    s.part,
+                    if form.units_in(n) > 1 { format!("{n}.{p}") } else { n.to_string() },
+                    clock((m as f64 * spec.bars + p as f64 * form.unit_bars) * bar_seconds),
+                    s.kind.name(),
+                    form.movement_units(n, p),
+                    clock(form.movement_units(n, p) as f64 * form.unit_seconds),
+                    form.second_of(s.part).map_or("one theme".to_string(), |seed| format!("B of seed {seed}")),
+                );
+            }
+        }
+        return Ok(());
+    }
     println!("# {:>9} {:>8} {:>4}  {:<11} {:>12}  {:<16} {:<18} {:>5} {:>6}  changed", "section", "time", "bars", "role", "part", "theme", "key", "bpm", "energy");
     let count = count.unwrap_or_else(|| sections.map_or(60, |n| n.min(200)));
     for n in from..from.saturating_add(count) {
@@ -250,6 +288,15 @@ fn map(args: &[String]) -> Result<(), String> {
             }
             if let Some((l, pick)) = s.state.voice {
                 state.push(format!("{} voice {pick:.2}", l.name()));
+            }
+            if s.calls {
+                state.push("a call and response".to_string());
+            }
+            if s.prepares {
+                state.push("the bass holds the home fifth".to_string());
+            }
+            if s.journey == Journey::Arc && form.cycle().len() > 1 {
+                state.push(s.kind.name().to_string());
             }
             if s.journey == Journey::Wander {
                 state.push(format!("warmth {:+.2} space {:+.2} register {:+} length {:+} density {:.2}", s.state.warmth, s.state.space, s.state.register, s.state.length, s.state.density));

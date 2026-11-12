@@ -49,6 +49,29 @@
 //! the tune's last phrase, whole; the round after starts at its opening,
 //! from the close. Endless plays arc after arc, a breath between, and never
 //! lands. A pass of a loop that is no piece is exactly as before.
+//!
+//! **An arc's themes, variations and keys** (queue item 102d, session 14:
+//! `Lift::themed`). A unit plays the loop's own tune, the piece's second
+//! (`Tune`: another seed's tune bent into this loop, or the loop's own
+//! answered, made by the generator a section ahead, `Generator::prepare`),
+//! or one then the other by the halves of each phrase: a fragment (the
+//! phrase's first half, then a rest), a call and response (theme A's
+//! fragment, the other's in its rests), a theme answered (its first half
+//! kept, the second the answer's). One voice throughout: never two tunes
+//! at once. A variation is a mark on the notes, a pure function of the
+//! theme and the movement's drawn number: the tune an octave away, in
+//! another voice of its pool, stretched (each phrase's first half at half
+//! speed over held chords), over the relative key's chords, thinned to its
+//! outline. A related key a fifth away moves the whole loop (the wander's
+//! way); the relative and the parallel move every note along the mode
+//! (`key_map`: a table by pitch class, so the chords, the bass, the tune,
+//! the texture and a tuned kick move together and stay in the key). Before
+//! a return the bass may hold the home key's fifth for a phrase. **An
+//! interlude** (a movement in the wander's way) is its energy and the
+//! wander's state over it. **A section plays one tune beside the loop's
+//! own** (so the generator keeps two: the section playing and the next):
+//! where its units name more, the first is the section's and stands in for
+//! the others.
 
 // Steps and units are whole numbers far below 2^53.
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
@@ -58,11 +81,12 @@ use super::character::Names;
 use super::data::{ENERGY, LONGFORM};
 use super::js;
 use super::list::{Empty, Word};
-use super::longform::{Form, Span, Theme};
+use super::longform::{Form, Key, Relation, Role, Span, State, Theme, Variation};
 use super::melody::MELODY_MAX;
 use super::plan::{self, Cx, Notes};
 use super::render::Render;
 use super::request::Journey;
+use super::theory::SCALES;
 use super::{LAYERS, Layer};
 
 /// The most units a section has: a section of up to 32 bars in phrases of
@@ -83,6 +107,67 @@ const KEY_RANGE: [[f64; 2]; 5] = [[0.0, 127.0], [33.0, 60.0], [36.0, 96.0], [48.
 const ROOM_MOST: usize = 64;
 /// The stream a tune's notes draw their rank on, for thinning.
 const THIN_SALT: u32 = 0x5448_494e;
+/// The same for the second tune's notes, and the salt an answer's seed is
+/// made with.
+const SECOND_SALT: u32 = 0x3254_4e45;
+const ANSWER_SALT: u32 = 0x414e_5357;
+/// Where the tune may sit once a variation moves it an octave: up where its
+/// highest stays here or under (then anywhere under the doubling's 96),
+/// down where its lowest stays here or over.
+const TUNE_RANGE: [f64; 2] = [48.0, 91.0];
+/// The layers a key's map moves, a bit each: every pitched one.
+const PITCHED: u8 = 0b1_1110;
+
+/// What a phrase half of a unit plays (`Unit::tune`).
+pub mod tune {
+    /// The loop's own tune.
+    pub const OWN: u8 = 0;
+    /// The section's second tune (`Heard::second`).
+    pub const SECOND: u8 = 1;
+    /// Nothing: the tune rests.
+    pub const REST: u8 = 2;
+}
+
+/// A tune beside the loop's own, as the generator makes it (session 14):
+/// which, and from what seed. All zero bytes is none.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Tune {
+    /// 0 none; 1 a second theme, another seed's tune bent into this loop;
+    /// 2 the loop's own tune answered (`melody::answer_figure`).
+    pub kind: u8,
+    pub seed: u32,
+}
+
+impl Tune {
+    /// No tune.
+    pub const NONE: Tune = Tune { kind: 0, seed: 0 };
+    /// A second theme's.
+    pub const SECOND: u8 = 1;
+    /// An answer's.
+    pub const ANSWER: u8 = 2;
+
+    /// The tune unit `span` of a piece asks for beside the loop's own, if
+    /// it asks for one.
+    #[must_use]
+    pub fn wanted(span: &Span) -> Option<Tune> {
+        match (span.theme, span.theme_seed) {
+            (Theme::B | Theme::Recall(_), Some(seed)) => Some(Tune { kind: Tune::SECOND, seed }),
+            (Theme::A, _) if span.variation == Variation::Answered => {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a number from 0 to 1 as 32 bits
+                let seed = (span.pick * 4_294_967_296.0) as u32 ^ ANSWER_SALT;
+                Some(Tune { kind: Tune::ANSWER, seed })
+            }
+            _ => None,
+        }
+    }
+
+    /// The one tune section `n` of the piece `form` plays beside the loop's
+    /// own: its first unit's that asks for one.
+    #[must_use]
+    pub fn of(form: &Form, n: u64) -> Tune {
+        (0..form.units_in(n)).find_map(|p| Tune::wanted(&form.at(n, p))).unwrap_or(Tune::NONE)
+    }
+}
 
 /// A unit of a section as the plan has it heard: its steps, and each thing
 /// at the unit's start and its end (the gliding ones) or throughout. Every
@@ -127,6 +212,22 @@ pub struct Unit {
     /// The arc's filter's aim, at the start and the end: -1 its darkest, 0
     /// the loop's own swing, 1 its brightest.
     pub aim: [f64; 2],
+    /// What each half of a phrase plays (session 14, `tune`): the loop's
+    /// own tune, the section's second, or a rest.
+    pub tune: [u8; 2],
+    /// The tune moved, in semitones (an octave, a variation's register).
+    pub lift: i16,
+    /// Whether the tune is stretched: each phrase's first half at half
+    /// speed.
+    pub stretched: bool,
+    /// Another mode's key: how far each pitch class, counted from the home
+    /// note, moves (`key_map`), and the layers it moves, a bit each.
+    pub map: [i8; 12],
+    pub mapped: u8,
+    /// The bass holds this note (0: its own) from section step
+    /// `pedal_from` to the unit's end: a return prepared.
+    pub pedal: i16,
+    pub pedal_from: f64,
 }
 
 impl Empty for Unit {
@@ -146,6 +247,13 @@ impl Empty for Unit {
         double: 0,
         doubled: [0.0; 2],
         aim: [0.0; 2],
+        tune: [0; 2],
+        lift: 0,
+        stretched: false,
+        map: [0; 12],
+        mapped: 0,
+        pedal: 0,
+        pedal_from: 0.0,
     };
 }
 
@@ -197,6 +305,33 @@ impl Unit {
     #[must_use]
     pub fn aim_at(&self, step: f64) -> f64 {
         Self::glide(self.aim, self.along(step))
+    }
+
+    /// How far `layer`'s note `midi` moves in the unit, in semitones: to
+    /// another mode's key along the map (by the note's place from the home
+    /// note `root`), then the layer's own move (a key a fifth away, an
+    /// octave to stay in range; the chords' register; the tune's lift).
+    #[must_use]
+    pub fn moved(&self, layer: Layer, midi: f64, root: f64) -> f64 {
+        let k = layer as usize;
+        let mut by = f64::from(self.shift[k]);
+        if self.mapped & (1 << k) != 0 {
+            let pc = js::index((js::round(midi - root) % 12.0 + 12.0) % 12.0) % 12;
+            by += f64::from(self.map[pc]);
+        }
+        by + match layer {
+            Layer::Chords => f64::from(self.register),
+            Layer::Melody => f64::from(self.lift),
+            _ => 0.0,
+        }
+    }
+
+    /// How far the home note itself moves for `layer` (a tuned kick follows
+    /// the bass's).
+    #[must_use]
+    pub fn tonic(&self, layer: Layer) -> i16 {
+        let k = layer as usize;
+        self.shift[k] + if self.mapped & (1 << k) != 0 { i16::from(self.map[0]) } else { 0 }
     }
 
     /// How much of its velocity a kit hit keeps at `step` (1 all), by its
@@ -294,6 +429,13 @@ pub struct Heard {
     /// before the landing; none where the two are equal), and the landing.
     whole: [f64; 2],
     pub landing: Landing,
+    /// The tune the section plays beside the loop's own (session 14; none:
+    /// `Tune::NONE`), a phrase's steps and its first half's, and the home
+    /// note.
+    pub second: Tune,
+    pub phrase: f64,
+    pub half: f64,
+    pub root: f64,
 }
 
 impl Heard {
@@ -308,7 +450,60 @@ impl Heard {
         arc: false,
         whole: [0.0; 2],
         landing: Landing::NONE,
+        second: Tune::NONE,
+        phrase: 0.0,
+        half: 0.0,
+        root: 0.0,
     };
+
+    /// What the tune plays at section step `step` (`tune`): the unit's, by
+    /// the half of the phrase the step is in.
+    #[must_use]
+    pub fn tune_at(&self, step: f64) -> u8 {
+        let Some(u) = self.unit(step) else { return tune::OWN };
+        let later = self.phrase > 0.0 && step % self.phrase >= self.half;
+        u.tune[usize::from(later)]
+    }
+
+    /// Whether note `i` of the section's second tune sounds at `step`: as
+    /// `sounds`, by a rank of its own.
+    #[must_use]
+    pub fn second_sounds(&self, i: usize, step: f64) -> bool {
+        let Some(u) = self.unit(step) else { return true };
+        let thin = Unit::glide(u.thin, u.along(step));
+        thin <= 0.0 || rank(self.seed ^ SECOND_SALT, i) < 1.0 - thin
+    }
+
+    /// Where a stretched tune's note sounding at section step `step` is
+    /// written: the phrase's first half at half speed, so the note at
+    /// phrase step `x` sounds at `2x`. None where the unit is not
+    /// stretched, or no note falls on the step.
+    #[must_use]
+    pub fn stretched_from(&self, step: f64) -> Option<f64> {
+        let u = self.unit(step)?;
+        if !u.stretched || !(self.phrase > 0.0) {
+            return None;
+        }
+        let x = step % self.phrase;
+        (x % 2.0 == 0.0).then(|| step - x + x / 2.0)
+    }
+
+    /// The phrase lines of a loop of `bars` bars of `spb` steps: a
+    /// phrase's steps and its first half's (whole bars; the longer half
+    /// first where they are odd).
+    fn phrases(&mut self, cx: &Cx) {
+        let bars = cx.spec.bars;
+        let phrase = if bars % 4.0 == 0.0 {
+            4.0
+        } else if bars % 2.0 == 0.0 {
+            2.0
+        } else {
+            bars
+        };
+        self.phrase = phrase * cx.spb;
+        self.half = if phrase >= 2.0 { js::ceil(phrase / 2.0) * cx.spb } else { js::ceil(cx.spb / 2.0) };
+        self.root = cx.spec.root;
+    }
 
     /// The unit holding section step `step` (none: nothing heard).
     #[must_use]
@@ -384,6 +579,8 @@ impl Heard {
         self.seed = cx.spec.seed;
         self.spb = cx.spb;
         self.place_notes(base);
+        self.phrases(cx);
+        self.second = Tune::of(form, n);
         let ways = Ways::of(cx, base);
         let spb = cx.spb;
         let unit_steps = form.unit_bars * spb;
@@ -426,16 +623,25 @@ impl Heard {
         self.seed = cx.spec.seed;
         self.spb = cx.spb;
         self.place_notes(base);
+        self.phrases(cx);
+        self.second = Tune::of(form, n);
         let ways = Ways::of(cx, base);
         let lift = Lift::of(form, cx, &ways);
         let spb = cx.spb;
         let unit_steps = form.unit_bars * spb;
         let count = (form.units_in(n) as usize).min(UNITS_MAX);
-        let mut from = form.before(n, 0).map(|(b, p)| lift.end(&ways, &smoothed(form, b, p)));
+        let has = self.second != Tune::NONE;
+        let mut from = form.before(n, 0).map(|(b, p)| {
+            let span = smoothed(form, b, p);
+            let mut end = lift.end(&ways, &span);
+            lift.themed(form, &ways, &span, has, &mut end);
+            end
+        });
         let mut at = 0.0;
         for p in 0..count {
             let span = smoothed(form, n, p as u64);
-            let end = lift.end(&ways, &span);
+            let mut end = lift.end(&ways, &span);
+            lift.themed(form, &ways, &span, has, &mut end);
             let start = from.unwrap_or(end);
             let steps = span.bars * spb;
             let u = &mut self.units[p];
@@ -459,7 +665,15 @@ impl Heard {
                 u.doubled[0] = 0.0;
             }
             u.aim[0] = start.aim[1];
+            // A return prepared: over the unit's last phrase the bass holds
+            // the home key's fifth.
+            if span.prepares {
+                u.pedal = ways.fifth(form, cx);
+                u.pedal_from = js::max(u.from, u.to - self.phrase);
+            }
             at = u.to;
+            // (What a line changes, a tune, a key, a voice, is this unit's
+            // alone: the next starts from its levels only.)
             from = Some(end);
         }
         self.count = count;
@@ -562,7 +776,17 @@ impl Heard {
     /// its last phrase whole and its landing.
     pub fn write<S: Sink>(&self, w: &mut Writer<S>) {
         if !self.arc {
+            // (A wander that hands its tune over says whose it plays.)
+            if self.second == Tune::NONE {
+                self.write_units(w);
+                return;
+            }
+            w.obj();
+            w.key("second");
+            w.num(f64::from(self.second.seed));
+            w.key("units");
             self.write_units(w);
+            w.end_obj();
             return;
         }
         w.obj();
@@ -588,6 +812,11 @@ impl Heard {
         } else {
             w.null();
         }
+        w.key("second");
+        w.list();
+        w.num(f64::from(self.second.kind));
+        w.num(f64::from(self.second.seed));
+        w.end_list();
         w.key("units");
         self.write_units(w);
         w.key("whole");
@@ -627,6 +856,23 @@ impl Heard {
             }
             w.key("from");
             w.num(u.from);
+            if self.arc {
+                w.key("lift");
+                w.num(f64::from(u.lift));
+                w.key("map");
+                w.list();
+                for &m in &u.map {
+                    w.num(f64::from(m));
+                }
+                w.end_list();
+                w.key("mapped");
+                w.num(f64::from(u.mapped));
+                w.key("pedal");
+                w.list();
+                w.num(f64::from(u.pedal));
+                w.num(u.pedal_from);
+                w.end_list();
+            }
             w.key("register");
             w.num(f64::from(u.register));
             w.key("shift");
@@ -653,6 +899,10 @@ impl Heard {
             }
             w.key("stretch");
             w.num(u.stretch);
+            if self.arc {
+                w.key("stretched");
+                w.bool(u.stretched);
+            }
             w.key("thin");
             w.list();
             w.num(u.thin[0]);
@@ -664,6 +914,11 @@ impl Heard {
                 w.num(t[0]);
                 w.num(t[1]);
             }
+            w.end_list();
+            w.key("tune");
+            w.list();
+            w.num(f64::from(u.tune[0]));
+            w.num(f64::from(u.tune[1]));
             w.end_list();
             w.key("voice");
             w.list();
@@ -820,6 +1075,128 @@ impl Lift {
     }
 }
 
+impl Lift {
+    /// Unit `span` of an arc's theme, its variation and its key, on the
+    /// unit `u` its energy made (session 14; the module's doc). `has`: the
+    /// section plays a tune beside the loop's own.
+    fn themed(&self, form: &Form, ways: &Ways, span: &Span, has: bool, u: &mut Unit) {
+        // An interlude: the wander's state over the energy.
+        if span.journey == Journey::Wander {
+            ways.overlay(&span.state, u);
+            return;
+        }
+        // Whose tune, by the halves of each phrase.
+        let second = if has { tune::SECOND } else { tune::OWN };
+        let other = matches!(span.theme, Theme::B | Theme::Recall(_)) || span.variation == Variation::Answered;
+        u.tune = match (span.fragment, span.calls, other) {
+            (true, true, _) => [tune::OWN, second],
+            (true, false, true) => [second, tune::REST],
+            (true, false, false) => [tune::OWN, tune::REST],
+            // A theme answered: its first half kept, the second the answer's.
+            (false, _, true) if span.theme == Theme::A => [tune::OWN, second],
+            (false, _, true) => [second; 2],
+            (false, _, false) => [tune::OWN; 2],
+        };
+        // The key: a fifth away, the loop moved whole; another mode, every
+        // pitched layer along the map, an octave over where it would leave
+        // its range.
+        let relation = span.key.relation;
+        if relation.is_fifth() {
+            u.shift = ways.shift(relation.shift());
+        } else if relation != Relation::Home {
+            u.map = key_map(form.home, span.key);
+            u.mapped = PITCHED;
+            u.shift = ways.octaves(u.map[0]);
+        }
+        // The variation: a mark on the notes, by the movement's number.
+        let mut variation = span.variation;
+        let melody = Layer::Melody as usize;
+        if variation == Variation::Voice {
+            match ways.voice(Layer::Melody, span.pick) {
+                Some(v) => u.voice[melody] = Word::new(v),
+                // A tune with no other voice to take moves an octave.
+                None => variation = Variation::Register,
+            }
+        }
+        match variation {
+            // (The peak's register is its double, an octave over.)
+            Variation::Register if span.role != Role::Peak => {
+                u.lift = ways.lift(span.pick, u.shift[melody]);
+                if u.lift > 0 {
+                    u.double = 0;
+                    u.doubled = [0.0; 2];
+                } else if u.lift == 0 {
+                    // A tune too wide to move is thinned to its outline.
+                    u.thin = [js::max(u.thin[1], LONGFORM.outline); 2];
+                }
+            }
+            Variation::Stretched => {
+                u.stretched = true;
+                u.stretch = ways.stretch(1);
+            }
+            Variation::Reharmonized => {
+                if let Some(relative) = form.related().find(|k| k.relation == Relation::Relative) {
+                    u.map = key_map(form.home, relative);
+                    u.mapped = PITCHED & !(1 << melody);
+                    let octaves = ways.octaves(u.map[0]);
+                    for layer in [Layer::Bass, Layer::Chords, Layer::Texture] {
+                        u.shift[layer as usize] = octaves[layer as usize];
+                    }
+                }
+            }
+            Variation::Outline => u.thin = [js::max(u.thin[1], LONGFORM.outline); 2],
+            _ => {}
+        }
+    }
+}
+
+/// How far each pitch class, counted from `home`'s note, moves to play in
+/// the key `to` (session 14). The relative key (the same notes, another
+/// home note): every note the same count of the mode's steps along, the
+/// nearer way, so a tune keeps its shape and a chord becomes the chord
+/// that many steps away; a note outside the mode goes with the mode's note
+/// under it. The parallel (the same home note, another mode): each of the
+/// mode's notes to the other mode's, step for step where they have as
+/// many, else to its nearest. A key a fifth away moves nothing here (the
+/// whole loop moves, `Ways::shift`).
+#[must_use]
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // steps and semitones, under 24
+pub fn key_map(home: Key, to: Key) -> [i8; 12] {
+    let mut map = [0i8; 12];
+    let (Some(own), Some(other)) = (SCALES.get(home.scale), SCALES.get(to.scale)) else { return map };
+    let steps = own.steps;
+    let n = steps.len() as i32;
+    if n == 0 {
+        return map;
+    }
+    let at = |x: i32| steps[x.rem_euclid(n) as usize] as i32 + 12 * x.div_euclid(n);
+    match to.relation {
+        Relation::Relative => {
+            let up = (i32::from(to.root) - i32::from(home.root)).rem_euclid(12);
+            let Some(d) = steps.iter().position(|&s| s as i32 == up) else { return map };
+            let d = if up > 6 { d as i32 - n } else { d as i32 };
+            for pc in 0..12 {
+                // The mode's note at or under this one.
+                let x = steps.iter().rposition(|&s| s as i32 <= pc).unwrap_or(0) as i32;
+                map[pc as usize] = (at(x + d) - at(x)) as i8;
+            }
+        }
+        Relation::Parallel => {
+            for (x, &s) in steps.iter().enumerate() {
+                let near = |o: f64| ((o as i32 - s as i32 + 18).rem_euclid(12)) - 6;
+                let by = if other.steps.len() == steps.len() {
+                    near(other.steps[x])
+                } else {
+                    other.steps.iter().map(|&o| near(o)).min_by_key(|d| (d.abs(), *d)).unwrap_or(0)
+                };
+                map[(s as usize) % 12] = by as i8;
+            }
+        }
+        _ => {}
+    }
+    map
+}
+
 /// How a loop's things move, worked out once a section from the loop: the
 /// voices its pools offer, which way its chords may move, which octave each
 /// layer takes in another key.
@@ -943,6 +1320,72 @@ impl Ways {
         out
     }
 
+    /// Each pitched layer's octave where a key's map moves the home note
+    /// `by` semitones: none, or the octave that keeps the layer in its
+    /// range.
+    fn octaves(&self, by: i8) -> [i16; 5] {
+        let mut out = self.shift(by);
+        if by != 0 {
+            for o in &mut out[1..] {
+                *o -= i16::from(by);
+            }
+        }
+        out
+    }
+
+    /// The octave a register variation moves the tune by, for the
+    /// movement's number `pick` (down under a half, up over it, the other
+    /// way where that one leaves the tune's range, none where both do),
+    /// the tune already moved `shift` by its key.
+    fn lift(&self, pick: f64, shift: i16) -> i16 {
+        let Some([lo, hi]) = self.ranges[Layer::Melody as usize] else { return 0 };
+        let (lo, hi) = (lo + f64::from(shift), hi + f64::from(shift));
+        let up = hi + 12.0 <= TUNE_RANGE[1];
+        let down = lo - 12.0 >= TUNE_RANGE[0];
+        match (pick >= 0.5, up, down) {
+            (true, true, _) | (false, true, false) => 12,
+            (false, _, true) | (true, false, true) => -12,
+            _ if hi + 12.0 <= 96.0 => 12,
+            _ => 0,
+        }
+    }
+
+    /// The home key's fifth for the bass to hold before a return: the
+    /// mode's (a perfect fifth, or its nearest), the lowest in the bass's
+    /// own range.
+    fn fifth(&self, form: &Form, cx: &Cx) -> i16 {
+        let steps = cx.spec.steps();
+        let has = |x: f64| steps.contains(&x);
+        let fifth = if has(7.0) { 7.0 } else if has(8.0) { 8.0 } else { 6.0 };
+        let pc = (f64::from(form.home.root) + fifth) % 12.0;
+        let [lo, _] = self.ranges[Layer::Bass as usize].unwrap_or([36.0, 48.0]);
+        let lo = js::max(lo, KEY_RANGE[Layer::Bass as usize][0]);
+        (lo + ((pc - lo) % 12.0 + 12.0) % 12.0) as i16
+    }
+
+    /// An interlude's state on a unit an arc's energy made: the wander's
+    /// things, as `end` hears them, over it.
+    fn overlay(&self, s: &State, u: &mut Unit) {
+        let reach = LONGFORM.reach;
+        let [_, own] = LONGFORM.density;
+        if let Some(layer) = s.rest {
+            u.cut[layer as usize] = [1.0; 2];
+        }
+        u.tone[0] = [u.tone[0][1] + s.warmth * reach; 2];
+        u.tone[1] = [u.tone[1][1] + s.space * reach; 2];
+        let thin = if own > 0.0 { js::clamp(1.0 - s.density / own, 0.0, 1.0) } else { 0.0 };
+        u.thin = [js::max(u.thin[1], thin); 2];
+        if let Some((layer, pick)) = s.voice
+            && let Some(v) = self.voice(layer, pick)
+        {
+            u.voice[layer as usize] = Word::new(v);
+        }
+        u.register = self.register(s.register);
+        if s.length != 0 {
+            u.stretch = self.stretch(s.length);
+        }
+    }
+
     /// What unit `phrase` of section `n` ends as, its glides under way: in
     /// the first `glide` units of a hold, the gliding things (the levels,
     /// the tone, the tune's density) are that share of the way from where
@@ -1003,6 +1446,10 @@ impl Ways {
         u.register = self.register(s.register);
         u.stretch = self.stretch(s.length);
         u.shift = self.shift(span.key.relation.shift());
+        // The tune handed to the piece's second theme (session 14).
+        if span.theme == Theme::B {
+            u.tune = [tune::SECOND; 2];
+        }
         u
     }
 }

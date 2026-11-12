@@ -357,6 +357,16 @@ pub struct Longform {
     pub dark: f64,
     /// The least a key lasts in the development, in seconds.
     pub stay: f64,
+    /// The movements' kinds and each one's length, a share of a full arc's.
+    pub kinds: Table,
+    /// A gentle movement's energy: its floor and its peak.
+    pub gentle: [f64; 2],
+    /// How often a movement's return is prepared on the home key's fifth.
+    pub prepare: f64,
+    /// How often a pair of the development's units is a call and response.
+    pub call: f64,
+    /// The least share of its notes a theme's outline leaves out.
+    pub outline: f64,
     /// A wander's hold, in seconds.
     pub hold: [f64; 2],
     /// A mean hold of fewer sections than this is planned in phrases.

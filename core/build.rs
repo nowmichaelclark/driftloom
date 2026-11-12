@@ -838,7 +838,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     let journey = find("journey");
     journey.only(&["weights", "endless", "vibes"]);
     let arc = find("arc");
-    arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay"]);
+    arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay", "kinds", "gentle", "prepare", "call", "outline"]);
     let wander = find("wander");
     wander.only(&["hold", "sections", "key", "theme", "density", "apart", "reach", "lengths", "glide"]);
     let mut energy = String::from("&[");
@@ -849,7 +849,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     energy.push(']');
     let _ = writeln!(
         out,
-        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {}, apart: {}, reach: {}, lengths: {}, glide: {} }};",
+        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, kinds: {}, gentle: {}, prepare: {}, call: {}, outline: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {}, apart: {}, reach: {}, lengths: {}, glide: {} }};",
         named(&journey, "weights", &["arc", "wander"]),
         journey.need_num("endless"),
         leaning(&journey, "vibes"),
@@ -869,6 +869,11 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         arc.need_num("common"),
         arc.need_num("dark"),
         arc.need_num("stay"),
+        named(&arc, "kinds", &["full", "gentle", "light", "interlude"]),
+        arc.need_range("gentle"),
+        arc.need_num("prepare"),
+        arc.need_num("call"),
+        arc.need_num("outline"),
         wander.need_range("hold"),
         wander.need_num("sections"),
         wander.need_num("key"),

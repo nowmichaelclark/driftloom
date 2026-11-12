@@ -120,7 +120,7 @@ impl Room {
         self.seq = Sequencer::new();
         self.seq.bpm = BPM;
         self.seq.next_step_time = at;
-        let lp = Loop { spec: &self.spec, base: &self.render, pass: None, settings: &Load::EMPTY, step: 0.0 };
+        let lp = Loop { spec: &self.spec, base: &self.render, pass: None, settings: &Load::EMPTY, step: 0.0, second: None };
         self.seq.schedule_step(host, synth, &lp, 0.0);
     }
 }

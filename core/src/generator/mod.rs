@@ -192,6 +192,35 @@ pub struct Generator {
     request: request::Request,
     today: Option<f64>,
     kick: choices::KickFit,
+    /// The tunes a long piece plays beside the loop's own (session 14,
+    /// `heard::Tune`): the one the section playing uses and the next's,
+    /// each made a stage at a time (`prepare`).
+    seconds: [Second; 2],
+    making: Making,
+}
+
+/// A tune beside the loop's own, made (`Generator::prepare`): which it is,
+/// whether its making is done, and its notes (none: the theme rests, and
+/// stays resting, queue item 85f). All zero bytes is an empty slot.
+pub struct Second {
+    tune: heard::Tune,
+    ready: bool,
+    melody: melody::Melody,
+}
+
+impl Second {
+    const EMPTY: Second = Second { tune: heard::Tune::NONE, ready: false, melody: list::List::new() };
+}
+
+/// A second tune's making under way: the slot it is made in, the stage it
+/// is at (0 its figure, 1 its notes, 2 their finish), and the figure and
+/// the rhythmic cell it holds (none: it rests).
+struct Making {
+    slot: usize,
+    stage: u8,
+    sings: bool,
+    figure: melody::Figure,
+    cell: list::Word,
 }
 
 /// Whether the plan's chords last longer than today's (`longChords` not
@@ -249,6 +278,8 @@ impl Generator {
             request: request::Request::new(),
             today: None,
             kick: choices::KickFit::EMPTY,
+            seconds: [Second::EMPTY, Second::EMPTY],
+            making: Making { slot: 0, stage: 0, sings: false, figure: list::List::new(), cell: list::Word::EMPTY },
         }
     }
 
@@ -367,6 +398,11 @@ impl Generator {
     fn stage_settings(&mut self) {
         self.settings = load::Load::without_kick(&plan::Cx::new(&self.spec), &self.render);
         self.pass.number = None;
+        // A new loop: the tunes made beside the last one's are not its.
+        for s in &mut self.seconds {
+            s.tune = heard::Tune::NONE;
+            s.ready = false;
+        }
         self.stage = if load::Load::kick_kind(&self.render).is_some() {
             self.kick = choices::KickFit::new(self.spec.seed, self.spec.root, &self.spec.pins);
             Stage::Kick
@@ -466,10 +502,96 @@ impl Generator {
         &self.pass
     }
 
+    /// Make ready what section `n` of the loop's piece plays beside the
+    /// loop's own tune (session 14: a second theme, another seed's tune
+    /// bent into this loop, or the loop's own answered), a stage a call:
+    /// the theme's figure (its own loop's spec, nothing asked, and the tune
+    /// drawn from it: the request's theme machinery, queue item 85d), the
+    /// notes (the loop's melody made again around that figure), their
+    /// finish. True once it is ready (at once where the section needs
+    /// none, or has it). The player calls it in the blocks before the
+    /// section's pass is drawn, as a load is spread, so no block makes
+    /// more than a stage; the tune of the section before stays as it is
+    /// (the other slot is the one made in).
+    pub fn prepare(&mut self, n: u64) -> bool {
+        let Some(form) = self.form() else { return true };
+        let want = heard::Tune::of(&form, n);
+        if want == heard::Tune::NONE || self.seconds.iter().any(|s| s.ready && s.tune == want) {
+            return true;
+        }
+        if !self.seconds.get(self.making.slot).is_some_and(|s| s.tune == want && !s.ready) {
+            // A new making, in the slot the section before does not play
+            // from.
+            let keep = n.checked_sub(1).map_or(heard::Tune::NONE, |b| heard::Tune::of(&form, b));
+            let slot = usize::from(self.seconds[0].ready && self.seconds[0].tune == keep);
+            self.seconds[slot].tune = want;
+            self.seconds[slot].ready = false;
+            self.making.slot = slot;
+            self.making.stage = 0;
+        }
+        match self.making.stage {
+            0 => self.second_figure(want),
+            1 => self.second_notes(),
+            _ => self.second_finish(),
+        }
+        self.seconds[self.making.slot].ready
+    }
+
+    /// The first stage of a second tune's making: its figure and its cell.
+    #[inline(never)]
+    fn second_figure(&mut self, want: heard::Tune) {
+        let own = &self.render.melody_out;
+        let tune = if want.kind == heard::Tune::ANSWER {
+            // The loop's own figure, answered (`answerFigure`), on the
+            // loop's own cell.
+            let cx = plan::Cx::new(&self.spec);
+            own.cell.filter(|_| !own.motif.is_empty()).map(|cell| (melody::answer_figure(&cx, &own.motif, &mut rng::Rng::new(want.seed), false).0, cell))
+        } else {
+            melody::theme_tune(&spec::new_spec(want.seed, &request::Request::new()))
+        };
+        // A loop with no tune of its own has none beside it.
+        let tune = tune.filter(|_| !self.render.melody.is_empty());
+        self.making.sings = tune.is_some();
+        if let Some((figure, cell)) = tune {
+            self.making.figure = figure;
+            self.making.cell = cell.into();
+        }
+        self.seconds[self.making.slot].melody.clear();
+        self.making.stage = if self.making.sings { 1 } else { 2 };
+    }
+
+    /// The second: its notes, the loop's melody made again around it.
+    #[inline(never)]
+    fn second_notes(&mut self) {
+        let mut spec = self.spec;
+        spec.tune = Some(Some((self.making.figure, self.making.cell.get())));
+        let slot = self.making.slot;
+        self.render.second_melody(&plan::Cx::new(&spec), &self.plan, &mut self.seconds[slot].melody);
+        self.making.stage = 2;
+    }
+
+    /// The last: the notes finished as the loop's own are.
+    #[inline(never)]
+    fn second_finish(&mut self) {
+        let slot = self.making.slot;
+        if self.making.sings {
+            self.render.second_finish(&plan::Cx::new(&self.spec), &mut self.seconds[slot].melody);
+        }
+        self.seconds[slot].ready = true;
+    }
+
+    /// The notes of `tune`, made (`prepare`): none while it is not, or for
+    /// no tune.
+    #[must_use]
+    pub fn second(&self, tune: heard::Tune) -> Option<&melody::Melody> {
+        self.seconds.iter().find(|s| s.ready && s.tune == tune && tune != heard::Tune::NONE).map(|s| &s.melody)
+    }
+
     /// The pass drawn last, heard as section `n` of the loop's piece (queue
     /// item 102b, `heard`): a wander's plan on its events, nothing for an
     /// arc's or a loop that is no piece.
     fn hear(&mut self, n: u64) {
+        while !self.prepare(n) {}
         let form = self.form();
         self.pass.heard.hear(form.as_ref(), &plan::Cx::new(&self.spec), &self.render, n);
     }
