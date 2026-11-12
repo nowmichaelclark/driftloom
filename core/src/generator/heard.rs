@@ -655,6 +655,11 @@ impl Heard {
                 t[0] = s[1];
             }
             u.thin[0] = start.thin[1];
+            // A theme stated comes in whole on its line (the second theme,
+            // theme A come home): it never fills in from the outline before.
+            if matches!(span.role, Role::Second | Role::Return) && span.changed & super::longform::changed::ROLE != 0 && u.thin[1] < u.thin[0] {
+                u.thin[0] = u.thin[1];
+            }
             u.soft[0] = start.soft[1];
             u.shimmer[0] = start.shimmer[1];
             u.backbeat[0] = start.backbeat[1];
@@ -1147,6 +1152,7 @@ impl Lift {
             Variation::Outline => u.thin = [js::max(u.thin[1], LONGFORM.outline); 2],
             _ => {}
         }
+        ways.settle(u);
     }
 }
 
@@ -1211,6 +1217,10 @@ struct Ways {
     shorter: bool,
     /// Each layer's lowest and highest note.
     ranges: [Option<[f64; 2]>; 5],
+    /// How far the tune's centre sits over the chords' (the chords' octave
+    /// rule, queue item 84: five semitones apart at least where the loop
+    /// keeps it); none without both.
+    gap: Option<f64>,
 }
 
 impl Ways {
@@ -1243,7 +1253,10 @@ impl Ways {
         base.chords.iter().flat_map(|e| e.notes.iter()).for_each(|&n| widen(Layer::Chords, f64::from(n)));
         base.melody.iter().for_each(|e| widen(Layer::Melody, e.midi));
         base.texture.iter().flat_map(|e| e.notes.iter()).for_each(|&n| widen(Layer::Texture, f64::from(n)));
-        Ways { own, pools, chords, longer, shorter, ranges }
+        let mean = |sum: f64, n: usize| (n > 0).then(|| sum / n as f64);
+        let tune = mean(base.melody.iter().filter(|e| e.vel != 0.0).map(|e| e.midi).sum(), base.melody.iter().filter(|e| e.vel != 0.0).count());
+        let under = mean(base.chords.iter().flat_map(|e| e.notes.iter()).map(|&n| f64::from(n)).sum(), base.chords.iter().map(|e| e.notes.len()).sum());
+        Ways { own, pools, chords, longer, shorter, ranges, gap: tune.zip(under).map(|(t, c)| t - c) }
     }
 
     /// The voice `layer` plays for the plan's number `pick` (0 to 1 over its
@@ -1340,13 +1353,43 @@ impl Ways {
     fn lift(&self, pick: f64, shift: i16) -> i16 {
         let Some([lo, hi]) = self.ranges[Layer::Melody as usize] else { return 0 };
         let (lo, hi) = (lo + f64::from(shift), hi + f64::from(shift));
-        let up = hi + 12.0 <= TUNE_RANGE[1];
-        let down = lo - 12.0 >= TUNE_RANGE[0];
+        // (Never the way that would bring the tune's centre within five
+        // semitones of the chords', where the loop keeps them apart.)
+        let clear = |by: f64| self.gap.is_none_or(|g| js::abs(g) < 5.0 || js::abs(g + by) >= 5.0);
+        let up = hi + 12.0 <= TUNE_RANGE[1] && clear(12.0);
+        let down = lo - 12.0 >= TUNE_RANGE[0] && clear(-12.0);
         match (pick >= 0.5, up, down) {
             (true, true, _) | (false, true, false) => 12,
             (false, _, true) | (true, false, true) => -12,
-            _ if hi + 12.0 <= 96.0 => 12,
+            _ if hi + 12.0 <= 96.0 && clear(12.0) => 12,
             _ => 0,
+        }
+    }
+
+    /// The chords' octave rule in the unit's key (queue item 84): where the
+    /// loop keeps its tune's centre five semitones or more from its
+    /// chords', a unit whose moves bring them nearer moves the chords an
+    /// octave away from the tune, or the tune an octave from the chords,
+    /// whichever has room.
+    fn settle(&self, u: &mut Unit) {
+        let (Some(gap), Some([lo, hi]), Some([tlo, thi])) = (self.gap, self.chords, self.ranges[Layer::Melody as usize]) else { return };
+        let (m, c) = (Layer::Melody as usize, Layer::Chords as usize);
+        let by = |u: &Unit, k: usize| f64::from(u.shift[k]) + if u.mapped & (1 << k) != 0 { f64::from(u.map[0]) } else { 0.0 };
+        let now = |u: &Unit| gap + by(u, m) + f64::from(u.lift) - by(u, c) - f64::from(u.register);
+        if js::abs(gap) < 5.0 || js::abs(now(u)) >= 5.0 {
+            return;
+        }
+        // Apart the way they already stand: the tune over the chords, or
+        // under.
+        let away: i16 = if gap >= 0.0 { -12 } else { 12 };
+        let moved = i16::from(u.map[0]) * i16::from(u.mapped & (1 << c) != 0) + u.shift[c] + u.register + away;
+        if lo + moved >= CHORDS_RANGE[0] && hi + moved <= CHORDS_RANGE[1] {
+            u.shift[c] += away;
+        } else {
+            let to = by(u, m) + f64::from(u.lift) - f64::from(away);
+            if tlo + to >= TUNE_RANGE[0] && thi + to <= 96.0 {
+                u.shift[m] -= away;
+            }
         }
     }
 

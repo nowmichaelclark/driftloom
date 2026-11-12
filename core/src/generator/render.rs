@@ -220,6 +220,31 @@ impl Render {
         if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
             Self::spell_tune(&self.harmony, cx, out);
         }
+        // The chords' octave was read against the loop's own tune (queue
+        // item 84): a second tune whose centre sits within five semitones
+        // of the chords' moves an octave away from them, where it has room.
+        let centre = |sum: f64, n: usize| (n > 0).then(|| sum / js::num(n));
+        let chords = centre(self.chords.iter().flat_map(|e| e.notes.iter()).map(|&n| f64::from(n)).sum(), self.chords.iter().map(|e| e.notes.len()).sum());
+        let tune = centre(out.iter().map(|e| e.midi).sum(), out.len());
+        if let (Some(c), Some(t), None) = (chords, tune, cx.choir) {
+            let (lo, hi) = out.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), e| (js::min(lo, e.midi), js::max(hi, e.midi)));
+            let by = if t >= c { 12.0 } else { -12.0 };
+            if js::abs(t - c) < 5.0 && lo + by >= 55.0 && hi + by <= 95.0 {
+                out.iter_mut().for_each(|e| e.midi += by);
+            }
+        }
+        // No clash added: a note that starts a semitone over a tone of the
+        // chord sounding under it takes that tone (where the tune and the
+        // chords turn together, on the loop's own cycle).
+        let together = |l: Layer| cx.spec.cycles.of(l as usize).is_none_or(|c| c == 0.0 || c == cx.spec.bars * spb);
+        if together(Layer::Melody) && together(Layer::Chords) {
+            for e in out.iter_mut().filter(|e| e.vel != 0.0) {
+                let over = |c: &ChordEvent| c.vel != 0.0 && c.step <= e.step && e.step < c.step + c.dur && c.notes.iter().any(|&n| ((e.midi - f64::from(n)) % 12.0 + 12.0) % 12.0 == 1.0);
+                if self.chords.iter().any(over) {
+                    e.midi -= 1.0;
+                }
+            }
+        }
         let cycle = cx.spec.cycles.of(Layer::Melody as usize).filter(|&c| c != 0.0).unwrap_or(cx.spec.bars * spb);
         Self::annotate_prev(cx, cycle, out);
         if cx.choir.is_none() {
