@@ -781,18 +781,18 @@ impl Player {
         if let Some(p) = self.passes.get_mut(slot) {
             let cx = Cx::new(g.spec());
             p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
-            // A long piece's plan, heard (queue item 102b): a wander's.
+            // A long piece's plan, heard (queue items 102b and 102c).
             if self.journeyed {
                 p.heard.hear(g.form().as_ref(), &cx, g.render(), u64::from(number));
             }
         }
     }
 
-    /// Whether the loop playing is a piece whose plan is heard (a wander's),
-    /// so its sections are drawn as passes at any wander setting: the
-    /// slider is only how much each breathes (queue item 102b).
+    /// Whether the loop playing is a piece whose plan is heard (a wander's,
+    /// queue item 102b; an arc's, 102c), so its sections are drawn as passes
+    /// at any wander setting: the slider is only how much each breathes.
     fn journeys(&self) -> bool {
-        self.generator.form().is_some_and(|f| f.journey == crate::generator::request::Journey::Wander)
+        self.generator.form().is_some()
     }
 
 

@@ -56,6 +56,17 @@ the points where the next step is yours.
   most a quarter of the Sound panel), is the octave or voice change at a
   line ever too sudden, does a layer's rest feel like a breath, and is a
   key change a fourth away welcome once in a while.
+- **The arc heard (102c, session 13, v162):** nothing to do now either
+  (session 15 renders the excerpts). Three arc pieces with the minutes of
+  their opening, peak, release and close are in `docs/LONGFORM.md`, "Pieces
+  to hear". Listen for: the build noticed only once it has passed (the
+  loudness rises 1 to 2 LU by ear, the filter opens, the hats and the
+  backbeat come in, the tune is doubled an octave up toward the peak, softly);
+  the close thinning to the chords and the tune; the landing, the tonic
+  chord and the tune on the tonic alone, ringing out, then the opening
+  again. What only your ears can judge: is the arc strong enough to be felt
+  at all (the conservative end, on purpose), is the opening's darker filter
+  welcome or muffled, and is the landing a real ending.
 - Batch 6's and 84b's: brain session B2. The long pieces': session 15 and
   brain session B3. B4 makes them again in the new codes.
 
@@ -91,6 +102,14 @@ the points where the next step is yours.
   needs both; nothing before it does.
 
 ## Decisions
+
+- **The arc's brightness (102c, #377):** #377 merged short of two of its
+  yardsticks, on your or the brain's say-so: brightness rises and falls on
+  87% of pieces (9 in 10 asked), and one 1,024-bar piece steps 2.7 LU (2
+  asked). Four loops miss: tui-doask and so-rou (nothing above about 1 kHz
+  to brighten), gluith-vuisk and rong-wuisk (their own slow opening hides
+  the arc's). `docs/notes/102c-arc-brightness.md` says why and what could
+  be tried. When you hear them, say whether they rise and fall to you.
 
 **Long pieces: the plan (102a, session 11, v160).** Nothing sounds
 different yet; a piece can be read before it is heard (`docs/LONGFORM.md`
@@ -147,3 +166,24 @@ Left open, for later sessions or for you:
   sounds (session 14).
 - Moving the tempo slider mid-piece stretches the plan's spans; it does not
   re-plan.
+
+**The arc heard (102c, session 13, v162), first picks** (each one line of
+`data/longform.txt`, `[longform energy]`):
+
+- The loop as written is the arc's fullest, near its peak; the rest of the
+  arc holds it back a little. The kit and the bass sit at 0.85 of their
+  level at an opening (`level.*`), the chords and the tune at 0.85 at the
+  lowest (`swell`): the peak ends up about 1 to 2 LU over the opening.
+- The kit's hats and shakers come in with the energy, and the backbeat
+  from half its velocity (`kit`, `shimmer`, `backbeat`, `beat`): the
+  brief's "kick out" made openings brighter and far quieter, so it was
+  turned around.
+- The tune thins under the theme's energy (`thin`); the chords sound longer
+  in an opening and a close (`held`); the tune is doubled an octave up from
+  the build, at most 0.3 of its velocity (`double`).
+- Brightness is the loop's own slow filter, aimed: up to 0.6 of its range
+  darker in an opening and a close, its swing half as deep at the peak
+  (`aim`, `dark`, `open`); the space opens with it, a little (`space`).
+- A finite arc lands on its last 4 s and a bar at least (`land`): the
+  tonic chord and the tune on the tonic, alone, ringing out.
+

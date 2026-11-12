@@ -32,6 +32,13 @@ use super::synth::{Fm, KickHit, Opts, StabOpts, Synth};
 
 /// A chord's level spread across its voicing (`CHORD_SPREAD`).
 const CHORD_SPREAD: f64 = 0.8;
+/// How far apart a landing's rolled chord's notes start, in seconds (queue item
+/// 102c: a loop that plays its chords a note at a time lands on a roll).
+const LAND_ROLL: f64 = 0.12;
+/// The budget's room a long piece's doubled tune needs to spare before it
+/// plays (queue item 102c): its own cost and as much again, so it yields to
+/// any note that comes after it.
+const DOUBLE_ROOM: f64 = 24.0;
 /// Grace notes: each this long, running straight into the note, lighter
 /// than it (`GRACE`, `GRACE_VEL`); the harmony line a step back
 /// (`HARMONY_VEL`).
@@ -223,7 +230,16 @@ impl Loop<'_> {
     /// grid (queue item 94a).
     pub fn each_velocity(&self, layer: Layer, mut f: impl FnMut(f64, f64)) {
         match layer {
-            Layer::Drums => self.drums().for_each(|(vel, _, e)| f(e.step, vel)),
+            // Each hit at its own step, as the bass and the tune are below
+            // (a long piece's plan moves the kit's velocities over a unit).
+            Layer::Drums => {
+                for (i, e) in self.base.drums.iter().enumerate() {
+                    f(e.step, self.pass.map_or(e.vel, |p| p.drum(i, e).0));
+                }
+                if let Some(g) = self.pass.and_then(Pass::ghost) {
+                    f(g.step, if self.pass.is_some_and(|p| p.rests(g.step, Layer::Drums)) { 0.0 } else { g.vel });
+                }
+            }
             Layer::Bass => {
                 for (i, e) in self.base.bass.iter().enumerate() {
                     f(e.step, self.pass.map_or(e.vel, |p| p.bass(i, e).0));
@@ -231,7 +247,7 @@ impl Loop<'_> {
             }
             Layer::Chords => {
                 for (i, e) in self.base.chords.iter().enumerate() {
-                    f(e.step, self.chord(i, e).0);
+                    f(e.step, self.pass.map_or(e.vel, |p| p.chord(i, e).0));
                 }
             }
             Layer::Melody => {
@@ -401,6 +417,7 @@ impl Sequencer {
         self.bpm = lp.spec.bpm;
         // A new loop has no plan on its levels or its tone (queue item 102b).
         synth.clear_plan();
+        synth.let_go_aim(host, at);
         self.tone_held = false;
         synth.set_tone(host, lp.spec.tone, at);
         synth.set_level(host, s.level.get(), at);
@@ -500,6 +517,54 @@ impl Sequencer {
             let own = lp.spec.tone;
             synth.glide_tone(host, [own[0] + moved[0], own[1] + moved[1]], moved, time, tau);
         }
+        // An arc's energy aims the loop's own slow filter (queue item 102c).
+        if lp.pass.is_some_and(|p| p.heard.arc) {
+            let e = &crate::generator::data::ENERGY;
+            synth.glide_aim(host, u.aim_at(ahead), e.dark, e.open, time, tau);
+        }
+    }
+
+    /// A finite arc's landing (queue item 102c, `heard::Landing`), on its
+    /// first step: the loop's tonic chord, in the chords' voice as the plan
+    /// has it, and the tune on the tonic, held for `hold` steps and ringing
+    /// out; nothing else sounds after it (the pass leaves every layer's
+    /// notes out). A muted layer stays silent.
+    #[allow(clippy::too_many_arguments)] // the step's own place and times
+    fn land<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, l: &heard::Landing, mutes: [bool; 5], t: f64, sd: f64, key: &mut impl FnMut(Layer) -> Key) {
+        let dur = l.hold * sd;
+        synth.budget.set_firm(true);
+        if !mutes[Layer::Chords as usize] && !l.chord.is_empty() {
+            let e = lp.base.chords.get(l.chord_from);
+            let voice = lp.voice(Layer::Chords, e.map_or("", |e| e.voice.get()));
+            let opts = Opts { vowel: e.and_then(|e| e.vowel), detune: e.and_then(|e| e.detune), ..Opts::default() };
+            if voice == "pad" {
+                let k = key(Layer::Chords);
+                synth.budget.begin(Some(Layer::Chords), k);
+                synth.pad(host, k, &l.chord, t, dur, l.chord_vel * CHORD_SPREAD, CHORDS);
+                synth.budget.end();
+            } else if !voice.is_empty() {
+                let spread = CHORD_SPREAD / math::sqrt(js::num(l.chord.len()));
+                // Fingers, or a roll where the loop plays a note at a time.
+                let apart = if l.rolled { LAND_ROLL } else { 0.011 };
+                for (i, &n) in l.chord.iter().enumerate() {
+                    let k = key(Layer::Chords);
+                    synth.budget.begin(Some(Layer::Chords), k);
+                    synth.voice(host, k, voice, f64::from(n), t + js::num(i) * apart, dur, l.chord_vel * spread, CHORDS, &opts);
+                    synth.budget.end();
+                }
+            }
+        }
+        if !mutes[Layer::Melody as usize] && l.tune > 0.0
+            && let Some(e) = lp.base.melody.get(l.tune_from)
+        {
+            let vowel = (!e.vowel.is_empty()).then_some(e.vowel.get());
+            let opts = Opts { vowel, detune: e.detune, ..Opts::default() };
+            let k = key(Layer::Melody);
+            synth.budget.begin(Some(Layer::Melody), k);
+            synth.voice(host, k, lp.voice(Layer::Melody, e.voice.get()), l.tune, t, dur, l.tune_vel, MELODY, &opts);
+            synth.budget.end();
+        }
+        synth.budget.set_firm(false);
     }
 
     /// A new pass begins (`_advance`'s wrap, and the load's first): the
@@ -824,6 +889,18 @@ impl Sequencer {
                 // is the decoration that yields, never the tune.
                 let mode = e.steps.as_ref().map_or(lp.spec.steps(), |s| &s[..]);
                 let line = Opts { vowel, detune: e.detune, ..Opts::default() };
+                // Toward an arc's peak: the tune doubled an octave up,
+                // softly, swelling in (queue item 102c).
+                // It yields to everything: played only where the budget has
+                // room to spare (as a dub stab), so it never keeps another
+                // layer's note out.
+                let (double, share) = lp.pass.map_or((0, 0.0), |p| p.double(stepf));
+                if double != 0 && share > 0.0 && synth.budget.room(t + slip, DOUBLE_ROOM) {
+                    let k = key_of(Layer::Melody);
+                    synth.budget.begin(Some(Layer::Melody), k);
+                    synth.voice(host, k, voice, midi + f64::from(double), t + slip, dur, vel * share, MELODY, &line);
+                    synth.budget.end();
+                }
                 if let Some(under) = harmony_of(e.harm, midi, root, mode) {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
@@ -839,6 +916,10 @@ impl Sequencer {
                     synth.budget.end();
                 }
             }
+        }
+        // A finite arc lands, on its landing's first step (queue item 102c).
+        if let Some(l) = lp.pass.map(|p| &p.heard.landing).filter(|l| l.on && l.strikes && l.at == stepf) {
+            Self::land(host, synth, lp, l, mutes, t, sd, &mut key_of);
         }
         if !mutes[Layer::Texture as usize] {
             let s_at = at(Layer::Texture);

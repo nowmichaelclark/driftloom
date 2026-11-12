@@ -31,7 +31,7 @@ says the work goes on meanwhile.
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | yes, 2026-11-12 |
 | 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, medium | yes, 2026-11-12 |
 | 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | yes, 2026-11-12 |
-| 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
+| 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | yes, 2026-11-12 |
 | 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | |
 | 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
 | B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | |
@@ -179,6 +179,11 @@ Things earlier sessions learned:
   the plan was linked in. In a cloud session GitHub's API may be closed to
   the session while a pasted token still pushes: then the PR is Mikey's to
   open (session 12).
+- An arc is heard too (session 13, `heard::Lift`): its energy as marks and
+  levels, measured against the loop as itself (`tools/longform.mjs`, about
+  an hour with its arcs; `--arcs 10` for a quicker look). A finite arc's
+  last bars land (`heard::Landing`): session 14's keys must keep it on the
+  home key.
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.

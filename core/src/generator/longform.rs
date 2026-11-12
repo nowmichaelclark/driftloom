@@ -38,10 +38,11 @@
 //! layer's voice asked is never handed on, a tone edited is never moved,
 //! and the tempo is the loop's own throughout.
 //!
-//! **Heard: the wander** (session 12, `heard`): a wander's section plays
-//! its units' states as marks and levels on the loop's wandered pass. An
-//! arc's is computed and reported (`dlgen --map`, `tools/longform.mjs`) and
-//! still plays as `piece` says, the loop's wandered pass, until session 13.
+//! **Heard** (`heard`): a wander's section plays its units' states as marks
+//! and levels on the loop's wandered pass (session 12), and an arc's its
+//! units' energy, with a finite arc's landing on the tonic (session 13).
+//! The arc's themes, variations and keys are named here and not yet heard
+//! (session 14): it plays theme A in the home key throughout.
 //!
 //! The numbers are `data/longform.txt`'s (`data::LONGFORM`).
 
@@ -454,6 +455,13 @@ pub struct Form {
     resting: u8,
     voicing: u8,
     parity: u16,
+    /// The layers the loop plays, and of them those an arc's energy may
+    /// fade (none asked on, off or re-rolled), a bit each (session 13).
+    pub playing: u8,
+    pub fading: u8,
+    /// Whether the code edited the warmth, and the space: an arc never
+    /// moves them (session 13).
+    pub toned: [bool; 2],
 }
 
 /// Whether a mode has a minor third, a major one, or neither or both
@@ -659,6 +667,9 @@ impl Form {
             resting,
             voicing,
             parity,
+            playing,
+            fading: playing & !fixed,
+            toned: [edits.tone(0).is_some(), edits.tone(1).is_some()],
         })
     }
 
@@ -670,6 +681,22 @@ impl Form {
             Some(r) if n % r.sections == r.sections - 1 => r.units - (r.sections - 1) * self.per,
             _ => self.per,
         }
+    }
+
+    /// How many bars there are from section `n`'s first to its round's
+    /// end (a finite piece's); none for Endless. From the numbers alone.
+    #[must_use]
+    pub fn to_end(&self, n: u64) -> Option<f64> {
+        let r = self.round?;
+        let i = n % r.sections;
+        let last = (r.units - (r.sections - 1) * self.per - 1) as f64 * self.unit_bars + r.last;
+        Some((r.sections - 1 - i) as f64 * self.section_bars + last)
+    }
+
+    /// A bar's seconds at the loop's tempo.
+    #[must_use]
+    pub fn bar_seconds(&self) -> f64 {
+        self.bar_seconds
     }
 
     /// How many arcs a finite arc piece holds (its movements); 0 for

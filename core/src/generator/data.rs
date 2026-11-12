@@ -379,6 +379,49 @@ pub struct Longform {
     pub glide: f64,
 }
 
+/// How an arc's energy is heard (`[longform energy]`, queue item 102c):
+/// what a unit of a given energy plays, as `heard` reads it.
+#[derive(Clone, Copy, Debug)]
+pub struct Energy {
+    /// The layers that fade with the energy, each with the energy it is
+    /// gone at, the one it is at its floor at, the one it is its own from,
+    /// and the floor (a share of its level).
+    pub levels: &'static [(&'static str, [f64; 4])],
+    /// The chords' and the tune's swell: their level's share at the second
+    /// energy and under, their own from the third.
+    pub swell: [f64; 3],
+    /// The kit's shimmer is silent under the first energy and its own from
+    /// the second.
+    pub kit: [f64; 2],
+    /// The kit's shimmer: the pieces that come in with the energy.
+    pub shimmer: Table,
+    /// The kit's backbeat, which comes in over the same energies from
+    /// `beat`'s share of its velocity.
+    pub backbeat: Table,
+    pub beat: f64,
+    /// How much softer the kit's hits are at the lowest energy.
+    pub soft: f64,
+    /// The energy the tune thins under, and its thinnest (the share left
+    /// out at nothing).
+    pub thin: [f64; 2],
+    /// Under this energy the chords sound longer.
+    pub held: f64,
+    /// The tune's double an octave up: silent at the first energy, at the
+    /// third's share of the tune's velocity from the second.
+    pub double: [f64; 3],
+    /// The energy the arc's filter is its own at, and how far either side
+    /// its aim is all the way.
+    pub aim: [f64; 2],
+    /// How much darker the filter sits at the aim's darkest, and how much
+    /// shallower the swing is at its brightest: shares of its range.
+    pub dark: f64,
+    pub open: f64,
+    /// How far the space moves the Sound panel's at the aim's furthest.
+    pub space: f64,
+    /// The least a finite arc's landing lasts, in seconds (a bar at least).
+    pub land: f64,
+}
+
 /// The bass layer's level in dB, with a kick and without
 /// (`[setting basslift]`).
 #[derive(Clone, Copy, Debug)]
@@ -404,7 +447,7 @@ pub struct VoiceCosts {
 #[allow(clippy::unreadable_literal)]
 mod tables {
     use super::{
-        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
+        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, Energy, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
         Longform, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));

@@ -16,7 +16,7 @@
 use super::canon::{Sink, Writer};
 use super::choices;
 use super::data::FLOORDROP;
-use super::heard::Heard;
+use super::heard::{Heard, Piece};
 use super::js;
 use super::list::{Empty, Maybe};
 use super::layers::{self, BASS_MAX, BassEvent, DRUMS_MAX, DrumEvent};
@@ -399,7 +399,20 @@ impl Pass {
     pub fn drum_at(&self, step: f64, i: usize, e: &DrumEvent) -> (f64, &'static str) {
         let m = self.drums.get(i).copied().unwrap_or(0);
         let inst = if (m & OPEN) != 0 { if e.inst.get() == "hat" { "ohat" } else { "ojingle" } } else { e.inst.get() };
+        if self.heard.arc {
+            return (if (m & SILENT) != 0 { 0.0 } else { self.kit_at(step, inst, e.vel) }, inst);
+        }
         (if (m & SILENT) != 0 || self.rests(step, Layer::Drums) { 0.0 } else { e.vel }, inst)
+    }
+
+    /// An arc's kit hit `inst` of velocity `vel` at section step `step`
+    /// (session 13): silent where the plan rests the kit, its shimmer (the
+    /// hats, the shakers) coming in and leaving with the energy, every piece
+    /// softer as the energy is lower.
+    fn kit_at(&self, step: f64, inst: &str, vel: f64) -> f64 {
+        let Some(u) = self.heard.unit(step) else { return vel };
+        let keeps = u.kit_at(step, Piece::of(inst));
+        if self.rests(step, Layer::Drums) || keeps <= 0.0 { 0.0 } else { vel * keeps }
     }
 
     /// The ghost hit this pass adds after the loop's own, if it adds one.
@@ -412,7 +425,15 @@ impl Pass {
     /// out (its channel faded to nothing over the unit before).
     #[must_use]
     pub fn rests(&self, step: f64, layer: Layer) -> bool {
-        self.heard.on && self.heard.unit(step).is_some_and(|u| u.rests(layer))
+        self.heard.on && (self.heard.unit(step).is_some_and(|u| u.rests(layer)) || self.heard.landed(step))
+    }
+
+    /// How far the plan doubles the tune at section step `step`, in
+    /// semitones (0 none: toward an arc's peak, session 13), and the
+    /// double's share of the tune's velocity.
+    #[must_use]
+    pub fn double(&self, step: f64) -> (i16, f64) {
+        self.heard.unit(step).map_or((0, 0.0), |u| (u.double, u.doubled_at(step)))
     }
 
     /// Bass note `i` of the loop, `e`, as this pass plays it: its velocity

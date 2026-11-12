@@ -135,6 +135,13 @@ impl Reader<'_> {
     fn num(&self, key: &str) -> Option<f64> {
         self.one(key).map(|t| number(t, &self.at(key)))
     }
+    /// One row of numbers, however many.
+    fn nums(&self, key: &str) -> Option<Vec<f64>> {
+        self.rows(key).map(|rows| {
+            assert!(rows.len() == 1, "{}: expected one row", self.at(key));
+            rows[0].iter().map(|t| number(t, &self.at(key))).collect()
+        })
+    }
     fn range(&self, key: &str) -> Option<[f64; 2]> {
         self.rows(key).map(|rows| {
             assert!(rows.len() == 1 && rows[0].len() == 2, "{}: expected two numbers", self.at(key));
@@ -871,6 +878,45 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         wander.need_num("reach"),
         wander.need_range("lengths"),
         wander.need_num("glide")
+    );
+    // How an arc's energy is heard (session 13): each layer that may fade,
+    // by name, with the two energies of its fade.
+    let heard = find("energy");
+    heard.only(&["level.*", "swell", "kit", "shimmer", "backbeat", "beat", "soft", "thin", "held", "double", "aim", "dark", "open", "space", "land"]);
+    let mut levels = String::from("&[");
+    for (part, key) in heard.parts("level") {
+        assert!(["bass", "texture", "drums"].contains(&part.as_str()), "{}: only the bass, the texture and the kit fade", heard.at(&key));
+        let n = heard.nums(&key).unwrap_or_else(|| panic!("{}: missing", heard.at(&key)));
+        assert!(n.len() == 4 && n[0] < n[1] && n[1] < n[2] && (0.0..=1.0).contains(&n[3]), "{}: expected three rising energies and a share", heard.at(&key));
+        let _ = write!(levels, "({}, [{}, {}, {}, {}]),", quote(&part), f(n[0]), f(n[1]), f(n[2]), f(n[3]));
+    }
+    levels.push(']');
+    let _ = writeln!(
+        out,
+        "/// How an arc's energy is heard (`data/longform.txt`, `[longform energy]`).\npub static ENERGY: Energy = Energy {{ levels: {}, swell: {}, kit: {}, shimmer: {}, backbeat: {}, beat: {}, soft: {}, thin: {}, held: {}, double: {}, aim: {}, dark: {}, open: {}, space: {}, land: {} }};",
+        levels,
+        {
+            let n = heard.nums("swell").unwrap_or_else(|| panic!("{}: missing", heard.at("swell")));
+            assert!(n.len() == 3 && (0.0..=1.0).contains(&n[0]) && n[1] < n[2], "{}: expected a share and two rising energies", heard.at("swell"));
+            format!("[{}, {}, {}]", f(n[0]), f(n[1]), f(n[2]))
+        },
+        heard.need_range("kit"),
+        heard.need_table("shimmer"),
+        heard.need_table("backbeat"),
+        heard.need_num("beat"),
+        heard.need_num("soft"),
+        heard.need_range("thin"),
+        heard.need_num("held"),
+        {
+            let n = heard.nums("double").unwrap_or_else(|| panic!("{}: missing", heard.at("double")));
+            assert!(n.len() == 3 && n[0] < n[1] && (0.0..=1.0).contains(&n[2]), "{}: expected two rising energies and a share", heard.at("double"));
+            format!("[{}, {}, {}]", f(n[0]), f(n[1]), f(n[2]))
+        },
+        heard.need_range("aim"),
+        heard.need_num("dark"),
+        heard.need_num("open"),
+        heard.need_num("space"),
+        heard.need_num("land")
     );
 }
 

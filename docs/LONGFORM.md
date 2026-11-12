@@ -7,8 +7,10 @@ The brief still holds the rules that can't bend and what Mikey asked for.
 
 **Where things stand:** the plan is code (`core/src/generator/longform.rs`),
 its numbers are data (`data/longform.txt`). **The wander is heard** (session
-12, `core/src/generator/heard.rs`, below); an arc is still reported, not
-heard: its sections play as the loop's wandered pass until session 13. Read a piece with
+12, `core/src/generator/heard.rs`, below), and **an arc's energy and its
+close** (session 13, "How an arc is heard"); an arc's second theme, its
+variations and its keys are named in the map and not yet heard (session
+14): it plays theme A in the home key throughout. Read a piece with
 `dlgen --map SEED REQUEST [--from N] [--count N]` (in `core/`: `cargo run
 --release --example dlgen -- --map 7 bars=256,journey=arc`), or in Node
 with `tools/gen-lib.mjs`'s `pieceMap`. `node tools/longform.mjs` runs the
@@ -71,6 +73,47 @@ how high it is (0.85 to 1); every role has a unit at least.
 - **The close** takes the last units, 10 seconds at least: a last section
   cut short borrows the bars before it. The round after begins at the
   opening again (a round's plan is the same every time).
+
+### How an arc is heard (session 13)
+
+`heard::Lift` and `Heard::hear_arc`: each unit's energy, smoothed over its
+neighbors (a quarter each side, never across a round's end, so a role of
+one unit is approached rather than stepped into), played as marks and
+levels on the loop's own events and the mix, gliding over each unit from
+where the one before ended. Nothing new is made but the landing's few
+notes; a section costs one loop's making, as the wander's does.
+**The loop as composed is the arc's fullest, near its peak**: the rest of
+the arc is the loop held back a little, so the loudness climbs the whole
+way, gently (`[longform energy]`).
+
+| What | Heard as |
+|---|---|
+| the kit, the bass, the texture | their level in the mix: 0.85 of their own (the texture 0.7) at an opening's energy, their own near the peak, gone only as a close thins |
+| the chords, the tune | a swell of under a decibel: 0.85 of their level at the lowest energy (they never rest, but the tune in a breath) |
+| the kit's pieces | the shimmer (hats, shakers, jingles) comes in between 0.3 and 0.5; every hit up to a quarter softer below the loop's own |
+| the tune's density | thinner under 0.45, up to 0.55 of its notes left out (the bar lines' kept longest, as the wander thins) |
+| the chords' length | held longer under 0.42, where they have room (the wander's 1.5) |
+| the tune's register | doubled an octave up, swelling from nothing at 0.6 to 0.3 of its velocity at 0.95, where the octave keeps it at 96 or under |
+| brightness | the arc's filter (the loop's own slow swing, `blocks::arc`) takes the energy as its slow aim: the swing's centre lowered toward its darkest by up to 0.6 of its range under 0.7, its depth up to half shallower over it; a loop with no swing has the filter open, lowered the same way. One control, never a second filter |
+| the space | opens with the brightness: up to 0.12 of the Sound panel's |
+| a finite arc's close | thins to the chords and the tune (the energy's own); the tune's last phrase whole; then the **landing**: the round's last bars (4 s and a bar at least) play the loop's tonic chord (its own in root position, or the mode's triad, rolled where the loop plays its chords a note at a time) and the tune on the tonic, alone, held for half of them and ringing out. The voice budget gives the landing its whole ceiling |
+
+The round after a close starts at its opening, gliding up from the close;
+Endless plays arc after arc with a breath between (the tune rests, the
+rest thins), and never lands. **What was asked holds:** a layer asked on,
+off or re-rolled is its own throughout; a code's warmth keeps the filter
+the loop's own, its space the room's; an arc asked (`arc`, `arc.*`) keeps
+its swing as asked. **At any slider setting**, as the wander. Every number
+is for Mikey's ears. Measured (`node tools/longform.mjs`, 62 corpus pieces
+against the loop as itself): the loudness rises to the peak and falls on
+98%, the brightness on 87% (`docs/notes/102c-arc-brightness.md`); the peak
+at most 2.3 LU over the opening; every last chord the tonic's, ringing out.
+
+**Changed from the brief, measured:** the kit's shimmer comes in with the
+energy and the kick and the backbeat stay, softer. The brief had it the
+other way (hats in, the kick out): hats over a quiet kit made an opening
+brighter, not thinner, and the kick and the backbeat carry so much of a
+loop's loudness that an opening without them sat 6 to 8 LU under its peak.
 
 ## The wander
 
@@ -209,8 +252,10 @@ a theme-B section another seed's tune spread across blocks.
 
 - **Tempo:** held throughout. A slight easing into the close, or a slower
   middle movement, is a sketch to offer, not built.
-- **How strong the arc sounds** (session 13) and what each variation does
-  to the notes (session 14): the plan only names them.
+- **How strong the arc sounds:** session 13 took the conservative end (the
+  peak about 1 to 2 LU over the opening by ear; its numbers are first
+  picks). What each variation does to the notes (session 14): the plan
+  only names them.
 - **A second, smaller peak** now and then: not drawn.
 - **The tempo slider while playing:** the plan is made with the tempo the
   piece loads with; moving the slider changes how long the spans last.
@@ -220,8 +265,9 @@ a theme-B section another seed's tune spread across blocks.
 
 - Read the plan where a section is drawn: `Generator::form()` then
   `at(n, phrase)`. Keep `Form::of` free of the player's state.
-- Session 13: an arc is heard the way the wander is (`heard`; it returns
-  early for an arc today). Session 14: once theme B's tune is made, turn the
+- Session 14: theme B, the variations and the keys heard on top of the
+  arc's energy (`heard::Lift`; a key moves the landing's tonic too, so keep
+  the landing on the home key). Once theme B's tune is made, turn the
   wander's theme back on (`[longform wander] theme`, 0.2) and hear it.
 - `node tools/longform.mjs` checks what is played too
   (`tools/longform-played.mjs`; `--plan` for the plan alone).
@@ -256,3 +302,28 @@ between moves is the loop as it always breathed.
    fades out; 10:52 it comes back; 13:42 a layer changes voice; 17:06 the tone moves,
    then (256 bars) the close. Endless: 21:42 the chords' lengths; 24:36 the
    texture rests again.
+
+**The arc** (session 13). Each `journey=arc`, at the length given; times
+from the piece's start. Listen for: an opening thin and a little dark (the
+kit and the bass held back, no hats, the tune sparse, the filter low), the
+build noticed only once it has passed (the hats and the backbeat in, the
+filter opening, the tune doubled an octave up, softly, toward the peak),
+the release, the return, then the close thinning to the chords and the tune
+and the landing: the tonic chord and the tune on the tonic, alone, ringing
+out. One theme still, in the home key (session 14 brings the second and the
+keys).
+
+1. **Seed 2728346932, tha-vol** (131 bpm, A# lydian; 64 bars is 1:27, the
+   small form). The opening 0:00; the theme 0:10; the lift, the peak, 0:32
+   to 0:49; the release 0:49; the return 0:54; the close 1:16; the landing
+   1:23; the opening again 1:27.
+2. **Seed 1151594917, brum-yei** (109 bpm, C# ionian; 256 bars is 9:23, two
+   arcs as movements). The opening 0:00; the build 0:52; the peak 2:38; the
+   release 2:56; the return 3:13; a breath 4:06; the second arc's opening
+   4:41, peak 7:37, release 7:55, return 8:13; the close 9:06; the landing
+   9:19.
+3. **Seed 1278568317, sheim-gling** (98 bpm, G kumoi; 1,024 bars is 31:20,
+   two arcs of about 15 minutes). The opening 0:00 (a minute); the build
+   3:33; the peak 9:47; the release 10:53; the return 12:14; a breath 14:34;
+   the second arc's opening 15:40, build 18:58, peak 24:29, release 25:35,
+   return 27:11; the close 29:59; the landing 31:15.

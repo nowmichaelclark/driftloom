@@ -1,7 +1,7 @@
 //! The wander heard (queue item 102b; `generator::heard`, `docs/LONGFORM.md`,
 //! "The wander"): a wander's sections carry its plan as marks and levels,
-//! the player plays them at any slider setting, and an arc's sections and a
-//! loop's passes carry nothing. `tools/longform.mjs` checks what is played,
+//! the player plays them at any slider setting, and a loop's passes carry
+//! nothing (an arc's are `tests/arc.rs`'s, session 13). `tools/longform.mjs` checks what is played,
 //! note by note, from the player's calls; these check the marks.
 //!
 //! - every unit of a section is its plan's state: a layer rests where the
@@ -9,7 +9,7 @@
 //!   down), a voice, the chords' octave and length, the tune's density and a
 //!   key a fifth away where the plan has them, and the loop's own elsewhere;
 //! - a unit starts where the one before it ended, so nothing jumps;
-//! - an arc's section and a loop of up to 32 bars hear nothing;
+//! - a loop of up to 32 bars, or with no length, hears nothing;
 //! - the player draws a wander's sections as passes at 0, 1 and 2.4, and the
 //!   marks are the same at each (the slider is only the breathing);
 //! - the plan's level comes back under a mute lifted, and a voice is only
@@ -120,11 +120,11 @@ fn every_unit_of_a_wander_is_its_plans_state() {
 }
 
 #[test]
-fn an_arc_and_a_loop_hear_nothing() {
+fn a_loop_hears_nothing() {
     roomy(|| {
         let mut generator = Box::new(Generator::new());
         for seed in seeds(30) {
-            for text in ["bars=endless,journey=arc", "bars=256,journey=arc", "bars=24", "-"] {
+            for text in ["bars=24", "bars=32", "-"] {
                 generator.load_with(seed, &Request::parse(text).expect("a request"));
                 for n in [0u64, 3, 40] {
                     assert!(!generator.section(n, 1.0).heard.on, "seed {seed} {text}: section {n} hears a plan");

@@ -247,6 +247,10 @@ pub struct Synth {
     plan_cut: [f64; 5],
     /// The plan's last move of the warmth and the space (`glide_tone`).
     plan_tone: [f64; 2],
+    /// The last aim an arc's plan gave the arc's filter (`glide_aim`), and
+    /// whether one is in force, so a new loop lets it go.
+    plan_aim: f64,
+    aimed: bool,
 }
 
 impl Synth {
@@ -270,6 +274,8 @@ impl Synth {
             tune: 0.0,
             plan_cut: [0.0; 5],
             plan_tone: [0.0; 2],
+            plan_aim: 0.0,
+            aimed: false,
         }
     }
 
@@ -301,6 +307,33 @@ impl Synth {
     pub fn clear_plan(&mut self) {
         self.plan_cut = [0.0; 5];
         self.plan_tone = [0.0; 2];
+    }
+
+    /// An arc's plan aims the arc's filter (queue item 102c): `aim` from -1
+    /// (its darkest: the swing's centre lowered by `dark` of its range) to 1
+    /// (its brightest: the swing's depth `open` less), 0 the loop's own
+    /// swing, gliding there from `time` (`tau`). One control, the loop's own
+    /// slow filter, never a second beside it (`blocks::arc`). Nothing is
+    /// sent where the aim is already this.
+    pub fn glide_aim<H: Host>(&mut self, host: &mut H, aim: f64, dark: f64, open: f64, time: f64, tau: f64) {
+        if self.aimed && self.plan_aim == aim {
+            return;
+        }
+        self.plan_aim = aim;
+        self.aimed = true;
+        host.param(crate::ARC_LOWER, TARGET, dark * js::max(0.0, -aim), time, tau);
+        host.param(crate::ARC_SHALLOW, TARGET, open * js::max(0.0, aim), time, tau);
+    }
+
+    /// A new loop: an arc's aim, if one is in force, glides back to the
+    /// loop's own swing from `time`.
+    pub fn let_go_aim<H: Host>(&mut self, host: &mut H, time: f64) {
+        if self.aimed {
+            host.param(crate::ARC_LOWER, TARGET, 0.0, time, 0.15);
+            host.param(crate::ARC_SHALLOW, TARGET, 0.0, time, 0.15);
+        }
+        self.plan_aim = 0.0;
+        self.aimed = false;
     }
 
     /// A long piece's plan moves the tone (queue item 102b): the warmth's
