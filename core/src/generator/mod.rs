@@ -58,6 +58,7 @@ pub mod js;
 pub mod layers;
 pub mod list;
 pub mod load;
+pub mod longform;
 pub mod melody;
 pub mod piece;
 pub mod plan;
@@ -460,6 +461,24 @@ impl Generator {
             self.pass.number = None;
         }
         &self.pass
+    }
+
+    /// The plan of the loop's piece (queue item 102; `longform`): what each
+    /// of its sections is, from the spec, the request's edits and the
+    /// layers the loop plays; none for a loop that is no long piece. Made
+    /// now, from numbers alone: nothing is kept, and no section is walked.
+    #[must_use]
+    pub fn form(&self) -> Option<longform::Form> {
+        longform::Form::of(&self.spec, self.request.edits(), self.layers_made())
+    }
+
+    /// The layers the loop made has notes in, a bit each in `LAYERS`'
+    /// order (a layer asked off is still made: its mute is the spec's).
+    #[must_use]
+    pub fn layers_made(&self) -> u8 {
+        let r = &self.render;
+        let made = [!r.drums.is_empty(), !r.bass.is_empty(), !r.chords.is_empty(), !r.melody.is_empty(), !r.texture.is_empty()];
+        made.iter().enumerate().fold(0, |m, (i, &on)| m | u8::from(on) << i)
     }
 
     /// Write a pass's canonical text (the goldens' `passes`) into `sink`:

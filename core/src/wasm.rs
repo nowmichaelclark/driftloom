@@ -468,6 +468,36 @@ mod generator {
     pub extern "C" fn dl_gen_text() -> *const u8 {
         TEXT.0.get().cast()
     }
+
+    /// The map of the loaded loop's piece (queue item 102;
+    /// `generator::longform`), at `dl_gen_text`: a list of the piece's own
+    /// line and then a line a unit (`[section, phrase, span]`) for `count`
+    /// sections from section `from` (a whole number, as a double: sections
+    /// go past 2^32). Returns its length; 0 for a loop that is no long
+    /// piece, or a map too long for the buffer.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole sections, below 2^53
+    pub extern "C" fn dl_gen_map(from: f64, count: u32) -> u32 {
+        let Some(form) = generator().form() else { return 0 };
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        let mut w = crate::generator::canon::Writer::new(&mut text);
+        w.list();
+        form.write(&mut w);
+        let from = if from >= 0.0 { from as u64 } else { 0 };
+        for n in from..from.saturating_add(u64::from(count)) {
+            for p in 0..form.units_in(n) {
+                w.list();
+                w.num(n as f64);
+                w.num(p as f64);
+                form.at(n, p).write(&mut w);
+                w.end_list();
+            }
+        }
+        w.end_list();
+        if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
+    }
 }
 
 // --------------------------------------------------------------- the player

@@ -23,7 +23,8 @@
 //! **As text** (`parse`): items split by commas, each a vibe (`glacial`),
 //! a vibe and its weight (`glacial=0.7`), the tempo (`bpm=77`,
 //! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
-//! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`), the
+//! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`) and the journey a long piece takes
+//! (`journey=arc`, `journey=wander`; queue item 102), the
 //! key (`key=D`, `key=D|G`) and the mode (`scale=dorian`,
 //! `scale=dorian|aeolian`), the style (`style=tide`, `style=tide|shrine`),
 //! a layer's voices (`voice.melody=kalimba|marimba`) and a layer on or off
@@ -62,6 +63,8 @@ pub const TEMPO_OUT: &str = "tempo must be 32 to 190 bpm";
 /// The line for a length that is not a whole number of bars from 1 to
 /// `LENGTH_MOST`, nor `endless`.
 pub const BAD_LENGTH: &str = "a bad length";
+/// The line for a journey that is neither `arc` nor `wander`.
+pub const NO_SUCH_JOURNEY: &str = "no such journey";
 /// The line for a key that is no note.
 pub const NO_SUCH_KEY: &str = "no such key";
 /// The line for a mode the core does not have.
@@ -262,6 +265,31 @@ pub enum Length {
     Endless = 2,
 }
 
+/// The journey a long piece takes (queue item 102; `longform`): an arc, as
+/// a symphony's, or the long slow wander. Asked, it is the piece's; left
+/// out, the piece draws one from its seed, leaned by its vibes.
+// From 1, as `Length`'s: none asked is all zero bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Journey {
+    /// Themes that return changed, a build and a release, related keys, a
+    /// close.
+    Arc = 1,
+    /// Long held states, one thing moving at a time.
+    Wander = 2,
+}
+
+impl Journey {
+    /// The journey's name, as a request writes it.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Journey::Arc => "arc",
+            Journey::Wander => "wander",
+        }
+    }
+}
+
 /// A request: the vibes asked, each with its weight or none, the tempo
 /// asked, and the pins. Plain data, `Copy`, about two kilobytes: a host
 /// keeps one and hands it to each load.
@@ -299,13 +327,15 @@ pub struct Request {
     layers_off: u8,
     /// A code's edits (queue item 94a).
     edits: Edits,
+    /// The journey asked of a long piece (queue item 102).
+    journey: Option<Journey>,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0, edits: Edits::NONE }
+        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0, edits: Edits::NONE, journey: None }
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -427,6 +457,21 @@ impl Request {
     #[must_use]
     pub fn length(&self) -> Option<Length> {
         self.length
+    }
+
+    /// The same, with the journey a long piece takes pinned (queue item
+    /// 102): it plays that one whatever its seed and vibes would draw. A
+    /// loop of up to 32 bars has no journey, and plays as it does without.
+    #[must_use]
+    pub fn with_journey(mut self, journey: Journey) -> Self {
+        self.journey = Some(journey);
+        self
+    }
+
+    /// The journey asked.
+    #[must_use]
+    pub fn journey(&self) -> Option<Journey> {
+        self.journey
     }
 
     /// The same, with the home notes asked (queue item 89): a set to choose
@@ -648,7 +693,7 @@ impl Request {
     ///
     /// # Errors
     /// `NO_SUCH_VIBE`, `BAD_WEIGHT`, `BAD_TEMPO`, `TEMPO_OUT`, `BAD_LENGTH`,
-    /// `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_STYLE`, `NO_SUCH_LAYER`,
+    /// `NO_SUCH_JOURNEY`, `NO_SUCH_KEY`, `NO_SUCH_SCALE`, `NO_SUCH_STYLE`, `NO_SUCH_LAYER`,
     /// `NO_SUCH_VOICE`, `BAD_LAYER`, `ALL_LAYERS_OFF`, `NO_SUCH_SETTING`, `BAD_SETTING` or
     /// `SETTING_OUT`, or for an edit `NO_SUCH_EDIT`, `BAD_SEED`, `BAD_TONE`,
     /// for the first item that is one.
@@ -674,6 +719,12 @@ impl Request {
                 let value = value.ok_or(BAD_LENGTH)?;
                 let length = if value == "endless" { Length::Endless } else { Length::Bars(whole(value).ok_or(BAD_LENGTH)?) };
                 out = out.with_length(length)?;
+            } else if name == "journey" {
+                out = out.with_journey(match value {
+                    Some("arc") => Journey::Arc,
+                    Some("wander") => Journey::Wander,
+                    _ => return Err(NO_SUCH_JOURNEY),
+                });
             } else if name == "key" {
                 out.keys = keys_text(value.unwrap_or(""))?;
             } else if name == "scale" {

@@ -49,7 +49,7 @@ the points where the next step is yours.
   chords are doubled, padWow makes the mix 0.2 to 0.35 LU quieter or
   louder, as the sketch did.
 - Batch 6's and 84b's: brain session B2. The long pieces': session 15 and
-  brain session B3. B4 makes them again in the new codes.
+  brain session B3 (session 11's plan, v160, changes no sound). B4 makes them again in the new codes.
 
 ## Ears
 
@@ -84,4 +84,37 @@ the points where the next step is yours.
 
 ## Decisions
 
-(none waiting)
+**Long pieces: the plan (102a, session 11, v160).** Nothing sounds
+different yet; a piece can be read before it is heard (`docs/LONGFORM.md`
+says how; the PR has maps). Each line is a first pick, one line of
+`data/longform.txt` to change, for your ears once sessions 12 to 15 play
+them. Settled for now:
+
+- Which journey: arc and wander even; Endless leans to the wander (about
+  37% arcs); your vibes lean it (still, glacial, meditative to the wander;
+  adventurous, lively, soaring to the arc); `journey=arc` or
+  `journey=wander` pins it.
+- An arc lasts 4 to 15 minutes; a long piece holds several, as movements,
+  and only the last closes (the others end in a breath).
+- A piece under about 4 minutes (most 64-bar ones) plays a small arc: one
+  theme, a lift, a short release, the return, a close.
+- A second theme in 7 arc pieces of 10; the rest stay with one tune.
+- The peak falls 60% to 72% of the way through an arc.
+- Keys an arc may visit: a fifth up or down, the relative, and the parallel
+  only to brighten a minor loop; never a very dark mode; always home for
+  the return and the close.
+- The wander: a hold of 1 to 5 minutes (about 3 on average), then exactly
+  one thing moves; a layer that rests comes back a hold or two later.
+- The wander may visit a related key (15% of its half-hour epochs) and hand
+  the tune to a second theme (20%); set either to 0 to turn it off.
+- The tempo is held for the whole piece.
+- A finite piece played round again plays the same plan again.
+
+Left open, for later sessions or for you:
+
+- A slower middle movement, or easing into the close: not built; a sketch
+  to offer.
+- How strong a build sounds (session 13) and how each changed return
+  sounds (session 14).
+- Moving the tempo slider mid-piece stretches the plan's spans; it does not
+  re-plan.

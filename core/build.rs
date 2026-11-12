@@ -806,6 +806,70 @@ fn voices(out: &mut String, blocks: &[Block]) {
     );
 }
 
+/// The long pieces' numbers (`data/longform.txt`, queue item 102): the
+/// journey's draw, the arc's forms and the wander's holds, which
+/// `generator::longform` draws a piece's plan by. Every role, variation and
+/// vibe it names must be one the core knows, or the build fails here.
+fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
+    const ROLES: [&str; 11] = ["opening", "theme", "build", "second", "development", "peak", "release", "return", "close", "breath", "lift"];
+    const VARIATIONS: [&str; 8] = ["plain", "key", "register", "voice", "stretched", "reharmonized", "answered", "outline"];
+    let file = "data/longform.txt";
+    let find = |name: &str| {
+        let block = blocks.iter().find(|b| b.kind == "longform" && b.name == name).unwrap_or_else(|| panic!("{file} has no [longform {name}]"));
+        Reader { file, block }
+    };
+    let named = |r: &Reader, key: &str, known: &[&str]| {
+        for (name, _) in r.pool(key).unwrap_or_else(|| panic!("{}: missing", r.at(key))) {
+            assert!(known.contains(&name.as_str()), "{}: no such name '{name}'", r.at(key));
+        }
+        r.need_table(key)
+    };
+    let leaning = |r: &Reader, key: &str| {
+        let known: Vec<&str> = vibes.iter().map(String::as_str).collect();
+        named(r, key, &known)
+    };
+    let journey = find("journey");
+    journey.only(&["weights", "endless", "vibes"]);
+    let arc = find("arc");
+    arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay"]);
+    let wander = find("wander");
+    wander.only(&["hold", "sections", "key", "theme", "density"]);
+    let mut energy = String::from("&[");
+    for (part, key) in arc.parts("energy") {
+        assert!(ROLES.contains(&part.as_str()), "{}: no such role", arc.at(&key));
+        let _ = write!(energy, "({}, {}),", quote(&part), arc.need_range(&key));
+    }
+    energy.push(']');
+    let _ = writeln!(
+        out,
+        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {} }};",
+        named(&journey, "weights", &["arc", "wander"]),
+        journey.need_num("endless"),
+        leaning(&journey, "vibes"),
+        arc.need_range("minutes"),
+        leaning(&arc, "long"),
+        arc.need_num("small"),
+        arc.need_num("need"),
+        named(&arc, "full", &ROLES),
+        named(&arc, "short", &ROLES),
+        energy,
+        arc.need_range("peak"),
+        arc.need_range("height"),
+        arc.need_num("second"),
+        named(&arc, "returns", &VARIATIONS),
+        named(&arc, "builds", &VARIATIONS),
+        arc.need_num("close"),
+        arc.need_num("common"),
+        arc.need_num("dark"),
+        arc.need_num("stay"),
+        wander.need_range("hold"),
+        wander.need_num("sections"),
+        wander.need_num("key"),
+        wander.need_num("theme"),
+        wander.need_range("density")
+    );
+}
+
 fn main() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR")).join("..").join("data");
     let read = |name: &str| {
@@ -816,10 +880,13 @@ fn main() {
     };
     let mut out = String::from("// Written by core/build.rs from data/*.txt. Do not edit.\n");
     let _ = characters(&mut out, &read("characters"));
-    vibes(&mut out, &read("vibes"));
+    let vibe_blocks = read("vibes");
+    vibes(&mut out, &vibe_blocks);
+    let vibe_names: Vec<String> = vibe_blocks.iter().filter(|b| b.kind == "vibe").map(|b| b.name.clone()).collect();
     moods(&mut out, &read("moods"));
     choices(&mut out, &read("choices"));
     voices(&mut out, &read("voices"));
+    longform(&mut out, &read("longform"), &vibe_names);
     let dest = PathBuf::from(env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("gen_data.rs");
     fs::write(dest, out).expect("can write the generated tables");
     println!("cargo::rerun-if-changed=build.rs");
