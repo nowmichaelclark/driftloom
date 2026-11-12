@@ -167,8 +167,8 @@ Things earlier sessions learned:
   in Node, `tools/gen-lib.mjs`'s `newSpec` and `render` read the tools'
   build. Round-trip with `decodeAlbum` before giving a code to anyone.
 - The long pieces' plan (session 11): `dlgen --map SEED REQUEST` prints a
-  piece; `node tools/longform.mjs` runs the corpus checks in about six
-  minutes (`--seeds 30` in under one); `core/tests/longform.rs` is the
+  piece; `node tools/longform.mjs` runs the corpus checks in about two
+  minutes (2,400 pieces); `core/tests/longform.rs` is the
   gate's copy. The plan is not linked into `js/dlplayer.wasm` until
   something plays it, so session 12's first use will grow the module.
 - There is one generator and one engine, the core's (item 97). A change to
