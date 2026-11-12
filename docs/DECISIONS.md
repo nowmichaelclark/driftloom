@@ -15,6 +15,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## The music
 
+- 2026-11-12 -- **A long piece's movements differ in kind (Mikey, 2026-11-12):** in pieces of several arcs, a repeating cycle of kinds (a full arc, a gentle one, a short light one, and in long pieces a wander interlude), each with its own length; the first and last are full arcs. Session 14 builds it. Before, a 3,072-bar piece was about 21 movements of one length and shape.
 - 2026-11-11 -- **The melody twang waits until after 1.0 (Mikey, 2026-11-11):** batch 6 builds the twang on the chord layer only (session 09); the tune played by the twang voice is for after 1.0 (the queue's "Later").
 - 2026-11-08 -- **Music computers are good at, not copies (Mikey, 2026-11-08):** Driftloom makes the kind of music that is easy for computers to make and that they make well; it is not an app that copies real music. An instrument that recalls a real one (a tremolo baritone guitar, say) is a synth in its spirit, not an imitation: a near copy sounds uncanny unless it is perfect. Ears findings feed what a loop does, never a copy of a record's tune, chords or sound.
 - 2026-10-20 -- **Best sound wins, not how it used to be (Mikey, 2026-10-20):** "I just want whatever is best / sounds the best for the core and app going forward. I'm not married at all to how things used to be or operate or function." Today's behavior is a reference to measure against, not a thing to protect; his ears decide. (Level changes still go to his ears level-matched or labeled, since louder wins a quick listen.)
