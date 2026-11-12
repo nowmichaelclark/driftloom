@@ -188,6 +188,10 @@ pub struct Master {
     wobble_time: f32,
     curve: [f32; CURVE],
     tone_freq: Timeline<EVENTS>,
+    /// A long piece's aim for the arc (queue item 102c): the swing's centre
+    /// lowered and its depth made shallower, each a share (`ARC_LOWER`,
+    /// `ARC_SHALLOW`).
+    arc_aim: [Timeline<EVENTS>; 2],
     lanes: [Lane; OUT],
     /// How many lanes it renders: 1 (mono) or 2 (stereo).
     layout: usize,
@@ -225,6 +229,7 @@ impl Master {
             wobble_time: 0.0,
             curve: [0.0; CURVE],
             tone_freq: Timeline::new(0.0, 0.0, 0.0),
+            arc_aim: [Timeline::new(0.0, 0.0, 0.0), Timeline::new(0.0, 0.0, 0.0)],
             lanes: [const { Lane::new() }; OUT],
             layout: 0,
             comp: Compressor::new(),
@@ -267,6 +272,9 @@ impl Master {
         self.wobble_time = f(WOBBLE_TIME).max(0.0).min(self.wobble_max);
         self.set_drive(DRIVE);
         self.tone_freq.configure(f(TONE_HZ), 0.0, r / 2.0);
+        for aim in &mut self.arc_aim {
+            aim.configure(0.0, 0.0, 1.0);
+        }
         // Both compressors start warm (`Compressor::settle`): the first
         // notes after a Play, a rebuild or the core's arrival are not dipped.
         self.comp.init(rate, COMP);
@@ -386,6 +394,12 @@ impl Master {
     /// `block`, frame by frame; `None` with no arc.
     pub fn arc_lift(&mut self, block: u64) -> Option<Signal> {
         self.lanes.first_mut().and_then(|lane| lane.arc.lift(block))
+    }
+
+    /// The arc's aim (`ARC_LOWER` for 0, `ARC_SHALLOW` for 1).
+    pub fn arc_aim(&mut self, which: usize) -> &mut Timeline<EVENTS> {
+        let i = which.min(1);
+        &mut self.arc_aim[i]
     }
 
     pub fn tone_freq(&mut self) -> &mut Timeline<EVENTS> {
@@ -531,8 +545,19 @@ impl Master {
                 }
             }
         }
+        // The arc's aim at the block's middle (none: the swing as it is).
+        let mut aim = [0.0f64; 2];
+        for (a, line) in aim.iter_mut().zip(self.arc_aim.iter_mut()) {
+            *a = if line.idle() {
+                f64::from(line.value())
+            } else {
+                let mut v = [0.0f32; QUANTUM];
+                line.fill(block, rate, &mut v);
+                f64::from(v[QUANTUM / 2])
+            };
+        }
         for (lane, y) in self.lanes.iter_mut().zip(self.before_comp.iter_mut()).take(n) {
-            lane.arc.process(block, y);
+            lane.arc.process(block, y, aim);
             for x in y.iter_mut() {
                 *x = lane.highpass.step(*x);
             }

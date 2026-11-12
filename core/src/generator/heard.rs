@@ -33,20 +33,34 @@
 //! starts as the loop's own, every layer easing back up over its first
 //! unit. Endless never closes.
 //!
-//! An arc's sections hear none of this (session 13's): a pass of an arc,
-//! or of a loop that is no piece, is exactly as before.
+//! **An arc is heard by its energy** (queue item 102c, session 13: `Lift`,
+//! `hear_arc`): each unit's energy, smoothed over its neighbors, played the
+//! same way, as marks and levels gliding over the unit: the kit, the bass
+//! and the texture down a little (gone only as a close thins), the chords
+//! and the tune swelling by under a decibel, the kit's shimmer (the hats,
+//! the shakers) arriving with the energy and every hit softer below the
+//! loop's own, the tune thinner and the chords held longer when it is low,
+//! the tune doubled an octave up, softly, toward the peak, and the arc's
+//! filter (the loop's own slow swing, `blocks::arc`) aimed darker below
+//! the peak and its swing shallower at it, the space opening with it. The
+//! loop as composed is the arc's fullest, near its peak. **A finite arc
+//! lands**: its last bars play the loop's tonic chord and the tune on the
+//! tonic alone (`Landing`), held for half of them and ringing out, after
+//! the tune's last phrase, whole; the round after starts at its opening,
+//! from the close. Endless plays arc after arc, a breath between, and never
+//! lands. A pass of a loop that is no piece is exactly as before.
 
 // Steps and units are whole numbers far below 2^53.
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 
 use super::canon::{Sink, Writer};
 use super::character::Names;
-use super::data::LONGFORM;
+use super::data::{ENERGY, LONGFORM};
 use super::js;
 use super::list::{Empty, Word};
-use super::longform::{Form, Span};
+use super::longform::{Form, Span, Theme};
 use super::melody::MELODY_MAX;
-use super::plan::Cx;
+use super::plan::{self, Cx, Notes};
 use super::render::Render;
 use super::request::Journey;
 use super::{LAYERS, Layer};
@@ -95,6 +109,24 @@ pub struct Unit {
     pub stretch: f64,
     /// Each layer moved to another key, in semitones (0 none).
     pub shift: [i16; 5],
+    /// An arc's (session 13): how much softer the kit's hits are, a share
+    /// of their velocity, at the start and the end (0 their own).
+    pub soft: [f64; 2],
+    /// How far down the kit's shimmer is (the hats, the shakers, the
+    /// jingles: `[longform energy] shimmer`), a share of its velocity, at
+    /// the start and the end (0 its own, 1 silent).
+    pub shimmer: [f64; 2],
+    /// How far down the kit's backbeat is (the snares, the claps, the rims,
+    /// the brushes: `[longform energy] backbeat`), likewise.
+    pub backbeat: [f64; 2],
+    /// The tune doubled this many semitones up (0 none: an octave, toward
+    /// the peak), and the double's share of the tune's velocity at the
+    /// start and the end.
+    pub double: i16,
+    pub doubled: [f64; 2],
+    /// The arc's filter's aim, at the start and the end: -1 its darkest, 0
+    /// the loop's own swing, 1 its brightest.
+    pub aim: [f64; 2],
 }
 
 impl Empty for Unit {
@@ -108,6 +140,12 @@ impl Empty for Unit {
         register: 0,
         stretch: 0.0,
         shift: [0; 5],
+        soft: [0.0; 2],
+        shimmer: [0.0; 2],
+        backbeat: [0.0; 2],
+        double: 0,
+        doubled: [0.0; 2],
+        aim: [0.0; 2],
     };
 }
 
@@ -141,12 +179,100 @@ impl Unit {
         [Self::glide(self.tone[0], t), Self::glide(self.tone[1], t)]
     }
 
-    /// Whether anything glides in the unit (its levels, its tone, its tune).
+    /// Whether anything glides in the unit (its levels, its tone, its tune,
+    /// an arc's aim).
     #[must_use]
     pub fn glides(&self) -> bool {
         let moves = |p: &[f64; 2]| p[0] != p[1];
-        self.cut.iter().any(moves) || self.tone.iter().any(moves) || moves(&self.thin)
+        self.cut.iter().any(moves) || self.tone.iter().any(moves) || moves(&self.thin) || moves(&self.aim)
     }
+
+    /// The tune's double's share of its velocity at `step`.
+    #[must_use]
+    pub fn doubled_at(&self, step: f64) -> f64 {
+        Self::glide(self.doubled, self.along(step))
+    }
+
+    /// An arc's filter aim at `step`.
+    #[must_use]
+    pub fn aim_at(&self, step: f64) -> f64 {
+        Self::glide(self.aim, self.along(step))
+    }
+
+    /// How much of its velocity a kit hit keeps at `step` (1 all), by its
+    /// piece.
+    #[must_use]
+    pub fn kit_at(&self, step: f64, piece: Piece) -> f64 {
+        let t = self.along(step);
+        let arrived = match piece {
+            Piece::Shimmer => 1.0 - Self::glide(self.shimmer, t),
+            Piece::Backbeat => 1.0 - Self::glide(self.backbeat, t),
+            Piece::Other => 1.0,
+        };
+        (1.0 - Self::glide(self.soft, t)) * arrived
+    }
+}
+
+/// What a kit hit is to an arc's energy (session 13): its shimmer, its
+/// backbeat, or another piece (the kick).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Piece {
+    Shimmer,
+    Backbeat,
+    Other,
+}
+
+impl Piece {
+    /// The piece a kit instrument is.
+    #[must_use]
+    pub fn of(inst: &str) -> Piece {
+        if super::data::lookup(ENERGY.shimmer, inst).is_some() {
+            Piece::Shimmer
+        } else if super::data::lookup(ENERGY.backbeat, inst).is_some() {
+            Piece::Backbeat
+        } else {
+            Piece::Other
+        }
+    }
+}
+
+/// A finite arc's landing (session 13): over the round's last bars the
+/// loop's tonic chord and the tune on the tonic, alone, held for half of
+/// them and ringing out. Every field is nothing at zero.
+#[derive(Clone, Copy)]
+pub struct Landing {
+    /// Whether the section lands, from section step `at` (its first, where
+    /// the landing began in a section before), the two notes held `hold`
+    /// steps; and whether it strikes them (the landing starts in it).
+    pub on: bool,
+    pub at: f64,
+    pub hold: f64,
+    pub strikes: bool,
+    /// The tonic chord, as the loop voices it where it plays one (in the
+    /// voice of `chord_from`, the loop's chord it is taken from), at
+    /// `chord_vel`; empty with no chords.
+    pub chord: Notes,
+    pub chord_from: usize,
+    pub chord_vel: f64,
+    /// The tune's tonic (0 none), in the voice of tune note `tune_from`, at
+    /// `tune_vel`.
+    pub tune: f64,
+    pub tune_from: usize,
+    pub tune_vel: f64,
+    /// Whether the chord is rolled, a note after another (a loop that
+    /// plays its chords a note at a time).
+    pub rolled: bool,
+}
+
+impl core::fmt::Debug for Landing {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Landing").field("on", &self.on).field("at", &self.at).field("hold", &self.hold).field("chord", &&self.chord[..]).field("tune", &self.tune).finish_non_exhaustive()
+    }
+}
+
+impl Landing {
+    /// No landing.
+    pub const NONE: Landing = Landing { on: false, at: 0.0, hold: 0.0, strikes: false, chord: Notes::EMPTY, chord_from: 0, chord_vel: 0.0, tune: 0.0, tune_from: 0, tune_vel: 0.0, rolled: false };
 }
 
 /// What a section's plan has heard: its units, and whether it is a
@@ -162,11 +288,27 @@ pub struct Heard {
     /// Each tune note's place among the tune's notes by rank, from just
     /// over 0 to 1 (`sounds`): its share of the notes ranked at or under it.
     places: [f32; MELODY_MAX],
+    /// Whether it is an arc's (session 13), not a wander's.
+    pub arc: bool,
+    /// An arc's: the steps in which the tune sounds whole (its last phrase
+    /// before the landing; none where the two are equal), and the landing.
+    whole: [f64; 2],
+    pub landing: Landing,
 }
 
 impl Heard {
     /// Nothing heard.
-    pub const NONE: Heard = Heard { on: false, units: [Unit::EMPTY; UNITS_MAX], count: 0, seed: 0, spb: 0.0, places: [0.0; MELODY_MAX] };
+    pub const NONE: Heard = Heard {
+        on: false,
+        units: [Unit::EMPTY; UNITS_MAX],
+        count: 0,
+        seed: 0,
+        spb: 0.0,
+        places: [0.0; MELODY_MAX],
+        arc: false,
+        whole: [0.0; 2],
+        landing: Landing::NONE,
+    };
 
     /// The unit holding section step `step` (none: nothing heard).
     #[must_use]
@@ -193,6 +335,9 @@ impl Heard {
     #[must_use]
     pub fn sounds(&self, i: usize, step: f64) -> bool {
         let Some(u) = self.unit(step) else { return true };
+        if step >= self.whole[0] && step < self.whole[1] {
+            return true;
+        }
         let thin = Unit::glide(u.thin, u.along(step));
         thin <= 0.0 || f64::from(self.places.get(i).copied().unwrap_or(0.0)) < 1.0 - thin
     }
@@ -227,10 +372,14 @@ impl Heard {
 
     /// Hear section `n` of the piece `form` plans, of the loop of `cx`
     /// rendered as `base`: every unit's state, and the one before the first
-    /// (where it starts from). None for an arc's, which session 13 hears.
+    /// (where it starts from). An arc's is its energy (`hear_arc`).
     pub fn hear(&mut self, form: Option<&Form>, cx: &Cx, base: &Render, n: u64) {
         *self = Heard::NONE;
-        let Some(form) = form.filter(|f| f.journey == Journey::Wander) else { return };
+        let Some(form) = form else { return };
+        if form.journey == Journey::Arc {
+            self.hear_arc(form, cx, base, n);
+            return;
+        }
         self.on = true;
         self.seed = cx.spec.seed;
         self.spb = cx.spb;
@@ -266,12 +415,200 @@ impl Heard {
         self.count = count;
     }
 
+    /// Hear section `n` of an arc (session 13): each unit's energy, as
+    /// marks and levels (`Lift::end`), gliding over the unit from where the
+    /// unit before ended, so a build is a slow swell and nothing jumps; and
+    /// at a finite piece's end, the tune's last phrase whole and the landing
+    /// on the tonic (`land`).
+    fn hear_arc(&mut self, form: &Form, cx: &Cx, base: &Render, n: u64) {
+        self.on = true;
+        self.arc = true;
+        self.seed = cx.spec.seed;
+        self.spb = cx.spb;
+        self.place_notes(base);
+        let ways = Ways::of(cx, base);
+        let lift = Lift::of(form, cx, &ways);
+        let spb = cx.spb;
+        let unit_steps = form.unit_bars * spb;
+        let count = (form.units_in(n) as usize).min(UNITS_MAX);
+        let mut from = form.before(n, 0).map(|(b, p)| lift.end(&ways, &smoothed(form, b, p)));
+        let mut at = 0.0;
+        for p in 0..count {
+            let span = smoothed(form, n, p as u64);
+            let end = lift.end(&ways, &span);
+            let start = from.unwrap_or(end);
+            let steps = span.bars * spb;
+            let u = &mut self.units[p];
+            *u = end;
+            u.from = at;
+            u.to = at + if p + 1 == count { steps } else { unit_steps.min(steps) };
+            for (c, s) in u.cut.iter_mut().zip(start.cut.iter()) {
+                c[0] = s[1];
+            }
+            for (t, s) in u.tone.iter_mut().zip(start.tone.iter()) {
+                t[0] = s[1];
+            }
+            u.thin[0] = start.thin[1];
+            u.soft[0] = start.soft[1];
+            u.shimmer[0] = start.shimmer[1];
+            u.backbeat[0] = start.backbeat[1];
+            u.doubled[0] = start.doubled[1];
+            // A double arriving starts from nothing, in the octave it will
+            // play.
+            if u.double != 0 && start.double == 0 {
+                u.doubled[0] = 0.0;
+            }
+            u.aim[0] = start.aim[1];
+            at = u.to;
+            from = Some(end);
+        }
+        self.count = count;
+        if let Some(to_end) = form.to_end(n) {
+            self.land(form, cx, base, to_end * spb, at);
+        }
+    }
+
+    /// A finite arc's end, where it reaches section steps 0 to `steps`
+    /// (`end` steps from the section's first): its last bars land (at least
+    /// `[longform energy] land` seconds and a bar, over as many sections as
+    /// that takes), and the tune's last phrase before them sounds whole.
+    fn land(&mut self, form: &Form, cx: &Cx, base: &Render, end: f64, steps: f64) {
+        let spb = cx.spb;
+        let bars = cx.spec.bars;
+        let land_bars = js::max(1.0, js::ceil(ENERGY.land / form.bar_seconds()));
+        let phrase = if bars % 4.0 == 0.0 {
+            4.0
+        } else if bars % 2.0 == 0.0 {
+            2.0
+        } else {
+            bars
+        };
+        // Where the landing starts, from the section's first step (before it
+        // where the landing is longer than the section, so the section is
+        // all landing).
+        let at = end - land_bars * spb;
+        let whole = [js::max(0.0, at - phrase * spb), js::clamp(at, 0.0, steps)];
+        if whole[1] > whole[0] {
+            self.whole = whole;
+        }
+        if at >= steps {
+            return;
+        }
+        let l = &mut self.landing;
+        l.on = true;
+        l.at = js::max(0.0, at);
+        l.hold = js::max(1.0, js::floor((end - at) / 2.0));
+        // The section it starts in strikes it.
+        l.strikes = at >= 0.0;
+        if !l.strikes {
+            return;
+        }
+        let root = i16::from(form.home.root);
+        let pc = |n: i16| n.rem_euclid(12);
+        // The tonic chord: the mode's triad on the root (its third and its
+        // fifth, or their nearest where the mode has none), as the loop
+        // voices it where it plays one in root position, else built at the
+        // chords' lowest. (A loop whose chords are played a
+        // note at a time has no chord of three: it lands on the triad,
+        // rolled.)
+        let steps = cx.spec.steps();
+        let has = |x: f64| steps.contains(&x);
+        let third: i16 = if has(4.0) { 4 } else if has(3.0) { 3 } else { steps.get(1).map_or(4, |&x| x as i16) };
+        let fifth: i16 = if has(7.0) { 7 } else if has(8.0) { 8 } else { 6 };
+        let triad = [root, pc(root + third), pc(root + fifth)];
+        let lowest = |e: &plan::ChordEvent| e.notes.iter().copied().min();
+        let chords = || base.chords.iter().enumerate().filter(|(_, e)| !e.notes.is_empty());
+        let tonic = |e: &plan::ChordEvent| e.notes.len() >= 3 && triad.iter().all(|&t| e.notes.iter().any(|&n| pc(n) == t));
+        let own = chords().find(|(_, e)| tonic(e) && lowest(e).is_some_and(|lo| pc(lo) == root));
+        l.rolled = !chords().any(|(_, e)| e.notes.len() >= 2);
+        if let Some((i, e)) = own {
+            l.chord = e.notes;
+            l.chord_from = i;
+            l.chord_vel = e.vel;
+        } else if let Some((i, e)) = chords().next() {
+            let lo = base.chords.iter().flat_map(|e| e.notes.iter().copied()).min().unwrap_or(48);
+            let mut r = lo - pc(lo - root);
+            while r < CHORDS_RANGE[0] {
+                r += 12;
+            }
+            l.chord = Notes::new();
+            for by in [0, third, fifth] {
+                l.chord.push(r + by);
+            }
+            l.chord_from = i;
+            l.chord_vel = e.vel;
+        }
+        // The tune on the tonic, nearest its last note, in its range.
+        if let Some((i, e)) = base.melody.iter().enumerate().next_back() {
+            let m = js::round(e.midi) as i16;
+            let below = m - pc(m - root);
+            let near = if m - below <= 6 { below } else { below + 12 };
+            let near = if near + 12 <= 96 && near < 48 { near + 12 } else if near > 96 { near - 12 } else { near };
+            l.tune = f64::from(near);
+            l.tune_from = i;
+            l.tune_vel = e.vel;
+        }
+    }
+
+    /// Whether the plan's landing has every layer's own notes left out at
+    /// section step `step` (the landing plays alone).
+    #[must_use]
+    pub fn landed(&self, step: f64) -> bool {
+        self.landing.on && step >= self.landing.at
+    }
+
     /// The heard units' canonical text (the goldens' passes, a piece of the
-    /// wander's), in the pass's own.
+    /// wander's), in the pass's own: an arc's (session 13) as its units,
+    /// its last phrase whole and its landing.
     pub fn write<S: Sink>(&self, w: &mut Writer<S>) {
+        if !self.arc {
+            self.write_units(w);
+            return;
+        }
+        w.obj();
+        w.key("landing");
+        let l = &self.landing;
+        if l.on {
+            w.obj();
+            w.key("at");
+            w.num(l.at);
+            w.key("chord");
+            w.list();
+            for &n in l.chord.iter() {
+                w.num(f64::from(n));
+            }
+            w.end_list();
+            w.key("hold");
+            w.num(l.hold);
+            w.key("strikes");
+            w.bool(l.strikes);
+            w.key("tune");
+            w.num(l.tune);
+            w.end_obj();
+        } else {
+            w.null();
+        }
+        w.key("units");
+        self.write_units(w);
+        w.key("whole");
+        w.list();
+        w.num(self.whole[0]);
+        w.num(self.whole[1]);
+        w.end_list();
+        w.end_obj();
+    }
+
+    fn write_units<S: Sink>(&self, w: &mut Writer<S>) {
         w.list();
         for u in self.units() {
             w.obj();
+            if self.arc {
+                w.key("aim");
+                w.list();
+                w.num(u.aim[0]);
+                w.num(u.aim[1]);
+                w.end_list();
+            }
             w.key("cut");
             w.list();
             for c in &u.cut {
@@ -279,8 +616,26 @@ impl Heard {
                 w.num(c[1]);
             }
             w.end_list();
+            if self.arc {
+                w.key("double");
+                w.num(f64::from(u.double));
+                w.key("doubled");
+                w.list();
+                w.num(u.doubled[0]);
+                w.num(u.doubled[1]);
+                w.end_list();
+            }
             w.key("from");
             w.num(u.from);
+            if self.arc {
+                w.key("shimmer");
+                w.list();
+                w.num(u.shimmer[0]);
+                w.num(u.shimmer[1]);
+                w.num(u.backbeat[0]);
+                w.num(u.backbeat[1]);
+                w.end_list();
+            }
             w.key("register");
             w.num(f64::from(u.register));
             w.key("shift");
@@ -289,6 +644,13 @@ impl Heard {
                 w.num(f64::from(s));
             }
             w.end_list();
+            if self.arc {
+                w.key("soft");
+                w.list();
+                w.num(u.soft[0]);
+                w.num(u.soft[1]);
+                w.end_list();
+            }
             w.key("stretch");
             w.num(u.stretch);
             w.key("thin");
@@ -321,6 +683,28 @@ impl Default for Heard {
     }
 }
 
+/// Unit `phrase` of section `n` of an arc, its energy smoothed over its
+/// neighbors (a quarter each side, half its own: so a role of one unit,
+/// a breath, is approached and left over three, and no unit steps far from
+/// the one before), never across a round's end (a finite piece's close
+/// reaches its own low, and the round after starts at its opening). Three
+/// units read, by number.
+fn smoothed(form: &Form, n: u64, phrase: u64) -> Span {
+    let mut span = form.at(n, phrase);
+    let last = phrase + 1 >= form.units_in(n);
+    let before = if phrase == 0 && form.comes_round(n) { None } else { form.before(n, phrase) };
+    let after = if !last {
+        Some((n, phrase + 1))
+    } else if n.checked_add(1).is_some_and(|m| !form.comes_round(m)) {
+        Some((n + 1, 0))
+    } else {
+        None
+    };
+    let energy = |x: Option<(u64, u64)>| x.map_or(span.energy, |(b, p)| form.at(b, p).energy);
+    span.energy = 0.25 * energy(before) + 0.5 * span.energy + 0.25 * energy(after);
+    span
+}
+
 /// A rank in [0, 1) for tune note `i` of the loop of `seed`.
 fn rank(seed: u32, i: usize) -> f64 {
     let mut x = u64::from(seed ^ THIN_SALT) << 32 | i as u64;
@@ -328,6 +712,112 @@ fn rank(seed: u32, i: usize) -> f64 {
     x = (x ^ (x >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
     x ^= x >> 31;
     f64::from((x >> 32) as u32) / 4_294_967_296.0
+}
+
+/// How a loop plays an arc's energy (session 13), worked out once a
+/// section: the layers that may fade with it, whether its tune may be
+/// doubled, whether the filter and the space may move.
+#[allow(clippy::struct_excessive_bools)] // four separate facts about a loop, not a state
+struct Lift {
+    /// The layers that fade with the energy, a bit each (never one asked
+    /// on, off or re-rolled; the chords and the tune never, and a loop of
+    /// fewer than two of them keeps its bass, then its texture, then its
+    /// kit), and whether the tune rests in a breath.
+    fading: u8,
+    tune_rests: bool,
+    /// The chords and the tune, those that swell with the energy (none
+    /// asked on, off or re-rolled).
+    swelling: u8,
+    /// Whether the tune has room an octave up (its highest at 84 or under).
+    doubles: bool,
+    /// Whether the arc's filter takes the energy's aim (no arc asked), and
+    /// whether the space opens with it (the code left the space as it was).
+    aims: bool,
+    spaces: bool,
+}
+
+impl Lift {
+    fn of(form: &Form, cx: &Cx, ways: &Ways) -> Lift {
+        let bit = |l: Layer| 1u8 << l as usize;
+        let playing = form.playing;
+        let mut fading = form.fading & (bit(Layer::Drums) | bit(Layer::Bass) | bit(Layer::Texture));
+        let mut kept = (playing & (bit(Layer::Chords) | bit(Layer::Melody))).count_ones();
+        for l in [Layer::Bass, Layer::Texture, Layer::Drums] {
+            if kept >= 2 {
+                break;
+            }
+            if playing & bit(l) != 0 {
+                fading &= !bit(l);
+                kept += 1;
+            }
+        }
+        let asked = ["arc", "arc.shape", "arc.period", "arc.from", "arc.floor"].iter().any(|p| cx.spec.pins.get(p).is_some());
+        Lift {
+            fading,
+            tune_rests: form.fading & bit(Layer::Melody) != 0,
+            swelling: form.fading & (bit(Layer::Chords) | bit(Layer::Melody)),
+            doubles: ways.ranges[Layer::Melody as usize].is_some_and(|[_, hi]| hi + 12.0 <= 96.0),
+            aims: !asked && !form.toned[0],
+            spaces: !form.toned[1],
+        }
+    }
+
+    /// What unit `span` of an arc ends as: its energy heard, each gliding
+    /// thing at its end in both of its pair (`hear_arc` sets the start from
+    /// the unit before).
+    fn end(&self, ways: &Ways, span: &Span) -> Unit {
+        let e = span.energy;
+        let x = &ENERGY;
+        let mut u = Unit::EMPTY;
+        for &(name, [gone, low, own, floor]) in x.levels {
+            let Some(layer) = LAYERS.into_iter().find(|l| l.name() == name) else { continue };
+            if self.fading & (1 << layer as usize) == 0 {
+                continue;
+            }
+            // `build.rs` holds the three in order, apart.
+            let level = if e <= gone {
+                0.0
+            } else if e < low {
+                floor * (e - gone) / (low - gone)
+            } else if e < own {
+                floor + (1.0 - floor) * (e - low) / (own - low)
+            } else {
+                1.0
+            };
+            u.cut[layer as usize] = [1.0 - level; 2];
+        }
+        let [share, low, own] = x.swell;
+        let swell = share + (1.0 - share) * js::clamp((e - low) / (own - low), 0.0, 1.0);
+        for layer in [Layer::Chords, Layer::Melody] {
+            if self.swelling & (1 << layer as usize) != 0 {
+                u.cut[layer as usize] = [1.0 - swell; 2];
+            }
+        }
+        if span.theme == Theme::Rest && self.tune_rests {
+            u.cut[Layer::Melody as usize] = [1.0; 2];
+        }
+        let [own, reach] = x.aim;
+        let below = if own > 0.0 { js::clamp((own - e) / own, 0.0, 1.0) } else { 0.0 };
+        let [silent, full] = x.kit;
+        let arrived = if full > silent { js::clamp((e - silent) / (full - silent), 0.0, 1.0) } else { f64::from(u8::from(e >= full)) };
+        u.shimmer = [1.0 - arrived; 2];
+        u.backbeat = [(1.0 - x.beat) * (1.0 - arrived); 2];
+        u.soft = [x.soft * below; 2];
+        let [thin_at, thinnest] = x.thin;
+        u.thin = [if e < thin_at && thin_at > 0.0 { thinnest * (thin_at - e) / thin_at } else { 0.0 }; 2];
+        u.stretch = if e < x.held { ways.stretch(1) } else { 0.0 };
+        let [none, most, share] = x.double;
+        if self.doubles && e > none {
+            u.double = 12;
+            u.doubled = [share * js::clamp((e - none) / (most - none), 0.0, 1.0); 2];
+        }
+        let aim = if self.aims && reach > 0.0 { js::clamp((e - own) / reach, -1.0, 1.0) } else { 0.0 };
+        u.aim = [aim; 2];
+        if self.spaces {
+            u.tone[1] = [x.space * aim; 2];
+        }
+        u
+    }
 }
 
 /// How a loop's things move, worked out once a section from the loop: the

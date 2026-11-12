@@ -54,6 +54,8 @@ const GLIDE: f64 = 0.5;
 /// chain lets through), and the share of the rate it is held under.
 const OPEN: f64 = 20_000.0;
 const NYQUIST_SHARE: f64 = 0.45;
+/// Under this, an aim's share is none: the filter as the swing has it.
+const AIM_LEAST: f64 = 1e-4;
 
 /// The swing's shape (queue item 63b).
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -206,6 +208,22 @@ impl Arc {
         (math::pow(f0, 1.0 - w) * math::pow(f, w), lift0 + (lift - lift0) * w)
     }
 
+    /// The cutoff `f` under the aim `[lower, shallower]`: in log frequency,
+    /// how far down it sits from the top of its range (9 kHz with a swing,
+    /// the open filter without), lowered toward the swing's darkest by
+    /// `lower` of the way and its depth `shallower` less.
+    fn aimed(&self, f: f64, [lower, shallower]: [f64; 2], start: f64) -> f64 {
+        let top = OPEN.min(NYQUIST_SHARE * self.rate);
+        let high = if self.active(start) { HIGH } else { top };
+        let range = math::log2(high / LOW);
+        if range.is_nan() || range <= 0.0 {
+            return f;
+        }
+        let down = (math::log2(high / f.max(LOW)) / range).clamp(0.0, 1.0);
+        let down = (down + (1.0 - down) * lower.clamp(0.0, 1.0)) * (1.0 - shallower.clamp(0.0, 1.0));
+        (high * math::pow(LOW / high, down)).min(top)
+    }
+
     /// Whether it is a filter at all in a block that starts at `start`: an
     /// arc, or one gliding out.
     fn active(&self, start: f64) -> bool {
@@ -247,12 +265,24 @@ impl Arc {
     /// plays (a loop with one after a loop without) takes over from a filter
     /// already in step with it, not from rest, which stepped the output.
     /// Before any music its state is all zeros, as it always was.
-    pub fn process(&mut self, block: u64, signal: &mut Signal) {
+    ///
+    /// `aim` is a long piece's (queue item 102c): how far the swing's centre
+    /// is lowered, a share of its range in log frequency, and how much
+    /// shallower its depth is, each 0 to 1. Both 0: the swing exactly as it
+    /// is. A loop with no swing has the filter open, and lowered from there
+    /// the same way: one filter, the loop's own, never a second.
+    pub fn process(&mut self, block: u64, signal: &mut Signal, aim: [f64; 2]) {
         self.advance(block);
         let (start, end) = self.ends(block);
-        let (f, _) = self.at(f64::midpoint(start, end));
+        let (mut f, _) = self.at(f64::midpoint(start, end));
+        // (A shallower swing is nothing without a swing: the filter stays
+        // as it is, open.)
+        let aimed = aim[0] > AIM_LEAST || (aim[1] > AIM_LEAST && self.active(start));
+        if aimed {
+            f = self.aimed(f, aim, start);
+        }
         self.filter.set(Kind::Lowpass, f as f32, Q, 0.0, self.rate as f32);
-        if self.active(start) {
+        if self.active(start) || aimed {
             for x in signal.iter_mut() {
                 *x = self.filter.step(*x);
             }
@@ -294,7 +324,7 @@ impl Block for Arc {
     }
 
     fn render(&mut self, block: u64, _: &Context, signal: &mut Signal) {
-        self.process(block, signal);
+        self.process(block, signal, [0.0; 2]);
     }
 }
 
@@ -308,6 +338,59 @@ mod tests {
     fn swing(s: &Settings, n: usize) -> impl Iterator<Item = (f64, f64)> + '_ {
         let w = Swing::new(s, 0.0);
         (0..n).map(move |i| w.at(i as f64 / n as f64 * s.period, RATE))
+    }
+
+    /// White noise through the arc, `blocks` blocks, its output's power in
+    /// its last half and the power of its sample-to-sample steps (the
+    /// highs).
+    fn through(arc: &mut Arc, aim: [f64; 2], blocks: u64) -> (f64, f64) {
+        let mut x = 0x1234_5678u32;
+        let (mut power, mut highs, mut last) = (0.0, 0.0, 0.0f32);
+        for b in 0..blocks {
+            let mut s = [0.0f32; QUANTUM];
+            for y in &mut s {
+                x ^= x << 13;
+                x ^= x >> 17;
+                x ^= x << 5;
+                *y = (f64::from(x) / f64::from(u32::MAX) - 0.5) as f32;
+            }
+            arc.process(b * QUANTUM as u64, &mut s, aim);
+            if b >= blocks / 2 {
+                for &y in &s {
+                    power += f64::from(y * y);
+                    highs += f64::from((y - last) * (y - last));
+                    last = y;
+                }
+            }
+        }
+        (power, highs)
+    }
+
+    #[test]
+    fn the_aim_darkens_an_open_filter_and_none_leaves_it_open() {
+        // No swing: open, and at no aim exactly the input.
+        let mut open = Arc::new();
+        open.ready(RATE);
+        let mut lowered = open.clone();
+        let mut none = open.clone();
+        let (p0, h0) = through(&mut open, [0.0, 0.0], 400);
+        let (p1, h1) = through(&mut lowered, [0.45, 0.0], 400);
+        let (p2, h2) = through(&mut none, [0.0, 0.7], 400);
+        assert!(h1 / p1 < 0.25 * (h0 / p0), "lowered {} against open {}", h1 / p1, h0 / p0);
+        // Shallower has nothing to lift with no swing: no filter at all.
+        assert_eq!((p2.to_bits(), h2.to_bits()), (p0.to_bits(), h0.to_bits()));
+    }
+
+    #[test]
+    fn the_aim_lifts_a_deep_swings_dark_side() {
+        let s = Settings { period: 1000.0, from: 0.0, ..REST };
+        let mut own = Arc::new();
+        own.ready(RATE);
+        own.begin(&s, 0.0);
+        let mut lifted = own.clone();
+        let (p0, h0) = through(&mut own, [0.0, 0.0], 400);
+        let (p1, h1) = through(&mut lifted, [0.0, 0.5], 400);
+        assert!(h1 / p1 > 2.0 * (h0 / p0), "lifted {} against its own {}", h1 / p1, h0 / p0);
     }
 
     #[test]

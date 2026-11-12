@@ -192,6 +192,12 @@ pub const SPACE_LIGHT: u32 = TONE_FREQ + 22;
 /// Draw the loop's space and take it from `time` (a stereo render's; it
 /// glides there over about 50 ms). Any value; 0 for no space (centered).
 pub const SPACE_START: u32 = TONE_FREQ + 23;
+/// A long piece's aim for the arc's filter (queue item 102c, `blocks::arc`):
+/// how far the swing's centre is lowered, a share of its range (0 its own),
+/// and how much shallower its depth is (0 its own). Glided as any
+/// parameter, by `op`.
+pub const ARC_LOWER: u32 = TONE_FREQ + 24;
+pub const ARC_SHALLOW: u32 = TONE_FREQ + 25;
 
 /// How long a layout changed while the core plays takes (queue item 66;
 /// `Core::set_layout`), in seconds: the side fades in over it, or out
@@ -906,6 +912,8 @@ impl Core {
                 true
             }
             VOLUME => mix::apply(self.master.volume(), op, v, time, tau, now),
+            ARC_LOWER => mix::apply(self.master.arc_aim(0), op, v, time, tau, now),
+            ARC_SHALLOW => mix::apply(self.master.arc_aim(1), op, v, time, tau, now),
             KILL => mix::apply(self.master.kill(), op, v, time, tau, now),
             BYPASS => {
                 self.master.set_bypass(value != 0.0);

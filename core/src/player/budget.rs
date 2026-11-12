@@ -93,6 +93,10 @@ pub struct Budget {
     head: usize,
     len: usize,
     lite: bool,
+    /// Whether the calls asking now are a long piece's landing (queue item
+    /// 102c, `set_firm`): they may take the whole ceiling, and let go any
+    /// older call, whatever its layer.
+    firm: bool,
     full: u32,
     /// The voice call being made (`begin`), and how many calls there have
     /// been (each one's number).
@@ -122,6 +126,7 @@ impl Budget {
             head: 0,
             len: 0,
             lite: false,
+            firm: false,
             full: 0,
             current: Maybe::NONE,
             calls: 0,
@@ -131,11 +136,20 @@ impl Budget {
         }
     }
 
+    /// A long piece's landing asks from now (`firm` true) until it is done
+    /// (queue item 102c): its few notes play alone, every layer's own left
+    /// out, so they may use the whole ceiling and let go any older tail
+    /// that still holds it.
+    pub fn set_firm(&mut self, firm: bool) {
+        self.firm = firm;
+    }
+
     /// Let everything go, and ask from now on at `lite` quality or full.
     pub fn reset(&mut self, lite: bool) {
         self.head = 0;
         self.len = 0;
         self.lite = lite;
+        self.firm = false;
         self.full = 0;
         self.current = Maybe::NONE;
         self.stolen = [0; 5];
@@ -227,7 +241,7 @@ impl Budget {
         }
         let ceiling = self.ceiling();
         let reserve = js::min(LATE_LAYER_RESERVE, js::round(ceiling * RESERVE_SHARE));
-        let cap = if soft { js::max(40.0, ceiling - reserve) } else { ceiling };
+        let cap = if soft && !self.firm { js::max(40.0, ceiling - reserve) } else { ceiling };
         if spent + cost > cap {
             let fits = self.steal(host, time, cost, cap, spent); #[cfg(feature = "tools")] self.counts.answer(fits); return fits;
         }
@@ -251,7 +265,7 @@ impl Budget {
         for k in 0..self.len {
             let i = self.slot(k);
             let Some(h) = self.group[i].get() else { continue };
-            if h.kept || h.id == g.id || h.layer != g.layer || (h.key.pass == g.key.pass && h.key.step == g.key.step) {
+            if h.kept || h.id == g.id || (h.layer != g.layer && !self.firm) || (h.key.pass == g.key.pass && h.key.step == g.key.step) {
                 continue;
             }
             let released = self.at[i] - TAIL <= time;

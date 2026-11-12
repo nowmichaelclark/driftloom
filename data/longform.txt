@@ -3,7 +3,8 @@
 # compiles it in; core/src/generator/longform.rs draws by it); the page does
 # not. The format is js/data.js's. Every number here is a first pick for
 # Mikey's ears: sessions 12 to 16 tune them. The wander's are heard since
-# session 12 (core/src/generator/heard.rs); the arc's from session 13.
+# session 12 (core/src/generator/heard.rs); the arc's energy since session
+# 13 ([longform energy]).
 
 # Which journey a piece takes: an arc, as a symphony's, or the long slow
 # wander. Drawn per piece on a stream of its own; a request pins it
@@ -115,3 +116,77 @@ lengths = 0.6 1.5
 # move, as many as that takes. A voice, a register, a length or a key
 # changes on the move's line.
 glide = 24
+
+# How an arc's energy is heard (session 13, core/src/generator/heard.rs):
+# each unit's energy (the arc's [longform arc] energy, 0 to 1, the peak at
+# about 1) played as marks and levels on the loop's own events, gliding over
+# each unit from where the unit before ended. Density and brightness carry
+# it more than level: someone working in a coffee shop should notice a
+# build only once it has passed. The loop is its own at about the theme's
+# energy (0.45 to 0.5). Every number is a first pick for Mikey's ears.
+[longform energy]
+# Each layer's level by the energy: nothing at the first number, the
+# fourth's share of its own at the second, its own at the third, in a line
+# between (a layer asked on, off or re-rolled is always its own; the chords
+# and the tune always play, and a loop that has fewer than two of them
+# keeps its bass, then its texture). Under the first its notes rest. The
+# loop as composed is the arc's fullest, near its peak: the rest of the arc
+# is the loop held back a little, so the loudness climbs the whole way,
+# gently. The kit and the bass carry most of a loop's loudness: they stay
+# in an opening, a little down, and leave only as a close thins.
+level.bass = 0.12 0.24 0.85 0.85
+level.texture = 0.16 0.28 0.85 0.7
+level.drums = 0.12 0.24 0.85 0.85
+# The chords and the tune always play, but swell a little with the rest:
+# at the first number's share of their level at the second energy and
+# under, their own from the third (a layer asked on, off or re-rolled
+# apart): the one level every loop shares, so even a loop with nothing to
+# fade rises and falls, by under a decibel.
+swell = 0.85 0.2 0.85
+# The kit's shimmer (these pieces: the hats, the shakers, the jingles) by
+# the energy: silent under the first, its own velocity from the second, in
+# a line between; the kick stays, softer (below). So a
+# build is heard as the shimmer arriving: brighter and busier. (The brief
+# had it the other way, hats in and the kick out: measured, hats over a
+# quiet kit made an opening brighter, not thinner. For Mikey's ears.)
+kit = 0.3 0.5
+shimmer = hat 1, ohat 1, shaker 1, jingle 1, ojingle 1
+# The backbeat (these pieces: the snares, the claps, the rims, the brushes)
+# comes in over the same energies from this share of its velocity: it
+# carries much of a kit's brightness, so an opening with it at its own is
+# as bright as the loop.
+backbeat = snare 1, clap 1, rim 1, brush 1
+beat = 0.5
+# The kit's velocities, softer by this share of their own at the energy's
+# lowest (none at the loop's own energy and over).
+soft = 0.25
+# The tune thins under the first energy, toward the second share of its
+# notes left out (its thinnest) at nothing.
+thin = 0.45 0.55
+# Under this energy the chords sound longer (the wander's longer length,
+# where they have room): held, as an opening and a close are.
+held = 0.42
+# The tune doubled an octave up (where the octave keeps it at 96 and
+# under), swelling in with the energy: silent at the first energy and
+# under, at the third number's share of the tune's velocity from the
+# second. So the build to the peak brightens as it goes, the peak most.
+double = 0.6 0.95 0.3
+# The arc's filter (the loop's own slow swing, blocks/arc.rs) takes the
+# energy as its slow aim: the loop's own at the first energy (near the
+# peak, as the levels are), all the way at the first plus or minus the
+# second.
+aim = 0.7 0.35
+# At the aim's darkest the filter sits this share of its range lower (the
+# swing's darkest point stays where it is); at its brightest the swing's
+# depth is this share less (its dark side lifted). A loop with no swing has
+# the filter open at its own energy and darkening below it the same way.
+dark = 0.6
+open = 0.5
+# The space opens with the brightness: the Sound panel's space moved by
+# this much at the aim's furthest (never where the code edited the tone).
+space = 0.12
+# A finite arc lands: its last bars, at least this many seconds and a bar,
+# play the loop's tonic chord and the tune on the tonic alone, held for
+# half of them and ringing out; the tune's last phrase sounds whole before
+# them.
+land = 4
