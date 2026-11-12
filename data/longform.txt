@@ -1,0 +1,98 @@
+# Long pieces, composed (queue item 102; docs/LONGFORM.md): the numbers the
+# piece's plan is drawn by. The core alone reads this file (core/build.rs
+# compiles it in; core/src/generator/longform.rs draws by it); the page does
+# not. The format is js/data.js's. Every number here is a first pick for
+# Mikey's ears: sessions 12 to 16 tune them, and nothing here is heard until
+# session 12.
+
+# Which journey a piece takes: an arc, as a symphony's, or the long slow
+# wander. Drawn per piece on a stream of its own; a request pins it
+# (journey=arc, journey=wander).
+[longform journey]
+# The two, by weight, before the vibes lean them.
+weights = arc 1, wander 1
+# Endless is the wander's natural home: the arc's weight there is this much
+# of its own (never 0: Endless plays arcs in turn too).
+endless = 0.6
+# The vibes lean the arc's weight (the choices' way and bounds: toward x1.5
+# to x3, away x0.2 to x0.5, never 0), so a vibe below 1 leans to the wander.
+vibes = still 0.3, serene 0.4, meditative 0.3, glacial 0.3, droning 0.25,
+    floating 0.4, hazy 0.5, misty 0.5, dreamy 0.5, restful 0.4,
+    adventurous 3, triumphant 3, soaring 2.5, lively 2, playful 2,
+    wondrous 2, joyful 2, bouncy 2
+
+# The arc: a run of roles with one peak. Its spans are set in time and
+# turned into sections (or phrases) at the loop's tempo.
+[longform arc]
+# How long an arc is, in minutes (a symphony's movement is about ten). A
+# finite piece holds a whole number of arcs of about the length drawn;
+# Endless plays arcs of that length in turn.
+minutes = 4 15
+# The vibes that lean an arc longer (above 1) or shorter.
+long = glacial 2, meditative 1.5, still 1.5, droning 2, cosmic 1.5,
+    lively 0.5, bouncy 0.5, playful 0.6, nimble 0.5
+# An arc shorter than this many minutes plays the small form (a short long
+# piece: 64 bars is two to five minutes).
+small = 4
+# An arc of fewer sections than this is planned in phrases, not sections:
+# its roles change at phrase lines inside a section.
+need = 12
+# The full form: each role's share of the arc, in order. The peak ends near
+# two thirds. The last arc of a finite piece ends in the close; any other
+# arc ends in a breath of the same share.
+full = opening 0.07, theme 0.15, build 0.08, second 0.15, development 0.15,
+    peak 0.07, release 0.09, return 0.16, close 0.08
+# The small form: one theme, a lift for a peak, a short release after it
+# (without one the energy would fall from the peak in a single line).
+short = opening 0.12, theme 0.24, lift 0.2, release 0.08, return 0.24,
+    close 0.12
+# Each role's energy, from its first unit to its last, where the arc's peak
+# is 1 (the arc's own height scales them all). It never falls before the
+# peak nor rises after it.
+energy.opening = 0.25 0.4
+energy.theme = 0.45 0.5
+energy.build = 0.5 0.65
+energy.second = 0.65 0.65
+energy.development = 0.65 0.9
+energy.peak = 1 1
+energy.lift = 0.6 1
+energy.release = 0.85 0.55
+energy.return = 0.55 0.5
+energy.close = 0.4 0.15
+energy.breath = 0.3 0.2
+# Where in the arc the peak ends (the full form's shares put it at 0.67),
+# and how high an arc's peak is: both drawn per arc.
+peak = 0.6 0.72
+height = 0.85 1
+# The share of arc pieces with a second theme; the rest keep one (simple
+# loops stay simple), and their second role plays theme A in the related
+# key.
+second = 0.7
+# How the return changes theme A, by weight (never plain: known at once, and
+# still new), and what the build and the lift do to it.
+returns = register 2, voice 2, stretched 1, reharmonized 2, answered 2
+builds = plain 2, register 1, voice 1
+# A close lasts at least this many seconds: a last section cut short takes
+# the bars before it too.
+close = 10
+# A related key shares at least this much of the home key's notes.
+common = 0.6
+# No related key's mode is darker than this (theory's brightness: phrygian
+# 0.08, harmonicMinor 0.14, aeolian 0.24), unless the home mode is darker
+# still: a calm piece does not turn to the darkest modes.
+dark = 0.2
+# In the development a key lasts at least this many seconds (and two units).
+stay = 30
+
+# The wander: holds of a drawn length, one thing moving at each hold's end.
+[longform wander]
+# How long a hold lasts, in seconds.
+hold = 60 300
+# A piece whose mean hold is fewer sections than this is planned in phrases.
+sections = 3
+# How often an epoch (each thing's turn once) visits a related key, and
+# hands the tune to the second theme. Rare; 0 turns either off.
+key = 0.15
+theme = 0.2
+# How thin the tune may go: the share of its notes that sound, 1 its own.
+density = 0.55 1

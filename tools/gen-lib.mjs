@@ -24,6 +24,13 @@
 //                            layers, meta, choices, load, passes (a list of
 //                            eight)
 //   hashes(seed, request)    each part's hash, as the goldens' line has them
+//   pieceMap(seed, request, from, count)
+//                            a long piece's plan (queue item 102;
+//                            core/src/generator/longform.rs): { form, units },
+//                            a unit a section (or a phrase of one), each
+//                            { section, phrase, role, theme, key, energy,
+//                            changed, ... }; null for a loop that is no long
+//                            piece. What `dlgen --map` prints
 //
 // There was a JavaScript generator beside the core's until item 97, held to
 // it by the goldens; this reads the one there is.
@@ -139,6 +146,26 @@ export function parts(seed, request = null, canon = false) {
   out.passes = Array.from({ length: PASSES }, (_, i) => read(text(PARTS.length + i)));
   return out;
 }
+
+/**
+ * A long piece's map (`dl_gen_map`): its form and `count` sections' units
+ * from section `from`, each straight from its number.
+ */
+export function pieceMap(seed, request = null, from = 0, count = 64) {
+  load(seed, request);
+  const units = [];
+  let form = null;
+  // A few sections a call: the text has a megabyte of room.
+  for (let at = from; at < from + count; at += MAP_CHUNK) {
+    const len = x.dl_gen_map(at, Math.min(MAP_CHUNK, from + count - at));
+    if (!len) return null;
+    const [head, ...rows] = parseCanonical(new TextDecoder('ascii').decode(new Uint8Array(x.memory.buffer, x.dl_gen_text(), len)));
+    form = head;
+    for (const [section, phrase, span] of rows) units.push({ section, phrase, ...span });
+  }
+  return { form, units };
+}
+const MAP_CHUNK = 200;
 
 /** Each part's hash: { spec, plan, ..., load, passes: [8] }, and whether any list lost an item. */
 export function hashes(seed, request = null) {

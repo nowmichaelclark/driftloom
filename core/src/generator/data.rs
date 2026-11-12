@@ -315,6 +315,60 @@ pub struct Tuning {
     pub vibes: Table,
 }
 
+/// The long pieces' numbers (`data/longform.txt`, queue item 102): what
+/// `longform` draws a piece's plan by. The file says what each is.
+#[derive(Clone, Copy, Debug)]
+pub struct Longform {
+    /// The journeys' weights (`arc`, `wander`).
+    pub weights: Table,
+    /// The arc's weight in Endless, as a share of its own.
+    pub endless: f64,
+    /// The vibes that lean the arc's weight.
+    pub vibes: Table,
+    /// An arc's length, in minutes.
+    pub minutes: [f64; 2],
+    /// The vibes that lean an arc longer.
+    pub long: Table,
+    /// An arc shorter than this, in minutes, plays the small form.
+    pub small: f64,
+    /// An arc of fewer sections than this is planned in phrases.
+    pub need: f64,
+    /// The full form's roles and their shares, in order.
+    pub full: Table,
+    /// The small form's.
+    pub short: Table,
+    /// Each role's energy, from its first unit to its last.
+    pub energy: &'static [(&'static str, [f64; 2])],
+    /// Where in the arc the peak ends.
+    pub peak: [f64; 2],
+    /// How high an arc's peak is.
+    pub height: [f64; 2],
+    /// The share of arc pieces with a second theme.
+    pub second: f64,
+    /// How the return changes theme A, by weight.
+    pub returns: Table,
+    /// What the build and the lift do to it.
+    pub builds: Table,
+    /// The least a close lasts, in seconds.
+    pub close: f64,
+    /// The least share of the home key's notes a related key keeps.
+    pub common: f64,
+    /// No related key's mode is darker than this, unless home is.
+    pub dark: f64,
+    /// The least a key lasts in the development, in seconds.
+    pub stay: f64,
+    /// A wander's hold, in seconds.
+    pub hold: [f64; 2],
+    /// A mean hold of fewer sections than this is planned in phrases.
+    pub sections: f64,
+    /// How often an epoch of the wander visits a related key.
+    pub key: f64,
+    /// How often one hands the tune to the second theme.
+    pub theme: f64,
+    /// The share of the tune's notes that sound, thinnest to its own.
+    pub density: [f64; 2],
+}
+
 /// The bass layer's level in dB, with a kick and without
 /// (`[setting basslift]`).
 #[derive(Clone, Copy, Debug)]
@@ -341,7 +395,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
+        Longform, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

@@ -29,7 +29,7 @@ says the work goes on meanwhile.
 | | **you** | The testers' steps from 01 (your phone, tablet, the friends' Pixels). The work goes on meanwhile. | | |
 | 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | yes, 2026-11-11 |
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | yes, 2026-11-12 |
-| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, medium | |
+| 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, medium | yes, 2026-11-12 |
 | 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | |
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
 | 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | |
@@ -166,6 +166,11 @@ Things earlier sessions learned:
   `js/gen.js`'s `newSpec(seed, request)` (in the page) or `decodeSong(code)`;
   in Node, `tools/gen-lib.mjs`'s `newSpec` and `render` read the tools'
   build. Round-trip with `decodeAlbum` before giving a code to anyone.
+- The long pieces' plan (session 11): `dlgen --map SEED REQUEST` prints a
+  piece; `node tools/longform.mjs` runs the corpus checks in about two
+  minutes (2,400 pieces); `core/tests/longform.rs` is the
+  gate's copy. The plan is not linked into `js/dlplayer.wasm` until
+  something plays it, so session 12's first use will grow the module.
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.

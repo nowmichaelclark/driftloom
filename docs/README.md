@@ -28,6 +28,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `docs/DECISIONS.md` | What Mikey has decided: one dated line each, by topic. | brain, hands |
 | `ROADMAP.md` | What is still ahead, what was decided against, the contribution rules. | brain |
 | `docs/CORE.md` | The core's charter: ten promises, each with its measure, and the phases. | brain, hands (core) |
+| `docs/LONGFORM.md` | Long pieces (item 102): the design that stands, the piece map and how to read one, and the pieces to hear. | hands (sessions 12 to 16), brain |
 | `docs/PAINTER.md`, `design/` | What there is to paint; the design spec and the picks' brief. | Painter |
 | `docs/EARS.md`, `docs/ears/`, `tools/ears/` | What the ears sessions found and the yardsticks; their plan, reports, album cards and tools. `docs/ears/README.md` indexes the folder. | ears, brain |
 | `docs/MOODS.md`, `docs/VIBES.md` | The mood words, and the vibe recipes (the source is `data/vibes.txt`; `docs/VIBES.md` says how to edit one). | brain |

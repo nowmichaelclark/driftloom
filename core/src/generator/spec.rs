@@ -67,6 +67,9 @@ pub struct Spec {
     /// The length asked (queue item 88), kept: the piece's (`piece::Piece`),
     /// and a share code carries it.
     pub length: Option<Length>,
+    /// The journey asked of a long piece (queue item 102), kept the same
+    /// way; not written among the spec's text, which is as it was.
+    pub journey: Option<request::Journey>,
     /// The home notes asked (queue item 89), a bit each (C the lowest), and
     /// the modes asked, a bit each by their place in `theory::SCALES`; 0 for
     /// none. Kept, so a share code carries them and the loop is made again.
@@ -145,6 +148,7 @@ impl Spec {
         pins: request::Pins::NONE,
         theme: None,
         length: None,
+        journey: None,
         keys: 0,
         scales: 0,
         styles: 0,
@@ -834,6 +838,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         pins: *request.pins(),
         theme: request.theme(),
         length: request.length(),
+        journey: request.journey(),
         keys: request.keys(),
         scales: request.scales(),
         styles: request.styles(),
