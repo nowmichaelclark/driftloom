@@ -103,8 +103,11 @@ Endless plays arc after arc with a breath between (the tune rests, the
 rest thins), and never lands. **What was asked holds:** a layer asked on,
 off or re-rolled is its own throughout; a code's warmth keeps the filter
 the loop's own, its space the room's; an arc asked (`arc`, `arc.*`) keeps
-its swing as asked. **At any slider setting**, as the wander. Measured in
-"Measures" below; every number is for Mikey's ears.
+its swing as asked. **At any slider setting**, as the wander. Every number
+is for Mikey's ears. Measured (`node tools/longform.mjs`, 62 corpus pieces
+against the loop as itself): the loudness rises to the peak and falls on
+98%, the brightness on 87% (`docs/notes/102c-arc-brightness.md`); the peak
+at most 2.3 LU over the opening; every last chord the tonic's, ringing out.
 
 **Changed from the brief, measured:** the kit's shimmer comes in with the
 energy and the kick and the backbeat stay, softer. The brief had it the

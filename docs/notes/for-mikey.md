@@ -103,6 +103,14 @@ the points where the next step is yours.
 
 ## Decisions
 
+- **The arc's brightness (102c, #377):** #377 merged short of two of its
+  yardsticks, on your or the brain's say-so: brightness rises and falls on
+  87% of pieces (9 in 10 asked), and one 1,024-bar piece steps 2.7 LU (2
+  asked). Four loops miss: tui-doask and so-rou (nothing above about 1 kHz
+  to brighten), gluith-vuisk and rong-wuisk (their own slow opening hides
+  the arc's). `docs/notes/102c-arc-brightness.md` says why and what could
+  be tried. When you hear them, say whether they rise and fall to you.
+
 **Long pieces: the plan (102a, session 11, v160).** Nothing sounds
 different yet; a piece can be read before it is heard (`docs/LONGFORM.md`
 says how; the PR has maps). Each line is a first pick, one line of
