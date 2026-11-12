@@ -560,3 +560,40 @@ export function arcVerdict(r) {
     jump: r.jump, ownJump: r.ownJump, step: r.step, jumps, tonic, rings, last: r.last,
   };
 }
+
+/**
+ * An arc's joins (queue item 102c): `request` of `seed` and the same seed
+ * as a plain loop, each played `seconds` at the wander's amount 0 (the
+ * plan with no breathing, so the two play the same notes but for the
+ * plan's), at 44.1 kHz; at every unit's line, from 20 ms before it to 300
+ * ms after, the largest step between two samples in each. An arc has a
+ * line at every unit, on its downbeats and their kicks, so a line is held
+ * to the loop's own step in the same window, not to the piece elsewhere:
+ * a click the plan makes is a step the loop as itself does not take.
+ */
+export function arcJoins(seed, request, seconds) {
+  const one = (args) => {
+    const file = path.join(os.tmpdir(), `longform-joins-${seed}-${process.pid}.wav`);
+    dlrender(['--seed', String(seed), ...args, '--seconds', String(seconds), '--rate', '44100', '--wander', '0', '--wav', file]);
+    const { rate, data } = readWav(file);
+    fs.rmSync(file, { force: true });
+    return { rate, data };
+  };
+  const piece = one(['--request', request]);
+  const rest = request.split(',').filter((x) => !/^(bars|journey)=/.test(x)).join(',');
+  const loop = one(rest ? ['--request', rest] : []);
+  const { form, units } = pieceMap(seed, request, 0, 2000);
+  const bar = form.unitSeconds / form.unitBars;
+  const start = 0.05;
+  const rate = piece.rate;
+  let t = start;
+  const joins = [];
+  for (const u of units) {
+    if (t > 30 && t + 0.3 < seconds) {
+      const [a, b] = [Math.round((t - 0.02) * rate), Math.round((t + 0.3) * rate)];
+      joins.push({ t, piece: stepMax(piece.data, a, b), loop: stepMax(loop.data, a, b) });
+    }
+    t += u.bars * bar;
+  }
+  return joins;
+}

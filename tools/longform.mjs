@@ -38,7 +38,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pieceMap } from './gen-lib.mjs';
-import { arcChecks, arcVerdict, dlrender, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
+import { arcChecks, arcJoins, arcVerdict, dlrender, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
 import { Rng } from '../js/rng.js';
 
 const args = process.argv.slice(2);
@@ -343,15 +343,15 @@ if (!flag('--plan')) {
     arcs.heard.push(arcVerdict(arcChecks(seed, 'bars=64,journey=arc', { wander: 1 })));
   }
   // The joins: every unit's line of two Endless arcs, twenty minutes each,
-  // at the app's amount.
+  // against the loop as itself in the same window (`arcJoins`: an arc has a
+  // line on every unit's downbeat, so the piece elsewhere is no measure).
   for (const seed of [7, seeds[1]]) {
-    const request = 'bars=endless,journey=arc';
-    const { units } = pieceMap(seed, request, 0, 400);
-    const lines = units.filter((u, i) => i > 0 && u.section > 4).map((u) => ({ section: u.section, phrase: u.phrase }));
-    const r = soundChecks(seed, request, 1200, lines);
-    arcs.joins.push(...r.joins);
-    arcs.own.push(r.own);
-    check("arc played: no click at a line (each join under the piece's own largest step)", r.joins.every((j) => j <= r.own), `${seed}: ${Math.max(...r.joins).toFixed(4)} against ${r.own.toFixed(4)}`);
+    const joins = arcJoins(seed, 'bars=endless,journey=arc', 1200);
+    const worst = joins.reduce((w, j) => (j.piece / j.loop > w.piece / w.loop ? j : w), joins[0]);
+    arcs.joins.push(...joins.map((j) => j.piece));
+    arcs.own.push(Math.max(...joins.map((j) => j.loop)));
+    arcs.ratios = [...(arcs.ratios ?? []), ...joins.map((j) => j.piece / j.loop)];
+    check("arc played: no click at a line (each join within the loop's own step there, +25%)", joins.every((j) => j.piece <= 1.25 * j.loop + 0.002), `${seed} at ${worst.t.toFixed(1)} s: ${worst.piece.toFixed(4)} against ${worst.loop.toFixed(4)}`);
   }
   // A section's making and its block, as the wander's.
   const core = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'core');
@@ -398,7 +398,8 @@ if (arcs.pieces) {
   console.log(`    the tonic's chord alone at the end ${pct((x) => x.tonic)}, a ring-out ${pct((x) => x.rings)}`);
   const h = arcs.heard;
   if (h.length) console.log(`  as heard at the app's amount (${h.length} at 64 bars, the loop's own form in it): loudness rises and falls ${(100 * h.filter((x) => x.loudHeard).length / h.length).toFixed(0)}%, brightness ${(100 * h.filter((x) => x.brightHeard).length / h.length).toFixed(0)}%; the peak over the opening ${Math.max(...h.map((x) => x.overHeard)).toFixed(2)} LU at most`);
-  console.log(`  arc joins: the largest step at ${arcs.joins.length} lines ${Math.max(...arcs.joins).toFixed(4)}; the pieces' own largest ${arcs.own.map((x) => x.toFixed(4)).join(', ')}`);
+  const ratios = [...(arcs.ratios ?? [])].sort((a, b) => a - b);
+  console.log(`  arc joins: ${arcs.joins.length} lines, the largest step ${Math.max(...arcs.joins).toFixed(4)} (the loop as itself in the same windows ${arcs.own.map((x) => x.toFixed(4)).join(', ')}); a line's step against the loop's there: median ${ratios[Math.floor(ratios.length / 2)]?.toFixed(2)}, at most ${ratios.at(-1)?.toFixed(2)}`);
   console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/10^4/10^9`);
   console.log(`  arc blocks: ${arcs.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} ${b.request.slice(5, b.request.indexOf(','))} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
