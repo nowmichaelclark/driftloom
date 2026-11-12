@@ -330,8 +330,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   unchanged (5,135), `tools/longform.mjs` all passing, and read maps: arcs
   sound in shape; the wander's longest stretch with nothing moving reached
   about 400 s (to session 12); a 3,072-bar piece was 21 alike movements, so
-  movements differ in kind (Mikey, to session 14). **Next:** session 12.
-  The next brain is B3, then B2.
+  movements differ in kind (Mikey, to session 14). Session 12 done (#375,
+  v161): goldens unchanged, the module matches its source; the longest
+  stretch with nothing moving now 300 s (was 587); the stall test clean on
+  two wander pieces in Chromium (autolite's slow case can't ask a journey
+  yet). The wander's tune hand-over waits for theme B: turned on in session
+  14. **Next:** session 13. The next brain is B3, then B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
