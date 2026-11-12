@@ -832,6 +832,7 @@ impl Heard {
         w.end_obj();
     }
 
+    #[allow(clippy::too_many_lines)] // a unit's marks, a key each
     fn write_units<S: Sink>(&self, w: &mut Writer<S>) {
         w.list();
         for u in self.units() {
@@ -1084,6 +1085,7 @@ impl Lift {
     /// Unit `span` of an arc's theme, its variation and its key, on the
     /// unit `u` its energy made (session 14; the module's doc). `has`: the
     /// section plays a tune beside the loop's own.
+    #[allow(clippy::unused_self)] // beside `end`, which it follows
     fn themed(&self, form: &Form, ways: &Ways, span: &Span, has: bool, u: &mut Unit) {
         // An interlude: the wander's state over the energy.
         if span.journey == Journey::Wander {

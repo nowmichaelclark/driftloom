@@ -266,6 +266,7 @@ impl Generator {
     /// An empty generator, nothing loaded. `const`, so a host can keep one
     /// in a static.
     #[must_use]
+    #[allow(clippy::large_stack_arrays)] // a const: built in place, in a static
     pub const fn empty() -> Self {
         Generator {
             spec: spec::Spec::EMPTY,

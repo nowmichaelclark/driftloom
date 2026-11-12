@@ -155,7 +155,7 @@ fn an_arc_returns_its_theme_and_rises_to_one_peak() {
             let want = if form.small || kind == Kind::Light { &small[..] } else { &full[..] };
             // A finale looks back: every earlier second theme it recalls is
             // that movement's own, found by its number.
-            for s in run.iter() {
+            for s in run {
                 if let Theme::Recall(k) = s.theme {
                     assert!(k < arc && sections.is_some(), "{what}: a recall of movement {k}");
                     let theirs = spans.iter().find(|x| x.part == k && x.theme == Theme::B).expect("the movement recalled has a second theme");

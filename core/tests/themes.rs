@@ -7,11 +7,13 @@
 //! measures the same on what the player plays.
 
 // Seeds, steps and pitches are compared exactly on purpose; sections and
-// units are whole numbers far below 2^53.
-#![allow(clippy::float_cmp, clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+// units are whole numbers far below 2^53; a generator, a section, a unit
+// and a span keep their short names.
+#![allow(clippy::many_single_char_names, clippy::float_cmp, clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 
 use dlcore::generator::data::LONGFORM;
 use dlcore::generator::heard::{Tune, key_map, tune};
+use dlcore::generator::piece::Piece;
 use dlcore::generator::longform::{Form, Key, Kind, Relation, Role, Span, Theme, Variation, changed};
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::rng::Rng;
@@ -23,6 +25,11 @@ use dlcore::player::Player;
 fn roomy<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
     let stack = (std::mem::size_of::<Player>() + std::mem::size_of::<Generator>()) * 4 + (16 << 20);
     std::thread::Builder::new().stack_size(stack).spawn(f).expect("a thread").join().expect("the test")
+}
+
+/// How many sections a round of the piece loaded has.
+fn sections_of(g: &Generator) -> u64 {
+    Piece::of(g.spec()).and_then(|p| p.end).map(|e| e.0).expect("a finite piece")
 }
 
 fn seeds(n: usize) -> Vec<u32> {
@@ -106,7 +113,7 @@ fn the_second_tune_is_made_the_same_however_it_is_reached() {
             let form = load(&mut straight, seed, "bars=256");
             load(&mut through, seed, "bars=256");
             let before: Vec<u64> = Part::ALL.into_iter().map(|p| straight.hash(p)).collect();
-            let sections = (0..).find(|&n| n > 0 && form.comes_round(n)).expect("a round");
+            let sections = sections_of(&straight);
             // Through: every section in order, a stage of the next's tune
             // at a time, as the player makes it.
             let mut walked = Vec::new();
@@ -148,7 +155,7 @@ fn find(g: &mut Generator, role: Role, variation: Variation, theme: Theme) -> (F
         if g.render().melody.iter().filter(|e| e.vel != 0.0).count() < 6 || g.spec().choir().is_some() {
             continue;
         }
-        let sections = (0..).find(|&n| n > 0 && form.comes_round(n)).expect("a round");
+        let sections = sections_of(g);
         if let Some((n, p, s)) = round(&form, sections).into_iter().find(|(_, _, s)| s.role == role && s.variation == variation && s.theme == theme && !s.fragment) {
             return (form, n, p, s);
         }
@@ -233,7 +240,7 @@ fn a_piece_plays_its_plan_theme_by_theme() {
         let (mut seconds, mut calls, mut prepared, mut fragments) = (0, 0, 0, 0);
         for seed in seeds(60) {
             let form = load(&mut g, seed, "bars=256");
-            let sections = (0..).find(|&n| n > 0 && form.comes_round(n)).expect("a round");
+            let sections = sections_of(&g);
             let tuneful = !g.render().melody.is_empty();
             for n in 0..sections {
                 let pass = g.section(n, 0.0);
@@ -291,7 +298,7 @@ fn movements_differ_in_kind() {
             for text in ["bars=1024", "bars=3072", "bars=32768"] {
                 let form = load(&mut g, seed, text);
                 let what = format!("seed {seed} {text}");
-                let sections = (0..).find(|&n| n > 0 && form.comes_round(n)).expect("a round");
+                let sections = sections_of(&g);
                 let mut kinds: Vec<(u64, Kind)> = Vec::new();
                 for (_, _, s) in round(&form, sections.min(40_000)) {
                     if kinds.last().map(|k| k.0) != Some(s.part) {
@@ -349,7 +356,7 @@ fn an_interlude_moves_one_thing_at_a_time_and_comes_home() {
             if !form.cycle().contains(&Kind::Interlude) {
                 continue;
             }
-            let sections = (0..).find(|&n| n > 0 && form.comes_round(n)).expect("a round");
+            let sections = sections_of(&g);
             let spans = round(&form, sections);
             for (x, (_, _, s)) in spans.iter().enumerate() {
                 if s.kind != Kind::Interlude {

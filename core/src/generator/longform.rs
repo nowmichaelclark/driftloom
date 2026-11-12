@@ -426,6 +426,7 @@ pub mod changed {
 
 /// What one unit of a piece is: a section, or a phrase of one (`Grain`).
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // separate facts about a unit, not a state
 pub struct Span {
     pub journey: Journey,
     pub role: Role,
@@ -1211,7 +1212,7 @@ impl Form {
             Theme::A | Theme::Rest => None,
         };
         // The return prepared: the last unit before theme A comes home.
-        let prepares = prepared && j + 1 == to && form.get(x + 1).is_some_and(|next| next.0 == Role::Return.name());
+        let held = prepared && j + 1 == to && form.get(x + 1).is_some_and(|next| next.0 == Role::Return.name());
         Span {
             journey: Journey::Arc,
             role,
@@ -1232,7 +1233,7 @@ impl Form {
             kind,
             pick,
             calls,
-            prepares,
+            prepares: held,
         }
     }
 

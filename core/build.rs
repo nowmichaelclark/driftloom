@@ -817,6 +817,7 @@ fn voices(out: &mut String, blocks: &[Block]) {
 /// journey's draw, the arc's forms and the wander's holds, which
 /// `generator::longform` draws a piece's plan by. Every role, variation and
 /// vibe it names must be one the core knows, or the build fails here.
+#[allow(clippy::too_many_lines)] // one table, a line a number
 fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     const ROLES: [&str; 11] = ["opening", "theme", "build", "second", "development", "peak", "release", "return", "close", "breath", "lift"];
     const VARIATIONS: [&str; 8] = ["plain", "key", "register", "voice", "stretched", "reharmonized", "answered", "outline"];
