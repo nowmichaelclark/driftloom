@@ -1,5 +1,7 @@
 # Session 12: long pieces: the wandering journey (102b)
 
+**Changed by the brain after session 11 (2026-11-12):** the longest stretch with nothing moving, measured and kept near the drawn hold's top.
+
 **Changed by brain B1 (2026-11-11):** the clicks check named rightly (there
 is none in `tools/measure.mjs`; `dlrender --changes` has one, `change.rs`);
 a yardstick for the section line on the audio thread (the tablet's margin to
@@ -25,6 +27,8 @@ This is the work Mikey cares about most (2026-11-10: the composing for the longe
 The work, one PR: the wander is heard. A piece whose journey is the wander plays its plan: long held states, exactly one thing moving at each hold's end (which layers play, a layer's voice within the profile's pools, the tone, the chords' register and length, the tune's density, and rarely the key or the theme, as docs/LONGFORM.md settled), a glide where a thing can glide and a phrase line where it can't, nothing abrupt. Inside a hold the loop still wanders as today. A finite wander closes softly; Endless goes on.
 
 Build it as marks and levels on the loop's own events and the mix, the way a wandered pass is, so a section still costs one loop's making. Anything a move needs that the core can't yet do at a section line without a click or a gap (a voice changing, a layer fading in over a section) is this session's to build, small, with a test.
+
+Before the sound: the longest stretch with nothing moving. The plan draws holds of 60 to 300 s, but a turn that would move nothing is skipped and two holds merge (the brain read 401 s and 387 s in seed 7, bars=1024, journey=wander). Report the longest stretch over the corpus; if it passes about 330 s, make a skipped turn hand on to the next thing in the same epoch rather than wait a hold, and say how the maps moved.
 
 Yardsticks: tools/longform.mjs's wander checks now read what is played (from the player's note list, dlrender --calls), not only the map: at most one thing moves a section; holds as drawn; no move mid-phrase; nothing clicks at a line (a clicks check in tools/longform.mjs on twenty section lines, built on dlrender --changes' own: core/examples/dlrender/change.rs); loudness across a 20-minute render within the catalog's spread (no jump past 2 LU between neighboring sections); a section's cost flat from the first to the ten-thousandth (timed) and the baseline's costs within 5%; no block at a section line over the loop's own worst audio block, natively and on tools/autolite.mjs's slow case; promise 1's stall test on a wander of 32,768 bars. Loops of up to 32 bars and every arc piece: bit for bit as before. The long-length goldens move: say which cases. For the listening set (session 15 renders it for Mikey): three wander pieces in docs/LONGFORM.md's "Pieces to hear" (seed, request, bars=256 and Endless, journey=wander), each with the times where something moves and what to listen for.
 

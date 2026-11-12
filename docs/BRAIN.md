@@ -326,7 +326,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   three baseline loops' mix past 0.2 LU, as the approved sketch does: for
   Mikey's ears at B2. **Order changed 2026-11-12** (Mikey): the long pieces
   (11 to 15, 11 and 14 on Fable) before batch 6's 04 to 10. **Next:**
-  session 11. The next brain is B3, then B2.
+  session 11. Session 11 done (#373, v160): the brain checked the goldens
+  unchanged (5,135), `tools/longform.mjs` all passing, and read maps: arcs
+  sound in shape; the wander's longest stretch with nothing moving reached
+  about 400 s (to session 12); a 3,072-bar piece was 21 alike movements, so
+  movements differ in kind (Mikey, to session 14). **Next:** session 12.
+  The next brain is B3, then B2.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
