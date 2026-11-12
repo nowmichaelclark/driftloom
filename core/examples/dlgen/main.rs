@@ -17,10 +17,15 @@
 //!     whole round up to 200, else 60): its role, theme, key, tempo and
 //!     energy, and what changed from the line before. Any section of any
 //!     length is printed straight from its number
+//! cargo run --release --example dlgen -- --section-cost SEED [REQUEST]
+//!     what a section costs to make as the player makes it (its pass drawn
+//!     and its plan heard, queue item 102b), timed at sections 1, 10^4 and
+//!     10^9: the least of many makings each, in microseconds
 //! ```
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any difference.
 
+use std::fmt::Write as _;
 use std::process::ExitCode;
 
 use dlcore::generator::longform::{self, Theme, Variation, changed};
@@ -35,7 +40,8 @@ fn main() -> ExitCode {
         Some("--check") => args.get(1).ok_or_else(|| "--check needs a file".to_string()).and_then(|f| check(f)),
         Some("--show") => show(&args[1..]),
         Some("--map") => map(&args[1..]),
-        _ => Err("usage: dlgen --check FILE | --show SEED [REQUEST] [PART] | --map SEED [REQUEST] [--from N] [--count N]".to_string()),
+        Some("--section-cost") => section_cost(&args[1..]),
+        _ => Err("usage: dlgen --check FILE | --show SEED [REQUEST] [PART] | --map SEED [REQUEST] [--from N] [--count N] | --section-cost SEED [REQUEST]".to_string()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -44,6 +50,30 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// `--section-cost`: section 1, 10^4 and 10^9 made again and again
+/// (`Generator::section`, the pass and its plan heard, at the app's amount),
+/// the least time of each kept.
+fn section_cost(args: &[String]) -> Result<(), String> {
+    let seed: u32 = args.first().and_then(|s| s.parse().ok()).ok_or("--section-cost needs a seed")?;
+    let asked = request(args.get(1).map_or("-", String::as_str))?;
+    let mut generator = Box::new(generator::Generator::new());
+    generator.load_with(seed, &asked);
+    let mut line = format!("seed={seed} request={}", args.get(1).map_or("-", String::as_str));
+    for n in [1u64, 10_000, 1_000_000_000] {
+        let mut best = f64::INFINITY;
+        for _ in 0..50 {
+            let t0 = std::time::Instant::now();
+            for k in 0..20 {
+                std::hint::black_box(generator.section(n + k % 2, generator::wander::AMOUNT));
+            }
+            best = best.min(t0.elapsed().as_secs_f64() / 20.0);
+        }
+        let _ = write!(line, " n{n}={:.1}us", best * 1e6);
+    }
+    println!("{line}");
+    Ok(())
 }
 
 fn request(word: &str) -> Result<Request, String> {

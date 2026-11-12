@@ -38,9 +38,10 @@
 //! layer's voice asked is never handed on, a tone edited is never moved,
 //! and the tempo is the loop's own throughout.
 //!
-//! **Not yet heard.** Until session 12 the plan is computed and reported
-//! (`dlgen --map`, `tools/longform.mjs`), and a section still plays as
-//! `piece` says: the loop's wandered pass.
+//! **Heard: the wander** (session 12, `heard`): a wander's section plays
+//! its units' states as marks and levels on the loop's wandered pass. An
+//! arc's is computed and reported (`dlgen --map`, `tools/longform.mjs`) and
+//! still plays as `piece` says, the loop's wandered pass, until session 13.
 //!
 //! The numbers are `data/longform.txt`'s (`data::LONGFORM`).
 
@@ -260,6 +261,26 @@ pub enum Relation {
 }
 
 impl Relation {
+    /// Whether the key is the home key's mode a fifth away: the loop moved
+    /// whole, as the wander moves it.
+    #[must_use]
+    pub const fn is_fifth(self) -> bool {
+        matches!(self, Relation::FifthAbove | Relation::FifthBelow)
+    }
+
+    /// How far the loop moves, in semitones, to play in a key of this
+    /// relation, the nearer way: a fifth above is a fourth down, a fifth
+    /// below a fourth up (0 for any other: they keep the notes or the home
+    /// note).
+    #[must_use]
+    pub const fn shift(self) -> i8 {
+        match self {
+            Relation::FifthAbove => -5,
+            Relation::FifthBelow => 5,
+            _ => 0,
+        }
+    }
+
     /// The relation's name, as the map writes it.
     #[must_use]
     pub const fn name(self) -> &'static str {
@@ -504,8 +525,17 @@ impl Form {
     /// piece: no length asked, or one of up to 32 bars, which plays as it
     /// always has.
     #[must_use]
-    #[allow(clippy::too_many_lines)] // the piece's few numbers, each drawn once, in order
     pub fn of(spec: &Spec, edits: &Edits, present: u8) -> Option<Form> {
+        Self::of_loop(spec, edits, present, 0b1_1111)
+    }
+
+    /// `of`, for a loop made: `voiceable` says, a bit a layer, which of its
+    /// layers may play another voice (`heard::voiceable`: a pool with
+    /// another, and no sung voice), so the wander's voice turn never falls
+    /// on a layer it can't move.
+    #[must_use]
+    #[allow(clippy::too_many_lines)] // the piece's few numbers, each drawn once, in order
+    pub fn of_loop(spec: &Spec, edits: &Edits, present: u8, voiceable: u8) -> Option<Form> {
         let piece = Piece::of(spec)?;
         let endless = match spec.length? {
             Length::Endless => true,
@@ -576,7 +606,7 @@ impl Form {
         let playing = present & !spec.layers_off;
         let fixed = spec.layers_on | spec.layers_off | spec.rolled;
         let resting = if playing.count_ones() >= 3 { playing & !fixed } else { 0 };
-        let voicing = [Layer::Bass, Layer::Chords, Layer::Melody].into_iter().filter(|&l| playing & bit(l) != 0 && spec.voices[l as usize] == 0).fold(0, |m, l| m | bit(l));
+        let voicing = [Layer::Bass, Layer::Chords, Layer::Melody].into_iter().filter(|&l| playing & voiceable & bit(l) != 0 && spec.voices[l as usize] == 0).fold(0, |m, l| m | bit(l));
         let chords = playing & bit(Layer::Chords) != 0;
         let tune = playing & bit(Layer::Melody) != 0;
         let mut turns = [Thing::Layers; TURNS_MAX];
@@ -595,7 +625,7 @@ impl Form {
         turn(Thing::Register, chords);
         turn(Thing::Length, chords);
         turn(Thing::Density, tune);
-        turn(Thing::Key, spec.keys == 0 && LONGFORM.key > 0.0 && related.iter().any(Option::is_some));
+        turn(Thing::Key, spec.keys == 0 && LONGFORM.key > 0.0 && related.iter().flatten().any(|k| k.relation.is_fifth()));
         turn(Thing::Theme, tune && spec.theme.is_none() && LONGFORM.theme > 0.0);
         // An epoch is long enough for the turns it is likely to take, each a
         // mean hold: a rare thing takes a turn going and one coming back.
@@ -678,6 +708,38 @@ impl Form {
             let g = n.saturating_mul(self.per).saturating_add(phrase.min(self.per - 1));
             (g, g)
         }
+    }
+
+    /// The unit before unit `phrase` of section `n` (`at`'s numbers), none
+    /// at the piece's very first: the last of the section before, at a
+    /// section's first.
+    #[must_use]
+    pub fn before(&self, n: u64, phrase: u64) -> Option<(u64, u64)> {
+        let p = phrase.min(self.units_in(n) - 1);
+        if p > 0 {
+            Some((n, p - 1))
+        } else {
+            n.checked_sub(1).map(|b| (b, self.units_in(b) - 1))
+        }
+    }
+
+    /// Where unit `phrase` of section `n` sits in its round's close, if it
+    /// closes: its place among the close's units (0 the first) and how many
+    /// they are.
+    #[must_use]
+    pub fn close_place(&self, n: u64, phrase: u64) -> Option<(u64, u64)> {
+        let r = self.round?;
+        let (_, i) = self.place(n, phrase);
+        let count = self.close_units(r).min(r.units);
+        let first = r.units - count;
+        (i >= first).then(|| (i - first, count))
+    }
+
+    /// Whether section `n` begins a round after another (a finite piece
+    /// come round): it starts from the close before it.
+    #[must_use]
+    pub fn comes_round(&self, n: u64) -> bool {
+        self.round.is_some_and(|r| n > 0 && n.is_multiple_of(r.sections))
     }
 
     /// Section `n`, at its first unit (the whole of it, at the section's
@@ -934,19 +996,24 @@ impl Form {
             return (order, 0, ends);
         }
         let mut r = stream(self.seed, EPOCH_SALT, e);
-        // The holds: each a drawn length, scaled to the epoch's units.
+        // The holds: each a drawn length, fitted to the epoch (`fit_holds`:
+        // as drawn around the epoch's mean, never past the data's range
+        // where the epoch has turns enough), in units.
         let mut lengths = [0.0; TURNS_MAX];
-        let mut total = 0.0;
         for l in lengths.iter_mut().take(n) {
-            *l = r.range(LONGFORM.hold[0], LONGFORM.hold[1]);
-            total += *l;
+            *l = r.range(LONGFORM.hold[0], LONGFORM.hold[1]) / self.unit_seconds;
         }
+        // The longest in whole units, a little under: a hold's two ends each
+        // round to a unit line, so it may gain up to a unit.
+        let total = self.epoch_units as f64;
+        let most = js::max(1.0, js::floor(LONGFORM.hold[1] / self.unit_seconds)) - 1e-6;
+        fit_holds(&mut lengths[..n], total, LONGFORM.hold[0] / self.unit_seconds, most);
         let mut sum = 0.0;
         let mut before = 0;
         for q in 0..n {
             sum += lengths[q];
             let room = self.epoch_units.saturating_sub((n - 1 - q) as u64);
-            ends[q] = (js::round(sum / total * self.epoch_units as f64) as u64).max(before + 1).min(room).max(before);
+            ends[q] = (js::round(sum) as u64).max(before + 1).min(room).max(before);
             before = ends[q];
         }
         ends[n - 1] = self.epoch_units;
@@ -988,10 +1055,21 @@ impl Form {
         (order, n, ends)
     }
 
-    /// Whether epoch `e` is one of thing `bit`'s away ones: a two-state
-    /// thing is the loop's own every other epoch, so it always moves.
-    fn away(&self, bit: u16, e: u64) -> bool {
-        (e & 1 == 1) != (self.parity & bit != 0)
+    /// Whether epoch `e` is one of the away ones: a two-state thing is the
+    /// loop's own every other epoch, so it always moves. Every thing goes
+    /// out in the even epochs, the first among them, and comes home in the
+    /// odd ones, one turn at a time (session 12): so every epoch has all its
+    /// turns, and none is stretched to fill it. (102a gave each thing its
+    /// own parity, so the first epoch moved about half of them, and its
+    /// holds outlasted 300 s.)
+    fn away(e: u64) -> bool {
+        e & 1 == 0
+    }
+
+    /// The side of the loop's own the warmth or the space (`bit`) takes in
+    /// epoch `e`: the other each epoch, the first drawn per piece.
+    fn side(&self, bit: u16, e: u64) -> f64 {
+        if Self::away(e) == (self.parity & bit != 0) { -1.0 } else { 1.0 }
     }
 
     /// What the wander's things are once they have all taken epoch `e`'s
@@ -1012,7 +1090,7 @@ impl Form {
         // The layer whose voice an epoch changes, if it is an away one.
         let voice_of = |e: u64| {
             let mut r = stream(self.seed, VALUE_SALT + Thing::Voice as u32, e);
-            among(self.voicing, &mut r).map(|l| (l, r.f())).filter(|_| self.away(changed::VOICE, e))
+            among(self.voicing, &mut r).map(|l| (l, r.f())).filter(|_| Self::away(e))
         };
         let voice = voice_of(e);
         // A layer never rests while its voice is changed: not the layer
@@ -1020,17 +1098,29 @@ impl Form {
         let voiced = |v: Option<(Layer, f64)>| v.map_or(0, |(l, _)| 1u8 << l as usize);
         let resting = self.resting & !voiced(voice) & !voiced(e.checked_sub(1).and_then(voice_of));
         let mut r = draw(Thing::Key);
-        let keys = self.related.iter().flatten().count();
+        // A wander visits a key a fifth away only: the whole loop moved as
+        // it is, every chord and note the same in the new key (session 12;
+        // the relative and the parallel change what the chords are, which
+        // is the arc's to sound, session 14).
+        let fifths = || self.related.iter().flatten().filter(|k| k.relation.is_fifth());
+        let keys = fifths().count();
         let visit = r.f() < LONGFORM.key;
-        let key = self.related.iter().flatten().nth(r.pick_index(keys.max(1))).copied().filter(|_| visit && !homeward && has(Thing::Key)).unwrap_or(self.home);
+        let key = fifths().nth(r.pick_index(keys.max(1))).copied().filter(|_| visit && !homeward && has(Thing::Key)).unwrap_or(self.home);
+        // The tone's two take the other side of the loop's own every epoch,
+        // at least `apart` of the way out, so each turn is a step that is
+        // heard (a fresh draw anywhere, as 102a drew them, moved by less
+        // than a fifth of the range about one turn in five); the tune thins
+        // every other epoch and is its own between.
+        let apart = LONGFORM.apart;
+        let side = |bit: u16| self.side(bit, e);
         let state = State {
             rest: among(resting, &mut draw(Thing::Layers)),
             voice,
-            warmth: if has(Thing::Warmth) { draw(Thing::Warmth).range(-1.0, 1.0) } else { 0.0 },
-            space: if has(Thing::Space) { draw(Thing::Space).range(-1.0, 1.0) } else { 0.0 },
-            register: if has(Thing::Register) && self.away(changed::REGISTER, e) { sign(&mut draw(Thing::Register)) } else { 0 },
-            length: if has(Thing::Length) && self.away(changed::LENGTH, e) { sign(&mut draw(Thing::Length)) } else { 0 },
-            density: if has(Thing::Density) { draw(Thing::Density).range(thin, own) } else { 1.0 },
+            warmth: if has(Thing::Warmth) { side(changed::WARMTH) * draw(Thing::Warmth).range(apart, 1.0) } else { 0.0 },
+            space: if has(Thing::Space) { side(changed::SPACE) * draw(Thing::Space).range(apart, 1.0) } else { 0.0 },
+            register: if has(Thing::Register) && Self::away(e) { sign(&mut draw(Thing::Register)) } else { 0 },
+            length: if has(Thing::Length) && Self::away(e) { sign(&mut draw(Thing::Length)) } else { 0 },
+            density: if has(Thing::Density) && Self::away(e) { draw(Thing::Density).range(thin, own - apart * (own - thin)) } else { own },
         };
         let theme = if has(Thing::Theme) && !homeward && draw(Thing::Theme).f() < LONGFORM.theme { Theme::B } else { Theme::A };
         (state, key, theme)
@@ -1149,6 +1239,37 @@ fn write_key<S: Sink>(w: &mut Writer<S>, k: Key) {
     w.key("scale");
     w.str(SCALES.get(k.scale).map_or("", |s| s.id));
     w.end_obj();
+}
+
+/// An epoch's holds, drawn as `holds` (any unit), fitted to fill `total`:
+/// each kept as far from the epoch's mean as it was drawn from the draws'
+/// mean, unless that would take it under `lo` or past `hi`, where every
+/// hold is drawn in toward the mean alike, just enough. So the holds still
+/// sum to the epoch, and no hold outlasts the data's longest where the
+/// epoch has turns enough to fill it (`total` at most `hi` a turn); an
+/// epoch with fewer splits itself evenly. (Scaling the draws to the epoch,
+/// as 102a did, let one long draw beside short ones outlast 300 s by
+/// nearly twice: session 12 measured 587 s.)
+fn fit_holds(holds: &mut [f64], total: f64, lo: f64, hi: f64) {
+    let n = holds.len();
+    if n == 0 {
+        return;
+    }
+    let count = n as f64;
+    let mean = total / count;
+    let drawn = holds.iter().sum::<f64>() / count;
+    let (most, least) = holds.iter().fold((f64::NEG_INFINITY, f64::INFINITY), |(m, l), &x| (js::max(m, x), js::min(l, x)));
+    // How far the draws may stand from the mean: as drawn, or less.
+    let mut k: f64 = 1.0;
+    if most > drawn {
+        k = k.min(js::max(0.0, hi - mean) / (most - drawn));
+    }
+    if least < drawn {
+        k = k.min(js::max(0.0, mean - lo) / (drawn - least));
+    }
+    for h in holds.iter_mut() {
+        *h = mean + (*h - drawn) * k;
+    }
 }
 
 /// What differs between a unit and the one after it (`changed`).

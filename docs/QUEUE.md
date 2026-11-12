@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-12:** `main` is at v160 (session 01 done: v154 the tools
+**Status, 2026-11-12:** `main` is at v161 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -35,9 +35,11 @@ session 02 done (2026-11-11: 101a, batch 6's far ends, #363); hands session
 03 done (2026-11-12: 101b, tuningOffset #367 and padWow #369; the nightly's
 stereo hashes #366 and Emscripten stack #368); hands session 11 done
 (2026-11-12: 102a, v160, the long pieces' plan and its map, nothing heard
-yet; the design that stands is `docs/LONGFORM.md`); next: session 12 (102b,
-the wander heard; the long pieces, 11 to 16, come before batch 6's 04 to
-10), and
+yet; the design that stands is `docs/LONGFORM.md`); hands session 12 done
+(2026-11-12: 102b, v161, the wander heard, #375; holds kept within 300 s;
+`tools/longform.mjs` checks what is played); next: session 13 (102c, the
+arc's energy; the long pieces, 11 to 16, come before batch 6's 04 to 10),
+and
 Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -444,6 +446,9 @@ before its close; movements (a finite piece's last arc looks back);
 theme B's making spread across blocks (the tablet's margin); and the
 listening set as rendered excerpts with a blind before-and-after pair,
 since the app can't jump or take a journey until 106.
+
+**102b done** (session 12, v161): the wander heard (`core/src/generator/heard.rs`;
+`docs/LONGFORM.md`, "How the wander is heard").
 
 **102a done** (session 11): the plan as code (`core/src/generator/longform.rs`,
 `data/longform.txt`), `journey=arc` and `journey=wander`, `dlgen --map`,
