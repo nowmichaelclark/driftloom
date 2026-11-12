@@ -110,3 +110,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   **soath-wa** (#27, 13.0 cents at 0.58 Hz, the organ's held chords) from
   0:00 to 0:19, and **sheith-sith** (#47, 13.4 cents at 0.54 Hz, a pad) from
   0:14. A loop without it plays as before.
+- #373, long pieces: the plan and its map (item 102a, session 11, v160),
+  preview URL: the branch's preview (no hash kept): nothing should sound
+  different (the goldens, the balance lock and the baseline are unchanged;
+  the module grew 16 bytes). Nothing to hear yet. To read a piece before it
+  is heard: in `core/`, `cargo run --release --example dlgen -- --map 12
+  bars=256,journey=arc` (and `journey=wander`, `bars=endless --from 1000000
+  --count 60`); the PR has eleven maps. The design that stands is
+  `docs/LONGFORM.md`; the checks are `core/tests/longform.rs` and `node
+  tools/longform.mjs`; the first picks waiting for his ears are in
+  `docs/notes/for-mikey.md`, "Decisions".
