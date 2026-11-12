@@ -154,6 +154,8 @@ pub struct Player {
     current: usize,
     wandering: bool,
     next_drawn: bool,
+    /// Whether the loop playing is a piece whose plan is heard (`journeys`).
+    journeyed: bool,
     seq: Sequencer,
     synth: Synth,
     state: State,
@@ -235,6 +237,7 @@ impl Player {
             current: 0,
             wandering: false,
             next_drawn: false,
+            journeyed: false,
             seq: Sequencer::new(),
             synth: Synth::new(),
             state: State::Idle,
@@ -307,6 +310,7 @@ impl Player {
         self.was_playing = false;
         self.wandering = false;
         self.next_drawn = false;
+        self.journeyed = false;
         self.pending = [Maybe::NONE; SLOTS];
         self.handover = Handover::RingOut;
         self.asked_by = Asked::Load;
@@ -610,6 +614,8 @@ impl Player {
         let tone = tone.map(|t| t.clamp(0.0, 1.0));
         let now = self.now(host);
         self.synth.set_tone(host, tone, now);
+        // The tone asked holds: a long piece's plan no longer moves it.
+        self.seq.tone_held = true;
         if self.state == State::Playing || (self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done) {
             self.generator.set_tone(tone);
         }
@@ -754,7 +760,8 @@ impl Player {
                 // a section is the same however it is reached (queue item
                 // 88).
                 self.current = 0;
-                self.wandering = self.wander.get() > 0.0;
+                self.journeyed = self.journeys();
+                self.wandering = self.wander.get() > 0.0 || self.journeyed;
                 if self.wandering {
                     let piece = self.generator.spec().length.is_some();
                     let n = if (self.asked_by == Asked::Load && !piece) || self.asked_by == Asked::InPlace { self.seq.loop_count } else { 0 };
@@ -772,8 +779,20 @@ impl Player {
         let g = &self.generator;
         let kick = g.settings().kick.map(|k| k.kind);
         if let Some(p) = self.passes.get_mut(slot) {
-            p.draw_salted(&Cx::new(g.spec()), g.render(), kick, number, self.wander.get(), self.salt);
+            let cx = Cx::new(g.spec());
+            p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
+            // A long piece's plan, heard (queue item 102b): a wander's.
+            if self.journeyed {
+                p.heard.hear(g.form().as_ref(), &cx, g.render(), u64::from(number));
+            }
         }
+    }
+
+    /// Whether the loop playing is a piece whose plan is heard (a wander's),
+    /// so its sections are drawn as passes at any wander setting: the
+    /// slider is only how much each breathes (queue item 102b).
+    fn journeys(&self) -> bool {
+        self.generator.form().is_some_and(|f| f.journey == crate::generator::request::Journey::Wander)
     }
 
 
@@ -816,7 +835,7 @@ impl Player {
         // loop's first step, before the new loop hands over a note.
         let fade = if self.was_playing { self.handover.fade() } else { None };
         let g = &self.generator;
-        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings() };
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0 };
         let at_moment = self.asked_by == Asked::Moment;
         if at_moment || fade.is_some() {
             let when = if at_moment { start } else { now };
@@ -887,7 +906,7 @@ impl Player {
         }
         self.generator.keep_late(was.late);
         let g = &self.generator;
-        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings() };
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0 };
         self.seq.revise(host, &mut self.synth, &lp, now, was);
         let count = self.seq.loop_count;
         for _ in 0..skip {
@@ -1080,7 +1099,10 @@ impl Player {
     /// playing hands over).
     fn step_once<H: Host>(&mut self, host: &mut H, now: f64, last: u64) {
         self.tell();
-        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        let mut lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        #[allow(clippy::cast_precision_loss)] // a step of a section, far below 2^53
+        let step = self.seq.step as f64;
+        lp.step = step;
         self.seq.schedule_step(host, &mut self.synth, &lp, now);
         if self.seq.advance(&lp) {
             self.pass_measured();
@@ -1175,7 +1197,7 @@ impl Player {
     /// The top of a new pass: the next one drawn (now, if it is not yet),
     /// and played.
     fn next_pass(&mut self) {
-        if self.wander.get() > 0.0 {
+        if self.wander.get() > 0.0 || self.journeyed {
             let next = 1 - self.current;
             if !self.wandering || !self.next_drawn {
                 let n = self.seq.loop_count;
@@ -1278,7 +1300,7 @@ impl Player {
 /// The loop as the sequencer plays it: the generator's, with the pass in
 /// `passes[slot]` wandering over it (none: the loop as composed).
 fn loop_of<'a>(g: &'a Generator, passes: &'a [Pass; 2], slot: Option<usize>) -> Loop<'a> {
-    Loop { spec: g.spec(), base: g.render(), pass: slot.and_then(|i| passes.get(i)), settings: g.settings() }
+    Loop { spec: g.spec(), base: g.render(), pass: slot.and_then(|i| passes.get(i)), settings: g.settings(), step: 0.0 }
 }
 
 impl Default for Player {

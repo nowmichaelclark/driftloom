@@ -16,6 +16,7 @@
 use super::canon::{Sink, Writer};
 use super::choices;
 use super::data::FLOORDROP;
+use super::heard::Heard;
 use super::js;
 use super::list::{Empty, Maybe};
 use super::layers::{self, BASS_MAX, BassEvent, DRUMS_MAX, DrumEvent};
@@ -87,6 +88,13 @@ pub struct Pass {
     pub floor_drop: Maybe<FloorDrop>,
     /// The tuned kick this pass plays, in a loop with one.
     pub kick: Option<&'static str>,
+    /// Whether it breathes: drawn at a wander's amount above 0. A long
+    /// piece's pass at 0 (a wander heard with the slider at its left) has
+    /// no marks of its own and keeps the loop's own kick.
+    pub breathes: bool,
+    /// What a long piece's plan asks of this section (queue item 102b,
+    /// `heard`): nothing but in a wander's, set by `hear` after the draw.
+    pub heard: Heard,
 }
 
 impl Pass {
@@ -102,6 +110,8 @@ impl Pass {
             melody: [(0, 0.0); MELODY_MAX],
             floor_drop: Maybe::NONE,
             kick: None,
+            breathes: false,
+            heard: Heard::NONE,
         }
     }
 
@@ -131,6 +141,8 @@ impl Pass {
         let held = cx.spec.pins.get("tunedKick").is_some();
         self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass, held));
         self.number = Some(pass);
+        self.breathes = amount > 0.0;
+        self.heard = Heard::NONE;
     }
 
     /// `drift(pattern, rng, amount)`: hats flicker, a ghost hit, a kick
@@ -378,9 +390,16 @@ impl Pass {
     /// goldens prove it.
     #[must_use]
     pub fn drum(&self, i: usize, e: &DrumEvent) -> (f64, &'static str) {
+        self.drum_at(e.step, i, e)
+    }
+
+    /// `drum`, decided at section step `step`: silent where the plan rests
+    /// the kit (`heard`).
+    #[must_use]
+    pub fn drum_at(&self, step: f64, i: usize, e: &DrumEvent) -> (f64, &'static str) {
         let m = self.drums.get(i).copied().unwrap_or(0);
         let inst = if (m & OPEN) != 0 { if e.inst.get() == "hat" { "ohat" } else { "ojingle" } } else { e.inst.get() };
-        (if (m & SILENT) != 0 { 0.0 } else { e.vel }, inst)
+        (if (m & SILENT) != 0 || self.rests(step, Layer::Drums) { 0.0 } else { e.vel }, inst)
     }
 
     /// The ghost hit this pass adds after the loop's own, if it adds one.
@@ -389,12 +408,26 @@ impl Pass {
         self.ghost.as_ref()
     }
 
+    /// Whether the plan rests `layer` at section step `step`: its notes left
+    /// out (its channel faded to nothing over the unit before).
+    #[must_use]
+    pub fn rests(&self, step: f64, layer: Layer) -> bool {
+        self.heard.on && self.heard.unit(step).is_some_and(|u| u.rests(layer))
+    }
+
     /// Bass note `i` of the loop, `e`, as this pass plays it: its velocity
     /// and its pitch (a passing tone).
     #[must_use]
     pub fn bass(&self, i: usize, e: &BassEvent) -> (f64, f64) {
+        self.bass_at(e.step, i, e)
+    }
+
+    /// `bass`, decided at section step `step`: in the plan's key there.
+    #[must_use]
+    pub fn bass_at(&self, step: f64, i: usize, e: &BassEvent) -> (f64, f64) {
         let (m, midi) = self.bass.get(i).copied().unwrap_or((0, e.midi));
-        (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi)
+        let midi = if self.heard.on { midi + f64::from(self.shift(step, Layer::Bass)) } else { midi };
+        (if (m & SILENT) != 0 || self.rests(step, Layer::Bass) { 0.0 } else { e.vel }, midi)
     }
 
     /// Chord `i` of the loop, `e`, as this pass plays it: its velocity (0.4
@@ -402,12 +435,19 @@ impl Pass {
     /// first note's ninth above.
     #[must_use]
     pub fn chord(&self, i: usize, e: &ChordEvent) -> (f64, Option<i16>) {
+        self.chord_at(e.step, i, e)
+    }
+
+    /// `chord`, decided at section step `step` (its notes moved by
+    /// `shift`).
+    #[must_use]
+    pub fn chord_at(&self, step: f64, i: usize, e: &ChordEvent) -> (f64, Option<i16>) {
         let m = self.chords.get(i).copied().unwrap_or(0);
         let mut vel = e.vel;
         if (m & SOFT) != 0 {
             vel *= 0.4;
         }
-        if (m & SILENT) != 0 {
+        if (m & SILENT) != 0 || self.rests(step, Layer::Chords) {
             vel = 0.0;
         }
         (vel, if (m & OPEN) != 0 { e.notes.first().map(|&n| n + 14) } else { None })
@@ -417,8 +457,40 @@ impl Pass {
     /// velocity and its pitch (a neighbor, or an octave up).
     #[must_use]
     pub fn melody(&self, i: usize, e: &MelodyEvent) -> (f64, f64) {
+        self.melody_at(e.step, i, e)
+    }
+
+    /// `melody`, decided at section step `step`: left out where the plan
+    /// thins the tune past the note's rank, in the plan's key.
+    #[must_use]
+    pub fn melody_at(&self, step: f64, i: usize, e: &MelodyEvent) -> (f64, f64) {
         let (m, midi) = self.melody.get(i).copied().unwrap_or((0, e.midi));
-        (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi)
+        if !self.heard.on {
+            return (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi);
+        }
+        let out = (m & SILENT) != 0 || self.rests(step, Layer::Melody) || !self.heard.sounds(i, step);
+        (if out { 0.0 } else { e.vel }, midi + f64::from(self.shift(step, Layer::Melody)))
+    }
+
+    /// How far the plan moves `layer`'s notes at section step `step`, in
+    /// semitones: another key, and for the chords their register.
+    #[must_use]
+    pub fn shift(&self, step: f64, layer: Layer) -> i16 {
+        self.heard.unit(step).map_or(0, |u| u.shift[layer as usize] + if layer == Layer::Chords { u.register } else { 0 })
+    }
+
+    /// The voice the plan has `layer` play at section step `step` in place
+    /// of its own, if it changed it.
+    #[must_use]
+    pub fn voice(&self, step: f64, layer: Layer) -> Option<&'static str> {
+        self.heard.unit(step).map(|u| u.voice[layer as usize].get()).filter(|v| !v.is_empty())
+    }
+
+    /// The chords' lengths at section step `step`, as a share of their own
+    /// (0: their own).
+    #[must_use]
+    pub fn stretch(&self, step: f64) -> f64 {
+        self.heard.unit(step).map_or(0.0, |u| u.stretch)
     }
 
     /// The pass's canonical text: the whole pattern it plays, less its spec
@@ -440,6 +512,10 @@ impl Pass {
         plan::write_gaps(w, &base.gaps);
         w.key("harmony");
         base.write_harmony(w, plan);
+        if self.heard.on {
+            w.key("heard");
+            self.heard.write(w);
+        }
         if let Some(k) = self.kick {
             w.key("kick");
             w.str(k);

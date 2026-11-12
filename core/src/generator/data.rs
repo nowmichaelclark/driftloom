@@ -367,6 +367,16 @@ pub struct Longform {
     pub theme: f64,
     /// The share of the tune's notes that sound, thinnest to its own.
     pub density: [f64; 2],
+    /// How far out of the loop's own a turn of the warmth, the space or
+    /// the tune's density takes it, at least (a share of the way).
+    pub apart: f64,
+    /// How far the tone's two move the Sound panel's warmth and space (0 to
+    /// 1) at their furthest.
+    pub reach: f64,
+    /// The chords' lengths, shorter and longer: a share of their own.
+    pub lengths: [f64; 2],
+    /// How long a move glides, in seconds, where it can.
+    pub glide: f64,
 }
 
 /// The bass layer's level in dB, with a kick and without

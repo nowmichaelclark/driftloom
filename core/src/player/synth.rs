@@ -241,6 +241,12 @@ pub struct Synth {
     /// to the pitches a note carries with it (the note a slide or a slur
     /// comes from, a stab's other notes, the organ's chords).
     tune: f64,
+    /// How far a long piece's plan has each channel down (queue item 102b,
+    /// `set_plan_level`: 0 its own, 1 at rest), in the core's channel order;
+    /// a mute lifted comes back to this.
+    plan_cut: [f64; 5],
+    /// The plan's last move of the warmth and the space (`glide_tone`).
+    plan_tone: [f64; 2],
 }
 
 impl Synth {
@@ -262,7 +268,61 @@ impl Synth {
             volume: Biased::DEFAULT,
             level: Biased::DEFAULT,
             tune: 0.0,
+            plan_cut: [0.0; 5],
+            plan_tone: [0.0; 2],
         }
+    }
+
+    /// A long piece's plan sets a channel's level (queue item 102b: a layer
+    /// resting and returning), `level` from 0 to 1 of its own, gliding there
+    /// from `time` (`tau`): its gain in the mix, as a mute does, so all it
+    /// plays (its held notes, its organ, its tails) fades together. Muted,
+    /// the level is kept for when the mute is lifted. Nothing is sent where
+    /// the level is already this.
+    pub fn set_plan_level<H: Host>(&mut self, host: &mut H, channel: usize, level: f64, time: f64, tau: f64) {
+        let (Some(&g), Some(cut)) = (CHANNEL_GAIN.get(channel), self.plan_cut.get_mut(channel)) else { return };
+        let want = 1.0 - js::clamp(level, 0.0, 1.0);
+        if *cut == want {
+            return;
+        }
+        *cut = want;
+        if self.mutes.get(channel).copied().unwrap_or(false) {
+            return;
+        }
+        #[allow(clippy::cast_possible_truncation)] // a channel, under 5
+        let c = channel as u32;
+        host.param(GAINS + c, TARGET, g * (1.0 - want), time, tau);
+        if self.wash {
+            host.set(WASH_CHANNEL, own::WASH, crate::blocks::wash::set::WEIGHT + channel, g * (1.0 - want), time);
+        }
+    }
+
+    /// Every channel back to its own level, no plan on it (a new loop).
+    pub fn clear_plan(&mut self) {
+        self.plan_cut = [0.0; 5];
+        self.plan_tone = [0.0; 2];
+    }
+
+    /// A long piece's plan moves the tone (queue item 102b): the warmth's
+    /// lowpass and the space's room glide to `tone` (the Sound panel's
+    /// warmth and space, 0 to 1) from `time` (`tau`), as `set_tone` sets
+    /// them but gently, and without the saturation's drive, which is set at
+    /// once and stays the loop's own. `moved` is the plan's move itself,
+    /// kept so the same is not sent twice.
+    pub fn glide_tone<H: Host>(&mut self, host: &mut H, tone: [f64; 2], moved: [f64; 2], time: f64, tau: f64) {
+        let [warmth, space] = tone.map(|t| js::clamp(t, 0.0, 1.0));
+        if self.plan_tone[0] != moved[0] {
+            host.param(crate::TONE_FREQ, TARGET, 2600.0 + (1.0 - warmth) * 9000.0, time, tau);
+        }
+        if self.plan_tone[1] != moved[1] {
+            let fb = js::min(0.74, 0.66 + space * 0.2);
+            let combs = if self.lite { 3.0 } else { 6.0 };
+            host.param(REVERB_OUT, TARGET, 0.4 + space * 0.9, time, tau);
+            host.param(COMB_FB, TARGET, fb, time, tau);
+            host.param(COMB_FREQ, TARGET, 1400.0 + space * 2600.0, time, tau);
+            host.param(COMB_SUM, TARGET, (1.0 - fb) / combs, time, tau);
+        }
+        self.plan_tone = moved;
     }
 
     /// The loop's tuning, in cents off A440 (`Load::tuning`), for every note
@@ -341,6 +401,8 @@ impl Synth {
         }
         #[allow(clippy::cast_possible_truncation)] // a channel, under 5
         let c = channel as u32;
+        // A long piece's plan may have the channel down (`set_plan_level`).
+        let g = g * (1.0 - self.plan_cut.get(channel).copied().unwrap_or(0.0));
         host.param(GAINS + c, TARGET, if muted { 0.0 } else { g }, now, 0.03);
         if self.wash {
             host.set(WASH_CHANNEL, own::WASH, crate::blocks::wash::set::WEIGHT + channel, if muted { 0.0 } else { g }, now);

@@ -54,6 +54,7 @@ pub mod canon;
 pub mod character;
 pub mod choices;
 pub mod data;
+pub mod heard;
 pub mod js;
 pub mod layers;
 pub mod list;
@@ -444,6 +445,7 @@ impl Generator {
         if self.pass.number != Some(pass) {
             let kick = self.settings.kick.map(|k| k.kind);
             self.pass.draw(&plan::Cx::new(&self.spec), &self.render, kick, pass);
+            self.hear(u64::from(pass));
         }
         &self.pass
     }
@@ -456,11 +458,20 @@ impl Generator {
     pub fn section(&mut self, n: u64, amount: f64) -> &wander::Pass {
         let kick = self.settings.kick.map(|k| k.kind);
         self.pass.draw_by(&plan::Cx::new(&self.spec), &self.render, kick, piece::pass_number(n), amount);
+        self.hear(n);
         // `wander` keeps the pass it drew at the default amount only.
         if amount != wander::AMOUNT {
             self.pass.number = None;
         }
         &self.pass
+    }
+
+    /// The pass drawn last, heard as section `n` of the loop's piece (queue
+    /// item 102b, `heard`): a wander's plan on its events, nothing for an
+    /// arc's or a loop that is no piece.
+    fn hear(&mut self, n: u64) {
+        let form = self.form();
+        self.pass.heard.hear(form.as_ref(), &plan::Cx::new(&self.spec), &self.render, n);
     }
 
     /// The plan of the loop's piece (queue item 102; `longform`): what each
@@ -469,7 +480,7 @@ impl Generator {
     /// now, from numbers alone: nothing is kept, and no section is walked.
     #[must_use]
     pub fn form(&self) -> Option<longform::Form> {
-        longform::Form::of(&self.spec, self.request.edits(), self.layers_made())
+        longform::Form::of_loop(&self.spec, self.request.edits(), self.layers_made(), heard::voiceable(&plan::Cx::new(&self.spec), &self.render))
     }
 
     /// The layers the loop made has notes in, a bit each in `LAYERS`'

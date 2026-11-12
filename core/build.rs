@@ -833,7 +833,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     let arc = find("arc");
     arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay"]);
     let wander = find("wander");
-    wander.only(&["hold", "sections", "key", "theme", "density"]);
+    wander.only(&["hold", "sections", "key", "theme", "density", "apart", "reach", "lengths", "glide"]);
     let mut energy = String::from("&[");
     for (part, key) in arc.parts("energy") {
         assert!(ROLES.contains(&part.as_str()), "{}: no such role", arc.at(&key));
@@ -842,7 +842,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     energy.push(']');
     let _ = writeln!(
         out,
-        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {} }};",
+        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {}, apart: {}, reach: {}, lengths: {}, glide: {} }};",
         named(&journey, "weights", &["arc", "wander"]),
         journey.need_num("endless"),
         leaning(&journey, "vibes"),
@@ -866,7 +866,11 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         wander.need_num("sections"),
         wander.need_num("key"),
         wander.need_num("theme"),
-        wander.need_range("density")
+        wander.need_range("density"),
+        wander.need_num("apart"),
+        wander.need_num("reach"),
+        wander.need_range("lengths"),
+        wander.need_num("glide")
     );
 }
 

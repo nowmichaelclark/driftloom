@@ -30,7 +30,7 @@ says the work goes on meanwhile.
 | 02 | `02-batch6-far-ends.md` | 101a: deepDuck, wideSweep, slowOpening | Opus 5.5, high | yes, 2026-11-11 |
 | 03 | `03-batch6-pitch.md` | 101b: tuningOffset, padWow | Opus 5.5, high | yes, 2026-11-12 |
 | 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, medium | yes, 2026-11-12 |
-| 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | |
+| 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | yes, 2026-11-12 |
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | |
 | 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | |
 | 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
@@ -171,6 +171,14 @@ Things earlier sessions learned:
   minutes (2,400 pieces); `core/tests/longform.rs` is the
   gate's copy. The plan is not linked into `js/dlplayer.wasm` until
   something plays it, so session 12's first use will grow the module.
+- The wander is heard (session 12, `core/src/generator/heard.rs`): a pass
+  carries its section's plan (`Pass::heard`); an arc's hears nothing yet
+  (session 13 hears it the same way). `node tools/longform.mjs` now plays
+  wander pieces through `dlrender` and checks what is played (about ten
+  minutes; `--plan` for the plan alone). The app's module grew 53 KB once
+  the plan was linked in. In a cloud session GitHub's API may be closed to
+  the session while a pasted token still pushes: then the PR is Mikey's to
+  open (session 12).
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.

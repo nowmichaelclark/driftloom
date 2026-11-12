@@ -2,8 +2,8 @@
 # piece's plan is drawn by. The core alone reads this file (core/build.rs
 # compiles it in; core/src/generator/longform.rs draws by it); the page does
 # not. The format is js/data.js's. Every number here is a first pick for
-# Mikey's ears: sessions 12 to 16 tune them, and nothing here is heard until
-# session 12.
+# Mikey's ears: sessions 12 to 16 tune them. The wander's are heard since
+# session 12 (core/src/generator/heard.rs); the arc's from session 13.
 
 # Which journey a piece takes: an arc, as a symphony's, or the long slow
 # wander. Drawn per piece on a stream of its own; a request pins it
@@ -93,6 +93,25 @@ sections = 3
 # How often an epoch (each thing's turn once) visits a related key, and
 # hands the tune to the second theme. Rare; 0 turns either off.
 key = 0.15
-theme = 0.2
+# The theme's turn waits for theme B's tune to be made (session 14 makes it,
+# for the arc, and turns this back on: 0.2 was 102a's pick). Until then a
+# turn that handed the tune over would move nothing heard.
+theme = 0
 # How thin the tune may go: the share of its notes that sound, 1 its own.
 density = 0.55 1
+# Each turn of the warmth and the space takes it to the other side of the
+# loop's own, and a turn of the tune's density thins it or brings it home:
+# at least this share of the way out, so every turn is a step that is heard.
+apart = 0.4
+# How far the warmth and the space move the Sound panel's (0 to 1) at their
+# furthest: a turn is a slow glide over its unit, a tenth to a quarter.
+reach = 0.25
+# The chords shorter and longer, as shares of their own lengths. Longer
+# never runs into the next chord; a loop whose chords can't be made longer
+# (or shorter) moves them the other way.
+lengths = 0.6 1.5
+# How long a move glides where it can (a layer resting or returning, the
+# tone, the tune thinning or filling), in seconds: over the units after the
+# move, as many as that takes. A voice, a register, a length or a key
+# changes on the move's line.
+glide = 24

@@ -120,3 +120,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   `docs/LONGFORM.md`; the checks are `core/tests/longform.rs` and `node
   tools/longform.mjs`; the first picks waiting for his ears are in
   `docs/notes/for-mikey.md`, "Decisions".
+- #375, long pieces: the wander heard (item 102b, session 12, v161),
+  preview URL: the branch's preview (no hash kept): nothing in the app
+  changes yet (it can't take a journey; loops of up to 32 bars and every arc
+  piece render bit for bit as before, 144 renders against main). A piece
+  whose journey is the wander now plays its plan: about every three minutes
+  one thing moves, slowly (a layer fades out or back over 24 s, the tone
+  warms or the room changes, the tune thins), or on a line (a voice, the
+  chords an octave up or down, their lengths, rarely the whole loop a fourth
+  away). The longest stretch with nothing moving is 300 s (was 587 s). To
+  hear before session 15's excerpts: in `core/`, `cargo run --release
+  --example dlrender -- --seed 7 --request bars=endless,journey=wander
+  --seconds 1560 --wav glor-ti.wav`; the moves' minutes are in
+  `docs/LONGFORM.md`, "Pieces to hear".

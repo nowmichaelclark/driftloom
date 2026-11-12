@@ -6,8 +6,9 @@ the brief (`docs/sessions/long-pieces-brief.md`) against the code. Sessions
 The brief still holds the rules that can't bend and what Mikey asked for.
 
 **Where things stand:** the plan is code (`core/src/generator/longform.rs`),
-its numbers are data (`data/longform.txt`), and it is reported, not heard:
-a section still plays as the loop's wandered pass. Read a piece with
+its numbers are data (`data/longform.txt`). **The wander is heard** (session
+12, `core/src/generator/heard.rs`, below); an arc is still reported, not
+heard: its sections play as the loop's wandered pass until session 13. Read a piece with
 `dlgen --map SEED REQUEST [--from N] [--count N]` (in `core/`: `cargo run
 --release --example dlgen -- --map 7 bars=256,journey=arc`), or in Node
 with `tools/gen-lib.mjs`'s `pieceMap`. `node tools/longform.mjs` runs the
@@ -77,17 +78,30 @@ Time is cut into **epochs**: each thing that may move takes one turn an
 epoch, in an order drawn from the epoch's number, at the end of a **hold**
 of drawn length (60 to 300 s; measured mean about 3 minutes). So exactly
 one thing moves at each hold's end, and a unit's state is read from this
-epoch and the one before, no further back.
+epoch and the one before, no further back. **The holds stay as drawn**
+(session 12): they are fitted to the epoch around its mean, drawn in only
+as far as keeps each within 60 to 300 s in whole units, where 102a scaled
+them and one long draw beside short ones, or an epoch with turns skipped,
+stretched a hold to 587 s. Over the corpus (241 seeds at five lengths,
+88,522 stretches) the longest stretch with nothing moving is now 300 s
+(the median 179 s); it was 587 s, with 2,092 past 330 s.
 
 - The things: a layer rests and later returns (two turns); a layer's voice
-  (bass, chords or tune: a number over the pool's other voices); warmth;
-  space (each -1 to 1 around the loop's own); the chords' register and
-  their length (-1, 0, +1); the tune's density (0.55 to 1); rarely the key
-  (15% of epochs visit a related key) and the theme (20% hand the tune to
-  B).
-- Voice, register and length are the loop's own every other epoch, so they
-  always move and always come home. A turn that would move nothing is not
-  taken.
+  (bass, chords or tune: a number over the pool's other voices, only a
+  layer whose pool has another and that does not sing); warmth; space; the
+  chords' register and their length (-1, 0, +1); the tune's density; rarely
+  the key (15% of epochs visit a key **a fifth away**: the whole loop moved,
+  every chord the same; the relative and the parallel are the arc's) and
+  the theme (**off until theme B is made**, session 14: `theme = 0`).
+- **Every thing goes out in the even epochs and comes home in the odd**
+  (session 12; 102a gave each its own parity, so the first epoch moved
+  half of them and its holds ran long): voice, register, length and
+  density are the loop's own every other epoch; the warmth and the space
+  take the other side of the loop's own each epoch, at least `apart` (0.4)
+  of the way out, and the tune thins to 0.55 to 0.82 of its notes, so every
+  turn is a step that is heard (a fresh draw, as 102a drew them, moved by
+  less than a fifth of the range one turn in five). A turn that would move
+  nothing is not taken.
 - An epoch never starts on the thing the last one ended on. A layer's rest
   lasts one hold or two (it returns in the next turn, or the one after),
   and is never an epoch's last turn. A layer whose voice is changed
@@ -97,6 +111,37 @@ epoch and the one before, no further back.
 - A finite wander's last two epochs bring the key and the theme home, and
   its last units are the close. Its energy is level (about 0.5), lower
   while a layer rests or the tune is thin.
+
+### How the wander is heard (session 12)
+
+`heard::Heard`, on each pass (`wander::Pass::heard`), drawn a section ahead
+with the pass: each unit of the section as the plan has it, as marks and
+levels on the loop's own events and the mix. Nothing new is made, so a
+section costs one loop's making (measured: 7 to 12 us a section natively,
+the same at 1, 10^4 and 10^9; the block that draws it 28 to 39 us, under
+the loop's own worst audio block of 49 to 187 us, full and lite).
+
+| Thing | Heard as | When |
+|---|---|---|
+| a layer rests, returns | its channel's gain in the mix, beside the mute (`Synth::set_plan_level`); its notes left out once it is down | a glide |
+| the warmth, the space | the lowpass and the room glide (`Synth::glide_tone`), `reach` 0.25 of the Sound panel's at most; the drive stays the loop's own | a glide |
+| the tune's density | its highest-ranked notes left out (a rank a note, the bar lines' kept longest; at least one as soon as it thins) | a glide |
+| a voice | the same notes, another voice of the layer's pool | the line |
+| the chords' register | an octave, the other way where that leaves 36 to 96 | the line |
+| the chords' length | 0.6 or 1.5 of their own (longer never into the next chord; the other way where a loop's chords can't) | the line |
+| the key | every pitched layer, the tune's harmony and graces, a tuned kick: a fourth up or down, an octave over where a layer would leave its range | the line |
+
+A glide takes `glide` (24 s) over the units after its move; a unit starts
+where the one before ended, so nothing jumps. The line is the unit's first
+step: a phrase line, or a section's. Inside a hold the loop wanders as
+before; **at any slider setting** (at 0 the player still draws a wander's
+sections as passes, with no breathing and the loop's own kick). A tone the
+listener sets while it plays holds from then on. **A finite wander closes
+softly:** over its close every layer eases to 0.7 and the tune thins toward
+its thinnest; the round after starts as the loop's own, gliding back up.
+**A voice moved changes the voice budget's room:** a layer the budget held
+back may come in (2 sections in 8 pieces played). For Mikey's ears: every
+number here.
 
 ## Which journey
 
@@ -175,6 +220,11 @@ a theme-B section another seed's tune spread across blocks.
 
 - Read the plan where a section is drawn: `Generator::form()` then
   `at(n, phrase)`. Keep `Form::of` free of the player's state.
+- Session 13: an arc is heard the way the wander is (`heard`; it returns
+  early for an arc today). Session 14: once theme B's tune is made, turn the
+  wander's theme back on (`[longform wander] theme`, 0.2) and hear it.
+- `node tools/longform.mjs` checks what is played too
+  (`tools/longform-played.mjs`; `--plan` for the plan alone).
 - A change to the plan's draws moves the maps: say so, and keep
   `core/tests/longform.rs` and `tools/longform.mjs` passing (add what is
   played to the tool).
@@ -184,4 +234,25 @@ a theme-B section another seed's tune spread across blocks.
 
 For session 15's listening set: seed, request, where to listen, what for.
 
-(empty: sessions 12 to 14 fill this)
+**The wander** (session 12). Each at bars=256 and Endless, `journey=wander`;
+times from the piece's start (the 256-bar piece's moves are its first, then
+its close). Listen for: each move alone, slow, never a jump; the rest
+between moves is the loop as it always breathed.
+
+1. **Seed 7, glor-ti** (134 bpm, F# mixolydian; 256 bars is 7:38). 3:12 the
+   room glides drier; 5:42 the kit fades out over 24 s (256 bars: it stays
+   out into the close, which eases down). Endless goes on: 10:24 the kit
+   fades back; 14:54 the tone warms; 18:30 the bass changes voice; 21:00 the
+   chords go up an octave; 23:30 the tune thins; 25:00 the chords sound
+   shorter or longer.
+2. **Seed 1086007177, mu-meth** (138 bpm, F major pentatonic; 256 bars is
+   5:33). 256 bars: 1:36 the tune thins; 5:00 the tune fades out, then the
+   close. Endless: 1:02 the tone warms; 4:00 the chords up an octave; 5:54
+   the tune fades out; 10:00 it fades back; **11:07 the key: the whole loop
+   to C** (the one key move of the three); 15:13 the chords shorter; 16:26
+   the room; 20:31 the chords change voice.
+3. **Seed 2541830973, so-rou** (56 bpm, F# ionian, 34-s sections; 256 bars
+   is 18:17). 2:17 the room; 4:00 the chords up an octave; 6:52 the texture
+   fades out; 10:52 it comes back; 13:42 a layer changes voice; 17:06 the tone moves,
+   then (256 bars) the close. Endless: 21:42 the chords' lengths; 24:36 the
+   texture rests again.

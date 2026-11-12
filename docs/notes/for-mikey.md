@@ -48,8 +48,16 @@ the points where the next step is yours.
   14 at 0.5 (the records' median is nearer 20). On a few loops where the
   chords are doubled, padWow makes the mix 0.2 to 0.35 LU quieter or
   louder, as the sketch did.
+- **The wander heard (102b, session 12, v161):** nothing to do now (the app
+  can't take a journey or jump yet; session 15 renders the excerpts). The
+  three wander pieces and the minutes where each thing moves are in
+  `docs/LONGFORM.md`, "Pieces to hear". What only your ears can judge: is
+  each move slow enough and still heard (a 24-s glide; the tone moves at
+  most a quarter of the Sound panel), is the octave or voice change at a
+  line ever too sudden, does a layer's rest feel like a breath, and is a
+  key change a fourth away welcome once in a while.
 - Batch 6's and 84b's: brain session B2. The long pieces': session 15 and
-  brain session B3 (session 11's plan, v160, changes no sound). B4 makes them again in the new codes.
+  brain session B3. B4 makes them again in the new codes.
 
 ## Ears
 
@@ -108,6 +116,27 @@ them. Settled for now:
 - The wander may visit a related key (15% of its half-hour epochs) and hand
   the tune to a second theme (20%); set either to 0 to turn it off.
 - The tempo is held for the whole piece.
+
+**The wander heard (102b, session 12, v161), first picks** (each one line
+of `data/longform.txt`, `[longform wander]`):
+
+- Everything a piece moves goes out from the loop's own over about 25
+  minutes, one thing a hold, and comes home over the next 25.
+- The warmth and the space swing to the other side of the loop's own each
+  time, at least 0.4 of the way, at most a quarter of the Sound panel
+  (`apart`, `reach`); the tune thins to 55% to 82% of its notes and comes
+  back (`density`).
+- A glide (a layer resting or coming back, the tone, the tune thinning)
+  takes 24 s (`glide`); a voice, the chords' octave or length, or a key
+  change on a phrase or section line.
+- The chords' lengths: 0.6 or 1.5 of their own (`lengths`).
+- A wander visits only a key a fifth away (the whole loop moved), never the
+  relative or the parallel (those change the chords: the arc's).
+- The wander's theme turn is off until session 14 makes theme B (`theme =
+  0`; it was 0.2).
+- A voice moved can let the voice budget play a layer it held back (seen
+  twice in eight pieces): the chords coming in when the tune's voice gets
+  lighter. Yours to judge.
 - A finite piece played round again plays the same plan again.
 
 Left open, for later sessions or for you:

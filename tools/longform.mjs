@@ -7,18 +7,30 @@
 // (That the plan is the same wherever the wander's slider stands is the
 // Rust test's: it plays the player at 0, 1 and 2.4.)
 //
-//   node tools/longform.mjs                 the table, 240 seeds
+//   node tools/longform.mjs                 the table, 240 seeds, and the
+//                                           wander as played (a few minutes
+//                                           more: tools/longform-played.mjs)
 //   node tools/longform.mjs --seeds 60      fewer (or more) seeds
+//   node tools/longform.mjs --played 8      that many wander seeds played (6)
+//   node tools/longform.mjs --plan          the plan's checks alone
 //   node tools/longform.mjs --check         exit 1 if any check fails
 //   node tools/longform.mjs --map SEED REQUEST [--from N] [--count N]
 //                                           a piece's map as JSON lines
 //                                           (dlgen --map prints it for people)
 //
 // Each seed is planned at 64, 256, 1,024 and 32,768 bars and Endless, as an
-// arc and as a wander (journey=arc, journey=wander). Until session 12 the
-// plan is computed and reported, not heard.
+// arc and as a wander (journey=arc, journey=wander). Since session 12 the
+// wander is heard: its checks are made again on what the player plays (the
+// corpus's first pieces, rendered by `dlrender`, built first), with the
+// joins' clicks, the loudness over twenty minutes and the cost of a
+// section's making and of its block.
 
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pieceMap } from './gen-lib.mjs';
+import { dlrender, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
 import { Rng } from '../js/rng.js';
 
 const args = process.argv.slice(2);
@@ -226,7 +238,72 @@ for (const journey of JOURNEYS) {
 
 const mean = holds.seconds / Math.max(1, holds.count);
 check('holds as long as drawn: between one and five minutes on average', mean >= 90 && mean <= 270, `${mean.toFixed(0)} s`);
-check('every thing of the wander takes its turns', THINGS.every((t) => holds.things[t] > 0), JSON.stringify(holds.things));
+// The theme's turn is off until theme B is made (data/longform.txt).
+const themeOff = /^theme = 0$/m.test(fs.readFileSync(new URL('../data/longform.txt', import.meta.url), 'utf8'));
+check('every thing of the wander takes its turns', THINGS.every((t) => holds.things[t] > 0 || (t === 'theme' && themeOff)), JSON.stringify(holds.things));
+
+// The wander as played: the corpus's first pieces at Endless and 1,024
+// bars, 25 minutes each at the wander's amount 0, every move read from the
+// notes and the mix; two of them at the app's amount for their joins and
+// their loudness; then what a section costs.
+const played = { pieces: 0, moves: 0, heard: 0, budget: 0, cycling: 0, joins: [], own: [], loud: [], costs: [], blocks: [] };
+if (!flag('--plan')) {
+  const PLAYED = Number(value('--played', 6));
+  const lines = [];
+  for (const seed of [7, ...seeds.slice(0, PLAYED - 1)]) {
+    for (const length of ['bars=endless', 'bars=1024']) {
+      const request = `${length},journey=wander`;
+      const r = playedChecks(seed, request, 1500);
+      played.pieces += 1;
+      played.moves += r.moves.length;
+      played.heard += r.heard.length;
+      played.budget += r.budget.length;
+      played.cycling += r.cycling.length;
+      for (const name of ['at most one thing moves a section', "every move heard is one of the wander's things", 'nothing moves where the map draws nothing', "a move that can't glide starts on its line", 'every move the map draws is heard']) {
+        const bad = r.problems.filter((p) => p.check === name);
+        check(`played: ${name}`, bad.length === 0, bad[0]?.where);
+      }
+      if (length === 'bars=endless') lines.push({ seed, request, moves: r.moves });
+    }
+  }
+  // Twenty lines at least, from as many pieces as that takes (two at least,
+  // each over twenty minutes for its loudness).
+  for (const { seed, request, moves } of lines) {
+    if (played.joins.length >= 20 && played.loud.length >= 2) break;
+    const r = soundChecks(seed, request, 1500, moves);
+    const own = loopLoudness(seed, 1500, r.stretch);
+    played.joins.push(...r.joins);
+    played.own.push(r.own);
+    played.loud.push({ seed, jump: r.jump, range: r.range, ownJump: own.jump });
+    check("played: no click at a line (each join under the piece's own largest step)", r.joins.every((j) => j <= r.own), `${seed}: ${r.joins.map((j) => j.toFixed(4))} against ${r.own.toFixed(4)}`);
+    check("played: no loudness jump past 2 LU (or the loop's own) between stretches", r.jump <= Math.max(2, own.jump + 0.25), `${seed}: ${r.jump.toFixed(2)} LU, the loop's own ${own.jump.toFixed(2)}`);
+    check("played: twenty minutes' loudness within the catalog's spread", r.range <= r.spread, `${seed}: ${r.range.toFixed(2)} LU against ${r.spread.toFixed(2)}`);
+  }
+  // A section's making, timed natively (dlgen --section-cost): the same at
+  // section 1, 10^4 and 10^9.
+  const core = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'core');
+  execFileSync('cargo', ['build', '--release', '--locked', '--example', 'dlgen'], { cwd: core, stdio: 'ignore' });
+  for (const seed of [7, ...seeds.slice(0, 3)]) {
+    const line = execFileSync(path.join(core, 'target', 'release', 'examples', 'dlgen'), ['--section-cost', String(seed), 'bars=endless,journey=wander'], { encoding: 'utf8' });
+    const us = [...line.matchAll(/=([\d.]+)us/g)].map((m) => Number(m[1]));
+    played.costs.push(us);
+    check("played: a section's making costs the same at 10^9 as at 1 and 10^4", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
+  }
+  // The worst block at a section line against the loop's own worst audio
+  // block (dlrender --costs: a pass, its plan heard, is drawn in a block of
+  // its own a section ahead, and a line's steps are decided in another),
+  // full and lite.
+  for (const seed of [7, ...seeds.slice(0, 3)]) {
+    for (const lite of [false, true]) {
+      const out = dlrender(['--seed', String(seed), '--request', 'bars=endless,journey=wander', '--seconds', '300', '--costs', ...(lite ? ['--lite'] : [])]);
+      const m = out.match(/pass (\d+), steps (\d+), audio (\d+)/);
+      if (!m) continue;
+      const [pass, steps, audio] = m.slice(1).map(Number);
+      played.blocks.push({ seed, lite, pass, steps, audio });
+      check("played: no section line's block over the loop's own worst audio block", pass <= audio && steps <= audio, `${seed}${lite ? ' lite' : ''}: pass ${pass} us, steps ${steps} us, audio ${audio} us`);
+    }
+  }
+}
 
 console.log(`longform: ${SEEDS} seeds x ${LENGTHS.length} lengths x 2 journeys = ${pieces} pieces, in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 const drawn = journeys.arc + journeys.wander;
@@ -234,6 +311,13 @@ console.log(`  drawn with nothing asked: arc ${(100 * journeys.arc / drawn).toFi
 console.log(`  a wander's holds: ${holds.count}, ${mean.toFixed(0)} s on average; moves: ${THINGS.map((t) => `${t} ${holds.things[t] ?? 0}`).join(', ')}`);
 for (const journey of JOURNEYS) {
   console.log(`  a section's plan, ${journey}: ${timed[journey].map((t, i) => `${(t * 1000).toFixed(1)} us at ${['1', '10^5', '10^9'][i]}`).join(', ')} (with its text)`);
+}
+if (played.pieces) {
+  console.log(`  played: ${played.pieces} wander pieces of 25 minutes: ${played.moves} moves drawn, heard in ${played.heard} sections (a glide over several); ${played.budget} sections where a voice moved changed what the voice budget let another layer play; ${played.cycling} layers with cycles of their own read by their gain alone`);
+  console.log(`  joins: the largest step at ${played.joins.length} lines ${Math.max(...played.joins).toFixed(4)}; the pieces' own largest ${played.own.map((x) => x.toFixed(4)).join(', ')}`);
+  for (const l of played.loud) console.log(`  loudness, ${l.seed}: the largest jump between 20 s stretches ${l.jump.toFixed(2)} LU (the loop as itself ${l.ownJump.toFixed(2)}), the range ${l.range.toFixed(2)} LU`);
+  console.log(`  a section's making: ${played.costs.map((c) => c.join('/')).join(', ')} us at 1/10^4/10^9`);
+  console.log(`  blocks: ${played.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
 console.log('');
 let failed = 0;

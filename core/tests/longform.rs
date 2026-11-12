@@ -11,7 +11,8 @@
 //! moved. `tools/longform.mjs` runs the same checks in Node, on the tools'
 //! build, and prints the table.
 //!
-//! Nothing here is heard yet: a section still plays as `piece` says.
+//! What a wander's plan sounds like is `tests/heard.rs`'s, and
+//! `tools/longform.mjs` checks what is played.
 
 // Units and sections, far below 2^53.
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
@@ -254,7 +255,9 @@ fn a_wander_moves_one_thing_at_a_time_and_holds() {
     // every thing takes its turns.
     let mean = seconds / holds as f64;
     assert!(moves > 20_000 && rests > 1000 && (90.0..=270.0).contains(&mean), "{moves} moves, {rests} rests, holds of {mean:.0} s");
-    for (bit, name) in changed::NAMES.iter().enumerate().filter(|(bit, _)| changed::THINGS & (1 << bit) != 0) {
+    // (The theme's turn waits for theme B's tune: `data/longform.txt`.)
+    let off = if dlcore::generator::data::LONGFORM.theme > 0.0 { 0 } else { changed::THEME };
+    for (bit, name) in changed::NAMES.iter().enumerate().filter(|(bit, _)| (changed::THINGS & !off) & (1 << bit) != 0) {
         assert!(by_thing[bit] > 0, "nothing ever moves the {name}");
     }
 }
@@ -484,11 +487,19 @@ fn the_journey_is_asked_or_drawn_and_short_loops_have_none() {
         let mut hashes = Vec::new();
         for text in ["bars=256", "bars=256,journey=arc", "bars=256,journey=wander"] {
             generator.load_with(31, &Request::parse(text).expect("a request"));
-            hashes.push(dlcore::generator::Part::ALL.map(|p| generator.hash(p)));
+            let drawn = generator.form().expect("a plan").journey;
+            // The loop's own parts; its passes carry a wander's plan heard
+            // (session 12), so only an arc's are the loop's wandered passes.
+            let own: Vec<u64> = dlcore::generator::Part::ALL.iter().filter(|p| !matches!(p, dlcore::generator::Part::Pass(_))).map(|&p| generator.hash(p)).collect();
+            let passes: Vec<u64> = dlcore::generator::Part::ALL.iter().filter(|p| matches!(p, dlcore::generator::Part::Pass(_))).map(|&p| generator.hash(p)).collect();
+            hashes.push((own, passes, drawn));
         }
         hashes
     });
-    assert!(hashes[0] == hashes[1] && hashes[1] == hashes[2], "a journey asked moved the loop");
+    assert!(hashes[0].0 == hashes[1].0 && hashes[1].0 == hashes[2].0, "a journey asked moved the loop");
+    let drawn = if hashes[0].2 == Journey::Arc { 1 } else { 2 };
+    assert!(hashes[0].1 == hashes[drawn].1, "asking the journey a piece draws moved its sections");
+    assert!(hashes[1].1 != hashes[2].1, "a wander's sections are an arc's");
     // Drawn: both journeys, the vibes leaning, Endless toward the wander.
     let share = |text: &str| {
         let request = Request::parse(text).expect("a request");
