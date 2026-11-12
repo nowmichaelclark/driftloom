@@ -299,3 +299,28 @@ between moves is the loop as it always breathed.
    fades out; 10:52 it comes back; 13:42 a layer changes voice; 17:06 the tone moves,
    then (256 bars) the close. Endless: 21:42 the chords' lengths; 24:36 the
    texture rests again.
+
+**The arc** (session 13). Each `journey=arc`, at the length given; times
+from the piece's start. Listen for: an opening thin and a little dark (the
+kit and the bass held back, no hats, the tune sparse, the filter low), the
+build noticed only once it has passed (the hats and the backbeat in, the
+filter opening, the tune doubled an octave up, softly, toward the peak),
+the release, the return, then the close thinning to the chords and the tune
+and the landing: the tonic chord and the tune on the tonic, alone, ringing
+out. One theme still, in the home key (session 14 brings the second and the
+keys).
+
+1. **Seed 2728346932, tha-vol** (131 bpm, A# lydian; 64 bars is 1:27, the
+   small form). The opening 0:00; the theme 0:10; the lift, the peak, 0:32
+   to 0:49; the release 0:49; the return 0:54; the close 1:16; the landing
+   1:23; the opening again 1:27.
+2. **Seed 1151594917, brum-yei** (109 bpm, C# ionian; 256 bars is 9:23, two
+   arcs as movements). The opening 0:00; the build 0:52; the peak 2:38; the
+   release 2:56; the return 3:13; a breath 4:06; the second arc's opening
+   4:41, peak 7:37, release 7:55, return 8:13; the close 9:06; the landing
+   9:19.
+3. **Seed 1278568317, sheim-gling** (98 bpm, G kumoi; 1,024 bars is 31:20,
+   two arcs of about 15 minutes). The opening 0:00 (a minute); the build
+   3:33; the peak 9:47; the release 10:53; the return 12:14; a breath 14:34;
+   the second arc's opening 15:40, build 18:58, peak 24:29, release 25:35,
+   return 27:11; the close 29:59; the landing 31:15.

@@ -627,6 +627,14 @@ impl Heard {
             }
             w.key("from");
             w.num(u.from);
+            w.key("register");
+            w.num(f64::from(u.register));
+            w.key("shift");
+            w.list();
+            for &s in &u.shift {
+                w.num(f64::from(s));
+            }
+            w.end_list();
             if self.arc {
                 w.key("shimmer");
                 w.list();
@@ -636,14 +644,6 @@ impl Heard {
                 w.num(u.backbeat[1]);
                 w.end_list();
             }
-            w.key("register");
-            w.num(f64::from(u.register));
-            w.key("shift");
-            w.list();
-            for &s in &u.shift {
-                w.num(f64::from(s));
-            }
-            w.end_list();
             if self.arc {
                 w.key("soft");
                 w.list();

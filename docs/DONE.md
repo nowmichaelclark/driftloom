@@ -133,3 +133,19 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   --example dlrender -- --seed 7 --request bars=endless,journey=wander
   --seconds 1560 --wav glor-ti.wav`; the moves' minutes are in
   `docs/LONGFORM.md`, "Pieces to hear".
+- #377, long pieces: the arc heard (item 102c, session 13, v162), preview
+  URL: the branch's preview (no hash kept): nothing in the app changes yet
+  (it can't take a journey; loops of up to 32 bars and every wander render
+  bit for bit as before, 144 renders against main). A piece whose journey
+  is the arc now rises and falls: a thin, slightly dark opening (the kit
+  and the bass held back, no hats, the tune sparse, the loop's own filter
+  low), the build heard only once it has passed (hats and backbeat in, the
+  filter opening, the tune doubled an octave up toward the peak, about 1 to
+  2 LU louder by ear), the release, the return, and a close that thins to
+  the chords and the tune and lands on the tonic chord, ringing out. To
+  hear: tha-vol (corpus 20261009 #18, seed 2728346932, `bars=64,journey=arc`)
+  from 0:32 (the lift) and 1:16 (the close, the landing at 1:23); brum-yei
+  (#17, seed 1151594917, `bars=256,journey=arc`) from 2:20 (the peak at
+  2:38) and 9:00 (the close). In `core/`: `cargo run --release --example
+  dlrender -- --seed 2728346932 --request bars=64,journey=arc --seconds 100
+  --wav tha-vol.wav`; the times are in `docs/LONGFORM.md`, "Pieces to hear".
