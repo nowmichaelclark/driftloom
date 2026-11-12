@@ -1,5 +1,7 @@
 # Session 14: long pieces: themes that return changed, and related keys (102d)
 
+**Changed by the brain after session 12 (2026-11-12):** the wander's hand-over of the tune, which session 12 left off until theme B exists, is turned on here.
+
 **Changed by the brain after session 11 (2026-11-12):** movements of different kinds (Mikey's answer that day): a 3,072-bar piece's 21 movements were all the same shape.
 
 **Changed by brain B1 (2026-11-11):** Fable 5.2 rather than Opus (the second
@@ -31,6 +33,7 @@ The work, one PR (two if the keys are cleaner apart: the themes first): the arc 
 - Related keys: from the loop's mode (the fifth above or below, the relative, the parallel mode where the profile allows it). The bass, the chords, the tune, the tuned kick and anything else that reads the key move together, and only at a section line. A pinned key is the home key; a pinned scale rules out the parallel mode.
 - Movements: in a finite piece that holds several arcs, each arc brings its own B (from the seed and the arc's number), and the last arc, before its close, recalls fragments of earlier arcs' B themes, reached by number (the brief's "Movements": Mikey's 3,072 bars came from Beethoven's Ninth, whose finale looks back). Endless's arcs don't.
 - Movements of different kinds (Mikey, 2026-11-12): today every arc of a piece is the same length and shape, so a 3,072-bar piece is about 21 alike movements. Make them differ in kind, in a repeating cycle drawn per piece so a unit still finds its movement by division (closed form, promise 11): a full arc (today's), a gentle one (a low peak, about 0.6, fewer layers, no build to speak of), a short light one (the small form), and in pieces of four or more movements a wander interlude (the wander's plan for that span, one thing moving). Each kind has its own length, a share of the drawn arc length; the kinds and their shares are lines of data/longform.txt, first picks for Mikey's ears. The first movement and the last are full arcs; the last recalls and alone closes; no two neighbors are the same kind unless both are full. Endless's arcs take the same cycle (no finale). Pieces of one or two arcs are unchanged. Update docs/LONGFORM.md.
+- The wander's theme: session 12 left the wander's hand-over of the tune off until theme B exists (data/longform.txt, [longform wander], theme = 0; LONGFORM.md says 20% of epochs). Once B is made here, turn it on at the plan's 20% and hear it the way session 12 hears its other moves (core/src/generator/heard.rs), so a wander's tune now and then passes to B and comes home.
 
 A variation must not make several loops to compare, and must not walk earlier sections: check the cost. Theme B's tune is another seed's making: spread it across the blocks before its section, as a load is (Generator::step), so no block at the line costs more than the loop's own worst.
 
