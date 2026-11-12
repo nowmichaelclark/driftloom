@@ -90,7 +90,8 @@ epoch and the one before, no further back.
   taken.
 - An epoch never starts on the thing the last one ended on. A layer's rest
   lasts one hold or two (it returns in the next turn, or the one after),
-  and is never an epoch's last turn.
+  and is never an epoch's last turn. A layer whose voice is changed
+  does not rest.
 - The unit after a move is `turning` (the glide's room); the rest of a hold
   is `holding`. A piece starts with everything the loop's own.
 - A finite wander's last two epochs bring the key and the theme home, and

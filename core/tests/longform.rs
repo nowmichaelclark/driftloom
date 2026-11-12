@@ -213,6 +213,7 @@ fn a_wander_moves_one_thing_at_a_time_and_holds() {
                     continue;
                 }
                 assert!(things(s).count_ones() <= 1, "{what}: {} things move at once", things(s).count_ones());
+                assert!(s.state.rest.is_none() || s.state.rest != s.state.voice.map(|v| v.0), "{what}: a layer rests while its voice is changed");
                 if s.closes {
                     continue;
                 }

@@ -1006,17 +1006,25 @@ impl Form {
         };
         let [thin, own] = LONGFORM.density;
         let sign = |r: &mut Rng| if r.f() < 0.5 { -1 } else { 1 };
-        let mut r = draw(Thing::Voice);
         // A thing that takes no turns (asked, or not the loop's) stays the
         // loop's own.
         let has = |thing: Thing| self.turns[..self.turn_count].contains(&thing);
-        let voice = among(self.voicing, &mut r).map(|l| (l, r.f())).filter(|_| self.away(changed::VOICE, e));
+        // The layer whose voice an epoch changes, if it is an away one.
+        let voice_of = |e: u64| {
+            let mut r = stream(self.seed, VALUE_SALT + Thing::Voice as u32, e);
+            among(self.voicing, &mut r).map(|l| (l, r.f())).filter(|_| self.away(changed::VOICE, e))
+        };
+        let voice = voice_of(e);
+        // A layer never rests while its voice is changed: not the layer
+        // this epoch voices, nor the one the epoch before did.
+        let voiced = |v: Option<(Layer, f64)>| v.map_or(0, |(l, _)| 1u8 << l as usize);
+        let resting = self.resting & !voiced(voice) & !voiced(e.checked_sub(1).and_then(voice_of));
         let mut r = draw(Thing::Key);
         let keys = self.related.iter().flatten().count();
         let visit = r.f() < LONGFORM.key;
         let key = self.related.iter().flatten().nth(r.pick_index(keys.max(1))).copied().filter(|_| visit && !homeward && has(Thing::Key)).unwrap_or(self.home);
         let state = State {
-            rest: among(self.resting, &mut draw(Thing::Layers)),
+            rest: among(resting, &mut draw(Thing::Layers)),
             voice,
             warmth: if has(Thing::Warmth) { draw(Thing::Warmth).range(-1.0, 1.0) } else { 0.0 },
             space: if has(Thing::Space) { draw(Thing::Space).range(-1.0, 1.0) } else { 0.0 },
