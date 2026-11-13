@@ -278,8 +278,11 @@ const powerDb = (x, from, to) => {
 // A join is a hole (session 16's yardstick) where, as played, it leaves the
 // mix far under the loop as itself at the same moment: brain B3 measured
 // the two holes it found (a pivot struck at 0, the tune alone over a silent
-// tune) 30 to 58 dB under, a breath 8 to 13 (16 where the loop is sparse),
-// so 20 dB catches holes and passes breaths. Read in 50 ms frames, each the
+// tune) 30 to 58 dB under and a breath 8 to 13, and asked for about 20; read
+// on each join's own window as played, an arc's breath (every layer out,
+// the tails ringing) sits up to 21.8 dB under (2 of 118 over 47 arcs), the
+// holes at 40 and 42, so the line is 25: over every breath, under every
+// hole measured. Read in 50 ms frames, each the
 // piece's power against the loop's (frames where the loop is under -60 dB
 // have nothing to leave silent): a join is a hole where its median frame is
 // HOLE_DB under and the join took it down at least half that again from the
@@ -287,7 +290,7 @@ const powerDb = (x, from, to) => {
 // Where the beat before was that far under already, the quiet is the unit's
 // (vath-sei's return, a voice that dies away where the loop's holds, 40 dB
 // under before its join and in it), not the join's: reported, not held.
-export const HOLE_DB = 20;
+export const HOLE_DB = 25;
 const FRAME = 0.05;
 
 /** The median of a list (NaN for none). */

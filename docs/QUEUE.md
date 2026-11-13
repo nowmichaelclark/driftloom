@@ -468,7 +468,7 @@ from silence. The developments' frequent breaths were heard and kept.
 (session 16, v165): the pivot struck at the landing's velocity, "the tune
 alone" only over a tune that sounds there as the unit plays it (else a
 breath), and the yardstick: `tools/longform.mjs` holds every arc's join,
-as played, from a hole (20 dB under the loop as itself, and made by the
+as played, from a hole (25 dB under the loop as itself, and made by the
 join), and `core/tests/joins.rs` every pivot struck and every tune alone
 sounding.
 
