@@ -365,7 +365,9 @@ if (!flag('--plan')) {
   }
   const share = (key) => arcs.verdicts.filter((v) => v[key]).length / arcs.verdicts.length;
   check('arc played: the loudness rises to the peak and falls, in order (9 in 10)', share('loudRises') >= 0.9, `${(100 * share('loudRises')).toFixed(0)}%: ${arcs.verdicts.filter((v) => !v.loudRises).map((v) => v.seed).join(', ')}`);
-  check('arc played: the brightness rises to the peak and falls, in order (9 in 10)', share('brightRises') >= 0.9, `${(100 * share('brightRises')).toFixed(0)}%: ${arcs.verdicts.filter((v) => !v.brightRises).map((v) => v.seed).join(', ')}`);
+  // The brightness judged on the arc's own job (session 15): the opening and
+  // the close darker than the peak. The order over every role is reported.
+  check('arc played: darker at the opening and the close than at the peak (9 in 10)', share('brightEnds') >= 0.9, `${(100 * share('brightEnds')).toFixed(0)}%: ${arcs.verdicts.filter((v) => !v.brightEnds).map((v) => `${v.seed}@${v.length.slice(5)}`).join(', ')}`);
   // As heard at the app's amount, the loop's own form and breathing in it:
   // reported, not held.
   for (const seed of seeds.slice(0, Math.min(10, n))) {
@@ -422,7 +424,7 @@ if (arcs.pieces) {
   const pct = (f) => `${(100 * v.filter(f).length / v.length).toFixed(0)}%`;
   const med = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   console.log(`  arcs played: ${arcs.pieces} pieces (${['bars=64', 'bars=256', 'bars=1024'].map((l) => `${v.filter((x) => x.length === l).length} at ${l.slice(5)} bars`).join(', ')}), against the loop as itself:`);
-  console.log(`    loudness rises and falls ${pct((x) => x.loudRises)}, brightness ${pct((x) => x.brightRises)}, both ${pct((x) => x.loudRises && x.brightRises)}; the peak over the opening ${Math.max(...v.map((x) => x.over)).toFixed(2)} LU at most (median ${med(v.map((x) => x.over)).toFixed(2)}); the largest step ${Math.max(...v.map((x) => x.step)).toFixed(2)} LU`);
+  console.log(`    loudness rises and falls ${pct((x) => x.loudRises)}; brightness darker at the opening and the close than at the peak ${pct((x) => x.brightEnds)}, in order over every role ${pct((x) => x.brightRises)} (reported); the peak over the opening ${Math.max(...v.map((x) => x.over)).toFixed(2)} LU at most (median ${med(v.map((x) => x.over)).toFixed(2)}); the largest step ${Math.max(...v.map((x) => x.step)).toFixed(2)} LU`);
   console.log(`    the opening / the peak / the close, median: ${['opening', 'peak', 'close'].map((r) => `${med(v.map((x) => x.lift[r])).toFixed(1)} LU ${med(v.map((x) => x.brighter[r])).toFixed(0)} cents`).join(' / ')} (loudness, brightness: the centroid over 250 Hz)`);
   console.log(`    the tonic's chord alone at the end ${pct((x) => x.tonic)}, a ring-out ${pct((x) => x.rings)}`);
   const h = arcs.heard;

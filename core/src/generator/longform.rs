@@ -1050,6 +1050,11 @@ impl Form {
                 _ => i - 1,
             });
             span.changed = difference(&before, &span);
+        }
+        // (The unit after reads what changed from this one as the plan has
+        // it, before a wander's turn names it.)
+        let own = span;
+        if g > 0 {
             self.turned(&mut span, i);
         }
         // The line at its end (session 15): the unit after, by number.
@@ -1060,7 +1065,7 @@ impl Form {
         };
         if let Some(x) = next {
             let mut after = self.unit(x);
-            after.changed = difference(&span, &after);
+            after.changed = difference(&own, &after);
             self.turned(&mut after, x);
             span.join = self.join_of(&span, &after);
         }

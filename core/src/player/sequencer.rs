@@ -230,7 +230,7 @@ impl Loop<'_> {
             let (vel, inst) = self.drum(i, e);
             (vel, inst, e)
         });
-        let rests = self.rests(Layer::Drums);
+        let rests = self.pass.is_some_and(|p| p.out(self.step, Layer::Drums, 0.0));
         own.chain(self.pass.and_then(Pass::ghost).map(move |g| (if rests { 0.0 } else { g.vel }, g.inst.get(), g)))
     }
 
@@ -246,7 +246,7 @@ impl Loop<'_> {
                     f(e.step, self.pass.map_or(e.vel, |p| p.drum(i, e).0));
                 }
                 if let Some(g) = self.pass.and_then(Pass::ghost) {
-                    f(g.step, if self.pass.is_some_and(|p| p.rests(g.step, Layer::Drums)) { 0.0 } else { g.vel });
+                    f(g.step, if self.pass.is_some_and(|p| p.out(g.step, Layer::Drums, 0.0)) { 0.0 } else { g.vel });
                 }
             }
             Layer::Bass => {
@@ -1012,8 +1012,8 @@ impl Sequencer {
                 }
                 let k = key_of(Layer::Texture);
                 // A long piece's plan: resting (its place still counted),
-                // or in another key.
-                if rests {
+                // left out for a join, or in another key.
+                if rests || lp.pass.is_some_and(|p| p.out(stepf, Layer::Texture, e.dur)) {
                     continue;
                 }
                 let mut notes = e.notes;

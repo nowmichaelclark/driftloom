@@ -586,6 +586,11 @@ export function arcVerdict(r) {
   return {
     loud, tilt, lift, brighter, loudOrder, brightOrder, unitOrder,
     loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder), brightOwn,
+    // The arc's own job (session 15): darker at the opening and the close
+    // than at the peak, the roles between apart (a return an octave up, a
+    // lift in another voice, a release in outline read brighter or darker
+    // on purpose since session 14).
+    brightEnds: brighter.peak > brighter.opening && brighter.peak > brighter.close,
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
     jump: r.jump, ownJump: r.ownJump, step: r.step, stepOwn: r.stepOwn, jumps, tonic, rings, last: r.last,

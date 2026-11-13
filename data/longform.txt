@@ -227,9 +227,9 @@ land = 4
 # role changes, twice this).
 step = 0.04
 # A join lasts this many bars before its line, at most this share of its
-# unit (a two-bar phrase's join is half a bar).
+# unit (a four-bar phrase's join is half a bar, an eight-bar section's a bar).
 bars = 1
-share = 0.25
+share = 0.125
 # A breath leaves out this share of a join's length: the last half bar.
 breath = 0.5
 # A fill's hits (the kit's backbeat, or its shimmer where it has none, on

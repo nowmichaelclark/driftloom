@@ -402,7 +402,7 @@ impl Pass {
         if self.heard.arc {
             return (if (m & SILENT) != 0 { 0.0 } else { self.kit_at(step, inst, e.vel) }, inst);
         }
-        (if (m & SILENT) != 0 || self.rests(step, Layer::Drums) { 0.0 } else { e.vel }, inst)
+        (if (m & SILENT) != 0 || self.out(step, Layer::Drums, 0.0) { 0.0 } else { e.vel }, inst)
     }
 
     /// An arc's kit hit `inst` of velocity `vel` at section step `step`
@@ -412,7 +412,7 @@ impl Pass {
     fn kit_at(&self, step: f64, inst: &str, vel: f64) -> f64 {
         let Some(u) = self.heard.unit(step) else { return vel };
         let keeps = u.kit_at(step, Piece::of(inst));
-        if self.rests(step, Layer::Drums) || keeps <= 0.0 { 0.0 } else { vel * keeps }
+        if self.out(step, Layer::Drums, 0.0) || keeps <= 0.0 { 0.0 } else { vel * keeps }
     }
 
     /// The ghost hit this pass adds after the loop's own, if it adds one.
@@ -425,7 +425,15 @@ impl Pass {
     /// out (its channel faded to nothing over the unit before).
     #[must_use]
     pub fn rests(&self, step: f64, layer: Layer) -> bool {
-        self.heard.on && (self.heard.unit(step).is_some_and(|u| u.rests(layer) || u.joins_out(layer, step)) || self.heard.landed(step))
+        self.heard.on && (self.heard.unit(step).is_some_and(|u| u.rests(layer)) || self.heard.landed(step))
+    }
+
+    /// Whether `layer`'s note at section step `step`, `dur` steps long, is
+    /// left out, the plan's rests and its joins both (session 15: a join
+    /// takes out the notes that end by its line).
+    #[must_use]
+    pub fn out(&self, step: f64, layer: Layer, dur: f64) -> bool {
+        self.rests(step, layer) || self.heard.on && self.heard.unit(step).is_some_and(|u| u.joins_out(layer, step, dur))
     }
 
     /// A fill's hit at section step `step` (session 15, the join into a
@@ -469,7 +477,7 @@ impl Pass {
         // (session 14).
         let pedal = self.heard.unit(step).filter(|u| u.pedal != 0 && step >= u.pedal_from).map(|u| f64::from(u.pedal));
         let midi = if self.heard.on { pedal.unwrap_or(midi + self.moved(step, Layer::Bass, midi)) } else { midi };
-        (if (m & SILENT) != 0 || self.rests(step, Layer::Bass) { 0.0 } else { e.vel }, midi)
+        (if (m & SILENT) != 0 || self.out(step, Layer::Bass, e.dur) { 0.0 } else { e.vel }, midi)
     }
 
     /// Chord `i` of the loop, `e`, as this pass plays it: its velocity (0.4
@@ -489,7 +497,7 @@ impl Pass {
         if (m & SOFT) != 0 {
             vel *= 0.4;
         }
-        if (m & SILENT) != 0 || self.rests(step, Layer::Chords) {
+        if (m & SILENT) != 0 || self.out(step, Layer::Chords, e.dur) {
             vel = 0.0;
         }
         (vel, if (m & OPEN) != 0 { e.notes.first().map(|&n| n + 14) } else { None })
@@ -519,7 +527,7 @@ impl Pass {
         if !self.heard.on {
             return (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi);
         }
-        let out = (m & SILENT) != 0 || self.rests(step, Layer::Melody) || !self.heard.sounds(i, step);
+        let out = (m & SILENT) != 0 || self.out(step, Layer::Melody, e.dur) || !self.heard.sounds(i, step);
         (if out { 0.0 } else { e.vel }, midi)
     }
 
@@ -529,7 +537,7 @@ impl Pass {
     /// marks are the loop's tune's, not this one's.
     #[must_use]
     pub fn second_at(&self, step: f64, i: usize, e: &MelodyEvent) -> (f64, f64) {
-        let out = self.rests(step, Layer::Melody) || !self.heard.second_sounds(i, step);
+        let out = self.out(step, Layer::Melody, e.dur) || !self.heard.second_sounds(i, step);
         (if out { 0.0 } else { e.vel }, e.midi)
     }
 

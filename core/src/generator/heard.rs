@@ -312,12 +312,14 @@ impl Unit {
         self.cut[layer as usize] == [1.0, 1.0]
     }
 
-    /// Whether `layer`'s notes are left out at `step` for the join at the
-    /// unit's end (session 15): the floor out, the tune alone, a breath,
-    /// the chords under a pivot.
+    /// Whether `layer`'s note at `step`, `dur` steps long, is left out for
+    /// the join at the unit's end (session 15): the floor out, the tune
+    /// alone, a breath, the chords under a pivot.
     #[must_use]
-    pub fn joins_out(&self, layer: Layer, step: f64) -> bool {
-        self.out & (1 << layer as usize) != 0 && step >= self.join_from && step < self.to
+    pub fn joins_out(&self, layer: Layer, step: f64, dur: f64) -> bool {
+        // (A note that would ring across the line plays: the line's next
+        // unit is not starved of what was held into it.)
+        self.out & (1 << layer as usize) != 0 && step >= self.join_from && step < self.to && step + dur <= self.to + 0.5
     }
 
     /// The fill's hit at `step`, if one falls there: its instrument and its
@@ -907,6 +909,36 @@ impl Heard {
                 } else {
                     all
                 };
+            }
+            // A join takes out only a layer heard in the unit before it (two
+            // notes struck there at least): a sparse loop's one bass note in
+            // its last bar is the unit's bass, not a floor to take out
+            // (session 15 measured such a unit 6 LU under the loop).
+            if u.out != 0 {
+                let heard = |layer: Layer, starts: &mut dyn Iterator<Item = f64>| {
+                    let c = cycle(layer);
+                    starts.filter(|&step| falls(step, c, u.from, u.join_from)).take(2).count() >= 2
+                };
+                let mut keep = 0u8;
+                for layer in LAYERS {
+                    if u.out & bit(layer) == 0 {
+                        continue;
+                    }
+                    let ok = match layer {
+                        Layer::Drums => heard(layer, &mut base.drums.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+                        Layer::Bass => heard(layer, &mut base.bass.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+                        Layer::Chords => heard(layer, &mut base.chords.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+                        Layer::Melody => heard(layer, &mut base.melody.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+                        Layer::Texture => heard(layer, &mut base.texture.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+                    };
+                    if ok || kind == Join::Pivot && layer == Layer::Chords {
+                        keep |= bit(layer);
+                    }
+                }
+                u.out = keep;
+                if keep == 0 && kind != Join::Pivot {
+                    kind = Join::Glide;
+                }
             }
             u.join = kind;
         }
