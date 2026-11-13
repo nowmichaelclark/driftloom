@@ -547,7 +547,7 @@ impl Pass {
     /// The pass's canonical text: the whole pattern it plays, less its spec
     /// (`render`'s, with the pass's tracks and floor drop), and the kick it
     /// plays in a loop with a tuned kick.
-    pub fn write<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan, base: &Render) {
+    pub fn write<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan, base: &Render, second: Option<&super::melody::Melody>) {
         w.obj();
         w.key("choices");
         base.write_choices(w);
@@ -612,6 +612,17 @@ impl Pass {
             render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
         }
         w.end_list();
+        // The tune the section plays beside the loop's own (session 14),
+        // as written in the home key: the goldens hold its making too.
+        if let Some(second) = second {
+            w.key("second");
+            w.list();
+            for (i, e) in second.iter().enumerate() {
+                let (vel, midi) = self.second_at(e.step, i, e);
+                render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
+            }
+            w.end_list();
+        }
         w.key("texture");
         base.write_layer(w, Layer::Texture);
         w.end_obj();

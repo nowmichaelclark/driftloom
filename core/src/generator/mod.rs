@@ -621,7 +621,7 @@ impl Generator {
     /// `pass`, of this loop, as the player plays it (`Player::pass`).
     pub fn write_pass<S: canon::Sink>(&self, pass: &wander::Pass, sink: &mut S) {
         let mut w = canon::Writer::new(sink);
-        pass.write(&mut w, &plan::Cx::new(&self.spec), &self.plan, &self.render);
+        pass.write(&mut w, &plan::Cx::new(&self.spec), &self.plan, &self.render, self.second(pass.heard.second));
     }
 
     /// Section `n`'s hash at the wander's `amount` (`section`, then FNV-1a
@@ -631,7 +631,7 @@ impl Generator {
         self.section(n, amount);
         let mut h = canon::Fnv::new();
         let mut w = canon::Writer::new(&mut h);
-        self.pass.write(&mut w, &plan::Cx::new(&self.spec), &self.plan, &self.render);
+        self.pass.write(&mut w, &plan::Cx::new(&self.spec), &self.plan, &self.render, self.second(self.pass.heard.second));
         h.0
     }
 
@@ -651,7 +651,7 @@ impl Generator {
             Part::Meta => self.render.write_meta(&mut w, &cx, &self.plan),
             Part::Choices => self.render.write_choices(&mut w),
             Part::Load => self.settings.write(&mut w),
-            Part::Pass(_) => self.pass.write(&mut w, &cx, &self.plan, &self.render),
+            Part::Pass(_) => self.pass.write(&mut w, &cx, &self.plan, &self.render, self.second(self.pass.heard.second)),
         }
     }
 
