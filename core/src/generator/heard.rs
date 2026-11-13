@@ -1151,7 +1151,10 @@ impl Lift {
                     }
                 }
             }
-            Variation::Outline => u.thin = [js::max(u.thin[1], LONGFORM.outline); 2],
+            // (An opening and a close are already as thin as their energy
+            // makes them, session 13: the outline's share is the release's,
+            // whose energy alone leaves the tune whole.)
+            Variation::Outline if span.role == Role::Release => u.thin = [js::max(u.thin[1], LONGFORM.outline); 2],
             _ => {}
         }
         ways.settle(u);

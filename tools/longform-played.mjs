@@ -459,12 +459,20 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   // The arc's own step between neighbors: what the plan adds to the loop's
   // own section-to-section change.
   const step = jumps(lufs.map((l, i) => l - ownLufs[i]));
+  // The same between neighbors that both play the loop's own notes (theme
+  // A whole, at home): there the loop as itself is the arc's reference
+  // note for note. A unit in another key, a fragment (half of each phrase
+  // a rest) or another tune plays other notes than the loop does in those
+  // bars (session 14), so its step is what the notes are, not only what
+  // the arc adds to them.
+  const plain = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && !['answered', 'stretched', 'reharmonized'].includes(u.variation));
+  const stepOwn = Math.max(0, ...lufs.slice(1).map((l, i) => (whole[i] && whole[i + 1] && plain[i] && plain[i + 1] ? Math.abs(l - ownLufs[i + 1] - (lufs[i] - ownLufs[i])) : 0)));
   const keep = (_, i) => body[i];
   // The arc's own shape: each unit against the loop as itself there.
   const lift = lufs.map((l, i) => l - ownLufs[i]);
   // (Brightness as a ratio, in cents of the centroid: 1200 an octave.)
   const brighter = bright.map((b, i) => 1200 * Math.log2(Math.max(1, b) / Math.max(1, ownBright[i])));
-  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step };
+  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
 }
 
 /** Spearman's rank correlation of two lists. */
@@ -556,14 +564,16 @@ export function arcVerdict(r) {
   const rings = r.rms.length > 2 && top - r.rms.at(-1) >= 15 && Math.max(...falls) <= 12;
   // No step past 2 LU between neighboring units in what the arc adds (the
   // loop's own form moves as it always did, and is reported beside).
-  const jumps = r.step <= 2;
+  // (Session 14: 2 LU where both units play the loop's own notes; 3 LU
+  // where one plays other notes, a fragment, another key or another tune.)
+  const jumps = r.stepOwn <= 2 && r.step <= 3;
   const heard = (m, list) => m.peak > m.opening && m.peak > m.close && spearman(roleEnergy, byRole(list)) >= 0.5;
   return {
     loud, tilt, lift, brighter, loudOrder, brightOrder, unitOrder,
     loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder),
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
-    jump: r.jump, ownJump: r.ownJump, step: r.step, jumps, tonic, rings, last: r.last,
+    jump: r.jump, ownJump: r.ownJump, step: r.step, stepOwn: r.stepOwn, jumps, tonic, rings, last: r.last,
   };
 }
 

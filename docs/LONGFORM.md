@@ -167,7 +167,7 @@ stands in for the others.
 | stretched | each phrase's first half at half speed, the chords held longer |
 | reharmonized | the bass, the chords and the texture in the relative key, the tune where it was |
 | answered | each phrase's first half kept, its second the answer's: the loop's own figure through `answerFigure`, made as a second tune |
-| outline | at least half the tune's notes left out, the bar lines' kept longest |
+| outline | in a release, at least half the tune's notes left out, the bar lines' kept longest (an opening and a close are as thin as their energy makes them) |
 | the return prepared (half the movements) | the bass on the home key's fifth for the release's last phrase |
 
 A theme stated (B at the second, A at the return) comes in whole on its

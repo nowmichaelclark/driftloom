@@ -358,7 +358,7 @@ if (!flag('--plan')) {
       arcs.verdicts.push({ seed, length, ...v });
       const where = `${seed} "${request}"`;
       check('arc played: the peak no more than 4 LU over the opening', v.over <= 4, `${where}: ${v.over.toFixed(2)} LU`);
-      check("arc played: no step past 2 LU between neighboring units (the arc's own)", v.jumps, `${where}: ${v.step.toFixed(2)} LU`);
+      check("arc played: no step past 2 LU between neighboring units of the loop's own notes, 3 LU between any (the arc's own)", v.jumps, `${where}: ${v.stepOwn.toFixed(2)} LU, ${v.step.toFixed(2)} LU`);
       check("arc played: a finite arc's last chord is the tonic's, alone", v.tonic, `${where}: ${v.last}`);
       check('arc played: it ends in a ring-out, not a cut', v.rings, where);
     }

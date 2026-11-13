@@ -103,8 +103,9 @@ prepare = 0.5
 # phrase theme A's fragment, then the other theme's in A's rests (one
 # voice), in place of a unit of one and a unit of the other.
 call = 0.35
-# A theme thinned to its outline (the variation) leaves out at least this
-# share of its notes, the bar lines' kept longest.
+# A theme thinned to its outline in a release leaves out at least this
+# share of its notes, the bar lines' kept longest (an opening and a close
+# are as thin as their energy makes them: [longform energy] thin).
 outline = 0.5
 
 # The wander: holds of a drawn length, one thing moving at each hold's end.
