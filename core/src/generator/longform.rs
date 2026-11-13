@@ -1055,25 +1055,20 @@ impl Form {
                 _ => i - 1,
             });
             span.changed = difference(&before, &span);
-        }
-        // (The unit after reads what changed from this one as the plan has
-        // it, before a wander's turn names it.)
-        let own = span;
-        if g > 0 {
             self.turned(&mut span, i);
         }
-        // The line at its end (session 15): the unit after, by number.
-        // (A round's last closes, and lands: no join.)
-        let next = match self.round {
-            Some(r) if i + 1 >= r.units => None,
-            _ => i.checked_add(1),
-        };
-        if let Some(x) = next {
-            let mut after = self.unit(x);
-            after.changed = difference(&own, &after);
-            self.turned(&mut after, x);
-            span.join = self.join_of(&span, &after);
-        }
+        span
+    }
+
+    /// Unit `phrase` of section `n` (`at`) with its join toward the unit
+    /// after it (`Span::join`, session 15): what the map writes. `at` leaves
+    /// it none, so a unit costs what it did; `heard` reads the join from
+    /// the units it has at hand (`join_of`).
+    #[must_use]
+    pub fn joined(&self, n: u64, phrase: u64) -> Span {
+        let mut span = self.at(n, phrase);
+        let (bn, bp) = self.after(n, phrase);
+        span.join = self.join_of(&span, &self.at(bn, bp));
         span
     }
 

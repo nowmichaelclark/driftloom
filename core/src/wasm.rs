@@ -491,7 +491,7 @@ mod generator {
                 w.list();
                 w.num(n as f64);
                 w.num(p as f64);
-                form.at(n, p).write(&mut w);
+                form.joined(n, p).write(&mut w);
                 w.end_list();
             }
         }

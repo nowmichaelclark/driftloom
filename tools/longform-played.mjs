@@ -166,7 +166,22 @@ export function playedChecks(seed, request, seconds) {
   const seam = (n) => form.sections && n % form.sections !== n && (n % form.sections) * sectionSeconds <= GLIDE + form.unitSeconds + 0.01;
   // A layer with a cycle of its own plays other notes each section: read
   // by its gain alone (it differs in most sections, the plan's or not).
-  const differs = CH.map((l, i) => ns.slice(4, -1).filter((n) => secs.get(n - 1) && moved(l, secs.get(n - 1).layers[i], secs.get(n).layers[i])).length);
+  // A join's last bar (session 15: a breath, a pivot's chord and its bass,
+  // the floor out) is the line's, not a move: the steps of either
+  // section's joins are left out of both before they are compared.
+  const sectionSteps = secs.get(ns[1])?.steps ?? 0;
+  const barSteps = sectionSteps / form.sectionBars;
+  const tails = (n) => units.filter((u) => u.section === n && !['none', 'glide', 'prepared'].includes(u.join)).map((u) => {
+    const end = Math.round((u.phrase + 1) * unitSteps);
+    const len = Math.max(1, Math.floor(Math.min(barSteps, u.bars * barSteps / 8)));
+    return [end - (u.join === 'breath' ? Math.max(1, Math.floor(len / 2)) : len), end];
+  });
+  const strip = (notes, cut) => notes.filter((x) => !cut.some(([f, t]) => x.step >= f && x.step < t));
+  const pair = (n, i) => {
+    const cut = [...tails(n - 1), ...tails(n)];
+    return [strip(secs.get(n - 1).layers[i], cut), strip(secs.get(n).layers[i], cut)];
+  };
+  const differs = CH.map((l, i) => ns.slice(4, -1).filter((n) => secs.get(n - 1) && moved(l, ...pair(n, i))).length);
   const cycling = CH.map((_, i) => differs[i] > 0.4 * ns.length);
   for (const n of ns.slice(4, -1)) {
     const a = secs.get(n - 1), b = secs.get(n);
@@ -174,12 +189,13 @@ export function playedChecks(seed, request, seconds) {
     const end = secs.get(n + 1)?.start ?? Infinity;
     const things = new Map();
     CH.forEach((l, i) => {
-      let m = !cycling[i] && moved(l, a.layers[i], b.layers[i]);
+      const [la, lb] = pair(n, i);
+      let m = !cycling[i] && moved(l, la, lb);
       // The tune handed to the second theme, or home again (session 14):
       // other notes, more or fewer, or none (a theme that rests), on the
       // move's line; a move inside a section is heard in the next too.
       if (m && l === 'melody' && moves.some((x) => x.thing === 'theme' && (x.section === n || (x.section === n - 1 && x.phrase > 0)))) m = 'theme';
-      if (m) things.set(m, Math.min(things.get(m) ?? Infinity, firstDiff(a.layers[i], b.layers[i])));
+      if (m) things.set(m, Math.min(things.get(m) ?? Infinity, firstDiff(la, lb)));
     });
     for (const p of params) {
       const t = which(p.id);

@@ -50,7 +50,7 @@ fn units(form: &Form, count: u64) -> Vec<(u64, u64, Span, Span)> {
     for n in 0..count {
         for p in 0..form.units_in(n) {
             let (bn, bp) = form.after(n, p);
-            out.push((n, p, form.at(n, p), form.at(bn, bp)));
+            out.push((n, p, form.joined(n, p), form.at(bn, bp)));
         }
     }
     out
@@ -133,7 +133,7 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                 for n in 0..count.min(24) {
                     let pass = g.section(n, 0.0);
                     for (p, u) in pass.heard.units().iter().enumerate() {
-                        let s = form.at(n, p as u64);
+                        let s = form.joined(n, p as u64);
                         heard_kinds[u.join as usize] += 1;
                         let what = format!("seed {seed} {text} section {n}.{p}");
                         // What the plan asked, or the next of its kind the

@@ -280,7 +280,7 @@ fn map(args: &[String]) -> Result<(), String> {
         for n in from..from.saturating_add(count) {
             let m = sections.map_or(n, |all| n % all);
             for p in 0..form.units_in(n) {
-                let s = form.at(n, p);
+                let s = form.joined(n, p);
                 if s.journey == Journey::Arc && s.role == longform::Role::Return && s.at > 0 && last == Some((s.part, false)) {
                     println!("{:>64}the return: A {}{}", "", s.variation.name(), if form.at(n, p).changed & changed::KEY != 0 { ", the key home" } else { "" });
                     last = Some((s.part, true));
@@ -310,7 +310,7 @@ fn map(args: &[String]) -> Result<(), String> {
         let before = round as f64 * piece.length().unwrap_or(0.0) + m as f64 * spec.bars;
         let units = form.units_in(n);
         for p in 0..units {
-            let s = form.at(n, p);
+            let s = form.joined(n, p);
             let label = if units > 1 { format!("{n}.{p}") } else { n.to_string() };
             let theme = match s.theme {
                 Theme::Rest => "-".to_string(),

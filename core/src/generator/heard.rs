@@ -661,14 +661,15 @@ impl Heard {
         let count = (form.units_in(n) as usize).min(UNITS_MAX);
         // A glide lasts the data's seconds, over as many units as that is.
         let glide = js::max(1.0, js::ceil(LONGFORM.glide / form.unit_seconds)) as u64;
-        let mut from = form.before(n, 0).map(|(b, p)| ways.glided(form, b, p, glide));
+        let mut from = form.before(n, 0).map(|(b, p)| ways.glided(form, b, p, glide).0);
         let mut at = 0.0;
+        let mut prev: Option<Span> = None;
         for p in 0..count {
-            let end = ways.glided(form, n, p as u64, glide);
+            let (end, span) = ways.glided(form, n, p as u64, glide);
             // Every unit starts from the end of the one before (a round's
             // first from the close before it); the piece's first as its own.
             let start = from.unwrap_or(end);
-            let steps = form.at(n, p as u64).bars * spb;
+            let steps = span.bars * spb;
             let u = &mut self.units[p];
             *u = end;
             u.from = at;
@@ -682,9 +683,14 @@ impl Heard {
             u.thin[0] = start.thin[1];
             at = u.to;
             from = Some(end);
+            // The line before it, from the two units at hand.
+            if let Some(a) = prev {
+                self.join_at(form, cx, base, second, &ways, p - 1, &a, &span);
+            }
+            prev = Some(span);
         }
         self.count = count;
-        self.joins(form, cx, base, second, &ways, n);
+        self.last_join(form, cx, base, second, &ways, n, prev);
     }
 
     /// Hear section `n` of an arc (session 13): each unit's energy, as
@@ -712,14 +718,15 @@ impl Heard {
         // under its neighbors in a tune-led loop: session 14 measured.)
         let has = self.second != Tune::NONE && second.is_some_and(|m| m.iter().any(|e| e.vel != 0.0));
         let mut from = form.before(n, 0).map(|(b, p)| {
-            let span = smoothed(form, b, p);
+            let span = smoothed(form, b, p).0;
             let mut end = lift.end(&ways, &span);
             lift.themed(form, &ways, &span, has, &mut end);
             end
         });
         let mut at = 0.0;
+        let mut prev: Option<Span> = None;
         for p in 0..count {
-            let span = smoothed(form, n, p as u64);
+            let (span, own) = smoothed(form, n, p as u64);
             let mut end = lift.end(&ways, &span);
             lift.themed(form, &ways, &span, has, &mut end);
             let start = from.unwrap_or(end);
@@ -760,9 +767,17 @@ impl Heard {
             // (What a line changes, a tune, a key, a voice, is this unit's
             // alone: the next starts from its levels only.)
             from = Some(end);
+            // The line before it, from the two units at hand, by the plan's
+            // own energies.
+            let mut raw = span;
+            raw.energy = own;
+            if let Some(a) = prev {
+                self.join_at(form, cx, base, second, &ways, p - 1, &a, &raw);
+            }
+            prev = Some(raw);
         }
         self.count = count;
-        self.joins(form, cx, base, second, &ways, n);
+        self.last_join(form, cx, base, second, &ways, n, prev);
         if let Some(to_end) = form.to_end(n) {
             self.land(form, cx, base, to_end * spb, at);
         }
@@ -776,22 +791,34 @@ impl Heard {
     /// glide, the tune alone where the tune is silent there a breath, a
     /// pivot with no chords the floor out. Nothing is made but a fill's few
     /// hits and the pivot's chord.
-    fn joins(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, n: u64) {
-        for p in 0..self.count {
-            let a = form.at(n, p as u64);
-            self.units[p].join = a.join;
-            if matches!(a.join, Join::None | Join::Glide | Join::Prepared) {
-                continue;
-            }
-            let (bn, bp) = form.after(n, p as u64);
-            let b = form.at(bn, bp);
-            self.join_unit(form, cx, base, second, ways, p, &a, &b);
+    #[allow(clippy::too_many_arguments)] // `join_unit`'s, and the two units
+    fn join_at(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, p: usize, a: &Span, b: &Span) {
+        let join = form.join_of(a, b);
+        if let Some(u) = self.units.get_mut(p) {
+            u.join = join;
+        }
+        if !matches!(join, Join::None | Join::Glide | Join::Prepared) {
+            self.join_unit(form, cx, base, second, ways, p, a, b, join);
         }
     }
 
-    /// Unit `p`'s join (`joins`), unit `a` of the plan meeting `b` after it.
+    /// The last unit's join (`join_at`), toward the next section's first:
+    /// the one unit read beyond the section.
+    #[allow(clippy::too_many_arguments)] // `join_at`'s
+    fn last_join(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, n: u64, last: Option<Span>) {
+        let Some(a) = last else { return };
+        if a.closes {
+            return;
+        }
+        let (bn, bp) = form.after(n, (self.count as u64).saturating_sub(1));
+        let b = form.at(bn, bp);
+        self.join_at(form, cx, base, second, ways, self.count - 1, &a, &b);
+    }
+
+    /// Unit `p`'s join (`join_at`), `join`, unit `a` of the plan meeting `b`
+    /// after it.
     #[allow(clippy::too_many_lines, clippy::too_many_arguments)] // a join's kinds, each a few lines
-    fn join_unit(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, p: usize, a: &Span, b: &Span) {
+    fn join_unit(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, p: usize, a: &Span, b: &Span, join: Join) {
         let spb = cx.spb;
         let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
         let bit = |l: Layer| 1u8 << l as usize;
@@ -814,9 +841,9 @@ impl Heard {
         let chord = base.chords.iter().enumerate().find(|(_, e)| !e.notes.is_empty()).map(|(i, e)| (i, e.vel));
         {
             let Some(u) = self.units.get_mut(p) else { return };
-            u.join = a.join;
+            u.join = join;
             let len = js::max(1.0, js::floor(js::min(JOINS.bars * spb, JOINS.share * (u.to - u.from))));
-            let mut kind = a.join;
+            let mut kind = join;
             if kind == Join::Fill {
                 let pick = kit[0].or(kit[1]);
                 match pick {
@@ -1077,7 +1104,7 @@ impl Heard {
                 let (into, join) = form.join_between(&before, &span);
                 self.units[p - 1].join = join;
                 if !matches!(join, Join::None | Join::Glide | Join::Prepared) {
-                    self.join_unit(form, cx, base, second, &ways, p - 1, &before, &into);
+                    self.join_unit(form, cx, base, second, &ways, p - 1, &before, &into, join);
                 }
             }
         }
@@ -1385,8 +1412,9 @@ impl Default for Heard {
 /// the one before), never across a round's end (a finite piece's close
 /// reaches its own low, and the round after starts at its opening). Three
 /// units read, by number.
-fn smoothed(form: &Form, n: u64, phrase: u64) -> Span {
+fn smoothed(form: &Form, n: u64, phrase: u64) -> (Span, f64) {
     let mut span = form.at(n, phrase);
+    let own = span.energy;
     let last = phrase + 1 >= form.units_in(n);
     let before = if phrase == 0 && form.comes_round(n) { None } else { form.before(n, phrase) };
     let after = if !last {
@@ -1398,7 +1426,7 @@ fn smoothed(form: &Form, n: u64, phrase: u64) -> Span {
     };
     let energy = |x: Option<(u64, u64)>| x.map_or(span.energy, |(b, p)| form.at(b, p).energy);
     span.energy = 0.25 * energy(before) + 0.5 * span.energy + 0.25 * energy(after);
-    span
+    (span, own)
 }
 
 /// A rank in [0, 1) for tune note `i` of the loop of `seed`.
@@ -1916,26 +1944,26 @@ impl Ways {
         }
     }
 
-    /// What unit `phrase` of section `n` ends as, its glides under way: in
+    /// What unit `phrase` of section `n` ends as (and the unit, as the plan
+    /// has it), its glides under way: in
     /// the first `glide` units of a hold, the gliding things (the levels,
     /// the tone, the tune's density) are that share of the way from where
     /// the hold before left them; the rest (a voice, a register, a length,
     /// a key) are the hold's from its first step. A close keeps its own.
-    fn glided(&self, form: &Form, n: u64, phrase: u64, glide: u64) -> Unit {
-        let full = self.end(form, n, phrase);
-        let span = form.at(n, phrase);
+    fn glided(&self, form: &Form, n: u64, phrase: u64, glide: u64) -> (Unit, Span) {
+        let (full, span) = self.end(form, n, phrase);
         if span.at + 1 >= glide || form.close_place(n, phrase).is_some() {
-            return full;
+            return (full, span);
         }
         // The unit before the hold's first: where the glide starts.
         let mut back = (n, phrase);
         for _ in 0..=span.at {
             match form.before(back.0, back.1) {
                 Some(b) => back = b,
-                None => return full,
+                None => return (full, span),
             }
         }
-        let was = self.end(form, back.0, back.1);
+        let (was, _) = self.end(form, back.0, back.1);
         let t = (span.at + 1) as f64 / glide as f64;
         let mut u = full;
         let mix = |a: f64, b: f64| a + (b - a) * t;
@@ -1946,13 +1974,14 @@ impl Ways {
             *x = [mix(w[1], x[1]); 2];
         }
         u.thin = [mix(was.thin[1], u.thin[1]); 2];
-        u
+        (u, span)
     }
 
     /// What unit `phrase` of section `n` ends as: the plan's state there,
     /// heard: each gliding thing at its end, in both of its pair (`hear`
-    /// sets the start from the unit before).
-    fn end(&self, form: &Form, n: u64, phrase: u64) -> Unit {
+    /// sets the start from the unit before); and the unit, as the plan has
+    /// it.
+    fn end(&self, form: &Form, n: u64, phrase: u64) -> (Unit, Span) {
         let span: Span = form.at(n, phrase);
         let s = span.state;
         let mut u = Unit::EMPTY;
@@ -1980,7 +2009,7 @@ impl Ways {
         if span.theme == Theme::B {
             u.tune = [tune::SECOND; 2];
         }
-        u
+        (u, span)
     }
 }
 
