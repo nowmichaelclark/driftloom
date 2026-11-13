@@ -19,7 +19,7 @@
 //!     length is printed straight from its number
 //! cargo run --release --example dlgen -- --section-cost SEED [REQUEST]
 //!     what a section costs to make as the player makes it (its pass drawn
-//!     and its plan heard, queue item 102b), timed at sections 1, 10^4 and
+//!     and its plan heard, queue item 102b), timed at sections 1, 1,000 and
 //!     10^9: the least of many makings each, in microseconds
 //! ```
 //!
@@ -28,7 +28,7 @@
 use std::fmt::Write as _;
 use std::process::ExitCode;
 
-use dlcore::generator::longform::{self, Theme, Variation, changed};
+use dlcore::generator::longform::{self, Join, Theme, Variation, changed};
 use dlcore::generator::piece::{self, Piece};
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::theory::SCALES;
@@ -53,7 +53,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// `--section-cost`: section 1, 10^4 and 10^9 made again and again
+/// `--section-cost`: section 1, 1,000 and 10^9 made again and again
 /// (`Generator::section`, the pass and its plan heard, at the app's amount),
 /// the least time of each kept.
 fn section_cost(args: &[String]) -> Result<(), String> {
@@ -62,7 +62,7 @@ fn section_cost(args: &[String]) -> Result<(), String> {
     let mut generator = Box::new(generator::Generator::new());
     generator.load_with(seed, &asked);
     let mut line = format!("seed={seed} request={}", args.get(1).map_or("-", String::as_str));
-    for n in [1u64, 10_000, 1_000_000_000] {
+    for n in [1u64, 1_000, 1_000_000_000] {
         let mut best = f64::INFINITY;
         for _ in 0..50 {
             let t0 = std::time::Instant::now();
@@ -280,7 +280,7 @@ fn map(args: &[String]) -> Result<(), String> {
         for n in from..from.saturating_add(count) {
             let m = sections.map_or(n, |all| n % all);
             for p in 0..form.units_in(n) {
-                let s = form.at(n, p);
+                let s = form.joined(n, p);
                 if s.journey == Journey::Arc && s.role == longform::Role::Return && s.at > 0 && last == Some((s.part, false)) {
                     println!("{:>64}the return: A {}{}", "", s.variation.name(), if form.at(n, p).changed & changed::KEY != 0 { ", the key home" } else { "" });
                     last = Some((s.part, true));
@@ -310,7 +310,7 @@ fn map(args: &[String]) -> Result<(), String> {
         let before = round as f64 * piece.length().unwrap_or(0.0) + m as f64 * spec.bars;
         let units = form.units_in(n);
         for p in 0..units {
-            let s = form.at(n, p);
+            let s = form.joined(n, p);
             let label = if units > 1 { format!("{n}.{p}") } else { n.to_string() };
             let theme = match s.theme {
                 Theme::Rest => "-".to_string(),
@@ -336,6 +336,10 @@ fn map(args: &[String]) -> Result<(), String> {
             }
             if s.prepares {
                 state.push("the bass holds the home fifth".to_string());
+            }
+            // How it meets the unit after it (session 15).
+            if !matches!(s.join, Join::None | Join::Glide | Join::Prepared) {
+                state.push(format!("then {}", s.join.name()));
             }
             if s.journey == Journey::Arc && form.cycle().len() > 1 {
                 state.push(s.kind.name().to_string());

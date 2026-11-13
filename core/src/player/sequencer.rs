@@ -230,7 +230,7 @@ impl Loop<'_> {
             let (vel, inst) = self.drum(i, e);
             (vel, inst, e)
         });
-        let rests = self.rests(Layer::Drums);
+        let rests = self.pass.is_some_and(|p| p.out(self.step, Layer::Drums, 0.0));
         own.chain(self.pass.and_then(Pass::ghost).map(move |g| (if rests { 0.0 } else { g.vel }, g.inst.get(), g)))
     }
 
@@ -246,7 +246,7 @@ impl Loop<'_> {
                     f(e.step, self.pass.map_or(e.vel, |p| p.drum(i, e).0));
                 }
                 if let Some(g) = self.pass.and_then(Pass::ghost) {
-                    f(g.step, if self.pass.is_some_and(|p| p.rests(g.step, Layer::Drums)) { 0.0 } else { g.vel });
+                    f(g.step, if self.pass.is_some_and(|p| p.out(g.step, Layer::Drums, 0.0)) { 0.0 } else { g.vel });
                 }
             }
             Layer::Bass => {
@@ -576,6 +576,39 @@ impl Sequencer {
         synth.budget.set_firm(false);
     }
 
+    /// A pivot (session 15, `heard::Unit::pivot`): the chord both keys
+    /// share, in the chords' voice as the plan has it there, held across
+    /// the line. A muted layer stays silent.
+    #[allow(clippy::too_many_arguments)] // the step's own place and times
+    fn pivot<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, u: &heard::Unit, mutes: [bool; 5], t: f64, sd: f64, key: &mut impl FnMut(Layer) -> Key) {
+        if mutes[Layer::Chords as usize] {
+            return;
+        }
+        let notes = &u.pivot[..u.pivot_count.min(3)];
+        let dur = u.pivot_hold * sd;
+        let e = lp.base.chords.get(u.pivot_from);
+        let voice = lp.voice(Layer::Chords, e.map_or("", |e| e.voice.get()));
+        let opts = Opts { vowel: e.and_then(|e| e.vowel), detune: e.and_then(|e| e.detune), ..Opts::default() };
+        if voice == "pad" {
+            let mut chord = crate::generator::plan::Notes::new();
+            for &n in notes {
+                chord.push(n);
+            }
+            let k = key(Layer::Chords);
+            synth.budget.begin(Some(Layer::Chords), k);
+            synth.pad(host, k, &chord, t, dur, u.pivot_vel * CHORD_SPREAD, CHORDS);
+            synth.budget.end();
+        } else if !voice.is_empty() {
+            let spread = CHORD_SPREAD / math::sqrt(js::num(notes.len()));
+            for (i, &n) in notes.iter().enumerate() {
+                let k = key(Layer::Chords);
+                synth.budget.begin(Some(Layer::Chords), k);
+                synth.voice(host, k, voice, f64::from(n), t + js::num(i) * 0.011, dur, u.pivot_vel * spread, CHORDS, &opts);
+                synth.budget.end();
+            }
+        }
+    }
+
     /// A new pass begins (`_advance`'s wrap, and the load's first): the
     /// tuned kick it plays, its own on a pass as composed, else the swap a
     /// wandering pass may draw (`_kickOn`, `kickKindOf`, by the pass's
@@ -777,6 +810,21 @@ impl Sequencer {
                     Synth::duck(host, t + micro, pump * vel);
                 }
             }
+            // A fill into a long piece's line (session 15): the kit's own
+            // instrument on the steps of the last beat where the loop has
+            // no hit of it, rising; where the kit sits out, so does it.
+            if let Some((inst, vel)) = lp.pass.and_then(|p| p.fill_at(stepf))
+                && !lp.base.drums.iter().any(|e| e.step == s_at && e.inst == inst && truthy(e.vel))
+                && !late.is_some_and(|l| abs < l.drums)
+            {
+                let vel = vel * late.map_or(1.0, |l| l.rise(abs - l.drums, sd));
+                if vel > 0.0 {
+                    let key = key_of(Layer::Drums);
+                    synth.budget.begin(Some(Layer::Drums), key);
+                    synth.drum(host, key, inst, t, vel, None);
+                    synth.budget.end();
+                }
+            }
         }
         if !mutes[Layer::Bass as usize] {
             let s_at = at(Layer::Bass);
@@ -950,6 +998,11 @@ impl Sequencer {
         if let Some(l) = lp.pass.map(|p| &p.heard.landing).filter(|l| l.on && l.strikes && l.at == stepf) {
             Self::land(host, synth, lp, l, mutes, t, sd, &mut key_of);
         }
+        // A long piece's key changes across a line (session 15): a chord
+        // both keys share, held across it.
+        if let Some(u) = lp.pass.and_then(|p| p.pivot_at(stepf)) {
+            Self::pivot(host, synth, lp, u, mutes, t, sd, &mut key_of);
+        }
         if !mutes[Layer::Texture as usize] {
             let s_at = at(Layer::Texture);
             let rests = lp.rests(Layer::Texture);
@@ -959,8 +1012,8 @@ impl Sequencer {
                 }
                 let k = key_of(Layer::Texture);
                 // A long piece's plan: resting (its place still counted),
-                // or in another key.
-                if rests {
+                // left out for a join, or in another key.
+                if rests || lp.pass.is_some_and(|p| p.out(stepf, Layer::Texture, e.dur)) {
                     continue;
                 }
                 let mut notes = e.notes;

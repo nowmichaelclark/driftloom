@@ -389,6 +389,26 @@ pub struct Longform {
     pub glide: f64,
 }
 
+/// How a long piece's units meet (`[longform joins]`, session 15): how
+/// long a join lasts and what it plays, as `longform` and `heard` read it.
+#[derive(Clone, Copy, Debug)]
+pub struct Joins {
+    /// How far the energy rises or falls across a line for a fill or the
+    /// floor out where a theme changes (twice this where only a role does).
+    pub step: f64,
+    /// How long a join lasts before its line, in bars: this many at most,
+    /// and at most `share` of its unit.
+    pub bars: f64,
+    pub share: f64,
+    /// A breath's share of a join's length.
+    pub breath: f64,
+    /// A fill's hits, from the first to the last, as shares of the
+    /// instrument's loudest in the loop.
+    pub fill: [f64; 2],
+    /// How many beats a pivot's chord holds past the line.
+    pub hold: f64,
+}
+
 /// How an arc's energy is heard (`[longform energy]`, queue item 102c):
 /// what a unit of a given energy plays, as `heard` reads it.
 #[derive(Clone, Copy, Debug)]
@@ -457,7 +477,7 @@ pub struct VoiceCosts {
 #[allow(clippy::unreadable_literal)]
 mod tables {
     use super::{
-        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, Energy, FloorDrop, Gait, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
+        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
         Longform, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));

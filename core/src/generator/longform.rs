@@ -51,7 +51,12 @@
 //! arc, so its first and its last are full and the last alone closes; a
 //! unit finds its movement by a division still.
 //!
-//! The numbers are `data/longform.txt`'s (`data::LONGFORM`).
+//! **The joins** (session 15, `Join`). Where two units meet and something
+//! changes, each unit names how it meets the next, chosen from what changes
+//! and the energy either side (`Form::join_of`), the unit after found by
+//! number like any other.
+//!
+//! The numbers are `data/longform.txt`'s (`data::LONGFORM`, `data::JOINS`).
 
 // Units, sections and bars are whole numbers far below 2^53, and a share of
 // them is rounded on purpose.
@@ -59,7 +64,7 @@
 
 use super::canon::{Sink, Writer};
 use super::choices::lean_of;
-use super::data::{self, CHARACTERS, LONGFORM, Table};
+use super::data::{self, CHARACTERS, JOINS, LONGFORM, Table};
 use super::js;
 use super::piece::{self, Piece, SECTION_BARS};
 use super::request::{Edits, Journey, Length};
@@ -469,6 +474,101 @@ pub struct Span {
     /// Whether the unit prepares the return: over its last phrase the bass
     /// holds the home key's fifth.
     pub prepares: bool,
+    /// How the unit meets the one after it, at the line at its end
+    /// (session 15, `Join`).
+    pub join: Join,
+}
+
+/// How a unit meets the one after it at the line between them (session 15;
+/// `docs/LONGFORM.md`, "The joins"): written where something changes, not
+/// left to chance. The plan chooses it from what changes at the line and
+/// the energy either side (`Form::join_of`); `heard` plays it over the
+/// unit's last bar (`[longform joins]`). First the empty one, so a unit of
+/// nothing is all zero bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Join {
+    /// Nothing changes at the line (or the piece closes there: its landing
+    /// is the end).
+    None,
+    /// What changes glides over the unit after (a level, the tone, a
+    /// wander's density, an arc's energy by a little): the glide is the
+    /// join, as the wander has always played it.
+    Glide,
+    /// A fill into the line: the kit's backbeat over the last beat, rising
+    /// (the energy rises across it).
+    Fill,
+    /// The floor out: the kit and the bass leave for the last bar and come
+    /// back on the line (the energy falls across it).
+    Floor,
+    /// A chord both keys share, struck at the last bar and held across the
+    /// line, the bass on its root (the key changes).
+    Pivot,
+    /// The last bar the tune alone (a theme changes, the energy level).
+    Alone,
+    /// A breath: the last half bar's notes left out, the tails ringing (a
+    /// theme changes where nothing else can join it; at a wander's line
+    /// move, only the layer that moves).
+    Breath,
+    /// The return prepared: the bass on the home key's fifth for the last
+    /// phrase (session 14).
+    Prepared,
+}
+
+impl Join {
+    /// The join's name, as the map writes it.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Join::None => "none",
+            Join::Glide => "glide",
+            Join::Fill => "fill",
+            Join::Floor => "floor",
+            Join::Pivot => "pivot",
+            Join::Alone => "alone",
+            Join::Breath => "breath",
+            Join::Prepared => "prepared",
+        }
+    }
+
+    /// Every join, in the order the map names them.
+    pub const ALL: [Join; 8] = [Join::None, Join::Glide, Join::Fill, Join::Floor, Join::Pivot, Join::Alone, Join::Breath, Join::Prepared];
+}
+
+/// A chord both keys share, for a pivot (`Join::Pivot`): its pitch classes
+/// from its root up (a triad of `to`'s mode, or its root and fifth where no
+/// triad is shared), and how many.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Pivot {
+    pub notes: [u8; 3],
+    pub count: usize,
+}
+
+/// The chord the keys `from` and `to` share (`Pivot`), if they share one:
+/// a triad of `to`'s mode (every other note of the mode, from a degree),
+/// all of its notes in both keys, `to`'s own tonic first, then its fourth
+/// degree, its fifth and the rest in order; else `to`'s root and its fifth
+/// where both keys have them. So the chord heard across the line belongs to
+/// the key it leaves and to the key it reaches.
+#[must_use]
+pub fn pivot(from: Key, to: Key) -> Option<Pivot> {
+    let both = from.notes() & to.notes();
+    let steps = SCALES.get(to.scale)?.steps;
+    let n = steps.len();
+    if n < 3 {
+        return None;
+    }
+    let pc = |x: usize| ((usize::from(to.root) + steps[x % n] as usize) % 12) as u8;
+    for degree in [0, 3, 4, 5, 1, 2, 6] {
+        if degree >= n {
+            continue;
+        }
+        let notes = [pc(degree), pc(degree + 2), pc(degree + 4)];
+        if notes.iter().all(|&p| both & 1 << p != 0) {
+            return Some(Pivot { notes, count: 3 });
+        }
+    }
+    let fifth = (to.root + 7) % 12;
+    (both & 1 << to.root != 0 && both & 1 << fifth != 0).then_some(Pivot { notes: [to.root, fifth, 0], count: 2 })
 }
 
 /// The things a wander moves, in the order their turns are numbered.
@@ -955,16 +1055,128 @@ impl Form {
                 _ => i - 1,
             });
             span.changed = difference(&before, &span);
-            // (A round's first unit is a start, not a turn.)
-            // (An interlude's first follows a breath: only its own things
-            // turn it.)
-            let things = if self.journey == Journey::Wander { changed::THINGS } else { changed::STATE };
-            if span.journey == Journey::Wander && i > 0 && span.role == Role::Holding && span.changed & things != 0 {
-                span.role = Role::Turning;
-                span.changed |= changed::ROLE;
-            }
+            self.turned(&mut span, i);
         }
         span
+    }
+
+    /// Unit `phrase` of section `n` (`at`) with its join toward the unit
+    /// after it (`Span::join`, session 15): what the map writes. `at` leaves
+    /// it none, so a unit costs what it did; `heard` reads the join from
+    /// the units it has at hand (`join_of`).
+    #[must_use]
+    pub fn joined(&self, n: u64, phrase: u64) -> Span {
+        let mut span = self.at(n, phrase);
+        let (bn, bp) = self.after(n, phrase);
+        span.join = self.join_of(&span, &self.at(bn, bp));
+        span
+    }
+
+    /// A wander's unit `span`, unit `i` of its round, that something turned
+    /// (`span.changed`): its role is `turning`. (A round's first unit is a
+    /// start, not a turn. An interlude's first follows a breath: only its
+    /// own things turn it.)
+    fn turned(&self, span: &mut Span, i: u64) {
+        let things = if self.journey == Journey::Wander { changed::THINGS } else { changed::STATE };
+        if span.journey == Journey::Wander && i > 0 && span.role == Role::Holding && span.changed & things != 0 {
+            span.role = Role::Turning;
+            span.changed |= changed::ROLE;
+        }
+    }
+
+    /// The unit after unit `phrase` of section `n` (`at`'s numbers): the
+    /// next of the section, or the first of the section after.
+    #[must_use]
+    pub fn after(&self, n: u64, phrase: u64) -> (u64, u64) {
+        let p = phrase.min(self.units_in(n) - 1);
+        if p + 1 < self.units_in(n) { (n, p + 1) } else { (n.saturating_add(1), 0) }
+    }
+
+    /// How unit `a` meets `b` where `b` is not the plan's own next unit (a
+    /// close the length slider asks for, session 15): `b` with what changed
+    /// from `a` read again, and the join between them.
+    #[must_use]
+    pub fn join_between(&self, a: &Span, b: &Span) -> (Span, Join) {
+        let mut b = *b;
+        b.changed = difference(a, &b);
+        (b, self.join_of(a, &b))
+    }
+
+    /// How unit `a` meets unit `b` after it (`Join`; session 15), from what
+    /// changes between them (`b.changed`) and the energy either side.
+    ///
+    /// - **A key** changes: the return prepared where it is (the bass on
+    ///   the home fifth); else a chord both keys share, held across the
+    ///   line (where the loop has chords and the keys share one); else the
+    ///   floor out, or a breath.
+    /// - **A theme** changes (or how it is played): with the energy rising,
+    ///   a fill (where the loop has a kit); falling from the peak (or the
+    ///   lift), the floor out; else the tune's last bar alone (where it
+    ///   plays one), else a breath. In a wander, always a breath: nothing
+    ///   abrupt.
+    /// - **A role** alone (an arc's): a fill where the energy rises by twice
+    ///   the data's `step` or more, the floor out where it falls as far from
+    ///   the peak, else the energy's glide.
+    /// - **A wander's line move** (a voice, the chords' register or length):
+    ///   a breath of the layer that moves. Its glides (a layer, the tone,
+    ///   the tune's density) are their own joins.
+    #[must_use]
+    pub fn join_of(&self, a: &Span, b: &Span) -> Join {
+        let c = b.changed;
+        if a.closes || c == 0 {
+            return Join::None;
+        }
+        let has = |l: Layer| self.playing & (1 << l as usize) != 0;
+        let kit = has(Layer::Drums);
+        let floor = kit || has(Layer::Bass);
+        let rise = b.energy - a.energy;
+        let step = JOINS.step;
+        let wander = a.journey == Journey::Wander || b.journey == Journey::Wander;
+        if c & changed::KEY != 0 {
+            return if a.prepares {
+                Join::Prepared
+            } else if has(Layer::Chords) && pivot(a.key, b.key).is_some() {
+                Join::Pivot
+            } else if floor && !wander {
+                Join::Floor
+            } else {
+                Join::Breath
+            };
+        }
+        if a.prepares {
+            return Join::Prepared;
+        }
+        if c & (changed::THEME | changed::VARIATION) != 0 {
+            // The tune plays its last bar: a theme, not a rest, nor a
+            // fragment's second half (a rest but in a call and response).
+            let sings = has(Layer::Melody) && a.theme != Theme::Rest && (!a.fragment || a.calls);
+            // (The floor out is the fall from the height: once there, not at
+            // every step down after it.)
+            let height = matches!(a.role, Role::Peak | Role::Lift);
+            return if wander {
+                Join::Breath
+            } else if rise >= step && kit {
+                Join::Fill
+            } else if rise <= -step && floor && height {
+                Join::Floor
+            } else if sings && self.playing.count_ones() >= 2 {
+                Join::Alone
+            } else {
+                Join::Breath
+            };
+        }
+        if c & (changed::VOICE | changed::REGISTER | changed::LENGTH) != 0 {
+            return Join::Breath;
+        }
+        if c & changed::ROLE != 0 && !wander {
+            if rise >= 2.0 * step && kit {
+                return Join::Fill;
+            }
+            if rise <= -2.0 * step && floor && matches!(a.role, Role::Peak | Role::Lift) {
+                return Join::Floor;
+            }
+        }
+        Join::Glide
     }
 
     /// Unit `i` of a round (or of Endless), before what changed is read.
@@ -1173,7 +1385,9 @@ impl Form {
         let mut fragment = false;
         let mut calls = false;
         let (theme, variation, key) = match role {
-            Role::Opening | Role::Close => (Theme::A, Variation::Outline, self.home),
+            // (A breath keeps the tune at its thinnest, session 15: resting it
+            // in a breath one unit long stepped 2.7 LU from its neighbors.)
+            Role::Opening | Role::Close | Role::Breath => (Theme::A, Variation::Outline, self.home),
             Role::Theme | Role::Holding | Role::Turning => (Theme::A, Variation::Plain, self.home),
             Role::Build => (Theme::A, builds, self.home),
             Role::Lift => (Theme::A, if builds == Variation::Plain { Variation::Register } else { builds }, self.home),
@@ -1207,7 +1421,6 @@ impl Form {
             // (The small form stays at home throughout.)
             Role::Release => (b, Variation::Outline, if light { self.home } else { second_key }),
             Role::Return => (Theme::A, returns, self.home),
-            Role::Breath => (Theme::Rest, Variation::Plain, self.home),
         };
         let theme_seed = match theme {
             Theme::B => Some(self.second_seed(k)),
@@ -1237,6 +1450,7 @@ impl Form {
             pick,
             calls,
             prepares: held,
+            join: Join::None,
         }
     }
 
@@ -1318,6 +1532,7 @@ impl Form {
             pick: 0.0,
             calls: false,
             prepares: false,
+            join: Join::None,
         }
     }
 
@@ -1567,6 +1782,7 @@ impl Form {
             pick: 0.0,
             calls: false,
             prepares: false,
+            join: Join::None,
         }
     }
 
@@ -1715,6 +1931,8 @@ impl Span {
         w.num(js::round(self.energy * 1000.0) / 1000.0);
         w.key("fragment");
         w.bool(self.fragment);
+        w.key("join");
+        w.str(self.join.name());
         w.key("journey");
         w.str(self.journey.name());
         w.key("key");

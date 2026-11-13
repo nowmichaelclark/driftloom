@@ -44,6 +44,9 @@ pub struct Way {
     pub clip: crate::clip::Clip,
     /// Add what the loop drew among its choices to the line (`choices=`).
     pub choices: bool,
+    /// How long the track plays (`--track`; the app's length slider): at its
+    /// end the core's own next loop follows, as in the app.
+    pub track: Option<dlcore::player::Track>,
 }
 
 impl Way {
@@ -222,6 +225,12 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
     {
         let mut host = Tracer { core: &mut core, lines: &mut lines, pins: &way.clip.pins };
         player.attach(&mut host, way.rate, way.full);
+        // The track's end handed over as the app's is (queue item 95): the
+        // core makes its own next loop there, from seeds of its own.
+        if let Some(track) = way.track {
+            player.set_track(&host, track);
+            player.set_draws(1);
+        }
         player.load(seed, request);
         player.ready(&mut host);
     }
@@ -254,6 +263,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
                 let mut host = Tracer { core, lines: &mut block, pins: &way.clip.pins };
                 player.decide(&mut host)
             };
+
             if matches!(decided, Work::Steps(_)) {
                 let _ = writeln!(lines, "at {frame}");
             }

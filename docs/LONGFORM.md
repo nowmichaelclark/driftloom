@@ -8,9 +8,11 @@ The brief still holds the rules that can't bend and what Mikey asked for.
 **Where things stand:** the plan is code (`core/src/generator/longform.rs`),
 its numbers are data (`data/longform.txt`). **The wander is heard** (session
 12, `core/src/generator/heard.rs`, below), **an arc's energy and its
-close** (session 13, "How an arc is heard"), and **its themes, their
+close** (session 13, "How an arc is heard"), **its themes, their
 variations, its keys and its movements' kinds** (session 14, "How an arc's
-themes are heard"). The joins are session 15's. Read a piece with
+themes are heard"), and **the joins and the endings the length slider
+makes** (session 15, "The joins" and "Endings that land"). Session 16 tunes
+it all from Mikey's notes. Read a piece with
 `dlgen --map SEED REQUEST [--from N] [--count N]` (in `core/`: `cargo run
 --release --example dlgen -- --map 7 bars=256,journey=arc`), or in Node
 with `tools/gen-lib.mjs`'s `pieceMap`; `--movements` prints a line a movement.
@@ -58,7 +60,7 @@ how high it is (0.85 to 1); every role has a unit at least.
 | peak | A, register | the arc's related key | 1 |
 | release | B (or A), outline; its last phrase may hold the bass on the home fifth | the same | 0.85 to 0.55 |
 | return | A with one variation (register, voice, stretched, reharmonized, answered) | home | 0.55 to 0.5 |
-| close / breath | A outline, closing on the tonic / a rest | home | 0.4 to 0.15 / 0.3 to 0.2 |
+| close / breath | A outline, closing on the tonic / A thinning to its thinnest (session 15) | home | 0.4 to 0.15 / 0.3 to 0.2 |
 
 - **How long:** an arc is 4 to 15 minutes (drawn per piece, by ratio,
   leaned longer by glacial, droning and the like). A finite piece holds a
@@ -127,8 +129,13 @@ way, gently (`[longform energy]`).
 | a finite arc's close | thins to the chords and the tune (the energy's own); the tune's last phrase whole; then the **landing**: the round's last bars (4 s and a bar at least) play the loop's tonic chord (its own in root position, or the mode's triad, rolled where the loop plays its chords a note at a time) and the tune on the tonic, alone, held for half of them and ringing out. The voice budget gives the landing its whole ceiling |
 
 The round after a close starts at its opening, gliding up from the close;
-Endless plays arc after arc with a breath between (the tune rests, the
-rest thins), and never lands. **What was asked holds:** a layer asked on,
+Endless plays arc after arc with a breath between (session 15: the tune
+never rests, but thins across the breath, its thinnest, 0.55 of its notes
+left out, at the breath's lowest energy, the rest thinned by its energy; it
+rested before, and a breath one unit long, tui-doask's 50 s sections, stepped
+2.7 LU from its neighbors; the tune held at its thinnest throughout stepped
+2.04 LU between a breath's two units, its loop's tune strong there), and
+never lands. **What was asked holds:** a layer asked on,
 off or re-rolled is its own throughout; a code's warmth keeps the filter
 the loop's own, its space the room's; an arc asked (`arc`, `arc.*`) keeps
 its swing as asked. **At any slider setting**, as the wander. Every number
@@ -309,12 +316,72 @@ theme asked stays the tune. The tempo is the loop's own for the whole piece.
 
 ## The joins (session 15)
 
-Not code yet. The plan gives what a join needs: `changed` and the energy
-either side. The starting set, by what changed: a key (a chord both keys
-share, held across the line; before a return, the bass on the home fifth);
-a theme alone (a bar of the tune alone, or a breath); a role with the
-energy rising (a fill into the line) or falling (the floor out for the last
-bar); a wander's move (the glide over the `turning` unit).
+Where two units meet and something changes, the line is written, not left
+to chance. The plan chooses each unit's join toward the unit after it
+(`Span::join`, `Form::join_of`: the unit after by number, so a section's
+last join is known a section ahead and a section reached straight joins as
+one reached by playing) from what changes and the energy either side;
+`heard` plays it over the unit's last bar (`Heard::joins`); the map and the
+pass's text name it (`dlgen --map` writes "then fill"). The numbers are
+`[longform joins]`.
+
+| Join | When | Heard as |
+|---|---|---|
+| **pivot** | a key changes (and the loop has chords) | a chord both keys share (`longform::pivot`: a triad of the new key's mode on its tonic, its fourth, its fifth or the rest, every note in both keys; else its root and fifth), struck at the join's first step in the chords' voice and held a beat past the line; the loop's chords out under it, the bass on its root |
+| **prepared** | the return, prepared (half the movements) | the bass on the home fifth for the release's last phrase (session 14) |
+| **fill** | a theme or how it is played changes and the energy rises by `step` (0.04) or more, or a role alone and twice that (a kit plays) | the kit's backbeat (else its shimmer) on each step of the last beat (every other in 6/8) where the loop has no hit of it, from 0.35 to 0.65 of its loudest, under the arc's kit marks |
+| **floor** | the same, the energy falling from the peak or the lift (a kit or a bass plays); a key with no chords | the kit and the bass out for the join |
+| **alone** | a theme changes, the energy level or falling after the height | every layer but the tune out for the join (where the tune plays there; else a breath) |
+| **breath** | a theme changes where nothing else can join it; every wander's theme; a wander's line move (a voice, the chords' register or length) | the join's last half left out: every layer, or in a wander only the layer that moves |
+| **glide** | what changes glides (a layer, the tone, a wander's density, the energy by a little) | nothing at the line: the unit after glides (sessions 12 and 13) |
+
+- **How long:** a join is a bar, at most a sixteenth of its unit (a beat in
+  a four-bar phrase, half a bar in eight bars, a bar in sixteen; measured: a
+  bar of a four-bar unit took 1 LU off it and broke the loudness order on
+  three 64-bar arcs of eight, half a bar still on five of thirty). A breath
+  is half of that, a fill the last beat. The floor out comes once, from the
+  peak or the lift: at every step down after it, it hollowed the release
+  too, and two in a row is one too many.
+- **What it takes out:** only notes that end by the line (a chord or a bass
+  note that would ring across it plays: leaving out pads held into the
+  next unit starved that unit by 2 LU), and only a layer heard in the unit
+  before the join (two notes struck there at least: tui-doask's one bass
+  note in a sparse unit's last bar was the unit's bass, and its floor out
+  sat 6 LU under the loop). A join with nothing to take out is a glide.
+- **What the loop can't play** is the next of its kind: a fill with no kit
+  a glide, the tune alone where it is silent a breath, a pivot with no
+  shared chord or no chords the floor out (or a breath).
+- **None after a close:** the landing ends the round, and the round after
+  starts from it. The yardstick holds: every line where a theme, a key or
+  a line move changes has a join that is not a glide (`tools/longform.mjs`,
+  `core/tests/joins.rs`).
+- For Mikey's ears: every kind, how often each comes, and how strong.
+
+## Endings that land (session 15)
+
+When the length slider will stop a long piece (or Endless) before its own
+close, the phrases before the stop play the close in place of the fade
+(`Heard::stop_at`): from the energy there, thinning to the close's (0.15)
+at home on theme A, the line into it a join like any other (a pivot home,
+the floor out), the tune's last phrase whole, and the landing in its last
+bars (the tonic chord and the tune on the tonic, alone, ringing out, as a
+finite arc's). The close lasts the data's least (`[longform arc] close`, 10
+s) in whole phrases. The player hears the stop with each section it draws
+(`Player::hear_pass`, from the track's end) and again when the slider
+moves (`set_track`); at the stop the next loop follows with the old one
+ringing out, never faded. Where the landing would begin in steps already
+played (the slider moved too late), the track ends as it always did. With
+the slider off nothing changes; a stop at a finite piece's own end is its
+own close. Measured (`tools/longform.mjs`, twenty pieces stopped part way,
+Endless arcs and wanders, 256 and 1,024 bars): every one lands on the tonic,
+alone, and rings. `dlrender --track bars=N` plays it, with the core's own
+next loop after, as the app does. For Mikey's ears.
+
+**Found on the way:** a landing could take its chord from one the loop
+leaves silent (an entry's or a rest's) and strike it at velocity 0, so some
+finite arcs since session 13 landed on the tune's tonic alone. The landing
+now takes a chord the loop plays (else the chords' loudest velocity), and
+the tune's last note that sounds.
 
 ## The cost
 
@@ -369,11 +436,10 @@ a theme-B section another seed's tune spread across blocks.
 
 - Read the plan where a section is drawn: `Generator::form()` then
   `at(n, phrase)`. Keep `Form::of` free of the player's state.
-- Session 15: the joins. A key, a theme and a voice change on a unit's
-  first step with nothing written across the line yet (`Span::changed`
-  says which); the one join built is the return prepared (`prepares`). A
-  second tune is ready a section ahead (`Generator::second`), so a join
-  may play a bar of it alone.
+- Session 16 tunes from Mikey's notes: every number in `data/longform.txt`
+  (`[longform joins]` too) is a first pick. The joins are the plan's
+  (`Form::join_of`) and heard (`Heard::joins`); a slider's close is
+  `Heard::stop_at`.
 - `node tools/longform.mjs` checks what is played too
   (`tools/longform-played.mjs`; `--plan` for the plan alone).
 - A change to the plan's draws moves the maps: say so, and keep

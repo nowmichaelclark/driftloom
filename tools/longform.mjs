@@ -15,6 +15,8 @@
 //   node tools/longform.mjs --arcs 30       that many arc seeds played at 64
 //                                           bars (30; 256 bars: 12, 1,024:
 //                                           4, each two fifths as many again)
+//   node tools/longform.mjs --endings 20    that many pieces stopped by the
+//                                           length slider (20)
 //   node tools/longform.mjs --plan          the plan's checks alone
 //   node tools/longform.mjs --check         exit 1 if any check fails
 //   node tools/longform.mjs --map SEED REQUEST [--from N] [--count N]
@@ -38,7 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pieceMap } from './gen-lib.mjs';
-import { arcChecks, arcJoins, arcVerdict, dlrender, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
+import { arcChecks, arcJoins, arcVerdict, dlrender, endingChecks, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
 import { Rng } from '../js/rng.js';
 
 const args = process.argv.slice(2);
@@ -165,6 +167,7 @@ function wanderChecks(where, form, units, fromStart) {
   check('never the thing that moved last (a layer back from its rest apart)', never, where);
 }
 const holds = { count: 0, seconds: 0, things: {} };
+const joins = {};
 
 // The corpus's seeds: the corpus seed's own stream.
 const rng = new Rng(20261009);
@@ -189,6 +192,23 @@ for (const seed of seeds) {
       grains[form.grain] += 1;
       check('the journey asked is the piece\'s', form.journey === journey && form.asked, where);
 
+      // The joins (session 15): every line where a theme, a key or how
+      // the tune is played changes (or a wander's line move) written, a
+      // glide only for what glides; none after a close.
+      for (let x = 1; x < units.length; x++) {
+        const [a, b] = [units[x - 1], units[x]];
+        joins[a.join] = (joins[a.join] ?? 0) + 1;
+        if (a.closes) {
+          check('a close lands: no join after it', a.join === 'none', where);
+          continue;
+        }
+        if (b.changed.some((c) => ['theme', 'key', 'variation', 'voice', 'register', 'length'].includes(c))) {
+          check('no line left unwritten where a theme, a key or a line move changes', !['none', 'glide'].includes(a.join), `${where} section ${a.section}.${a.phrase}: ${a.join} into ${b.changed.join(', ')}`);
+        } else if (b.changed.length) {
+          check('something changes at the line: a join or its glide', a.join !== 'none', `${where} section ${a.section}.${a.phrase}`);
+        }
+        if (b.changed.includes('key')) check('a key changes: a chord both keys share, the return prepared, the floor out or a breath', ['pivot', 'prepared', 'floor', 'breath'].includes(a.join), `${where} section ${a.section}.${a.phrase}: ${a.join}`);
+      }
       const keys = [form.home, ...form.related];
       check('no key outside the related set', units.every((u) => keys.some((k) => sameKey(k, u.key))), where);
       check('the tempo is the loop\'s own throughout', units.every((u) => u.bpm === units[0].bpm), where);
@@ -273,6 +293,8 @@ for (const journey of JOURNEYS) {
   check("a section's plan costs the same at 10^9 as at 10^5", far < on * 1.5 + 0.002, `${journey}: ${timed[journey].map((t) => (t * 1000).toFixed(1)).join(', ')} us`);
 }
 
+const JOINS = ['glide', 'fill', 'floor', 'pivot', 'alone', 'breath', 'prepared'];
+check('every join kind appears in the corpus', JOINS.every((k) => joins[k] > 0), JSON.stringify(joins));
 const mean = holds.seconds / Math.max(1, holds.count);
 check('holds as long as drawn: between one and five minutes on average', mean >= 90 && mean <= 270, `${mean.toFixed(0)} s`);
 // The theme's turn is off until theme B is made (data/longform.txt).
@@ -324,7 +346,7 @@ if (!flag('--plan')) {
     const line = execFileSync(path.join(core, 'target', 'release', 'examples', 'dlgen'), ['--section-cost', String(seed), 'bars=endless,journey=wander'], { encoding: 'utf8' });
     const us = [...line.matchAll(/=([\d.]+)us/g)].map((m) => Number(m[1]));
     played.costs.push(us);
-    check("played: a section's making costs the same at 10^9 as at 1 and 10^4", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
+    check("played: a section's making costs the same at 10^9 as at 1 and 1,000", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
   }
   // The worst block at a section line against the loop's own worst audio
   // block (dlrender --costs: a pass, its plan heard, is drawn in a block of
@@ -365,7 +387,9 @@ if (!flag('--plan')) {
   }
   const share = (key) => arcs.verdicts.filter((v) => v[key]).length / arcs.verdicts.length;
   check('arc played: the loudness rises to the peak and falls, in order (9 in 10)', share('loudRises') >= 0.9, `${(100 * share('loudRises')).toFixed(0)}%: ${arcs.verdicts.filter((v) => !v.loudRises).map((v) => v.seed).join(', ')}`);
-  check('arc played: the brightness rises to the peak and falls, in order (9 in 10)', share('brightRises') >= 0.9, `${(100 * share('brightRises')).toFixed(0)}%: ${arcs.verdicts.filter((v) => !v.brightRises).map((v) => v.seed).join(', ')}`);
+  // The brightness judged on the arc's own job (session 15): the opening and
+  // the close darker than the peak. The order over every role is reported.
+  check('arc played: darker at the opening and the close than at the peak (9 in 10)', share('brightEnds') >= 0.9, `${(100 * share('brightEnds')).toFixed(0)}%: ${arcs.verdicts.filter((v) => !v.brightEnds).map((v) => `${v.seed}@${v.length.slice(5)}`).join(', ')}`);
   // As heard at the app's amount, the loop's own form and breathing in it:
   // reported, not held.
   for (const seed of seeds.slice(0, Math.min(10, n))) {
@@ -389,7 +413,7 @@ if (!flag('--plan')) {
     const line = execFileSync(path.join(core, 'target', 'release', 'examples', 'dlgen'), ['--section-cost', String(seed), 'bars=endless,journey=arc'], { encoding: 'utf8' });
     const us = [...line.matchAll(/=([\d.]+)us/g)].map((m) => Number(m[1]));
     arcs.costs.push(us);
-    check("arc played: a section's making costs the same at 10^9 as at 1 and 10^4", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
+    check("arc played: a section's making costs the same at 10^9 as at 1 and 1,000", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
     for (const lite of [false, true]) {
       for (const request of ['bars=endless,journey=arc', 'bars=256,journey=arc']) {
         const out = dlrender(['--seed', String(seed), '--request', request, '--seconds', '600', '--costs', ...(lite ? ['--lite'] : [])]);
@@ -403,7 +427,32 @@ if (!flag('--plan')) {
   }
 }
 
+// Endings that land (session 15): twenty pieces the length slider stops
+// before their close (Endless arcs and wanders, and finite arcs part way),
+// each with the core's own next loop after it, as in the app: the last
+// chord struck the tonic's, nothing after it but its ring, never faded.
+const endings = [];
+if (!flag('--plan')) {
+  const n = Number(value('--endings', 20));
+  const asks = ['bars=endless,journey=arc', 'bars=endless,journey=wander', 'bars=1024,journey=arc', 'bars=256,journey=arc'];
+  for (let i = 0; i < n; i++) {
+    const seed = seeds[i];
+    const request = asks[i % asks.length];
+    // A stop somewhere in the second to the fifth minute, by the seed.
+    const { form } = pieceMap(seed, request, 0, 1);
+    const bar = form.unitSeconds / form.unitBars;
+    const bars = Math.max(9, Math.round((60 + (seed % 180)) / bar));
+    const e = endingChecks(seed, request, bars);
+    endings.push(e);
+    const where = `${seed} "${request}" stopped at bar ${e.stopBars}`;
+    check('a slider-made close lands on the tonic', e.tonic, `${where}: ${e.chord.join('/')}`);
+    check('a slider-made close plays alone, then rings out (never faded or cut)', e.alone && e.rings, `${where}: ${e.later} notes after it, ${e.faded} fades, a fall of ${e.fall.toFixed(1)} dB`);
+  }
+}
+
 console.log(`longform: ${SEEDS} seeds x ${LENGTHS.length} lengths x 2 journeys = ${pieces} pieces, in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+console.log(`  joins in the maps: ${Object.entries(joins).sort((a, b) => b[1] - a[1]).map(([k, c]) => `${k} ${c}`).join(', ')}`);
+if (endings.length) console.log(`  endings that land: ${endings.filter((e) => e.tonic && e.alone && e.rings).length} of ${endings.length} on the tonic, alone, ringing out (the largest fall in a ring ${Math.max(...endings.map((e) => e.fall)).toFixed(1)} dB)`);
 const drawn = journeys.arc + journeys.wander;
 console.log(`  drawn with nothing asked: arc ${(100 * journeys.arc / drawn).toFixed(0)}%, wander ${(100 * journeys.wander / drawn).toFixed(0)}%; planned in sections ${grains.section}, in phrases ${grains.phrase}`);
 console.log(`  a wander's holds: ${holds.count}, ${mean.toFixed(0)} s on average; moves: ${THINGS.map((t) => `${t} ${holds.things[t] ?? 0}`).join(', ')}`);
@@ -414,7 +463,7 @@ if (played.pieces) {
   console.log(`  played: ${played.pieces} wander pieces of 25 minutes: ${played.moves} moves drawn, heard in ${played.heard} sections (a glide over several); ${played.budget} sections where a voice moved changed what the voice budget let another layer play; ${played.cycling} layers with cycles of their own read by their gain alone`);
   console.log(`  joins: the largest step at ${played.joins.length} lines ${Math.max(...played.joins).toFixed(4)}; the pieces' own largest ${played.own.map((x) => x.toFixed(4)).join(', ')}`);
   for (const l of played.loud) console.log(`  loudness, ${l.seed}: the largest jump between 20 s stretches ${l.jump.toFixed(2)} LU (the loop as itself ${l.ownJump.toFixed(2)}), the range ${l.range.toFixed(2)} LU`);
-  console.log(`  a section's making: ${played.costs.map((c) => c.join('/')).join(', ')} us at 1/10^4/10^9`);
+  console.log(`  a section's making: ${played.costs.map((c) => c.join('/')).join(', ')} us at 1/1,000/10^9`);
   console.log(`  blocks: ${played.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
 if (arcs.pieces) {
@@ -422,7 +471,7 @@ if (arcs.pieces) {
   const pct = (f) => `${(100 * v.filter(f).length / v.length).toFixed(0)}%`;
   const med = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   console.log(`  arcs played: ${arcs.pieces} pieces (${['bars=64', 'bars=256', 'bars=1024'].map((l) => `${v.filter((x) => x.length === l).length} at ${l.slice(5)} bars`).join(', ')}), against the loop as itself:`);
-  console.log(`    loudness rises and falls ${pct((x) => x.loudRises)}, brightness ${pct((x) => x.brightRises)}, both ${pct((x) => x.loudRises && x.brightRises)}; the peak over the opening ${Math.max(...v.map((x) => x.over)).toFixed(2)} LU at most (median ${med(v.map((x) => x.over)).toFixed(2)}); the largest step ${Math.max(...v.map((x) => x.step)).toFixed(2)} LU`);
+  console.log(`    loudness rises and falls ${pct((x) => x.loudRises)}; brightness darker at the opening and the close than at the peak ${pct((x) => x.brightEnds)}, in order over every role ${pct((x) => x.brightRises)} (reported); the peak over the opening ${Math.max(...v.map((x) => x.over)).toFixed(2)} LU at most (median ${med(v.map((x) => x.over)).toFixed(2)}); the largest step ${Math.max(...v.map((x) => x.step)).toFixed(2)} LU`);
   console.log(`    the opening / the peak / the close, median: ${['opening', 'peak', 'close'].map((r) => `${med(v.map((x) => x.lift[r])).toFixed(1)} LU ${med(v.map((x) => x.brighter[r])).toFixed(0)} cents`).join(' / ')} (loudness, brightness: the centroid over 250 Hz)`);
   console.log(`    the tonic's chord alone at the end ${pct((x) => x.tonic)}, a ring-out ${pct((x) => x.rings)}`);
   const h = arcs.heard;
@@ -433,7 +482,7 @@ if (arcs.pieces) {
   if (h.length) console.log(`  as heard at the app's amount (${h.length} at 64 bars, the loop's own form in it): loudness rises and falls ${(100 * h.filter((x) => x.loudHeard).length / h.length).toFixed(0)}%, brightness ${(100 * h.filter((x) => x.brightHeard).length / h.length).toFixed(0)}%; the peak over the opening ${Math.max(...h.map((x) => x.overHeard)).toFixed(2)} LU at most`);
   const ratios = [...(arcs.ratios ?? [])].sort((a, b) => a - b);
   console.log(`  arc joins: ${arcs.joins.length} lines, the largest step ${Math.max(...arcs.joins).toFixed(4)} (the loop as itself in the same windows ${arcs.own.map((x) => x.toFixed(4)).join(', ')}); a line's step against the loop's there: median ${ratios[Math.floor(ratios.length / 2)]?.toFixed(2)}, at most ${ratios.at(-1)?.toFixed(2)}`);
-  console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/10^4/10^9`);
+  console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/1,000/10^9`);
   console.log(`  arc blocks: ${arcs.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} ${b.request.slice(5, b.request.indexOf(','))} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
 console.log('');

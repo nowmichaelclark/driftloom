@@ -586,6 +586,14 @@ impl Player {
         if let Some(c) = self.pending.get_mut(END_SLOT).and_then(Maybe::as_mut) {
             c.target = None;
         }
+        // A long piece's sections drawn already hear the new stop (session
+        // 15: a close that lands where the track ends).
+        if self.state == State::Playing && self.journeyed && self.wandering {
+            self.hear_pass(self.current, self.seq.loop_count);
+            if self.next_drawn {
+                self.hear_pass(1 - self.current, self.seq.loop_count.wrapping_add(1));
+            }
+        }
     }
 
     /// The track's length (`set_track`).
@@ -787,13 +795,57 @@ impl Player {
         if let Some(p) = self.passes.get_mut(slot) {
             let cx = Cx::new(g.spec());
             p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
-            // A long piece's plan, heard (queue items 102b and 102c).
-            if self.journeyed {
-                let form = g.form();
-                let second = form.as_ref().and_then(|f| g.second(crate::generator::heard::Tune::of(f, u64::from(number))));
-                p.heard.hear(form.as_ref(), &cx, g.render(), second, u64::from(number));
+        }
+        // A long piece's plan, heard (queue items 102b and 102c).
+        if self.journeyed {
+            self.hear_pass(slot, number);
+        }
+    }
+
+    /// Hear pass `passes[slot]`, section `number` of a long piece: its plan
+    /// (`Heard::hear`), and where the length slider will stop the piece
+    /// before its own close, the close it lands with there (session 15,
+    /// `Heard::stop_at`). Again when the slider moves (`set_track`): the
+    /// same section heard again is the same but for the stop.
+    fn hear_pass(&mut self, slot: usize, number: u32) {
+        let stop = self.stop_for(number);
+        let g = &self.generator;
+        let form = g.form();
+        let cx = Cx::new(g.spec());
+        let n = u64::from(number);
+        let second = form.as_ref().and_then(|f| g.second(crate::generator::heard::Tune::of(f, n)));
+        if let Some(p) = self.passes.get_mut(slot) {
+            p.heard.hear(form.as_ref(), &cx, g.render(), second, n);
+            if let (Some(f), Some((at, decided))) = (form.as_ref(), stop) {
+                p.heard.stop_at(f, &cx, g.render(), second, n, at, decided);
             }
         }
+    }
+
+    /// Where the track will end, for section `number` (the one playing or
+    /// the next): the steps from the section's first, and the first of its
+    /// steps not yet decided. None while the track plays on, or where it
+    /// ends before the section.
+    fn stop_for(&self, number: u32) -> Option<(f64, f64)> {
+        if self.track == Track::Always {
+            return None;
+        }
+        // A load's first section: the track counts from its first step.
+        let fresh = self.state == State::Wandering && self.asked_by != Asked::InPlace;
+        let end = self.track.end_step(self.generator.spec(), if fresh { 0 } else { self.count_from })?;
+        let here = self.seq.abs_step.saturating_sub(self.seq.step);
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a section's steps
+        let (start, decided) = if fresh {
+            (0, 0)
+        } else if number == self.seq.loop_count {
+            (here, self.seq.step)
+        } else if number == self.seq.loop_count.wrapping_add(1) {
+            (here + self.seq.pass_steps as u64, 0)
+        } else {
+            return None;
+        };
+        #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+        (end > start).then(|| ((end - start) as f64, decided as f64))
     }
 
     /// Whether the loop playing is a piece whose plan is heard (a wander's,
@@ -1083,7 +1135,8 @@ impl Player {
                 self.ended = true;
                 self.events.push(Event { time: start, kind: Kind::End, number: 0, step: target });
             }
-            if track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) {
+            // (And where a long piece's close landed there: session 15.)
+            if track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) || self.passes.iter().any(|p| p.heard.stops) {
                 handover = Handover::RingOut;
             }
         }
