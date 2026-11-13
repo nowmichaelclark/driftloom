@@ -170,3 +170,36 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   dlrender -- --seed 1151594917 --request bars=256,journey=arc --seconds
   570 --wav brum-yei.wav`; every time is in `docs/LONGFORM.md`, "Pieces to
   hear".
+- #381, long pieces: the joins, endings that land, the breath between arcs
+  (item 102e, session 15, v164), preview URL: the branch's preview (no hash
+  kept): nothing in the app changes yet (it can't take a journey; loops of
+  up to 32 bars play bit for bit as before, the core baseline unmoved;
+  Endless and long pieces stopped by the length slider now land). Where two
+  units of a long piece meet and something changes, the line is written: a
+  chord both keys share held across a key's line (the bass on its root), a
+  fill of the kit's backbeat into a rise, the floor out after the peak, the
+  tune alone or a breath where a theme changes, a wander's line move a
+  breath of its layer. The breath between arcs thins the tune across it
+  instead of resting it. When the length slider will stop a piece or
+  Endless before its close, its last phrases thin to a close and land on
+  the tonic, ringing out, where a fade was. A landing struck at velocity 0
+  since 102c fixed. To hear: brum-yei (corpus 20261009 #17, seed
+  1151594917, `bars=256,journey=arc`) from 0:50 (a pivot into theme B at
+  1:10) and 2:23 (the peak, the floor out at 2:56); fei-no (seed
+  2158762586, `bars=256,journey=arc`, the slider at 120 bars) from 3:35, the
+  close it makes landing at 4:05. In `core/`: `cargo run --release --example
+  dlrender -- --seed 2158762586 --request bars=256,journey=arc --track
+  bars=120 --seconds 250 --stereo --wav fei-no.wav`; every clip is on the
+  branch `long-clips` (`docs/notes/for-mikey.md`, the listening set).
+- #382, long pieces: the measures and the listening set (item 102e, session
+  15), docs and a tool (no app change): everything `tools/longform.mjs`
+  checks, over 240 seeds at 64, 256, 1,024 and 32,768 bars and Endless, in
+  the PR (one check of 24 short once, as on `main`); the nightly run by hand
+  on #381; and the listening set for brain B3's page: 31 clips, 23
+  minutes, on the throwaway branch `long-clips` (the pieces, how they were
+  chosen and what to listen for at the top of `docs/notes/for-mikey.md`;
+  two blind pairs, before item 102 and now). To hear: tha-vol (seed
+  2728346932, `bars=64,journey=arc`), the whole small form in 1:34; glor-ti
+  (seed 7, `bars=endless,journey=wander`) from 3:05, the wander's first
+  move. `node tools/longform-clips.mjs OUTDIR --before DLRENDER` makes the
+  set again.

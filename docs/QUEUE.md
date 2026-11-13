@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-13:** `main` is at v163 (session 01 done: v154 the tools
+**Status, 2026-11-13:** `main` is at v164 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -42,9 +42,12 @@ yet; the design that stands is `docs/LONGFORM.md`); hands session 12 done
 #377); hands session 14 done (2026-11-13: 102d, v163, the arc's second
 theme, its variations, its keys and movements of different kinds heard,
 and the wander's theme turn on, #379; the brightness order's note
-`docs/notes/102d-arc-brightness.md`); next: session 15 (102e, the joins; the
-long pieces, 11 to 16, come before batch 6's 04 to 10), and
-Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
+`docs/notes/102d-arc-brightness.md`); hands session 15 done (2026-11-13:
+102e, v164, the joins, endings that land and the breath between arcs, #381;
+the measures and the listening set, #382: 31 clips on the branch
+`long-clips`); next: brain B3 (check 102, the long-piece album from those
+clips; hands 04 onward may run alongside), then Mikey's listening (session
+16 waits for it), and Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -451,7 +454,7 @@ theme B's making spread across blocks (the tablet's margin); and the
 listening set as rendered excerpts with a blind before-and-after pair,
 since the app can't jump or take a journey until 106.
 
-**102e's joins done** (session 15, v164): every line where a unit meets
+**102e done** (session 15, v164; #381, #382): every line where a unit meets
 the next and something changes is written, chosen by what changes and the
 energy either side (`longform::Join`, `Form::join_of`; heard in
 `Heard::joins`): a chord both keys share held across a key's line, the
@@ -464,8 +467,13 @@ before the stop play the close and land on the tonic, ringing out
 (`Heard::stop_at`; `dlrender --track`). A landing struck at velocity 0
 since 102c fixed. The arc's brightness judged on its opening, peak and
 close (`docs/LONGFORM.md`, "The joins", "Endings that land";
-`core/tests/joins.rs`). The measures and the listening set are 102e's
-second PR.
+`core/tests/joins.rs`). Measured over 240 seeds at 64, 256, 1,024 and
+32,768 bars and Endless (#382's table): every check but one, a lite pass
+block a microsecond over its lightest audio block on one seed, as on `main`;
+promise 1's stall test clean on an arc of 32,768 bars and on Endless (120
+rows). The listening set: 31 clips, 23 minutes, two blind pairs (before and
+after item 102), on the throwaway branch `long-clips`
+(`tools/longform-clips.mjs`; `docs/notes/for-mikey.md`).
 
 **102d done** (session 14, v163): a second theme (another seed's tune bent
 into the loop, made a stage a block a section ahead), the variations as
