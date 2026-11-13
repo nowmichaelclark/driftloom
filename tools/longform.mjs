@@ -426,6 +426,10 @@ if (arcs.pieces) {
   console.log(`    the opening / the peak / the close, median: ${['opening', 'peak', 'close'].map((r) => `${med(v.map((x) => x.lift[r])).toFixed(1)} LU ${med(v.map((x) => x.brighter[r])).toFixed(0)} cents`).join(' / ')} (loudness, brightness: the centroid over 250 Hz)`);
   console.log(`    the tonic's chord alone at the end ${pct((x) => x.tonic)}, a ring-out ${pct((x) => x.rings)}`);
   const h = arcs.heard;
+  {
+    const judged = v.filter((x) => x.brightOwn != null);
+    console.log(`    brightness on the units in the loop's own voice and register alone (reported): ${judged.filter((x) => x.brightOwn).length} of ${judged.length} judged rise and fall; missing: ${judged.filter((x) => !x.brightOwn).map((x) => `${x.seed}@${x.length.slice(5)}`).join(', ')}`);
+  }
   if (h.length) console.log(`  as heard at the app's amount (${h.length} at 64 bars, the loop's own form in it): loudness rises and falls ${(100 * h.filter((x) => x.loudHeard).length / h.length).toFixed(0)}%, brightness ${(100 * h.filter((x) => x.brightHeard).length / h.length).toFixed(0)}%; the peak over the opening ${Math.max(...h.map((x) => x.overHeard)).toFixed(2)} LU at most`);
   const ratios = [...(arcs.ratios ?? [])].sort((a, b) => a - b);
   console.log(`  arc joins: ${arcs.joins.length} lines, the largest step ${Math.max(...arcs.joins).toFixed(4)} (the loop as itself in the same windows ${arcs.own.map((x) => x.toFixed(4)).join(', ')}); a line's step against the loop's there: median ${ratios[Math.floor(ratios.length / 2)]?.toFixed(2)}, at most ${ratios.at(-1)?.toFixed(2)}`);

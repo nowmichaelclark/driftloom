@@ -467,12 +467,18 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   // the arc adds to them.
   const plain = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && !['answered', 'stretched', 'reharmonized'].includes(u.variation));
   const stepOwn = Math.max(0, ...lufs.slice(1).map((l, i) => (whole[i] && whole[i + 1] && plain[i] && plain[i + 1] ? Math.abs(l - ownLufs[i + 1] - (lufs[i] - ownLufs[i])) : 0)));
+  // The units that sound the loop's own notes in its own voice and register
+  // (session 14): a return an octave up or in another voice is brighter or
+  // darker than the loop there by what the variation is, not by the arc's
+  // energy, so the brightness order is reported on these beside all units.
+  // (A lift's or a peak's register is session 13's double: its own.)
+  const ownTone = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && (['plain', 'outline'].includes(u.variation) || (u.variation === 'register' && ['lift', 'peak'].includes(u.role))));
   const keep = (_, i) => body[i];
   // The arc's own shape: each unit against the loop as itself there.
   const lift = lufs.map((l, i) => l - ownLufs[i]);
   // (Brightness as a ratio, in cents of the centroid: 1200 an octave.)
   const brighter = bright.map((b, i) => 1200 * Math.log2(Math.max(1, b) / Math.max(1, ownBright[i])));
-  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
+  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
 }
 
 /** Spearman's rank correlation of two lists. */
@@ -540,6 +546,14 @@ export function arcVerdict(r) {
   const brightOrder = spearman(roleEnergy, byRole(r.brighter));
   const unitOrder = [spearman(energy, r.lift), spearman(energy, r.brighter)];
   const rises = (m, order) => m.peak > m.opening && m.peak > m.close && order >= 0.5;
+  // The same on the units in the loop's own voice and register alone
+  // (reported, not held; null where the peak or an end has none).
+  const tone = r.ownTone ?? units.map(() => true);
+  const toneOf = (pick) => { const xs = units.map((u, i) => (tone[i] && pick(u) ? r.brighter[i] : null)).filter((x) => x != null); return xs.length ? mean(xs) : NaN; };
+  const toneRoles = roles.filter((role) => units.some((u, i) => tone[i] && u.role === role));
+  const toneAt = { opening: toneOf((u) => u.role === 'opening'), peak: toneOf((u) => peakRoles.includes(u.role)), close: toneOf((u) => u.role === 'close') };
+  const toneOrder = spearman(toneRoles.map((role) => mean(units.filter((u, i) => tone[i] && u.role === role).map((u) => u.energy))), toneRoles.map((role) => toneOf((u) => u.role === role)));
+  const brightOwn = [toneAt.opening, toneAt.peak, toneAt.close].some(Number.isNaN) ? null : rises(toneAt, toneOrder);
   const pc = (n) => ((n % 12) + 12) % 12;
   const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   // The tonic's triad: the mode's third and fifth on the root (or their
@@ -570,7 +584,7 @@ export function arcVerdict(r) {
   const heard = (m, list) => m.peak > m.opening && m.peak > m.close && spearman(roleEnergy, byRole(list)) >= 0.5;
   return {
     loud, tilt, lift, brighter, loudOrder, brightOrder, unitOrder,
-    loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder),
+    loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder), brightOwn,
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
     jump: r.jump, ownJump: r.ownJump, step: r.step, stepOwn: r.stepOwn, jumps, tonic, rings, last: r.last,
