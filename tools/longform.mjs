@@ -346,7 +346,7 @@ if (!flag('--plan')) {
     const line = execFileSync(path.join(core, 'target', 'release', 'examples', 'dlgen'), ['--section-cost', String(seed), 'bars=endless,journey=wander'], { encoding: 'utf8' });
     const us = [...line.matchAll(/=([\d.]+)us/g)].map((m) => Number(m[1]));
     played.costs.push(us);
-    check("played: a section's making costs the same at 10^9 as at 1 and 10^4", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
+    check("played: a section's making costs the same at 10^9 as at 1 and 1,000", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
   }
   // The worst block at a section line against the loop's own worst audio
   // block (dlrender --costs: a pass, its plan heard, is drawn in a block of
@@ -413,7 +413,7 @@ if (!flag('--plan')) {
     const line = execFileSync(path.join(core, 'target', 'release', 'examples', 'dlgen'), ['--section-cost', String(seed), 'bars=endless,journey=arc'], { encoding: 'utf8' });
     const us = [...line.matchAll(/=([\d.]+)us/g)].map((m) => Number(m[1]));
     arcs.costs.push(us);
-    check("arc played: a section's making costs the same at 10^9 as at 1 and 10^4", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
+    check("arc played: a section's making costs the same at 10^9 as at 1 and 1,000", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
     for (const lite of [false, true]) {
       for (const request of ['bars=endless,journey=arc', 'bars=256,journey=arc']) {
         const out = dlrender(['--seed', String(seed), '--request', request, '--seconds', '600', '--costs', ...(lite ? ['--lite'] : [])]);
@@ -463,7 +463,7 @@ if (played.pieces) {
   console.log(`  played: ${played.pieces} wander pieces of 25 minutes: ${played.moves} moves drawn, heard in ${played.heard} sections (a glide over several); ${played.budget} sections where a voice moved changed what the voice budget let another layer play; ${played.cycling} layers with cycles of their own read by their gain alone`);
   console.log(`  joins: the largest step at ${played.joins.length} lines ${Math.max(...played.joins).toFixed(4)}; the pieces' own largest ${played.own.map((x) => x.toFixed(4)).join(', ')}`);
   for (const l of played.loud) console.log(`  loudness, ${l.seed}: the largest jump between 20 s stretches ${l.jump.toFixed(2)} LU (the loop as itself ${l.ownJump.toFixed(2)}), the range ${l.range.toFixed(2)} LU`);
-  console.log(`  a section's making: ${played.costs.map((c) => c.join('/')).join(', ')} us at 1/10^4/10^9`);
+  console.log(`  a section's making: ${played.costs.map((c) => c.join('/')).join(', ')} us at 1/1,000/10^9`);
   console.log(`  blocks: ${played.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
 if (arcs.pieces) {
@@ -482,7 +482,7 @@ if (arcs.pieces) {
   if (h.length) console.log(`  as heard at the app's amount (${h.length} at 64 bars, the loop's own form in it): loudness rises and falls ${(100 * h.filter((x) => x.loudHeard).length / h.length).toFixed(0)}%, brightness ${(100 * h.filter((x) => x.brightHeard).length / h.length).toFixed(0)}%; the peak over the opening ${Math.max(...h.map((x) => x.overHeard)).toFixed(2)} LU at most`);
   const ratios = [...(arcs.ratios ?? [])].sort((a, b) => a - b);
   console.log(`  arc joins: ${arcs.joins.length} lines, the largest step ${Math.max(...arcs.joins).toFixed(4)} (the loop as itself in the same windows ${arcs.own.map((x) => x.toFixed(4)).join(', ')}); a line's step against the loop's there: median ${ratios[Math.floor(ratios.length / 2)]?.toFixed(2)}, at most ${ratios.at(-1)?.toFixed(2)}`);
-  console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/10^4/10^9`);
+  console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/1,000/10^9`);
   console.log(`  arc blocks: ${arcs.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} ${b.request.slice(5, b.request.indexOf(','))} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
 console.log('');

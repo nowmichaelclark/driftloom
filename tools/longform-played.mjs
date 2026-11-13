@@ -629,6 +629,16 @@ export function arcJoins(seed, request, seconds) {
       const [a, b] = [Math.round((t - 0.02) * rate), Math.round((t + 0.3) * rate)];
       joins.push({ t, piece: stepMax(piece.data, a, b), loop: stepMax(loop.data, a, b) });
     }
+    // Where a join begins inside the unit (session 15): a bar before the
+    // line at most an eighth of the unit, half that for a breath, the last
+    // beat for a fill; the same window, held the same way.
+    const len = Math.min(1, u.bars / 8) * bar;
+    const from = { fill: 0.25 * bar, breath: len / 2 }[u.join] ?? len;
+    const at = t + u.bars * bar - from;
+    if (!['none', 'glide', 'prepared'].includes(u.join) && at > 30 && at + 0.3 < seconds) {
+      const [a, b] = [Math.round((at - 0.02) * rate), Math.round((at + 0.3) * rate)];
+      joins.push({ t: at, join: u.join, piece: stepMax(piece.data, a, b), loop: stepMax(loop.data, a, b) });
+    }
     t += u.bars * bar;
   }
   return joins;

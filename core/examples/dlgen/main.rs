@@ -19,7 +19,7 @@
 //!     length is printed straight from its number
 //! cargo run --release --example dlgen -- --section-cost SEED [REQUEST]
 //!     what a section costs to make as the player makes it (its pass drawn
-//!     and its plan heard, queue item 102b), timed at sections 1, 10^4 and
+//!     and its plan heard, queue item 102b), timed at sections 1, 1,000 and
 //!     10^9: the least of many makings each, in microseconds
 //! ```
 //!
@@ -53,7 +53,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// `--section-cost`: section 1, 10^4 and 10^9 made again and again
+/// `--section-cost`: section 1, 1,000 and 10^9 made again and again
 /// (`Generator::section`, the pass and its plan heard, at the app's amount),
 /// the least time of each kept.
 fn section_cost(args: &[String]) -> Result<(), String> {
@@ -62,7 +62,7 @@ fn section_cost(args: &[String]) -> Result<(), String> {
     let mut generator = Box::new(generator::Generator::new());
     generator.load_with(seed, &asked);
     let mut line = format!("seed={seed} request={}", args.get(1).map_or("-", String::as_str));
-    for n in [1u64, 10_000, 1_000_000_000] {
+    for n in [1u64, 1_000, 1_000_000_000] {
         let mut best = f64::INFINITY;
         for _ in 0..50 {
             let t0 = std::time::Instant::now();
