@@ -72,6 +72,16 @@
 //! own** (so the generator keeps two: the section playing and the next):
 //! where its units name more, the first is the section's and stands in for
 //! the others.
+//!
+//! **The joins** (queue item 102e, session 15: `Heard::joins`). Each unit's
+//! line toward the next is played as the plan chose it (`longform::Join`),
+//! over the unit's last bar at most: a chord both keys share held across
+//! a key's line, the bass on its root; a fill of the kit's backbeat into a
+//! rise; the floor out before a fall; the tune alone, or a breath, where a
+//! theme changes. Only notes that end by the line are left out, and only a
+//! layer heard in the unit before. **Endings that land** (`stop_at`): where
+//! the length slider will stop the piece before its close, the phrases
+//! before the stop thin to a close at home and land on the tonic.
 
 // Steps and units are whole numbers far below 2^53.
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]

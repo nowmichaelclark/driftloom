@@ -56,11 +56,10 @@ the points where the next step is yours.
   most a quarter of the Sound panel), is the octave or voice change at a
   line ever too sudden, does a layer's rest feel like a breath, and is a
   key change a fourth away welcome once in a while.
-- **The arc's themes and movements (102d, session 14, v163): one decision
-  first.** #379 is not merged: the arc's brightness order, 87% on `main`,
-  is 77% with the returns varied (an octave up reads brighter than the
-  peak). `docs/notes/102d-arc-brightness.md` has the three choices; I
-  recommend merging as it is. Nothing to listen to yet (session 15 renders the excerpts). Five arc pieces with the
+- **The arc's themes and movements (102d, session 14, v163):** merged as it
+  is (2026-11-13); since session 15 the arc's brightness is judged on its
+  opening, its peak and its close (`docs/notes/102d-arc-brightness.md`
+  says why). Five arc pieces with the
   minutes where the second theme enters, where the development is, where
   theme A returns and which variation each return uses are in
   `docs/LONGFORM.md`, "Pieces to hear" (the fourth, moan-teil, 34 minutes,
@@ -69,8 +68,7 @@ the points where the next step is yours.
   B sound like it belongs to the piece (it is another seed's tune in this
   loop's voice and chords); is a return known at once and still new (an
   octave away, another voice, stretched, over the relative key's chords,
-  answered); is a key change with nothing written across the line too
-  plain (session 15 writes the joins); does the bass holding one note for
+  answered); does the bass holding one note for
   a phrase before the return feel like coming home; are a gentle
   movement, a light one and an interlude different enough from a full arc,
   and their lengths right (0.7, 0.4 and 0.5 of it). **Two choices made for
@@ -94,8 +92,35 @@ the points where the next step is yours.
   again. What only your ears can judge: is the arc strong enough to be felt
   at all (the conservative end, on purpose), is the opening's darker filter
   welcome or muffled, and is the landing a real ending.
-- Batch 6's and 84b's: brain session B2. The long pieces': session 15 and
-  brain session B3. B4 makes them again in the new codes.
+- **The joins and endings that land (102e, session 15, v164):** where two
+  units meet and something changes, the line is written: a chord both keys
+  share held across a key's line (the bass on its root), a fill of the
+  kit's backbeat into a rise, the floor (kit and bass) out for the bar
+  before a fall, the tune alone for a bar where a theme changes, or a
+  breath of half a bar; a wander's voice, register or length move gives
+  only that layer a breath. A breath between arcs now keeps the tune at its
+  thinnest instead of resting it. And when the length slider will stop a
+  long piece or Endless before its close, the last phrases thin to a close
+  and land on the tonic chord, ringing out, where a fade was. The
+  excerpts are in the listening set above. What only your ears can judge:
+  is each kind welcome, and how often (pivots come at every key change, so
+  through a development every 30 s or so); is a fill gentle enough (four
+  soft hits of the loop's own snare or rim, 0.35 to 0.65 of its loudest);
+  is the floor out or a bar of the tune alone too much of a hole (each is
+  at most an eighth of its unit: half a bar in a four-bar phrase); and does
+  a slider-made close feel like an ending or like being hurried out.
+- **slowOpening and the arc's opening together (102e, for your ears):** in
+  gluith-vuisk (corpus #0, seed 1068550449) the loop's own slow opening
+  keeps the kit out for 74 s (full by 81 s) and the bass for 100 s, while
+  the arc's opening ends at 15 to 30 s: so as an arc its first minute and
+  a quarter is the chords and the tune alone, through the opening and the
+  theme, and the kit arrives just before the lift (at 64 bars, 89 s). In
+  rong-wuisk (#6, seed 3372926893) the kit comes at 49 s (full by 60 s),
+  four seconds before the 64-bar lift. Whether that start runs too long
+  thin is yours; one way out is for an arc to shorten slowOpening's wait
+  (a line of `data/choices.txt` or the plan), not done.
+- Batch 6's and 84b's: brain session B2. The long pieces': brain session
+  B3. B4 makes them again in the new codes.
 
 ## Ears
 
@@ -214,3 +239,19 @@ Left open, for later sessions or for you:
 - A finite arc lands on its last 4 s and a bar at least (`land`): the
   tonic chord and the tune on the tonic, alone, ringing out.
 
+
+**The joins (102e, session 15, v164), first picks** (each one line of
+`data/longform.txt`, `[longform joins]`):
+
+- A fill or the floor out where the energy steps by 0.04 or more across a
+  line where a theme changes, 0.08 where only a role does (`step`).
+- A join lasts a bar, at most an eighth of its unit (`bars`, `share`); a
+  breath half of that (`breath`); a fill the last beat, rising from 0.35
+  to 0.65 of the instrument's loudest (`fill`); a pivot's chord held a beat
+  past the line (`hold`).
+- Chosen in the code, not the data (`Form::join_of`): a key's line a pivot
+  (else the floor out, or a breath); a theme's a fill rising, the floor out
+  falling, the tune alone level (a breath where the tune is silent); every
+  wander's theme a breath of the tune; the return prepared where it is.
+- A slider-made close lasts 10 s in whole phrases (`[longform arc] close`)
+  and lands as a finite arc does (`[longform energy] land`).

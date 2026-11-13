@@ -5,7 +5,8 @@
 # Mikey's ears: sessions 12 to 16 tune them. The wander's are heard since
 # session 12 (core/src/generator/heard.rs); the arc's energy since session
 # 13 ([longform energy]); its themes, variations, keys and movements since
-# session 14.
+# session 14; the joins between its units since session 15 ([longform
+# joins]).
 
 # Which journey a piece takes: an arc, as a symphony's, or the long slow
 # wander. Drawn per piece on a stream of its own; a request pins it

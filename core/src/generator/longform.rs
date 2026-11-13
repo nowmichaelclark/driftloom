@@ -51,7 +51,12 @@
 //! arc, so its first and its last are full and the last alone closes; a
 //! unit finds its movement by a division still.
 //!
-//! The numbers are `data/longform.txt`'s (`data::LONGFORM`).
+//! **The joins** (session 15, `Join`). Where two units meet and something
+//! changes, each unit names how it meets the next, chosen from what changes
+//! and the energy either side (`Form::join_of`), the unit after found by
+//! number like any other.
+//!
+//! The numbers are `data/longform.txt`'s (`data::LONGFORM`, `data::JOINS`).
 
 // Units, sections and bars are whole numbers far below 2^53, and a share of
 // them is rounded on purpose.

@@ -451,6 +451,22 @@ theme B's making spread across blocks (the tablet's margin); and the
 listening set as rendered excerpts with a blind before-and-after pair,
 since the app can't jump or take a journey until 106.
 
+**102e's joins done** (session 15, v164): every line where a unit meets
+the next and something changes is written, chosen by what changes and the
+energy either side (`longform::Join`, `Form::join_of`; heard in
+`Heard::joins`): a chord both keys share held across a key's line, the
+bass on its root; a fill into a rise; the floor out before a fall; the
+tune alone, or a breath, where a theme changes; a wander's line move a
+breath of its layer; what glides, its glide. A breath between arcs keeps
+the tune at its thinnest (the 2.7 LU step gone). Endings that land: where
+the length slider stops a piece or Endless before its close, the phrases
+before the stop play the close and land on the tonic, ringing out
+(`Heard::stop_at`; `dlrender --track`). A landing struck at velocity 0
+since 102c fixed. The arc's brightness judged on its opening, peak and
+close (`docs/LONGFORM.md`, "The joins", "Endings that land";
+`core/tests/joins.rs`). The measures and the listening set are 102e's
+second PR.
+
 **102d done** (session 14, v163): a second theme (another seed's tune bent
 into the loop, made a stage a block a section ahead), the variations as
 marks on the notes, the related keys (a fifth away, the relative and the

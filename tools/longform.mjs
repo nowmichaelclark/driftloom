@@ -15,6 +15,8 @@
 //   node tools/longform.mjs --arcs 30       that many arc seeds played at 64
 //                                           bars (30; 256 bars: 12, 1,024:
 //                                           4, each two fifths as many again)
+//   node tools/longform.mjs --endings 20    that many pieces stopped by the
+//                                           length slider (20)
 //   node tools/longform.mjs --plan          the plan's checks alone
 //   node tools/longform.mjs --check         exit 1 if any check fails
 //   node tools/longform.mjs --map SEED REQUEST [--from N] [--count N]
@@ -38,7 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pieceMap } from './gen-lib.mjs';
-import { arcChecks, arcJoins, arcVerdict, dlrender, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
+import { arcChecks, arcJoins, arcVerdict, dlrender, endingChecks, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
 import { Rng } from '../js/rng.js';
 
 const args = process.argv.slice(2);
@@ -165,6 +167,7 @@ function wanderChecks(where, form, units, fromStart) {
   check('never the thing that moved last (a layer back from its rest apart)', never, where);
 }
 const holds = { count: 0, seconds: 0, things: {} };
+const joins = {};
 
 // The corpus's seeds: the corpus seed's own stream.
 const rng = new Rng(20261009);
@@ -189,6 +192,23 @@ for (const seed of seeds) {
       grains[form.grain] += 1;
       check('the journey asked is the piece\'s', form.journey === journey && form.asked, where);
 
+      // The joins (session 15): every line where a theme, a key or how
+      // the tune is played changes (or a wander's line move) written, a
+      // glide only for what glides; none after a close.
+      for (let x = 1; x < units.length; x++) {
+        const [a, b] = [units[x - 1], units[x]];
+        joins[a.join] = (joins[a.join] ?? 0) + 1;
+        if (a.closes) {
+          check('a close lands: no join after it', a.join === 'none', where);
+          continue;
+        }
+        if (b.changed.some((c) => ['theme', 'key', 'variation', 'voice', 'register', 'length'].includes(c))) {
+          check('no line left unwritten where a theme, a key or a line move changes', !['none', 'glide'].includes(a.join), `${where} section ${a.section}.${a.phrase}: ${a.join} into ${b.changed.join(', ')}`);
+        } else if (b.changed.length) {
+          check('something changes at the line: a join or its glide', a.join !== 'none', `${where} section ${a.section}.${a.phrase}`);
+        }
+        if (b.changed.includes('key')) check('a key changes: a chord both keys share, the return prepared, the floor out or a breath', ['pivot', 'prepared', 'floor', 'breath'].includes(a.join), `${where} section ${a.section}.${a.phrase}: ${a.join}`);
+      }
       const keys = [form.home, ...form.related];
       check('no key outside the related set', units.every((u) => keys.some((k) => sameKey(k, u.key))), where);
       check('the tempo is the loop\'s own throughout', units.every((u) => u.bpm === units[0].bpm), where);
@@ -273,6 +293,8 @@ for (const journey of JOURNEYS) {
   check("a section's plan costs the same at 10^9 as at 10^5", far < on * 1.5 + 0.002, `${journey}: ${timed[journey].map((t) => (t * 1000).toFixed(1)).join(', ')} us`);
 }
 
+const JOINS = ['glide', 'fill', 'floor', 'pivot', 'alone', 'breath', 'prepared'];
+check('every join kind appears in the corpus', JOINS.every((k) => joins[k] > 0), JSON.stringify(joins));
 const mean = holds.seconds / Math.max(1, holds.count);
 check('holds as long as drawn: between one and five minutes on average', mean >= 90 && mean <= 270, `${mean.toFixed(0)} s`);
 // The theme's turn is off until theme B is made (data/longform.txt).
@@ -405,7 +427,32 @@ if (!flag('--plan')) {
   }
 }
 
+// Endings that land (session 15): twenty pieces the length slider stops
+// before their close (Endless arcs and wanders, and finite arcs part way),
+// each with the core's own next loop after it, as in the app: the last
+// chord struck the tonic's, nothing after it but its ring, never faded.
+const endings = [];
+if (!flag('--plan')) {
+  const n = Number(value('--endings', 20));
+  const asks = ['bars=endless,journey=arc', 'bars=endless,journey=wander', 'bars=1024,journey=arc', 'bars=256,journey=arc'];
+  for (let i = 0; i < n; i++) {
+    const seed = seeds[i];
+    const request = asks[i % asks.length];
+    // A stop somewhere in the second to the fifth minute, by the seed.
+    const { form } = pieceMap(seed, request, 0, 1);
+    const bar = form.unitSeconds / form.unitBars;
+    const bars = Math.max(9, Math.round((60 + (seed % 180)) / bar));
+    const e = endingChecks(seed, request, bars);
+    endings.push(e);
+    const where = `${seed} "${request}" stopped at bar ${e.stopBars}`;
+    check('a slider-made close lands on the tonic', e.tonic, `${where}: ${e.chord.join('/')}`);
+    check('a slider-made close plays alone, then rings out (never faded or cut)', e.alone && e.rings, `${where}: ${e.later} notes after it, ${e.faded} fades, a fall of ${e.fall.toFixed(1)} dB`);
+  }
+}
+
 console.log(`longform: ${SEEDS} seeds x ${LENGTHS.length} lengths x 2 journeys = ${pieces} pieces, in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+console.log(`  joins in the maps: ${Object.entries(joins).sort((a, b) => b[1] - a[1]).map(([k, c]) => `${k} ${c}`).join(', ')}`);
+if (endings.length) console.log(`  endings that land: ${endings.filter((e) => e.tonic && e.alone && e.rings).length} of ${endings.length} on the tonic, alone, ringing out (the largest fall in a ring ${Math.max(...endings.map((e) => e.fall)).toFixed(1)} dB)`);
 const drawn = journeys.arc + journeys.wander;
 console.log(`  drawn with nothing asked: arc ${(100 * journeys.arc / drawn).toFixed(0)}%, wander ${(100 * journeys.wander / drawn).toFixed(0)}%; planned in sections ${grains.section}, in phrases ${grains.phrase}`);
 console.log(`  a wander's holds: ${holds.count}, ${mean.toFixed(0)} s on average; moves: ${THINGS.map((t) => `${t} ${holds.things[t] ?? 0}`).join(', ')}`);
