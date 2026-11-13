@@ -149,3 +149,24 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   2:38) and 9:00 (the close). In `core/`: `cargo run --release --example
   dlrender -- --seed 2728346932 --request bars=64,journey=arc --seconds 100
   --wav tha-vol.wav`; the times are in `docs/LONGFORM.md`, "Pieces to hear".
+- #379, long pieces: themes that return changed, related keys, movements
+  of kinds (item 102d, session 14, v163), preview URL: the branch's preview
+  (no hash kept): nothing in the app changes yet (it can't take a journey;
+  loops of up to 32 bars play bit for bit as before, the core baseline
+  unmoved). An arc is now a piece with ideas: a second theme (another
+  seed's tune bent into the loop, in the related key), a development
+  trading fragments (now and then a call and response in one voice), theme
+  A home again with one variation (an octave away, another voice,
+  stretched, over the relative key's chords, answered), the bass holding
+  the home fifth for a phrase before it, movements of four kinds in a
+  piece of three or more, a finale that recalls the earlier movements'
+  second themes, and in a wander the tune now and then handed to the
+  second theme. To hear: brum-yei (corpus 20261009 #17, seed 1151594917,
+  `bars=256,journey=arc`) from 1:00 (B enters 1:10 in F#, the call and
+  response 1:45, the return 3:13) and from 6:40 (the look back, the
+  answered return 8:13); fei-no (#42, seed 2158762586,
+  `bars=256,journey=arc`) from 2:35 (B in the relative key 2:43) and 7:00
+  (the stretched return 7:05). In `core/`: `cargo run --release --example
+  dlrender -- --seed 1151594917 --request bars=256,journey=arc --seconds
+  570 --wav brum-yei.wav`; every time is in `docs/LONGFORM.md`, "Pieces to
+  hear".

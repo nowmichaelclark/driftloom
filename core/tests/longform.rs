@@ -24,7 +24,7 @@ use std::sync::OnceLock;
 use std::time::Instant;
 
 use dlcore::block::Event;
-use dlcore::generator::longform::{Form, Grain, Relation, Role, Span, State, Theme, Variation, changed};
+use dlcore::generator::longform::{Form, Grain, Kind, Relation, Role, Span, State, Theme, Variation, changed};
 use dlcore::generator::piece::Piece;
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::rng::Rng;
@@ -97,7 +97,7 @@ fn each(mut check: impl FnMut(u32, &str, Journey, &Form, Option<u64>)) {
 
 #[test]
 fn an_arc_returns_its_theme_and_rises_to_one_peak() {
-    let (mut arcs, mut two, mut varied) = (0, 0, [0usize; 8]);
+    let (mut arcs, mut two, mut varied, mut recalls) = (0, 0, [0usize; 8], 0);
     each(|seed, text, journey, form, sections| {
         if journey != Journey::Arc {
             return;
@@ -115,8 +115,15 @@ fn an_arc_returns_its_theme_and_rises_to_one_peak() {
             if !whole {
                 continue;
             }
-            arcs += 1;
             let what = format!("seed {seed} {text} arc {arc}");
+            // An interlude (session 14) is no arc: theme A at home, level.
+            let kind = run[0].kind;
+            assert!(run.iter().all(|s| s.kind == kind), "{what}: a movement of two kinds");
+            if kind == Kind::Interlude {
+                assert!(run.iter().all(|s| s.theme == Theme::A && s.key == form.home && s.journey == Journey::Wander && !s.closes), "{what}: an interlude");
+                continue;
+            }
+            arcs += 1;
             // The energy: up to one peak, and down from it.
             let top = run.iter().map(|s| s.energy).fold(0.0, f64::max);
             let first = run.iter().position(|s| s.energy == top).expect("a peak");
@@ -135,7 +142,7 @@ fn an_arc_returns_its_theme_and_rises_to_one_peak() {
             assert!(run[back].theme == Theme::A && run[back].variation != Variation::Plain && run[back].variation != Variation::Key, "{what}: the return is a copy");
             assert_eq!(run[back].key, form.home, "{what}: the return is not in the home key");
             varied[run[back].variation as usize] += 1;
-            if form.second && !form.small {
+            if form.second && !form.small && kind != Kind::Light {
                 two += 1;
                 let b = run.iter().position(|s| s.theme == Theme::B && s.role == Role::Second).expect("theme B is stated");
                 assert!(stated < b && b < back, "{what}: B is not between A and its return");
@@ -145,12 +152,22 @@ fn an_arc_returns_its_theme_and_rises_to_one_peak() {
             let order: Vec<Role> = run.iter().map(|s| s.role).collect::<Vec<_>>().chunk_by(|a, b| a == b).map(|c| c[0]).collect();
             let full = [Role::Opening, Role::Theme, Role::Build, Role::Second, Role::Development, Role::Peak, Role::Release, Role::Return];
             let small = [Role::Opening, Role::Theme, Role::Lift, Role::Release, Role::Return];
-            let want = if form.small { &small[..] } else { &full[..] };
+            let want = if form.small || kind == Kind::Light { &small[..] } else { &full[..] };
+            // A finale looks back: every earlier second theme it recalls is
+            // that movement's own, found by its number.
+            for s in run {
+                if let Theme::Recall(k) = s.theme {
+                    assert!(k < arc && sections.is_some(), "{what}: a recall of movement {k}");
+                    let theirs = spans.iter().find(|x| x.part == k && x.theme == Theme::B).expect("the movement recalled has a second theme");
+                    assert_eq!(s.theme_seed, theirs.theme_seed, "{what}: the recall of movement {k} is not its tune");
+                    recalls += 1;
+                }
+            }
             assert_eq!(&order[..order.len() - 1], want, "{what}: the roles");
             assert!(matches!(order[order.len() - 1], Role::Close | Role::Breath), "{what}: no close or breath");
         }
     });
-    assert!(arcs > 2000 && two > 500, "{arcs} arcs, {two} with a second theme");
+    assert!(arcs > 2000 && two > 500 && recalls > 100, "{arcs} arcs, {two} with a second theme, {recalls} recalls");
     // Every return's variation is drawn somewhere.
     for v in [Variation::Register, Variation::Voice, Variation::Stretched, Variation::Reharmonized, Variation::Answered] {
         assert!(varied[v as usize] > 0, "no return is {}", v.name());
@@ -461,12 +478,12 @@ fn what_was_asked_is_never_moved() {
             let (spec, _, spans) = all("bars=endless,edit.warmth=0.6,edit.space=0.2,bpm=77", journey, seed);
             assert!(spans.iter().all(|s| s.state.warmth == 0.0 && s.state.space == 0.0 && s.bpm == 77.0 && spec.bpm == 77.0), "seed {seed}: the tone or the tempo moved");
             // A theme asked stays the tune.
-            let (_, _, spans) = all("bars=endless,theme=1234", Journey::Wander, seed);
-            assert!(spans.iter().all(|s| s.theme == Theme::A), "seed {seed}: a theme asked, handed over");
+            let (_, _, spans) = all("bars=endless,theme=1234", journey, seed);
+            assert!(spans.iter().all(|s| matches!(s.theme, Theme::A | Theme::Rest)), "seed {seed}: a theme asked, handed over");
         }
         // An arc moves nothing of the wander's.
         let (_, _, spans) = all("bars=1024", Journey::Arc, seed);
-        assert!(spans.iter().all(|s| s.state == State::OWN && s.changed & (changed::THINGS & !changed::THEME & !changed::KEY) == 0));
+        assert!(spans.iter().filter(|s| s.kind != Kind::Interlude).all(|s| s.state == State::OWN && s.changed & (changed::THINGS & !changed::THEME & !changed::KEY) == 0));
     }
 }
 

@@ -183,6 +183,87 @@ impl Render {
         self.chord_shift = self.register_given.take().unwrap_or_else(|| self.chords_octave(cx));
     }
 
+    /// The loop's tune made again as another tune's (session 14, a long
+    /// piece's second theme or its own answered): `cx`'s spec is the loop's
+    /// with the tune to hold (`Spec::tune`, the request's theme machinery,
+    /// queue item 85d), so the notes are drawn exactly as the loop's own
+    /// were, over the same chords, around the other figure. Into `out`;
+    /// nothing of the loop moves (the working lists apart).
+    pub fn second_melody(&mut self, cx: &Cx, plan: &Plan, out: &mut Melody) {
+        if let Some(dev) = plan.development.as_ref() {
+            melody::develop_melody(cx, &plan.sections, dev, out, &mut self.a_notes, &mut self.section_notes);
+        } else {
+            let over = Over { slots: &self.harmony.slots, cycle_steps: self.harmony.cycle_steps, events: &self.harmony.events };
+            melody::gen_melody(cx, layer_bars(cx, Layer::Melody), cx.spec.layer_seed(Layer::Melody), &over, None, out);
+        }
+    }
+
+    /// A second tune finished as the loop's own is (`finish_part`): held
+    /// out of the bars the loop's own tune is held out of (its entry, a
+    /// gap), spelled over the chords, its slides, its ornaments and its
+    /// harmony line.
+    pub fn second_finish(&self, cx: &Cx, out: &mut Melody) {
+        let spb = cx.spb;
+        let mut bars = [(false, false); MAX_BARS];
+        for e in self.melody.iter() {
+            if let Some(b) = bars.get_mut(js::index(js::floor(e.step / spb))) {
+                *b = (true, b.1 || e.vel != 0.0);
+            }
+        }
+        let gaps = &self.gaps;
+        for e in out.iter_mut() {
+            let held = bars.get(js::index(js::floor(e.step / spb))).is_some_and(|b| b.0 && !b.1);
+            if held || gaps.iter().any(|g| e.step >= g.start && e.step < g.start + g.len) {
+                e.vel = 0.0;
+            }
+        }
+        if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
+            Self::spell_tune(&self.harmony, cx, out);
+        }
+        // The chords' octave was read against the loop's own tune (queue
+        // item 84): a second tune whose centre sits within five semitones
+        // of the chords' moves an octave away from them, where it has room.
+        let centre = |sum: f64, n: usize| (n > 0).then(|| sum / js::num(n));
+        let chords = centre(self.chords.iter().flat_map(|e| e.notes.iter()).map(|&n| f64::from(n)).sum(), self.chords.iter().map(|e| e.notes.len()).sum());
+        let tune = centre(out.iter().map(|e| e.midi).sum(), out.len());
+        if let (Some(c), Some(t), None) = (chords, tune, cx.choir) {
+            let (lo, hi) = out.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), e| (js::min(lo, e.midi), js::max(hi, e.midi)));
+            let by = if t >= c { 12.0 } else { -12.0 };
+            if js::abs(t - c) < 5.0 && lo + by >= 55.0 && hi + by <= 95.0 {
+                out.iter_mut().for_each(|e| e.midi += by);
+            }
+        }
+        // As loud as the loop's own tune: its notes' mean velocity the
+        // loop's tune's (a quieter second theme sat a role that should
+        // rise 2 LU under the theme before it: session 14 measured).
+        let level = |m: &Melody| centre(m.iter().filter(|e| e.vel != 0.0).map(|e| e.vel).sum(), m.iter().filter(|e| e.vel != 0.0).count());
+        if let (Some(own), Some(other)) = (level(&self.melody), level(out)) {
+            let by = js::clamp(own / other, 0.5, 2.0);
+            for e in out.iter_mut() {
+                e.vel = js::min(1.0, e.vel * by);
+                e.vel0 = e.vel;
+            }
+        }
+        // No clash added: a note that starts a semitone over a tone of the
+        // chord sounding under it takes that tone (where the tune and the
+        // chords turn together, on the loop's own cycle).
+        let together = |l: Layer| cx.spec.cycles.of(l as usize).is_none_or(|c| c == 0.0 || c == cx.spec.bars * spb);
+        if together(Layer::Melody) && together(Layer::Chords) {
+            for e in out.iter_mut().filter(|e| e.vel != 0.0) {
+                let over = |c: &ChordEvent| c.vel != 0.0 && c.step <= e.step && e.step < c.step + c.dur && c.notes.iter().any(|&n| ((e.midi - f64::from(n)) % 12.0 + 12.0) % 12.0 == 1.0);
+                if self.chords.iter().any(over) {
+                    e.midi -= 1.0;
+                }
+            }
+        }
+        let cycle = cx.spec.cycles.of(Layer::Melody as usize).filter(|&c| c != 0.0).unwrap_or(cx.spec.bars * spb);
+        Self::annotate_prev(cx, cycle, out);
+        if cx.choir.is_none() {
+            Self::ornament(cx, out);
+            Self::harmonize(cx, out);
+        }
+    }
+
     /// The chords' octave the progression and the tune ask for, without
     /// building the rest of the loop: the harmony of `plan` and the melody
     /// over it (queue item 84). `Generator` uses it on today's chord
@@ -292,7 +373,7 @@ impl Render {
         }
 
         let cycle = spec.cycles.of(Layer::Melody as usize).filter(|&c| c != 0.0).unwrap_or(spec.bars * spb);
-        self.annotate_prev(cx, cycle);
+        Self::annotate_prev(cx, cycle, &mut self.melody);
 
         let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
         for (i, e) in self.chords.iter_mut().enumerate() {
@@ -308,8 +389,8 @@ impl Render {
         }
 
         if cx.choir.is_none() {
-            self.ornament(cx);
-            self.harmonize(cx);
+            Self::ornament(cx, &mut self.melody);
+            Self::harmonize(cx, &mut self.melody);
         } else {
             for e in self.texture.iter_mut() {
                 if e.vel != 0.0 {
@@ -702,36 +783,41 @@ impl Render {
 
     /// `spellOver`, on the melody and then the bass.
     fn spell_over(&mut self, cx: &Cx) {
+        Self::spell_tune(&self.harmony, cx, &mut self.melody);
+        for e in self.bass.iter_mut() {
+            Self::respell(&self.harmony, cx, &mut e.midi, &mut e.steps, e.step);
+        }
+    }
+
+    /// `spellOver`'s respelling of one note over the chord at its step.
+    fn respell(h: &plan::Harmony, cx: &Cx, midi: &mut f64, steps: &mut Option<List<f64, 7>>, step: f64) {
         let spec = cx.spec;
         let scale = spec.steps();
-        let h = &self.harmony;
-        let respell = |midi: &mut f64, steps: &mut Option<List<f64, 7>>, step: f64| {
-            let slot = h.slot_at(step);
-            let Some(st) = &slot.steps else { return };
-            let p = (((*midi - spec.root) % 12.0) + 12.0) % 12.0;
-            if let Some(i) = scale.iter().position(|&x| x == p) {
-                *midi += ((st[i] - scale[i] + 18.0) % 12.0) - 6.0;
-            }
-            *steps = Some(*st);
-        };
-        for e in self.melody.iter_mut() {
-            respell(&mut e.midi, &mut e.steps, e.step);
+        let slot = h.slot_at(step);
+        let Some(st) = &slot.steps else { return };
+        let p = (((*midi - spec.root) % 12.0) + 12.0) % 12.0;
+        if let Some(i) = scale.iter().position(|&x| x == p) {
+            *midi += ((st[i] - scale[i] + 18.0) % 12.0) - 6.0;
         }
-        for e in self.bass.iter_mut() {
-            respell(&mut e.midi, &mut e.steps, e.step);
+        *steps = Some(*st);
+    }
+
+    /// `spellOver`, on a tune.
+    fn spell_tune(h: &plan::Harmony, cx: &Cx, m: &mut Melody) {
+        for e in m.iter_mut() {
+            Self::respell(h, cx, &mut e.midi, &mut e.steps, e.step);
         }
     }
 
     /// `annotatePrev`: the pitch each melody note slides from.
-    fn annotate_prev(&mut self, cx: &Cx, cycle: f64) {
+    fn annotate_prev(cx: &Cx, cycle: f64, m: &mut Melody) {
         let sd = 60.0 / cx.spec.bpm / 4.0;
         let mut order: List<usize, { melody::MELODY_MAX }> = List::new();
-        for (i, e) in self.melody.iter().enumerate() {
+        for (i, e) in m.iter().enumerate() {
             if e.vel != 0.0 {
                 order.push(i);
             }
         }
-        let m = &mut self.melody;
         order.sort_stable_by(|&a, &b| m[a].step < m[b].step);
         if order.len() < 2 {
             return;
@@ -750,13 +836,13 @@ impl Render {
     }
 
     /// `ornament`: cuts and turns.
-    fn ornament(&mut self, cx: &Cx) {
+    fn ornament(cx: &Cx, m: &mut Melody) {
         let Some(p) = cx.c.ornament.filter(|&p| p != 0.0) else { return };
         let spb = cx.spb;
         let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
         let sd = 60.0 / cx.spec.bpm / 4.0;
         let mut r = Rng::new(js::salted(cx.spec.layer_seed(Layer::Melody), 0x0a11_e7ed, 1));
-        for e in self.melody.iter_mut() {
+        for e in m.iter_mut() {
             if e.vel == 0.0 || (e.step % spb) % beat != 0.0 {
                 continue;
             }
@@ -771,14 +857,13 @@ impl Render {
     }
 
     /// `harmonize`: a line in thirds or sixths on the held notes.
-    fn harmonize(&mut self, cx: &Cx) {
+    fn harmonize(cx: &Cx, m: &mut Melody) {
         let Some(p) = cx.c.harmonize.filter(|&p| p != 0.0) else { return };
         let mut r = Rng::new(js::salted(cx.spec.layer_seed(Layer::Melody), 0x7417_d5e5, 1));
         if !r.chance(p) {
             return;
         }
         let kind = r.weighted(&[("third", 2.0), ("sixth", 1.0)]).unwrap_or("third");
-        let m = &mut self.melody;
         // The last note of each phrase (the first of the latest, by step).
         let mut last: List<(f64, usize), { melody::MELODY_MAX }> = List::new();
         let mut sounding = 0;

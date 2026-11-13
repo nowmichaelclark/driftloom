@@ -40,8 +40,9 @@ fn main() -> ExitCode {
         Some("--check") => args.get(1).ok_or_else(|| "--check needs a file".to_string()).and_then(|f| check(f)),
         Some("--show") => show(&args[1..]),
         Some("--map") => map(&args[1..]),
+        Some("--theme-cost") => theme_cost(&args[1..]),
         Some("--section-cost") => section_cost(&args[1..]),
-        _ => Err("usage: dlgen --check FILE | --show SEED [REQUEST] [PART] | --map SEED [REQUEST] [--from N] [--count N] | --section-cost SEED [REQUEST]".to_string()),
+        _ => Err("usage: dlgen --check FILE | --show SEED [REQUEST] [PART] | --map SEED [REQUEST] [--from N] [--count N] | --section-cost SEED [REQUEST] | --theme-cost SEED [REQUEST] [FROM]".to_string()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -73,6 +74,47 @@ fn section_cost(args: &[String]) -> Result<(), String> {
         let _ = write!(line, " n{n}={:.1}us", best * 1e6);
     }
     println!("{line}");
+    Ok(())
+}
+
+/// `--theme-cost`: what a section of an arc costs to make by whose tune it
+/// plays (session 14), from section `from` on: a theme-A section and a
+/// theme-B one made again and again (the second tune already made, as the
+/// player has it a section ahead), a theme-B section whose tune is made
+/// from nothing each time (two movements' in turn), and the loop's own
+/// load beside them. The least time of each kept.
+fn theme_cost(args: &[String]) -> Result<(), String> {
+    let seed: u32 = args.first().and_then(|s| s.parse().ok()).ok_or("--theme-cost needs a seed")?;
+    let asked = request(args.get(1).map_or("-", String::as_str))?;
+    let from: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let mut generator = Box::new(generator::Generator::new());
+    let mut load = f64::INFINITY;
+    for _ in 0..5 {
+        let t0 = std::time::Instant::now();
+        generator.load_with(seed, &asked);
+        load = load.min(t0.elapsed().as_secs_f64());
+    }
+    let form = generator.form().ok_or("no long piece")?;
+    let first = |role: longform::Role, theme: Theme, after: u64| (after..after + 20_000).find(|&n| {
+        let s = form.at(n, 0);
+        s.role == role && s.theme == theme && form.units_in(n) == 1
+    });
+    let a = first(longform::Role::Theme, Theme::A, from).ok_or("no theme-A section (a piece planned in phrases?)")?;
+    let b = first(longform::Role::Second, Theme::B, from).ok_or("no theme-B section: a piece of one theme")?;
+    let other = first(longform::Role::Second, Theme::B, b + form.movement_units(b, 0)).filter(|&n| form.at(n, 0).theme_seed != form.at(b, 0).theme_seed).ok_or("no second movement with a theme B")?;
+    let mut time = |sections: &[u64]| {
+        let mut best = f64::INFINITY;
+        for _ in 0..40 {
+            let t0 = std::time::Instant::now();
+            for k in 0..20 {
+                std::hint::black_box(generator.section(sections[k % sections.len()], generator::wander::AMOUNT));
+            }
+            best = best.min(t0.elapsed().as_secs_f64() / 20.0);
+        }
+        best * 1e6
+    };
+    let (warm_a, warm_b, cold_b) = (time(&[a, a + 1]), time(&[b, b + 1]), time(&[b, other]));
+    println!("seed={seed} request={} from={from} a={a} b={b} themeA={warm_a:.1}us themeB={warm_b:.1}us themeBmade={cold_b:.1}us load={:.1}us", args.get(1).map_or("-", String::as_str), load * 1e6);
     Ok(())
 }
 
@@ -174,11 +216,13 @@ fn clock(seconds: f64) -> String {
 fn map(args: &[String]) -> Result<(), String> {
     let mut plain = Vec::new();
     let (mut from, mut count) = (0u64, None);
+    let mut movements = false;
     let mut rest = args.iter();
     while let Some(a) = rest.next() {
         match a.as_str() {
             "--from" => from = rest.next().and_then(|x| x.parse().ok()).ok_or("--from needs a section's number")?,
             "--count" => count = Some(rest.next().and_then(|x| x.parse::<u64>().ok()).ok_or("--count needs a number")?),
+            "--movements" => movements = true,
             _ => plain.push(a),
         }
     }
@@ -223,6 +267,42 @@ fn map(args: &[String]) -> Result<(), String> {
     println!("# {length}; the {} ({how}): {journey}; the unit is the {} ({} bars, {:.1} s)", form.journey.name(), form.grain.name(), form.unit_bars, form.unit_seconds);
     let related: Vec<String> = form.related().map(|k| format!("{} ({})", key_name(k), k.relation.name())).collect();
     println!("# related keys: {}", if related.is_empty() { "none".to_string() } else { related.join(", ") });
+    let kinds: Vec<&str> = form.cycle().iter().map(|k| k.name()).collect();
+    if form.journey == Journey::Arc && kinds.len() > 1 {
+        println!("# the movements' cycle: {}{}", kinds.join(", "), if sections.is_some() { ", then a last full arc" } else { ", round and round" });
+    }
+    if movements {
+        // One line a movement: where it starts, its kind, how long it is,
+        // its second theme's seed and how its theme returns.
+        println!("# {:>9} {:>9} {:>8}  {:<10} {:>6} {:>8}  second theme, the return", "movement", "section", "time", "kind", "units", "lasts");
+        let count = count.unwrap_or_else(|| sections.unwrap_or(2000));
+        let mut last = None;
+        for n in from..from.saturating_add(count) {
+            let m = sections.map_or(n, |all| n % all);
+            for p in 0..form.units_in(n) {
+                let s = form.at(n, p);
+                if s.journey == Journey::Arc && s.role == longform::Role::Return && s.at > 0 && last == Some((s.part, false)) {
+                    println!("{:>64}the return: A {}{}", "", s.variation.name(), if form.at(n, p).changed & changed::KEY != 0 { ", the key home" } else { "" });
+                    last = Some((s.part, true));
+                }
+                if last.map(|l| l.0) == Some(s.part) {
+                    continue;
+                }
+                last = Some((s.part, false));
+                println!(
+                    "{:>11} {:>9} {:>8}  {:<10} {:>6} {:>8}  {}",
+                    s.part,
+                    if form.units_in(n) > 1 { format!("{n}.{p}") } else { n.to_string() },
+                    clock((m as f64 * spec.bars + p as f64 * form.unit_bars) * bar_seconds),
+                    s.kind.name(),
+                    form.movement_units(n, p),
+                    clock(form.movement_units(n, p) as f64 * form.unit_seconds),
+                    form.second_of(s.part).map_or("one theme".to_string(), |seed| format!("B of seed {seed}")),
+                );
+            }
+        }
+        return Ok(());
+    }
     println!("# {:>9} {:>8} {:>4}  {:<11} {:>12}  {:<16} {:<18} {:>5} {:>6}  changed", "section", "time", "bars", "role", "part", "theme", "key", "bpm", "energy");
     let count = count.unwrap_or_else(|| sections.map_or(60, |n| n.min(200)));
     for n in from..from.saturating_add(count) {
@@ -250,6 +330,15 @@ fn map(args: &[String]) -> Result<(), String> {
             }
             if let Some((l, pick)) = s.state.voice {
                 state.push(format!("{} voice {pick:.2}", l.name()));
+            }
+            if s.calls {
+                state.push("a call and response".to_string());
+            }
+            if s.prepares {
+                state.push("the bass holds the home fifth".to_string());
+            }
+            if s.journey == Journey::Arc && form.cycle().len() > 1 {
+                state.push(s.kind.name().to_string());
             }
             if s.journey == Journey::Wander {
                 state.push(format!("warmth {:+.2} space {:+.2} register {:+} length {:+} density {:.2}", s.state.warmth, s.state.space, s.state.register, s.state.length, s.state.density));

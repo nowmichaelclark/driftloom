@@ -776,6 +776,12 @@ impl Player {
     /// Draw pass `number` into `passes[slot]`, at the wander's amount, on
     /// its stream salted as the host asked.
     fn draw(&mut self, slot: usize, number: u32) {
+        // What the section plays beside the loop's own tune (session 14):
+        // made in the blocks before, a stage each (`decide`); here only
+        // where the pass is drawn with no blocks to spare (a load's first).
+        if self.journeyed {
+            while !self.generator.prepare(u64::from(number)) {}
+        }
         let g = &self.generator;
         let kick = g.settings().kick.map(|k| k.kind);
         if let Some(p) = self.passes.get_mut(slot) {
@@ -783,7 +789,9 @@ impl Player {
             p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
             // A long piece's plan, heard (queue items 102b and 102c).
             if self.journeyed {
-                p.heard.hear(g.form().as_ref(), &cx, g.render(), u64::from(number));
+                let form = g.form();
+                let second = form.as_ref().and_then(|f| g.second(crate::generator::heard::Tune::of(f, u64::from(number))));
+                p.heard.hear(form.as_ref(), &cx, g.render(), second, u64::from(number));
             }
         }
     }
@@ -835,7 +843,7 @@ impl Player {
         // loop's first step, before the new loop hands over a note.
         let fade = if self.was_playing { self.handover.fade() } else { None };
         let g = &self.generator;
-        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0 };
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0, second: None };
         let at_moment = self.asked_by == Asked::Moment;
         if at_moment || fade.is_some() {
             let when = if at_moment { start } else { now };
@@ -906,7 +914,7 @@ impl Player {
         }
         self.generator.keep_late(was.late);
         let g = &self.generator;
-        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0 };
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0, second: None };
         self.seq.revise(host, &mut self.synth, &lp, now, was);
         let count = self.seq.loop_count;
         for _ in 0..skip {
@@ -1180,6 +1188,12 @@ impl Player {
         let due = |seq: &Sequencer| seq.next_step_time < now + LOOKAHEAD && seq.abs_step < last;
         if self.wandering && !self.next_drawn && !due(&self.seq) {
             let n = self.seq.loop_count.wrapping_add(1);
+            // The next section's second tune first, a stage a block, as a
+            // load is spread (session 14: another seed's tune is a spec's
+            // making and a melody's).
+            if self.journeyed && !self.generator.prepare(u64::from(n)) {
+                return Work::Pass;
+            }
             self.draw(1 - self.current, n);
             self.next_drawn = true;
             return Work::Pass;
@@ -1300,7 +1314,8 @@ impl Player {
 /// The loop as the sequencer plays it: the generator's, with the pass in
 /// `passes[slot]` wandering over it (none: the loop as composed).
 fn loop_of<'a>(g: &'a Generator, passes: &'a [Pass; 2], slot: Option<usize>) -> Loop<'a> {
-    Loop { spec: g.spec(), base: g.render(), pass: slot.and_then(|i| passes.get(i)), settings: g.settings(), step: 0.0 }
+    let pass = slot.and_then(|i| passes.get(i));
+    Loop { spec: g.spec(), base: g.render(), pass, settings: g.settings(), step: 0.0, second: pass.and_then(|p| g.second(p.heard.second)) }
 }
 
 impl Default for Player {

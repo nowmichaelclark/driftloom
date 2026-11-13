@@ -40,9 +40,16 @@
 //!
 //! **Heard** (`heard`): a wander's section plays its units' states as marks
 //! and levels on the loop's wandered pass (session 12), and an arc's its
-//! units' energy, with a finite arc's landing on the tonic (session 13).
-//! The arc's themes, variations and keys are named here and not yet heard
-//! (session 14): it plays theme A in the home key throughout.
+//! units' energy, with a finite arc's landing on the tonic (session 13),
+//! and its themes, their variations and its keys (session 14).
+//!
+//! **Movements of different kinds** (session 14). A piece of three arcs or
+//! more, and Endless, plays its movements in a repeating cycle drawn per
+//! piece (`Kind`): a full arc, then a gentle one, a light one and (four or
+//! more) an interlude in the wander's way, in a drawn order, each a share
+//! of the full arc's length. A finite piece is whole cycles and a last full
+//! arc, so its first and its last are full and the last alone closes; a
+//! unit finds its movement by a division still.
 //!
 //! The numbers are `data/longform.txt`'s (`data::LONGFORM`).
 
@@ -71,6 +78,9 @@ const THEME_SALT: u32 = 0x4254_484d;
 const EPOCH_SALT: u32 = 0x4550_4f43;
 const LAST_SALT: u32 = 0x4c41_5354;
 const VALUE_SALT: u32 = 0x5641_4c00;
+const KIND_SALT: u32 = 0x4b49_4e44;
+const CALL_SALT: u32 = 0x4341_4c4c;
+const INTERLUDE_SALT: u32 = 0x494e_544c;
 
 /// A phrase, in bars, where four divide a section (`player::change`'s
 /// `PHRASE_BARS`: the player's phrase lines are the plan's).
@@ -82,6 +92,59 @@ const ROLES_MAX: usize = 9;
 /// The most turns an epoch of the wander has: every thing once, the layers
 /// twice (one rests, and returns).
 const TURNS_MAX: usize = 10;
+
+/// The most places a cycle of movements has: a full arc and the three
+/// other kinds.
+const CYCLE_MAX: usize = 4;
+
+/// What kind a movement is (session 14; Mikey, 2026-11-12: a long piece's
+/// movements should differ in kind, as a symphony's do).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    /// The full form: an opening to a close, with a second theme and keys.
+    Full,
+    /// The full form with a low peak: no build to speak of.
+    Gentle,
+    /// The small form: one theme, a lift, the home key.
+    Light,
+    /// The wander's way for a span: one thing moving at a time, each home
+    /// again before the span ends.
+    Interlude,
+}
+
+impl Kind {
+    /// The kind's name, as the data and the map write it.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Kind::Full => "full",
+            Kind::Gentle => "gentle",
+            Kind::Light => "light",
+            Kind::Interlude => "interlude",
+        }
+    }
+
+    /// The fewest units a movement of this kind is laid on: a unit a role,
+    /// or an interlude's three holds.
+    const fn least(self) -> u64 {
+        match self {
+            Kind::Full | Kind::Gentle => FULL_UNITS,
+            Kind::Light => 6,
+            Kind::Interlude => 3,
+        }
+    }
+
+    /// Whether a movement of this kind brings a second theme (where the
+    /// piece has them).
+    const fn bears(self) -> bool {
+        matches!(self, Kind::Full | Kind::Gentle)
+    }
+
+    /// The kind's length, a share of a full arc's in thousandths.
+    fn share(self) -> u64 {
+        (js::round(1000.0 * data::lookup(LONGFORM.kinds, self.name()).unwrap_or(1.0)) as u64).max(1)
+    }
+}
 
 /// A stream of the piece's own for the draw `salt` names, numbered
 /// `number` (an arc's, an epoch's): the number is folded into the seed by
@@ -191,8 +254,8 @@ pub enum Theme {
     Recall(u64),
 }
 
-/// How a theme is changed where it comes again. What each does to the notes
-/// is session 14's; the plan says which.
+/// How a theme is changed where it comes again. The plan says which; what
+/// each does to the notes is `heard`'s (session 14).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Variation {
     /// As first stated.
@@ -356,10 +419,14 @@ pub mod changed {
     pub const NAMES: [&str; 11] = ["role", "theme", "variation", "key", "layers", "voice", "warmth", "space", "register", "length", "density"];
     /// The things a wander moves: every bit but the role and the variation.
     pub const THINGS: u16 = THEME | KEY | LAYERS | VOICE | WARMTH | SPACE | REGISTER | LENGTH | DENSITY;
+    /// The things an interlude moves: a wander's, the key and the theme
+    /// apart.
+    pub const STATE: u16 = LAYERS | VOICE | WARMTH | SPACE | REGISTER | LENGTH | DENSITY;
 }
 
 /// What one unit of a piece is: a section, or a phrase of one (`Grain`).
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // separate facts about a unit, not a state
 pub struct Span {
     pub journey: Journey,
     pub role: Role,
@@ -390,6 +457,18 @@ pub struct Span {
     /// What changed from the unit before (`changed`); nothing at a piece's
     /// first.
     pub changed: u16,
+    /// The kind of the movement it is in (session 14; a wander's: full).
+    pub kind: Kind,
+    /// The movement's drawn number, from 0 to 1, that its variations are a
+    /// function of: which way a register moves, which voice takes the
+    /// tune, which answer the theme is given.
+    pub pick: f64,
+    /// Whether the unit is a call and response: each phrase theme A's
+    /// fragment, then `theme`'s in A's rests.
+    pub calls: bool,
+    /// Whether the unit prepares the return: over its last phrase the bass
+    /// holds the home key's fifth.
+    pub prepares: bool,
 }
 
 /// The things a wander moves, in the order their turns are numbered.
@@ -444,6 +523,19 @@ pub struct Form {
     arc_units: u64,
     pub small: bool,
     pub second: bool,
+    /// The movements' cycle (session 14): its kinds in order, a full arc
+    /// first (one place: every movement a full arc), each place's share in
+    /// thousandths of a full arc's, how many whole cycles a finite piece
+    /// plays before its last full arc, and each place's units in Endless.
+    cycle: [Kind; CYCLE_MAX],
+    cycle_len: usize,
+    shares: [u64; CYCLE_MAX],
+    cycles: u64,
+    lens: [u64; CYCLE_MAX],
+    /// Whether the tune may be stretched (it has no cycle of its own), and
+    /// whether the loop has a tune at all.
+    stretchable: bool,
+    tune: bool,
     /// Whether the tune's voice may be handed on (none was asked).
     hand_on: bool,
     /// The wander: an epoch's turns and its units, the layers that may rest
@@ -601,10 +693,50 @@ impl Form {
 
         // The arcs: a finite piece holds a whole number, each with room for
         // its form; Endless plays arcs of the drawn length in turn.
-        let arcs = round.map_or(0, |r| (arcs_wanted as u64).min(r.units / FULL_UNITS).max(1));
-        let arc_units = round.map_or_else(|| (js::round(arc_seconds / unit_seconds) as u64).max(FULL_UNITS), |r| r.units / arcs);
+        let wanted = round.map_or(0, |r| (arcs_wanted as u64).min(r.units / FULL_UNITS).max(1));
+        // The movements' kinds (session 14): a cycle drawn per piece, a full
+        // arc first, then the others in a drawn order (three movements: one
+        // other, never an interlude). A finite piece is as many whole
+        // cycles as fill it and a last full arc; every movement has room
+        // for its form, or the piece keeps arcs all alike.
+        let mut kr = stream(seed, KIND_SALT, 0);
+        let mut others = [Kind::Gentle, Kind::Light, Kind::Interlude];
+        for x in (1..others.len()).rev() {
+            others.swap(x, kr.pick_index(x + 1));
+        }
+        let mut cycle = [Kind::Full; CYCLE_MAX];
+        let mut cycle_len = 1;
+        if round.is_none() || wanted >= 4 {
+            cycle[1..].copy_from_slice(&others);
+            cycle_len = CYCLE_MAX;
+        } else if wanted == 3 {
+            cycle[1] = others.into_iter().find(|&k| k != Kind::Interlude).unwrap_or(Kind::Gentle);
+            cycle_len = 2;
+        }
+        let mut shares = [0u64; CYCLE_MAX];
+        for (s, k) in shares.iter_mut().zip(cycle).take(cycle_len) {
+            *s = k.share();
+        }
+        let sum: u64 = shares.iter().sum();
+        let mut cycles = 0;
+        if let (Some(r), true) = (round, cycle_len > 1) {
+            let want = js::max(1.0, js::round((wanted - 1) as f64 * 1000.0 / sum as f64)) as u64;
+            let room = (0..cycle_len).map(|x| (r.units * shares[x] / cycle[x].least()).saturating_sub(shares[0]) / sum).min().unwrap_or(0);
+            cycles = want.min(room);
+            if cycles == 0 {
+                cycle_len = 1;
+            }
+        }
+        let arcs = if cycles > 0 { cycles * cycle_len as u64 + 1 } else { wanted };
+        let arc_units = round.map_or_else(
+            || (js::round(arc_seconds / unit_seconds) as u64).max(FULL_UNITS),
+            |r| if cycles > 0 { (u128::from(r.units) * u128::from(shares[0]) / u128::from(cycles * sum + shares[0])) as u64 } else { r.units / arcs },
+        );
+        let mut lens = [0u64; CYCLE_MAX];
+        for x in 0..cycle_len {
+            lens[x] = (js::round(arc_units as f64 * shares[x] as f64 / 1000.0) as u64).max(cycle[x].least());
+        }
         let small = round.is_some() && (arc_units < FULL_UNITS || arc_units as f64 * unit_seconds < LONGFORM.small * 60.0);
-        let second = stream(seed, SECOND_SALT, 0).f() < LONGFORM.second;
 
         // The wander's turns: every thing that was not asked, and that the
         // loop has.
@@ -617,6 +749,10 @@ impl Form {
         let voicing = [Layer::Bass, Layer::Chords, Layer::Melody].into_iter().filter(|&l| playing & voiceable & bit(l) != 0 && spec.voices[l as usize] == 0).fold(0, |m, l| m | bit(l));
         let chords = playing & bit(Layer::Chords) != 0;
         let tune = playing & bit(Layer::Melody) != 0;
+        // A second theme where the loop has a tune of its own to set it
+        // against, and none was asked (a theme asked stays the tune).
+        let second = stream(seed, SECOND_SALT, 0).f() < LONGFORM.second && tune && spec.theme.is_none();
+        let stretchable = spec.cycles.of(Layer::Melody as usize).is_none_or(|c| c == 0.0 || c == bars * spb);
         let mut turns = [Thing::Layers; TURNS_MAX];
         let mut turn_count = 0;
         let mut turn = |thing, on: bool| {
@@ -634,7 +770,9 @@ impl Form {
         turn(Thing::Length, chords);
         turn(Thing::Density, tune);
         turn(Thing::Key, spec.keys == 0 && LONGFORM.key > 0.0 && related.iter().flatten().any(|k| k.relation.is_fifth()));
-        turn(Thing::Theme, tune && spec.theme.is_none() && LONGFORM.theme > 0.0);
+        // (A second theme may rest, and the tune with it: never a tune
+        // asked on or re-rolled.)
+        turn(Thing::Theme, tune && spec.theme.is_none() && LONGFORM.theme > 0.0 && fixed & bit(Layer::Melody) == 0);
         // An epoch is long enough for the turns it is likely to take, each a
         // mean hold: a rare thing takes a turn going and one coming back.
         let rare = |thing, chance: f64| if turns[..turn_count].contains(&thing) { 1.0 - js::min(1.0, 2.0 * chance) } else { 0.0 };
@@ -660,6 +798,13 @@ impl Form {
             arc_units,
             small,
             second,
+            cycle,
+            cycle_len,
+            shares,
+            cycles,
+            lens,
+            stretchable,
+            tune,
             hand_on: spec.voices[Layer::Melody as usize] == 0,
             turns,
             turn_count,
@@ -711,6 +856,27 @@ impl Form {
     #[must_use]
     pub fn arc_units(&self) -> u64 {
         self.arc_units
+    }
+
+    /// The movements' cycle: its kinds in order (one, a full arc: every
+    /// movement alike).
+    #[must_use]
+    pub fn cycle(&self) -> &[Kind] {
+        &self.cycle[..self.cycle_len]
+    }
+
+    /// How many units the movement holding unit `phrase` of section `n`
+    /// has (an arc piece's).
+    #[must_use]
+    pub fn movement_units(&self, n: u64, phrase: u64) -> u64 {
+        self.movement(self.place(n, phrase).1).2
+    }
+
+    /// The seed of movement `k`'s second theme, where it brings one.
+    #[must_use]
+    pub fn second_of(&self, k: u64) -> Option<u32> {
+        let light = self.small || self.kind_of(k) == Kind::Light;
+        (self.second && !light && self.kind_of(k).bears()).then(|| self.second_seed(k))
     }
 
     /// The keys the piece may visit, the home key apart.
@@ -790,7 +956,10 @@ impl Form {
             });
             span.changed = difference(&before, &span);
             // (A round's first unit is a start, not a turn.)
-            if self.journey == Journey::Wander && i > 0 && span.role == Role::Holding && span.changed & changed::THINGS != 0 {
+            // (An interlude's first follows a breath: only its own things
+            // turn it.)
+            let things = if self.journey == Journey::Wander { changed::THINGS } else { changed::STATE };
+            if span.journey == Journey::Wander && i > 0 && span.role == Role::Holding && span.changed & things != 0 {
                 span.role = Role::Turning;
                 span.changed |= changed::ROLE;
             }
@@ -820,9 +989,20 @@ impl Form {
 
     // ------------------------------------------------------------ the arc
 
-    /// The start of arc `k` of a finite piece's `arcs`, in units.
+    /// The start of movement `k` of a finite piece's `arcs`, in units:
+    /// the units shared evenly, or by the cycle's shares.
     fn arc_start(&self, r: Round, k: u64) -> u64 {
-        (u128::from(k) * u128::from(r.units) / u128::from(self.arcs)) as u64
+        if self.cycles == 0 {
+            return (u128::from(k) * u128::from(r.units) / u128::from(self.arcs)) as u64;
+        }
+        if k >= self.arcs {
+            return r.units;
+        }
+        let len = self.cycle_len;
+        let sum: u64 = self.shares.iter().take(len).sum();
+        let before: u64 = self.shares.iter().take((k % len as u64) as usize).sum();
+        let at = (k / len as u64) * sum + before;
+        (u128::from(at) * u128::from(r.units) / u128::from(self.cycles * sum + self.shares[0])) as u64
     }
 
     /// The seed of arc `k`'s second theme: its own draw, so an earlier
@@ -861,19 +1041,86 @@ impl Form {
         (bounds, roles)
     }
 
-    fn arc_unit(&self, i: u64) -> Span {
-        // Which arc, and where in it.
-        let (k, j, n, last) = match self.round {
-            Some(r) => {
-                let mut k = (u128::from(i) * u128::from(self.arcs) / u128::from(r.units)) as u64;
-                if k + 1 < self.arcs && self.arc_start(r, k + 1) <= i {
-                    k += 1;
-                }
-                let start = self.arc_start(r, k);
-                (k, i - start, self.arc_start(r, k + 1) - start, k + 1 == self.arcs)
+    /// The movement unit `i` of a round (or of Endless) is in: its number,
+    /// the unit's place in it, its units, whether it is a finite piece's
+    /// last, and its kind. By division: whole cycles, then a place.
+    fn movement(&self, i: u64) -> (u64, u64, u64, bool, Kind) {
+        let len = self.cycle_len;
+        let Some(r) = self.round else {
+            if len == 1 {
+                return (i / self.arc_units, i % self.arc_units, self.arc_units, false, Kind::Full);
             }
-            None => (i / self.arc_units, i % self.arc_units, self.arc_units, false),
+            let whole: u64 = self.lens.iter().take(len).sum();
+            let (c, mut x) = (i / whole, i % whole);
+            let mut place = 0;
+            while place + 1 < len && x >= self.lens[place] {
+                x -= self.lens[place];
+                place += 1;
+            }
+            return (c.saturating_mul(len as u64).saturating_add(place as u64), x, self.lens[place], false, self.cycle[place]);
         };
+        if self.cycles == 0 {
+            let mut k = (u128::from(i) * u128::from(self.arcs) / u128::from(r.units)) as u64;
+            if k + 1 < self.arcs && self.arc_start(r, k + 1) <= i {
+                k += 1;
+            }
+            let start = self.arc_start(r, k);
+            return (k, i - start, self.arc_start(r, k + 1) - start, k + 1 == self.arcs, Kind::Full);
+        }
+        // A guess by the shares, set right against the starts themselves.
+        let sum: u64 = self.shares.iter().take(len).sum();
+        let whole = u128::from(self.cycles * sum + self.shares[0]);
+        let at = (u128::from(i) * whole / u128::from(r.units)) as u64;
+        let (c, mut x) = (at / sum, at % sum);
+        let mut place = 0;
+        while place + 1 < len && x >= self.shares[place] {
+            x -= self.shares[place];
+            place += 1;
+        }
+        let mut k = (c * len as u64 + place as u64).min(self.arcs - 1);
+        while k + 1 < self.arcs && self.arc_start(r, k + 1) <= i {
+            k += 1;
+        }
+        while k > 0 && self.arc_start(r, k) > i {
+            k -= 1;
+        }
+        let start = self.arc_start(r, k);
+        (k, i - start, self.arc_start(r, k + 1) - start, k + 1 == self.arcs, self.kind_of(k))
+    }
+
+    /// The kind of movement `k`: its place in the cycle's.
+    #[must_use]
+    pub fn kind_of(&self, k: u64) -> Kind {
+        self.cycle[(k % self.cycle_len as u64) as usize]
+    }
+
+    /// How many of a finite piece's movements before its last bring a
+    /// second theme: what the last looks back on.
+    fn bearers(&self) -> u64 {
+        if self.cycles == 0 {
+            return self.arcs.saturating_sub(1);
+        }
+        self.cycles * self.cycle.iter().take(self.cycle_len).filter(|k| k.bears()).count() as u64
+    }
+
+    /// The number of the `x`th movement that brings a second theme, by
+    /// division.
+    fn bearer(&self, x: u64) -> u64 {
+        if self.cycles == 0 {
+            return x;
+        }
+        let each = self.cycle.iter().take(self.cycle_len).filter(|k| k.bears()).count().max(1) as u64;
+        let place = (0..self.cycle_len).filter(|&p| self.cycle[p].bears()).nth((x % each) as usize).unwrap_or(0);
+        (x / each) * self.cycle_len as u64 + place as u64
+    }
+
+    #[allow(clippy::too_many_lines)] // a movement's draws in their fixed order, then its roles
+    fn arc_unit(&self, i: u64) -> Span {
+        // Which movement, and where in it.
+        let (k, j, n, last, kind) = self.movement(i);
+        if kind == Kind::Interlude {
+            return self.interlude_unit(k, j, n);
+        }
         // The arc's own draws, in a fixed order.
         let mut r = stream(self.seed, ARC_SALT, k);
         let peak = r.range(LONGFORM.peak[0], LONGFORM.peak[1]);
@@ -882,14 +1129,26 @@ impl Form {
         let first = r.pick_index(keys.max(1));
         let key = |q: usize| self.related.iter().flatten().nth(q % keys.max(1)).copied().unwrap_or(self.home);
         let second_key = key(first);
+        let relative = self.related.iter().flatten().any(|k| k.relation == Relation::Relative);
         let vary = |table: Table, r: &mut Rng| {
-            let allowed = |name: &str| self.hand_on || name != Variation::Voice.name();
+            // A variation the loop can't play is never drawn: the tune's
+            // voice asked, no relative key, a tune with a cycle of its own.
+            let allowed = |name: &str| {
+                (self.hand_on || name != Variation::Voice.name())
+                    && (relative || name != Variation::Reharmonized.name())
+                    && (self.stretchable || name != Variation::Stretched.name())
+            };
             r.weighted_index(table.iter().map(|&(name, w)| if allowed(name) { w } else { 0.0 })).and_then(|x| table.get(x)).map_or(Variation::Register, |x| Variation::named(x.0))
         };
         let returns = vary(LONGFORM.returns, &mut r);
         let builds = vary(LONGFORM.builds, &mut r);
+        // (Session 14's draws, after the others, so none of those moved.)
+        let pick = r.f();
+        let prepared = r.f() < LONGFORM.prepare;
 
-        let form = if self.small { LONGFORM.short } else { LONGFORM.full };
+        let light = self.small || kind == Kind::Light;
+        let two = self.second && !light;
+        let form = if light { LONGFORM.short } else { LONGFORM.full };
         let (bounds, roles) = self.bounds(form, n, peak, last);
         let x = (0..roles).find(|&x| j < bounds[x + 1]).unwrap_or(roles - 1);
         let (from, to) = (bounds[x], bounds[x + 1]);
@@ -901,16 +1160,24 @@ impl Form {
         // What the role plays.
         let energy = data::LONGFORM.energy.iter().find(|e| e.0 == role.name()).map_or(0.5, |e| {
             let t = ((j - from) as f64 + 0.5) / (to - from).max(1) as f64;
-            (e.1[0] + (e.1[1] - e.1[0]) * t) * height
+            let e = e.1[0] + (e.1[1] - e.1[0]) * t;
+            // A gentle movement's sits between its two, but its breath.
+            if kind == Kind::Gentle && role != Role::Breath {
+                let [lo, hi] = LONGFORM.gentle;
+                lo + (hi - lo) * e
+            } else {
+                e * height
+            }
         });
-        let b = if self.second { Theme::B } else { Theme::A };
+        let b = if two { Theme::B } else { Theme::A };
         let mut fragment = false;
+        let mut calls = false;
         let (theme, variation, key) = match role {
             Role::Opening | Role::Close => (Theme::A, Variation::Outline, self.home),
             Role::Theme | Role::Holding | Role::Turning => (Theme::A, Variation::Plain, self.home),
             Role::Build => (Theme::A, builds, self.home),
             Role::Lift => (Theme::A, if builds == Variation::Plain { Variation::Register } else { builds }, self.home),
-            Role::Second if self.second => (Theme::B, Variation::Plain, second_key),
+            Role::Second if two => (Theme::B, Variation::Plain, second_key),
             Role::Second => (Theme::A, if second_key == self.home { Variation::Register } else { Variation::Key }, second_key),
             Role::Development => {
                 fragment = true;
@@ -920,18 +1187,25 @@ impl Form {
                 let stay = 2 * js::max(1.0, js::ceil(LONGFORM.stay / (2.0 * self.unit_seconds))) as u64;
                 let at = key(first + 1 + (d / stay) as usize);
                 let at = if keys == 1 && (d / stay) % 2 == 1 { self.home } else { at };
-                if d % 2 == 0 {
-                    (Theme::A, Variation::Plain, at)
-                } else if !self.second {
-                    (Theme::A, Variation::Answered, at)
-                } else if last && self.arcs > 1 {
-                    (Theme::Recall((d / 2) % (self.arcs - 1)), Variation::Plain, at)
+                // The answer: the second theme, in a finale an earlier
+                // movement's (one a section, so a section makes one tune),
+                // or theme A answered. Now and then the pair is a call and
+                // response: A's fragment, then the answer's in A's rests.
+                let bearers = self.bearers();
+                let answer = if !two {
+                    (Theme::A, Variation::Answered)
+                } else if last && bearers > 0 {
+                    let x = if self.grain == Grain::Phrase { i / self.per } else { d / 2 };
+                    (Theme::Recall(self.bearer(x % bearers)), Variation::Plain)
                 } else {
-                    (Theme::B, Variation::Plain, at)
-                }
+                    (Theme::B, Variation::Plain)
+                };
+                calls = self.tune && to - from >= 2 && (d / 2) * 2 + 1 < to - from && stream(self.seed, CALL_SALT, k.wrapping_mul(0x1_0000).wrapping_add(d / 2)).f() < LONGFORM.call;
+                if d % 2 == 0 && !calls { (Theme::A, Variation::Plain, at) } else { (answer.0, answer.1, at) }
             }
             Role::Peak => (Theme::A, Variation::Register, second_key),
-            Role::Release => (b, Variation::Outline, second_key),
+            // (The small form stays at home throughout.)
+            Role::Release => (b, Variation::Outline, if light { self.home } else { second_key }),
             Role::Return => (Theme::A, returns, self.home),
             Role::Breath => (Theme::Rest, Variation::Plain, self.home),
         };
@@ -940,6 +1214,8 @@ impl Form {
             Theme::Recall(of) => Some(self.second_seed(of)),
             Theme::A | Theme::Rest => None,
         };
+        // The return prepared: the last unit before theme A comes home.
+        let held = prepared && j + 1 == to && form.get(x + 1).is_some_and(|next| next.0 == Role::Return.name());
         Span {
             journey: Journey::Arc,
             role,
@@ -957,6 +1233,91 @@ impl Form {
             bars: self.unit_bars,
             state: State::OWN,
             changed: 0,
+            kind,
+            pick,
+            calls,
+            prepares: held,
+        }
+    }
+
+    /// Unit `j` of the `n` of movement `k`, an interlude (session 14): the
+    /// wander's way for the span. Up to three of the things a wander moves
+    /// (never the key or the theme) go out one at a time, a hold apart, and
+    /// come home in the same order, so one thing moves at each hold's end
+    /// and everything is the loop's own at both ends. The things, their
+    /// order and where each goes are drawn from the movement's number.
+    fn interlude_unit(&self, k: u64, j: u64, n: u64) -> Span {
+        let mut things = [Thing::Layers; TURNS_MAX];
+        let mut count = 0;
+        for &t in self.turns.iter().take(self.turn_count) {
+            if !matches!(t, Thing::Key | Thing::Theme) && !things[..count].contains(&t) {
+                things[count] = t;
+                count += 1;
+            }
+        }
+        let mut r = stream(self.seed, INTERLUDE_SALT, k);
+        for x in (1..count).rev() {
+            things.swap(x, r.pick_index(x + 1));
+        }
+        // As many things as leave each hold the data's least, three at most.
+        let room = js::max(0.0, (n as f64 * self.unit_seconds / LONGFORM.hold[0] - 1.0) / 2.0) as usize;
+        let out = room.clamp(1, 3).min(count).min((n.saturating_sub(1) / 2) as usize);
+        let holds = 2 * out as u64 + 1;
+        let hold = (u128::from(j) * u128::from(holds) / u128::from(n.max(1))) as u64;
+        let line = |h: u64| (u128::from(h) * u128::from(n)).div_ceil(u128::from(holds)) as u64;
+        let (from, to) = (line(hold), line(hold + 1).max(line(hold) + 1));
+        // Thing `q` is out from the end of hold `q` to the end of hold
+        // `out + q`.
+        let away = |thing: Thing| things[..out].iter().position(|&t| t == thing).is_some_and(|q| (q as u64) < hold && hold <= (out + q) as u64);
+        let draw = |thing: Thing| stream(self.seed, VALUE_SALT + thing as u32, k ^ 0x8000_0000_0000_0000);
+        let among = |mask: u8, r: &mut Rng| {
+            let pick = r.pick_index(mask.count_ones().max(1) as usize);
+            LAYERS.into_iter().filter(|&l| mask & (1 << l as usize) != 0).nth(pick)
+        };
+        let sign = |r: &mut Rng| if r.f() < 0.5 { -1 } else { 1 };
+        let [thin, own] = LONGFORM.density;
+        let apart = LONGFORM.apart;
+        let voice = {
+            let mut r = draw(Thing::Voice);
+            among(self.voicing, &mut r).map(|l| (l, r.f())).filter(|_| things[..out].contains(&Thing::Voice))
+        };
+        // A layer never rests while its voice is changed.
+        let resting = self.resting & !voice.map_or(0, |(l, _)| 1u8 << l as usize);
+        let tone = |thing: Thing| {
+            let mut r = draw(thing);
+            f64::from(sign(&mut r)) * r.range(apart, 1.0)
+        };
+        let state = State {
+            rest: among(resting, &mut draw(Thing::Layers)).filter(|_| away(Thing::Layers)),
+            voice: voice.filter(|_| away(Thing::Voice)),
+            warmth: if away(Thing::Warmth) { tone(Thing::Warmth) } else { 0.0 },
+            space: if away(Thing::Space) { tone(Thing::Space) } else { 0.0 },
+            register: if away(Thing::Register) { sign(&mut draw(Thing::Register)) } else { 0 },
+            length: if away(Thing::Length) { sign(&mut draw(Thing::Length)) } else { 0 },
+            density: if away(Thing::Density) { draw(Thing::Density).range(thin, own - apart * (own - thin)) } else { own },
+        };
+        let thinned = if own > thin { (own - state.density) / (own - thin) } else { 0.0 };
+        Span {
+            journey: Journey::Wander,
+            role: Role::Holding,
+            part: k,
+            at: j - from.min(j),
+            of: to - from,
+            theme: Theme::A,
+            theme_seed: None,
+            fragment: false,
+            variation: Variation::Plain,
+            key: self.home,
+            bpm: self.bpm,
+            energy: js::clamp(0.5 - 0.12 * f64::from(u8::from(state.rest.is_some())) - 0.15 * thinned + 0.05 * f64::from(state.register), 0.0, 1.0),
+            closes: false,
+            bars: self.unit_bars,
+            state,
+            changed: 0,
+            kind: Kind::Interlude,
+            pick: 0.0,
+            calls: false,
+            prepares: false,
         }
     }
 
@@ -1202,6 +1563,10 @@ impl Form {
             bars: self.unit_bars,
             state,
             changed: 0,
+            kind: Kind::Full,
+            pick: 0.0,
+            calls: false,
+            prepares: false,
         }
     }
 
@@ -1217,6 +1582,12 @@ impl Form {
         w.num(self.arcs as f64);
         w.key("asked");
         w.bool(self.asked);
+        w.key("cycle");
+        w.list();
+        for k in self.cycle.iter().take(self.cycle_len) {
+            w.str(k.name());
+        }
+        w.end_list();
         w.key("epochUnits");
         w.num(self.epoch_units as f64);
         w.key("grain");
@@ -1326,6 +1697,8 @@ impl Span {
         w.num(self.bars);
         w.key("bpm");
         w.num(self.bpm);
+        w.key("calls");
+        w.bool(self.calls);
         w.key("changed");
         w.list();
         for (x, name) in changed::NAMES.iter().enumerate() {
@@ -1348,10 +1721,20 @@ impl Span {
         write_key(w, self.key);
         w.key("length");
         w.num(f64::from(self.state.length));
+        w.key("movement");
+        match self.journey {
+            Journey::Arc => w.str(self.kind.name()),
+            Journey::Wander if self.kind == Kind::Interlude => w.str(self.kind.name()),
+            Journey::Wander => w.null(),
+        }
         w.key("of");
         w.num(self.of as f64);
         w.key("part");
         w.num(self.part as f64);
+        w.key("pick");
+        w.num(js::round(self.pick * 1000.0) / 1000.0);
+        w.key("prepares");
+        w.bool(self.prepares);
         w.key("recall");
         match self.theme {
             Theme::Recall(k) => w.num(k as f64),

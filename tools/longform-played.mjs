@@ -15,6 +15,8 @@
 //   length    the chords' notes the same but their lengths
 //   density   the tune's notes a few fewer or more, the rest the same
 //   key       every pitched layer moved the same few semitones
+//   theme     the tune's notes another tune's (the piece's second theme,
+//             session 14), or none where that theme rests
 //   warmth    the tone's lowpass gliding; space: the room's
 //
 // and every check is the plan's, held to what was heard: at most one thing
@@ -43,7 +45,7 @@ import { kWeighting, fft } from './meter.mjs';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DLRENDER = path.join(ROOT, 'core', 'target', 'release', 'examples', 'dlrender');
 const CH = ['melody', 'chords', 'bass', 'texture', 'drums'];
-const THINGS = ['key', 'layers', 'voice', 'warmth', 'space', 'register', 'length', 'density'];
+const THINGS = ['theme', 'key', 'layers', 'voice', 'warmth', 'space', 'register', 'length', 'density'];
 const GLIDING = ['layers', 'warmth', 'space', 'density'];
 /** How long a move glides, as data/longform.txt has it ([longform wander] glide). */
 const GLIDE = Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').match(/^glide = (\S+)/m)?.[1] ?? 24);
@@ -70,7 +72,7 @@ export function dlrender(args) {
 const num = (x) => (x.startsWith('x') ? Buffer.from(x.slice(1).padStart(16, '0'), 'hex').readDoubleBE(0) : Number(x));
 
 /** A call list: each section's notes by layer (the loop's own; glass and stabs, keyed past 256, apart) and the mix's moves. */
-function readCalls(file) {
+export function readCalls(file) {
   const secs = new Map();
   const params = [];
   let key = null;
@@ -81,7 +83,7 @@ function readCalls(file) {
       if (!secs.has(key.pass)) secs.set(key.pass, { start: Infinity, steps: 0, layers: CH.map(() => []) });
       const s = secs.get(key.pass);
       const t = num(p[3]);
-      s.layers[Number(p[2])].push({ step: key.step, kind: `${p[1]}.${p[7]}`, midi: num(p[4]), dur: num(p[5]), t });
+      s.layers[Number(p[2])].push({ step: key.step, kind: `${p[1]}.${p[7]}`, tone: p[8], midi: num(p[4]), dur: num(p[5]), t });
       s.steps = Math.max(s.steps, key.step + 1);
       if (key.step === 0) s.start = Math.min(s.start, t);
     } else if (p[0] === 'param') params.push({ id: Number(p[1]), v: num(p[3]), t: num(p[4]) });
@@ -172,7 +174,11 @@ export function playedChecks(seed, request, seconds) {
     const end = secs.get(n + 1)?.start ?? Infinity;
     const things = new Map();
     CH.forEach((l, i) => {
-      const m = !cycling[i] && moved(l, a.layers[i], b.layers[i]);
+      let m = !cycling[i] && moved(l, a.layers[i], b.layers[i]);
+      // The tune handed to the second theme, or home again (session 14):
+      // other notes, more or fewer, or none (a theme that rests), on the
+      // move's line; a move inside a section is heard in the next too.
+      if (m && l === 'melody' && moves.some((x) => x.thing === 'theme' && (x.section === n || (x.section === n - 1 && x.phrase > 0)))) m = 'theme';
       if (m) things.set(m, Math.min(things.get(m) ?? Infinity, firstDiff(a.layers[i], b.layers[i])));
     });
     for (const p of params) {
@@ -199,7 +205,7 @@ export function playedChecks(seed, request, seconds) {
       }
       // The move this is: drawn in this section, or one gliding on from
       // within the glide's seconds (and a unit) before.
-      const move = moves.find((m) => m.thing === thing && m.section <= n && (m.section === n || (GLIDING.includes(thing) && (n - m.section) * sectionSeconds <= GLIDE + form.unitSeconds + 0.01)));
+      const move = moves.find((m) => m.thing === thing && m.section <= n && (m.section === n || (thing === 'theme' && m.section === n - 1 && m.phrase > 0) || (GLIDING.includes(thing) && (n - m.section) * sectionSeconds <= GLIDE + form.unitSeconds + 0.01)));
       if (!move) problems.push({ check: 'nothing moves where the map draws nothing', where: `${where}: ${thing}` });
       else if (!GLIDING.includes(thing) && step !== Infinity && (step < Math.round(move.phrase * unitSteps) || step >= Math.round((move.phrase + 1) * unitSteps))) {
         problems.push({ check: 'a move that can\'t glide starts on its line', where: `${where}: ${thing} at step ${step}` });
@@ -213,7 +219,7 @@ export function playedChecks(seed, request, seconds) {
     if (m.section <= 4 || m.section + reach >= last - 1 || closes.has(m.section) || seam(m.section)) continue;
     const h = heard.find((x) => x.section >= m.section && x.section <= m.section + reach && x.things.includes(m.thing));
     // A layer with a cycle of its own is not read note by note.
-    const layer = { voice: m.voice, register: 'chords', length: 'chords', density: 'melody' }[m.thing];
+    const layer = { voice: m.voice, register: 'chords', length: 'chords', density: 'melody', theme: 'melody' }[m.thing];
     if (!h && !(layer && cycling[CH.indexOf(layer)])) problems.push({ check: 'every move the map draws is heard', where: `${seed} "${request}" section ${m.section}: ${m.thing}` });
   }
   return { problems, heard, moves: moves.filter((m) => m.section > 4 && m.section < last), form, cycling: CH.filter((_, i) => cycling[i]), budget };
@@ -453,12 +459,26 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   // The arc's own step between neighbors: what the plan adds to the loop's
   // own section-to-section change.
   const step = jumps(lufs.map((l, i) => l - ownLufs[i]));
+  // The same between neighbors that both play the loop's own notes (theme
+  // A whole, at home): there the loop as itself is the arc's reference
+  // note for note. A unit in another key, a fragment (half of each phrase
+  // a rest) or another tune plays other notes than the loop does in those
+  // bars (session 14), so its step is what the notes are, not only what
+  // the arc adds to them.
+  const plain = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && !['answered', 'stretched', 'reharmonized'].includes(u.variation));
+  const stepOwn = Math.max(0, ...lufs.slice(1).map((l, i) => (whole[i] && whole[i + 1] && plain[i] && plain[i + 1] ? Math.abs(l - ownLufs[i + 1] - (lufs[i] - ownLufs[i])) : 0)));
+  // The units that sound the loop's own notes in its own voice and register
+  // (session 14): a return an octave up or in another voice is brighter or
+  // darker than the loop there by what the variation is, not by the arc's
+  // energy, so the brightness order is reported on these beside all units.
+  // (A lift's or a peak's register is session 13's double: its own.)
+  const ownTone = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && (['plain', 'outline'].includes(u.variation) || (u.variation === 'register' && ['lift', 'peak'].includes(u.role))));
   const keep = (_, i) => body[i];
   // The arc's own shape: each unit against the loop as itself there.
   const lift = lufs.map((l, i) => l - ownLufs[i]);
   // (Brightness as a ratio, in cents of the centroid: 1200 an octave.)
   const brighter = bright.map((b, i) => 1200 * Math.log2(Math.max(1, b) / Math.max(1, ownBright[i])));
-  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step };
+  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
 }
 
 /** Spearman's rank correlation of two lists. */
@@ -526,6 +546,14 @@ export function arcVerdict(r) {
   const brightOrder = spearman(roleEnergy, byRole(r.brighter));
   const unitOrder = [spearman(energy, r.lift), spearman(energy, r.brighter)];
   const rises = (m, order) => m.peak > m.opening && m.peak > m.close && order >= 0.5;
+  // The same on the units in the loop's own voice and register alone
+  // (reported, not held; null where the peak or an end has none).
+  const tone = r.ownTone ?? units.map(() => true);
+  const toneOf = (pick) => { const xs = units.map((u, i) => (tone[i] && pick(u) ? r.brighter[i] : null)).filter((x) => x != null); return xs.length ? mean(xs) : NaN; };
+  const toneRoles = roles.filter((role) => units.some((u, i) => tone[i] && u.role === role));
+  const toneAt = { opening: toneOf((u) => u.role === 'opening'), peak: toneOf((u) => peakRoles.includes(u.role)), close: toneOf((u) => u.role === 'close') };
+  const toneOrder = spearman(toneRoles.map((role) => mean(units.filter((u, i) => tone[i] && u.role === role).map((u) => u.energy))), toneRoles.map((role) => toneOf((u) => u.role === role)));
+  const brightOwn = [toneAt.opening, toneAt.peak, toneAt.close].some(Number.isNaN) ? null : rises(toneAt, toneOrder);
   const pc = (n) => ((n % 12) + 12) % 12;
   const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   // The tonic's triad: the mode's third and fifth on the root (or their
@@ -550,14 +578,16 @@ export function arcVerdict(r) {
   const rings = r.rms.length > 2 && top - r.rms.at(-1) >= 15 && Math.max(...falls) <= 12;
   // No step past 2 LU between neighboring units in what the arc adds (the
   // loop's own form moves as it always did, and is reported beside).
-  const jumps = r.step <= 2;
+  // (Session 14: 2 LU where both units play the loop's own notes; 3 LU
+  // where one plays other notes, a fragment, another key or another tune.)
+  const jumps = r.stepOwn <= 2 && r.step <= 3;
   const heard = (m, list) => m.peak > m.opening && m.peak > m.close && spearman(roleEnergy, byRole(list)) >= 0.5;
   return {
     loud, tilt, lift, brighter, loudOrder, brightOrder, unitOrder,
-    loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder),
+    loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder), brightOwn,
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
-    jump: r.jump, ownJump: r.ownJump, step: r.step, jumps, tonic, rings, last: r.last,
+    jump: r.jump, ownJump: r.ownJump, step: r.step, stepOwn: r.stepOwn, jumps, tonic, rings, last: r.last,
   };
 }
 

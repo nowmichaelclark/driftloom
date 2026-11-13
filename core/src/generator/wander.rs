@@ -447,7 +447,10 @@ impl Pass {
     #[must_use]
     pub fn bass_at(&self, step: f64, i: usize, e: &BassEvent) -> (f64, f64) {
         let (m, midi) = self.bass.get(i).copied().unwrap_or((0, e.midi));
-        let midi = if self.heard.on { midi + f64::from(self.shift(step, Layer::Bass)) } else { midi };
+        // In the plan's key; before a return, on the home key's fifth
+        // (session 14).
+        let pedal = self.heard.unit(step).filter(|u| u.pedal != 0 && step >= u.pedal_from).map(|u| f64::from(u.pedal));
+        let midi = if self.heard.on { pedal.unwrap_or(midi + self.moved(step, Layer::Bass, midi)) } else { midi };
         (if (m & SILENT) != 0 || self.rests(step, Layer::Bass) { 0.0 } else { e.vel }, midi)
     }
 
@@ -485,19 +488,46 @@ impl Pass {
     /// thins the tune past the note's rank, in the plan's key.
     #[must_use]
     pub fn melody_at(&self, step: f64, i: usize, e: &MelodyEvent) -> (f64, f64) {
+        let (vel, midi) = self.melody_home_at(step, i, e);
+        (vel, midi + self.moved(step, Layer::Melody, midi))
+    }
+
+    /// `melody_at`, its pitch as written in the home key: the sequencer
+    /// makes a note's graces and its harmony line there, and moves each to
+    /// the plan's key (`moved`).
+    #[must_use]
+    pub fn melody_home_at(&self, step: f64, i: usize, e: &MelodyEvent) -> (f64, f64) {
         let (m, midi) = self.melody.get(i).copied().unwrap_or((0, e.midi));
         if !self.heard.on {
             return (if (m & SILENT) != 0 { 0.0 } else { e.vel }, midi);
         }
         let out = (m & SILENT) != 0 || self.rests(step, Layer::Melody) || !self.heard.sounds(i, step);
-        (if out { 0.0 } else { e.vel }, midi + f64::from(self.shift(step, Layer::Melody)))
+        (if out { 0.0 } else { e.vel }, midi)
     }
 
-    /// How far the plan moves `layer`'s notes at section step `step`, in
-    /// semitones: another key, and for the chords their register.
+    /// Note `i` of the section's second tune, `e` (session 14), at section
+    /// step `step`: its velocity (left out where the plan rests or thins
+    /// the tune) and its pitch as written in the home key. The pass's own
+    /// marks are the loop's tune's, not this one's.
     #[must_use]
-    pub fn shift(&self, step: f64, layer: Layer) -> i16 {
-        self.heard.unit(step).map_or(0, |u| u.shift[layer as usize] + if layer == Layer::Chords { u.register } else { 0 })
+    pub fn second_at(&self, step: f64, i: usize, e: &MelodyEvent) -> (f64, f64) {
+        let out = self.rests(step, Layer::Melody) || !self.heard.second_sounds(i, step);
+        (if out { 0.0 } else { e.vel }, e.midi)
+    }
+
+    /// How far the plan moves `layer`'s note `midi` at section step `step`,
+    /// in semitones (`heard::Unit::moved`): another key, the chords'
+    /// register, the tune's lift.
+    #[must_use]
+    pub fn moved(&self, step: f64, layer: Layer, midi: f64) -> f64 {
+        self.heard.unit(step).map_or(0.0, |u| u.moved(layer, midi, self.heard.root))
+    }
+
+    /// How far the plan moves `layer`'s home note at section step `step`
+    /// (a tuned kick follows the bass's).
+    #[must_use]
+    pub fn tonic(&self, step: f64, layer: Layer) -> i16 {
+        self.heard.unit(step).map_or(0, |u| u.tonic(layer))
     }
 
     /// The voice the plan has `layer` play at section step `step` in place
@@ -517,7 +547,7 @@ impl Pass {
     /// The pass's canonical text: the whole pattern it plays, less its spec
     /// (`render`'s, with the pass's tracks and floor drop), and the kick it
     /// plays in a loop with a tuned kick.
-    pub fn write<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan, base: &Render) {
+    pub fn write<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan, base: &Render, second: Option<&super::melody::Melody>) {
         w.obj();
         w.key("choices");
         base.write_choices(w);
@@ -582,6 +612,17 @@ impl Pass {
             render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
         }
         w.end_list();
+        // The tune the section plays beside the loop's own (session 14),
+        // as written in the home key: the goldens hold its making too.
+        if let Some(second) = second {
+            w.key("second");
+            w.list();
+            for (i, e) in second.iter().enumerate() {
+                let (vel, midi) = self.second_at(e.step, i, e);
+                render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
+            }
+            w.end_list();
+        }
         w.key("texture");
         base.write_layer(w, Layer::Texture);
         w.end_obj();

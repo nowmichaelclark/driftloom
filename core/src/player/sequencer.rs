@@ -13,7 +13,7 @@ use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
 use crate::generator::js;
 use crate::generator::list::Biased;
-use crate::generator::heard;
+use crate::generator::heard::{self, tune};
 use crate::generator::layers::{BassEvent, DrumEvent};
 use crate::generator::melody::MelodyEvent;
 use crate::generator::piece::Piece;
@@ -96,13 +96,12 @@ impl Chord {
         self.notes.get(..self.len).unwrap_or(&[])
     }
 
-    /// Every note moved `by` semitones (a long piece's plan: the chords'
-    /// register, another key).
-    fn moved(mut self, by: i16) -> Self {
-        if by != 0 {
-            for n in self.notes.iter_mut().take(self.len) {
-                *n += by;
-            }
+    /// Every note moved as `by` says, in semitones (a long piece's plan:
+    /// the chords' register, another key).
+    #[allow(clippy::cast_possible_truncation)] // whole semitones
+    fn moved(mut self, by: impl Fn(f64) -> f64) -> Self {
+        for n in self.notes.iter_mut().take(self.len) {
+            *n += by(f64::from(*n)) as i16;
         }
         self
     }
@@ -155,6 +154,9 @@ pub struct Loop<'a> {
     /// The step of the section being decided (a long piece's plan reads its
     /// unit from it, queue item 102b; 0 where no step is).
     pub step: f64,
+    /// The tune the section plays beside the loop's own (session 14:
+    /// `Generator::second`), where it plays one.
+    pub second: Option<&'a crate::generator::melody::Melody>,
 }
 
 impl Loop<'_> {
@@ -189,9 +191,16 @@ impl Loop<'_> {
         self.pass.and_then(|p| p.voice(self.step, layer)).unwrap_or(own)
     }
 
-    /// How far the plan moves `layer`'s notes this step, in semitones.
-    fn shift(&self, layer: Layer) -> i16 {
-        self.pass.map_or(0, |p| p.shift(self.step, layer))
+    /// Melody note `i` as the pass plays it, its pitch as written in the
+    /// home key (`moved` takes it to the plan's).
+    fn melody_home(&self, i: usize, e: &MelodyEvent) -> (f64, f64) {
+        self.pass.map_or((e.vel, e.midi), |p| p.melody_home_at(self.step, i, e))
+    }
+
+    /// How far the plan moves `layer`'s note `midi` this step, in
+    /// semitones.
+    fn moved(&self, layer: Layer, midi: f64) -> f64 {
+        self.pass.map_or(0.0, |p| p.moved(self.step, layer, midi))
     }
 
     /// Whether the plan rests `layer` this step.
@@ -268,7 +277,7 @@ impl Loop<'_> {
     /// Chord `i` as the pass plays it: its velocity and its notes.
     fn chord(&self, i: usize, e: &ChordEvent) -> (f64, Chord) {
         let (vel, opened) = self.pass.map_or((e.vel, None), |p| p.chord_at(self.step, i, e));
-        (vel, Chord::of(e, opened).moved(self.shift(Layer::Chords)))
+        (vel, Chord::of(e, opened).moved(|n| self.moved(Layer::Chords, n)))
     }
 }
 
@@ -729,7 +738,7 @@ impl Sequencer {
             let pump = s.pump;
             let kick = s.kick.map(|k| (k, self.kick_kind));
             // A tuned kick moves with the bass to the plan's key.
-            let by = lp.shift(Layer::Bass);
+            let by = lp.pass.map_or(0, |p| p.tonic(stepf, Layer::Bass));
             let key_ratio = if by == 0 { 1.0 } else { math::pow(2.0, f64::from(by) / 12.0) };
             for (vel, inst, e) in lp.drums() {
                 if e.step != s_at || !truthy(vel) {
@@ -870,20 +879,40 @@ impl Sequencer {
         if !mutes[Layer::Melody as usize] {
             let s_at = at(Layer::Melody);
             let slip = ensemble(MELODY);
-            // The tune's key: the loop's, or the plan's (queue item 102b).
-            let root = lp.spec.root + f64::from(lp.shift(Layer::Melody));
-            for (i, e) in lp.base.melody.iter().enumerate() {
-                let (vel, midi) = lp.melody(i, e);
-                if e.step != s_at || !truthy(vel) {
+            // Every pitch is made in the home key and moved to the plan's
+            // (queue items 102b and 102d): a fifth away the two are the same
+            // thing, and in another mode a grace or a third under the note
+            // stays in the key.
+            let root = lp.spec.root;
+            let mv = |x: f64| x + lp.moved(Layer::Melody, x);
+            // Whose tune this step plays (session 14): the loop's own, the
+            // section's second, or a rest; one voice, never two tunes.
+            let which = lp.pass.map_or(tune::OWN, |p| p.heard.tune_at(stepf));
+            let second = which == tune::SECOND;
+            let notes: &[MelodyEvent] = match which {
+                tune::OWN => &lp.base.melody,
+                tune::SECOND => lp.second.map_or(&[], |m| &m[..]),
+                _ => &[],
+            };
+            // A stretched tune plays each phrase's first half at half speed:
+            // the note written half as far into the phrase, twice as long.
+            let stretched = lp.pass.is_some_and(|p| p.heard.unit(stepf).is_some_and(|u| u.stretched));
+            let from = lp.pass.and_then(|p| p.heard.stretched_from(stepf));
+            for (i, e) in notes.iter().enumerate() {
+                if if stretched { from != Some(e.step) } else { e.step != s_at } {
                     continue;
                 }
-                let dur = e.dur * sd;
+                let (vel, midi) = if second { lp.pass.map_or((e.vel, e.midi), |p| p.second_at(stepf, i, e)) } else { lp.melody_home(i, e) };
+                if !truthy(vel) {
+                    continue;
+                }
+                let dur = e.dur * sd * if stretched { 2.0 } else { 1.0 };
                 let vowel = (!e.vowel.is_empty()).then_some(e.vowel.get());
-                let opts = Opts { vowel, detune: e.detune, prev: e.prev, ..Opts::default() };
+                let opts = Opts { vowel, detune: e.detune, prev: e.prev.map(mv), ..Opts::default() };
                 let k = key_of(Layer::Melody);
                 synth.budget.begin(Some(Layer::Melody), k);
                 let voice = lp.voice(Layer::Melody, e.voice.get());
-                synth.voice(host, k, voice, midi, t + slip, dur, vel, MELODY, &opts);
+                synth.voice(host, k, voice, mv(midi), t + slip, dur, vel, MELODY, &opts);
                 synth.budget.end();
                 // Asked for after the note, so where the budget is short it
                 // is the decoration that yields, never the tune.
@@ -898,13 +927,13 @@ impl Sequencer {
                 if double != 0 && share > 0.0 && synth.budget.room(t + slip, DOUBLE_ROOM) {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
-                    synth.voice(host, k, voice, midi + f64::from(double), t + slip, dur, vel * share, MELODY, &line);
+                    synth.voice(host, k, voice, mv(midi) + f64::from(double), t + slip, dur, vel * share, MELODY, &line);
                     synth.budget.end();
                 }
                 if let Some(under) = harmony_of(e.harm, midi, root, mode) {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
-                    synth.voice(host, k, voice, under, t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
+                    synth.voice(host, k, voice, mv(under), t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
                     synth.budget.end();
                 }
                 let (graces, n) = graces_of(e.orn, midi, root, mode);
@@ -912,7 +941,7 @@ impl Sequencer {
                     let at = t + slip - GRACE * js::num(n - k);
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
-                    synth.voice(host, k, voice, g, js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
+                    synth.voice(host, k, voice, mv(g), js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
                     synth.budget.end();
                 }
             }
@@ -923,7 +952,7 @@ impl Sequencer {
         }
         if !mutes[Layer::Texture as usize] {
             let s_at = at(Layer::Texture);
-            let (rests, by) = (lp.rests(Layer::Texture), lp.shift(Layer::Texture));
+            let rests = lp.rests(Layer::Texture);
             for e in lp.base.texture.iter() {
                 if e.step != s_at || !truthy(e.vel) {
                     continue;
@@ -935,9 +964,8 @@ impl Sequencer {
                     continue;
                 }
                 let mut notes = e.notes;
-                if by != 0 {
-                    notes.iter_mut().for_each(|n| *n += by);
-                }
+                #[allow(clippy::cast_possible_truncation)] // whole semitones
+                notes.iter_mut().for_each(|n| *n += lp.moved(Layer::Texture, f64::from(*n)) as i16);
                 synth.budget.begin(Some(Layer::Texture), k);
                 synth.texture(host, k, e.kind.get(), &notes, t, e.dur * sd, e.vel, e.band);
                 synth.budget.end();

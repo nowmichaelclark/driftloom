@@ -82,6 +82,21 @@ const things = (u) => u.changed.filter((c) => THINGS.includes(c));
 // A unit without what changed from the one before: what it is.
 const bare = (u) => JSON.stringify({ ...u, changed: null, section: null, phrase: null });
 
+/** The movements' kinds (session 14), over a whole finite piece's units or a stretch of Endless's. */
+function movementChecks(where, form, units, whole) {
+  const kinds = [];
+  for (const u of units) if (kinds.at(-1)?.part !== u.part) kinds.push({ part: u.part, kind: u.movement });
+  if (form.cycle.length === 1) {
+    check('a piece of one or two arcs, or with no room for kinds, is full arcs', kinds.every((k) => k.kind === 'full'), where);
+    return;
+  }
+  check('no two neighboring movements are the same kind unless both are full', kinds.every((k, i) => i === 0 || k.kind !== kinds[i - 1].kind || k.kind === 'full'), where);
+  if (!whole) return;
+  check('the first movement and the last are full arcs', kinds[0].kind === 'full' && kinds.at(-1).kind === 'full' && kinds.length === form.arcs, where);
+  if (form.arcs >= 4) check('four movements or more: every kind appears', ['full', 'gentle', 'light', 'interlude'].every((k) => kinds.some((x) => x.kind === k)), where);
+  else check('three movements: no interlude', kinds.every((k) => k.kind !== 'interlude'), where);
+}
+
 function arcPlanChecks(where, form, units) {
   // Whole arcs only.
   for (let at = 0; at < units.length;) {
@@ -89,6 +104,17 @@ function arcPlanChecks(where, form, units) {
     while (end < units.length && units[end].part === units[at].part) end += 1;
     const run = units.slice(at, end);
     at = end;
+    // An interlude (session 14) is the wander's way for a span: theme A at
+    // home, one thing moving at a time, the loop's own at both its ends.
+    if (run[0].movement === 'interlude') {
+      const started = at - run.length > 0 && units[at - run.length - 1].movement !== 'interlude';
+      const whole = started && at < units.length;
+      const own = (u) => !u.rest && !u.voice && u.warmth === 0 && u.space === 0 && u.register === 0 && u.length === 0 && u.density === 1;
+      const moves = (u) => u.changed.filter((c) => !['role', 'theme', 'variation', 'key'].includes(c)).length;
+      check('an interlude keeps theme A at home and moves one thing at a time', run.every((u) => u.theme === 'A' && sameKey(u.key, form.home) && moves(u) <= 1 && !u.closes), where);
+      if (whole) check("an interlude is the loop's own at both its ends, and moves something between", own(run[0]) && own(run.at(-1)) && (form.turns === 0 || run.some((u) => !own(u))), where);
+      continue;
+    }
     if (run.length !== run[0].of) continue;
     const top = Math.max(...run.map((u) => u.energy));
     const first = run.findIndex((u) => u.energy === top);
@@ -102,7 +128,7 @@ function arcPlanChecks(where, form, units) {
     const home = (u) => sameKey(u.key, form.home);
     check('theme A is stated plain, in the home key', stated >= 0 && run[stated].theme === 'A' && run[stated].variation === 'plain' && home(run[stated]), where);
     check('theme A returns after it, changed, in the home key', back > stated && run[back].theme === 'A' && !['plain', 'key'].includes(run[back].variation) && home(run[back]), where);
-    if (form.second && !form.small) {
+    if (form.second && !form.small && run[0].movement !== 'light') {
       const b = run.findIndex((u) => u.role === 'second' && u.theme === 'B');
       check('theme B comes between A and its return, in a related key', stated < b && b < back && (form.related.length === 0 || !home(run[b])), where);
     }
@@ -167,7 +193,10 @@ for (const seed of seeds) {
       check('no key outside the related set', units.every((u) => keys.some((k) => sameKey(k, u.key))), where);
       check('the tempo is the loop\'s own throughout', units.every((u) => u.bpm === units[0].bpm), where);
 
-      if (journey === 'arc') arcPlanChecks(where, form, units);
+      if (journey === 'arc') {
+        arcPlanChecks(where, form, units);
+        movementChecks(where, form, units, form.sections != null && units.at(-1).section === form.sections - 1);
+      }
       else wanderChecks(where, form, units, true);
 
       if (sections != null) {
@@ -329,7 +358,7 @@ if (!flag('--plan')) {
       arcs.verdicts.push({ seed, length, ...v });
       const where = `${seed} "${request}"`;
       check('arc played: the peak no more than 4 LU over the opening', v.over <= 4, `${where}: ${v.over.toFixed(2)} LU`);
-      check("arc played: no step past 2 LU between neighboring units (the arc's own)", v.jumps, `${where}: ${v.step.toFixed(2)} LU`);
+      check("arc played: no step past 2 LU between neighboring units of the loop's own notes, 3 LU between any (the arc's own)", v.jumps, `${where}: ${v.stepOwn.toFixed(2)} LU, ${v.step.toFixed(2)} LU`);
       check("arc played: a finite arc's last chord is the tonic's, alone", v.tonic, `${where}: ${v.last}`);
       check('arc played: it ends in a ring-out, not a cut', v.rings, where);
     }
@@ -397,6 +426,10 @@ if (arcs.pieces) {
   console.log(`    the opening / the peak / the close, median: ${['opening', 'peak', 'close'].map((r) => `${med(v.map((x) => x.lift[r])).toFixed(1)} LU ${med(v.map((x) => x.brighter[r])).toFixed(0)} cents`).join(' / ')} (loudness, brightness: the centroid over 250 Hz)`);
   console.log(`    the tonic's chord alone at the end ${pct((x) => x.tonic)}, a ring-out ${pct((x) => x.rings)}`);
   const h = arcs.heard;
+  {
+    const judged = v.filter((x) => x.brightOwn != null);
+    console.log(`    brightness on the units in the loop's own voice and register alone (reported): ${judged.filter((x) => x.brightOwn).length} of ${judged.length} judged rise and fall; missing: ${judged.filter((x) => !x.brightOwn).map((x) => `${x.seed}@${x.length.slice(5)}`).join(', ')}`);
+  }
   if (h.length) console.log(`  as heard at the app's amount (${h.length} at 64 bars, the loop's own form in it): loudness rises and falls ${(100 * h.filter((x) => x.loudHeard).length / h.length).toFixed(0)}%, brightness ${(100 * h.filter((x) => x.brightHeard).length / h.length).toFixed(0)}%; the peak over the opening ${Math.max(...h.map((x) => x.overHeard)).toFixed(2)} LU at most`);
   const ratios = [...(arcs.ratios ?? [])].sort((a, b) => a - b);
   console.log(`  arc joins: ${arcs.joins.length} lines, the largest step ${Math.max(...arcs.joins).toFixed(4)} (the loop as itself in the same windows ${arcs.own.map((x) => x.toFixed(4)).join(', ')}); a line's step against the loop's there: median ${ratios[Math.floor(ratios.length / 2)]?.toFixed(2)}, at most ${ratios.at(-1)?.toFixed(2)}`);

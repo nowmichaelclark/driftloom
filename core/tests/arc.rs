@@ -25,7 +25,7 @@
 #![allow(clippy::float_cmp)]
 
 use dlcore::generator::heard::{Heard, Unit};
-use dlcore::generator::longform::Role;
+use dlcore::generator::longform::{Kind, Role};
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::rng::Rng;
 use dlcore::generator::theory::SCALES;
@@ -78,13 +78,20 @@ fn an_arcs_units_follow_its_energy_and_glide() {
                     let heard: Heard = generator.section(n, 1.0).heard;
                     assert!(heard.on && heard.arc, "{what}: section {n} hears no arc");
                     for (p, u) in heard.units().iter().enumerate() {
-                        if let Some(l) = &last {
+                        let span = form.at(n, p as u64);
+                        if let Some(l) = &mut last {
+                            // (A theme stated comes in whole on its line,
+                            // session 14: the tune never fills in from the
+                            // outline before it.)
+                            if matches!(span.role, Role::Second | Role::Return) && u.thin[0] == u.thin[1] {
+                                l[7] = u.thin[0];
+                            }
                             assert_eq!(&starts(u), l, "{what}: section {n} unit {p} jumps from the unit before");
                         }
                         last = Some(ends(u));
-                        let span = form.at(n, p as u64);
                         for layer in [Layer::Chords, Layer::Melody] {
-                            assert!(!u.rests(layer) || (layer == Layer::Melody && span.role == Role::Breath), "{what}: section {n} rests {layer:?}");
+                            // (But in an interlude, the wander's way: session 14.)
+                            assert!(!u.rests(layer) || (layer == Layer::Melody && span.role == Role::Breath) || span.kind == Kind::Interlude, "{what}: section {n} rests {layer:?}");
                         }
                         let bass = 1.0 - u.cut[Layer::Bass as usize][1];
                         seen.push((span.energy, bass, u.aim[1]));
