@@ -223,6 +223,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 | Session 26 (the sound batch, 3 albums + clips, v123) | every new sound and mixing idea kept; bass +3 dB with a kick, today's without; lateFloor's second arrival should vary; stereo vs mono: "same" on 5 of 6 (and the null), stereo "just barely" nicer on the sixth |
 | Lite Room Album (item 85c, 6 loops before and after, lite) | "it sounded great for lite mode"; the steal goes to full quality too (item 85e) |
 | 87b on his devices (v142 preview) | Moto stays on full (busiest 18-24%, no late notes); tablet moved to lite by itself (75% at full; on lite 55%, 40% of real time); the switch "doesn't bother" him, a crossfade in phase 3; the tablet lost 10 notes at two new loops: folded into phase 3 (the queue's "For phase 3") |
+| Long Pieces Album (v164, 33 clips, 3 blind pairs, 2026-11-14) | all ten pieces Keep; composed chosen over before (brum-yei's B); a wander move and the control Same; arc "good enough for now"; joins welcome, wander right, endings real |
 | Phase 2 Blind Album (v128 against v149, 11 pairs, 2026-11-07) | the null pair Same; no pair worse for phase 2 apart from item 84's downward octave moves (old preferred 2 of 3); upward moves new preferred 3 of 3: 84b after phase 3; the stab chords "Fine" in all three |
 
 ## Methods that proved themselves
@@ -290,8 +291,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
-- **Brain B3 (Opus 5.5, 2026-11-14): item 102 checked, the album out, his
-  notes still to come.** On `main` at v164 (88c98be), measured, not taken
+- **Brain B3 (Opus 5.5, 2026-11-14): item 102 checked, heard, and briefed.** On `main` at v164 (88c98be), measured, not taken
   from the reports: module matches (801,267 bytes); goldens 5,135; balance
   lock; 15 short loops bit for bit as at dfe78c3; 27 Rust tests (straight or
   played, 32,768 bars); `longform.mjs --plan` all, a played run all but the
@@ -304,11 +304,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   old pair 2 was a null: kept as the control). All in
   `docs/notes/102-b3-measured.md`. **The page:** "Long Pieces Album"
   (`docs/ALBUMS.md`; verdicts in its db `verdicts`, the key in `brain/key`).
-  **Next brain:** read the verdicts (`db_list` on slug
-  2280beaa-39db-4a83-90d6-6becf933d8f0), write `docs/notes/102-mikey.md`
-  (his words first, then actions by importance; new composing gets its own
-  queue item and session prompt), record his answers in `docs/DECISIONS.md`,
-  write the pairs' key into `docs/ALBUMS.md`, delete `long-clips`. B3's
+  **Mikey heard it the same night:** every piece Keep, composed chosen over
+  before, joins welcome (so the development's breaths stay), the arc "good
+  enough for now" (`docs/notes/102-mikey.md`, `docs/DECISIONS.md`). Session
+  16 now retunes nothing: it fixes the two holes and adds a yardstick.
+  **Next:** session 16, then 04 onward; brain B2 after batch 6. B3's
   scratch scripts were not kept; the method (Methods): render the same span
   at dfe78c3 and now, compare unit by unit and join by join.
 - **Brain B1 (Opus 5.5, 2026-11-11): the road to 1.0's kickoff.** The plan

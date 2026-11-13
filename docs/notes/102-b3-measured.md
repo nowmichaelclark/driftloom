@@ -27,7 +27,7 @@ brain, not taken from the reports. The first part is bugs: fix them in session
 - Maps read at 64, 256, 1,024 and 32,768 bars and Endless (section 10^9 too):
   as LONGFORM describes.
 
-## Bugs (fix in session 16, before or beside the tuning)
+## Bugs (1 and 2 fixed in session 16; 3 withdrawn by his ears)
 
 1. **A pivot can be silent.** `heard.rs` takes the pivot's velocity from the
    loop's first chord event with notes (`chord`, near line 841), which is a
@@ -43,7 +43,8 @@ brain, not taken from the reports. The first part is bugs: fix them in session
    but a tune that, stretched, plays nothing there: three seconds 30 to 50 dB
    under the loop. The check for "the tune plays there" must read the tune as
    the unit plays it (its variation), else take a breath or a glide.
-3. **A development stutters.** Where the development's units are short (4 or
+3. **A development stutters.** (Withdrawn 2026-11-14: Mikey heard it in
+   moan-teil's look-back, flagged, and kept it; joins "Welcome". Not changed.) Where the development's units are short (4 or
    8 bars), A's and B's fragments trade every unit and each trade is a
    theme's line, so nearly every unit ends in a join, mostly a breath (every
    layer out for half a beat, 8 to 13 dB under the loop): sheim-gling
