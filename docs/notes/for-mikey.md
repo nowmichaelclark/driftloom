@@ -71,12 +71,15 @@ the points where the next step is yours.
   a phrase before the return feel like coming home; are a gentle
   movement, a light one and an interlude different enough from a full arc,
   and their lengths right (0.7, 0.4 and 0.5 of it). **Two choices made for
-  you to overrule:** about 1 second theme in 12 is a rest of the tune (a
-  theme that rests stays resting, as 85f has it: the section plays chords
-  and bass alone; the other way is to give such a piece one theme); and
-  the parallel key (a minor loop's major) stays, though the tune sits a
-  semitone over a chord tone a little more there (4.5% of its time against
-  3.8 to 4.6% for the loop itself).
+  you to overrule:** about 1 second theme in 12 comes from a loop whose
+  tune rests, and is never given a tune (85f): that movement keeps theme A
+  in the new key instead (played as a silence of the tune it left a hole
+  of 4 LU); and the parallel key (a minor loop's major) stays, though the
+  tune sits a semitone over a chord tone a little more there (4.5% of its
+  time against about 4% for the loop itself). **And one thing the measures
+  show that ears must judge:** a unit that plays other notes than the loop
+  (a fragment with half of each phrase resting, another key) can sit 2 LU
+  from its neighbor, where the energy alone steps under 2.
 - **The arc heard (102c, session 13, v162):** nothing to do now either
   (session 15 renders the excerpts). Three arc pieces with the minutes of
   their opening, peak, release and close are in `docs/LONGFORM.md`, "Pieces

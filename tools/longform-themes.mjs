@@ -13,8 +13,10 @@
 //              outside its home mode (a bass holding the home fifth before
 //              a return apart)
 //   second     where the map says theme B, the tune is another tune (under
-//              0.9 of theme A's notes kept), or rests (a theme that rests
-//              stays resting, queue item 85f: counted)
+//              0.9 of theme A's notes kept), or theme A in the unit's key
+//              where the second theme's own loop has no tune (a theme
+//              that rests stays resting, queue item 85f: counted, one in
+//              five at most), never silent
 //   return     theme A comes home changed: the share of the loop's own tune
 //              kept in the return's first unit (the same step and pitch
 //              class; a stretched return against the tune stretched, an
@@ -239,7 +241,7 @@ function corpus() {
   }
   const share = ([over, all]) => (all ? over / all : 0);
   console.log(`${total.pieces} arc pieces played (${SEEDS} at 256 bars, ${Math.min(LONG, SEEDS)} at 1,024)`);
-  console.log(`second themes stated: ${total.seconds}; resting (85f): ${total.rests}; too like theme A: ${total.likeA}`);
+  console.log(`second themes stated: ${total.seconds}; theme A in the key, where the second theme rests (85f): ${total.likeA}; silent: ${total.rests}`);
   console.log(`returns, the share of theme A's notes kept: ${Object.entries(total.returns).map(([k, v]) => `${k} ${v.length} (${Math.min(...v).toFixed(2)} to ${Math.max(...v).toFixed(2)}, mean ${mean(v.filter((x) => !Number.isNaN(x))).toFixed(2)})`).join('; ')}`);
   console.log(`variations played (units): ${VARIATIONS.map((v) => `${v} ${total.variations[v] ?? 0}`).join(', ')}; returns prepared ${total.prepared}; call-and-response units ${total.calls}`);
   const rest = Object.entries(total.clash).filter(([k]) => k !== 'theme A stated').reduce((a, [, v]) => [a[0] + v[0], a[1] + v[1]], [0, 0]);
@@ -258,8 +260,8 @@ function corpus() {
     console.log('  the units clash more than theme A alone does');
     bad += 1;
   }
-  if (total.likeA * 10 > total.seconds) {
-    console.log('  too many second themes are theme A again');
+  if (total.likeA * 5 > total.seconds || total.rests) {
+    console.log('  too many second themes are theme A again, or one is silent');
     bad += 1;
   }
   console.log(bad ? `FAILED: ${total.problems} problems in ${failing.length} pieces` : 'ok');

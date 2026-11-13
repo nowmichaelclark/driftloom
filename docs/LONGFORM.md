@@ -93,7 +93,11 @@ how high it is (0.85 to 1); every role has a unit at least.
 - **One theme or two:** 70% of arc pieces whose loop has a tune have a B
   (none where a theme was asked: it stays the tune); the rest play A in
   the related key where B would be. A second theme whose own loop's tune
-  rests is a rest of the tune (queue item 85f: about 1 in 12 of them).
+  rests (queue item 85f: about 1 in 12) is never given one: that movement
+  keeps theme A there, in the key, as a one-theme piece does. (Played as
+  a rest of the tune it sat 4.4 LU under its neighbors in a tune-led
+  loop.) In a wander, where a layer's rest is one of the moves, such a
+  theme is the tune resting for the epoch.
 - **The close** takes the last units, 10 seconds at least: a last section
   cut short borrows the bars before it. The round after begins at the
   opening again (a round's plan is the same every time).
@@ -163,7 +167,8 @@ stands in for the others.
 | a fragment | each phrase's first half, then a rest |
 | a call and response (35% of the development's pairs) | theme A's fragment, then the other theme's in A's rests: one voice |
 | in the related key | a fifth away, the whole loop moved (the wander's way); the relative or the parallel, every note along the mode (`key_map`, a table by pitch class), an octave over where a layer would leave its range, so the bass, the chords, the tune, its graces, the texture and a tuned kick stay in the key together |
-| register (not the peak's, which is its double) | the tune an octave up or down by the movement's number, the way that keeps it in 48 to 91 and five semitones from the chords |
+| register, in a return (or a one-theme second at home) | the tune an octave up or down by the movement's number, the way that keeps it in 48 to 91 and five semitones from the chords |
+| register, where the energy rises (a build, the lift, the peak) | the tune doubled an octave up, softly (session 13's double; a build's from its first unit): the tune itself moved an octave there sat under the theme before it, either way |
 | voice | the tune in another voice of its pool (a tune with none moves an octave) |
 | stretched | each phrase's first half at half speed, the chords held longer |
 | reharmonized | the bass, the chords and the texture in the relative key, the tune where it was |
@@ -193,7 +198,8 @@ those bars** (a fragment, half of each phrase a rest; another key; another
 tune) may sit up to 2.3 LU from its neighbor where the energy alone steps
 under 2: the arc's step check holds those to 3 LU and the loop's own notes
 to 2. For Mikey's ears: every number, and whether a second theme that
-rests is welcome.
+rests should rather be given a tune. A second theme's notes are as loud
+as the loop's own tune's (their mean velocity matched).
 
 ## The wander
 
@@ -410,8 +416,8 @@ development trading fragments; theme A coming home whole, known at once
 and changed; the bars before it where the bass holds one note.
 
 1. **Seed 2728346932, tha-vol** (131 bpm, A# lydian; 64 bars is 1:27, the
-   small form: one theme, at home). The theme 0:10; the lift 0:32, theme A
-   an octave away; the release 0:49, the bass holding F (the home fifth)
+   small form: one theme, at home). The theme 0:10; the lift 0:32, the
+   tune doubled an octave up as it rises; the release 0:49, the bass holding F (the home fifth)
    until the return 0:54, **A answered** (each phrase's second half the
    answer's); the close 1:16; the landing 1:23; the opening again 1:27.
 2. **Seed 1151594917, brum-yei** (109 bpm, C# ionian; 256 bars is 9:23, two
@@ -420,9 +426,9 @@ and changed; the bars before it where the bass holds one note.
    relative: A's fragment, B's in its rests), then A's fragment alone in G#
    at 2:20; the peak 2:38; the release 2:56 (B's outline, the bass holding
    G# from 3:05); **A returns 3:13, register** (an octave away, home); a
-   breath 4:06. The second arc: its own B at 6:09 is a theme that rests
-   (85f: the tune is silent to 6:45, the loop in G#); the development 6:45
-   **recalls the first arc's B** as a call and response; the peak 7:37;
+   breath 4:06. The second arc: its own B is a theme that rests (85f), so
+   at 6:09 it states theme A in G#; the development 6:45 **recalls the
+   first arc's B** as a call and response; the peak 7:37;
    **A returns 8:13, answered**; the close 9:06; the landing 9:19.
 3. **Seed 1278568317, sheim-gling** (98 bpm, G kumoi; 1,024 bars is 31:20,
    two arcs of about 15 minutes). B enters 4:53 in D; the development 7:20;
