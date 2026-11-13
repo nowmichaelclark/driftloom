@@ -1381,7 +1381,9 @@ impl Form {
         let mut fragment = false;
         let mut calls = false;
         let (theme, variation, key) = match role {
-            Role::Opening | Role::Close => (Theme::A, Variation::Outline, self.home),
+            // (A breath keeps the tune at its thinnest, session 15: resting it
+            // in a breath one unit long stepped 2.7 LU from its neighbors.)
+            Role::Opening | Role::Close | Role::Breath => (Theme::A, Variation::Outline, self.home),
             Role::Theme | Role::Holding | Role::Turning => (Theme::A, Variation::Plain, self.home),
             Role::Build => (Theme::A, builds, self.home),
             Role::Lift => (Theme::A, if builds == Variation::Plain { Variation::Register } else { builds }, self.home),
@@ -1415,9 +1417,6 @@ impl Form {
             // (The small form stays at home throughout.)
             Role::Release => (b, Variation::Outline, if light { self.home } else { second_key }),
             Role::Return => (Theme::A, returns, self.home),
-            // A breath keeps the tune at its thinnest (session 15: resting it
-            // in a breath one unit long stepped 2.7 LU from its neighbors).
-            Role::Breath => (Theme::A, Variation::Outline, self.home),
         };
         let theme_seed = match theme {
             Theme::B => Some(self.second_seed(k)),

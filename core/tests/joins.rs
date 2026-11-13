@@ -229,7 +229,7 @@ fn a_close_the_slider_asks_for_lands_on_the_tonic() {
                         let l = &heard.landing;
                         assert!(l.at < stop && l.at + spb <= stop, "{what}: lands at {} for a stop at {stop}", l.at);
                         let root = i16::from(form.home.root);
-                        assert!(l.chord.is_empty() || l.chord.iter().min().is_some_and(|&lo| lo.rem_euclid(12) == root), "{what}: {:?}", l);
+                        assert!(l.chord.is_empty() || l.chord.iter().min().is_some_and(|&lo| lo.rem_euclid(12) == root), "{what}: {l:?}");
                         assert!(l.chord.is_empty() || l.chord_vel > 0.0, "{what}: a landing struck at nothing");
                         assert!(l.tune == 0.0 || (l.tune as i16).rem_euclid(12) == root, "{what}: the tune off the tonic");
                         // Everything after the landing is left out: it rings alone.

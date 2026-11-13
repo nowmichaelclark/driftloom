@@ -956,7 +956,7 @@ impl Heard {
     /// landing would begin before them, nothing changes (the track ends as
     /// it always did). The player calls it after `hear`, with the track's
     /// end; with no end asked it is never called, so nothing changes.
-    #[allow(clippy::too_many_lines)] // the close's units, then the landing
+    #[allow(clippy::too_many_lines, clippy::too_many_arguments)] // the close's units, then the landing; `hear`'s and the stop's two
     pub fn stop_at(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, n: u64, stop: f64, decided: f64) {
         if !self.on || !(stop > 0.0) || self.phrase <= 0.0 || self.count == 0 {
             return;
@@ -1155,7 +1155,7 @@ impl Heard {
         }
         // The tune on the tonic, nearest its last note that sounds, in its
         // range.
-        if let Some((i, e)) = base.melody.iter().enumerate().filter(|(_, e)| e.vel > 0.0).next_back() {
+        if let Some((i, e)) = base.melody.iter().enumerate().rfind(|(_, e)| e.vel > 0.0) {
             let m = js::round(e.midi) as i16;
             let below = m - pc(m - root);
             let near = if m - below <= 6 { below } else { below + 12 };

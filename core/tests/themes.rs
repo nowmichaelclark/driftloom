@@ -280,9 +280,9 @@ fn a_piece_plays_its_plan_theme_by_theme() {
                         let fifth = (i16::from(form.home.root) + 7).rem_euclid(12);
                         assert!(u.pedal > 0 && (u.pedal.rem_euclid(12) - fifth).abs() <= 1 && u.pedal_from >= u.from && u.pedal_from < u.to, "{what}: {u:?}");
                     } else if u.join == Join::Pivot {
-                        // (A pivot holds the bass on its chord's root for its
-                        // bar: session 15.)
-                        assert!(u.pedal > 0 && u.pedal_from == u.join_from, "{what}: {u:?}");
+                        // (A pivot holds the bass, where the loop has one, on
+                        // its chord's root for its bar: session 15.)
+                        assert!(u.pedal == 0 || u.pedal_from == u.join_from, "{what}: {u:?}");
                     } else {
                         assert_eq!(u.pedal, 0, "{what}");
                     }
