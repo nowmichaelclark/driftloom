@@ -924,6 +924,19 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         heard.need_num("space"),
         heard.need_num("land")
     );
+    // How a unit meets the next (session 15): the joins' numbers.
+    let joins = find("joins");
+    joins.only(&["step", "bars", "share", "breath", "fill", "hold"]);
+    let _ = writeln!(
+        out,
+        "/// How a long piece's units meet (`data/longform.txt`, `[longform joins]`).\npub static JOINS: Joins = Joins {{ step: {}, bars: {}, share: {}, breath: {}, fill: {}, hold: {} }};",
+        joins.need_num("step"),
+        joins.need_num("bars"),
+        joins.need_num("share"),
+        joins.need_num("breath"),
+        joins.need_range("fill"),
+        joins.need_num("hold")
+    );
 }
 
 fn main() {

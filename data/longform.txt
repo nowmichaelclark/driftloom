@@ -212,3 +212,30 @@ space = 0.12
 # half of them and ringing out; the tune's last phrase sounds whole before
 # them.
 land = 4
+
+# How a long piece's units meet (session 15; docs/LONGFORM.md, "The joins"):
+# where two units meet and something changes (a theme, a key, a role, a
+# wander's line move), the line is written, not left to chance: a fill into
+# it, the floor out for its last bar, a chord both keys share held across
+# it, the tune's last bar alone, or a breath. The plan chooses by what
+# changes and by the energy either side (core/src/generator/longform.rs,
+# Form::join_of); core/src/generator/heard.rs plays it. Every number is a
+# first pick for Mikey's ears.
+[longform joins]
+# Where a theme changes, a rise in the energy of this much or more across
+# the line is a fill into it, a fall as large the floor out (where only a
+# role changes, twice this).
+step = 0.04
+# A join lasts this many bars before its line, at most this share of its
+# unit (a two-bar phrase's join is half a bar).
+bars = 1
+share = 0.25
+# A breath leaves out this share of a join's length: the last half bar.
+breath = 0.5
+# A fill's hits (the kit's backbeat, or its shimmer where it has none, on
+# the steps of the last beat), from the first to the last, as shares of the
+# instrument's loudest hit in the loop: a gentle rise into the line.
+fill = 0.35 0.65
+# A pivot's chord, struck on the join's first step, holds this many beats
+# past the line.
+hold = 1

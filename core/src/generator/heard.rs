@@ -78,14 +78,15 @@
 
 use super::canon::{Sink, Writer};
 use super::character::Names;
-use super::data::{ENERGY, LONGFORM};
+use super::data::{ENERGY, JOINS, LONGFORM};
 use super::js;
 use super::list::{Empty, Word};
-use super::longform::{Form, Key, Relation, Role, Span, State, Theme, Variation};
+use super::longform::{self, Form, Join, Key, Relation, Role, Span, State, Theme, Variation};
 use super::melody::{MELODY_MAX, Melody};
 use super::plan::{self, Cx, Notes};
 use super::render::Render;
 use super::request::Journey;
+use super::spec::Metre;
 use super::theory::SCALES;
 use super::{LAYERS, Layer};
 
@@ -228,6 +229,26 @@ pub struct Unit {
     /// `pedal_from` to the unit's end: a return prepared.
     pub pedal: i16,
     pub pedal_from: f64,
+    /// How the unit meets the next at its end (session 15, `Join`), as
+    /// played: from section step `join_from` to the unit's end, the layers
+    /// `out` leave their notes out (a bit each, `LAYERS`' order; the tails
+    /// ring).
+    pub join: Join,
+    pub join_from: f64,
+    pub out: u8,
+    /// A fill: the kit's instrument `fill` struck every `fill_every` steps
+    /// from `join_from`, rising from the first velocity to the second.
+    pub fill: Word,
+    pub fill_every: f64,
+    pub fill_vel: [f64; 2],
+    /// A pivot: the chord both keys share (`pivot_count` notes), struck on
+    /// `join_from` in the voice of the loop's chord `pivot_from`, at
+    /// `pivot_vel`, held `pivot_hold` steps (across the line).
+    pub pivot: [i16; 3],
+    pub pivot_count: usize,
+    pub pivot_from: usize,
+    pub pivot_vel: f64,
+    pub pivot_hold: f64,
 }
 
 impl Empty for Unit {
@@ -254,6 +275,17 @@ impl Empty for Unit {
         mapped: 0,
         pedal: 0,
         pedal_from: 0.0,
+        join: Join::None,
+        join_from: 0.0,
+        out: 0,
+        fill: Word::EMPTY,
+        fill_every: 0.0,
+        fill_vel: [0.0; 2],
+        pivot: [0; 3],
+        pivot_count: 0,
+        pivot_from: 0,
+        pivot_vel: 0.0,
+        pivot_hold: 0.0,
     };
 }
 
@@ -278,6 +310,32 @@ impl Unit {
     #[must_use]
     pub fn rests(&self, layer: Layer) -> bool {
         self.cut[layer as usize] == [1.0, 1.0]
+    }
+
+    /// Whether `layer`'s notes are left out at `step` for the join at the
+    /// unit's end (session 15): the floor out, the tune alone, a breath,
+    /// the chords under a pivot.
+    #[must_use]
+    pub fn joins_out(&self, layer: Layer, step: f64) -> bool {
+        self.out & (1 << layer as usize) != 0 && step >= self.join_from && step < self.to
+    }
+
+    /// The fill's hit at `step`, if one falls there: its instrument and its
+    /// share of the instrument's loudest (before the arc's kit marks).
+    #[must_use]
+    pub fn fill_at(&self, step: f64) -> Option<(&'static str, f64)> {
+        if self.join != Join::Fill || step < self.join_from || step >= self.to || !(self.fill_every > 0.0) || (step - self.join_from) % self.fill_every != 0.0 {
+            return None;
+        }
+        let span = self.to - self.join_from - self.fill_every;
+        let t = if span > 0.0 { (step - self.join_from) / span } else { 1.0 };
+        Some((self.fill.get(), Self::glide(self.fill_vel, js::clamp(t, 0.0, 1.0))))
+    }
+
+    /// The pivot's chord, where it is struck at `step`.
+    #[must_use]
+    pub fn pivot_at(&self, step: f64) -> Option<&[i16]> {
+        (self.join == Join::Pivot && self.pivot_count > 0 && step == self.join_from).then(|| &self.pivot[..self.pivot_count])
     }
 
     /// The warmth's and the space's moves at `step`.
@@ -610,6 +668,7 @@ impl Heard {
             from = Some(end);
         }
         self.count = count;
+        self.joins(form, cx, base, second, &ways, n);
     }
 
     /// Hear section `n` of an arc (session 13): each unit's energy, as
@@ -687,8 +746,157 @@ impl Heard {
             from = Some(end);
         }
         self.count = count;
+        self.joins(form, cx, base, second, &ways, n);
         if let Some(to_end) = form.to_end(n) {
             self.land(form, cx, base, to_end * spb, at);
+        }
+    }
+
+    /// The joins at the ends of section `n`'s units (session 15): each
+    /// unit's `Join`, as the plan chose it, played over its last bar (at
+    /// most `[longform joins] share` of the unit; a breath over its share of
+    /// that, a fill over the last beat), where the loop has what it needs,
+    /// else the next of its kind it has: a fill with no kit to play it is a
+    /// glide, the tune alone where the tune is silent there a breath, a
+    /// pivot with no chords the floor out. Nothing is made but a fill's few
+    /// hits and the pivot's chord.
+    #[allow(clippy::too_many_lines)] // a join's kinds, each a few lines
+    fn joins(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, n: u64) {
+        let spb = cx.spb;
+        let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
+        let bit = |l: Layer| 1u8 << l as usize;
+        let all = 0b1_1111u8;
+        let cycle = |layer: Layer| cx.spec.cycles.of(layer as usize).filter(|&c| c > 0.0).unwrap_or(cx.spec.bars * spb);
+        // Whether a layer's notes fall in steps `from` to `to` of the section.
+        let falls = |step: f64, len: f64, from: f64, to: f64| len > 0.0 && step + js::ceil((from - step) / len) * len < to;
+        // The kit's backbeat instrument, else its shimmer, and its loudest.
+        let mut kit: [Option<(Word, f64)>; 2] = [None; 2];
+        for e in base.drums.iter().filter(|e| e.vel > 0.0) {
+            let slot = match Piece::of(e.inst.get()) {
+                Piece::Backbeat => 0,
+                Piece::Shimmer => 1,
+                Piece::Other => continue,
+            };
+            if kit[slot].is_none_or(|(_, v)| e.vel > v) {
+                kit[slot] = Some((e.inst, e.vel));
+            }
+        }
+        let chord = base.chords.iter().enumerate().find(|(_, e)| !e.notes.is_empty()).map(|(i, e)| (i, e.vel));
+        for p in 0..self.count {
+            let a = form.at(n, p as u64);
+            let u = &mut self.units[p];
+            u.join = a.join;
+            if matches!(a.join, Join::None | Join::Glide | Join::Prepared) {
+                continue;
+            }
+            let (bn, bp) = form.after(n, p as u64);
+            let b = form.at(bn, bp);
+            let len = js::max(1.0, js::floor(js::min(JOINS.bars * spb, JOINS.share * (u.to - u.from))));
+            let mut kind = a.join;
+            if kind == Join::Fill {
+                let pick = kit[0].or(kit[1]);
+                match pick {
+                    Some((inst, vel)) if !u.rests(Layer::Drums) && u.cut[Layer::Drums as usize][1] < 1.0 => {
+                        let span = js::min(beat, len);
+                        u.join_from = u.to - span;
+                        u.fill = inst;
+                        u.fill_every = if beat == 6.0 { 2.0 } else { 1.0 };
+                        u.fill_vel = [JOINS.fill[0] * vel, JOINS.fill[1] * vel];
+                    }
+                    _ => kind = Join::Glide,
+                }
+            }
+            if kind == Join::Pivot {
+                let pivot = longform::pivot(a.key, b.key);
+                match (pivot, ways.chords, chord) {
+                    (Some(pv), Some([lo, _]), Some((from, vel))) => {
+                        let c = Layer::Chords as usize;
+                        let by = u.shift[c] + u.register + if u.mapped & bit(Layer::Chords) != 0 { i16::from(u.map[0]) } else { 0 };
+                        let low = lo + by;
+                        // The chord's root at or a little under the chords'
+                        // lowest, its notes stacked over it.
+                        let root = i16::from(pv.notes[0]);
+                        let mut m = low - (low - root).rem_euclid(12);
+                        if m < low - 4 {
+                            m += 12;
+                        }
+                        let mut notes = [0i16; 3];
+                        let mut last = m - 1;
+                        for (x, &pc) in pv.notes.iter().take(pv.count).enumerate() {
+                            let q = i16::from(pc);
+                            let mut note = last + 1 + (q - (last + 1)).rem_euclid(12);
+                            if x == 0 {
+                                note = m;
+                            }
+                            notes[x] = note;
+                            last = note;
+                        }
+                        while notes[pv.count - 1] > CHORDS_RANGE[1] {
+                            notes.iter_mut().take(pv.count).for_each(|x| *x -= 12);
+                        }
+                        while notes[0] < CHORDS_RANGE[0] {
+                            notes.iter_mut().take(pv.count).for_each(|x| *x += 12);
+                        }
+                        u.join_from = u.to - len;
+                        u.out = bit(Layer::Chords);
+                        u.pivot = notes;
+                        u.pivot_count = pv.count;
+                        u.pivot_from = from;
+                        u.pivot_vel = vel;
+                        u.pivot_hold = len + JOINS.hold * beat;
+                        // The bass on the chord's root, in its own register.
+                        if u.pedal == 0
+                            && let Some([blo, _]) = ways.ranges[Layer::Bass as usize]
+                        {
+                            let blo = blo + f64::from(u.shift[Layer::Bass as usize]);
+                            u.pedal = (blo + ((f64::from(root) - blo) % 12.0 + 12.0) % 12.0) as i16;
+                            u.pedal_from = u.join_from;
+                        }
+                    }
+                    _ => kind = if form.playing & (bit(Layer::Drums) | bit(Layer::Bass)) != 0 && a.journey == Journey::Arc { Join::Floor } else { Join::Breath },
+                }
+            }
+            if kind == Join::Alone {
+                // The tune's notes in the last bar: the loop's own or the
+                // second's, by the phrase's later half.
+                let from = u.to - len;
+                let notes: &[super::melody::MelodyEvent] = match u.tune[1] {
+                    tune::OWN => &base.melody,
+                    tune::SECOND => second.map_or(&[], |m| &m[..]),
+                    _ => &[],
+                };
+                let c = cycle(Layer::Melody);
+                if notes.iter().any(|e| e.vel > 0.0 && falls(e.step, c, from, u.to)) && !u.rests(Layer::Melody) {
+                    u.join_from = from;
+                    u.out = all & !bit(Layer::Melody);
+                } else {
+                    kind = Join::Breath;
+                }
+            }
+            if kind == Join::Floor {
+                u.join_from = u.to - len;
+                u.out = bit(Layer::Drums) | bit(Layer::Bass);
+            }
+            if kind == Join::Breath {
+                u.join_from = u.to - js::max(1.0, js::floor(len * JOINS.breath));
+                // A wander's line move: only the layer that moves takes the
+                // breath; else every layer.
+                let c = b.changed;
+                u.out = if a.journey == Journey::Wander && b.journey == Journey::Wander {
+                    if c & longform::changed::VOICE != 0 {
+                        b.state.voice.or(a.state.voice).map_or(all, |(l, _)| bit(l))
+                    } else if c & (longform::changed::REGISTER | longform::changed::LENGTH) != 0 {
+                        bit(Layer::Chords)
+                    } else if c & longform::changed::THEME != 0 {
+                        bit(Layer::Melody)
+                    } else {
+                        all
+                    }
+                } else {
+                    all
+                };
+            }
+            u.join = kind;
         }
     }
 
@@ -867,6 +1075,34 @@ impl Heard {
             }
             w.key("from");
             w.num(u.from);
+            // How it meets the next (session 15), where it does more than
+            // glide.
+            if !matches!(u.join, Join::None | Join::Glide) {
+                w.key("join");
+                w.obj();
+                w.key("fill");
+                w.list();
+                if u.join == Join::Fill {
+                    w.str(u.fill.get());
+                    w.num(u.fill_every);
+                    w.num(u.fill_vel[0]);
+                    w.num(u.fill_vel[1]);
+                }
+                w.end_list();
+                w.key("from");
+                w.num(u.join_from);
+                w.key("kind");
+                w.str(u.join.name());
+                w.key("out");
+                w.num(f64::from(u.out));
+                w.key("pivot");
+                w.list();
+                for &n in &u.pivot[..u.pivot_count.min(3)] {
+                    w.num(f64::from(n));
+                }
+                w.end_list();
+                w.end_obj();
+            }
             if self.arc {
                 w.key("lift");
                 w.num(f64::from(u.lift));
@@ -1071,6 +1307,11 @@ impl Lift {
         u.soft = [x.soft * below; 2];
         let [thin_at, thinnest] = x.thin;
         u.thin = [if e < thin_at && thin_at > 0.0 { thinnest * (thin_at - e) / thin_at } else { 0.0 }; 2];
+        // A breath between arcs: the tune at its thinnest, never resting
+        // (session 15).
+        if span.role == Role::Breath {
+            u.thin = [thinnest; 2];
+        }
         u.stretch = if e < x.held { ways.stretch(1) } else { 0.0 };
         let [none, most, share] = x.double;
         if self.doubles && e > none {

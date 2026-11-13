@@ -28,7 +28,7 @@
 use std::fmt::Write as _;
 use std::process::ExitCode;
 
-use dlcore::generator::longform::{self, Theme, Variation, changed};
+use dlcore::generator::longform::{self, Join, Theme, Variation, changed};
 use dlcore::generator::piece::{self, Piece};
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::theory::SCALES;
@@ -336,6 +336,10 @@ fn map(args: &[String]) -> Result<(), String> {
             }
             if s.prepares {
                 state.push("the bass holds the home fifth".to_string());
+            }
+            // How it meets the unit after it (session 15).
+            if !matches!(s.join, Join::None | Join::Glide | Join::Prepared) {
+                state.push(format!("then {}", s.join.name()));
             }
             if s.journey == Journey::Arc && form.cycle().len() > 1 {
                 state.push(s.kind.name().to_string());

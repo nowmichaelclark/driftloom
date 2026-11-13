@@ -425,7 +425,25 @@ impl Pass {
     /// out (its channel faded to nothing over the unit before).
     #[must_use]
     pub fn rests(&self, step: f64, layer: Layer) -> bool {
-        self.heard.on && (self.heard.unit(step).is_some_and(|u| u.rests(layer)) || self.heard.landed(step))
+        self.heard.on && (self.heard.unit(step).is_some_and(|u| u.rests(layer) || u.joins_out(layer, step)) || self.heard.landed(step))
+    }
+
+    /// A fill's hit at section step `step` (session 15, the join into a
+    /// line where the energy rises): its instrument and velocity, the
+    /// arc's kit marks on it; none where no hit falls, or the kit rests.
+    #[must_use]
+    pub fn fill_at(&self, step: f64) -> Option<(&'static str, f64)> {
+        let u = self.heard.unit(step)?;
+        let (inst, vel) = u.fill_at(step)?;
+        let keeps = if self.heard.arc { u.kit_at(step, Piece::of(inst)) } else { 1.0 };
+        (!self.rests(step, Layer::Drums) && keeps > 0.0 && vel > 0.0).then_some((inst, vel * keeps))
+    }
+
+    /// The chord a pivot strikes at section step `step` (session 15, the
+    /// join where the key changes), with the unit that holds it.
+    #[must_use]
+    pub fn pivot_at(&self, step: f64) -> Option<&super::heard::Unit> {
+        self.heard.unit(step).filter(|u| u.pivot_at(step).is_some())
     }
 
     /// How far the plan doubles the tune at section step `step`, in
