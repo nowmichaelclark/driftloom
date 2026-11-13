@@ -1114,7 +1114,7 @@ impl Lift {
         // its range.
         let relation = span.key.relation;
         if relation.is_fifth() {
-            u.shift = ways.shift(relation.shift());
+            u.shift = ways.shift_up(relation.shift());
         } else if relation != Relation::Home {
             u.map = key_map(form.home, span.key);
             u.mapped = PITCHED;
@@ -1358,11 +1358,32 @@ impl Ways {
         out
     }
 
+    /// An arc's move to the key `shift` semitones away (session 14): as
+    /// `shift`, but every layer over the bass takes the way up where it
+    /// fits its range (a fifth above is seven semitones up, not a fourth
+    /// down), so a second theme and a peak in the related key sit brighter
+    /// than home, as their energy asks; the bass keeps the nearer way.
+    fn shift_up(&self, shift: i8) -> [i16; 5] {
+        let mut out = self.shift(shift);
+        if shift == 0 {
+            return out;
+        }
+        let up = f64::from(i16::from(shift).rem_euclid(12));
+        for layer in [Layer::Chords, Layer::Melody, Layer::Texture] {
+            let k = layer as usize;
+            let [lo, hi] = KEY_RANGE[k];
+            if self.ranges[k].is_some_and(|[a, b]| a + up >= lo && b + up <= hi) {
+                out[k] = up as i16;
+            }
+        }
+        out
+    }
+
     /// Each pitched layer's octave where a key's map moves the home note
     /// `by` semitones: none, or the octave that keeps the layer in its
     /// range.
     fn octaves(&self, by: i8) -> [i16; 5] {
-        let mut out = self.shift(by);
+        let mut out = self.shift_up(by);
         if by != 0 {
             for o in &mut out[1..] {
                 *o -= i16::from(by);

@@ -190,9 +190,12 @@ export function themeChecks(piece) {
   }
   const ownGap = own.melody.length && own.chords.length ? mean(own.melody.map((e) => e.midi)) - mean(own.chords.flatMap((e) => e.notes)) : NaN;
   for (const s of seconds.values()) {
-    seen.seconds += 1;
+    if (s.tune.length || own.melody.length) seen.seconds += 1;
+    // (A loop whose own tune never sounds has none to state.)
+    if (!s.tune.length && !own.melody.length) continue;
     if (!s.tune.length) {
       seen.rests += 1;
+      problems.push(`${s.where}: the second theme is silent`);
       continue;
     }
     if (s.like.length && mean(s.like) >= 0.9) seen.likeA += 1;
