@@ -1529,11 +1529,17 @@ impl Lift {
         u.soft = [x.soft * below; 2];
         let [thin_at, thinnest] = x.thin;
         u.thin = [if e < thin_at && thin_at > 0.0 { thinnest * (thin_at - e) / thin_at } else { 0.0 }; 2];
-        // A breath between arcs: the tune at its thinnest, never resting
-        // (session 15).
+        // A breath between arcs (session 15): the tune never rests, but thins
+        // across it, at its thinnest at the breath's own lowest energy (the
+        // data's `energy.breath`), so it is spread over the breath's units
+        // rather than stepped into.
         if span.role == Role::Breath {
-            u.thin = [thinnest; 2];
+            let low = LONGFORM.energy.iter().find(|r| r.0 == Role::Breath.name()).map_or(0.2, |r| js::min(r.1[0], r.1[1]));
+            if thin_at > low {
+                u.thin = [thinnest * js::clamp((thin_at - e) / (thin_at - low), 0.0, 1.0); 2];
+            }
         }
+
         u.stretch = if e < x.held { ways.stretch(1) } else { 0.0 };
         let [none, most, share] = x.double;
         if self.doubles && e > none {

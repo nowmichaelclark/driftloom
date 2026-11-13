@@ -60,7 +60,7 @@ how high it is (0.85 to 1); every role has a unit at least.
 | peak | A, register | the arc's related key | 1 |
 | release | B (or A), outline; its last phrase may hold the bass on the home fifth | the same | 0.85 to 0.55 |
 | return | A with one variation (register, voice, stretched, reharmonized, answered) | home | 0.55 to 0.5 |
-| close / breath | A outline, closing on the tonic / A at its thinnest (session 15) | home | 0.4 to 0.15 / 0.3 to 0.2 |
+| close / breath | A outline, closing on the tonic / A thinning to its thinnest (session 15) | home | 0.4 to 0.15 / 0.3 to 0.2 |
 
 - **How long:** an arc is 4 to 15 minutes (drawn per piece, by ratio,
   leaned longer by glacial, droning and the like). A finite piece holds a
@@ -129,10 +129,13 @@ way, gently (`[longform energy]`).
 | a finite arc's close | thins to the chords and the tune (the energy's own); the tune's last phrase whole; then the **landing**: the round's last bars (4 s and a bar at least) play the loop's tonic chord (its own in root position, or the mode's triad, rolled where the loop plays its chords a note at a time) and the tune on the tonic, alone, held for half of them and ringing out. The voice budget gives the landing its whole ceiling |
 
 The round after a close starts at its opening, gliding up from the close;
-Endless plays arc after arc with a breath between (the tune at its thinnest,
-0.55 of its notes left out, the rest thinned by its energy: session 15; it
+Endless plays arc after arc with a breath between (session 15: the tune
+never rests, but thins across the breath, its thinnest, 0.55 of its notes
+left out, at the breath's lowest energy, the rest thinned by its energy; it
 rested before, and a breath one unit long, tui-doask's 50 s sections, stepped
-2.7 LU from its neighbors), and never lands. **What was asked holds:** a layer asked on,
+2.7 LU from its neighbors; the tune held at its thinnest throughout stepped
+2.04 LU between a breath's two units, its loop's tune strong there), and
+never lands. **What was asked holds:** a layer asked on,
 off or re-rolled is its own throughout; a code's warmth keeps the filter
 the loop's own, its space the room's; an arc asked (`arc`, `arc.*`) keeps
 its swing as asked. **At any slider setting**, as the wander. Every number

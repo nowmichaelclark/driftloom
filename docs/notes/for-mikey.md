@@ -98,8 +98,8 @@ the points where the next step is yours.
   kit's backbeat into a rise, the floor (kit and bass) out before the fall
   from the peak, the tune alone where a theme changes, or a breath; a
   wander's voice, register or length move gives
-  only that layer a breath. A breath between arcs now keeps the tune at its
-  thinnest instead of resting it. And when the length slider will stop a
+  only that layer a breath. A breath between arcs now thins the tune across it
+  instead of resting it. And when the length slider will stop a
   long piece or Endless before its close, the last phrases thin to a close
   and land on the tonic chord, ringing out, where a fade was. The
   excerpts are in the listening set above. What only your ears can judge:

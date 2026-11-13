@@ -36,7 +36,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pieceMap } from './gen-lib.mjs';
+import { newSpec, pieceMap } from './gen-lib.mjs';
 import { SCALES } from '../js/theory.js';
 
 const SCALE_STEPS = Object.fromEntries(Object.entries(SCALES).map(([id, s]) => [id, s.steps]));
@@ -50,6 +50,9 @@ const GLIDING = ['layers', 'warmth', 'space', 'density'];
 /** How long a move glides, as data/longform.txt has it ([longform wander] glide). */
 const GLIDE = Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').match(/^glide = (\S+)/m)?.[1] ?? 24);
 /** How long a finite arc's landing lasts at least, in seconds ([longform energy] land). */
+// A join's length (session 15, `[longform joins]`): at most `bars` bars and
+// `share` of its unit; a breath `breath` of that.
+const JOIN = Object.fromEntries(['bars', 'share', 'breath'].map((k) => [k, Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').split('[longform joins]')[1].match(new RegExp(`^${k} = (\\S+)`, 'm'))[1])]));
 const LAND = Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').match(/^land = (\S+)/m)?.[1] ?? 4);
 /** The catalog's spread of loudness: test/core-baseline.json's loops, from the tenth to the ninetieth. */
 const SPREAD = (() => {
@@ -145,7 +148,10 @@ export function playedChecks(seed, request, seconds) {
   const map = pieceMap(seed, request, 0, last + 1);
   const { form, units } = map;
   // The things a turn moves, by section and by the unit's first step there.
-  const unitSteps = form.unitBars * (secs.get(ns[1])?.steps ?? 0) / form.sectionBars;
+  // (A section's steps from the loop's spec: its last notes may end before
+  // its last step.)
+  const spb = newSpec(seed, request).stepsPerBar;
+  const unitSteps = form.unitBars * spb;
   const moves = [];
   for (const u of units) {
     const thing = u.changed.filter((c) => THINGS.includes(c))[0];
@@ -169,12 +175,11 @@ export function playedChecks(seed, request, seconds) {
   // A join's last bar (session 15: a breath, a pivot's chord and its bass,
   // the floor out) is the line's, not a move: the steps of either
   // section's joins are left out of both before they are compared.
-  const sectionSteps = secs.get(ns[1])?.steps ?? 0;
-  const barSteps = sectionSteps / form.sectionBars;
+  const barSteps = spb;
   const tails = (n) => units.filter((u) => u.section === n && !['none', 'glide', 'prepared'].includes(u.join)).map((u) => {
     const end = Math.round((u.phrase + 1) * unitSteps);
-    const len = Math.max(1, Math.floor(Math.min(barSteps, u.bars * barSteps / 8)));
-    return [end - (u.join === 'breath' ? Math.max(1, Math.floor(len / 2)) : len), end];
+    const len = Math.max(1, Math.floor(Math.min(JOIN.bars * barSteps, JOIN.share * u.bars * barSteps)));
+    return [end - (u.join === 'breath' ? Math.max(1, Math.floor(len * JOIN.breath)) : len), end];
   });
   const strip = (notes, cut) => notes.filter((x) => !cut.some(([f, t]) => x.step >= f && x.step < t));
   const pair = (n, i) => {
@@ -645,11 +650,11 @@ export function arcJoins(seed, request, seconds) {
       const [a, b] = [Math.round((t - 0.02) * rate), Math.round((t + 0.3) * rate)];
       joins.push({ t, piece: stepMax(piece.data, a, b), loop: stepMax(loop.data, a, b) });
     }
-    // Where a join begins inside the unit (session 15): a bar before the
-    // line at most an eighth of the unit, half that for a breath, the last
-    // beat for a fill; the same window, held the same way.
-    const len = Math.min(1, u.bars / 8) * bar;
-    const from = { fill: 0.25 * bar, breath: len / 2 }[u.join] ?? len;
+    // Where a join begins inside the unit (session 15): `[longform joins]`'s
+    // length before the line, a breath's share of it, the last beat for a
+    // fill; the same window, held the same way.
+    const len = Math.min(JOIN.bars, JOIN.share * u.bars) * bar;
+    const from = { fill: Math.min(0.25 * bar, len), breath: len * JOIN.breath }[u.join] ?? len;
     const at = t + u.bars * bar - from;
     if (!['none', 'glide', 'prepared'].includes(u.join) && at > 30 && at + 0.3 < seconds) {
       const [a, b] = [Math.round((at - 0.02) * rate), Math.round((at + 0.3) * rate)];

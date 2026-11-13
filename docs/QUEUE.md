@@ -457,8 +457,8 @@ energy either side (`longform::Join`, `Form::join_of`; heard in
 `Heard::joins`): a chord both keys share held across a key's line, the
 bass on its root; a fill into a rise; the floor out before a fall; the
 tune alone, or a breath, where a theme changes; a wander's line move a
-breath of its layer; what glides, its glide. A breath between arcs keeps
-the tune at its thinnest (the 2.7 LU step gone). Endings that land: where
+breath of its layer; what glides, its glide. A breath between arcs thins
+the tune across it instead of resting it (the 2.7 LU step gone). Endings that land: where
 the length slider stops a piece or Endless before its close, the phrases
 before the stop play the close and land on the tonic, ringing out
 (`Heard::stop_at`; `dlrender --track`). A landing struck at velocity 0
