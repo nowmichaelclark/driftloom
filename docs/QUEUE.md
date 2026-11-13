@@ -41,7 +41,8 @@ yet; the design that stands is `docs/LONGFORM.md`); hands session 12 done
 (2026-11-12: 102c, v162, the arc's energy, an opening and a close heard,
 #377); hands session 14 done (2026-11-13: 102d, v163, the arc's second
 theme, its variations, its keys and movements of different kinds heard,
-and the wander's theme turn on); next: session 15 (102e, the joins; the
+and the wander's theme turn on, #379; the brightness order's note
+`docs/notes/102d-arc-brightness.md`); next: session 15 (102e, the joins; the
 long pieces, 11 to 16, come before batch 6's 04 to 10), and
 Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:

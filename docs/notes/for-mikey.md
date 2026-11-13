@@ -56,8 +56,11 @@ the points where the next step is yours.
   most a quarter of the Sound panel), is the octave or voice change at a
   line ever too sudden, does a layer's rest feel like a breath, and is a
   key change a fourth away welcome once in a while.
-- **The arc's themes and movements (102d, session 14, v163):** nothing to
-  do now (session 15 renders the excerpts). Five arc pieces with the
+- **The arc's themes and movements (102d, session 14, v163): one decision
+  first.** #379 is not merged: the arc's brightness order, 87% on `main`,
+  is 77% with the returns varied (an octave up reads brighter than the
+  peak). `docs/notes/102d-arc-brightness.md` has the three choices; I
+  recommend merging as it is. Nothing to listen to yet (session 15 renders the excerpts). Five arc pieces with the
   minutes where the second theme enters, where the development is, where
   theme A returns and which variation each return uses are in
   `docs/LONGFORM.md`, "Pieces to hear" (the fourth, moan-teil, 34 minutes,
@@ -78,8 +81,8 @@ the points where the next step is yours.
   tune sits a semitone over a chord tone a little more there (4.5% of its
   time against about 4% for the loop itself). **And one thing the measures
   show that ears must judge:** a unit that plays other notes than the loop
-  (a fragment with half of each phrase resting, another key) can sit 2 LU
-  from its neighbor, where the energy alone steps under 2.
+  (a fragment with half of each phrase resting, another key) can sit up to
+  2.9 LU from its neighbor, where the energy alone steps under 2.
 - **The arc heard (102c, session 13, v162):** nothing to do now either
   (session 15 renders the excerpts). Three arc pieces with the minutes of
   their opening, peak, release and close are in `docs/LONGFORM.md`, "Pieces

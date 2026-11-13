@@ -185,17 +185,19 @@ a tune's voice asked is never handed on; a pinned key is home, a pinned
 scale rules out the parallel; the landing is the home key's.
 
 Measured (`node tools/longform-themes.mjs`, 44 corpus pieces played): no
-note outside its unit's key beyond the loop's own; 46 second themes, none
-theme A again, 6 resting; every return keeps 0.42 or more of theme A's
+note outside its unit's key beyond the loop's own; 43 second themes, none
+theme A again, 3 resting; every return keeps 0.42 or more of theme A's
 notes and none is a copy; every variation played; the tune's time a
-semitone over a chord tone 3.4% against 4.4% for theme A's own statements
-(the parallel key's units 4.5%, a second tune 2.4%); the tune's centre five
-semitones from the chords' wherever the loop keeps it. A theme-B section
+semitone over a chord tone 3.6% against 4.4% for theme A's own statements
+(the parallel key's units 4.4%, a second tune 2.7%); the tune's centre five
+semitones from the chords' wherever the loop keeps it. The arc's
+brightness order, short of 9 in 10 since session 13, is 77% with the
+returns varied (`docs/notes/102d-arc-brightness.md`). A theme-B section
 costs what a theme-A one does (12 to 17 us, within 4%, the same at section
 10^9); its tune made from nothing, a section ahead, 26 to 40 us more, about
 a loop's own making. **A unit that plays other notes than the loop does in
 those bars** (a fragment, half of each phrase a rest; another key; another
-tune) may sit up to 2.3 LU from its neighbor where the energy alone steps
+tune) may sit up to 2.9 LU from its neighbor where the energy alone steps
 under 2: the arc's step check holds those to 3 LU and the loop's own notes
 to 2. For Mikey's ears: every number, and whether a second theme that
 rests should rather be given a tune. A second theme's notes are as loud
