@@ -33,7 +33,7 @@ says the work goes on meanwhile.
 | 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | yes, 2026-11-12 |
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | yes, 2026-11-12 |
 | 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | yes, 2026-11-13 (once #379 merges: `docs/notes/102d-arc-brightness.md`) |
-| 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
+| 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | yes, 2026-11-13 (#381, #382; the clips on `long-clips`) |
 | B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | |
 | | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | |
 | 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | |
@@ -196,6 +196,15 @@ Things earlier sessions learned:
   theme-B section. Session 15's joins: `Span::changed` says what a line
   changes; nothing is written across a key's or a theme's line yet but
   the return's held fifth.
+- The joins and the slider's close (session 15): `Form::join_of` chooses a
+  unit's join, `Form::joined` gives it to the map, and `heard` reads it
+  from the units a section already has (so a section costs what it did);
+  `Heard::stop_at` plays the close the length slider asks for. `dlrender
+  --track bars=N` plays a piece with the slider set, the core's own next
+  loop after, as the app does; `tools/longform-clips.mjs` makes the
+  listening set again from the maps (`--before` a dlrender from dfe78c3 for
+  the blind pairs). `tools/stalls.mjs --loops arc,arcs` is the stall test
+  on an arc of 32,768 bars and on Endless arcs.
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.

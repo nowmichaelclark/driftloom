@@ -450,18 +450,22 @@ a theme-B section another seed's tune spread across blocks.
 ## Pieces to hear
 
 For session 15's listening set: seed, request, where to listen, what for.
+The set itself (session 15: 31 clips, 23 minutes, on the throwaway branch
+`long-clips`, made by `tools/longform-clips.mjs`) reads every place from the
+piece's map; where a time below differs from its index, the index is
+current (the plan moved under sessions 13 and 14).
 
 **The wander** (session 12). Each at bars=256 and Endless, `journey=wander`;
 times from the piece's start (the 256-bar piece's moves are its first, then
 its close). Listen for: each move alone, slow, never a jump; the rest
 between moves is the loop as it always breathed.
 
-1. **Seed 7, glor-ti** (134 bpm, F# mixolydian; 256 bars is 7:38). 3:12 the
-   room glides drier; 5:42 the kit fades out over 24 s (256 bars: it stays
-   out into the close, which eases down). Endless goes on: 10:24 the kit
-   fades back; 14:54 the tone warms; 18:30 the bass changes voice; 21:00 the
-   chords go up an octave; 23:30 the tune thins; 25:00 the chords sound
-   shorter or longer.
+1. **Seed 7, glor-ti** (134 bpm, F# mixolydian; 256 bars is 7:38). 3:20 the
+   room glides drier; 5:58 the kit fades out over 24 s (256 bars: it stays
+   out into the close, which eases down). Endless goes on: 10:51 the kit
+   fades back; 15:31 the tone warms; 19:13 the bass changes voice (its last
+   half beat before it a breath, session 15); 21:58 the chords move an
+   octave; 24:35 the tune thins (times as of v164).
 2. **Seed 1086007177, mu-meth** (138 bpm, F major pentatonic; 256 bars is
    5:33). 256 bars: 1:36 the tune thins; 5:00 the tune fades out, then the
    close. Endless: 1:02 the tone warms; 4:00 the chords up an octave; 5:54
@@ -523,3 +527,13 @@ and changed; the bars before it where the bass holds one note.
    every note two steps of the mode down); the development 4:21 in E; the
    peak 5:27; the release 6:00; **A returns 7:05, stretched**; the close
    8:10, landing in its last bars.
+
+**The joins and the endings** (session 15). Listen for each line written,
+none clicking: brum-yei at 256 bars (`journey=arc`) has a fill into its
+theme (0:17), a pivot chord into B (1:10), the floor out after the peak
+(2:56), the return prepared (3:13) and the breath between its movements
+(4:06); tha-vol at 64 bars has every arc join but the pivot in 1:27; mu-meth
+in Endless (`journey=wander`) has the wander's key move over a pivot
+(11:49). A close the length slider makes: fei-no at 256 bars with the
+slider at 120 bars (it lands at 4:05), glor-ti in Endless at 100 bars
+(2:59): `dlrender --seed SEED --request REQUEST --track bars=N`.

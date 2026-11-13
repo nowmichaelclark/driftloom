@@ -6,6 +6,50 @@ to listen for or decide. The hands add lines as they go and never wait on
 them; an answered line is removed (or moved to `docs/DECISIONS.md` by the
 brain). Empty or answered at 1.0 (queue item 108).
 
+## The long pieces: the listening set (102e, session 15)
+
+**31 clips, 23 minutes in all**, on the throwaway branch `long-clips`
+(stereo Opus, its `index.md` has every clip's piece, place and one line on
+what to listen for). Brain B3 builds the page from it. The pairs are named
+before and after there, and B3's page makes them blind. Made by
+`tools/longform-clips.mjs` from `main` at v164 (#381); each excerpt's place
+is read from the piece's map, so the set can be made again after session 16.
+
+**How they were chosen:** the pieces sessions 12 to 14 wrote into
+`docs/LONGFORM.md`'s "Pieces to hear", one clear example of each thing
+built, picked by what their maps show, not by how they sound. Beside them, from the corpus:
+- an Endless arc (brum-yei: the stall test's piece);
+- a piece whose journey a vibe chose (loa-yer with adventurous, teth-hu
+  with still), with no journey asked;
+- one piece likely to sound weakest: gluith-vuisk, where batch 6's
+  slowOpening and the arc's opening hold the kit back together.
+
+Lengths: 64, 256 and 1,024 bars and Endless; six styles; arcs and wanders.
+
+| Piece (seed, request) | Clips: what happens |
+|---|---|
+| tha-vol, `2728346932 bars=64,journey=arc` | **whole** (1:34): the small form end to end, every join kind of an arc but the pivot, the landing |
+| brum-yei, `1151594917 bars=256,journey=arc` | the start; B's entry over a pivot chord (1:10); the peak and the floor out after it (2:38); the return prepared on the home fifth (3:13); the breath between its two movements; the close and the landing |
+| fei-no, `2158762586 bars=256,journey=arc` | B in the relative key (2:43); A home stretched (7:05); **a close the length slider made** at bar 120 (4:05, `track bars=120`) |
+| moan-teil, `2060199680 bars=1024,journey=arc` | the interlude's one move; the finale looking back (29:17); the close after 34 minutes |
+| loa-yer, `2975389383 bars=1024,adventurous=0.8` | an arc the vibe chose: the start; the first peak (7:23) |
+| gluith-vuisk, `1068550449 bars=64,journey=arc` | its first 90 s: the kit out for 74 s, the bass for 100 s: too long thin? |
+| glor-ti, `7 bars=endless,journey=wander` | Endless's first twenty minutes as its first five moves (3:20 to 19:13), each alone; **a close the slider made** at bar 100 (2:59) |
+| mu-meth, `1086007177 bars=endless,journey=wander` | the wander's rare key move over a pivot chord (11:49) |
+| teth-hu, `706141505 bars=endless,still=0.8` | a wander the vibe chose, at 40 bpm: the start; its first move |
+| brum-yei, `1151594917 bars=endless,journey=arc` | Endless's first arc ending in a breath, not a close; the gentle movement after it |
+| **two blind pairs** | brum-yei 256 bars from 0:55, and glor-ti Endless from 5:20, 45 s each: before item 102 (`dfe78c3`, the loop's wandered sections) and now, level-matched to the quieter (within 0.6 dB): **is composed better than before?** |
+
+**What only your ears can judge** (I could measure the rest; the measures
+are in #381 and the second PR): whether each join is welcome or too much; whether
+a build is felt; whether B belongs and A's return is known at once; whether
+the breath, the slider's close and the landing feel like endings; whether
+the wander's moves are slow enough and still heard; and the pairs.
+
+**After sessions 17, 18 and item 105** the app will play these whole: the
+seeds and requests above are the pieces (the journey and the vibe in the
+request; the slider's close is the length slider's `track`).
+
 ## What to start next
 
 The rest of the road is cut into sessions, each with a prompt to paste:
@@ -49,7 +93,8 @@ the points where the next step is yours.
   chords are doubled, padWow makes the mix 0.2 to 0.35 LU quieter or
   louder, as the sketch did.
 - **The wander heard (102b, session 12, v161):** nothing to do now (the app
-  can't take a journey or jump yet; session 15 renders the excerpts). The
+  can't take a journey or jump yet; the excerpts are in the listening set
+  above). The
   three wander pieces and the minutes where each thing moves are in
   `docs/LONGFORM.md`, "Pieces to hear". What only your ears can judge: is
   each move slow enough and still heard (a 24-s glide; the tone moves at
@@ -82,7 +127,7 @@ the points where the next step is yours.
   (a fragment with half of each phrase resting, another key) can sit up to
   2.9 LU from its neighbor, where the energy alone steps under 2.
 - **The arc heard (102c, session 13, v162):** nothing to do now either
-  (session 15 renders the excerpts). Three arc pieces with the minutes of
+  (the excerpts are in the listening set above). Three arc pieces with the minutes of
   their opening, peak, release and close are in `docs/LONGFORM.md`, "Pieces
   to hear". Listen for: the build noticed only once it has passed (the
   loudness rises 1 to 2 LU by ear, the filter opens, the hats and the
@@ -163,6 +208,9 @@ the points where the next step is yours.
   to brighten), gluith-vuisk and rong-wuisk (their own slow opening hides
   the arc's). `docs/notes/102c-arc-brightness.md` says why and what could
   be tried. When you hear them, say whether they rise and fall to you.
+  Since session 15 the yardstick is the arc's own job, darker at the
+  opening and the close than at the peak: 91% of 47 pieces (the misses the
+  same loops); over every role 77%, reported.
 
 **Long pieces: the plan (102a, session 11, v160).** Nothing sounds
 different yet; a piece can be read before it is heard (`docs/LONGFORM.md`
