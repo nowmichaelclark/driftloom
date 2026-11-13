@@ -6,6 +6,20 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B3, long pieces checked and heard (Opus 5.5, 2026-11-14).** On
+`main` at v164 (88c98be): item 102 against the brief, LONGFORM and promise
+11 (every check in `docs/notes/102-b3-measured.md`); then every clip of the
+listening set rendered again at dfe78c3 and measured against it (loudness
+each second, brightness, 50-ms dips), whole pieces unit by unit (brum-yei
+256, moan-teil 1,024, glor-ti Endless 25 min) and join by join (six arcs).
+Found: silent pivots (1 loop in 12), a three-second hole where "the tune
+alone" meets a stretched tune, developments with a join at nearly every
+unit; the arc 1.5 to 2 LU against the loop, its shape carried by the key;
+session 15's second blind pair a null (kept as the control; a new pair
+across glor-ti's kit fade). Page "Long Pieces Album" built (33 clips, three
+pairs, ten pieces, four questions); session 16's prompt takes the bugs as its
+first PR. Mikey's notes still to come.
+
 **Brain B1, the road to 1.0's kickoff (Opus 5.5, 2026-11-11).** On `main` at
 v153 (d9d6ffe), not taken from the reports:
 - **Checks:** `build-core.sh --check` (668,322 bytes); the generation

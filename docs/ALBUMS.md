@@ -4,6 +4,29 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Long Pieces Album" (brain B3, 2026-11-14, v164; item 102) -- out
+
+Page: <https://claude.ai/artifact/5G7YcuFc7iRvCNz8JtT4VD> (private to its
+owner; verdicts in its database, collection `verdicts`, one document a pair,
+a piece, a question and `free`; the blind key in `brain/key`, readable by the
+owner only). Excerpts, since the app can't take a journey or jump yet:
+session 15's set from the branch `long-clips` (`tools/longform-clips.mjs`,
+main at v164; stereo Opus 96 kbps; the index on the branch has every clip's
+piece, place and line), 33 clips, about 24 minutes. Ten pieces, each a card
+of its clips and one pick (Keep, Too much, Too little, Wrong, a note), in
+this order: three blind pairs, tha-vol whole, brum-yei and fei-no (256),
+moan-teil and loa-yer (1,024), the wander (glor-ti, mu-meth, teth-hu), the
+Endless arcs (brum-yei), gluith-vuisk's question; then four questions (the
+arc felt, the joins, the wander's pace, the endings) and a free note.
+
+The pairs, A and B by `random.Random(1102)`: pair 1 is session 15's
+(brum-yei 256 bars from 0:55, now against dfe78c3); pair 2 the brain's own
+(glor-ti Endless from 5:50, across the kit's 24-s fade, the same two builds,
+level-matched to the quieter as session 15's script does); pair 3 a control
+(session 15's pair 2, from 5:20: the same music both sides within -29 dB, the
+fade starting in its last 7 s). Measured beside it: `docs/notes/102-b3-measured.md`.
+When he answers: `docs/notes/102-mikey.md`, then delete `long-clips`.
+
 ## "Phase 3 Control" (brain B1, 2026-11-11, v149 against v153) -- out
 
 Item 98's control: the same album code in the app before phase 3 and in

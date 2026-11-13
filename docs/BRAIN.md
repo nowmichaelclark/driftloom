@@ -256,6 +256,10 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - **Seed-derived decisions use a salted RNG** (`spec.seed ^ SALT`) so loops
   that don't take the feature render exactly as before; it keeps A/Bs
   clean.
+- **Measure against the same moment before** (brain B3): a join, an arc's
+  energy, a wander's move, rendered at the commit before the change and now
+  and compared span by span, separates what the plan did from what the loop
+  always did; the hands' checks (clicks, steps) passed three holes.
 - Single-stage bisects mislead when stages interact. One fixed curve
   applied everywhere becomes a mannerism.
 
@@ -282,10 +286,31 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-11
+## State -- 2026-11-14
 
 ### Start here (for the next brain)
 
+- **Brain B3 (Opus 5.5, 2026-11-14): item 102 checked, the album out, his
+  notes still to come.** On `main` at v164 (88c98be), measured, not taken
+  from the reports: module matches (801,267 bytes); goldens 5,135; balance
+  lock; 15 short loops bit for bit as at dfe78c3; 27 Rust tests (straight or
+  played, 32,768 bars); `longform.mjs --plan` all, a played run all but the
+  arc's darker ends (81% of 16, batch 6's slow openings); a section's making
+  flat at 1, 1,000 and 10^9. **Three bugs** (to session 16's first PR):
+  silent pivots, "alone" over a silent varied tune, developments stuttering
+  with a join a unit. **The arc's energy** is 1.5 to 2 LU against the loop;
+  its shape is carried by the key a fourth or fifth up from B to the
+  release. **Endless's wander** is the old app for its first minutes (the
+  old pair 2 was a null: kept as the control). All in
+  `docs/notes/102-b3-measured.md`. **The page:** "Long Pieces Album"
+  (`docs/ALBUMS.md`; verdicts in its db `verdicts`, the key in `brain/key`).
+  **Next brain:** read the verdicts (`db_list` on slug
+  2280beaa-39db-4a83-90d6-6becf933d8f0), write `docs/notes/102-mikey.md`
+  (his words first, then actions by importance; new composing gets its own
+  queue item and session prompt), record his answers in `docs/DECISIONS.md`,
+  write the pairs' key into `docs/ALBUMS.md`, delete `long-clips`. B3's
+  scratch scripts were not kept; the method (Methods): render the same span
+  at dfe78c3 and now, compare unit by unit and join by join.
 - **Brain B1 (Opus 5.5, 2026-11-11): the road to 1.0's kickoff.** The plan
   is `docs/sessions/README.md`; each brain session has its prompt there.
   **Checked on `main` at v153 (d9d6ffe), not taken from the reports:** items

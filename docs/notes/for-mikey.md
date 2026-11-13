@@ -8,10 +8,20 @@ brain). Empty or answered at 1.0 (queue item 108).
 
 ## The long pieces: the listening set (102e, session 15)
 
+**Listen here: the "Long Pieces Album" page,
+<https://claude.ai/artifact/5G7YcuFc7iRvCNz8JtT4VD>** (brain B3, 2026-11-14):
+every clip below, in the order to hear them, with three blind pairs first,
+one pick a piece and four questions at the bottom. Your picks save as you tap;
+the brain turns them into session 16's brief (`docs/notes/102-mikey.md`).
+**Session 16 waits for them.** Three clips carry a line of what the brain
+measured (`docs/notes/102-b3-measured.md`): fei-no's held chord into B is
+silent (a bug), moan-teil's look-back drops out for half a beat every 8 s,
+and brum-yei's floor out takes almost nothing.
+
 **31 clips, 23 minutes in all**, on the throwaway branch `long-clips`
 (stereo Opus, its `index.md` has every clip's piece, place and one line on
-what to listen for). Brain B3 builds the page from it. The pairs are named
-before and after there, and B3's page makes them blind. Made by
+what to listen for). The page makes the pairs blind, adds a pair across
+glor-ti's kit fade and keeps session 15's second pair as a control. Made by
 `tools/longform-clips.mjs` from `main` at v164 (#381); each excerpt's place
 is read from the piece's map, so the set can be made again after session 16.
 
@@ -38,7 +48,7 @@ Lengths: 64, 256 and 1,024 bars and Endless; six styles; arcs and wanders.
 | mu-meth, `1086007177 bars=endless,journey=wander` | the wander's rare key move over a pivot chord (11:49) |
 | teth-hu, `706141505 bars=endless,still=0.8` | a wander the vibe chose, at 40 bpm: the start; its first move |
 | brum-yei, `1151594917 bars=endless,journey=arc` | Endless's first arc ending in a breath, not a close; the gentle movement after it |
-| **two blind pairs** | brum-yei 256 bars from 0:55, and glor-ti Endless from 5:20, 45 s each: before item 102 (`dfe78c3`, the loop's wandered sections) and now, level-matched to the quieter (within 0.6 dB): **is composed better than before?** |
+| **three blind pairs** (on the page) | brum-yei 256 bars from 0:55, glor-ti Endless from 5:50 (the brain's), 45 s each: before item 102 (`dfe78c3`, the loop's wandered sections) and now, level-matched to the quieter: **is composed better than before?**; and a control, glor-ti from 5:20 (the same music twice, within 0.3 dB) |
 
 **What only your ears can judge** (I could measure the rest; the measures
 are in #381 and the second PR): whether each join is welcome or too much; whether
