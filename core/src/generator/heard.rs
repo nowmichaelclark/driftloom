@@ -509,6 +509,10 @@ pub struct Heard {
     /// Whether the section plays a close the length slider asked for
     /// (`stop_at`): the track ends ringing out, not faded.
     pub stops: bool,
+    /// The section's first step, counted from the piece's (session 16): a
+    /// layer with a cycle of its own is placed by it, as the sequencer
+    /// places it (`abs_step`), not by the section's step.
+    start: f64,
 }
 
 impl Heard {
@@ -528,6 +532,7 @@ impl Heard {
         half: 0.0,
         root: 0.0,
         stops: false,
+        start: 0.0,
     };
 
     /// What the tune plays at section step `step` (`tune`): the unit's, by
@@ -577,6 +582,12 @@ impl Heard {
         self.phrase = phrase * cx.spb;
         self.half = if phrase >= 2.0 { js::ceil(phrase / 2.0) * cx.spb } else { js::ceil(cx.spb / 2.0) };
         self.root = cx.spec.root;
+    }
+
+    /// Where a note at loop step `step` of a layer cycling every `cycle`
+    /// steps falls in this section, give or take whole cycles (`start`).
+    fn placed(&self, step: f64, cycle: f64) -> f64 {
+        if cycle > 0.0 { step - self.start % cycle } else { step }
     }
 
     /// The unit holding section step `step` (none: nothing heard).
@@ -642,7 +653,8 @@ impl Heard {
                         return true;
                     }
                 } else if cycle > 0.0 {
-                    let mut s = e.step + js::ceil((from - e.step) / cycle) * cycle;
+                    let step = self.placed(e.step, cycle);
+                    let mut s = step + js::ceil((from - step) / cycle) * cycle;
                     while s < to {
                         if heard(s) {
                             return true;
@@ -698,6 +710,9 @@ impl Heard {
         self.spb = cx.spb;
         self.place_notes(base);
         self.phrases(cx);
+        #[allow(clippy::cast_precision_loss)] // a section's number, far under 2^53
+        let first = n as f64 * cx.spec.bars * cx.spb;
+        self.start = first;
         self.second = Tune::of(form, n);
         let ways = Ways::of(cx, base, None);
         let spb = cx.spb;
@@ -749,6 +764,9 @@ impl Heard {
         self.spb = cx.spb;
         self.place_notes(base);
         self.phrases(cx);
+        #[allow(clippy::cast_precision_loss)] // a section's number, far under 2^53
+        let first = n as f64 * cx.spec.bars * cx.spb;
+        self.start = first;
         self.second = Tune::of(form, n);
         let ways = Ways::of(cx, base, second);
         let lift = Lift::of(form, cx, &ways);

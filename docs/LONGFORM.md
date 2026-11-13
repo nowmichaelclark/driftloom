@@ -356,11 +356,15 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
   a line move changes has a join that is not a glide (`tools/longform.mjs`,
   `core/tests/joins.rs`).
 - **Never a hole** (session 16): a join thins the mix, it never leaves it
-  silent where the loop sounds. Every arc's join played, its window's mean
-  power within 20 dB of the loop as itself in the same samples
-  (`tools/longform.mjs`; a breath sits 8 to 16 dB under, the two holes
-  brain B3 found 30 to 58); every pivot struck above 0 and every tune
-  alone over a tune that sounds there (`core/tests/joins.rs`).
+  silent where the loop sounds. `tools/longform.mjs` reads every arc's join
+  as played (`dl_gen_played`: the join the loop can play of the plan's) that
+  strikes something or takes a note out, in 50 ms frames against the loop
+  as itself: a hole is a window whose median frame is 20 dB under the loop
+  and 10 dB or more under the beat before it (a breath sits 8 to 18 dB
+  under; the two holes brain B3 found, 40 and 42 from 18 and 20). Where the
+  beat before was already that far under, the quiet is the unit's, and is
+  reported. `core/tests/joins.rs` holds every pivot struck above 0 and every
+  tune alone over a tune that sounds there.
 - For Mikey's ears: every kind, how often each comes, and how strong.
 
 ## Endings that land (session 15)

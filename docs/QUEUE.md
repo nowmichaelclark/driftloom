@@ -467,9 +467,10 @@ from silence. The developments' frequent breaths were heard and kept.
 `docs/notes/102-mikey.md`, `docs/notes/102-b3-measured.md`. **Done**
 (session 16, v165): the pivot struck at the landing's velocity, "the tune
 alone" only over a tune that sounds there as the unit plays it (else a
-breath), and the yardstick: `tools/longform.mjs` holds every arc's join
-from a hole (20 dB under the loop as itself, made by the join), and
-`core/tests/joins.rs` every pivot struck and every tune alone sounding.
+breath), and the yardstick: `tools/longform.mjs` holds every arc's join,
+as played, from a hole (20 dB under the loop as itself, and made by the
+join), and `core/tests/joins.rs` every pivot struck and every tune alone
+sounding.
 
 **102e done** (session 15, v164; #381, #382): every line where a unit meets
 the next and something changes is written, chosen by what changes and the

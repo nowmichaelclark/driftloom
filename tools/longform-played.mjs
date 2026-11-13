@@ -36,7 +36,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newSpec, pieceMap } from './gen-lib.mjs';
+import { LAYERS, newSpec, parts, pieceMap, playedJoins } from './gen-lib.mjs';
 import { SCALES } from '../js/theory.js';
 
 const SCALE_STEPS = Object.fromEntries(Object.entries(SCALES).map(([id, s]) => [id, s.steps]));
@@ -310,35 +310,59 @@ function frameDepths(piece, loop, rate, from, to) {
 
 /**
  * How far under the loop as itself each of a piece's joins leaves the mix
- * (session 16): for every unit whose join does more than glide, over the
- * join's window as the plan has it (`[longform joins]`'s length before the
- * line; a breath its share of that, a fill the last beat): `depth`, the
- * piece's mean power against the loop's in the same samples, in dB; `frames`
- * and `before`, the median 50 ms frame's depth there and over the beat
- * before the window; `hole`, whether the join made a hole (`HOLE_DB`), and
+ * (session 16): for every unit whose join, as played (`playedJoins`: the
+ * join the loop can play of the plan's, at the wander's amount 0, as the
+ * renders here are made), does more than glide (a pivot or a fill, or a
+ * join that takes out a note there: one of a layer it takes out, not
+ * resting, struck in the window and ending by the line, a layer with a
+ * cycle of its own placed from the piece's first step, as the sequencer
+ * places it), over the join's window
+ * (from where it begins to the unit's line): `depth`, the piece's mean
+ * power against the loop's in the same samples, in dB; `frames` and
+ * `before`, the median 50 ms frame's depth there and over the beat before
+ * the window; `hole`, whether the join made a hole (`HOLE_DB`), and
  * `inherited`, whether its window is that far under only as the beat before
- * already nearly was. `units` from `pieceMap`, each `bars` long from `start`
- * seconds; `piece` and `loop` the two renders' samples at `rate`; `beat` in
- * seconds.
+ * already nearly was. The piece of `seed` and `request`, its first `count`
+ * sections, from `start` seconds; `piece` and `loop` the two renders'
+ * samples at `rate`.
  */
-export function joinDepths(units, bar, start, piece, loop, rate, beat = bar / 4) {
+export function joinDepths(seed, request, count, start, piece, loop, rate) {
+  const { form } = pieceMap(seed, request, 0, 1);
+  const played = playedJoins(seed, request, 0, count);
+  if (!played) return [];
+  const sectionSeconds = form.sectionBars / form.unitBars * form.unitSeconds;
+  const step = sectionSeconds / played.steps;
+  const beat = form.unitSeconds / form.unitBars / 4;
+  const loopParts = parts(seed, request);
+  const cycle = (layer) => loopParts.form.cycles?.[layer] || played.steps;
+  const notes = (layer) => loopParts[layer] ?? [];
+  // Whether the join leaves out a note the unit would play in its window.
+  const takes = (u) => LAYERS.some((layer, i) => {
+    if (!(u.out & (1 << i)) || u.rests & (1 << i)) return false;
+    const c = cycle(layer);
+    const shift = (u.section * played.steps) % c;
+    return notes(layer).some((e) => {
+      if (!(e.vel > 0)) return false;
+      const step = e.step - shift;
+      for (let s = step + Math.ceil((u.from - step) / c) * c; s < u.to; s += c) if (s + (e.dur ?? 0) <= u.to + 0.5) return true;
+      return false;
+    });
+  });
   const out = [];
-  let t = start;
-  for (const u of units) {
-    const end = t + u.bars * bar;
-    t = end;
+  for (const u of played.units) {
     if (['none', 'glide', 'prepared'].includes(u.join)) continue;
-    const len = Math.min(JOIN.bars, JOIN.share * u.bars) * bar;
-    const from = { fill: Math.min(0.25 * bar, len), breath: len * JOIN.breath }[u.join] ?? len;
-    const [a, b] = [Math.round((end - from) * rate), Math.round(end * rate)];
+    if (!['pivot', 'fill'].includes(u.join) && !takes(u)) continue;
+    const at = start + u.section * sectionSeconds;
+    const [from, end] = [at + u.from * step, at + u.to * step];
+    const [a, b] = [Math.round(from * rate), Math.round(end * rate)];
     if (b > Math.min(piece.length, loop.length)) break;
     const own = powerDb(loop, a, b);
     if (own < -60) continue;
-    const frames = median(frameDepths(piece, loop, rate, end - from, end));
-    const before = median(frameDepths(piece, loop, rate, end - from - beat, end - from));
+    const frames = median(frameDepths(piece, loop, rate, from, end));
+    const before = median(frameDepths(piece, loop, rate, from - beat, from));
     const deep = frames >= HOLE_DB;
     const made = !(frames - before < HOLE_DB / 2);
-    out.push({ t: end - from, join: u.join, depth: own - powerDb(piece, a, b), frames, before, hole: deep && made, inherited: deep && !made });
+    out.push({ t: from, join: u.join, depth: own - powerDb(piece, a, b), frames, before, hole: deep && made, inherited: deep && !made });
   }
   return out;
 }
@@ -549,7 +573,7 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   const loop = readWav(wavFile).data;
   fs.rmSync(wavFile, { force: true });
   // Each join against the loop as itself there (session 16: never a hole).
-  const depths = joinDepths(units, barSeconds, start, data, loop, rate);
+  const depths = joinDepths(seed, request, Math.max(1, sections), start, data, loop, rate);
   const whole = spans.map(([a, b], i) => b - a >= 0.99 * units[i].bars * barSeconds * rate);
   const ownLufs = lufsOf(loop, rate, spans.map(([a, b]) => [a, Math.max(a + 1, b)]));
   const ownBright = spans.map(([a, b]) => brightness(loop, rate, a, Math.max(a + 1, b)));
@@ -742,7 +766,7 @@ export function arcJoins(seed, request, seconds) {
     t += u.bars * bar;
   }
   // Each join against the loop as itself there (session 16: never a hole).
-  joins.depths = joinDepths(units, bar, start, piece.data, loop.data, rate);
+  joins.depths = joinDepths(seed, request, Math.ceil(seconds / (form.sectionBars * bar)) + 1, start, piece.data, loop.data, rate);
   return joins;
 }
 

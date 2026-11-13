@@ -498,6 +498,50 @@ mod generator {
         w.end_list();
         if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
     }
+
+    /// The joins of the loaded loop's piece as played (session 16), at
+    /// `dl_gen_text`: a list of a section's steps and then a line a unit
+    /// (`[section, phrase, kind, from, to, out, rests]`: the join `heard`
+    /// plays, where it begins and the unit ends, in the section's steps, the
+    /// layers it takes out and the layers the unit rests, a bit each, in
+    /// `LAYERS`' order), for `count` sections from section
+    /// `from`, each drawn at the wander's amount 0. The map (`dl_gen_map`)
+    /// names the plan's join; this, what the loop can play of it (a tune
+    /// alone over a tune silent there is a breath, a breath with nothing to
+    /// take out a glide), so the yardstick reads the join that is heard.
+    /// Returns its length; 0 as `dl_gen_map`.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole sections, below 2^53
+    pub extern "C" fn dl_gen_played(from: f64, count: u32) -> u32 {
+        let g = generator();
+        if g.form().is_none() {
+            return 0;
+        }
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        let mut w = crate::generator::canon::Writer::new(&mut text);
+        w.list();
+        w.num(g.spec().bars * g.spec().steps_per_bar);
+        let from = if from >= 0.0 { from as u64 } else { 0 };
+        for n in from..from.saturating_add(u64::from(count)) {
+            let pass = g.section(n, 0.0);
+            for (p, u) in pass.heard.units().iter().enumerate() {
+                w.list();
+                w.num(n as f64);
+                w.num(p as f64);
+                w.str(u.join.name());
+                w.num(u.join_from);
+                w.num(u.to);
+                w.num(f64::from(u.out));
+                let rests = crate::generator::LAYERS.iter().enumerate().filter(|&(_, &l)| u.rests(l)).fold(0u8, |m, (i, _)| m | 1 << i);
+                w.num(f64::from(rests));
+                w.end_list();
+            }
+        }
+        w.end_list();
+        if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
+    }
 }
 
 // --------------------------------------------------------------- the player
