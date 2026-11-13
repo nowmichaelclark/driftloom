@@ -7,14 +7,16 @@ The brief still holds the rules that can't bend and what Mikey asked for.
 
 **Where things stand:** the plan is code (`core/src/generator/longform.rs`),
 its numbers are data (`data/longform.txt`). **The wander is heard** (session
-12, `core/src/generator/heard.rs`, below), and **an arc's energy and its
-close** (session 13, "How an arc is heard"); an arc's second theme, its
-variations and its keys are named in the map and not yet heard (session
-14): it plays theme A in the home key throughout. Read a piece with
+12, `core/src/generator/heard.rs`, below), **an arc's energy and its
+close** (session 13, "How an arc is heard"), and **its themes, their
+variations, its keys and its movements' kinds** (session 14, "How an arc's
+themes are heard"). The joins are session 15's. Read a piece with
 `dlgen --map SEED REQUEST [--from N] [--count N]` (in `core/`: `cargo run
 --release --example dlgen -- --map 7 bars=256,journey=arc`), or in Node
-with `tools/gen-lib.mjs`'s `pieceMap`. `node tools/longform.mjs` runs the
-corpus checks; `core/tests/longform.rs` holds the same in the gate.
+with `tools/gen-lib.mjs`'s `pieceMap`; `--movements` prints a line a movement.
+`node tools/longform.mjs` runs the corpus checks and
+`node tools/longform-themes.mjs` the themes' on what is played;
+`core/tests/longform.rs` and `core/tests/themes.rs` hold the same in the gate.
 
 ## What a plan is
 
@@ -54,7 +56,7 @@ how high it is (0.85 to 1); every role has a unit at least.
 | second | B (one-theme pieces: A in the related key) | the arc's related key | 0.65 |
 | development | fragments: A, then its answer (B; in a finale, an earlier arc's B) | through the related keys, each at least 30 s | 0.65 to 0.9 |
 | peak | A, register | the arc's related key | 1 |
-| release | B (or A), outline | the same | 0.85 to 0.55 |
+| release | B (or A), outline; its last phrase may hold the bass on the home fifth | the same | 0.85 to 0.55 |
 | return | A with one variation (register, voice, stretched, reharmonized, answered) | home | 0.55 to 0.5 |
 | close / breath | A outline, closing on the tonic / a rest | home | 0.4 to 0.15 / 0.3 to 0.2 |
 
@@ -63,13 +65,35 @@ how high it is (0.85 to 1); every role has a unit at least.
   whole number of arcs of about that length; Endless plays arcs of exactly
   that length in turn, each ending in a breath.
 - **The small form** (an arc under 4 minutes: most 64-bar pieces): opening,
-  theme, lift, release, return, close. One theme, home key throughout.
+  theme, lift, release, return, close. One theme, home key throughout
+  (session 14 brought its release home: it had the related key for a
+  phrase).
 - **Movements:** in a finite piece of several arcs every arc but the last
   ends in a breath; each has its own B (`Span::theme_seed`, from the seed
   and the arc's number); the last arc's development recalls the earlier
-  arcs' Bs (`Theme::Recall`) and it alone closes.
-- **One theme or two:** 70% of arc pieces have a B; the rest play A in the
-  related key where B would be.
+  movements' Bs (`Theme::Recall`, by number: one a section) and it alone
+  closes.
+- **Movements of different kinds** (Mikey, 2026-11-12; session 14,
+  `longform::Kind`): a piece that would hold three arcs or more, and
+  Endless, plays a repeating **cycle** drawn per piece: a **full** arc,
+  then in a drawn order a **gentle** one (the full form, every role's
+  energy between 0.32 and 0.6: the hats partway in, no doubled tune, no
+  build to speak of), a **light** one (the small form) and, in pieces of
+  four or more, an **interlude** (the wander's way for the span: up to
+  three things go out one at a time, a hold apart, and come home in the
+  same order; theme A, the home key). Each kind's length is a share of the
+  full arc's (`kinds`: 1, 0.7, 0.4, 0.5). A finite piece is whole cycles
+  and a last full arc, so the first and the last are full, the last alone
+  recalls and closes, and no two neighbors are alike; three movements are
+  full, gentle or light, full. A unit finds its movement by a division (a
+  cycle, then a place in it). Pieces of one or two arcs are as they were;
+  so is a piece too short to give every kind its roles. Mikey's 3,072 bars
+  (seed 7, 1:31:42) were 17 alike; they are 17 in four kinds, 8:00, 4:03,
+  5:36 and 3:13 long.
+- **One theme or two:** 70% of arc pieces whose loop has a tune have a B
+  (none where a theme was asked: it stays the tune); the rest play A in
+  the related key where B would be. A second theme whose own loop's tune
+  rests is a rest of the tune (queue item 85f: about 1 in 12 of them).
 - **The close** takes the last units, 10 seconds at least: a last section
   cut short borrows the bars before it. The round after begins at the
   opening again (a round's plan is the same every time).
@@ -115,6 +139,57 @@ other way (hats in, the kick out): hats over a quiet kit made an opening
 brighter, not thinner, and the kick and the backbeat carry so much of a
 loop's loudness that an opening without them sat 6 to 8 LU under its peak.
 
+### How an arc's themes are heard (session 14)
+
+`heard::Lift::themed`, on the unit its energy made. **Theme B is another
+seed's tune bent into this loop** by the request's theme machinery (85d):
+that seed's own spec, its figure and its cell, and the loop's melody made
+again around them, over the same chords, then finished as the loop's own is
+(spelled over the chords, its slides, ornaments and harmony line; held out
+of the bars the loop's tune is held out of; an octave away where its centre
+would sit within five semitones of the chords'; a note that starts a
+semitone over a chord tone takes that tone). The generator keeps two such
+tunes, the section playing's and the next's, and makes one in three
+stages, a block each, before the next pass is drawn (`Generator::prepare`):
+3 to 30 us a stage natively, under the loop's own worst audio block. **A
+section plays one tune beside the loop's own**: where its units name more
+(a phrase-planned piece whose section holds B and an answer), the first
+stands in for the others.
+
+| What the map says | Heard as |
+|---|---|
+| theme B, a recall | the second tune in the loop's tune's voice, whole |
+| a fragment | each phrase's first half, then a rest |
+| a call and response (35% of the development's pairs) | theme A's fragment, then the other theme's in A's rests: one voice |
+| in the related key | a fifth away, the whole loop moved (the wander's way); the relative or the parallel, every note along the mode (`key_map`, a table by pitch class), an octave over where a layer would leave its range, so the bass, the chords, the tune, its graces, the texture and a tuned kick stay in the key together |
+| register (not the peak's, which is its double) | the tune an octave up or down by the movement's number, the way that keeps it in 48 to 91 and five semitones from the chords |
+| voice | the tune in another voice of its pool (a tune with none moves an octave) |
+| stretched | each phrase's first half at half speed, the chords held longer |
+| reharmonized | the bass, the chords and the texture in the relative key, the tune where it was |
+| answered | each phrase's first half kept, its second the answer's: the loop's own figure through `answerFigure`, made as a second tune |
+| outline | at least half the tune's notes left out, the bar lines' kept longest |
+| the return prepared (half the movements) | the bass on the home key's fifth for the release's last phrase |
+
+A theme stated (B at the second, A at the return) comes in whole on its
+line; everything else glides as session 13's energy does. **The octave
+rule** (item 84) is kept in every key: a unit whose moves would bring the
+tune's centre within five semitones of the chords' moves the chords an
+octave away, or the tune. **What was asked holds:** a theme asked has no B;
+a tune's voice asked is never handed on; a pinned key is home, a pinned
+scale rules out the parallel; the landing is the home key's.
+
+Measured (`node tools/longform-themes.mjs`, 43 corpus pieces played): no
+note outside its unit's key beyond the loop's own; 44 second themes, none
+theme A again, 6 resting; every return keeps 0.42 or more of theme A's
+notes and none is a copy; every variation played; the tune's time a
+semitone over a chord tone 3.6% against 4.6% for theme A's own statements
+(the parallel key's units 4.5%, a second tune 2.6%); the tune's centre five
+semitones from the chords' wherever the loop keeps it. A theme-B section
+costs what a theme-A one does (13 to 30 us, within a few percent either
+way); its tune made from nothing, a section ahead, 27 to 43 us more, about
+a loop's own making. For Mikey's ears: every number, and whether a second
+theme that rests is welcome.
+
 ## The wander
 
 Time is cut into **epochs**: each thing that may move takes one turn an
@@ -135,7 +210,8 @@ stretched a hold to 587 s. Over the corpus (241 seeds at five lengths,
   chords' register and their length (-1, 0, +1); the tune's density; rarely
   the key (15% of epochs visit a key **a fifth away**: the whole loop moved,
   every chord the same; the relative and the parallel are the arc's) and
-  the theme (**off until theme B is made**, session 14: `theme = 0`).
+  the theme (20% of epochs hand the tune to the piece's second theme and
+  bring it home in the next: on since session 14 made theme B).
 - **Every thing goes out in the even epochs and comes home in the odd**
   (session 12; 102a gave each its own parity, so the first epoch moved
   half of them and its holds ran long): voice, register, length and
@@ -173,6 +249,7 @@ the loop's own worst audio block of 49 to 187 us, full and lite).
 | the chords' register | an octave, the other way where that leaves 36 to 96 | the line |
 | the chords' length | 0.6 or 1.5 of their own (longer never into the next chord; the other way where a loop's chords can't) | the line |
 | the key | every pitched layer, the tune's harmony and graces, a tuned kick: a fourth up or down, an octave over where a layer would leave its range | the line |
+| the theme (session 14) | the tune's notes the second theme's (another seed's tune bent into the loop), in the same voice; a rest where that theme rests | the line |
 
 A glide takes `glide` (24 s) over the units after its move; a unit starts
 where the one before ended, so nothing jumps. The line is the unit's first
@@ -247,6 +324,18 @@ a theme-B section another seed's tune spread across blocks.
 - **A peak is its own role**, in the arc's related key; the home key is
   kept for the return, so coming home is heard.
 - **Rounds repeat their plan.** The loop's breathing still differs.
+- **An answer is a tune made, not marks** (session 14): "the second half
+  drawn anew" needs notes that fit the chords, so the answer is the loop's
+  melody made again around `answerFigure`'s figure, a stage a block, like
+  theme B. Every other variation is marks on the notes.
+- **One tune a section beside the loop's own** (session 14), so the
+  generator keeps two and a block makes one stage; a finale's recalls are
+  one movement's a section.
+- **A gentle movement is the full form held between two energies**, not
+  fewer layers by name: the energy already decides which layers play.
+- **An interlude is its own small wander** (out and home inside the span),
+  not a slice of the piece-long wander's epochs, which run 20 minutes and
+  more: a movement must begin and end as the loop's own.
 
 ## Left open
 
@@ -254,8 +343,10 @@ a theme-B section another seed's tune spread across blocks.
   middle movement, is a sketch to offer, not built.
 - **How strong the arc sounds:** session 13 took the conservative end (the
   peak about 1 to 2 LU over the opening by ear; its numbers are first
-  picks). What each variation does to the notes (session 14): the plan
-  only names them.
+  picks).
+- **The parallel key** clashes a little more than the loop (4.5% of the
+  tune's time against 3.8 to 4.6%): a minor tune's fourth over a major
+  third. Kept, as the brief asks; one line of `related` to rule out.
 - **A second, smaller peak** now and then: not drawn.
 - **The tempo slider while playing:** the plan is made with the tempo the
   piece loads with; moving the slider changes how long the spans last.
@@ -265,10 +356,11 @@ a theme-B section another seed's tune spread across blocks.
 
 - Read the plan where a section is drawn: `Generator::form()` then
   `at(n, phrase)`. Keep `Form::of` free of the player's state.
-- Session 14: theme B, the variations and the keys heard on top of the
-  arc's energy (`heard::Lift`; a key moves the landing's tonic too, so keep
-  the landing on the home key). Once theme B's tune is made, turn the
-  wander's theme back on (`[longform wander] theme`, 0.2) and hear it.
+- Session 15: the joins. A key, a theme and a voice change on a unit's
+  first step with nothing written across the line yet (`Span::changed`
+  says which); the one join built is the return prepared (`prepares`). A
+  second tune is ready a section ahead (`Generator::second`), so a join
+  may play a bar of it alone.
 - `node tools/longform.mjs` checks what is played too
   (`tools/longform-played.mjs`; `--plan` for the plan alone).
 - A change to the plan's draws moves the maps: say so, and keep
@@ -303,27 +395,52 @@ between moves is the loop as it always breathed.
    then (256 bars) the close. Endless: 21:42 the chords' lengths; 24:36 the
    texture rests again.
 
-**The arc** (session 13). Each `journey=arc`, at the length given; times
-from the piece's start. Listen for: an opening thin and a little dark (the
-kit and the bass held back, no hats, the tune sparse, the filter low), the
-build noticed only once it has passed (the hats and the backbeat in, the
-filter opening, the tune doubled an octave up, softly, toward the peak),
-the release, the return, then the close thinning to the chords and the tune
-and the landing: the tonic chord and the tune on the tonic, alone, ringing
-out. One theme still, in the home key (session 14 brings the second and the
-keys).
+**The arc** (sessions 13 and 14). Each `journey=arc`, at the length given;
+times from the piece's start. Listen for the energy (session 13): an
+opening thin and a little dark, the build noticed only once it has passed,
+the release, then the close thinning to the chords and the tune and the
+landing on the tonic, alone, ringing out. And the ideas (session 14): the
+second theme arriving as another tune in the same voice, in a new key; the
+development trading fragments; theme A coming home whole, known at once
+and changed; the bars before it where the bass holds one note.
 
 1. **Seed 2728346932, tha-vol** (131 bpm, A# lydian; 64 bars is 1:27, the
-   small form). The opening 0:00; the theme 0:10; the lift, the peak, 0:32
-   to 0:49; the release 0:49; the return 0:54; the close 1:16; the landing
-   1:23; the opening again 1:27.
+   small form: one theme, at home). The theme 0:10; the lift 0:32, theme A
+   an octave away; the release 0:49, the bass holding F (the home fifth)
+   until the return 0:54, **A answered** (each phrase's second half the
+   answer's); the close 1:16; the landing 1:23; the opening again 1:27.
 2. **Seed 1151594917, brum-yei** (109 bpm, C# ionian; 256 bars is 9:23, two
-   arcs as movements). The opening 0:00; the build 0:52; the peak 2:38; the
-   release 2:56; the return 3:13; a breath 4:06; the second arc's opening
-   4:41, peak 7:37, release 7:55, return 8:13; the close 9:06; the landing
-   9:19.
+   arcs as movements). **B enters 1:10, in F#** (a busier tune, the loop a
+   fourth up); the development 1:45, a call and response in A# aeolian (the
+   relative: A's fragment, B's in its rests), then A's fragment alone in G#
+   at 2:20; the peak 2:38; the release 2:56 (B's outline, the bass holding
+   G# from 3:05); **A returns 3:13, register** (an octave away, home); a
+   breath 4:06. The second arc: its own B at 6:09 is a theme that rests
+   (85f: the tune is silent to 6:45, the loop in G#); the development 6:45
+   **recalls the first arc's B** as a call and response; the peak 7:37;
+   **A returns 8:13, answered**; the close 9:06; the landing 9:19.
 3. **Seed 1278568317, sheim-gling** (98 bpm, G kumoi; 1,024 bars is 31:20,
-   two arcs of about 15 minutes). The opening 0:00 (a minute); the build
-   3:33; the peak 9:47; the release 10:53; the return 12:14; a breath 14:34;
-   the second arc's opening 15:40, build 18:58, peak 24:29, release 25:35,
-   return 27:11; the close 29:59; the landing 31:15.
+   two arcs of about 15 minutes). B enters 4:53 in D; the development 7:20;
+   the peak 9:47; the release 10:53; **A returns 12:14, voice** (a bell for
+   the keys); a breath 14:34. The second arc: B 20:04; the development
+   22:17 recalls the first arc's B; the peak 24:29; the release 25:35; **A
+   returns 27:11, answered**; the close 30:00; the landing 31:15.
+4. **Seed 2060199680, moan-teil** (118 bpm, G mixolydian; 1,024 bars is
+   34:42, **five movements of four kinds**). The full arc 0:00: B 2:42 in
+   D, the development 3:55, the peak 5:17, **A returns 6:54, answered**. The
+   gentle one 9:37 (no build to speak of): B 11:39, a call and response
+   12:44, **A returns 14:46, register**. The light one 16:16 (the small
+   form): the lift 17:37, **A returns 18:50, stretched** (each phrase's
+   first half at half speed over held chords). The interlude 20:12: the
+   tune thins at 21:49 and fills again at 23:27, nothing else moves. The
+   finale 24:56: its own B 27:47 in C; **the look back 29:17 to 30:38**,
+   fragments of the first movement's B (29:25, 29:57, 30:30) and the gentle
+   one's (29:33, 30:06, as calls and responses) through D dorian (the
+   relative), D and C; the peak 30:38; **A returns 32:16, reharmonized**
+   (the tune as it was, the chords and the bass in D dorian); the close
+   33:53, landing in its last bars.
+5. **Seed 2158762586, fei-no** (88 bpm, A major pentatonic; 256 bars is
+   8:43, one arc). **B enters 2:43 in F# minor pentatonic** (the relative:
+   every note two steps of the mode down); the development 4:21 in E; the
+   peak 5:27; the release 6:00; **A returns 7:05, stretched**; the close
+   8:10, landing in its last bars.

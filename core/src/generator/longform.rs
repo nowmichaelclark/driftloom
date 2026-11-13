@@ -1202,7 +1202,8 @@ impl Form {
                 if d % 2 == 0 && !calls { (Theme::A, Variation::Plain, at) } else { (answer.0, answer.1, at) }
             }
             Role::Peak => (Theme::A, Variation::Register, second_key),
-            Role::Release => (b, Variation::Outline, second_key),
+            // (The small form stays at home throughout.)
+            Role::Release => (b, Variation::Outline, if light { self.home } else { second_key }),
             Role::Return => (Theme::A, returns, self.home),
             Role::Breath => (Theme::Rest, Variation::Plain, self.home),
         };

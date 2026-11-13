@@ -789,7 +789,9 @@ impl Player {
             p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
             // A long piece's plan, heard (queue items 102b and 102c).
             if self.journeyed {
-                p.heard.hear(g.form().as_ref(), &cx, g.render(), u64::from(number));
+                let form = g.form();
+                let second = form.as_ref().and_then(|f| g.second(crate::generator::heard::Tune::of(f, u64::from(number))));
+                p.heard.hear(form.as_ref(), &cx, g.render(), second, u64::from(number));
             }
         }
     }

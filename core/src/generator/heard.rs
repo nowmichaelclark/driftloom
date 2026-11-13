@@ -82,7 +82,7 @@ use super::data::{ENERGY, LONGFORM};
 use super::js;
 use super::list::{Empty, Word};
 use super::longform::{Form, Key, Relation, Role, Span, State, Theme, Variation};
-use super::melody::MELODY_MAX;
+use super::melody::{MELODY_MAX, Melody};
 use super::plan::{self, Cx, Notes};
 use super::render::Render;
 use super::request::Journey;
@@ -568,11 +568,11 @@ impl Heard {
     /// Hear section `n` of the piece `form` plans, of the loop of `cx`
     /// rendered as `base`: every unit's state, and the one before the first
     /// (where it starts from). An arc's is its energy (`hear_arc`).
-    pub fn hear(&mut self, form: Option<&Form>, cx: &Cx, base: &Render, n: u64) {
+    pub fn hear(&mut self, form: Option<&Form>, cx: &Cx, base: &Render, second: Option<&Melody>, n: u64) {
         *self = Heard::NONE;
         let Some(form) = form else { return };
         if form.journey == Journey::Arc {
-            self.hear_arc(form, cx, base, n);
+            self.hear_arc(form, cx, base, second, n);
             return;
         }
         self.on = true;
@@ -581,7 +581,7 @@ impl Heard {
         self.place_notes(base);
         self.phrases(cx);
         self.second = Tune::of(form, n);
-        let ways = Ways::of(cx, base);
+        let ways = Ways::of(cx, base, None);
         let spb = cx.spb;
         let unit_steps = form.unit_bars * spb;
         let count = (form.units_in(n) as usize).min(UNITS_MAX);
@@ -617,7 +617,7 @@ impl Heard {
     /// unit before ended, so a build is a slow swell and nothing jumps; and
     /// at a finite piece's end, the tune's last phrase whole and the landing
     /// on the tonic (`land`).
-    fn hear_arc(&mut self, form: &Form, cx: &Cx, base: &Render, n: u64) {
+    fn hear_arc(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, n: u64) {
         self.on = true;
         self.arc = true;
         self.seed = cx.spec.seed;
@@ -625,7 +625,7 @@ impl Heard {
         self.place_notes(base);
         self.phrases(cx);
         self.second = Tune::of(form, n);
-        let ways = Ways::of(cx, base);
+        let ways = Ways::of(cx, base, second);
         let lift = Lift::of(form, cx, &ways);
         let spb = cx.spb;
         let unit_steps = form.unit_bars * spb;
@@ -1223,10 +1223,13 @@ struct Ways {
     /// rule, queue item 84: five semitones apart at least where the loop
     /// keeps it); none without both.
     gap: Option<f64>,
+    /// The same for the section's second tune, where it plays one with
+    /// notes.
+    second_gap: Option<f64>,
 }
 
 impl Ways {
-    fn of(cx: &Cx, base: &Render) -> Ways {
+    fn of(cx: &Cx, base: &Render, second: Option<&Melody>) -> Ways {
         let first = |v: Option<Word>| v.map_or("", |w| w.get());
         let own = [
             "",
@@ -1258,7 +1261,8 @@ impl Ways {
         let mean = |sum: f64, n: usize| (n > 0).then(|| sum / n as f64);
         let tune = mean(base.melody.iter().filter(|e| e.vel != 0.0).map(|e| e.midi).sum(), base.melody.iter().filter(|e| e.vel != 0.0).count());
         let under = mean(base.chords.iter().flat_map(|e| e.notes.iter()).map(|&n| f64::from(n)).sum(), base.chords.iter().map(|e| e.notes.len()).sum());
-        Ways { own, pools, chords, longer, shorter, ranges, gap: tune.zip(under).map(|(t, c)| t - c) }
+        let other = second.and_then(|m| mean(m.iter().filter(|e| e.vel != 0.0).map(|e| e.midi).sum(), m.iter().filter(|e| e.vel != 0.0).count()));
+        Ways { own, pools, chords, longer, shorter, ranges, gap: tune.zip(under).map(|(t, c)| t - c), second_gap: other.zip(under).map(|(t, c)| t - c) }
     }
 
     /// The voice `layer` plays for the plan's number `pick` (0 to 1 over its
@@ -1374,23 +1378,29 @@ impl Ways {
     /// octave away from the tune, or the tune an octave from the chords,
     /// whichever has room.
     fn settle(&self, u: &mut Unit) {
-        let (Some(gap), Some([lo, hi]), Some([tlo, thi])) = (self.gap, self.chords, self.ranges[Layer::Melody as usize]) else { return };
+        let (Some(own), Some([lo, hi]), Some([tlo, thi])) = (self.gap, self.chords, self.ranges[Layer::Melody as usize]) else { return };
+        // The tune the unit plays whole: the loop's own, or the second.
+        let gap = if u.tune == [tune::SECOND; 2] { self.second_gap.unwrap_or(own) } else { own };
         let (m, c) = (Layer::Melody as usize, Layer::Chords as usize);
         let by = |u: &Unit, k: usize| f64::from(u.shift[k]) + if u.mapped & (1 << k) != 0 { f64::from(u.map[0]) } else { 0.0 };
         let now = |u: &Unit| gap + by(u, m) + f64::from(u.lift) - by(u, c) - f64::from(u.register);
-        if js::abs(gap) < 5.0 || js::abs(now(u)) >= 5.0 {
+        if js::abs(own) < 5.0 || js::abs(now(u)) >= 5.0 {
             return;
         }
-        // Apart the way they already stand: the tune over the chords, or
-        // under.
-        let away: i16 = if gap >= 0.0 { -12 } else { 12 };
-        let moved = i16::from(u.map[0]) * i16::from(u.mapped & (1 << c) != 0) + u.shift[c] + u.register + away;
-        if lo + moved >= CHORDS_RANGE[0] && hi + moved <= CHORDS_RANGE[1] {
-            u.shift[c] += away;
-        } else {
-            let to = by(u, m) + f64::from(u.lift) - f64::from(away);
-            if tlo + to >= TUNE_RANGE[0] && thi + to <= 96.0 {
-                u.shift[m] -= away;
+        // The tune stays over the chords where it can: the chords down, or
+        // the tune up; else the other way about.
+        let chords = i16::from(u.map[0]) * i16::from(u.mapped & (1 << c) != 0) + u.shift[c] + u.register;
+        let tune = by(u, m) + f64::from(u.lift);
+        for (layer, octave) in [(c, -12i16), (m, 12), (c, 12), (m, -12)] {
+            let fits = if layer == c {
+                lo + chords + octave >= CHORDS_RANGE[0] && hi + chords + octave <= CHORDS_RANGE[1]
+            } else {
+                tlo + tune + f64::from(octave) >= TUNE_RANGE[0] && thi + tune + f64::from(octave) <= 96.0
+            };
+            let then = now(u) + f64::from(if layer == c { -octave } else { octave });
+            if fits && js::abs(then) >= 5.0 {
+                u.shift[layer] += octave;
+                return;
             }
         }
     }
@@ -1549,7 +1559,7 @@ fn has_room(base: &Render, cx: &Cx) -> bool {
 /// has notes, a voice of its own that is not sung, and its pool another.
 #[must_use]
 pub fn voiceable(cx: &Cx, base: &Render) -> u8 {
-    let ways = Ways::of(cx, base);
+    let ways = Ways::of(cx, base, None);
     let mut mask = 0;
     for layer in [Layer::Bass, Layer::Chords, Layer::Melody] {
         let sings = cx.choir.is_some() && matches!(layer, Layer::Chords | Layer::Melody);

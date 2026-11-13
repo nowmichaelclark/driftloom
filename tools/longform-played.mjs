@@ -15,6 +15,8 @@
 //   length    the chords' notes the same but their lengths
 //   density   the tune's notes a few fewer or more, the rest the same
 //   key       every pitched layer moved the same few semitones
+//   theme     the tune's notes another tune's (the piece's second theme,
+//             session 14), or none where that theme rests
 //   warmth    the tone's lowpass gliding; space: the room's
 //
 // and every check is the plan's, held to what was heard: at most one thing
@@ -43,7 +45,7 @@ import { kWeighting, fft } from './meter.mjs';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DLRENDER = path.join(ROOT, 'core', 'target', 'release', 'examples', 'dlrender');
 const CH = ['melody', 'chords', 'bass', 'texture', 'drums'];
-const THINGS = ['key', 'layers', 'voice', 'warmth', 'space', 'register', 'length', 'density'];
+const THINGS = ['theme', 'key', 'layers', 'voice', 'warmth', 'space', 'register', 'length', 'density'];
 const GLIDING = ['layers', 'warmth', 'space', 'density'];
 /** How long a move glides, as data/longform.txt has it ([longform wander] glide). */
 const GLIDE = Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').match(/^glide = (\S+)/m)?.[1] ?? 24);
@@ -172,7 +174,11 @@ export function playedChecks(seed, request, seconds) {
     const end = secs.get(n + 1)?.start ?? Infinity;
     const things = new Map();
     CH.forEach((l, i) => {
-      const m = !cycling[i] && moved(l, a.layers[i], b.layers[i]);
+      let m = !cycling[i] && moved(l, a.layers[i], b.layers[i]);
+      // The tune handed to the second theme, or home again (session 14):
+      // other notes, more or fewer, or none (a theme that rests), on the
+      // move's line; a move inside a section is heard in the next too.
+      if (m && l === 'melody' && moves.some((x) => x.thing === 'theme' && (x.section === n || (x.section === n - 1 && x.phrase > 0)))) m = 'theme';
       if (m) things.set(m, Math.min(things.get(m) ?? Infinity, firstDiff(a.layers[i], b.layers[i])));
     });
     for (const p of params) {
@@ -199,7 +205,7 @@ export function playedChecks(seed, request, seconds) {
       }
       // The move this is: drawn in this section, or one gliding on from
       // within the glide's seconds (and a unit) before.
-      const move = moves.find((m) => m.thing === thing && m.section <= n && (m.section === n || (GLIDING.includes(thing) && (n - m.section) * sectionSeconds <= GLIDE + form.unitSeconds + 0.01)));
+      const move = moves.find((m) => m.thing === thing && m.section <= n && (m.section === n || (thing === 'theme' && m.section === n - 1 && m.phrase > 0) || (GLIDING.includes(thing) && (n - m.section) * sectionSeconds <= GLIDE + form.unitSeconds + 0.01)));
       if (!move) problems.push({ check: 'nothing moves where the map draws nothing', where: `${where}: ${thing}` });
       else if (!GLIDING.includes(thing) && step !== Infinity && (step < Math.round(move.phrase * unitSteps) || step >= Math.round((move.phrase + 1) * unitSteps))) {
         problems.push({ check: 'a move that can\'t glide starts on its line', where: `${where}: ${thing} at step ${step}` });
@@ -213,7 +219,7 @@ export function playedChecks(seed, request, seconds) {
     if (m.section <= 4 || m.section + reach >= last - 1 || closes.has(m.section) || seam(m.section)) continue;
     const h = heard.find((x) => x.section >= m.section && x.section <= m.section + reach && x.things.includes(m.thing));
     // A layer with a cycle of its own is not read note by note.
-    const layer = { voice: m.voice, register: 'chords', length: 'chords', density: 'melody' }[m.thing];
+    const layer = { voice: m.voice, register: 'chords', length: 'chords', density: 'melody', theme: 'melody' }[m.thing];
     if (!h && !(layer && cycling[CH.indexOf(layer)])) problems.push({ check: 'every move the map draws is heard', where: `${seed} "${request}" section ${m.section}: ${m.thing}` });
   }
   return { problems, heard, moves: moves.filter((m) => m.section > 4 && m.section < last), form, cycling: CH.filter((_, i) => cycling[i]), budget };

@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-12:** `main` is at v162 (session 01 done: v154 the tools
+**Status, 2026-11-13:** `main` is at v163 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -39,8 +39,10 @@ yet; the design that stands is `docs/LONGFORM.md`); hands session 12 done
 (2026-11-12: 102b, v161, the wander heard, #375; holds kept within 300 s;
 `tools/longform.mjs` checks what is played); hands session 13 done
 (2026-11-12: 102c, v162, the arc's energy, an opening and a close heard,
-#377); next: session 14 (102d, the arc's themes and keys; the long pieces,
-11 to 16, come before batch 6's 04 to 10), and
+#377); hands session 14 done (2026-11-13: 102d, v163, the arc's second
+theme, its variations, its keys and movements of different kinds heard,
+and the wander's theme turn on); next: session 15 (102e, the joins; the
+long pieces, 11 to 16, come before batch 6's 04 to 10), and
 Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -447,6 +449,16 @@ before its close; movements (a finite piece's last arc looks back);
 theme B's making spread across blocks (the tablet's margin); and the
 listening set as rendered excerpts with a blind before-and-after pair,
 since the app can't jump or take a journey until 106.
+
+**102d done** (session 14, v163): a second theme (another seed's tune bent
+into the loop, made a stage a block a section ahead), the variations as
+marks on the notes, the related keys (a fifth away, the relative and the
+parallel along the mode), the return prepared on the home fifth, call and
+response in the development, movements of four kinds in a cycle, a finale
+that looks back, and the wander's hand-over of the tune
+(`heard::Lift::themed`, `Generator::prepare`, `longform::Kind`;
+`docs/LONGFORM.md`, "How an arc's themes are heard";
+`node tools/longform-themes.mjs`, `core/tests/themes.rs`).
 
 **102c done** (session 13, v162): the arc's energy heard, and a finite
 arc's landing on the tonic (`heard::Lift`; `docs/LONGFORM.md`, "How an arc

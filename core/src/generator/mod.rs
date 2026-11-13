@@ -594,7 +594,9 @@ impl Generator {
     fn hear(&mut self, n: u64) {
         while !self.prepare(n) {}
         let form = self.form();
-        self.pass.heard.hear(form.as_ref(), &plan::Cx::new(&self.spec), &self.render, n);
+        let want = form.as_ref().map_or(heard::Tune::NONE, |f| heard::Tune::of(f, n));
+        let second = self.seconds.iter().find(|s| s.ready && s.tune == want && want != heard::Tune::NONE).map(|s| &s.melody);
+        self.pass.heard.hear(form.as_ref(), &plan::Cx::new(&self.spec), &self.render, second, n);
     }
 
     /// The plan of the loop's piece (queue item 102; `longform`): what each

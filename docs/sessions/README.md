@@ -32,7 +32,7 @@ says the work goes on meanwhile.
 | 11 | `11-long-plan.md` | 102a: the piece's plan and its map (nothing sounds different yet) | Fable 5.2, medium | yes, 2026-11-12 |
 | 12 | `12-long-wander.md` | 102b: the wandering journey | Opus 5.5, high | yes, 2026-11-12 |
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | yes, 2026-11-12 |
-| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | |
+| 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | yes, 2026-11-13 |
 | 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | |
 | B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | |
 | | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | |
@@ -184,6 +184,18 @@ Things earlier sessions learned:
   an hour with its arcs; `--arcs 10` for a quicker look). A finite arc's
   last bars land (`heard::Landing`): session 14's keys must keep it on the
   home key.
+- An arc's themes and keys are heard (session 14, `heard::Lift::themed`):
+  a section plays one tune beside the loop's own (`heard::Tune`), which the
+  generator makes a stage a block before the section's pass is drawn
+  (`Generator::prepare`; anything that draws a pass straight calls it
+  first). Every pitch is made in the home key and moved by the unit
+  (`heard::Unit::moved`): a new pitched thing in the sequencer goes
+  through it too. `node tools/longform-themes.mjs` (about eight minutes)
+  measures the themes on what is played; `dlgen --map SEED REQUEST
+  --movements` prints a line a movement and `dlgen --theme-cost` times a
+  theme-B section. Session 15's joins: `Span::changed` says what a line
+  changes; nothing is written across a key's or a theme's line yet but
+  the return's held fifth.
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.
