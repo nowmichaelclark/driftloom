@@ -191,3 +191,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   dlrender -- --seed 2158762586 --request bars=256,journey=arc --track
   bars=120 --seconds 250 --stereo --wav fei-no.wav`; every clip is on the
   branch `long-clips` (`docs/notes/for-mikey.md`, the listening set).
+- #382, long pieces: the measures and the listening set (item 102e, session
+  15), docs and a tool (no app change): everything `tools/longform.mjs`
+  checks, over 240 seeds at 64, 256, 1,024 and 32,768 bars and Endless, in
+  the PR (one check of 24 short once, as on `main`); the nightly run by hand
+  on #381; and the listening set for brain B3's page: 31 clips, 23
+  minutes, on the throwaway branch `long-clips` (the pieces, how they were
+  chosen and what to listen for at the top of `docs/notes/for-mikey.md`;
+  two blind pairs, before item 102 and now). To hear: tha-vol (seed
+  2728346932, `bars=64,journey=arc`), the whole small form in 1:34; glor-ti
+  (seed 7, `bars=endless,journey=wander`) from 3:05, the wander's first
+  move. `node tools/longform-clips.mjs OUTDIR --before DLRENDER` makes the
+  set again.
