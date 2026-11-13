@@ -32,8 +32,9 @@ fn every_case() {
         cases += 1;
     }
     // With the 240 edit cases (queue item 94a), batch 6's eight far ends
-    // (item 101a) and its three tuning cases (item 101b).
-    assert_eq!(cases, 5135);
+    // (item 101a), its three tuning cases (item 101b) and four long pieces
+    // that reach session 16's joins (item 102f).
+    assert_eq!(cases, 5139);
 }
 
 #[test]

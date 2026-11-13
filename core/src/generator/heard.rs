@@ -509,6 +509,10 @@ pub struct Heard {
     /// Whether the section plays a close the length slider asked for
     /// (`stop_at`): the track ends ringing out, not faded.
     pub stops: bool,
+    /// The section's first step, counted from the piece's (session 16): a
+    /// layer with a cycle of its own is placed by it, as the sequencer
+    /// places it (`abs_step`), not by the section's step.
+    start: f64,
 }
 
 impl Heard {
@@ -528,6 +532,7 @@ impl Heard {
         half: 0.0,
         root: 0.0,
         stops: false,
+        start: 0.0,
     };
 
     /// What the tune plays at section step `step` (`tune`): the unit's, by
@@ -579,6 +584,12 @@ impl Heard {
         self.root = cx.spec.root;
     }
 
+    /// Where a note at loop step `step` of a layer cycling every `cycle`
+    /// steps falls in this section, give or take whole cycles (`start`).
+    fn placed(&self, step: f64, cycle: f64) -> f64 {
+        if cycle > 0.0 { step - self.start % cycle } else { step }
+    }
+
     /// The unit holding section step `step` (none: nothing heard).
     #[must_use]
     pub fn unit(&self, step: f64) -> Option<&Unit> {
@@ -609,6 +620,51 @@ impl Heard {
         }
         let thin = Unit::glide(u.thin, u.along(step));
         thin <= 0.0 || f64::from(self.places.get(i).copied().unwrap_or(0.0)) < 1.0 - thin
+    }
+
+    /// Whether unit `u` plays a note of a tune from section step `from` to
+    /// `to` (session 16): its own or the second, by the half of the phrase
+    /// each step is in, stretched where the unit stretches it, and left out
+    /// where the unit thins it past the note's rank, as the sequencer plays
+    /// them (`tune_at`, `stretched_from`, `sounds`, `second_sounds`). The
+    /// tune alone is heard only where this is so: fei-no's stretched return
+    /// joined its close "alone" over a tune that, stretched, played nothing
+    /// there (three seconds 30 to 50 dB under the loop). A walk of the
+    /// tunes' notes, each a few steps at most.
+    fn tune_plays(&self, u: &Unit, base: &Render, second: Option<&Melody>, cycle: f64, from: f64, to: f64) -> bool {
+        let tunes: [(u8, &[super::melody::MelodyEvent]); 2] = [(tune::OWN, &base.melody), (tune::SECOND, second.map_or(&[], |m| &m[..]))];
+        let which = |s: f64| u.tune[usize::from(self.phrase > 0.0 && s % self.phrase >= self.half)];
+        let kept = |own: bool, i: usize, s: f64| {
+            let thin = Unit::glide(u.thin, u.along(s));
+            let place = if own { f64::from(self.places.get(i).copied().unwrap_or(0.0)) } else { rank(self.seed ^ SECOND_SALT, i) };
+            thin <= 0.0 || place < 1.0 - thin
+        };
+        for (whose, notes) in tunes {
+            if !u.tune.contains(&whose) {
+                continue;
+            }
+            for (i, e) in notes.iter().enumerate().take(MELODY_MAX).filter(|(_, e)| e.vel > 0.0) {
+                let heard = |s: f64| s >= from && s < to && which(s) == whose && kept(whose == tune::OWN, i, s);
+                if u.stretched && self.phrase > 0.0 {
+                    // Written at phrase step `w` of the first half, it sounds
+                    // at `2w`.
+                    let w = e.step % self.phrase;
+                    if 2.0 * w < self.phrase && heard(e.step + w) {
+                        return true;
+                    }
+                } else if cycle > 0.0 {
+                    let step = self.placed(e.step, cycle);
+                    let mut s = step + js::ceil((from - step) / cycle) * cycle;
+                    while s < to {
+                        if heard(s) {
+                            return true;
+                        }
+                        s += cycle;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// Each tune note's place by rank (`places`), counted in 256 bins: a
@@ -654,6 +710,9 @@ impl Heard {
         self.spb = cx.spb;
         self.place_notes(base);
         self.phrases(cx);
+        #[allow(clippy::cast_precision_loss)] // a section's number, far under 2^53
+        let first = n as f64 * cx.spec.bars * cx.spb;
+        self.start = first;
         self.second = Tune::of(form, n);
         let ways = Ways::of(cx, base, None);
         let spb = cx.spb;
@@ -705,6 +764,9 @@ impl Heard {
         self.spb = cx.spb;
         self.place_notes(base);
         self.phrases(cx);
+        #[allow(clippy::cast_precision_loss)] // a section's number, far under 2^53
+        let first = n as f64 * cx.spec.bars * cx.spb;
+        self.start = first;
         self.second = Tune::of(form, n);
         let ways = Ways::of(cx, base, second);
         let lift = Lift::of(form, cx, &ways);
@@ -838,7 +900,20 @@ impl Heard {
                 kit[slot] = Some((e.inst, e.vel));
             }
         }
-        let chord = base.chords.iter().enumerate().find(|(_, e)| !e.notes.is_empty()).map(|(i, e)| (i, e.vel));
+        // The pivot's voice and velocity: the loop's first chord it plays,
+        // else its first with notes at the chords' loudest. (A chord the
+        // loop leaves silent, an entry's, gave its velocity, 0: every pivot
+        // of 1 loop in 12 was a hole, 30 to 58 dB under the loop. Session 16;
+        // the landing's way, `land`.)
+        let with_notes = || base.chords.iter().enumerate().filter(|(_, e)| !e.notes.is_empty());
+        let loudest = with_notes().map(|(_, e)| e.vel).fold(0.0, js::max);
+        let chord = with_notes().find(|(_, e)| e.vel > 0.0).or_else(|| with_notes().next()).map(|(i, e)| (i, if e.vel > 0.0 { e.vel } else { loudest })).filter(|&(_, vel)| vel > 0.0);
+        // Whether the tune sounds in the alone's window, as the unit plays it.
+        let alone_plays = join == Join::Alone
+            && self.units.get(p).is_some_and(|u| {
+                let len = js::max(1.0, js::floor(js::min(JOINS.bars * spb, JOINS.share * (u.to - u.from))));
+                !u.rests(Layer::Melody) && self.tune_plays(u, base, second, cycle(Layer::Melody), u.to - len, u.to)
+            });
         {
             let Some(u) = self.units.get_mut(p) else { return };
             u.join = join;
@@ -908,17 +983,10 @@ impl Heard {
                 }
             }
             if kind == Join::Alone {
-                // The tune's notes in the last bar: the loop's own or the
-                // second's, by the phrase's later half.
-                let from = u.to - len;
-                let notes: &[super::melody::MelodyEvent] = match u.tune[1] {
-                    tune::OWN => &base.melody,
-                    tune::SECOND => second.map_or(&[], |m| &m[..]),
-                    _ => &[],
-                };
-                let c = cycle(Layer::Melody);
-                if notes.iter().any(|e| e.vel > 0.0 && falls(e.step, c, from, u.to)) && !u.rests(Layer::Melody) {
-                    u.join_from = from;
+                // The tune alone where it sounds in the last bar as the unit
+                // plays it (`tune_plays`), else a breath.
+                if alone_plays {
+                    u.join_from = u.to - len;
                     u.out = all & !bit(Layer::Melody);
                 } else {
                     kind = Join::Breath;

@@ -13,7 +13,9 @@
 // exactly on purpose.
 #![allow(clippy::many_single_char_names, clippy::float_cmp, clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 
-use dlcore::generator::heard::Tune;
+use dlcore::generator::heard::{Tune, Unit, tune};
+use dlcore::generator::melody::MelodyEvent;
+use dlcore::generator::wander::Pass;
 use dlcore::generator::longform::{Form, Join, Key, Relation, Span, changed, pivot};
 use dlcore::generator::piece::Piece;
 use dlcore::generator::plan::Cx;
@@ -54,6 +56,32 @@ fn units(form: &Form, count: u64) -> Vec<(u64, u64, Span, Span)> {
         }
     }
     out
+}
+
+/// Whether a pass plays a tune note between unit `u`'s join and its line,
+/// asked as the sequencer asks (`player/sequencer.rs`): whose tune the step
+/// plays (`own`, the loop's, or `second`), where a stretched one's note is
+/// written, and each note's velocity as the pass gives it.
+fn tune_sounds(own: &[MelodyEvent], second: &[MelodyEvent], cycle: f64, pass: &Pass, u: &Unit) -> bool {
+    let mut s = u.join_from;
+    while s < u.to {
+        let which = pass.heard.tune_at(s);
+        let notes = match which {
+            tune::OWN => own,
+            tune::SECOND => second,
+            _ => &[],
+        };
+        let from = pass.heard.stretched_from(s);
+        for (i, e) in notes.iter().enumerate() {
+            let here = if u.stretched { from == Some(e.step) } else { e.step == s % cycle };
+            let vel = if which == tune::SECOND { pass.second_at(s, i, e).0 } else { pass.melody_home_at(s, i, e).0 };
+            if here && vel > 0.0 {
+                return true;
+            }
+        }
+        s += 1.0;
+    }
+    false
 }
 
 #[test]
@@ -130,7 +158,13 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                 }
                 // As heard: each unit's join played, its marks inside the
                 // unit, only before its line.
+                let spec = g.spec();
+                let cycle = spec.cycles.of(Layer::Melody as usize).filter(|&c| c > 0.0).unwrap_or(spec.bars * spec.steps_per_bar);
+                let own: Vec<MelodyEvent> = g.render().melody.iter().copied().collect();
                 for n in 0..count.min(24) {
+                    // The section's second tune, made with it.
+                    let _ = g.section(n, 0.0);
+                    let second: Vec<MelodyEvent> = g.second(Tune::of(&form, n)).map_or(Vec::new(), |m| m.iter().copied().collect());
                     let pass = g.section(n, 0.0);
                     for (p, u) in pass.heard.units().iter().enumerate() {
                         let s = form.joined(n, p as u64);
@@ -144,12 +178,20 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                         }
                         if u.join == Join::Pivot {
                             assert!(u.pivot_count >= 2 && u.out & (1 << Layer::Chords as usize) != 0, "{what}");
+                            // Struck, never at a silent entry chord's 0
+                            // (session 16: 1 loop in 12 had every pivot a hole).
+                            assert!(u.pivot_vel > 0.0, "{what}: a pivot struck at nothing");
                         }
                         if u.join == Join::Fill {
                             assert!(u.fill_vel[0] > 0.0 && u.fill_vel[0] < u.fill_vel[1] && !u.fill.get().is_empty(), "{what}");
                         }
                         if u.join == Join::Alone {
                             assert_eq!(u.out & (1 << Layer::Melody as usize), 0, "{what}: the tune left out of its own bar");
+                            // The tune sounds there as the unit plays it
+                            // (session 16: a stretched return joined "alone"
+                            // over a tune silent there, three seconds near
+                            // silence).
+                            assert!(tune_sounds(&own, &second, cycle, pass, u), "{what}: the tune alone over a silent tune");
                         }
                     }
                 }

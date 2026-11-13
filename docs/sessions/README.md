@@ -45,7 +45,7 @@ says the work goes on meanwhile.
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | |
 | B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
-| 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | |
+| 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | yes, 2026-11-14 (#385; the second set on `long-clips`) |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | |
 | 19 | `19-export-flac.md` | 104a: the FLAC writer in the core | Opus 5.5, high | |

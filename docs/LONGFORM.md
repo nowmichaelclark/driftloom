@@ -327,11 +327,11 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
 
 | Join | When | Heard as |
 |---|---|---|
-| **pivot** | a key changes (and the loop has chords) | a chord both keys share (`longform::pivot`: a triad of the new key's mode on its tonic, its fourth, its fifth or the rest, every note in both keys; else its root and fifth), struck at the join's first step in the chords' voice and held a beat past the line; the loop's chords out under it, the bass on its root |
+| **pivot** | a key changes (and the loop has chords) | a chord both keys share (`longform::pivot`: a triad of the new key's mode on its tonic, its fourth, its fifth or the rest, every note in both keys; else its root and fifth), struck at the join's first step in the voice of the loop's first chord it plays, at that chord's velocity (else the chords' loudest: never a silent entry chord's 0, session 16), and held a beat past the line; the loop's chords out under it, the bass on its root |
 | **prepared** | the return, prepared (half the movements) | the bass on the home fifth for the release's last phrase (session 14) |
 | **fill** | a theme or how it is played changes and the energy rises by `step` (0.04) or more, or a role alone and twice that (a kit plays) | the kit's backbeat (else its shimmer) on each step of the last beat (every other in 6/8) where the loop has no hit of it, from 0.35 to 0.65 of its loudest, under the arc's kit marks |
 | **floor** | the same, the energy falling from the peak or the lift (a kit or a bass plays); a key with no chords | the kit and the bass out for the join |
-| **alone** | a theme changes, the energy level or falling after the height | every layer but the tune out for the join (where the tune plays there; else a breath) |
+| **alone** | a theme changes, the energy level or falling after the height | every layer but the tune out for the join, where the tune sounds there as the unit plays it (whose half of the phrase, stretched, thinned: session 16); else a breath |
 | **breath** | a theme changes where nothing else can join it; every wander's theme; a wander's line move (a voice, the chords' register or length) | the join's last half left out: every layer, or in a wander only the layer that moves |
 | **glide** | what changes glides (a layer, the tone, a wander's density, the energy by a little) | nothing at the line: the unit after glides (sessions 12 and 13) |
 
@@ -355,7 +355,16 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
   starts from it. The yardstick holds: every line where a theme, a key or
   a line move changes has a join that is not a glide (`tools/longform.mjs`,
   `core/tests/joins.rs`).
-- For Mikey's ears: every kind, how often each comes, and how strong.
+- **Never a hole** (session 16): a join thins the mix, it never leaves it
+  silent where the loop sounds. `tools/longform.mjs` reads every arc's join
+  as played (`dl_gen_played`: the join the loop can play of the plan's) that
+  strikes something or takes a note out, in 50 ms frames against the loop
+  as itself: a hole is a window whose median frame is 25 dB under the loop
+  and 12.5 dB or more under the beat before it (an arc's breath sits up to
+  22 dB under; the two holes brain B3 found, 40 and 42 from 18 and 20).
+  Where the beat before was already that far under, the quiet is the
+  unit's, and is reported. `core/tests/joins.rs` holds every pivot struck
+  above 0 and every tune alone over a tune that sounds there.
 
 ## Endings that land (session 15)
 

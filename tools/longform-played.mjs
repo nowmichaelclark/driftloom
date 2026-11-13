@@ -36,7 +36,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newSpec, pieceMap } from './gen-lib.mjs';
+import { LAYERS, newSpec, parts, pieceMap, playedJoins } from './gen-lib.mjs';
 import { SCALES } from '../js/theory.js';
 
 const SCALE_STEPS = Object.fromEntries(Object.entries(SCALES).map(([id, s]) => [id, s.steps]));
@@ -267,6 +267,109 @@ const stepMax = (x, from, to) => {
   return m;
 };
 
+/** The mean power of `x` from sample `from` to `to`, in dB (full scale 0). */
+const powerDb = (x, from, to) => {
+  let s = 0;
+  const [a, b] = [Math.max(0, from), Math.min(x.length, to)];
+  for (let i = a; i < b; i++) s += x[i] * x[i];
+  return 10 * Math.log10(s / Math.max(1, b - a) + 1e-20);
+};
+
+// A join is a hole (session 16's yardstick) where, as played, it leaves the
+// mix far under the loop as itself at the same moment: brain B3 measured
+// the two holes it found (a pivot struck at 0, the tune alone over a silent
+// tune) 30 to 58 dB under and a breath 8 to 13, and asked for about 20; read
+// on each join's own window as played, an arc's breath (every layer out,
+// the tails ringing) sits up to 21.8 dB under (2 of 118 over 47 arcs), the
+// holes at 40 and 42, so the line is 25: over every breath, under every
+// hole measured. Read in 50 ms frames, each the
+// piece's power against the loop's (frames where the loop is under -60 dB
+// have nothing to leave silent): a join is a hole where its median frame is
+// HOLE_DB under and the join took it down at least half that again from the
+// beat before (fei-no's two at v164: 40 and 42 dB under, from 18 and 20).
+// Where the beat before was that far under already, the quiet is the unit's
+// (vath-sei's return, a voice that dies away where the loop's holds, 40 dB
+// under before its join and in it), not the join's: reported, not held.
+export const HOLE_DB = 25;
+const FRAME = 0.05;
+
+/** The median of a list (NaN for none). */
+const median = (xs) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : NaN);
+
+/** Each 50 ms frame from `from` to `to` seconds: how far `piece` is under `loop`, in dB, where the loop sounds. */
+function frameDepths(piece, loop, rate, from, to) {
+  const out = [];
+  const n = Math.round(FRAME * rate);
+  const [first, last] = [Math.round(from * rate), Math.round(to * rate)];
+  for (let a = first; a < last; a += n) {
+    const b = Math.min(a + n, last);
+    // (A last frame under half a frame long is left out, unless it is the only one.)
+    if (2 * (b - a) < n && a > first) break;
+    const own = powerDb(loop, a, b);
+    if (own >= -60) out.push(own - powerDb(piece, a, b));
+  }
+  return out;
+}
+
+/**
+ * How far under the loop as itself each of a piece's joins leaves the mix
+ * (session 16): for every unit whose join, as played (`playedJoins`: the
+ * join the loop can play of the plan's, at the wander's amount 0, as the
+ * renders here are made), does more than glide (a pivot or a fill, or a
+ * join that takes out a note there: one of a layer it takes out, not
+ * resting, struck in the window and ending by the line, a layer with a
+ * cycle of its own placed from the piece's first step, as the sequencer
+ * places it), over the join's window
+ * (from where it begins to the unit's line): `depth`, the piece's mean
+ * power against the loop's in the same samples, in dB; `frames` and
+ * `before`, the median 50 ms frame's depth there and over the beat before
+ * the window; `hole`, whether the join made a hole (`HOLE_DB`), and
+ * `inherited`, whether its window is that far under only as the beat before
+ * already nearly was. The piece of `seed` and `request`, its first `count`
+ * sections, from `start` seconds; `piece` and `loop` the two renders'
+ * samples at `rate`.
+ */
+export function joinDepths(seed, request, count, start, piece, loop, rate) {
+  const { form } = pieceMap(seed, request, 0, 1);
+  const played = playedJoins(seed, request, 0, count);
+  if (!played) return [];
+  const sectionSeconds = form.sectionBars / form.unitBars * form.unitSeconds;
+  const step = sectionSeconds / played.steps;
+  const beat = form.unitSeconds / form.unitBars / 4;
+  const loopParts = parts(seed, request);
+  const cycle = (layer) => loopParts.form.cycles?.[layer] || played.steps;
+  const notes = (layer) => loopParts[layer] ?? [];
+  // Whether the join leaves out a note the unit would play in its window.
+  const takes = (u) => LAYERS.some((layer, i) => {
+    if (!(u.out & (1 << i)) || u.rests & (1 << i)) return false;
+    const c = cycle(layer);
+    const shift = (u.section * played.steps) % c;
+    return notes(layer).some((e) => {
+      if (!(e.vel > 0)) return false;
+      const step = e.step - shift;
+      for (let s = step + Math.ceil((u.from - step) / c) * c; s < u.to; s += c) if (s + (e.dur ?? 0) <= u.to + 0.5) return true;
+      return false;
+    });
+  });
+  const out = [];
+  for (const u of played.units) {
+    if (['none', 'glide', 'prepared'].includes(u.join)) continue;
+    if (!['pivot', 'fill'].includes(u.join) && !takes(u)) continue;
+    const at = start + u.section * sectionSeconds;
+    const [from, end] = [at + u.from * step, at + u.to * step];
+    const [a, b] = [Math.round(from * rate), Math.round(end * rate)];
+    if (b > Math.min(piece.length, loop.length)) break;
+    const own = powerDb(loop, a, b);
+    if (own < -60) continue;
+    const frames = median(frameDepths(piece, loop, rate, from, end));
+    const before = median(frameDepths(piece, loop, rate, from - beat, from));
+    const deep = frames >= HOLE_DB;
+    const made = !(frames - before < HOLE_DB / 2);
+    out.push({ t: from, join: u.join, depth: own - powerDb(piece, a, b), frames, before, hole: deep && made, inherited: deep && !made });
+  }
+  return out;
+}
+
 /**
  * Play `request` of `seed` for `seconds` at the app's amount (1), at 44.1
  * kHz, and measure its lines and its loudness: each move's join (the
@@ -472,6 +575,8 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   dlrender(['--seed', String(seed), ...(rest ? ['--request', rest] : []), '--seconds', String(seconds), '--rate', String(rate), '--wander', String(wander), '--wav', wavFile]);
   const loop = readWav(wavFile).data;
   fs.rmSync(wavFile, { force: true });
+  // Each join against the loop as itself there (session 16: never a hole).
+  const depths = joinDepths(seed, request, Math.max(1, sections), start, data, loop, rate);
   const whole = spans.map(([a, b], i) => b - a >= 0.99 * units[i].bars * barSeconds * rate);
   const ownLufs = lufsOf(loop, rate, spans.map(([a, b]) => [a, Math.max(a + 1, b)]));
   const ownBright = spans.map(([a, b]) => brightness(loop, rate, a, Math.max(a + 1, b)));
@@ -500,7 +605,7 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   const lift = lufs.map((l, i) => l - ownLufs[i]);
   // (Brightness as a ratio, in cents of the centroid: 1200 an octave.)
   const brighter = bright.map((b, i) => 1200 * Math.log2(Math.max(1, b) / Math.max(1, ownBright[i])));
-  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
+  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), depths, rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
 }
 
 /** Spearman's rank correlation of two lists. */
@@ -615,6 +720,7 @@ export function arcVerdict(r) {
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
     jump: r.jump, ownJump: r.ownJump, step: r.step, stepOwn: r.stepOwn, jumps, tonic, rings, last: r.last,
+    depths: r.depths,
   };
 }
 
@@ -662,6 +768,8 @@ export function arcJoins(seed, request, seconds) {
     }
     t += u.bars * bar;
   }
+  // Each join against the loop as itself there (session 16: never a hole).
+  joins.depths = joinDepths(seed, request, Math.ceil(seconds / (form.sectionBars * bar)) + 1, start, piece.data, loop.data, rate);
   return joins;
 }
 

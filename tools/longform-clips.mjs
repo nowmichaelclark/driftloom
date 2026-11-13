@@ -10,6 +10,12 @@
 // so the set can be made again after session 16's tuning.
 //
 //   node tools/longform-clips.mjs OUTDIR [--before PATH] [--only NAME]
+//   node tools/longform-clips.mjs OUTDIR --fixes PATH
+//
+// `--fixes` makes session 16's shorter set instead (102f): only what
+// changed, the two holes brain B3 found, each excerpt now and as PATH (a
+// dlrender built at v164, 88c98be) plays it, not blind and not
+// level-matched: a chord now sounds where a hole was.
 //
 // OUTDIR gets NAME.opus (stereo, 96 kbps, ffmpeg's libopus) for each clip,
 // and index.md and index.json: each clip's piece (seed and request), where
@@ -31,13 +37,14 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DLRENDER = path.join(ROOT, 'core', 'target', 'release', 'examples', 'dlrender');
 const args = process.argv.slice(2);
 const value = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
-const OUT = args.find((a, i) => !a.startsWith('--') && !['--before', '--only'].includes(args[i - 1]));
+const OUT = args.find((a, i) => !a.startsWith('--') && !['--before', '--only', '--fixes'].includes(args[i - 1]));
 if (!OUT) {
   console.error('usage: node tools/longform-clips.mjs OUTDIR [--before PATH] [--only NAME]');
   process.exit(2);
 }
 const BEFORE = value('--before');
 const ONLY = value('--only');
+const FIXES = value('--fixes');
 fs.mkdirSync(OUT, { recursive: true });
 if (process.env.LONGFORM_BUILD !== 'no') execFileSync('cargo', ['build', '--release', '--locked', '--example', 'dlrender'], { cwd: path.join(ROOT, 'core'), stdio: 'ignore' });
 
@@ -201,8 +208,49 @@ const cut = (file, name, at, len, { tail = false, gain = 0 } = {}) => {
   return out;
 };
 
+// Session 16's set (102f): where the two holes were, found from the maps.
+// The join is the plan's last bar before the line (`[longform joins]`).
+const FIXED = [
+  {
+    seed: 2158762586, request: 'bars=256,journey=arc', title: 'fei-no, 256 bars, one arc',
+    clips: (p) => {
+      const pivot = p.units.find((u, i) => u.join === 'pivot' && p.units[i + 1]?.role === 'peak');
+      const alone = p.units.find((u, i) => u.join === 'alone' && p.units[i + 1]?.role === 'close');
+      const line = (u) => u.t + u.bars * p.bar;
+      return [
+        { name: 'fei-no-256-pivot', at: line(pivot) - 12, len: 25, where: `the key's line into the peak (${mmss(line(pivot))})`, now: `a chord both keys share struck at ${mmss(line(pivot) - p.bar)} and held across it`, then: 'the chord struck at nothing: a bar near silence before the line' },
+        { name: 'fei-no-256-into-close', at: line(alone) - 15, len: 30, where: `the stretched return into the close (${mmss(line(alone))})`, now: `a breath, half a bar from ${mmss(line(alone) - p.bar / 2)}, the chords and the bass to it`, then: '"the tune alone" over a tune that, stretched, plays nothing there: three seconds near silence' },
+      ];
+    },
+  },
+  {
+    seed: 2975389383, request: 'bars=1024,adventurous=0.8', title: 'loa-yer, 1,024 bars, adventurous (the vibe draws the arc)',
+    clips: (p) => {
+      const pivot = p.units.find((u) => u.join === 'pivot');
+      const line = pivot.t + pivot.bars * p.bar;
+      return [{ name: 'loa-yer-1024-pivot', at: line - 12, len: 25, where: `the key's line into theme B (${mmss(line)})`, now: `a chord both keys share struck at ${mmss(line - p.bar)} and held across it`, then: 'the chord struck at nothing: the kit and the bass play on, the chords missing for a bar' }];
+    },
+  },
+];
+
 const index = [];
-for (const piece of PIECES) {
+if (FIXES) {
+  for (const piece of FIXED) {
+    const head = pieceMap(piece.seed, piece.request, 0, 1).form;
+    const p = timed(piece.seed, piece.request, Math.min(head.sections, 64));
+    for (const c of piece.clips(p)) {
+      for (const [side, bin, when, what] of [['now', DLRENDER, 'now (v165)', c.now], ['v164', FIXES, 'as at v164', c.then]]) {
+        const wav = render(bin, piece.seed, piece.request, c.at + c.len + 2);
+        const name = `${c.name}-${side}`;
+        cut(wav, name, c.at, c.len);
+        index.push({ name, file: `${name}.opus`, piece: piece.title, seed: piece.seed, request: piece.request, track: null, from: mmss(c.at), seconds: c.len, what: `${c.where}, ${when}: ${what}`, lufs: Number(loudness(wav, c.at, c.len).toFixed(1)) });
+        fs.rmSync(wav, { force: true });
+        console.log(`${name}: ${mmss(c.at)} for ${c.len} s`);
+      }
+    }
+  }
+}
+for (const piece of FIXES ? [] : PIECES) {
   if (ONLY && !piece.key.startsWith(ONLY)) continue;
   const head = pieceMap(piece.seed, piece.request, 0, 1).form;
   // The sections read: a finite piece's every one, Endless's first half hour.
@@ -220,7 +268,7 @@ for (const piece of PIECES) {
   }
   fs.rmSync(wav, { force: true });
 }
-if (BEFORE && !ONLY) {
+if (BEFORE && !ONLY && !FIXES) {
   for (const pair of PAIRS) {
     const now = render(DLRENDER, pair.seed, pair.request, pair.at + pair.len + 2);
     const then = render(BEFORE, pair.seed, pair.request, pair.at + pair.len + 2);
@@ -239,6 +287,6 @@ if (BEFORE && !ONLY) {
 fs.rmSync(tmp, { recursive: true, force: true });
 const total = index.reduce((s, c) => s + c.seconds, 0);
 fs.writeFileSync(path.join(OUT, 'index.json'), `${JSON.stringify(index, null, 2)}\n`);
-const md = ['# The long pieces: the listening set (102e, session 15)', '', `${index.length} clips, ${mmss(total)} in all. Stereo Opus, 96 kbps, the app's wander amount (1), 44.1 kHz. Made by \`tools/longform-clips.mjs\`.`, '', '| Clip | Piece | Request | From | Seconds | Listen for |', '|---|---|---|---|---|---|', ...index.map((c) => `| ${c.file} | ${c.piece} | \`${c.seed} ${c.request}${c.track ? ` track ${c.track}` : ''}\` | ${c.from} | ${c.seconds} | ${c.what} |`), ''];
+const md = [FIXES ? '# The long pieces: what changed (102f, session 16)' : '# The long pieces: the listening set (102e, session 15)', '', `${index.length} clips, ${mmss(total)} in all. Stereo Opus, 96 kbps, the app's wander amount (1), 44.1 kHz. Made by \`tools/longform-clips.mjs\`.`, '', '| Clip | Piece | Request | From | Seconds | Listen for |', '|---|---|---|---|---|---|', ...index.map((c) => `| ${c.file} | ${c.piece} | \`${c.seed} ${c.request}${c.track ? ` track ${c.track}` : ''}\` | ${c.from} | ${c.seconds} | ${c.what} |`), ''];
 fs.writeFileSync(path.join(OUT, 'index.md'), md.join('\n'));
 console.log(`longform-clips: ${index.length} clips, ${mmss(total)} in all, in ${OUT}`);

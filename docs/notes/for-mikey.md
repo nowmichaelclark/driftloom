@@ -48,6 +48,23 @@ the points where the next step is yours.
   14 at 0.5 (the records' median is nearer 20). On a few loops where the
   chords are doubled, padWow makes the mix 0.2 to 0.35 LU quieter or
   louder, as the sketch did.
+- **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
+  on the branch `long-clips` (its `index.md`), not blind: each place now and
+  as at v164. fei-no (seed 2158762586, `bars=256,journey=arc`) from 5:15, the
+  key's line into the peak at 5:27: a chord now sounds from 5:25 where v164
+  had a bar near silence; and from 7:55, the stretched return into the close
+  at 8:10: a half-bar breath with the chords and bass in it where v164 had
+  three seconds near silence. loa-yer (2975389383, `bars=1024,adventurous=0.8`)
+  from 3:44, the key's line into theme B at 3:56: the chord both keys share
+  now struck at 3:54 (in v164 it was struck at nothing, under the kit and the
+  bass). Nothing else moved: every number, join and choice is as you kept it.
+  One more quiet found while measuring, not a join's and not changed (it
+  is the variation you kept, since v163): vath-sei (3104090029,
+  `bars=64,journey=arc`) at 2:45, theme A home in another voice that dies away
+  in about a tenth of a second where the loop's own voice holds the note, so
+  0.65 s sits near silence in a two-bar loop where the tune plays alone. If
+  it bothers you, tell the brain; it is a variation's choice to queue, not a
+  number.
 - Batch 6's and 84b's: brain session B2. B4 makes the albums again in the new codes.
 
 ## Ears

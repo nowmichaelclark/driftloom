@@ -203,3 +203,17 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (seed 7, `bars=endless,journey=wander`) from 3:05, the wander's first
   move. `node tools/longform-clips.mjs OUTDIR --before DLRENDER` makes the
   set again.
+- #385, long pieces: the two holes fixed, and a yardstick against holes
+  (item 102f, session 16, v165), preview URL: the branch's preview (no hash
+  kept): nothing in the app changes yet (it can't take a journey; loops of up
+  to 32 bars play bit for bit as before, the core baseline unmoved). Nothing
+  retuned (Mikey kept everything). A pivot is struck at the loop's first
+  sounding chord's velocity, never a silent entry chord's 0; "the tune
+  alone" only over a tune that sounds there as the unit plays it, else a
+  breath; `tools/longform.mjs` holds every arc's join from a hole, and
+  `core/tests/joins.rs` every pivot struck. To hear (corpus 20261009):
+  fei-no (#42, `bars=256,journey=arc`) from 5:15, a chord at the key's line
+  into the peak (5:25) where v164 had near silence, and from 7:55, a breath
+  into the close (8:09) where v164 had three seconds near silence; loa-yer
+  (#23, `bars=1024,adventurous=0.8`) from 3:44, the chord both keys share at
+  3:54. Six clips, now and v164, on `long-clips` (`docs/notes/for-mikey.md`).

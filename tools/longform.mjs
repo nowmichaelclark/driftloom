@@ -40,7 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pieceMap } from './gen-lib.mjs';
-import { arcChecks, arcJoins, arcVerdict, dlrender, endingChecks, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
+import { HOLE_DB, arcChecks, arcJoins, arcVerdict, dlrender, endingChecks, loopLoudness, playedChecks, soundChecks } from './longform-played.mjs';
 import { Rng } from '../js/rng.js';
 
 const args = process.argv.slice(2);
@@ -368,7 +368,7 @@ if (!flag('--plan')) {
 // amount 0 (the plan with no breathing, so what is measured is the arc's
 // own shape: each unit against the loop as itself on the same bars), the
 // first of them at the app's amount too for what is heard.
-const arcs = { pieces: 0, verdicts: [], heard: [], joins: [], own: [], costs: [], blocks: [] };
+const arcs = { pieces: 0, verdicts: [], heard: [], joins: [], own: [], depths: [], costs: [], blocks: [] };
 if (!flag('--plan')) {
   const n = Number(value('--arcs', 30));
   const sets = [['bars=64', n], ['bars=256', Math.round(0.4 * n)], ['bars=1024', Math.max(1, Math.round(0.4 * 0.4 * n))]];
@@ -383,6 +383,7 @@ if (!flag('--plan')) {
       check("arc played: no step past 2 LU between neighboring units of the loop's own notes, 3 LU between any (the arc's own)", v.jumps, `${where}: ${v.stepOwn.toFixed(2)} LU, ${v.step.toFixed(2)} LU`);
       check("arc played: a finite arc's last chord is the tonic's, alone", v.tonic, `${where}: ${v.last}`);
       check('arc played: it ends in a ring-out, not a cut', v.rings, where);
+      arcs.depths.push(...v.depths.map((d) => ({ ...d, where })));
     }
   }
   const share = (key) => arcs.verdicts.filter((v) => v[key]).length / arcs.verdicts.length;
@@ -404,7 +405,14 @@ if (!flag('--plan')) {
     arcs.joins.push(...joins.map((j) => j.piece));
     arcs.own.push(Math.max(...joins.map((j) => j.loop)));
     arcs.ratios = [...(arcs.ratios ?? []), ...joins.map((j) => j.piece / j.loop)];
+    arcs.depths.push(...joins.depths.map((d) => ({ ...d, where: `${seed} "bars=endless,journey=arc"` })));
     check("arc played: no click at a line (each join within the loop's own step there, +25%)", joins.every((j) => j.piece <= 1.25 * j.loop + 0.002), `${seed} at ${worst.t.toFixed(1)} s: ${worst.piece.toFixed(4)} against ${worst.loop.toFixed(4)}`);
+  }
+  // No join a hole (session 16): every join of every arc played, as played,
+  // against the loop as itself in the same window (`joinDepths`).
+  {
+    const holes = arcs.depths.filter((d) => d.hole);
+    check(`arc played: no join a hole (none ${HOLE_DB} dB under the loop there, made by the join)`, holes.length === 0, holes.map((d) => `${d.where} at ${d.t.toFixed(1)} s: a ${d.join} ${d.frames.toFixed(1)} dB under, from ${d.before.toFixed(1)}`).join('; '));
   }
   // A section's making and its block, as the wander's.
   const core = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'core');
@@ -482,6 +490,12 @@ if (arcs.pieces) {
   if (h.length) console.log(`  as heard at the app's amount (${h.length} at 64 bars, the loop's own form in it): loudness rises and falls ${(100 * h.filter((x) => x.loudHeard).length / h.length).toFixed(0)}%, brightness ${(100 * h.filter((x) => x.brightHeard).length / h.length).toFixed(0)}%; the peak over the opening ${Math.max(...h.map((x) => x.overHeard)).toFixed(2)} LU at most`);
   const ratios = [...(arcs.ratios ?? [])].sort((a, b) => a - b);
   console.log(`  arc joins: ${arcs.joins.length} lines, the largest step ${Math.max(...arcs.joins).toFixed(4)} (the loop as itself in the same windows ${arcs.own.map((x) => x.toFixed(4)).join(', ')}); a line's step against the loop's there: median ${ratios[Math.floor(ratios.length / 2)]?.toFixed(2)}, at most ${ratios.at(-1)?.toFixed(2)}`);
+  {
+    const kinds = [...new Set(arcs.depths.map((d) => d.join))].sort();
+    console.log(`  arc joins against the loop as itself (session 16), dB under it, median / deepest: ${kinds.map((k) => { const xs = arcs.depths.filter((d) => d.join === k).map((d) => d.frames); return `${k} ${med(xs).toFixed(1)} / ${Math.max(...xs).toFixed(1)} (${xs.length})`; }).join(', ')}`);
+    const quiet = arcs.depths.filter((d) => d.inherited);
+    console.log(`    ${HOLE_DB} dB under, as the beat before already was (the unit's quiet, not the join's; reported): ${quiet.length ? quiet.map((d) => `${d.where} at ${d.t.toFixed(1)} s (a ${d.join}, ${d.frames.toFixed(1)} from ${d.before.toFixed(1)})`).join('; ') : 'none'}`);
+  }
   console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/1,000/10^9`);
   console.log(`  arc blocks: ${arcs.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} ${b.request.slice(5, b.request.indexOf(','))} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }
