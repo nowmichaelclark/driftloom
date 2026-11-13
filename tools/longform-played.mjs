@@ -267,6 +267,82 @@ const stepMax = (x, from, to) => {
   return m;
 };
 
+/** The mean power of `x` from sample `from` to `to`, in dB (full scale 0). */
+const powerDb = (x, from, to) => {
+  let s = 0;
+  const [a, b] = [Math.max(0, from), Math.min(x.length, to)];
+  for (let i = a; i < b; i++) s += x[i] * x[i];
+  return 10 * Math.log10(s / Math.max(1, b - a) + 1e-20);
+};
+
+// A join is a hole (session 16's yardstick) where, as played, it leaves the
+// mix far under the loop as itself at the same moment: brain B3 measured
+// the two holes it found (a pivot struck at 0, the tune alone over a silent
+// tune) 30 to 58 dB under, a breath 8 to 13 (16 where the loop is sparse),
+// so 20 dB catches holes and passes breaths. Read in 50 ms frames, each the
+// piece's power against the loop's (frames where the loop is under -60 dB
+// have nothing to leave silent): a join is a hole where its median frame is
+// HOLE_DB under and the join took it down at least half that again from the
+// beat before (fei-no's two at v164: 40 and 42 dB under, from 18 and 20).
+// Where the beat before was that far under already, the quiet is the unit's
+// (vath-sei's return, a voice that dies away where the loop's holds, 40 dB
+// under before its join and in it), not the join's: reported, not held.
+export const HOLE_DB = 20;
+const FRAME = 0.05;
+
+/** The median of a list (NaN for none). */
+const median = (xs) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : NaN);
+
+/** Each 50 ms frame from `from` to `to` seconds: how far `piece` is under `loop`, in dB, where the loop sounds. */
+function frameDepths(piece, loop, rate, from, to) {
+  const out = [];
+  const n = Math.round(FRAME * rate);
+  const [first, last] = [Math.round(from * rate), Math.round(to * rate)];
+  for (let a = first; a < last; a += n) {
+    const b = Math.min(a + n, last);
+    // (A last frame under half a frame long is left out, unless it is the only one.)
+    if (2 * (b - a) < n && a > first) break;
+    const own = powerDb(loop, a, b);
+    if (own >= -60) out.push(own - powerDb(piece, a, b));
+  }
+  return out;
+}
+
+/**
+ * How far under the loop as itself each of a piece's joins leaves the mix
+ * (session 16): for every unit whose join does more than glide, over the
+ * join's window as the plan has it (`[longform joins]`'s length before the
+ * line; a breath its share of that, a fill the last beat): `depth`, the
+ * piece's mean power against the loop's in the same samples, in dB; `frames`
+ * and `before`, the median 50 ms frame's depth there and over the beat
+ * before the window; `hole`, whether the join made a hole (`HOLE_DB`), and
+ * `inherited`, whether its window is that far under only as the beat before
+ * already nearly was. `units` from `pieceMap`, each `bars` long from `start`
+ * seconds; `piece` and `loop` the two renders' samples at `rate`; `beat` in
+ * seconds.
+ */
+export function joinDepths(units, bar, start, piece, loop, rate, beat = bar / 4) {
+  const out = [];
+  let t = start;
+  for (const u of units) {
+    const end = t + u.bars * bar;
+    t = end;
+    if (['none', 'glide', 'prepared'].includes(u.join)) continue;
+    const len = Math.min(JOIN.bars, JOIN.share * u.bars) * bar;
+    const from = { fill: Math.min(0.25 * bar, len), breath: len * JOIN.breath }[u.join] ?? len;
+    const [a, b] = [Math.round((end - from) * rate), Math.round(end * rate)];
+    if (b > Math.min(piece.length, loop.length)) break;
+    const own = powerDb(loop, a, b);
+    if (own < -60) continue;
+    const frames = median(frameDepths(piece, loop, rate, end - from, end));
+    const before = median(frameDepths(piece, loop, rate, end - from - beat, end - from));
+    const deep = frames >= HOLE_DB;
+    const made = !(frames - before < HOLE_DB / 2);
+    out.push({ t: end - from, join: u.join, depth: own - powerDb(piece, a, b), frames, before, hole: deep && made, inherited: deep && !made });
+  }
+  return out;
+}
+
 /**
  * Play `request` of `seed` for `seconds` at the app's amount (1), at 44.1
  * kHz, and measure its lines and its loudness: each move's join (the
@@ -472,6 +548,8 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   dlrender(['--seed', String(seed), ...(rest ? ['--request', rest] : []), '--seconds', String(seconds), '--rate', String(rate), '--wander', String(wander), '--wav', wavFile]);
   const loop = readWav(wavFile).data;
   fs.rmSync(wavFile, { force: true });
+  // Each join against the loop as itself there (session 16: never a hole).
+  const depths = joinDepths(units, barSeconds, start, data, loop, rate);
   const whole = spans.map(([a, b], i) => b - a >= 0.99 * units[i].bars * barSeconds * rate);
   const ownLufs = lufsOf(loop, rate, spans.map(([a, b]) => [a, Math.max(a + 1, b)]));
   const ownBright = spans.map(([a, b]) => brightness(loop, rate, a, Math.max(a + 1, b)));
@@ -500,7 +578,7 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   const lift = lufs.map((l, i) => l - ownLufs[i]);
   // (Brightness as a ratio, in cents of the centroid: 1200 an octave.)
   const brighter = bright.map((b, i) => 1200 * Math.log2(Math.max(1, b) / Math.max(1, ownBright[i])));
-  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
+  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), depths, rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
 }
 
 /** Spearman's rank correlation of two lists. */
@@ -615,6 +693,7 @@ export function arcVerdict(r) {
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
     jump: r.jump, ownJump: r.ownJump, step: r.step, stepOwn: r.stepOwn, jumps, tonic, rings, last: r.last,
+    depths: r.depths,
   };
 }
 
@@ -662,6 +741,8 @@ export function arcJoins(seed, request, seconds) {
     }
     t += u.bars * bar;
   }
+  // Each join against the loop as itself there (session 16: never a hole).
+  joins.depths = joinDepths(units, bar, start, piece.data, loop.data, rate);
   return joins;
 }
 

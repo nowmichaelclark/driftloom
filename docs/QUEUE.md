@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-13:** `main` is at v164 (session 01 done: v154 the tools
+**Status, 2026-11-14:** `main` is at v165 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -48,8 +48,9 @@ the measures and the listening set, #382: 31 clips on the branch
 `long-clips`); brain B3 done in part (2026-11-14: 102 checked on v164, three
 bugs found for 102f, `docs/notes/102-b3-measured.md`; the "Long Pieces Album"
 page out, `docs/ALBUMS.md`); Mikey heard it (2026-11-14: every piece kept,
-`docs/notes/102-mikey.md`); next: hands session 16 (102f: the two holes, no
-retuning), then 04 onward, and Mikey's testers' pastes
+`docs/notes/102-mikey.md`); hands session 16 done (2026-11-14: 102f, v165,
+the two holes fixed and a yardstick against holes, nothing retuned; the
+second listening set on `long-clips`); next: 04 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -463,7 +464,12 @@ fixed: a pivot struck at velocity 0 in 1 loop in 12 (its velocity from a
 silent entry chord), and "the tune alone" over a varied tune that is silent
 there (three seconds near silence in fei-no); and a yardstick holds a join
 from silence. The developments' frequent breaths were heard and kept.
-`docs/notes/102-mikey.md`, `docs/notes/102-b3-measured.md`.
+`docs/notes/102-mikey.md`, `docs/notes/102-b3-measured.md`. **Done**
+(session 16, v165): the pivot struck at the landing's velocity, "the tune
+alone" only over a tune that sounds there as the unit plays it (else a
+breath), and the yardstick: `tools/longform.mjs` holds every arc's join
+from a hole (20 dB under the loop as itself, made by the join), and
+`core/tests/joins.rs` every pivot struck and every tune alone sounding.
 
 **102e done** (session 15, v164; #381, #382): every line where a unit meets
 the next and something changes is written, chosen by what changes and the
