@@ -338,8 +338,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   14. Session 13 done (#377, v162): two yardsticks short (brightness 87%
   of 9 in 10; one 2.7 LU step); Mikey merged it as it is. The brain checked
   main after: module matches, goldens 5,135 of 5,135. The step goes to
-  session 15. **Next:** session 14 (Fable 5.2, medium). The next brain is
-  B3, then B2.
+  session 15. Session 14 (#379, v163): brightness order 77% (9 in 10
+  asked), from the variations by design; the brain checked CI all green on
+  its last push (baselines included) and every moved golden (120) a long
+  piece or Endless; recommended merging; Mikey merges. Session 15 judges
+  brightness on the opening, the peak and the close. **Next:** session 15,
+  then brain B3.
 - **Not done in B1:** the commit previews couldn't be fetched from here (no
   approval for WebFetch while Mikey was away); the v149 link in the album is
   from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
