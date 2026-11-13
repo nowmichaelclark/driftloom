@@ -1110,12 +1110,13 @@ impl Form {
     ///   line (where the loop has chords and the keys share one); else the
     ///   floor out, or a breath.
     /// - **A theme** changes (or how it is played): with the energy rising,
-    ///   a fill (where the loop has a kit); falling, the floor out; level,
-    ///   the tune's last bar alone (where it plays one), else a breath. In a
-    ///   wander, always a breath: nothing abrupt.
-    /// - **A role** alone (an arc's): a fill where the energy rises by the
-    ///   data's `step` or more, the floor out where it falls by as much,
-    ///   else the energy's glide.
+    ///   a fill (where the loop has a kit); falling from the peak (or the
+    ///   lift), the floor out; else the tune's last bar alone (where it
+    ///   plays one), else a breath. In a wander, always a breath: nothing
+    ///   abrupt.
+    /// - **A role** alone (an arc's): a fill where the energy rises by twice
+    ///   the data's `step` or more, the floor out where it falls as far from
+    ///   the peak, else the energy's glide.
     /// - **A wander's line move** (a voice, the chords' register or length):
     ///   a breath of the layer that moves. Its glides (a layer, the tone,
     ///   the tune's density) are their own joins.
@@ -1149,11 +1150,14 @@ impl Form {
             // The tune plays its last bar: a theme, not a rest, nor a
             // fragment's second half (a rest but in a call and response).
             let sings = has(Layer::Melody) && a.theme != Theme::Rest && (!a.fragment || a.calls);
+            // (The floor out is the fall from the height: once there, not at
+            // every step down after it.)
+            let height = matches!(a.role, Role::Peak | Role::Lift);
             return if wander {
                 Join::Breath
             } else if rise >= step && kit {
                 Join::Fill
-            } else if rise <= -step && floor {
+            } else if rise <= -step && floor && height {
                 Join::Floor
             } else if sings && self.playing.count_ones() >= 2 {
                 Join::Alone
@@ -1168,7 +1172,7 @@ impl Form {
             if rise >= 2.0 * step && kit {
                 return Join::Fill;
             }
-            if rise <= -2.0 * step && floor {
+            if rise <= -2.0 * step && floor && matches!(a.role, Role::Peak | Role::Lift) {
                 return Join::Floor;
             }
         }
