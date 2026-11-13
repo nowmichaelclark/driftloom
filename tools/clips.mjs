@@ -23,6 +23,8 @@
 //     "wander": 1,                   // "Let the loop wander" amount; 0 off (default 1)
 //     "vibes": ["peaceful"],         // vibe ids, as the app's panel picks them
 //     "request": "bpm=180",          // a request as text (item 85: dlrender --request)
+//     "track": "bars=120",           // the length slider (dlrender --track: bars=N or passes=N),
+//                                    //   the core's own next loop after its end, as in the app
 //     "lite": false,                 // the lite mix (a phone's)
 //     "force": { "lateFloor": "on" },        // choices forced ("today": none)
 //     "set": { "bass.LIFT_DB": 3 },          // constants moved (core/src/tuning.rs)
@@ -117,6 +119,7 @@ const flagsOf = (j) => {
   if (j.from) a.push('--from', String(j.from));
   if (j.vibes?.length) a.push('--vibes', j.vibes.join(','));
   if (j.request) a.push('--request', j.request);
+  if (j.track) a.push('--track', j.track);
   for (const [id, option] of Object.entries(j.force ?? {})) a.push('--force', `${id}=${option}`);
   for (const [name, v] of Object.entries(j.set ?? {})) a.push('--set', `${name}=${v}`);
   for (const [name, v] of Object.entries(j.pin ?? {})) a.push('--pin', `${name}=${v}`);
