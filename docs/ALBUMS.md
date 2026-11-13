@@ -4,7 +4,7 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
-## "Long Pieces Album" (brain B3, 2026-11-14, v164; item 102) -- out
+## "Long Pieces Album" (brain B3, 2026-11-14, v164; item 102) -- heard 2026-11-14
 
 Page: <https://claude.ai/artifact/5G7YcuFc7iRvCNz8JtT4VD> (private to its
 owner; verdicts in its database, collection `verdicts`, one document a pair,
@@ -25,7 +25,10 @@ The pairs, A and B by `random.Random(1102)`: pair 1 is session 15's
 level-matched to the quieter as session 15's script does); pair 3 a control
 (session 15's pair 2, from 5:20: the same music both sides within -29 dB, the
 fade starting in its last 7 s). Measured beside it: `docs/notes/102-b3-measured.md`.
-When he answers: `docs/notes/102-mikey.md`, then delete `long-clips`.
+Heard 2026-11-14, so the key is written here: pair 1, B was now (he chose
+**B**); pair 2, A was now (**Same**); pair 3, the control (**Same**). Every
+piece **Keep**; the arc "Good enough for now"; joins Welcome; the wander
+Right; endings Real endings (`docs/notes/102-mikey.md`). `long-clips` deleted.
 
 ## "Phase 3 Control" (brain B1, 2026-11-11, v149 against v153) -- out
 

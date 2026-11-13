@@ -34,8 +34,8 @@ says the work goes on meanwhile.
 | 13 | `13-long-arc-energy.md` | 102c: the arc: builds, releases, an opening and a close | Opus 5.5, high | yes, 2026-11-12 |
 | 14 | `14-long-arc-themes.md` | 102d: the arc: themes that return changed, related keys, movements | Fable 5.2, medium | yes, 2026-11-13 (once #379 merges: `docs/notes/102d-arc-brightness.md`) |
 | 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | yes, 2026-11-13 (#381, #382; the clips on `long-clips`) |
-| B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | checked and the album out, 2026-11-14 (`docs/notes/102-b3-measured.md`); his notes into `102-mikey.md` still to do, in B3 or the next brain session |
-| | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | |
+| B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | yes, 2026-11-14 (`docs/notes/102-b3-measured.md`, `102-mikey.md`) |
+| | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | yes, 2026-11-14: all kept |
 | 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | |
 | 05 | `05-batch6-kit.md` | 101d: tripletKit, dottedPulse | Opus 5.5, high | |
 | 06 | `06-batch6-color.md` | 101e: colorTone | Opus 5.5, high | |
@@ -45,7 +45,7 @@ says the work goes on meanwhile.
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | |
 | B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
-| 16 | `16-long-tuning.md` | 102f: B3's three bugs (may run any time), then long pieces tuned from Mikey's notes (once your notes are in, wherever the order has got to; the rows below don't wait for it) | Opus 5.5, high | |
+| 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | |
 | 19 | `19-export-flac.md` | 104a: the FLAC writer in the core | Opus 5.5, high | |

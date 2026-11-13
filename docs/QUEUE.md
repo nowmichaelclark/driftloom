@@ -47,9 +47,10 @@ and the wander's theme turn on, #379; the brightness order's note
 the measures and the listening set, #382: 31 clips on the branch
 `long-clips`); brain B3 done in part (2026-11-14: 102 checked on v164, three
 bugs found for 102f, `docs/notes/102-b3-measured.md`; the "Long Pieces Album"
-page out, `docs/ALBUMS.md`); next: Mikey's listening (session 16's tuning
-waits for it; its bug PR may run any time), hands 04 onward meanwhile, and
-Mikey's testers' pastes (`docs/notes/98-testers.md`). Item
+page out, `docs/ALBUMS.md`); Mikey heard it (2026-11-14: every piece kept,
+`docs/notes/102-mikey.md`); next: hands session 16 (102f: the two holes, no
+retuning), then 04 onward, and Mikey's testers' pastes
+(`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
 
@@ -456,12 +457,13 @@ theme B's making spread across blocks (the tablet's margin); and the
 listening set as rendered excerpts with a blind before-and-after pair,
 since the app can't jump or take a journey until 106.
 
-**102f, first** (brain B3, 2026-11-14): three bugs measured on v164, fixed
-in session 16's first PR whatever Mikey's notes say: a pivot struck at
-velocity 0 in 1 loop in 12 (its velocity from a silent entry chord), "the
-tune alone" over a varied tune that is silent there (three seconds near
-silence in fei-no), and developments that stutter (a join, mostly a breath,
-at nearly every unit: up to 31 in a row). `docs/notes/102-b3-measured.md`.
+**102f** (session 16; brain B3, 2026-11-14): Mikey kept every piece and
+every first pick, so nothing is retuned. Two holes B3 measured on v164 are
+fixed: a pivot struck at velocity 0 in 1 loop in 12 (its velocity from a
+silent entry chord), and "the tune alone" over a varied tune that is silent
+there (three seconds near silence in fei-no); and a yardstick holds a join
+from silence. The developments' frequent breaths were heard and kept.
+`docs/notes/102-mikey.md`, `docs/notes/102-b3-measured.md`.
 
 **102e done** (session 15, v164; #381, #382): every line where a unit meets
 the next and something changes is written, chosen by what changes and the
