@@ -494,6 +494,9 @@ pub struct Heard {
     pub phrase: f64,
     pub half: f64,
     pub root: f64,
+    /// Whether the section plays a close the length slider asked for
+    /// (`stop_at`): the track ends ringing out, not faded.
+    pub stops: bool,
 }
 
 impl Heard {
@@ -512,6 +515,7 @@ impl Heard {
         phrase: 0.0,
         half: 0.0,
         root: 0.0,
+        stops: false,
     };
 
     /// What the tune plays at section step `step` (`tune`): the unit's, by
@@ -760,8 +764,22 @@ impl Heard {
     /// glide, the tune alone where the tune is silent there a breath, a
     /// pivot with no chords the floor out. Nothing is made but a fill's few
     /// hits and the pivot's chord.
-    #[allow(clippy::too_many_lines)] // a join's kinds, each a few lines
     fn joins(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, n: u64) {
+        for p in 0..self.count {
+            let a = form.at(n, p as u64);
+            self.units[p].join = a.join;
+            if matches!(a.join, Join::None | Join::Glide | Join::Prepared) {
+                continue;
+            }
+            let (bn, bp) = form.after(n, p as u64);
+            let b = form.at(bn, bp);
+            self.join_unit(form, cx, base, second, ways, p, &a, &b);
+        }
+    }
+
+    /// Unit `p`'s join (`joins`), unit `a` of the plan meeting `b` after it.
+    #[allow(clippy::too_many_lines, clippy::too_many_arguments)] // a join's kinds, each a few lines
+    fn join_unit(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, ways: &Ways, p: usize, a: &Span, b: &Span) {
         let spb = cx.spb;
         let beat = if cx.metre == Metre::SixEight { 6.0 } else { 4.0 };
         let bit = |l: Layer| 1u8 << l as usize;
@@ -782,15 +800,9 @@ impl Heard {
             }
         }
         let chord = base.chords.iter().enumerate().find(|(_, e)| !e.notes.is_empty()).map(|(i, e)| (i, e.vel));
-        for p in 0..self.count {
-            let a = form.at(n, p as u64);
-            let u = &mut self.units[p];
+        {
+            let Some(u) = self.units.get_mut(p) else { return };
             u.join = a.join;
-            if matches!(a.join, Join::None | Join::Glide | Join::Prepared) {
-                continue;
-            }
-            let (bn, bp) = form.after(n, p as u64);
-            let b = form.at(bn, bp);
             let len = js::max(1.0, js::floor(js::min(JOINS.bars * spb, JOINS.share * (u.to - u.from))));
             let mut kind = a.join;
             if kind == Join::Fill {
@@ -900,6 +912,140 @@ impl Heard {
         }
     }
 
+    /// An ending that lands (session 15; the brief's "Endings that land"):
+    /// the length slider will stop the piece `stop` steps from this
+    /// section's first, before its own close (or in Endless), so the
+    /// phrases before the stop play the close in place of the fade: from
+    /// where the piece is, thinning to the close's energy at home on theme
+    /// A, the tune's last phrase whole, and the landing (the tonic chord
+    /// and the tune on the tonic, alone, ringing out) in its last bars. The
+    /// close lasts the data's least (`[longform arc] close`), in whole
+    /// phrases. Steps before `decided` are played already: where the
+    /// landing would begin before them, nothing changes (the track ends as
+    /// it always did). The player calls it after `hear`, with the track's
+    /// end; with no end asked it is never called, so nothing changes.
+    #[allow(clippy::too_many_lines)] // the close's units, then the landing
+    pub fn stop_at(&mut self, form: &Form, cx: &Cx, base: &Render, second: Option<&Melody>, n: u64, stop: f64, decided: f64) {
+        if !self.on || !(stop > 0.0) || self.phrase <= 0.0 || self.count == 0 {
+            return;
+        }
+        let spb = cx.spb;
+        let steps = self.units[self.count - 1].to;
+        let phrase_seconds = self.phrase / spb * form.bar_seconds();
+        let close = self.phrase * js::max(1.0, js::ceil(LONGFORM.close / phrase_seconds));
+        let start = stop - close;
+        let land_bars = js::max(1.0, js::ceil(ENERGY.land / form.bar_seconds()));
+        if start >= steps || stop - land_bars * spb < decided {
+            return;
+        }
+        // The plan's own close is there already: its round ends inside the
+        // slider's close.
+        if form.to_end(n).is_some_and(|end| end * spb >= start && end * spb <= stop) {
+            return;
+        }
+        // The close's line in a unit: split it there (a section planned
+        // whole has one unit; a phrase-planned one has its lines there).
+        if let Some(p) = self.units[..self.count].iter().position(|u| u.from < start && u.to > start)
+            && self.count < UNITS_MAX
+        {
+            self.units.copy_within(p..self.count, p + 1);
+            self.count += 1;
+            self.units[p].to = start;
+            self.units[p + 1].from = start;
+            // (The join at its end was the plan's, at the section's end.)
+            self.units[p].join = Join::None;
+            self.units[p].out = 0;
+            self.units[p].pivot_count = 0;
+            self.units[p].pedal = 0;
+        }
+        let ways = Ways::of(cx, base, second);
+        let lift = Lift::of(form, cx, &ways);
+        let [_, low] = LONGFORM.energy.iter().find(|e| e.0 == Role::Close.name()).map_or([0.4, 0.15], |e| e.1);
+        // Where the energy stands as the close begins.
+        let first = self.units[..self.count].iter().position(|u| u.to > start).unwrap_or(self.count);
+        let plan_at = |step: f64| {
+            let unit = js::floor(js::max(0.0, step) / (form.unit_bars * spb)) as u64;
+            form.at(n, unit.min(form.units_in(n) - 1))
+        };
+        let before = if start > 0.0 { plan_at(start - 1.0) } else { form.before(n, 0).map_or_else(|| plan_at(0.0), |(b, p)| form.at(b, p)) };
+        let from_energy = before.energy;
+        let reach = |step: f64| js::clamp((step - start) / close, 0.0, 1.0);
+        let mut prev: Option<Unit> = first.checked_sub(1).map(|p| self.units[p]);
+        for p in first..self.count {
+            let (a, b) = (self.units[p].from, self.units[p].to);
+            let mut span = plan_at(a);
+            span.role = Role::Close;
+            span.theme = Theme::A;
+            span.theme_seed = None;
+            span.variation = Variation::Outline;
+            span.fragment = false;
+            span.calls = false;
+            span.prepares = false;
+            span.key = form.home;
+            span.energy = from_energy + (low - from_energy) * reach(b);
+            span.closes = true;
+            let mut end = if self.arc {
+                let mut u = lift.end(&ways, &span);
+                lift.themed(form, &ways, &span, false, &mut u);
+                u
+            } else {
+                // A wander's: every layer down toward its close's level, the
+                // tune toward its thinnest, at home.
+                let t = reach(b);
+                let mut u = self.units[p];
+                for c in &mut u.cut {
+                    c[1] = js::max(c[1], (1.0 - CLOSE_LEVEL) * t);
+                }
+                let [thinnest, own] = LONGFORM.density;
+                u.thin[1] = js::max(u.thin[1], (1.0 - thinnest / own.max(1e-9)) * t);
+                u.shift = [0; 5];
+                u.map = [0; 12];
+                u.mapped = 0;
+                u.tune = [tune::OWN; 2];
+                u
+            };
+            end.from = a;
+            end.to = b;
+            if let Some(s) = prev {
+                for (c, w) in end.cut.iter_mut().zip(s.cut.iter()) {
+                    c[0] = w[1];
+                }
+                for (t, w) in end.tone.iter_mut().zip(s.tone.iter()) {
+                    t[0] = w[1];
+                }
+                end.thin[0] = s.thin[1];
+                end.soft[0] = s.soft[1];
+                end.shimmer[0] = s.shimmer[1];
+                end.backbeat[0] = s.backbeat[1];
+                end.doubled[0] = s.doubled[1];
+                end.aim[0] = s.aim[1];
+            }
+            if !self.arc {
+                end.cut.iter_mut().zip(self.units[p].cut.iter()).for_each(|(c, w)| c[0] = w[0]);
+            }
+            end.join = Join::None;
+            end.out = 0;
+            end.pivot_count = 0;
+            end.pedal = 0;
+            self.units[p] = end;
+            prev = Some(end);
+            // The line into the close: written as any other (a pivot home,
+            // the floor out), on the unit before it.
+            if p == first && p > 0 && start > decided {
+                let (into, join) = form.join_between(&before, &span);
+                self.units[p - 1].join = join;
+                if !matches!(join, Join::None | Join::Glide | Join::Prepared) {
+                    self.join_unit(form, cx, base, second, &ways, p - 1, &before, &into);
+                }
+            }
+        }
+        // The landing on the tonic, from the stop's last bars.
+        self.landing = Landing::NONE;
+        self.whole = [0.0; 2];
+        self.land(form, cx, base, stop, steps);
+        self.stops = true;
+    }
+
     /// A finite arc's end, where it reaches section steps 0 to `steps`
     /// (`end` steps from the section's first): its last bars land (at least
     /// `[longform energy] land` seconds and a bar, over as many sections as
@@ -951,13 +1097,18 @@ impl Heard {
         let lowest = |e: &plan::ChordEvent| e.notes.iter().copied().min();
         let chords = || base.chords.iter().enumerate().filter(|(_, e)| !e.notes.is_empty());
         let tonic = |e: &plan::ChordEvent| e.notes.len() >= 3 && triad.iter().all(|&t| e.notes.iter().any(|&n| pc(n) == t));
-        let own = chords().find(|(_, e)| tonic(e) && lowest(e).is_some_and(|lo| pc(lo) == root));
+        // (A chord the loop leaves silent, an entry's or a rest's, gives its
+        // notes and its voice but never its velocity: session 15 found
+        // landings struck at 0. The chords' own loudest stands in.)
+        let loudest = chords().map(|(_, e)| e.vel).fold(0.0, js::max);
+        let sounding = |vel: f64| if vel > 0.0 { vel } else { loudest };
+        let own = chords().filter(|(_, e)| e.vel > 0.0).find(|(_, e)| tonic(e) && lowest(e).is_some_and(|lo| pc(lo) == root)).or_else(|| chords().find(|(_, e)| tonic(e) && lowest(e).is_some_and(|lo| pc(lo) == root)));
         l.rolled = !chords().any(|(_, e)| e.notes.len() >= 2);
         if let Some((i, e)) = own {
             l.chord = e.notes;
             l.chord_from = i;
-            l.chord_vel = e.vel;
-        } else if let Some((i, e)) = chords().next() {
+            l.chord_vel = sounding(e.vel);
+        } else if let Some((i, e)) = chords().find(|(_, e)| e.vel > 0.0).or_else(|| chords().next()) {
             let lo = base.chords.iter().flat_map(|e| e.notes.iter().copied()).min().unwrap_or(48);
             let mut r = lo - pc(lo - root);
             while r < CHORDS_RANGE[0] {
@@ -968,10 +1119,11 @@ impl Heard {
                 l.chord.push(r + by);
             }
             l.chord_from = i;
-            l.chord_vel = e.vel;
+            l.chord_vel = sounding(e.vel);
         }
-        // The tune on the tonic, nearest its last note, in its range.
-        if let Some((i, e)) = base.melody.iter().enumerate().next_back() {
+        // The tune on the tonic, nearest its last note that sounds, in its
+        // range.
+        if let Some((i, e)) = base.melody.iter().enumerate().filter(|(_, e)| e.vel > 0.0).next_back() {
             let m = js::round(e.midi) as i16;
             let below = m - pc(m - root);
             let near = if m - below <= 6 { below } else { below + 12 };

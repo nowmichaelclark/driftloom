@@ -23,7 +23,7 @@
 //! cargo run --release --example dlrender -- --wav OUT.wav [--signal NAME] LIST
 //! cargo run --release --example dlrender -- --seed N[,N...] [--vibes ID,...]
 //!     [--request TEXT] [--seconds 45] [--rate 44100] [--stereo] [--lite] [--wander 1]
-//!     [--salt 0] [--wav OUT.wav] [--calls OUT.calls]
+//!     [--salt 0] [--track bars=N|passes=N] [--wav OUT.wav] [--calls OUT.calls]
 //!                                           a loop from its seed on the
 //!                                           player (queue item 82), no note
 //!                                           list: one hash line a seed;
@@ -274,6 +274,10 @@ struct BySeed {
     clip: clip::Clip,
     pick: Option<usize>,
     choices: bool,
+    /// How long the track plays (`--track bars=N` or `passes=N`: the app's
+    /// length slider, `Player::set_track`); at its end the core's own next
+    /// loop follows, as the app's does (`Player::set_draws`).
+    track: Option<dlcore::player::Track>,
 }
 
 impl BySeed {
@@ -282,7 +286,7 @@ impl BySeed {
     /// length, at 22,050 Hz and lite unless asked otherwise.
     fn endless(self, hours: f64, rate: Option<f64>, layout: u32) -> Result<(), String> {
         let seed = self.seeds.first().map_or(1_027_928_796, |&(_, s)| s);
-        let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, salt: 0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false };
+        let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, salt: 0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false, track: None };
         let request = way.request()?;
         endless::run(&endless::Way { hours, seed, rate: rate.unwrap_or(22_050.0), full: self.full, layout, wander: self.wander.unwrap_or(1.0), request })
     }
@@ -298,7 +302,7 @@ impl BySeed {
                 return Err(format!("--pick {i}: the corpus has no such loop"));
             }
         }
-        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), salt: b.salt, vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices };
+        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), salt: b.salt, vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices, track: b.track };
         match b.measure {
             Some(Measure::Costs) => return seed_costs(&b.seeds, &way),
             Some(Measure::Fades) => return fades::run(&b.seeds, &way),
@@ -338,6 +342,16 @@ impl BySeed {
             "--salt" => self.salt = args.next().and_then(|s| s.parse().ok()).ok_or(USAGE)?,
             "--vibes" => self.vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),
             "--request" => self.request = Some(args.next().ok_or(USAGE)?),
+            "--track" => {
+                let word = args.next().ok_or(USAGE)?;
+                let (kind, count) = word.split_once('=').ok_or("--track is bars=N or passes=N")?;
+                let count: u32 = count.parse().map_err(|_| "--track: a count")?;
+                self.track = Some(match kind {
+                    "bars" => dlcore::player::Track::Bars(count),
+                    "passes" => dlcore::player::Track::Passes(count),
+                    _ => return Err("--track is bars=N or passes=N".to_string()),
+                });
+            }
             _ => return Ok(false),
         }
         Ok(true)

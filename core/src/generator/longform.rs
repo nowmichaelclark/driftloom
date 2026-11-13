@@ -1087,6 +1087,16 @@ impl Form {
         if p + 1 < self.units_in(n) { (n, p + 1) } else { (n.saturating_add(1), 0) }
     }
 
+    /// How unit `a` meets `b` where `b` is not the plan's own next unit (a
+    /// close the length slider asks for, session 15): `b` with what changed
+    /// from `a` read again, and the join between them.
+    #[must_use]
+    pub fn join_between(&self, a: &Span, b: &Span) -> (Span, Join) {
+        let mut b = *b;
+        b.changed = difference(a, &b);
+        (b, self.join_of(a, &b))
+    }
+
     /// How unit `a` meets unit `b` after it (`Join`; session 15), from what
     /// changes between them (`b.changed`) and the energy either side.
     ///

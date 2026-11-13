@@ -226,7 +226,7 @@ export function playedChecks(seed, request, seconds) {
 }
 
 /** A WAV's samples (dlrender writes 32-bit floats, one channel). */
-function readWav(file) {
+export function readWav(file) {
   const b = fs.readFileSync(file);
   let at = 12;
   let rate = 0;
@@ -435,7 +435,8 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   let later = 0;
   for (const line of calls.split('\n')) {
     const p = line.split(' ');
-    if (p[0] !== 'note' || p[2] !== '1') continue;
+    // (Struck notes only: one at velocity 0 is silent, session 15.)
+    if (p[0] !== 'note' || p[2] !== '1' || !(num(p[6]) > 0)) continue;
     const at = num(p[3]);
     if (at >= landT && at < landT + 0.4) {
       last.push(Math.round(num(p[4])));
@@ -626,4 +627,74 @@ export function arcJoins(seed, request, seconds) {
     t += u.bars * bar;
   }
   return joins;
+}
+
+/**
+ * An ending that lands (session 15; the brief's "Endings that land"):
+ * `request` of `seed` played with the length slider set to `bars` bars
+ * (`dlrender --track`: at the track's end the core's own next loop follows,
+ * as in the app), at the wander's amount `wander`. Read: the stop (the
+ * first phrase line `bars` bars on, as `track::phrase_line` finds it), the
+ * chord struck at the landing's start (the chords channel's notes in its
+ * first 0.4 s) against the home key's tonic triad, every note after those
+ * and before the stop (none: the landing alone), any fade of the mix from
+ * the landing on (none: it rings out, never cut), and the ring itself, from
+ * the landing to the stop in 50 ms windows: no fall of more than 12 dB
+ * between neighbors while above -60 dB (a cut's way).
+ */
+export function endingChecks(seed, request, bars, { wander = 1, rate = 44100 } = {}) {
+  const { form } = pieceMap(seed, request, 0, 1);
+  const barSeconds = form.unitSeconds / form.unitBars;
+  const sectionBars = form.sectionBars;
+  const phrase = sectionBars % 4 === 0 ? 4 : sectionBars % 2 === 0 ? 2 : sectionBars;
+  // The first phrase line at or after the bars asked, in the section.
+  const k = Math.floor(bars / sectionBars);
+  const into = bars - k * sectionBars;
+  const stopBars = k * sectionBars + Math.min(Math.ceil(into / phrase) * phrase, sectionBars);
+  const landBars = Math.max(1, Math.ceil(LAND / barSeconds));
+  const seconds = Math.ceil(0.05 + stopBars * barSeconds + 4);
+  const wavFile = path.join(os.tmpdir(), `longform-end-${seed}-${process.pid}.wav`);
+  const callFile = path.join(os.tmpdir(), `longform-end-${seed}-${process.pid}.calls`);
+  dlrender(['--seed', String(seed), '--request', request, '--track', `bars=${bars}`, '--seconds', String(seconds), '--rate', String(rate), '--wander', String(wander), '--wav', wavFile, '--calls', callFile]);
+  const { data } = readWav(wavFile);
+  const calls = fs.readFileSync(callFile, 'utf8');
+  fs.rmSync(wavFile, { force: true });
+  fs.rmSync(callFile, { force: true });
+  const notes = [];
+  const fades = [];
+  for (const line of calls.split('\n')) {
+    const p = line.split(' ');
+    if (p[0] === 'note') notes.push({ ch: Number(p[2]), t: num(p[3]), midi: num(p[4]), vel: num(p[6]) });
+    else if (p[0] === 'fade') fades.push(num(p[1]));
+  }
+  // The core's clock: the first note's time is the piece's first step.
+  const t0 = Math.min(...notes.map((n) => n.t));
+  const stopT = t0 + stopBars * barSeconds;
+  const landT = stopT - landBars * barSeconds;
+  // (Struck: a note at velocity 0 is silent.)
+  const chord = notes.filter((n) => n.ch === 1 && n.vel > 0 && n.t >= landT - 0.02 && n.t < landT + 0.4).map((n) => Math.round(n.midi));
+  // (The next loop's first notes may fall a few milliseconds early: their jitter.)
+  const later = notes.filter((n) => n.vel > 0 && n.t >= landT + 0.4 && n.t < stopT - 0.02).length;
+  const faded = fades.filter((t) => t >= landT - 0.02 && t < stopT + 1).length;
+  const pc = (x) => ((x % 12) + 12) % 12;
+  const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const root = NOTES.indexOf(form.home.root);
+  const steps = SCALE_STEPS[form.home.scale] ?? [0, 2, 4, 5, 7, 9, 11];
+  const third = steps.includes(4) ? 4 : steps.includes(3) ? 3 : steps[1];
+  const fifth = steps.includes(7) ? 7 : steps.includes(8) ? 8 : 6;
+  const triad = [0, third, fifth].map((x) => (root + x) % 12);
+  const pcs = new Set(chord.map(pc));
+  const tonic = chord.length > 0 && (pcs.size < 3 ? pcs.has(root) : triad.every((t) => pcs.has(t)) && triad.includes(pc(Math.min(...chord))));
+  const win = Math.round(0.05 * rate);
+  const rms = [];
+  for (let a = Math.round(landT * rate); a + win <= Math.min(data.length, Math.round(stopT * rate)); a += win) {
+    let s = 0;
+    for (let i = a; i < a + win; i++) s += data[i] * data[i];
+    rms.push(10 * Math.log10(s / win + 1e-20));
+  }
+  const audible = (x) => Math.max(x, -60);
+  const falls = rms.slice(1).map((x, i) => audible(rms[i]) - audible(x));
+  const fall = Math.max(0, ...falls);
+  const rings = rms.length > 2 && fall <= 12 && faded === 0;
+  return { seed, request, bars, stopBars, stopT, chord, tonic, later, alone: later === 0, faded, rings, fall, landed: chord.length > 0 };
 }

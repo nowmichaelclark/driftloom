@@ -14,7 +14,7 @@
 use dlcore::generator::data::LONGFORM;
 use dlcore::generator::heard::{Tune, key_map, tune};
 use dlcore::generator::piece::Piece;
-use dlcore::generator::longform::{Form, Key, Kind, Relation, Role, Span, Theme, Variation, changed};
+use dlcore::generator::longform::{Form, Join, Key, Kind, Relation, Role, Span, Theme, Variation, changed};
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::rng::Rng;
 use dlcore::generator::theory::SCALES;
@@ -279,6 +279,10 @@ fn a_piece_plays_its_plan_theme_by_theme() {
                         prepared += 1;
                         let fifth = (i16::from(form.home.root) + 7).rem_euclid(12);
                         assert!(u.pedal > 0 && (u.pedal.rem_euclid(12) - fifth).abs() <= 1 && u.pedal_from >= u.from && u.pedal_from < u.to, "{what}: {u:?}");
+                    } else if u.join == Join::Pivot {
+                        // (A pivot holds the bass on its chord's root for its
+                        // bar: session 15.)
+                        assert!(u.pedal > 0 && u.pedal_from == u.join_from, "{what}: {u:?}");
                     } else {
                         assert_eq!(u.pedal, 0, "{what}");
                     }
