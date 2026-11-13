@@ -233,6 +233,17 @@ impl Render {
                 out.iter_mut().for_each(|e| e.midi += by);
             }
         }
+        // As loud as the loop's own tune: its notes' mean velocity the
+        // loop's tune's (a quieter second theme sat a role that should
+        // rise 2 LU under the theme before it: session 14 measured).
+        let level = |m: &Melody| centre(m.iter().filter(|e| e.vel != 0.0).map(|e| e.vel).sum(), m.iter().filter(|e| e.vel != 0.0).count());
+        if let (Some(own), Some(other)) = (level(&self.melody), level(out)) {
+            let by = js::clamp(own / other, 0.5, 2.0);
+            for e in out.iter_mut() {
+                e.vel = js::min(1.0, e.vel * by);
+                e.vel0 = e.vel;
+            }
+        }
         // No clash added: a note that starts a semitone over a tone of the
         // chord sounding under it takes that tone (where the tune and the
         // chords turn together, on the loop's own cycle).

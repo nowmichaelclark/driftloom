@@ -151,7 +151,8 @@ would sit within five semitones of the chords'; a note that starts a
 semitone over a chord tone takes that tone). The generator keeps two such
 tunes, the section playing's and the next's, and makes one in three
 stages, a block each, before the next pass is drawn (`Generator::prepare`):
-3 to 30 us a stage natively, under the loop's own worst audio block. **A
+the worst block that makes a stage or draws a pass 44 to 73 us natively,
+under the loop's own worst audio block (78 to 331 us), full and lite. **A
 section plays one tune beside the loop's own**: where its units name more
 (a phrase-planned piece whose section holds B and an answer), the first
 stands in for the others.
@@ -178,17 +179,21 @@ octave away, or the tune. **What was asked holds:** a theme asked has no B;
 a tune's voice asked is never handed on; a pinned key is home, a pinned
 scale rules out the parallel; the landing is the home key's.
 
-Measured (`node tools/longform-themes.mjs`, 43 corpus pieces played): no
-note outside its unit's key beyond the loop's own; 44 second themes, none
+Measured (`node tools/longform-themes.mjs`, 44 corpus pieces played): no
+note outside its unit's key beyond the loop's own; 46 second themes, none
 theme A again, 6 resting; every return keeps 0.42 or more of theme A's
 notes and none is a copy; every variation played; the tune's time a
-semitone over a chord tone 3.6% against 4.6% for theme A's own statements
-(the parallel key's units 4.5%, a second tune 2.6%); the tune's centre five
+semitone over a chord tone 3.4% against 4.4% for theme A's own statements
+(the parallel key's units 4.5%, a second tune 2.4%); the tune's centre five
 semitones from the chords' wherever the loop keeps it. A theme-B section
-costs what a theme-A one does (13 to 30 us, within a few percent either
-way); its tune made from nothing, a section ahead, 27 to 43 us more, about
-a loop's own making. For Mikey's ears: every number, and whether a second
-theme that rests is welcome.
+costs what a theme-A one does (12 to 17 us, within 4%, the same at section
+10^9); its tune made from nothing, a section ahead, 26 to 40 us more, about
+a loop's own making. **A unit that plays other notes than the loop does in
+those bars** (a fragment, half of each phrase a rest; another key; another
+tune) may sit up to 2.3 LU from its neighbor where the energy alone steps
+under 2: the arc's step check holds those to 3 LU and the loop's own notes
+to 2. For Mikey's ears: every number, and whether a second theme that
+rests is welcome.
 
 ## The wander
 

@@ -237,14 +237,18 @@ fn each_variation_alone() {
 fn a_piece_plays_its_plan_theme_by_theme() {
     roomy(|| {
         let mut g = Box::new(Generator::new());
-        let (mut seconds, mut calls, mut prepared, mut fragments) = (0, 0, 0, 0);
+        let (mut seconds, mut calls, mut prepared, mut fragments, mut rests) = (0, 0, 0, 0, 0);
         for seed in seeds(60) {
             let form = load(&mut g, seed, "bars=256");
             let sections = sections_of(&g);
-            let tuneful = !g.render().melody.is_empty();
-            for n in 0..sections {
+                        for n in 0..sections {
+                let want = Tune::of(&form, n);
+                g.section(n, 0.0);
+                // (A second tune that rests leaves the arc theme A.)
+                let sings = g.second(want).is_some_and(|m| m.iter().any(|e| e.vel != 0.0));
+                rests += usize::from(want.kind == Tune::SECOND && !sings);
                 let pass = g.section(n, 0.0);
-                let has = pass.heard.second != Tune::NONE;
+                let has = pass.heard.second != Tune::NONE && sings;
                 for (p, u) in pass.heard.units().iter().enumerate() {
                     let s = form.at(n, p as u64);
                     let what = format!("seed {seed} section {n}.{p} ({})", s.role.name());
@@ -254,10 +258,10 @@ fn a_piece_plays_its_plan_theme_by_theme() {
                     // One voice: a half plays one tune or rests.
                     assert!(u.tune.iter().all(|&t| t <= tune::REST), "{what}");
                     let other = matches!(s.theme, Theme::B | Theme::Recall(_)) || s.variation == Variation::Answered;
-                    if other {
-                        assert!(!tuneful || (has && u.tune.contains(&tune::SECOND)), "{what}: the plan's other tune is not played");
-                        seconds += usize::from(tuneful);
-                    } else if !s.calls {
+                    if other && sings {
+                        assert!(u.tune.contains(&tune::SECOND), "{what}: the plan's other tune is not played");
+                        seconds += 1;
+                    } else if !s.calls || !sings {
                         assert!(!u.tune.contains(&tune::SECOND), "{what}: a second tune where the plan has theme A");
                     }
                     if s.fragment {
@@ -285,7 +289,7 @@ fn a_piece_plays_its_plan_theme_by_theme() {
                 }
             }
         }
-        assert!(seconds > 300 && calls > 20 && prepared > 20 && fragments > 100, "{seconds} units of a second tune, {calls} calls, {prepared} returns prepared, {fragments} fragments");
+        assert!(seconds > 300 && calls > 20 && prepared > 20 && fragments > 100 && rests > 0, "{seconds} units of a second tune, {calls} calls, {prepared} returns prepared, {fragments} fragments, {rests} sections whose second tune rests");
     });
 }
 

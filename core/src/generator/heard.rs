@@ -630,7 +630,12 @@ impl Heard {
         let spb = cx.spb;
         let unit_steps = form.unit_bars * spb;
         let count = (form.units_in(n) as usize).min(UNITS_MAX);
-        let has = self.second != Tune::NONE;
+        // A second tune that rests (its theme's own loop has none: queue
+        // item 85f, a theme that rests stays resting, never given a tune)
+        // leaves the arc its one theme: those units play theme A, in the
+        // unit's key. (A rest of the tune through a second role sat 4.4 LU
+        // under its neighbors in a tune-led loop: session 14 measured.)
+        let has = self.second != Tune::NONE && second.is_some_and(|m| m.iter().any(|e| e.vel != 0.0));
         let mut from = form.before(n, 0).map(|(b, p)| {
             let span = smoothed(form, b, p);
             let mut end = lift.end(&ways, &span);
@@ -1126,8 +1131,19 @@ impl Lift {
             }
         }
         match variation {
-            // (The peak's register is its double, an octave over.)
-            Variation::Register if span.role != Role::Peak => {
+            // The peak's register is its double, an octave over (session
+            // 13), and so is any rising role's: a build's swells in at the
+            // double's share from its first unit, the small form's lift's
+            // with its energy. (The tune itself moved an octave there sat
+            // under the theme before it, either way: measured.) A return
+            // moves whole.
+            Variation::Register if matches!(span.role, Role::Build) => {
+                if self.doubles {
+                    u.double = 12;
+                    u.doubled = [js::max(u.doubled[1], ENERGY.double[2]); 2];
+                }
+            }
+            Variation::Register if !matches!(span.role, Role::Peak | Role::Lift) => {
                 u.lift = ways.lift(span.pick, u.shift[melody]);
                 if u.lift > 0 {
                     u.double = 0;

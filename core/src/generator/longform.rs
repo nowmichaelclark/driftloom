@@ -770,7 +770,9 @@ impl Form {
         turn(Thing::Length, chords);
         turn(Thing::Density, tune);
         turn(Thing::Key, spec.keys == 0 && LONGFORM.key > 0.0 && related.iter().flatten().any(|k| k.relation.is_fifth()));
-        turn(Thing::Theme, tune && spec.theme.is_none() && LONGFORM.theme > 0.0);
+        // (A second theme may rest, and the tune with it: never a tune
+        // asked on or re-rolled.)
+        turn(Thing::Theme, tune && spec.theme.is_none() && LONGFORM.theme > 0.0 && fixed & bit(Layer::Melody) == 0);
         // An epoch is long enough for the turns it is likely to take, each a
         // mean hold: a rare thing takes a turn going and one coming back.
         let rare = |thing, chance: f64| if turns[..turn_count].contains(&thing) { 1.0 - js::min(1.0, 2.0 * chance) } else { 0.0 };
