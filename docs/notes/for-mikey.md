@@ -95,9 +95,9 @@ the points where the next step is yours.
 - **The joins and endings that land (102e, session 15, v164):** where two
   units meet and something changes, the line is written: a chord both keys
   share held across a key's line (the bass on its root), a fill of the
-  kit's backbeat into a rise, the floor (kit and bass) out for the bar
-  before a fall, the tune alone for a bar where a theme changes, or a
-  breath of half a bar; a wander's voice, register or length move gives
+  kit's backbeat into a rise, the floor (kit and bass) out before the fall
+  from the peak, the tune alone where a theme changes, or a breath; a
+  wander's voice, register or length move gives
   only that layer a breath. A breath between arcs now keeps the tune at its
   thinnest instead of resting it. And when the length slider will stop a
   long piece or Endless before its close, the last phrases thin to a close
@@ -106,8 +106,9 @@ the points where the next step is yours.
   is each kind welcome, and how often (pivots come at every key change, so
   through a development every 30 s or so); is a fill gentle enough (four
   soft hits of the loop's own snare or rim, 0.35 to 0.65 of its loudest);
-  is the floor out or a bar of the tune alone too much of a hole (each is
-  at most an eighth of its unit: half a bar in a four-bar phrase); and does
+  is the floor out or the tune alone too much of a hole, or too little to
+  notice (each is a bar at most, and at most a sixteenth of its unit: a
+  beat in a four-bar phrase); and does
   a slider-made close feel like an ending or like being hurried out.
 - **slowOpening and the arc's opening together (102e, for your ears):** in
   gluith-vuisk (corpus #0, seed 1068550449) the loop's own slow opening
@@ -243,15 +244,17 @@ Left open, for later sessions or for you:
 **The joins (102e, session 15, v164), first picks** (each one line of
 `data/longform.txt`, `[longform joins]`):
 
-- A fill or the floor out where the energy steps by 0.04 or more across a
-  line where a theme changes, 0.08 where only a role does (`step`).
-- A join lasts a bar, at most an eighth of its unit (`bars`, `share`); a
+- A fill where the energy rises by 0.04 or more across a line where a theme
+  changes, 0.08 where only a role does (`step`); the floor out where it
+  falls as far from the peak or the lift.
+- A join lasts a bar, at most a sixteenth of its unit (`bars`, `share`); a
   breath half of that (`breath`); a fill the last beat, rising from 0.35
   to 0.65 of the instrument's loudest (`fill`); a pivot's chord held a beat
   past the line (`hold`).
 - Chosen in the code, not the data (`Form::join_of`): a key's line a pivot
   (else the floor out, or a breath); a theme's a fill rising, the floor out
-  falling, the tune alone level (a breath where the tune is silent); every
+  falling from the height, else the tune alone (a breath where the tune is
+  silent); every
   wander's theme a breath of the tune; the return prepared where it is.
 - A slider-made close lasts 10 s in whole phrases (`[longform arc] close`)
   and lands as a finite arc does (`[longform energy] land`).

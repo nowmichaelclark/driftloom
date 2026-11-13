@@ -224,11 +224,13 @@ land = 4
 # first pick for Mikey's ears.
 [longform joins]
 # Where a theme changes, a rise in the energy of this much or more across
-# the line is a fill into it, a fall as large the floor out (where only a
-# role changes, twice this).
+# the line is a fill into it, a fall as large from the peak (or the lift)
+# the floor out (where only a role changes, twice this).
 step = 0.04
 # A join lasts this many bars before its line, at most this share of its
-# unit (a four-bar phrase's join is half a bar, an eight-bar section's a bar).
+# unit (a four-bar phrase's join is a beat, a sixteen-bar section's a bar:
+# measured, half a bar of a four-bar unit broke the loudness order of five
+# 64-bar arcs in thirty).
 bars = 1
 share = 0.0625
 # A breath leaves out this share of a join's length: the last half bar.

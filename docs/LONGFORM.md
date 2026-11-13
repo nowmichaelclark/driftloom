@@ -327,15 +327,18 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
 | **pivot** | a key changes (and the loop has chords) | a chord both keys share (`longform::pivot`: a triad of the new key's mode on its tonic, its fourth, its fifth or the rest, every note in both keys; else its root and fifth), struck at the join's first step in the chords' voice and held a beat past the line; the loop's chords out under it, the bass on its root |
 | **prepared** | the return, prepared (half the movements) | the bass on the home fifth for the release's last phrase (session 14) |
 | **fill** | a theme or how it is played changes and the energy rises by `step` (0.04) or more, or a role alone and twice that (a kit plays) | the kit's backbeat (else its shimmer) on each step of the last beat (every other in 6/8) where the loop has no hit of it, from 0.35 to 0.65 of its loudest, under the arc's kit marks |
-| **floor** | the same, the energy falling (a kit or a bass plays); a key with no chords | the kit and the bass out for the join |
-| **alone** | a theme changes, the energy level | every layer but the tune out for the join (where the tune plays there; else a breath) |
+| **floor** | the same, the energy falling from the peak or the lift (a kit or a bass plays); a key with no chords | the kit and the bass out for the join |
+| **alone** | a theme changes, the energy level or falling after the height | every layer but the tune out for the join (where the tune plays there; else a breath) |
 | **breath** | a theme changes where nothing else can join it; every wander's theme; a wander's line move (a voice, the chords' register or length) | the join's last half left out: every layer, or in a wander only the layer that moves |
 | **glide** | what changes glides (a layer, the tone, a wander's density, the energy by a little) | nothing at the line: the unit after glides (sessions 12 and 13) |
 
-- **How long:** a join is a bar, at most an eighth of its unit (half a bar in
-  a four-bar phrase; measured: a bar of a four-bar unit took 1 LU off it
-  and broke the loudness order on three 64-bar arcs of eight). A breath is
-  half of that, a fill the last beat.
+- **How long:** a join is a bar, at most a sixteenth of its unit (a beat in
+  a four-bar phrase, half a bar in eight bars, a bar in sixteen; measured: a
+  bar of a four-bar unit took 1 LU off it and broke the loudness order on
+  three 64-bar arcs of eight, half a bar still on five of thirty). A breath
+  is half of that, a fill the last beat. The floor out comes once, from the
+  peak or the lift: at every step down after it, it hollowed the release
+  too, and two in a row is one too many.
 - **What it takes out:** only notes that end by the line (a chord or a bass
   note that would ring across it plays: leaving out pads held into the
   next unit starved that unit by 2 LU), and only a layer heard in the unit
