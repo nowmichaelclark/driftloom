@@ -245,3 +245,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   20261009) that draw it: **dun-roar** (#45, a busy machine kit at 129) from
   0:00; **thisk-doam** (#76, a slow tape kit at 55) from 0:00. A loop without
   it plays as before, its wander too.
+- #PRNUM, dottedPulse (item 101d, session 05, v168), preview URL: the
+  branch's preview (no hash kept): about 1 loop in 7 with a 4/4 kit (nearly a
+  quarter of the groovy ones, 1 in 12 of the still ones) plays a lilt against the bar,
+  half and half: `pulse`, a soft rim every three eighths under the beat, and
+  `kick332`, the kick on a 3-3-2 of the bar's eighths, written whole. Two
+  loops (corpus 20261009) that draw it: **ta-muin** (#121, the pulse) from
+  0:16, as the kit comes in; **yi-yoar** (#51, the 3-3-2) from 0:00. A loop
+  without it plays as before, its wander too.

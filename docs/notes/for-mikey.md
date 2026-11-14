@@ -72,6 +72,19 @@ the points where the next step is yours.
   merged); and in a long piece the fill into a line still plays four
   sixteenths over the last beat, not thirds. Each is a line of
   `data/choices.txt` or `core/src/generator/kit.rs`.
+- **dottedPulse (101d, session 05, v168, #PRNUM):** a lilt against the bar,
+  in two versions, half and half, on about 1 loop in 7 with a 4/4 kit (never
+  beside a kit in threes): `pulse`, a soft rim every three eighths, and
+  `kick332`, the kick on a 3-3-2 written whole. To hear them before the
+  album: the pulse on ta-muin (corpus 20261009 #121) from 0:16, as the kit
+  comes in; the 3-3-2 on yi-yoar (#51) from 0:00 and la-glo (#73) from 0:00.
+  Taste calls for your ears: the pulse's level, rim velocity 0.5 (the sketch's
+  0.2 was too quiet to hear as a lilt; 0.5 sits where the kit's ghost rims
+  do, 31 to 40 LU under the loop, a little under its off-beat hats), one
+  number in `data/choices.txt`; the 3-3-2 keeps each bar's kick within 1 dB
+  of the loop's own there (the downbeat as it was, the other two softer where
+  needed) and plays only where the loop's own kick or bass plays, so it never
+  fills a gap's silence; 15% of the loops that may have it before the vibes.
 - **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
   on the branch `long-clips` (its `index.md`), not blind: each place now and
   as at v164. fei-no (seed 2158762586, `bars=256,journey=arc`) from 5:15, the

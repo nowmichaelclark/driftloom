@@ -226,6 +226,25 @@ vibes = swaying 2, skipping 2, bubbly 1.5, groovy 1.5, playful 1.5,
     whimsical 1.5, cozy 1.5, dusky 1.5, glacial 0.3, still 0.3, reverent 0.4,
     crisp 0.5
 
+# dottedPulse (queue item 101d; batch 6's #8, approved by Mikey 2026-11-09,
+# both versions): a part every three eighths, a lilt against the bar
+# (core/src/generator/kit.rs). `pulse` adds a soft rim (the hand kit's tap)
+# every six steps across the kit's layer, at its own level (setting
+# dottedpulse, below); `kick332` writes the kick whole on a 3-3-2 of the bar's
+# eighths in place of the loop's own, only where the kit has a kick; half and
+# half. For a loop with a kit in a bar of 16 steps (4/4, where it was heard),
+# never beside a kit in threes (tripletKit is drawn first). Drawn alone, not
+# among the changes, on a stream of its own, for 15% of the loops that may
+# have it before the vibes lean it: the batch's conservative share, for
+# Mikey's ears. The batch's [JUDGMENT] row, one for both versions: toward the
+# groovy and the quirky, away from the still.
+[choice dottedPulse]
+options = today 1, pulse 1, kick332 1
+ownStream = 1
+alone = 0.15
+vibes = groovy 2, quirky 1.5, cheeky 1.5, mischievous 1.5, intricate 1.5,
+    jazzy 1.5, still 0.4, restful 0.4, glacial 0.4
+
 # The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
 # every variable of the arc, named, with the range a loop draws it from, in
 # this one place, so phase 2's requests can pin them (docs/CORE.md, promises
@@ -474,6 +493,17 @@ fast.q = 0.7 1.1
 [setting padwow]
 depth = 12 14.5
 rate = 0.4 0.6
+
+# dottedPulse's settings (queue item 101d): the pulse's velocity on the rim
+# (the hand kit's tap). The lever's 0.2, the kit's ghost rim, read 38 to 43 LU
+# under the loop, too quiet to hear as a lilt; this level is measured to sit
+# where the kit's soft hits do (the PR has the figures), for Mikey's ears.
+[setting dottedpulse]
+pulse = 0.5
+# The 3-3-2's room, in dB: a bar's kicks (their velocities squared) no more
+# than this over the loop's own kicks in that bar (the batch's low guard: the
+# lever's moved kicks raised dust #69's 20-60 Hz past 1 dB).
+low = 1
 
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every

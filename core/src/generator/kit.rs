@@ -13,6 +13,16 @@
 //!   hat (its instrument, its off-beat velocities and its density) where
 //!   nothing of it sits, so a beat plays three. The kick stays on the beat.
 //!   6/8 loops never draw it: their beat's thirds are the eighths they play.
+//! - **dottedPulse** (batch 6's #8, approved by Mikey 2026-11-09, both
+//!   versions): a part every three eighths, a lilt against the bar. `pulse`
+//!   adds a soft rim (the hand kit's tap) every six steps across the kit's
+//!   layer, at a level of its own (`[setting dottedpulse]`): the lever's
+//!   rim at velocity 0.2 read 38 to 43 LU under the loop, too quiet to hear
+//!   as a lilt. `kick332` writes the kick whole on a 3-3-2 of the bar's
+//!   eighths (0, 6 and 12 of its 16 steps), in place of the loop's own: the
+//!   lever only moved the kicks a loop had, so most kits never played it.
+//!   Only in a bar of 16 steps (4/4), where it was heard, and never beside a
+//!   kit in threes.
 
 use super::data::{MAX_BARS, MAX_STEPS_PER_BAR};
 use super::js;
@@ -21,6 +31,8 @@ use super::rng::Rng;
 
 /// tripletKit's own stream (a salt on the loop's seed).
 const TRIPLET_SALT: u32 = 0x7472_6970;
+/// dottedPulse's own stream.
+const DOTTED_SALT: u32 = 0x646f_7473;
 
 /// A beat's steps, in every metre that may draw a kit choice (not 6/8).
 const BEAT: f64 = 4.0;
@@ -220,6 +232,117 @@ impl LoopHat {
     }
 }
 
+/// dottedPulse's two versions.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Dotted {
+    /// A soft part every three eighths.
+    Pulse,
+    /// The kick on a 3-3-2.
+    Kick332,
+}
+
+/// The pulse's step: three eighths, six sixteenths.
+const PULSE_EVERY: f64 = 6.0;
+/// A 3-3-2 of a 16-step bar's eighths, in steps.
+const KICK_332: [f64; 3] = [0.0, 6.0, 12.0];
+/// The longest loop's bars.
+const BARS: usize = MAX_BARS;
+
+/// dottedPulse on `drums`, a kit layer of `total` steps in bars of 16, the
+/// version `which`, the loop's `seed`; `hand` for the hand kit, `vel` the
+/// pulse's velocity and `low` the 3-3-2's room in dB over the loop's own
+/// kick (`[setting dottedpulse]`); `sounds` as `triplet_kit`'s. Its hits are written after
+/// the loop's own, which keep their order: the loop's kicks a 3-3-2 takes the
+/// place of stay in place, silent, so the wander's draws are the same draws.
+///
+/// The pulse is struck every six steps from the layer's first, unaware of
+/// the bars (the lilt is against them), where the kit has no rim of its own
+/// at the step. The 3-3-2 strikes the bar's first eighth at the loop's own
+/// downbeat kick and the other two at its other kicks' velocity (each a
+/// little apart, on its own stream), with the loop's own kick instrument; a
+/// roll of the kick stays.
+#[allow(clippy::too_many_arguments)] // the kit, the version, and what of the loop it reads
+pub fn dotted_pulse(drums: &mut Drums, which: Dotted, total: f64, seed: u32, hand: bool, (vel, low): (f64, f64), sounds: impl Fn(f64) -> bool, bass_in: impl Fn(f64, f64) -> bool) {
+    const BAR: f64 = 16.0;
+    let mut r = Rng::new(js::salted(seed, DOTTED_SALT, 1));
+    match which {
+        Dotted::Pulse => {
+            let inst = if hand { "tap" } else { "rim" };
+            let mut s = 0.0;
+            while s < total {
+                let own = drums.iter().any(|e| e.step == s && e.micro.is_none() && e.inst == inst && e.vel != 0.0);
+                if !own {
+                    drums.push(DrumEvent { step: s, inst: inst.into(), vel: if sounds(s) { vel } else { 0.0 }, vel0: vel, roll: false, micro: None });
+                }
+                s += PULSE_EVERY;
+            }
+        }
+        Dotted::Kick332 => {
+            let floor = |e: &DrumEvent| !e.roll && is_kick(e.inst.get()) && e.vel0 > 0.0;
+            let mean = |on: bool| {
+                let (sum, n) = drums.iter().filter(|e| floor(e) && ((e.step % BAR == 0.0) == on)).fold((0.0, 0usize), |(s, n), e| (s + e.vel0, n + 1));
+                (n > 0).then(|| sum / js::num(n))
+            };
+            let Some(inst) = KIT.iter().copied().filter(|k| is_kick(k)).max_by_key(|k| drums.iter().filter(|e| floor(e) && e.inst == *k).count()) else { return };
+            if !drums.iter().any(floor) {
+                return;
+            }
+            let down = mean(true).or(mean(false)).unwrap_or(0.84);
+            let other = mean(false).unwrap_or(down * 0.85);
+            // Each bar's own kicks' energy (their velocities as generated,
+            // squared), and the half bars where its floor sounds (a kick, or
+            // the bass), before its kicks are put out.
+            let mut own = [0.0f64; BARS];
+            let mut halves = [false; 2 * BARS];
+            for e in drums.iter().filter(|e| floor(e)) {
+                if let Some(x) = own.get_mut(js::index(js::floor(e.step / BAR))) {
+                    *x += e.vel0 * e.vel0;
+                }
+                if let Some(h) = halves.get_mut(js::index(js::floor(e.step / (BAR / 2.0)))).filter(|_| e.vel != 0.0) {
+                    *h = true;
+                }
+            }
+            for (i, h) in halves.iter_mut().enumerate() {
+                let from = js::num(i) * BAR / 2.0;
+                *h = *h || (from < total && bass_in(from, from + BAR / 2.0));
+            }
+            for e in drums.iter_mut().filter(|e| floor(e)) {
+                e.vel = 0.0;
+                e.vel0 = 0.0;
+            }
+            let room = crate::math::pow(10.0, low / 10.0);
+            let mut bar = 0.0;
+            while bar < total {
+                let was = own.get(js::index(bar / BAR)).copied().unwrap_or(0.0);
+                let mut v = [down, js::min(1.0, other * (0.9 + 0.2 * r.f())), js::min(1.0, other * (0.9 + 0.2 * r.f()))];
+                // Within the low guard: a bar's kicks no more than `low` dB
+                // over the loop's own there, the downbeat kept where it fits.
+                let most = was * room;
+                let rest = most - v[0] * v[0];
+                let after = v[1] * v[1] + v[2] * v[2];
+                if rest <= 0.0 {
+                    let k = crate::math::sqrt(most / (v[0] * v[0] + after));
+                    for x in &mut v {
+                        *x *= k;
+                    }
+                } else if after > rest {
+                    let k = crate::math::sqrt(rest / after);
+                    v[1] *= k;
+                    v[2] *= k;
+                }
+                for (&at, &vel) in KICK_332.iter().zip(v.iter()) {
+                    let step = bar + at;
+                    let floored = halves.get(js::index(js::floor(step / (BAR / 2.0)))).copied().unwrap_or(false);
+                    if step < total && was > 0.0 {
+                        drums.push(DrumEvent { step, inst: inst.into(), vel: if sounds(step) && floored { vel } else { 0.0 }, vel0: vel, roll: false, micro: None });
+                    }
+                }
+                bar += BAR;
+            }
+        }
+    }
+}
+
 /// The wander's ghost hit (`wander::Pass::drift`) in a kit in threes: at
 /// its third, as the loop's own are, from the same draws.
 #[must_use]
@@ -324,5 +447,51 @@ mod tests {
         triplet_kit(&mut d, 16.0, 0.0, 3, |_| true);
         assert_eq!(d.len(), 2);
         assert!(matches!(at(&d, "rim", 0.0)[..], [x] if (x - (4.0 + 8.0 / 3.0)).abs() < 1e-9), "the ghost rim at two thirds");
+    }
+
+    #[test]
+    fn a_pulse_strikes_every_six_steps_where_the_kit_has_no_rim() {
+        let mut d = Drums::new();
+        d.push(hit(0.0, "kick", 0.84));
+        d.push(hit(12.0, "rim", 0.22));
+        dotted_pulse(&mut d, Dotted::Pulse, 32.0, 1, false, (0.5, 1.0), |s| s < 24.0, |_, _| true);
+        let rims: Vec<(f64, f64)> = d.iter().filter(|e| e.inst == "rim").map(|e| (e.step, e.vel)).collect();
+        assert_eq!(rims, vec![(12.0, 0.22), (0.0, 0.5), (6.0, 0.5), (18.0, 0.5), (24.0, 0.0), (30.0, 0.0)], "the loop's own rim at 12, none doubled; silent where the kit is");
+        let mut d = Drums::new();
+        d.push(hit(0.0, "frame", 0.84));
+        dotted_pulse(&mut d, Dotted::Pulse, 16.0, 1, true, (0.5, 1.0), |_| true, |_, _| true);
+        assert_eq!(d.iter().filter(|e| e.inst == "tap").count(), 3, "the hand kit's tap");
+    }
+
+    #[test]
+    fn a_3_3_2_is_written_whole_where_the_loop_plays_a_kick_within_the_low_guard() {
+        let kicks = |d: &Drums| d.iter().filter(|e| e.vel != 0.0 && is_kick(e.inst.get())).map(|e| (e.step, e.vel)).collect::<Vec<_>>();
+        let energy = |v: &[(f64, f64)], bar: f64| v.iter().filter(|e| e.0 >= bar && e.0 < bar + 16.0).map(|e| e.1 * e.1).sum::<f64>();
+        // Four on the floor: three kicks a bar, each bar under its own four.
+        let mut d = Drums::new();
+        for s in [0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0] {
+            d.push(hit(s, "kick", if s % 16.0 == 0.0 { 0.84 } else { 0.7 }));
+        }
+        d.push(hit(4.0, "snare", 0.6));
+        dotted_pulse(&mut d, Dotted::Kick332, 32.0, 9, false, (0.5, 1.0), |_| true, |_, _| false);
+        let k = kicks(&d);
+        assert_eq!(k.iter().map(|e| e.0).collect::<Vec<_>>(), vec![0.0, 6.0, 12.0, 16.0, 22.0, 28.0]);
+        assert!(k.iter().all(|e| e.0 % 16.0 != 0.0 || e.1 == 0.84), "the downbeat at the loop's own");
+        // One kick a bar: the downbeat kept, the other two soft enough that
+        // the bar is within 1 dB of its own; a bar without a kick gets none.
+        let mut d = Drums::new();
+        d.push(hit(0.0, "kick", 0.84));
+        d.push(hit(4.0, "snare", 0.6));
+        d.push(hit(20.0, "snare", 0.6));
+        dotted_pulse(&mut d, Dotted::Kick332, 32.0, 9, false, (0.5, 1.0), |_| true, |_, _| true);
+        let k = kicks(&d);
+        assert_eq!(k.len(), 3, "{k:?}");
+        assert!(energy(&k, 0.0) <= 0.84 * 0.84 * 1.26 + 1e-9 && k[0].1 == 0.84, "{k:?}");
+        // The second half of a bar without the loop's kick or bass there.
+        let mut d = Drums::new();
+        d.push(hit(0.0, "kick", 0.84));
+        d.push(hit(6.0, "kick", 0.7));
+        dotted_pulse(&mut d, Dotted::Kick332, 16.0, 9, false, (0.5, 1.0), |_| true, |_, _| false);
+        assert_eq!(kicks(&d).iter().map(|e| e.0).collect::<Vec<_>>(), vec![0.0, 6.0], "no kick written where the loop's floor rests");
     }
 }
