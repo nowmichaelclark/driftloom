@@ -32,6 +32,7 @@ const opt = (name, fallback) => {
 const STEP_MS = Number(opt('--timeout', '90')) * 1000;
 const props = fs.readFileSync(path.join(HERE, 'gradle.properties'), 'utf8');
 const PACKAGE = opt('--package', (props.match(/^driftloom\.applicationId=(.+)$/m) || [])[1]);
+const transport = (message) => Object.assign(new Error(message), { transport: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(...a);
 
@@ -68,11 +69,18 @@ async function endpoint() {
 }
 
 class Page {
-  constructor(ws) {
+  constructor(ws, problems) {
     this.ws = ws;
     this.next = 1;
     this.waiting = new Map();
-    this.problems = [];
+    this.problems = problems;
+    // The page can be replaced under us: the system relaunches an app's
+    // activity when its package changes (a fresh install finishing its
+    // optimizing does it), and the new WebView is a new page.
+    ws.addEventListener('close', () => {
+      for (const { fail } of this.waiting.values()) fail(transport('the page went away'));
+      this.waiting.clear();
+    });
     ws.addEventListener('message', (m) => {
       const msg = JSON.parse(m.data);
       if (msg.id && this.waiting.has(msg.id)) {
@@ -91,10 +99,11 @@ class Page {
   }
   send(method, params = {}) {
     const id = this.next++;
+    if (this.ws.readyState !== 1) return Promise.reject(transport('the page went away'));
     this.ws.send(JSON.stringify({ id, method, params }));
     // A page that is navigating or gone never answers: fail, don't wait.
     return new Promise((ok, fail) => {
-      const t = setTimeout(() => { this.waiting.delete(id); fail(new Error(`no answer to ${method} in 15 s`)); }, 15000);
+      const t = setTimeout(() => { this.waiting.delete(id); fail(transport(`no answer to ${method} in 15 s`)); }, 15000);
       this.waiting.set(id, { ok: (v) => { clearTimeout(t); ok(v); }, fail: (e) => { clearTimeout(t); fail(e); } });
     });
   }
@@ -108,18 +117,39 @@ class Page {
 
 const base = await endpoint();
 log(`DevTools at ${base}`);
-const target = await until('the page', async () => {
-  const list = await (await fetch(`${base}/json/list`)).json();
-  return list.find((t) => t.type === 'page' && /^https?:\/\/(appassets\.androidplatform\.net|localhost|127\.0\.0\.1)/.test(t.url));
-});
-log(`page: ${target.url}`);
-const ws = new WebSocket(target.webSocketDebuggerUrl);
-await new Promise((ok, fail) => { ws.onopen = ok; ws.onerror = () => fail(new Error('the DevTools socket would not open')); });
-const page = new Page(ws);
-await page.send('Runtime.enable');
-await page.send('Log.enable');
-// Enabling these replays what the page logged before the socket opened.
-const diag = () => page.eval("document.getElementById('diagRefresh').click(); document.getElementById('diagOut').textContent");
+const problems = [];
+let page;
+async function connect() {
+  const target = await until('the page', async () => {
+    const list = await (await fetch(`${base}/json/list`)).json();
+    // The newest page of the app's own origin (a relaunch leaves the old one a moment).
+    return list.filter((t) => t.type === 'page' && /^https?:\/\/(appassets\.androidplatform\.net|localhost|127\.0\.0\.1)/.test(t.url)).pop();
+  });
+  log(`page: ${target.url}`);
+  const ws = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((ok, fail) => { ws.onopen = ok; ws.onerror = () => fail(transport('the DevTools socket would not open')); });
+  const p = new Page(ws, problems);
+  // Enabling these replays what the page logged before the socket opened.
+  await p.send('Runtime.enable');
+  await p.send('Log.enable');
+  return p;
+}
+page = await connect();
+// Every call goes through here: if the page was replaced, find the new one.
+async function ev(expression, gesture = false) {
+  for (let tries = 0; ; tries++) {
+    try {
+      return await page.eval(expression, gesture);
+    } catch (e) {
+      if (!e.transport || tries >= 4) throw e;
+      log(`reconnecting (${e.message})`);
+      try { page.ws.close(); } catch { /* already gone */ }
+      await sleep(1500);
+      page = await connect();
+    }
+  }
+}
+const diag = () => ev("document.getElementById('diagRefresh').click(); document.getElementById('diagOut').textContent");
 const checks = [];
 const check = (name, ok, detail = '') => {
   checks.push(ok);
@@ -127,16 +157,16 @@ const check = (name, ok, detail = '') => {
 };
 let text = '';
 try {
-  await until('the page to be built', () => page.eval("document.readyState === 'complete' && !!document.getElementById('playBtn') && !!document.getElementById('diagOut')"));
+  await until('the page to be built', () => ev("document.readyState === 'complete' && !!document.getElementById('playBtn') && !!document.getElementById('diagOut')"));
   text = await until('the core to load', async () => {
     const t = await diag();
     return /^core: loaded/m.test(t) || /^core: not loaded/m.test(t) ? t : '';
   });
   const line = (t, key) => (t.split('\n').find((l) => l.startsWith(`${key}:`)) || '').trim();
   check('the core loaded', /^core: loaded/m.test(text), line(text, 'core'));
-  check('no plain line in the card\'s place', await page.eval("document.getElementById('plainLine').hidden"));
+  check('no plain line in the card\'s place', await ev("document.getElementById('plainLine').hidden"));
 
-  await page.eval("document.getElementById('playBtn').click()", true);
+  await ev("document.getElementById('playBtn').click()", true);
   text = await until('the player to play', async () => {
     const t = await diag();
     const m = /player: playing, step (\d+)/.exec(line(t, 'engine'));
@@ -150,7 +180,7 @@ try {
   check('Diagnostics shows the core\'s player', /^engine: rust \(the core's player\)/.test(engine), engine);
   check('no error in the engine line', !/none \(|error|fail/i.test(engine));
   check('the player plays on (its step moves)', second !== first, `step ${first}, then ${second}`);
-  check('the page has a loop named', (await page.eval("document.getElementById('loopName').textContent.trim()")).length > 1);
+  check('the page has a loop named', (await ev("document.getElementById('loopName').textContent.trim()")).length > 1);
 } catch (e) {
   check('the check ran to its end', false, e.message);
   try { text = text || (await diag()); } catch { /* the page may be gone */ }
@@ -159,7 +189,7 @@ try {
 log('\n---- Diagnostics ----');
 log(text);
 log('---------------------');
-if (page.problems.length) log(`the page logged ${page.problems.length} problem(s):\n  ${page.problems.join('\n  ')}`);
+if (problems.length) log(`the page logged ${problems.length} problem(s):\n  ${problems.join('\n  ')}`);
 const shot = opt('--shot', '');
 if (shot) {
   try {
@@ -168,8 +198,8 @@ if (shot) {
     log(`screenshot: ${shot}`);
   } catch (e) { log(`no screenshot: ${e.message}`); }
 }
-check('no uncaught error in the page', !page.problems.some((p) => p.startsWith('uncaught')), page.problems.filter((p) => p.startsWith('uncaught')).join('; '));
-ws.close();
+check('no uncaught error in the page', !problems.some((p) => p.startsWith('uncaught')), problems.filter((p) => p.startsWith('uncaught')).join('; '));
+try { page.ws.close(); } catch { /* gone */ }
 const failed = checks.filter((c) => !c).length;
 log(failed ? `\n${failed} check(s) failed` : '\nthe app\'s page plays');
 process.exit(failed ? 1 : 0);
