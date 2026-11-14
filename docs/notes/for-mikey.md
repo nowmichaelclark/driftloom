@@ -64,7 +64,13 @@ the points where the next step is yours.
   in about a tenth of a second where the loop's own voice holds the note, so
   0.65 s sits near silence in a two-bar loop where the tune plays alone. If
   it bothers you, tell the brain; it is a variation's choice to queue, not a
-  number.
+  number. Brain B3 (checked v165): fei-no's stretched return has the same
+  kind of quiet just before its breath, 8:07 to 8:09, about 2 s some 30 dB
+  under the loop, unchanged since v164 (its held chord dies away under a
+  tune at half speed); you'll hear it in the second fei-no clip. And the
+  chord at 5:25 now sounds but dies away within a bar (that voice's own
+  decay), so the last second before the peak is still thin. Both are the
+  variations' and the voice's, not the joins'; say if either bothers you.
 - Batch 6's and 84b's: brain session B2. B4 makes the albums again in the new codes.
 
 ## Ears
