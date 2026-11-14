@@ -17,7 +17,7 @@ use dlcore::{EXTRA, Key, QUANTUM, Tap};
 
 #[test]
 fn the_numbers_are_the_javascripts() {
-    for (name, number) in [("glass", 0), ("tunedKick", 5), ("padSweep", 10), ("padWow", 11), ("widePad", 12), ("arc.shape", 16), ("kick.note", 20), ("echo.beats", 32), ("lateFloor.fade", 33), ("tuning.cents", 34), ("space.room-weight", 48), ("space.room", 50), ("space.wash-cutoff", 79), ("space.wide", 80), ("space.wide-open", 87)] {
+    for (name, number) in [("glass", 0), ("tunedKick", 5), ("padSweep", 10), ("padWow", 11), ("widePad", 12), ("tripletKit", 13), ("arc.shape", 16), ("kick.note", 20), ("echo.beats", 32), ("lateFloor.fade", 33), ("tuning.cents", 34), ("space.room-weight", 48), ("space.room", 50), ("space.wash-cutoff", 79), ("space.wide", 80), ("space.wide-open", 87)] {
         assert_eq!(Pins::number(name), Some(number), "{name}");
     }
     assert_eq!(Pins::number("space.nope"), None);

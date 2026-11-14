@@ -16,9 +16,8 @@
 //! Tests that force one hold a lock of their own for as long as they do
 //! (`tests/sketch.rs`).
 //!
-//! - **tripletKit** (`on`): the kit's hats and ghost hits on the thirds of
-//!   the beat instead of its sixteenths, and the kick on the beat
-//!   ([`triplet_kit`]).
+//! - tripletKit was one until queue item 101d made it a choice of the data
+//!   (`generator::kit`), which `--force tripletKit=on` forces as any other.
 //! - **dottedPulse** (`pulse`, `kick332`): a soft rim every three eighths,
 //!   or the kick on a 3-3-2 ([`dotted_pulse`]).
 //! - **planingSevenths** (`on`): every chord a major seventh, the roots a
@@ -28,7 +27,7 @@
 use core::sync::atomic::{AtomicU8, Ordering};
 
 use crate::generator::js;
-use crate::generator::layers::{DrumEvent, Drums, NO_DRUM};
+use crate::generator::layers::{Drums, NO_DRUM};
 use crate::generator::plan::{Notes, Slot};
 use crate::generator::rng::Rng;
 use crate::generator::theory::scale_pitch;
@@ -40,14 +39,12 @@ pub struct Lever {
 }
 
 /// The levers' numbers in [`LEVERS`].
-pub const TRIPLET_KIT: usize = 0;
-pub const DOTTED_PULSE: usize = 1;
-pub const PLANING_SEVENTHS: usize = 2;
+pub const DOTTED_PULSE: usize = 0;
+pub const PLANING_SEVENTHS: usize = 1;
 
 /// The levers, by number. A name here must not be one of the data's choices
 /// (`Render::force` looks there first).
-pub const LEVERS: [Lever; 3] = [
-    Lever { id: "tripletKit", options: &["today", "on"] },
+pub const LEVERS: [Lever; 2] = [
     Lever { id: "dottedPulse", options: &["today", "pulse", "kick332"] },
     Lever { id: "planingSevenths", options: &["today", "on"] },
 ];
@@ -87,64 +84,10 @@ pub fn named(id: &str) -> Option<&'static str> {
 /// minor third, either way. The harmony draws one a chord.
 pub const PLANING_STEPS: [f64; 4] = [2.0, -2.0, 3.0, -3.0];
 
-/// A beat's steps in the metre's grid: 6 in 6/8, else 4.
-fn beat_of(six_eight: bool) -> f64 {
-    if six_eight { 6.0 } else { 4.0 }
-}
-
-/// Move `e` to where a third of the beat falls, which is a step and the
-/// fraction of the next the sequencer plays it past it (`micro`), or drop it
-/// where it falls on the straight eighth, the middle of the beat.
-fn to_third(e: &mut DrumEvent, beat: f64) {
-    let at = e.step % beat;
-    let third = at * 3.0 / beat;
-    if (third - js::floor(third) - 0.5).abs() < 1e-9 {
-        e.vel = 0.0;
-        e.vel0 = 0.0;
-        return;
-    }
-    let to = js::round(third) * beat / 3.0 + (e.step - at);
-    e.step = js::floor(to);
-    let rest = to - e.step;
-    e.micro = if rest > 1e-9 { Some(rest) } else { None };
-}
-
-/// tripletKit: every hit that is not the kick and not on the beat is put on
-/// a third of the beat (the hats, the ghost hits and the fill's ticks; a
-/// roll keeps the place it was drawn at), the straight eighth (the middle of
-/// the beat) is dropped, and a kick off the beat moves to its beat, or goes
-/// where another kick already sits there. The hats at an odd step still take
-/// the loop's swing, as they do.
-pub fn triplet_kit(drums: &mut Drums, six_eight: bool) {
-    let beat = beat_of(six_eight);
-    for i in 0..drums.len() {
-        let mut e = drums[i];
-        if e.vel == 0.0 || e.roll || e.step % beat == 0.0 {
-            continue;
-        }
-        if e.inst == "kick" || e.inst == "softkick" {
-            let on_beat = e.step - e.step % beat;
-            let taken = drums.iter().any(|o| o.vel != 0.0 && (o.step - on_beat).abs() < 1e-9 && o.inst == e.inst);
-            if taken {
-                e.vel = 0.0;
-                e.vel0 = 0.0;
-            } else {
-                e.step = on_beat;
-            }
-        } else {
-            to_third(&mut e, beat);
-        }
-        drums[i] = e;
-    }
-}
-
-/// The levers that re-time the kit, in order (`Render::part`'s last): tripletKit,
-/// then dottedPulse. `total` is the kit layer's steps, `steps_per_bar` the
-/// loop's. Off, they change nothing.
-pub fn drum_levers(drums: &mut Drums, six_eight: bool, total: f64, steps_per_bar: f64) {
-    if option(TRIPLET_KIT) != 0 {
-        triplet_kit(drums, six_eight);
-    }
+/// The lever that re-times the kit (`Render::part`'s last): dottedPulse.
+/// `total` is the kit layer's steps, `steps_per_bar` the loop's. Off, it
+/// changes nothing.
+pub fn drum_levers(drums: &mut Drums, total: f64, steps_per_bar: f64) {
     let pulse = option(DOTTED_PULSE);
     if pulse != 0 {
         dotted_pulse(drums, pulse, total, steps_per_bar);
@@ -272,6 +215,7 @@ impl Planer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generator::layers::DrumEvent;
 
     fn hit(step: f64, inst: &'static str, vel: f64) -> DrumEvent {
         DrumEvent { step, inst: inst.into(), vel, vel0: vel, ..NO_DRUM }
@@ -279,38 +223,6 @@ mod tests {
 
     fn steps(d: &Drums, inst: &str) -> Vec<(f64, f64)> {
         d.iter().filter(|e| e.vel != 0.0 && e.inst == inst).map(|e| (e.step, e.micro.unwrap_or(0.0))).collect()
-    }
-
-    #[test]
-    fn the_triplet_kit_puts_hats_on_thirds_drops_the_eighth_and_snaps_the_kick() {
-        let mut d = Drums::new();
-        for s in 0..8 {
-            d.push(hit(f64::from(s), "hat", 0.4));
-        }
-        d.push(hit(0.0, "kick", 0.8));
-        d.push(hit(6.0, "kick", 0.6));
-        d.push(hit(7.0, "kick", 0.6));
-        d.push(hit(4.0, "snare", 0.6));
-        triplet_kit(&mut d, false);
-        let hats = steps(&d, "hat");
-        // Per beat: offsets 0, 1 and 3 stay (0, 4/3, 8/3 of a beat's four
-        // steps), the middle one is gone.
-        let at = |step: f64, micro: f64| hats.iter().any(|&(s, m)| (s + m - (step + micro)).abs() < 1e-9);
-        assert!(at(0.0, 0.0) && at(1.0, 1.0 / 3.0) && at(2.0, 2.0 / 3.0) && at(4.0, 0.0) && at(5.0, 1.0 / 3.0) && at(6.0, 2.0 / 3.0));
-        assert_eq!(hats.len(), 6, "{hats:?}");
-        // The kicks at 6 and 7 fall to the beat at 4, once.
-        assert_eq!(steps(&d, "kick"), vec![(0.0, 0.0), (4.0, 0.0)]);
-        assert_eq!(steps(&d, "snare"), vec![(4.0, 0.0)], "the snare was on the beat");
-    }
-
-    #[test]
-    fn the_triplet_kit_in_six_eight_keeps_the_dotted_beats_thirds() {
-        let mut d = Drums::new();
-        for s in 0..6 {
-            d.push(hit(f64::from(s), "hat", 0.4));
-        }
-        triplet_kit(&mut d, true);
-        assert_eq!(steps(&d, "hat"), vec![(0.0, 0.0), (2.0, 0.0), (4.0, 0.0)]);
     }
 
     #[test]

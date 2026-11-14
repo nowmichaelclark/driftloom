@@ -1337,3 +1337,95 @@ mod tools {
         }
     }
 }
+
+// FLAC, the lossless export (queue item 104a; `crate::flac`), with the `flac`
+// feature: not in js/dlplayer.wasm until the app exports (session 20), and in
+// the tools' build (`tools/flac.mjs` holds its bytes to the native encoder's).
+// One encoder an instance, in static memory like the core: a host writes up to
+// `BLOCK` frames a channel at `dl_flac_input` (left, then right), calls
+// `dl_flac_write`, and appends the bytes at `dl_flac_out` to its file.
+#[cfg(feature = "flac")]
+mod flac {
+    use core::cell::UnsafeCell;
+
+    use crate::flac::{BLOCK, Flac, HEADER};
+
+    /// The encoder, the runs a host writes into, and the finished header.
+    struct Encoder(UnsafeCell<(Flac, [f32; 2 * BLOCK], [u8; HEADER])>);
+
+    // Single-threaded, as the core is.
+    unsafe impl Sync for Encoder {}
+
+    static ENCODER: Encoder = Encoder(UnsafeCell::new((Flac::new(), [0.0; 2 * BLOCK], [0; HEADER])));
+
+    fn encoder() -> &'static mut (Flac, [f32; 2 * BLOCK], [u8; HEADER]) {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *ENCODER.0.get() }
+    }
+
+    /// A byte count as the exports give it: -1 for a refusal.
+    fn count(result: Result<&[u8], crate::flac::Refused>) -> i32 {
+        result.map_or(-1, |bytes| i32::try_from(bytes.len()).unwrap_or(-1))
+    }
+
+    /// Start a stream (`Flac::start`): `channels` (1 or 2) of `bits`-bit
+    /// samples (16 or 24) at `rate` Hz. The file's first bytes, its header
+    /// with the totals unknown, are at `dl_flac_out`; their count, or -1 for
+    /// a rate, layout or depth the export does not write.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_start(rate: u32, channels: u32, bits: u32) -> i32 {
+        count(encoder().0.start(rate, channels, bits))
+    }
+
+    /// Where a host writes the next frames: two runs of `BLOCK` floats, the
+    /// left (or mono) channel's first, as the core renders them.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_input() -> *mut f32 {
+        encoder().1.as_mut_ptr()
+    }
+
+    /// Take `frames` frames (at most `BLOCK`) from `dl_flac_input`. The
+    /// bytes to append, a whole frame when a block filled (else none), are at
+    /// `dl_flac_out`; their count, or -1 if not started or too many frames.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_write(frames: u32) -> i32 {
+        let (flac, input, _) = encoder();
+        let n = frames as usize;
+        if n > BLOCK {
+            return -1;
+        }
+        let (left, right) = input.split_at(BLOCK);
+        let (left, right) = (left.get(..n).unwrap_or(&[]), right.get(..n).unwrap_or(&[]));
+        if flac.channels() == 2 { count(flac.write(&[left, right])) } else { count(flac.write(&[left])) }
+    }
+
+    /// End the stream: the last frame's bytes at `dl_flac_out`, their count
+    /// (-1 if not started). Then `dl_flac_header` is the finished header.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_finish() -> i32 {
+        count(encoder().0.finish())
+    }
+
+    /// The bytes the last start, write or finish gave.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_out() -> *const u8 {
+        encoder().0.bytes().as_ptr()
+    }
+
+    /// The file's first `HEADER` (42) bytes as they stand (`Flac::header`):
+    /// after `dl_flac_finish`, with the length and the MD5, for a host to
+    /// write over the start of its file.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_header() -> *const u8 {
+        let (flac, _, head) = encoder();
+        *head = flac.header();
+        head.as_ptr()
+    }
+
+    /// The encoder's whole state in bytes: the memory an export takes, the
+    /// same for a minute or three hours.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_size() -> u32 {
+        u32::try_from(core::mem::size_of::<Flac>()).unwrap_or(u32::MAX)
+    }
+}

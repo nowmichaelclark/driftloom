@@ -10,6 +10,7 @@ use super::canon::{Sink, Writer};
 use super::choices::lean_of;
 use super::data::{self, CHOICES, MAX_BARS, PADSWEEP, PEDAL};
 use super::js;
+use super::kit;
 use super::layers::{self, Bass, BassEvent, BassOut, DrumEvent, Drums, DrumsOut, PedalOut, Texture, TextureEvent};
 use super::list::{List, Maybe, Word};
 use super::melody::{self, Depth, Melody, MelodyOut, Over};
@@ -109,7 +110,7 @@ impl Render {
             forced: [NOT_FORCED; CHOICES_MAX],
             bass_out: BassOut { style: Word::EMPTY, voice: Word::EMPTY },
             pedal: None,
-            drums_out: DrumsOut { kit: Word::EMPTY },
+            drums_out: DrumsOut { kit: Word::EMPTY, written: 0 },
             melody_out: MelodyOut { voice: Word::EMPTY, motif: List::new(), cell: None, centre: None },
             texture_kind: Word::EMPTY,
             depth: Depth { answer: None, shift: None },
@@ -337,6 +338,7 @@ impl Render {
     fn choices_part(&mut self, cx: &Cx, bass_bars: f64) {
         let spb = cx.spb;
         self.draw_choices(cx);
+        self.kit_choices(cx);
 
         self.pedal = None;
         if self.choice("pedalBass") == Some("on") {
@@ -359,6 +361,30 @@ impl Render {
             }
             self.pedal = Some((out, n0));
         }
+    }
+
+    /// Batch 6's kits (queue item 101d, `kit`), where the loop drew them:
+    /// the kit rewritten after the choices are drawn, on today's kit, so
+    /// every draw before is as it was. A hit written where the kit is
+    /// silent (its entry's bars, a gap) is silent, as the loop's own are.
+    fn kit_choices(&mut self, cx: &Cx) {
+        if self.choice("tripletKit") != Some("on") {
+            return;
+        }
+        let spb = cx.spb;
+        let total = layer_bars(cx, Layer::Drums) * spb;
+        let form = self.form;
+        let gaps = self.gaps;
+        let sounds = |step: f64| {
+            let on = form.as_ref().is_none_or(|f| {
+                let sched = &f[Layer::Drums as usize];
+                sched.is_empty() || sched.get(js::index(js::floor(step / spb)) % sched.len()).copied().unwrap_or(false)
+            });
+            on && !gaps.iter().any(|g| step >= g.start && step < g.start + g.len)
+        };
+        let own = self.drums.len();
+        kit::triplet_kit(&mut self.drums, total, cx.spec.swing, cx.spec.seed, sounds);
+        self.drums_out.written = if self.drums.len() > own { own } else { 0 };
     }
 
     fn finish_part(&mut self, cx: &Cx) {
@@ -686,6 +712,9 @@ impl Render {
             // 101b and 101c).
             "organ" | "padWow" | "widePad" => plays_chords,
             "wash" | "arc" => true,
+            // tripletKit (queue item 101d): any loop with a kit, but in 6/8,
+            // whose beat's thirds are the eighths it already plays.
+            "tripletKit" => has_drums && cx.metre != Metre::SixEight,
             "tunedKick" => has_kick,
             "subDuck" => has_kick && has_bass,
             "lateFloor" => {
@@ -1203,11 +1232,11 @@ pub fn fixed3(x: f64) -> f64 {
 // app runs, so that the lines of that code do not move: the player's module
 // holds its panic locations by line (`tools/build-core.sh --check`).
 impl Render {
-    /// The levers that re-time the kit (queue item 99): tripletKit, then
-    /// dottedPulse. Off, they change nothing.
+    /// The lever that re-times the kit (queue item 99): dottedPulse. Off, it
+    /// changes nothing.
     #[cfg(feature = "sketch")]
     fn drum_levers(&mut self, cx: &Cx) {
-        crate::levers::drum_levers(&mut self.drums, cx.metre == Metre::SixEight, layer_bars(cx, Layer::Drums) * cx.spb, cx.spb);
+        crate::levers::drum_levers(&mut self.drums, layer_bars(cx, Layer::Drums) * cx.spb, cx.spb);
     }
 }
 

@@ -339,6 +339,49 @@ typedef struct dl_note {
 size_t dl_player_notes(dl_player *player, uint32_t layer);
 int dl_player_note(dl_player *player, uint32_t layer, size_t index, dl_note *out);
 
+/* FLAC, the lossless export (queue item 104a): an encoder the core carries,
+   for a file of what a player renders, about half a WAV's size. Like a
+   player it takes the host's memory (dl_flac_size() bytes, aligned to
+   dl_flac_align(); about 120 KB, the same for a minute or three hours) and
+   keeps nothing anywhere else. Mono or stereo, 16 or 24 bits, 22,050 to
+   192,000 Hz. A host's export:
+
+       dl_flac *f = dl_flac_start(memory, size, 48000, 2, 24);
+       fwrite(dl_flac_bytes(f, &len), 1, len, file);       // the header
+       while (more) {                                      // a block at a time
+           dl_player_render(p, planes, n);                 // n <= DL_FLAC_BLOCK
+           dl_flac_write(f, planes, n);
+           fwrite(dl_flac_bytes(f, &len), 1, len, file);   // a frame, or nothing
+       }
+       dl_flac_finish(f);
+       fwrite(dl_flac_bytes(f, &len), 1, len, file);       // the last frame
+       dl_flac_header(f, head); fseek(file, 0, SEEK_SET); fwrite(head, 1, 42, file);
+
+   The header written first leaves the length, the frame sizes and the MD5
+   unknown (zeros, which FLAC allows), so the file plays at every moment, an
+   export cut off included; the last step writes them over it. A host that
+   can't seek skips it and loses only the check and the length shown. A
+   float becomes an integer by one rule (rounded, halves away from zero, held
+   to full scale; no dither), so the same render makes the same file on
+   every target. */
+typedef struct dl_flac dl_flac;
+enum { DL_FLAC_BLOCK = 4096, DL_FLAC_HEADER = 42 };
+size_t dl_flac_size(void);
+size_t dl_flac_align(void);
+/* Null if the memory is too small or misaligned, or not 1 or 2 channels of
+   16 or 24 bits at a rate from 22,050 to 192,000 Hz. */
+dl_flac *dl_flac_start(void *memory, size_t bytes, uint32_t rate, uint32_t channels, uint32_t bits);
+/* The bytes the last start, write or finish gave, and their count in `len`;
+   valid until the next call on the encoder. */
+const uint8_t *dl_flac_bytes(dl_flac *encoder, size_t *len);
+/* Up to DL_FLAC_BLOCK frames, a pointer a channel. 0, or -1 if not started,
+   finished, or too many frames. */
+int dl_flac_write(dl_flac *encoder, const float *const *planes, size_t frames);
+int dl_flac_finish(dl_flac *encoder);
+/* The 42 bytes of the file's start into `out`, finished once dl_flac_finish
+   has been called. 0, or -1 for a null encoder or `out`. */
+int dl_flac_header(dl_flac *encoder, uint8_t *out);
+
 #ifdef __cplusplus
 }
 #endif
