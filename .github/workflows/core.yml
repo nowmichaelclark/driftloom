@@ -17,6 +17,11 @@
 #             items 32 and 96), the "nothing moved" guard, in three groups of
 #             its parts: any change to what the core plays fails here until a
 #             PR updates the baseline on purpose
+#   flac      the core's FLAC writer (queue item 104a) on the golden lists
+#             and twenty corpus loops, every way, against the reference
+#             decoder (the runner's `flac`, dev-only): it decodes, nulls
+#             against the WAV of the same render, carries the right MD5, and
+#             the wasm and the C host write the same bytes
 #
 # Everything slower is in nightly.yml and never holds a merge: every target's
 # golden renders, Emscripten, Endless for 24 hours, rendering ahead's sweep
@@ -70,6 +75,19 @@ jobs:
           node-version: 22
       - name: The Node tests, the generation goldens, the balance lock
         run: tools/gate.sh node
+
+  flac:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The reference decoder
+        run: sudo apt-get update && sudo apt-get install -y flac
+      - name: The FLAC writer against it
+        run: tools/gate.sh flac
 
   baseline:
     name: baseline (${{ matrix.parts }})

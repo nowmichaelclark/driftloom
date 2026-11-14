@@ -45,10 +45,19 @@ player = ["web"]
 
 # The measuring tools' build (queue item 96): the player's module with the
 # generator's exports and the tools' own (`src/wasm.rs`, `dl_tools_*`: a
-# request as text, the voice probe, the budget's counts), which
-# tools/build-core.sh --tools writes to core/target/dltools.wasm. Never
-# shipped: the app's modules stay the bytes they were.
-tools = ["generator", "player"]
+# request as text, the voice probe, the budget's counts) and the FLAC
+# encoder's (`dl_flac_*`, tools/flac.mjs), which tools/build-core.sh --tools
+# writes to core/target/dltools.wasm. Never shipped: the app's modules stay
+# the bytes they were.
+tools = ["generator", "player", "flac"]
+
+# FLAC, the lossless export (`src/flac/`, queue item 104a) and its
+# WebAssembly exports (`src/wasm.rs`, `dl_flac_*`). Natively the encoder is
+# always there (the C face's `dl_flac_*` too); in a web build only with this
+# feature, so js/dlplayer.wasm stays the bytes it was until the app exports
+# (session 20 adds it to tools/build-core.sh's player build). The tools'
+# build has it.
+flac = []
 
 # The C face (`src/capi.rs`, `include/dlcore.h`; promise 4, queue item 82): a
 # native static library with the player's calls and the library's panic
