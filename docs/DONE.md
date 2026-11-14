@@ -228,3 +228,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   with headphones, against the Mono switch; **broan-bro** (#39, the late
   kind) from 0:00 to 1:26 as it opens, then held wide. A loop without it
   plays as before, in stereo and mono.
+- #390, the FLAC writer in the core (item 104a, session 19; core only, no
+  version: the app and `js/dlplayer.wasm` are unchanged), preview URL: none
+  needed (nothing in the app moves). The lossless export's encoder,
+  `core/src/flac/`: streaming, a fixed 122,576 bytes for a minute or three
+  hours, the same bytes natively, in wasm and from C. Nothing to listen for
+  yet: session 20 puts it in the app. To check: `dlrender --seed 1234
+  --stereo --flac out.flac` writes a file any player opens; `node
+  tools/flac.mjs` holds 328 renders to `flac` (about a fifth of a WAV at 16
+  bits, a third at 24).
