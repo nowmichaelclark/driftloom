@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The page's own first color (its theme-color, #160830) behind the
+         system bars and while the page loads, so nothing flashes white. -->
+    <color name="page_background">#160830</color>
+
+    <!-- A platform theme, no AppCompat: the activity is one WebView. -->
+    <style name="Theme.App" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/page_background</item>
+        <item name="android:statusBarColor">@color/page_background</item>
+        <item name="android:navigationBarColor">@color/page_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

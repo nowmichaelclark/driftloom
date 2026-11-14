@@ -1,0 +1,112 @@
+# The Android app's CI build (queue item 107a): a debug APK on every PR that
+# touches android/ or the app's files, uploaded for Mikey to install, and a
+# smoke test of it on a headless emulator. Not part of the merge gate yet
+# (docs/QUEUE.md, "Merge policy"); it is run, and read, before a merge.
+#
+# The app's files are the list sw.js keeps (android/app/build.gradle.kts
+# copies them into the APK), so the paths below are that list's folders.
+name: android
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'css/**'
+      - 'js/**'
+      - 'data/**'
+      - 'fonts/**'
+      - 'audio/**'
+      - 'icons/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: the debug APK builds from a clean checkout
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # No binary in the tree but the Gradle wrapper's jar, and that jar is
+      # the one Gradle publishes (F-Droid's rules).
+      - name: the tree and the Gradle wrapper
+        run: sh android/check-tree.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: the Android SDK pieces
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+
+      # The run number is the version code, so each build installs over the
+      # one before it (they share the test signing key,
+      # android/test-signing/README.md).
+      - name: build the debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain assembleDebug -Pdriftloom.versionCode=${{ github.run_number }}
+
+      - name: the APK
+        run: |
+          apk=$(ls android/app/build/outputs/apk/debug/*-debug.apk)
+          ls -l "$apk"
+          echo "### The APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "$(basename "$apk"): $(stat -c %s "$apk") bytes, version code ${{ github.run_number }}" >> "$GITHUB_STEP_SUMMARY"
+          unzip -l "$apk" | tail -1 >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: android/app/build/outputs/apk/debug/*-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  smoke:
+    name: the APK installs, starts and plays on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      # The runner lets the emulator use KVM once its group can.
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: smoke test
+        run: sh android/emulator-smoke.sh "$(ls apk/*-debug.apk)" "$RUNNER_TEMP/smoke.png"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-screenshot
+          path: ${{ runner.temp }}/smoke.png
+          if-no-files-found: ignore
+          retention-days: 14

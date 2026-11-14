@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launcher's label: one of the three lines the new name (session
+         31a) changes. The other two are in android/gradle.properties. -->
+    <string name="app_name">Driftloom</string>
+</resources>
