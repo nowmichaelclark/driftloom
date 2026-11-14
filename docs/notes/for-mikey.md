@@ -85,6 +85,14 @@ the points where the next step is yours.
   of the loop's own there (the downbeat as it was, the other two softer where
   needed) and plays only where the loop's own kick or bass plays, so it never
   fills a gap's silence; 15% of the loops that may have it before the vibes.
+  Found while measuring, not changed (it plays the same with today's kit,
+  since v164): two loops outside the long pieces' corpus run, as Endless arcs
+  (`bars=endless,journey=arc`), have joins the session 16 yardstick calls
+  holes. ta-muin (seed 1337654778) at 2:04 and 9:25, the tune alone over a
+  line 27 dB under the loop; yi-yoar (seed 819045617) at 6:13, a floor out
+  33 dB under (a sparse loop whose kick and bass are most of it). For the
+  brain: the hole check reads its corpus's pieces; these are a queue line if
+  you hear them as holes.
 - **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
   on the branch `long-clips` (its `index.md`), not blind: each place now and
   as at v164. fei-no (seed 2158762586, `bars=256,journey=arc`) from 5:15, the
