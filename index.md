@@ -1,14 +1,22 @@
-# The long pieces: what changed (102f, session 16)
+# The long pieces: no join a hole (102g, session 16b)
 
-Replaces session 15's set (heard and kept by Mikey, 2026-11-14). Only what session 16 changed: the two holes brain B3 measured on v164, each excerpt now (main at v165) and as at v164 (88c98be), not blind and not level-matched: listen for a chord, or a breath with the chords and bass in it, where there was near silence. Rendered by `node tools/longform-clips.mjs OUTDIR --fixes DLRENDER_AT_V164`. Delete this branch after his check.
-
-6 clips, 2:40 in all. Stereo Opus, 96 kbps, the app's wander amount (1), 44.1 kHz. Made by `tools/longform-clips.mjs`.
+6 clips, 2:30 in all. Stereo Opus, 96 kbps, the app's wander amount (1), 44.1 kHz. Made by `tools/longform-clips.mjs`.
 
 | Clip | Piece | Request | From | Seconds | Listen for |
 |---|---|---|---|---|---|
-| fei-no-256-pivot-now.opus | fei-no, 256 bars, one arc | `2158762586 bars=256,journey=arc` | 5:15 | 25 | the key's line into the peak (5:27), now (v165): a chord both keys share struck at 5:25 and held across it |
-| fei-no-256-pivot-v164.opus | fei-no, 256 bars, one arc | `2158762586 bars=256,journey=arc` | 5:15 | 25 | the key's line into the peak (5:27), as at v164: the chord struck at nothing: a bar near silence before the line |
-| fei-no-256-into-close-now.opus | fei-no, 256 bars, one arc | `2158762586 bars=256,journey=arc` | 7:55 | 30 | the stretched return into the close (8:10), now (v165): a breath, half a bar from 8:09, the chords and the bass to it |
-| fei-no-256-into-close-v164.opus | fei-no, 256 bars, one arc | `2158762586 bars=256,journey=arc` | 7:55 | 30 | the stretched return into the close (8:10), as at v164: "the tune alone" over a tune that, stretched, plays nothing there: three seconds near silence |
-| loa-yer-1024-pivot-now.opus | loa-yer, 1,024 bars, adventurous (the vibe draws the arc) | `2975389383 bars=1024,adventurous=0.8` | 3:44 | 25 | the key's line into theme B (3:56), now (v165): a chord both keys share struck at 3:54 and held across it |
-| loa-yer-1024-pivot-v164.opus | loa-yer, 1,024 bars, adventurous (the vibe draws the arc) | `2975389383 bars=1024,adventurous=0.8` | 3:44 | 25 | the key's line into theme B (3:56), as at v164: the chord struck at nothing: the kit and the bass play on, the chords missing for a bar |
+| ta-muin-endless-205-now.opus | ta-muin, Endless, arcs | `1337654778 bars=endless,journey=arc` | 1:50 | 25 | "then alone" into 2:05, now (v169): nothing written: the loop plays on across the line |
+| ta-muin-endless-205-v168.opus | ta-muin, Endless, arcs | `1337654778 bars=endless,journey=arc` | 1:50 | 25 | "then alone" into 2:05, as at v168: the tune alone for the last bar, the mix 20 to 40 dB under the loop there: a hole |
+| ta-muin-endless-926-now.opus | ta-muin, Endless, arcs | `1337654778 bars=endless,journey=arc` | 9:11 | 25 | "then alone" into 9:26, now (v169): nothing written: the loop plays on across the line |
+| ta-muin-endless-926-v168.opus | ta-muin, Endless, arcs | `1337654778 bars=endless,journey=arc` | 9:11 | 25 | "then alone" into 9:26, as at v168: the tune alone for the last bar, the mix 20 to 40 dB under the loop there: a hole |
+| yi-yoar-endless-614-now.opus | yi-yoar, Endless, arcs | `819045617 bars=endless,journey=arc` | 5:59 | 25 | "then floor" into 6:14, now (v169): a breath (every layer out for half the join, the tails ringing) |
+| yi-yoar-endless-614-v168.opus | yi-yoar, Endless, arcs | `819045617 bars=endless,journey=arc` | 5:59 | 25 | "then floor" into 6:14, as at v168: the kit and the bass out for the last half bar, the mix 20 to 40 dB under the loop there: a hole |
+
+## Measured (wander 0, 44.1 kHz, each quarter-second against the loop as itself)
+
+| Place | v168 (dB under the loop, from the join's start) | Now (v169) |
+|---|---|---|
+| ta-muin, "then alone" into 2:05 (124.0 to 125.75 s) | 26 21 27 23 32 30 38: 2.4 beats 25 dB under | 1 1 1 1 1 1 1: none |
+| ta-muin, "then alone" into 9:26 (564.5 to 566.25 s) | 22 22 26 19 30 26 35 32: 2.4 beats | 1 1 1 1 1 1 1 1: none |
+| yi-yoar, "then floor" into 6:14 (373.0 to 374.5 s) | 12 29 34 35 38: 1.6 beats | 11 3 6 9 4: 0.2 beats (the breath's last half beat) |
+
+The same at the app's wander amount (1): ta-muin none, yi-yoar 0.14 beats.
