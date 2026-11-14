@@ -682,8 +682,9 @@ impl Render {
                 }
             }),
             "dubStab" => plays_chords && has_drums && self.notes_per_second(cx) >= 7.0,
-            // padWow: any loop that plays a chord (queue item 101b).
-            "organ" | "padWow" => plays_chords,
+            // padWow and widePad: any loop that plays a chord (queue items
+            // 101b and 101c).
+            "organ" | "padWow" | "widePad" => plays_chords,
             "wash" | "arc" => true,
             "tunedKick" => has_kick,
             "subDuck" => has_kick && has_bass,

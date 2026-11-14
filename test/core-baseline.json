@@ -1785,12 +1785,12 @@
     "sideMidDb": -21.3
    },
    "toask-ha": {
-    "left": "ac5e4258",
-    "right": "2cb8c9db",
+    "left": "322b44a6",
+    "right": "83251411",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -79.5,
-    "sideMidDb": -22.18
+    "foldResidDb": -63.92,
+    "sideMidDb": -14.19
    },
    "theith-yaing": {
     "left": "0df7ac03",
@@ -1969,12 +1969,12 @@
     "sideMidDb": -25.64
    },
    "va-gloung": {
-    "left": "7bb2e5ac",
-    "right": "aea49538",
+    "left": "5f3d5cf6",
+    "right": "1df6447a",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -78.11,
-    "sideMidDb": -16.09
+    "foldResidDb": -76.44,
+    "sideMidDb": -15.64
    },
    "tei-har": {
     "left": "e8fde823",
@@ -2107,12 +2107,12 @@
     "sideMidDb": -21.8
    },
    "toask-ha": {
-    "left": "3423a87a",
-    "right": "65bf442e",
+    "left": "05ea4471",
+    "right": "93c2ab85",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -79.95,
-    "sideMidDb": -22.21
+    "foldResidDb": -65.09,
+    "sideMidDb": -14.35
    },
    "theith-yaing": {
     "left": "83359b79",
@@ -2291,12 +2291,12 @@
     "sideMidDb": -25.81
    },
    "va-gloung": {
-    "left": "1f8742bc",
-    "right": "eb1237f3",
+    "left": "d7a40bd6",
+    "right": "113f03fa",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -79.88,
-    "sideMidDb": -17.2
+    "foldResidDb": -77.87,
+    "sideMidDb": -16.63
    },
    "tei-har": {
     "left": "f0e929bb",
@@ -2431,8 +2431,8 @@
    "toask-ha": {
     "seed": 2265367787,
     "out": "165439f6",
-    "left": "ac5e4258",
-    "right": "2cb8c9db"
+    "left": "322b44a6",
+    "right": "83251411"
    },
    "theith-yaing": {
     "seed": 4213581821,
@@ -2569,8 +2569,8 @@
    "va-gloung": {
     "seed": 3430322586,
     "out": "c7256494",
-    "left": "7bb2e5ac",
-    "right": "aea49538"
+    "left": "5f3d5cf6",
+    "right": "1df6447a"
    },
    "tei-har": {
     "seed": 1266456452,
@@ -2673,8 +2673,8 @@
    "toask-ha": {
     "seed": 2265367787,
     "out": "1f19c290",
-    "left": "3423a87a",
-    "right": "65bf442e"
+    "left": "05ea4471",
+    "right": "93c2ab85"
    },
    "theith-yaing": {
     "seed": 4213581821,
@@ -2811,8 +2811,8 @@
    "va-gloung": {
     "seed": 3430322586,
     "out": "c3d556f3",
-    "left": "1f8742bc",
-    "right": "eb1237f3"
+    "left": "d7a40bd6",
+    "right": "113f03fa"
    },
    "tei-har": {
     "seed": 1266456452,

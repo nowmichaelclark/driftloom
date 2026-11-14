@@ -41,6 +41,7 @@
 // Ranges and draws in 64-bit; a seed carried in a float is a whole number.
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
+use crate::math;
 use crate::rng::{Key, unit};
 
 /// A setting: its name and the range a loop draws it from (`lo` = `hi` for
@@ -117,8 +118,28 @@ pub mod n {
     pub const WASH: usize = 29;
     pub const WASH_FOLLOWS: usize = 30;
     pub const WASH_CUTOFF: usize = 31;
+    /// widePad (queue item 101c; batch 6's #4): the loop's kind, which its
+    /// choice sets (`load::Space::pins`): 0 the baseline, 1 the chords wide
+    /// from the start, 2 the chords opening to it late, over `WIDE_OPEN`.
+    pub const WIDE: usize = 32;
+    /// The chords' spread in a widePad loop, in place of `SPREAD_CHORDS`, and
+    /// the most it is, scaled, in place of `SPREAD_MAX` (the chords' alone).
+    pub const WIDE_CHORDS: usize = 33;
+    pub const WIDE_MAX: usize = 34;
+    /// The width ceiling's targets in a widePad loop (dB), in place of
+    /// `CEILING_BUSY` and the other two: the chords' spread alone stops at
+    /// the baseline's.
+    pub const WIDE_CEILING_BUSY: usize = 35;
+    pub const WIDE_CEILING_SPARSE: usize = 36;
+    pub const WIDE_CEILING_VERY_SPARSE: usize = 37;
+    /// The chords' spread's highpass in a widePad loop (Hz), in place of
+    /// `SPREAD_CUTOFF` (the chords' alone): it keeps the side under 120 Hz
+    /// at -30 dB or lower.
+    pub const WIDE_CUTOFF: usize = 38;
+    /// How long the late kind takes to open, in seconds, drawn per loop.
+    pub const WIDE_OPEN: usize = 39;
     /// How many there are.
-    pub const COUNT: usize = 32;
+    pub const COUNT: usize = 40;
 }
 
 /// The approved stereo baseline (Ears 4, round 4), as the sketch's code has
@@ -159,6 +180,17 @@ pub const SETTINGS: [Setting; n::COUNT] = [
     // which put a sparse loop's lows on the side).
     s("wash-follows-width", 1.0, 1.0),
     s("wash-cutoff", 200.0, 200.0),
+    // widePad (queue item 101c; batch 6's #4, approved by Mikey 2026-11-09):
+    // the Ears 13b sketch's space, the chords' alone. Appended, so no setting
+    // before it moves and no draw does (`Space::draw`'s draw numbers).
+    s("wide", 0.0, 0.0),
+    s("wide-chords", 1.4, 1.4),
+    s("wide-max", 2.0, 2.0),
+    s("wide-ceiling-busy", -4.0, -4.0),
+    s("wide-ceiling-sparse", -5.0, -5.0),
+    s("wide-ceiling-very-sparse", -7.0, -7.0),
+    s("wide-cutoff", 250.0, 250.0),
+    s("wide-open", 60.0, 120.0),
 ];
 
 /// What the core needs to know about a loop to place it: its seed, how
@@ -205,6 +237,16 @@ pub struct Drawn {
     pub spread_delay: f64,
     pub spread_sway: f64,
     pub spread_rate: [f64; 3],
+    /// The chords' spread's highpass (Hz): `spread_cutoff` but in a widePad
+    /// loop (queue item 101c).
+    pub chords_cutoff: f64,
+    /// widePad's late kind (queue item 101c): how long the chords take to
+    /// open, in seconds from the space's start (0: as drawn from the start),
+    /// and where they open from, the baseline's chords' spread and ceiling.
+    /// `spread` and `ceiling` are where they open to; `at` is the way there.
+    pub open: f64,
+    pub from_chords: f64,
+    pub from_ceiling: f64,
 }
 
 /// All zeros: what a core built in a static holds until it starts.
@@ -225,6 +267,10 @@ pub const ZERO: Drawn = Drawn {
     spread_delay: 0.0,
     spread_sway: 0.0,
     spread_rate: [0.0; 3],
+    chords_cutoff: 0.0,
+    open: 0.0,
+    from_chords: 0.0,
+    from_ceiling: 0.0,
 };
 
 /// Nothing placed or widened: the stereo render is mono on each side.
@@ -245,7 +291,38 @@ pub const CENTERED: Drawn = Drawn {
     spread_delay: 0.012,
     spread_sway: 0.0,
     spread_rate: [0.0; 3],
+    chords_cutoff: 200.0,
+    open: 0.0,
+    from_chords: 0.0,
+    from_ceiling: 0.0,
 };
+
+impl Drawn {
+    /// The space `seconds` after it started (queue item 101c): itself, but
+    /// for widePad's late kind, whose chords' spread and width ceiling open
+    /// from the baseline's to the wide ones over `open` seconds, on a smooth
+    /// curve (slow at both ends), the spread evenly in dB and the ceiling in
+    /// dB. Plain arithmetic, a power a call: cheap enough for every block.
+    #[must_use]
+    pub fn at(&self, seconds: f64) -> Drawn {
+        let p = if self.open > 0.0 { (seconds / self.open).max(0.0) } else { 1.0 };
+        if p >= 1.0 {
+            // Open: exactly where it was going.
+            return *self;
+        }
+        let k = p * p * (3.0 - 2.0 * p);
+        let [melody, to, texture] = self.spread;
+        let from = self.from_chords;
+        // Evenly in dB where both ends are a width; straight where the
+        // baseline's is none (a request's pin of 0).
+        let chords = if from > 0.0 && to > 0.0 { from * math::pow(to / from, k) } else { from + (to - from) * k };
+        Drawn {
+            spread: [melody, chords, texture],
+            ceiling: self.from_ceiling + (self.ceiling - self.from_ceiling) * k,
+            ..*self
+        }
+    }
+}
 
 /// The draws' kind (`rng::salt`): the space's own, fixed for good.
 pub const SALT: u32 = 40;
@@ -314,13 +391,17 @@ impl Space {
         if l.wet > self.fixed(n::WET_FROM) {
             width *= self.fixed(n::WET_SCALE);
         }
-        let ceiling = if busy > self.fixed(n::DENSE) {
-            self.fixed(n::CEILING_BUSY)
-        } else if busy > self.fixed(n::SPARSE) {
-            self.fixed(n::CEILING_SPARSE)
-        } else {
-            self.fixed(n::CEILING_VERY_SPARSE)
+        // The ceiling by how busy the loop is: busy, sparse, very sparse.
+        let class = |of: [usize; 3]| {
+            if busy > self.fixed(n::DENSE) {
+                self.fixed(of[0])
+            } else if busy > self.fixed(n::SPARSE) {
+                self.fixed(of[1])
+            } else {
+                self.fixed(of[2])
+            }
         };
+        let ceiling = class([n::CEILING_BUSY, n::CEILING_SPARSE, n::CEILING_VERY_SPARSE]);
         // Which side the light kit goes to; a light texture and glass go to
         // the other.
         let side = if u(0) < 0.5 { -1.0 } else { 1.0 };
@@ -333,11 +414,29 @@ impl Space {
         let place = -side * width * pick(n::TEXTURE_PLACE) * ens_w;
         let rate = self.fixed(n::SPREAD_RATE);
         let step = self.fixed(n::SPREAD_RATE_STEP);
+        // widePad (queue item 101c): the chords' spread past the baseline's
+        // range and the most, the ceiling raised and the chords' side kept
+        // above 250 Hz, all scaled by the loop's width as the baseline's are,
+        // so a sparse loop stays at the narrow end. The late kind starts at
+        // the baseline's and opens to it (`Drawn::at`).
+        let chords = spread(n::SPREAD_CHORDS);
+        let kind = self.fixed(n::WIDE);
+        let wide = kind > 0.0;
+        let (wide_chords, wide_ceiling) = if wide {
+            let most = self.fixed(n::WIDE_MAX);
+            (
+                (width * self.fixed(n::WIDE_CHORDS) * scale).min(most) * ens_w,
+                class([n::WIDE_CEILING_BUSY, n::WIDE_CEILING_SPARSE, n::WIDE_CEILING_VERY_SPARSE]),
+            )
+        } else {
+            (chords, ceiling)
+        };
+        let late = kind > 1.0;
         Drawn {
             width,
-            ceiling,
+            ceiling: wide_ceiling,
             room: width * pick(n::ROOM) * room_w,
-            spread: [spread(n::SPREAD_MELODY), spread(n::SPREAD_CHORDS), texture_spread],
+            spread: [spread(n::SPREAD_MELODY), wide_chords, texture_spread],
             kit: side * width * pick(n::KIT) * ens_w,
             kit_soft: self.fixed(n::KIT_SOFT),
             texture: if l.light { place } else { 0.0 },
@@ -352,6 +451,10 @@ impl Space {
             // Melody, chords, texture: the sketch's rates by its channel
             // order (chords, melody, texture).
             spread_rate: [rate + step, rate, rate + 2.0 * step],
+            chords_cutoff: if wide { self.fixed(n::WIDE_CUTOFF) } else { self.fixed(n::SPREAD_CUTOFF) },
+            open: if late { pick(n::WIDE_OPEN).max(0.0) } else { 0.0 },
+            from_chords: chords,
+            from_ceiling: ceiling,
         }
     }
 }
@@ -394,6 +497,47 @@ mod tests {
         let at = |busy, wet| space.draw(&Loop { seed: 5, busy, wet, light: false }).width;
         assert!((at(0.0, 0.0) - 0.25).abs() < 1e-12 && (at(9.0, 0.0) - 1.0).abs() < 1e-12);
         assert!((at(9.0, 0.8) - 0.75).abs() < 1e-12);
+    }
+
+    /// widePad (queue item 101c): the chords alone wider, by the loop's
+    /// width (a sparse loop at the narrow end), the ceiling raised and the
+    /// chords' side above 250 Hz; every other amount as the baseline draws
+    /// it. The late kind opens from the baseline's to the same over 60-120 s,
+    /// smoothly, and holds there.
+    #[test]
+    fn wide_pad_widens_the_chords_alone_and_the_late_kind_opens_to_it() {
+        let base = Space::new();
+        let mut on = Space::new();
+        assert!(on.range(n::WIDE, 1.0, 1.0));
+        let mut late = Space::new();
+        assert!(late.range(n::WIDE, 2.0, 2.0));
+        for seed in 1..300u32 {
+            let l = Loop { seed, busy: f64::from(seed % 9), wet: f64::from(seed % 10) / 10.0, light: seed % 3 == 0 };
+            let (b, w, s) = (base.draw(&l), on.draw(&l), late.draw(&l));
+            assert_eq!((b.open, b.chords_cutoff, b.from_chords, b.from_ceiling), (0.0, 200.0, b.spread[1], b.ceiling));
+            // The chords: 1.4 of the width's, scaled, against 0.3-0.5.
+            assert!((w.spread[1] - (w.width * 1.4 * 1.6).min(2.0) * 0.5).abs() < 1e-12, "{}", w.spread[1]);
+            assert!(w.spread[1] >= b.spread[1] * 2.5 - 1e-12 && w.spread[1] <= 1.0);
+            let raised = match b.ceiling as i32 { -7 => -4.0, -9 => -5.0, _ => -7.0 };
+            assert!((w.ceiling - raised).abs() < 1e-12 && (w.chords_cutoff - 250.0).abs() < 1e-12 && w.open == 0.0);
+            // Nothing else moves.
+            let same = |d: &Drawn| Drawn { spread: [d.spread[0], 0.0, d.spread[2]], ceiling: 0.0, chords_cutoff: 0.0, open: 0.0, ..*d };
+            assert_eq!(same(&w), same(&b));
+            assert_eq!(w.at(1e9), w);
+            // Late: the wide one's destination, from the baseline's.
+            assert!((60.0..=120.0).contains(&s.open), "{}", s.open);
+            assert_eq!(Drawn { open: 0.0, ..s }, w);
+            let start = s.at(0.0);
+            assert!((start.spread[1] - b.spread[1]).abs() < 1e-12 && (start.ceiling - b.ceiling).abs() < 1e-12);
+            assert_eq!(s.at(s.open), Drawn { ..s });
+            let mut last = start.spread[1];
+            for k in 1..=100 {
+                let now = s.at(s.open * f64::from(k) / 100.0);
+                assert!(now.spread[1] >= last - 1e-12 && now.ceiling >= start.ceiling - 1e-12);
+                last = now.spread[1];
+            }
+            assert!((last - w.spread[1]).abs() < 1e-12);
+        }
     }
 
     #[test]

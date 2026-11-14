@@ -3,7 +3,7 @@
 // `readRequest`). The game's and the ears' levers: any of item 54's choices
 // to one of its options, and the settings each choice draws by (the arc, the
 // tuned kick, subDuck, lateFloor, padSweep), the echo's time, the loop's
-// tuning (0 holds it at A440) and the space recipe's 32 (core/src/space.rs). `core/src/generator/request.rs` reads the
+// tuning (0 holds it at A440) and the space recipe's 40 (core/src/space.rs). `core/src/generator/request.rs` reads the
 // same table, in the same order.
 //
 // **A pin chooses within what the loop could draw.** Every setting is held
@@ -47,6 +47,13 @@ export const SPACE_SETTINGS = [
   ['ceiling-busy', -7, -7], ['ceiling-sparse', -9, -9], ['ceiling-very-sparse', -12, -12],
   ['dense', 0.5, 0.5], ['sparse', 0.15, 0.15], ['wash', 1, 1],
   ['wash-follows-width', 1, 1], ['wash-cutoff', 200, 200],
+  // widePad's (item 101c): its kind, which its choice sets (0 the baseline,
+  // 1 wide, 2 opening late; pin the choice, `widePad=late`, to have it), the
+  // chords' spread, its most, the ceilings and the chords' cutoff, and how
+  // long the late kind takes to open, in seconds.
+  ['wide', 0, 0], ['wide-chords', 1.4, 1.4], ['wide-max', 2, 2],
+  ['wide-ceiling-busy', -4, -4], ['wide-ceiling-sparse', -5, -5], ['wide-ceiling-very-sparse', -7, -7],
+  ['wide-cutoff', 250, 250], ['wide-open', 60, 120],
 ];
 
 const periods = Object.values(ARC.period);

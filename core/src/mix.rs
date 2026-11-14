@@ -301,8 +301,10 @@ impl Side {
         self.sway = d.spread_sway;
         let r = f(self.rate);
         let nyquist = 0.45 * self.rate;
-        for hp in &mut self.sway_hp {
-            hp.set(Kind::Highpass, f(d.spread_cutoff.min(nyquist)), Q, 0.0, r);
+        // The chords' own in a widePad loop (queue item 101c; `SPREAD`'s
+        // order: melody, chords, texture), the spread's otherwise.
+        for (hp, cut) in self.sway_hp.iter_mut().zip([d.spread_cutoff, d.chords_cutoff, d.spread_cutoff]) {
+            hp.set(Kind::Highpass, f(cut.min(nyquist)), Q, 0.0, r);
         }
         for hp in &mut self.place_hp {
             hp.set(Kind::Highpass, f(d.place_cutoff.min(nyquist)), Q, 0.0, r);
@@ -312,6 +314,13 @@ impl Side {
         if self.wash_cut {
             self.wash_hp.set(Kind::Highpass, f(d.wash_cutoff.min(nyquist)), Q, 0.0, r);
         }
+    }
+
+    /// The amounts alone, glided to from the next block: a space that moves
+    /// over the loop (widePad's late kind, queue item 101c), its filters and
+    /// lines as they are.
+    fn amounts(&mut self, d: &Drawn) {
+        self.want = amounts(d);
     }
 
     /// The side of the block from `block`, from the channels after their
@@ -515,6 +524,12 @@ impl Mix {
     /// block mixed with a side.
     pub fn set_space(&mut self, drawn: &Drawn) {
         self.side.set(drawn);
+    }
+
+    /// The loop's space moving (`space::Drawn::at`): its widths glided to
+    /// from the next block, its filters and lines left as they are.
+    pub fn move_space(&mut self, drawn: &Drawn) {
+        self.side.amounts(drawn);
     }
 
     /// The side from silence, gliding to `drawn` (queue item 66): a stereo
