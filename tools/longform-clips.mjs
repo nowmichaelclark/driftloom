@@ -11,11 +11,14 @@
 //
 //   node tools/longform-clips.mjs OUTDIR [--before PATH] [--only NAME]
 //   node tools/longform-clips.mjs OUTDIR --fixes PATH
+//   node tools/longform-clips.mjs OUTDIR --holes PATH
 //
 // `--fixes` makes session 16's shorter set instead (102f): only what
 // changed, the two holes brain B3 found, each excerpt now and as PATH (a
 // dlrender built at v164, 88c98be) plays it, not blind and not
-// level-matched: a chord now sounds where a hole was.
+// level-matched: a chord now sounds where a hole was. `--holes PATH` makes
+// session 16b's (102g) the same way: the three holes session 05 found on
+// Endless arcs, now and as PATH (a dlrender built at v168) plays them.
 //
 // OUTDIR gets NAME.opus (stereo, 96 kbps, ffmpeg's libopus) for each clip,
 // and index.md and index.json: each clip's piece (seed and request), where
@@ -31,20 +34,21 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pieceMap } from './gen-lib.mjs';
+import { pieceMap, playedJoins } from './gen-lib.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DLRENDER = path.join(ROOT, 'core', 'target', 'release', 'examples', 'dlrender');
 const args = process.argv.slice(2);
 const value = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
-const OUT = args.find((a, i) => !a.startsWith('--') && !['--before', '--only', '--fixes'].includes(args[i - 1]));
+const OUT = args.find((a, i) => !a.startsWith('--') && !['--before', '--only', '--fixes', '--holes'].includes(args[i - 1]));
 if (!OUT) {
   console.error('usage: node tools/longform-clips.mjs OUTDIR [--before PATH] [--only NAME]');
   process.exit(2);
 }
 const BEFORE = value('--before');
 const ONLY = value('--only');
-const FIXES = value('--fixes');
+const HOLES = value('--holes');
+const FIXES = value('--fixes') ?? HOLES;
 fs.mkdirSync(OUT, { recursive: true });
 if (process.env.LONGFORM_BUILD !== 'no') execFileSync('cargo', ['build', '--release', '--locked', '--example', 'dlrender'], { cwd: path.join(ROOT, 'core'), stdio: 'ignore' });
 
@@ -233,13 +237,31 @@ const FIXED = [
   },
 ];
 
+// Session 16b's set (102g): the three holes session 05 found on Endless
+// arcs, each from its unit's line back, the join as the map plans it and as
+// it is played now (`playedJoins`).
+const HOLED = [
+  { seed: 1337654778, request: 'bars=endless,journey=arc', title: 'ta-muin, Endless, arcs', sections: [3, 17], name: 'ta-muin-endless' },
+  { seed: 819045617, request: 'bars=endless,journey=arc', title: 'yi-yoar, Endless, arcs', sections: [15], name: 'yi-yoar-endless' },
+];
+const said = { alone: 'the tune alone', floor: 'the kit and the bass out', breath: 'a breath (every layer out for half the join, the tails ringing)', glide: 'nothing written: the loop plays on across the line', pivot: 'a chord both keys share', fill: 'a fill' };
+for (const h of HOLED) {
+  h.clips = (p) => h.sections.map((n) => {
+    const unit = p.units.filter((u) => u.section === n).at(-1);
+    const line = unit.t + unit.bars * p.bar;
+    const played = playedJoins(h.seed, h.request, n, 1).units.at(-1).join;
+    return { name: `${h.name}-${mmss(line).replace(':', '')}`, at: line - 15, len: 25, where: `"then ${unit.join}" into ${mmss(line)}`, now: said[played] ?? played, then: `${said[unit.join]} for the last ${unit.join === 'floor' ? 'half bar' : 'bar'}, the mix 20 to 40 dB under the loop there: a hole` };
+  });
+}
+
 const index = [];
 if (FIXES) {
-  for (const piece of FIXED) {
+  for (const piece of HOLES ? HOLED : FIXED) {
     const head = pieceMap(piece.seed, piece.request, 0, 1).form;
-    const p = timed(piece.seed, piece.request, Math.min(head.sections, 64));
+    const p = timed(piece.seed, piece.request, Math.min(head.sections ?? 64, 64));
     for (const c of piece.clips(p)) {
-      for (const [side, bin, when, what] of [['now', DLRENDER, 'now (v165)', c.now], ['v164', FIXES, 'as at v164', c.then]]) {
+      const [was, ver] = HOLES ? ['v168', 'v169'] : ['v164', 'v165'];
+      for (const [side, bin, when, what] of [['now', DLRENDER, `now (${ver})`, c.now], [was, FIXES, `as at ${was}`, c.then]]) {
         const wav = render(bin, piece.seed, piece.request, c.at + c.len + 2);
         const name = `${c.name}-${side}`;
         cut(wav, name, c.at, c.len);
@@ -287,6 +309,6 @@ if (BEFORE && !ONLY && !FIXES) {
 fs.rmSync(tmp, { recursive: true, force: true });
 const total = index.reduce((s, c) => s + c.seconds, 0);
 fs.writeFileSync(path.join(OUT, 'index.json'), `${JSON.stringify(index, null, 2)}\n`);
-const md = [FIXES ? '# The long pieces: what changed (102f, session 16)' : '# The long pieces: the listening set (102e, session 15)', '', `${index.length} clips, ${mmss(total)} in all. Stereo Opus, 96 kbps, the app's wander amount (1), 44.1 kHz. Made by \`tools/longform-clips.mjs\`.`, '', '| Clip | Piece | Request | From | Seconds | Listen for |', '|---|---|---|---|---|---|', ...index.map((c) => `| ${c.file} | ${c.piece} | \`${c.seed} ${c.request}${c.track ? ` track ${c.track}` : ''}\` | ${c.from} | ${c.seconds} | ${c.what} |`), ''];
+const md = [HOLES ? '# The long pieces: no join a hole (102g, session 16b)' : FIXES ? '# The long pieces: what changed (102f, session 16)' : '# The long pieces: the listening set (102e, session 15)', '', `${index.length} clips, ${mmss(total)} in all. Stereo Opus, 96 kbps, the app's wander amount (1), 44.1 kHz. Made by \`tools/longform-clips.mjs\`.`, '', '| Clip | Piece | Request | From | Seconds | Listen for |', '|---|---|---|---|---|---|', ...index.map((c) => `| ${c.file} | ${c.piece} | \`${c.seed} ${c.request}${c.track ? ` track ${c.track}` : ''}\` | ${c.from} | ${c.seconds} | ${c.what} |`), ''];
 fs.writeFileSync(path.join(OUT, 'index.md'), md.join('\n'));
 console.log(`longform-clips: ${index.length} clips, ${mmss(total)} in all, in ${OUT}`);

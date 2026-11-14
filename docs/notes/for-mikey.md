@@ -85,16 +85,27 @@ the points where the next step is yours.
   of the loop's own there (the downbeat as it was, the other two softer where
   needed) and plays only where the loop's own kick or bass plays, so it never
   fills a gap's silence; 15% of the loops that may have it before the vibes.
-  Found while measuring, not changed (it plays the same with today's kit,
-  since v164): two loops outside the long pieces' corpus run, as Endless arcs
-  (`bars=endless,journey=arc`), have joins the session 16 yardstick calls
-  holes. ta-muin (seed 1337654778) at 2:04 and 9:25, the tune alone over a
-  line 27 dB under the loop; yi-yoar (seed 819045617) at 6:13, a floor out
-  33 dB under (a sparse loop whose kick and bass are most of it). For the
-  brain: the hole check reads its corpus's pieces; these are a queue line if
-  you hear them as holes.
+  The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
+  are fixed in 102g, below.
+- **No join a hole, on any piece (102g, session 16b, v169, PR #395):** six
+  clips, 2:30, on the branch `long-clips` (its `index.md`, which replaces
+  session 16's set; that one is in the branch's history), not blind: each
+  place now and as at v168, as Endless arcs (`bars=endless,journey=arc`).
+  ta-muin (seed 1337654778) from 1:50, the line into 2:05, and from 9:11,
+  the line into 9:26: at v168 the tune alone for the last bar, a stab's one
+  note fading, the mix 19 to 38 dB under the loop for about two seconds;
+  now nothing is written there and the loop plays on across the line.
+  yi-yoar (seed 819045617) from 5:59, the line into 6:14: at v168 the kit and
+  the bass out for half a bar, 29 to 38 dB under; now nothing written there
+  either. Listen for: no gap at those lines, and
+  nothing else different (every other join is as you kept it but where it
+  would have been a hole: 704 of about 30,000 written joins over the
+  corpus's maps, most of them breaths that become glides; the PR has the
+  count by kind). Taste call for your ears: a hole falls back to a breath where that
+  would not be one, else to nothing written, never to a new kind of join.
 - **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
-  on the branch `long-clips` (its `index.md`), not blind: each place now and
+  once on the branch `long-clips` (replaced by 102g's set; they are in the
+  branch's history, commit cf3576c), not blind: each place now and
   as at v164. fei-no (seed 2158762586, `bars=256,journey=arc`) from 5:15, the
   key's line into the peak at 5:27: a chord now sounds from 5:25 where v164
   had a bar near silence; and from 7:55, the stretched return into the close

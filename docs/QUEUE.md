@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-14:** `main` is at v168 (session 01 done: v154 the tools
+**Status, 2026-11-14:** `main` is at v169 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -55,7 +55,9 @@ v166, widePad, both kinds, #387); hands session 19 done alongside
 (2026-11-14: 104a, the FLAC writer in the core, #390; the app unchanged);
 hands session 25 done alongside (2026-11-14: 107a, the Android project and its
 CI build, `android/`, #389; no app change); hands session 05 done (2026-11-14: 101d, v167 tripletKit #391, v168
-dottedPulse #392); next: 06 onward, and Mikey's testers' pastes
+dottedPulse #392); hands session 16b done (2026-11-14: 102g, v169, no join
+a hole on any piece, #395; the listening set on `long-clips`); next: 06
+onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -485,6 +487,15 @@ under the loop for about 2 s; yi-yoar 819045617 at 6:14, a floor out 33 to
 the loop. A join that would be a hole falls back (decided from the unit's
 notes, at a flat cost); every other join stays as Mikey kept it; the
 yardstick plays at least 200 pieces' joins, Endless arcs among them.
+**Done** (session 16b, v169): a tune alone, a floor out or a breath is read
+from its notes when its unit is made (`Heard::under`: each voice's loudness
+over a note's life, `[longform loudness]`, `tools/voice-loudness.mjs`; the
+echoes as the mix sends them) and falls back to a breath, or to a glide,
+where it would leave the mix 12 dB under (`[longform joins] hole`); over
+200 pieces rendered, 88 holes before and none after (but three half-beat
+breaths, the kind Mikey kept), and 704 of 29,729 written joins over the
+corpus's maps changed, most of them breaths become glides. The wide run is the nightly's
+(`tools/longform-holes.mjs`), the three places in `tools/longform.mjs`.
 
 **102e done** (session 15, v164; #381, #382): every line where a unit meets
 the next and something changes is written, chosen by what changes and the

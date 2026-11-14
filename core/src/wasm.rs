@@ -501,10 +501,11 @@ mod generator {
 
     /// The joins of the loaded loop's piece as played (session 16), at
     /// `dl_gen_text`: a list of a section's steps and then a line a unit
-    /// (`[section, phrase, kind, from, to, out, rests]`: the join `heard`
+    /// (`[section, phrase, kind, from, to, out, rests, under]`: the join `heard`
     /// plays, where it begins and the unit ends, in the section's steps, the
     /// layers it takes out and the layers the unit rests, a bit each, in
-    /// `LAYERS`' order), for `count` sections from section
+    /// `LAYERS`' order, and how far under the unit the join's notes leave
+    /// the mix, `Unit::under`, session 16b), for `count` sections from section
     /// `from`, each drawn at the wander's amount 0. The map (`dl_gen_map`)
     /// names the plan's join; this, what the loop can play of it (a tune
     /// alone over a tune silent there is a breath, a breath with nothing to
@@ -536,6 +537,7 @@ mod generator {
                 w.num(f64::from(u.out));
                 let rests = crate::generator::LAYERS.iter().enumerate().filter(|&(_, &l)| u.rests(l)).fold(0u8, |m, (i, _)| m | 1 << i);
                 w.num(f64::from(rests));
+                w.num(u.under);
                 w.end_list();
             }
         }

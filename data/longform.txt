@@ -242,3 +242,89 @@ fill = 0.35 0.65
 # A pivot's chord, struck on the join's first step, holds this many beats
 # past the line.
 hold = 1
+# Never a hole (session 16b): where what a join keeps would leave the mix
+# this many dB under the unit there, read from the notes (the voices'
+# loudness below, `Heard::under`), it falls back to a breath, or where that
+# would too, to a glide.
+hole = 12
+
+[longform loudness]
+# Each voice's loudness in the mix over a note's life (session 16b), by
+# which a join knows from the notes alone how much of the mix the layers it
+# keeps carry (`Heard::share`): a note held at velocity 1, its mean power in
+# dB over 0 to 1/8 s, to 1/4, 1/2, 1, 2 and 4 s from its start, through its
+# layer's own path and the channel's gain. Measured, not tuned:
+# `node tools/voice-loudness.mjs` writes these lines and `--check` holds
+# them to the voices. A voice not here is heard as its layer's first.
+drums.kick = -12 -37 -67 -99 -99 -99
+drums.softkick = -11 -39 -73 -99 -99 -99
+drums.snare = -29 -91 -99 -99 -99 -99
+drums.clap = -29 -80 -99 -99 -99 -99
+drums.rim = -46 -99 -99 -99 -99 -99
+drums.hat = -46 -99 -99 -99 -99 -99
+drums.ohat = -40 -73 -99 -99 -99 -99
+drums.shaker = -44 -99 -99 -99 -99 -99
+drums.frame = -12 -36 -64 -99 -99 -99
+drums.tap = -27 -89 -99 -99 -99 -99
+drums.jingle = -44 -99 -99 -99 -99 -99
+drums.ojingle = -34 -61 -91 -99 -99 -99
+bass.sub = -27 -27 -28 -28 -29 -29
+bass.round = -23 -24 -24 -25 -26 -26
+bass.pluckbass = -21 -20 -23 -27 -27 -27
+bass.moogbass = -24 -24 -24 -25 -25 -25
+bass.fifths = -27 -26 -25 -25 -25 -26
+bass.rhodesbass = -21 -21 -22 -24 -26 -33
+chords.keys = -24 -24 -25 -27 -29 -36
+chords.pad = -43 -39 -33 -25 -29 -42
+chords.harp = -23 -24 -25 -28 -30 -41
+chords.accordion = -35 -32 -33 -35 -33 -32
+chords.piano = -25 -25 -26 -27 -30 -37
+chords.rhodes = -24 -24 -25 -27 -29 -36
+chords.moogpad = -43 -39 -33 -25 -29 -42
+chords.softpad = -50 -45 -40 -32 -28 -39
+chords.analogpad = -45 -41 -36 -27 -30 -43
+chords.prepared = -26 -27 -28 -28 -33 -46
+chords.musicbox = -24 -25 -25 -27 -30 -38
+chords.kalimba = -25 -26 -29 -34 -48 -77
+chords.marimba = -24 -26 -27 -31 -39 -65
+chords.vowel = -40 -31 -28 -32 -38 -50
+chords.hum = -44 -36 -33 -35 -40 -54
+chords.choir = -35 -30 -27 -31 -37 -48
+chords.templebell = -23 -26 -32 -38 -46 -67
+chords.tubular = -30 -32 -35 -42 -55 -77
+chords.stab = -39 -79 -99 -99 -99 -99
+chords.nylon = -29 -32 -35 -40 -49 -64
+melody.pluck = -27 -27 -27 -27 -27 -35
+melody.bell = -20 -20 -21 -22 -25 -33
+melody.keys = -20 -20 -21 -22 -25 -31
+melody.saw = -27 -26 -26 -26 -26 -32
+melody.ocarina = -28 -27 -27 -27 -27 -29
+melody.flute = -28 -27 -27 -27 -27 -29
+melody.harp = -20 -19 -21 -22 -26 -36
+melody.musicbox = -20 -20 -21 -22 -25 -33
+melody.fiddle = -30 -27 -27 -27 -27 -28
+melody.accordion = -29 -25 -25 -28 -28 -28
+melody.piano = -21 -21 -22 -23 -26 -32
+melody.sine = -37 -28 -22 -23 -30 -44
+melody.rhodes = -20 -20 -21 -22 -25 -31
+melody.moog = -28 -27 -27 -27 -27 -30
+melody.whistle = -29 -28 -28 -28 -28 -29
+melody.softpad = -49 -43 -33 -27 -24 -35
+melody.analoglead = -26 -27 -25 -26 -26 -29
+melody.prepared = -21 -22 -23 -25 -29 -41
+melody.celeste = -21 -21 -22 -23 -26 -32
+melody.kalimba = -20 -22 -24 -30 -44 -75
+melody.marimba = -20 -21 -23 -26 -35 -62
+melody.vowel = -35 -27 -24 -27 -34 -44
+melody.hum = -40 -32 -28 -31 -36 -50
+melody.choir = -33 -30 -24 -25 -32 -42
+melody.templebell = -21 -26 -29 -33 -45 -65
+melody.tubular = -25 -28 -31 -38 -51 -74
+melody.stab = -35 -74 -99 -99 -99 -99
+melody.panflute = -28 -27 -27 -27 -27 -29
+texture.bell = -21 -21 -22 -23 -26 -33
+texture.swell = -47 -39 -33 -27 -21 -25
+texture.drop = -56 -99 -99 -99 -99 -99
+texture.chime = -21 -21 -22 -23 -26 -33
+texture.wind = -61 -52 -46 -40 -35 -35
+texture.waves = -51 -38 -30 -27 -21 -26
