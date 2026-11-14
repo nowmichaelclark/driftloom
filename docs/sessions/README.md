@@ -135,6 +135,13 @@ queue's standing rules and merge policy, and `core/AGENTS.md`.
   constant and the manifest; Android's one resource; fastlane's title),
   never into new text where the rename would have to hunt for it, and never
   into the code format (session 22).
+- **The long pieces hold** (brain B3, 2026-11-14: Mikey kept them as they
+  are). A sound change that moves what a loop plays (a note, a hit, a
+  velocity: not a width or a tone) runs the full `node tools/longform.mjs`
+  (about an hour; the joins' hole yardstick, the endings and the arcs as
+  played) and keeps every check it kept on `main`; the joins read the kit
+  (a fill is the loop's own snare or rim, a floor out its kit and bass), so
+  a new kit is heard there too. Say in the PR what moved.
 - **Sound items** name, in their Done line, two corpus loops (corpus seed
   20261009) that draw the new sound, with a time, so the brain can build
   the album without searching.
