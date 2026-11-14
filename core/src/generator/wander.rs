@@ -18,6 +18,7 @@ use super::choices;
 use super::data::FLOORDROP;
 use super::heard::{Heard, Piece};
 use super::js;
+use super::kit;
 use super::list::{Empty, Maybe};
 use super::layers::{self, BASS_MAX, BassEvent, DRUMS_MAX, DrumEvent};
 use super::melody::{MELODY_MAX, MelodyEvent};
@@ -29,6 +30,9 @@ use super::Layer;
 /// Which stream of a loop's seed is its wander (what the ears' albums have
 /// always used for it).
 pub const DRIFT_SALT: u32 = 0x5eed_1e55;
+/// The stream the hats a kit choice wrote flicker on (`drift`), a salt on
+/// the wander's.
+const WRITTEN_SALT: u32 = 0x6b69_7433;
 /// How far a loop wanders, the app's default (`Engine.driftAmount`): the
 /// goldens' passes are drawn at it.
 pub const AMOUNT: f64 = 1.0;
@@ -137,7 +141,8 @@ impl Pass {
     pub fn draw_salted(&mut self, cx: &Cx, base: &Render, kick: Option<&'static str>, pass: u32, amount: f64, salt: u32) {
         let seed = cx.spec.seed;
         let mut rng = Rng::new((seed ^ DRIFT_SALT ^ salt).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
-        self.drift(cx, base, &mut rng, amount);
+        let mut written = Rng::new(js::salted(seed ^ DRIFT_SALT ^ salt, WRITTEN_SALT, 1).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
+        self.drift(cx, base, &mut rng, &mut written, amount);
         let held = cx.spec.pins.get("tunedKick").is_some();
         self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass, held));
         self.number = Some(pass);
@@ -145,26 +150,32 @@ impl Pass {
         self.heard = Heard::NONE;
     }
 
-    /// `drift(pattern, rng, amount)`: hats flicker, a ghost hit, a kick
+    /// `drift(pattern, rng, amount)` (`own`: the stream of the hats a kit
+    /// choice wrote): hats flicker, a ghost hit, a kick
     /// sits one out, the tune steps to a neighbor or jumps an octave, the
     /// bass finds a passing tone, a chord opens up, now and then the floor
     /// drops out and a layer takes a breath; draw for draw as the
     /// JavaScript does, in its order.
     #[allow(clippy::too_many_lines)] // one function, as drift is: its draws in order
-    fn drift(&mut self, cx: &Cx, base: &Render, rng: &mut Rng, a: f64) {
+    fn drift(&mut self, cx: &Cx, base: &Render, rng: &mut Rng, own: &mut Rng, a: f64) {
         let spec = cx.spec;
         let spb = cx.spb;
         let total = spec.bars * spb;
         let scale = spec.steps();
 
-        // Hats flicker in and out, and so do the hand kit's zils.
-        for (m, e) in self.drums.iter_mut().zip(base.drums.iter()) {
+        // Hats flicker in and out, and so do the hand kit's zils. The hats a
+        // kit choice wrote (queue item 101d, after the loop's own) flicker on
+        // a stream of their own, so every draw here and after is the one the
+        // loop's own kit made.
+        let written = base.drums_out.written;
+        for (i, (m, e)) in self.drums.iter_mut().zip(base.drums.iter()).enumerate() {
             *m = 0;
+            let r = if written > 0 && i >= written { &mut *own } else { &mut *rng };
             let hat = e.inst == "hat" || e.inst == "jingle";
-            if (hat || e.inst == "shaker") && rng.chance(0.1 * a) {
+            if (hat || e.inst == "shaker") && r.chance(0.1 * a) {
                 *m |= SILENT;
             }
-            if hat && rng.chance(0.05 * a) {
+            if hat && r.chance(0.05 * a) {
                 *m |= OPEN;
             }
         }
@@ -175,7 +186,11 @@ impl Pass {
             let inst = rng.pick(&["rim", "shaker", "hat"]).unwrap_or("rim");
             let vel = 0.16 + rng.f() * 0.14;
             let inst = if base.drums_out.kit == "hand" { layers::hand(inst) } else { inst };
-            self.ghost = Maybe::some(DrumEvent { step, inst: inst.into(), vel, vel0: vel, roll: false, micro: None });
+            let ghost = DrumEvent { step, inst: inst.into(), vel, vel0: vel, roll: false, micro: None };
+            // In a kit in threes (queue item 101d), at its third, from the
+            // same draws.
+            let ghost = if base.choice("tripletKit") == Some("on") { kit::ghost_in_threes(ghost, spec.swing) } else { ghost };
+            self.ghost = Maybe::some(ghost);
         }
         // Occasionally the kick sits one out.
         if rng.chance(0.18 * a) {

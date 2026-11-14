@@ -56,6 +56,7 @@ pub mod choices;
 pub mod data;
 pub mod heard;
 pub mod js;
+pub mod kit;
 pub mod layers;
 pub mod list;
 pub mod load;
