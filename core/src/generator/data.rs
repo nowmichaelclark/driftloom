@@ -294,6 +294,15 @@ pub struct Wow {
     pub rate: [f64; 2],
 }
 
+/// dottedPulse's settings (`[setting dottedpulse]`, queue item 101d): the
+/// pulse's velocity on the rim, and the 3-3-2's room over the loop's own
+/// kick, in dB (the low guard).
+#[derive(Clone, Copy, Debug)]
+pub struct Dotted {
+    pub pulse: f64,
+    pub low: f64,
+}
+
 /// echoTime's settings (`[setting echo]`).
 #[derive(Clone, Copy, Debug)]
 pub struct Echo {
@@ -477,7 +486,7 @@ pub struct VoiceCosts {
 #[allow(clippy::unreadable_literal)]
 mod tables {
     use super::{
-        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
+        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
         Longform, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));

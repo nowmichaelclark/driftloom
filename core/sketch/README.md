@@ -77,7 +77,7 @@ plain build does. All are `force`, `set`, `space` and `route` in a job (and
 | Candidate | Lever |
 |---|---|
 | tripletKit | Now a choice of the data (queue item 101d, `generator::kit`): `"force": {"tripletKit": "on"}` forces it as any choice, and a request pins it (`tripletKit=on`). The lever's re-timing is gone: the build moves the eighth to two thirds of the beat and writes the triplet hats. |
-| dottedPulse | `"force": {"dottedPulse": "pulse"}` adds a soft rim (0.2) every 6 steps, across the kit's layer; `"kick332"` puts the kick on 0, 6, 12 of a 16-step bar. |
+| dottedPulse | Now a choice of the data too (queue item 101d): `"force": {"dottedPulse": "pulse"}` or `"kick332"`, or a request's `dottedPulse=kick332`. The build gives the pulse its own level and writes the 3-3-2 whole. |
 | planingSevenths | `"force": {"planingSevenths": "on"}`: every chord a major seventh, the first on the tonic, each root a whole step or a minor third from the last (turning back past a fourth from the tonic). The bass follows the root, the tune keeps the scale (so it can clash: the sketch finding), and the loop's other choices are drawn over the new harmony, so they can differ. |
 | slowOpening | `"set": {"latefloor.SECONDS_MAX": 90}` (the same draw, over a wider range; force `lateFloor: on` to have it) and `"latefloor.FADE": 12` (seconds the kit and the bass take to rise once they arrive, a velocity ramp). |
 | tuningOffset | `"set": {"master.CENTS": -25}`: every pitched voice, where a note becomes Hz (`blocks::midi_to_freq`). The tuned kick and the noise voices keep theirs. |

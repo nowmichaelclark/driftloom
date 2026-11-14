@@ -104,60 +104,14 @@ fn the_levers_are_choices_to_force_and_off_they_change_nothing() {
                 (drums(&g), slots(&g))
             });
             // Forced on and lifted again: the loop is the plain one.
-            for (lever, option) in [("dottedPulse", "pulse"), ("dottedPulse", "kick332"), ("planingSevenths", "on")] {
-                g.force(lever, Some(option)).expect("a lever");
-                g.load(seed, &[]);
-                assert_eq!(levers::named(lever), Some(option));
-                g.force(lever, None).expect("a lever");
-                g.load(seed, &[]);
-                assert_eq!((drums(&g), slots(&g)), *plain, "{lever} lifted, seed {seed}");
-            }
+            let (lever, option) = ("planingSevenths", "on");
+            g.force(lever, Some(option)).expect("a lever");
+            g.load(seed, &[]);
+            assert_eq!(levers::named(lever), Some(option));
+            g.force(lever, None).expect("a lever");
+            g.load(seed, &[]);
+            assert_eq!((drums(&g), slots(&g)), *plain, "{lever} lifted, seed {seed}");
         }
-    });
-}
-
-#[test]
-fn a_dotted_pulse_is_a_soft_rim_every_three_eighths_or_a_3_3_2_kick() {
-    big(|| {
-        let _held = LEVERS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        let (mut pulsed, mut kicked) = (0, 0);
-        for seed in SEEDS {
-            let plain = {
-                let mut g = Box::new(Generator::new());
-                g.load(seed, &[]);
-                (drums(&g), g.spec().bars * g.spec().steps_per_bar)
-            };
-            with("dottedPulse", Some("pulse"), seed, |g| {
-                let on = drums(g);
-                assert_eq!(on[..plain.0.len()], plain.0[..], "the pulse leaves the kit as it was, seed {seed}");
-                let added = &on[plain.0.len()..];
-                // The kit's layer may be shorter than the loop (its own cycle).
-                for (i, (step, micro, inst, vel)) in added.iter().enumerate() {
-                    assert_eq!((inst.as_str(), *micro), ("rim", 0.0));
-                    assert!((*step - 6.0 * i as f64).abs() < 1e-9 && (*vel - 0.2).abs() < 1e-9, "{step} {vel}");
-                }
-                if !added.is_empty() {
-                    pulsed += 1;
-                }
-            });
-            with("dottedPulse", Some("kick332"), seed, |g| {
-                let spb = g.spec().steps_per_bar;
-                let on = drums(g);
-                assert_eq!(on.len(), plain.0.len(), "no hit added or taken, seed {seed}");
-                let sixteen = spb / 16.0;
-                for (step, _, inst, _) in on.iter().filter(|e| e.2 == "kick" || e.2 == "softkick") {
-                    let at = step % spb;
-                    let ok = [0.0, 6.0, 12.0].iter().any(|n| (at - n * sixteen).abs() < 1e-9);
-                    // A roll's kick keeps where it was drawn.
-                    let roll = g.render().drums.iter().any(|e| e.roll && e.step == *step && e.inst == inst.as_str());
-                    assert!(ok || roll, "a kick at {at} of {spb}, seed {seed}");
-                }
-                if on != plain.0 {
-                    kicked += 1;
-                }
-            });
-        }
-        assert!(pulsed > 0 && kicked > 0, "some loop has a kit to put a pulse on: {pulsed} {kicked}");
     });
 }
 

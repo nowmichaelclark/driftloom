@@ -130,8 +130,8 @@ console.log('\nThe choice tables');
 // whole file, strictly (core/build.rs), and its tests hold the draws.
 {
   const ids = CHOICES.map((c) => c.id);
-  check('the choices are the fourteen, in the draw\'s order',
-    JSON.stringify(ids) === '["glass","dubStab","organ","wash","arc","tunedKick","subDuck","lateFloor","floorDrop","pedalBass","padSweep","padWow","widePad","tripletKit"]', ids.join());
+  check('the choices are the fifteen, in the draw\'s order',
+    JSON.stringify(ids) === '["glass","dubStab","organ","wash","arc","tunedKick","subDuck","lateFloor","floorDrop","pedalBass","padSweep","padWow","widePad","tripletKit","dottedPulse"]', ids.join());
   check('each has today first, and positive weights', CHOICES.every((c) => c.options[0][0] === 'today' && c.options.every(([, w]) => w > 0)));
   check('every vibe a choice leans exists', CHOICES.every((c) => leansOk(c.vibes || {}) && Object.values(c.optionVibes || {}).every(leansOk)));
   check('every option a vibe leans is an option of the choice', CHOICES.every((c) => Object.keys(c.optionVibes || {}).every((o) => c.options.some(([x]) => x === o))));

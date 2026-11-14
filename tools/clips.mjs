@@ -26,7 +26,7 @@
 //     "track": "bars=120",           // the length slider (dlrender --track: bars=N or passes=N),
 //                                    //   the core's own next loop after its end, as in the app
 //     "lite": false,                 // the lite mix (a phone's)
-//     "force": { "lateFloor": "on" },        // choices forced ("today": none); tripletKit is one (item 101d)
+//     "force": { "lateFloor": "on" },        // choices forced ("today": none); tripletKit and dottedPulse are (item 101d)
 //     "set": { "bass.LIFT_DB": 3 },          // constants moved (core/src/tuning.rs)
 //     "pin": { "sub_duck.depth": 0.5 },      // a channel block's setting pinned
 //     "space": { "spread-chords": 1.4 },     // a space setting pinned, past its range if you like (item 99);
@@ -38,7 +38,6 @@
 //                                            //   instead of the speakers (item 101a; any build)
 //
 // "force" also takes the levers that are not in the data (item 99; core/src/levers.rs):
-//   "dottedPulse": "pulse" | "kick332"       a soft rim every three eighths, or the kick on a 3-3-2
 //   "planingSevenths": "on"                  every chord a major seventh, roots a step or a minor third apart
 // and "set" takes these constants (core/src/tuning.rs, item 99):
 //   "latefloor.SECONDS_MAX": 90              the longest lateFloor wait, in seconds (the data's is 30)

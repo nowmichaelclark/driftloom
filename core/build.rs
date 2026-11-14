@@ -765,6 +765,9 @@ fn choices(out: &mut String, blocks: &[Block]) {
         wow.need_range("depth"),
         wow.need_range("rate")
     );
+    let dotted = find("setting", "dottedpulse");
+    dotted.only(&["pulse", "low"]);
+    let _ = writeln!(out, "/// dottedPulse's settings (`[setting dottedpulse]`).\npub static DOTTEDPULSE: Dotted = Dotted {{ pulse: {}, low: {} }};", dotted.need_num("pulse"), dotted.need_num("low"));
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);
     let _ = writeln!(

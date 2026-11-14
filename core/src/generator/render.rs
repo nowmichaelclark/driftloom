@@ -338,7 +338,6 @@ impl Render {
     fn choices_part(&mut self, cx: &Cx, bass_bars: f64) {
         let spb = cx.spb;
         self.draw_choices(cx);
-        self.kit_choices(cx);
 
         self.pedal = None;
         if self.choice("pedalBass") == Some("on") {
@@ -361,14 +360,21 @@ impl Render {
             }
             self.pedal = Some((out, n0));
         }
+        self.kit_choices(cx);
     }
 
     /// Batch 6's kits (queue item 101d, `kit`), where the loop drew them:
-    /// the kit rewritten after the choices are drawn, on today's kit, so
-    /// every draw before is as it was. A hit written where the kit is
+    /// the kit rewritten once the choices are drawn and the pedal made, on
+    /// today's kit, so every draw before is as it was. A hit written where the kit is
     /// silent (its entry's bars, a gap) is silent, as the loop's own are.
     fn kit_choices(&mut self, cx: &Cx) {
-        if self.choice("tripletKit") != Some("on") {
+        let triplet = self.choice("tripletKit") == Some("on");
+        let dotted = match self.choice("dottedPulse") {
+            Some("pulse") => Some(kit::Dotted::Pulse),
+            Some("kick332") => Some(kit::Dotted::Kick332),
+            _ => None,
+        };
+        if !triplet && dotted.is_none() {
             return;
         }
         let spb = cx.spb;
@@ -383,12 +389,22 @@ impl Render {
             on && !gaps.iter().any(|g| step >= g.start && step < g.start + g.len)
         };
         let own = self.drums.len();
-        kit::triplet_kit(&mut self.drums, total, cx.spec.swing, cx.spec.seed, sounds);
+        if triplet {
+            kit::triplet_kit(&mut self.drums, total, cx.spec.swing, cx.spec.seed, sounds);
+        } else if let Some(which) = dotted {
+            let bass = &self.bass;
+            let cycle = layer_bars(cx, Layer::Bass) * spb;
+            let bass_in = |from: f64, to: f64| {
+                let (a, b) = (from % cycle, (from % cycle) + (to - from));
+                bass.iter().any(|e| e.vel != 0.0 && e.step >= a && e.step < b)
+            };
+            kit::dotted_pulse(&mut self.drums, which, total, cx.spec.seed, self.drums_out.kit == "hand", (data::DOTTEDPULSE.pulse, data::DOTTEDPULSE.low), sounds, bass_in);
+        }
         self.drums_out.written = if self.drums.len() > own { own } else { 0 };
     }
 
     fn finish_part(&mut self, cx: &Cx) {
-        let spec = cx.spec; #[cfg(feature = "sketch")] self.drum_levers(cx);
+        let spec = cx.spec;
         let spb = cx.spb;
         if self.chord_shift != 0.0 {
             #[allow(clippy::cast_possible_truncation)] // whole octaves
@@ -685,6 +701,8 @@ impl Render {
     fn option_eligible(&self, id: &str, option: &str) -> bool {
         match (id, option) {
             ("padSweep", "fast") => self.drums.iter().any(|e| e.vel != 0.0),
+            // A 3-3-2 kick only where the kit has a kick to write it with.
+            ("dottedPulse", "kick332") => self.drums.iter().any(|e| e.vel != 0.0 && kit::is_kick(e.inst.get())),
             _ => true,
         }
     }
@@ -715,6 +733,10 @@ impl Render {
             // tripletKit (queue item 101d): any loop with a kit, but in 6/8,
             // whose beat's thirds are the eighths it already plays.
             "tripletKit" => has_drums && cx.metre != Metre::SixEight,
+            // dottedPulse (queue item 101d): a kit in a bar of 16 steps (4/4,
+            // where the sketch was heard), not one in threes (tripletKit is
+            // drawn first).
+            "dottedPulse" => has_drums && cx.spb == 16.0 && cx.metre != Metre::SixEight && self.choice("tripletKit") != Some("on"),
             "tunedKick" => has_kick,
             "subDuck" => has_kick && has_bass,
             "lateFloor" => {
@@ -1226,18 +1248,6 @@ pub fn fixed3(x: f64) -> f64 {
     };
     let v = n as f64 / 1000.0;
     if neg { -v } else { v }
-}
-
-// The sketch levers' hooks (queue item 99). They sit here, after the code the
-// app runs, so that the lines of that code do not move: the player's module
-// holds its panic locations by line (`tools/build-core.sh --check`).
-impl Render {
-    /// The lever that re-times the kit (queue item 99): dottedPulse. Off, it
-    /// changes nothing.
-    #[cfg(feature = "sketch")]
-    fn drum_levers(&mut self, cx: &Cx) {
-        crate::levers::drum_levers(&mut self.drums, layer_bars(cx, Layer::Drums) * cx.spb, cx.spb);
-    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
-//! Batch 6's kits (queue item 101d; `generator::kit`). tripletKit: a kit in
+//! Batch 6's kits (queue item 101d; `generator::kit`): tripletKit, and
+//! dottedPulse below. tripletKit: a kit in
 //! threes, a choice drawn by itself (`alone`), not among the changes, on a
 //! stream of its own. What it holds to: it goes only to loops with a kit and
 //! not in 6/8, for about its share of them, leaned by the vibes as the
@@ -130,5 +131,89 @@ fn pinned_every_hit_is_on_a_third_and_nothing_but_the_kit_moves() {
             assert_eq!(r.lost(), 0, "seed {seed}: no list overflowed");
         }
         assert!(played > 30 && written > 20, "{played} loops played it, {written} with a third");
+    });
+}
+
+// ---------------------------------------------------------------------
+// dottedPulse: a part every three eighths (`pulse`), or the kick on a 3-3-2
+// (`kick332`), drawn alone on a stream of its own, for loops with a kit in
+// bars of 16 steps, never beside a kit in threes.
+
+fn may_dot(g: &Generator) -> bool {
+    has_kit(g) && g.spec().steps_per_bar == 16.0 && !six_eight(g) && g.render().choice("tripletKit") != Some("on")
+}
+
+#[test]
+fn a_dotted_pulse_goes_to_its_share_of_the_four_four_kits_and_never_beside_threes() {
+    roomy(|| {
+        let mut g = Box::new(Generator::new());
+        let (mut of, mut on, mut kicked) = (0usize, 0usize, 0usize);
+        for seed in corpus(1500) {
+            g.load_with(seed, &Request::new());
+            let drew = g.render().choice("dottedPulse");
+            if may_dot(&g) {
+                of += 1;
+                on += usize::from(drew != Some("today"));
+                kicked += usize::from(drew == Some("kick332"));
+            } else {
+                assert_eq!(drew, Some("today"), "seed {seed}: no 4/4 kit, or a kit in threes, and no dotted pulse");
+            }
+        }
+        let f = on as f64 / of as f64;
+        assert!(of > 250 && (0.11..=0.19).contains(&f), "{on} of {of} ({f:.3}), not near 15%");
+        assert!(kicked * 3 > on && kicked * 3 < 2 * on, "about half each: {kicked} of {on} a 3-3-2");
+        let both = Request::parse("tripletKit=on,dottedPulse=pulse").expect("a request");
+        for seed in corpus(60) {
+            g.load_with(seed, &both);
+            if g.render().choice("tripletKit") == Some("on") {
+                assert_eq!(g.render().choice("dottedPulse"), Some("today"), "seed {seed}: never both");
+            }
+        }
+    });
+}
+
+#[test]
+fn pinned_a_pulse_every_six_steps_or_a_3_3_2_and_nothing_but_the_kit_moves() {
+    roomy(|| {
+        let mut g = Box::new(Generator::new());
+        let ask = |t: &str| Request::parse(t).expect("a request");
+        let (mut pulsed, mut kicked) = (0, 0);
+        for seed in corpus(120) {
+            g.load_with(seed, &ask("tripletKit=today,dottedPulse=today"));
+            if !may_dot(&g) {
+                continue;
+            }
+            let plain = Box::new((g.render().bass.iter().map(|e| (e.step, e.midi, e.vel)).collect::<Vec<_>>(), g.render().melody.iter().map(|e| (e.step, e.midi, e.vel)).collect::<Vec<_>>(), g.render().choices.iter().map(|w| w.get()).collect::<Vec<_>>()));
+            let floor = |g: &Generator| g.render().drums.iter().any(|e| e.vel != 0.0 && dlcore::generator::kit::is_kick(e.inst.get()));
+            let had_kick = floor(&g);
+            for (option, check) in [("pulse", 0), ("kick332", 1)] {
+                g.load_with(seed, &ask(&format!("tripletKit=today,dottedPulse={option}")));
+                let r = g.render();
+                if option == "kick332" && !had_kick {
+                    assert_eq!(r.choice("dottedPulse"), Some("today"), "seed {seed}: no kick, no 3-3-2");
+                    continue;
+                }
+                assert_eq!(r.choice("dottedPulse"), Some(option), "seed {seed}");
+                let written = &r.drums[r.drums_out.written..];
+                if check == 0 {
+                    assert!(written.iter().all(|e| e.step % 6.0 == 0.0 && (e.inst == "rim" || e.inst == "tap")), "seed {seed}: the pulse every six steps");
+                    pulsed += usize::from(written.iter().any(|e| e.vel != 0.0));
+                } else {
+                    for e in r.drums.iter().filter(|e| e.vel != 0.0 && !e.roll && dlcore::generator::kit::is_kick(e.inst.get())) {
+                        assert!([0.0, 6.0, 12.0].contains(&(e.step % 16.0)), "seed {seed}: a kick at {} of the bar", e.step % 16.0);
+                    }
+                    kicked += usize::from(floor(&g));
+                }
+                assert_eq!(r.bass.iter().map(|e| (e.step, e.midi, e.vel)).collect::<Vec<_>>(), plain.0, "seed {seed}: the bass as it was");
+                assert_eq!(r.melody.iter().map(|e| (e.step, e.midi, e.vel)).collect::<Vec<_>>(), plain.1, "seed {seed}: the tune as it was");
+                for (i, (a, b)) in r.choices.iter().zip(plain.2.iter()).enumerate() {
+                    if dlcore::generator::data::CHOICES[i].id != "dottedPulse" {
+                        assert_eq!(a.get(), *b, "seed {seed}: no other choice moved");
+                    }
+                }
+                assert_eq!(r.lost(), 0, "seed {seed}: no list overflowed");
+            }
+        }
+        assert!(pulsed > 15 && kicked > 15, "{pulsed} pulsed, {kicked} kicked");
     });
 }

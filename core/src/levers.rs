@@ -6,8 +6,8 @@
 //! and these are for hearing before anything is approved. So the levers
 //! live here, beside [`tuning`](crate::tuning)'s constants, and `Render::force`
 //! falls back to them for an id that is not a choice: `dlrender --force
-//! tripletKit=on` and a clip job's `"force": {"tripletKit": "on"}` work as
-//! they do for `lateFloor`. Nothing draws them: a lever is off (its first
+//! planingSevenths=on` and a clip job's `"force": {"planingSevenths": "on"}`
+//! work as they do for `lateFloor`. Nothing draws them: a lever is off (its first
 //! option, `today`) until a clip forces it, and off it changes nothing, so a
 //! sketch build renders every loop bit for bit as the plain build does.
 //!
@@ -16,10 +16,9 @@
 //! Tests that force one hold a lock of their own for as long as they do
 //! (`tests/sketch.rs`).
 //!
-//! - tripletKit was one until queue item 101d made it a choice of the data
-//!   (`generator::kit`), which `--force tripletKit=on` forces as any other.
-//! - **dottedPulse** (`pulse`, `kick332`): a soft rim every three eighths,
-//!   or the kick on a 3-3-2 ([`dotted_pulse`]).
+//! - tripletKit and dottedPulse were levers until queue item 101d made them
+//!   choices of the data (`generator::kit`), which `--force tripletKit=on`
+//!   and `--force dottedPulse=kick332` force as any other.
 //! - **planingSevenths** (`on`): every chord a major seventh, the roots a
 //!   whole step or a minor third apart ([`PLANING_STEPS`]); drawn in
 //!   `plan::gen_harmony`.
@@ -27,7 +26,6 @@
 use core::sync::atomic::{AtomicU8, Ordering};
 
 use crate::generator::js;
-use crate::generator::layers::{Drums, NO_DRUM};
 use crate::generator::plan::{Notes, Slot};
 use crate::generator::rng::Rng;
 use crate::generator::theory::scale_pitch;
@@ -39,13 +37,11 @@ pub struct Lever {
 }
 
 /// The levers' numbers in [`LEVERS`].
-pub const DOTTED_PULSE: usize = 0;
-pub const PLANING_SEVENTHS: usize = 1;
+pub const PLANING_SEVENTHS: usize = 0;
 
 /// The levers, by number. A name here must not be one of the data's choices
 /// (`Render::force` looks there first).
-pub const LEVERS: [Lever; 2] = [
-    Lever { id: "dottedPulse", options: &["today", "pulse", "kick332"] },
+pub const LEVERS: [Lever; 1] = [
     Lever { id: "planingSevenths", options: &["today", "on"] },
 ];
 
@@ -83,53 +79,6 @@ pub fn named(id: &str) -> Option<&'static str> {
 /// The roots' moves for planingSevenths, in semitones: a whole step or a
 /// minor third, either way. The harmony draws one a chord.
 pub const PLANING_STEPS: [f64; 4] = [2.0, -2.0, 3.0, -3.0];
-
-/// The lever that re-times the kit (`Render::part`'s last): dottedPulse.
-/// `total` is the kit layer's steps, `steps_per_bar` the loop's. Off, it
-/// changes nothing.
-pub fn drum_levers(drums: &mut Drums, total: f64, steps_per_bar: f64) {
-    let pulse = option(DOTTED_PULSE);
-    if pulse != 0 {
-        dotted_pulse(drums, pulse, total, steps_per_bar);
-    }
-}
-
-/// The soft part's velocity for dottedPulse's `pulse`, quiet as the ghost
-/// hits are.
-const PULSE_VEL: f64 = 0.2;
-
-/// dottedPulse: `pulse` adds a soft rim every three eighths (six sixteenths)
-/// across the loop, on the loop's own grid and unaware of its bars (the
-/// lilt is against them); `kick332` puts the loop's kick on a 3-3-2 of
-/// eight eighths, 0, 6 and 12 of a 16-step bar (the bar's last quarter
-/// holds the beat's pickup). Rolls and fills stay as drawn.
-pub fn dotted_pulse(drums: &mut Drums, option: usize, total: f64, steps_per_bar: f64) {
-    if option == 1 {
-        let mut s = 0.0;
-        while s < total {
-            let mut hit = NO_DRUM;
-            hit.step = s;
-            hit.inst = "rim".into();
-            hit.vel = PULSE_VEL;
-            hit.vel0 = PULSE_VEL;
-            drums.push(hit);
-            s += 6.0;
-        }
-    } else if option == 2 {
-        for e in drums.iter_mut().filter(|e| e.inst == "kick" || e.inst == "softkick") {
-            if e.vel == 0.0 || e.roll {
-                continue;
-            }
-            let bar = e.step - e.step % steps_per_bar;
-            let at = e.step - bar;
-            // The nearest of 0, 6 and 12 in a 16-step bar; the same
-            // fractions of the bar in another.
-            let unit = steps_per_bar / 16.0;
-            let nearest = [0.0, 6.0, 12.0].into_iter().min_by(|a, b| (at - a * unit).abs().total_cmp(&(at - b * unit).abs())).unwrap_or(0.0);
-            e.step = bar + nearest * unit;
-        }
-    }
-}
 
 /// The velocity ramp of a floor that has just arrived (`latefloor.FADE`, in
 /// `tuning`): `since` steps after its arrival, of `sd` seconds each; 0 at the
@@ -209,35 +158,5 @@ impl Planer {
             slot.bass_degree = p.degree;
             slot.bass_midi = p.root;
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::generator::layers::DrumEvent;
-
-    fn hit(step: f64, inst: &'static str, vel: f64) -> DrumEvent {
-        DrumEvent { step, inst: inst.into(), vel, vel0: vel, ..NO_DRUM }
-    }
-
-    fn steps(d: &Drums, inst: &str) -> Vec<(f64, f64)> {
-        d.iter().filter(|e| e.vel != 0.0 && e.inst == inst).map(|e| (e.step, e.micro.unwrap_or(0.0))).collect()
-    }
-
-    #[test]
-    fn a_dotted_pulse_adds_a_rim_every_six_steps_or_moves_the_kick_to_3_3_2() {
-        let mut d = Drums::new();
-        d.push(hit(0.0, "kick", 0.8));
-        d.push(hit(10.0, "kick", 0.6));
-        dotted_pulse(&mut d, 1, 32.0, 16.0);
-        assert_eq!(steps(&d, "rim").iter().map(|x| x.0).collect::<Vec<_>>(), vec![0.0, 6.0, 12.0, 18.0, 24.0, 30.0]);
-        assert_eq!(steps(&d, "kick"), vec![(0.0, 0.0), (10.0, 0.0)], "the pulse leaves the kick");
-        let mut d = Drums::new();
-        d.push(hit(0.0, "kick", 0.8));
-        d.push(hit(10.0, "kick", 0.6));
-        d.push(hit(16.0 + 14.0, "kick", 0.6));
-        dotted_pulse(&mut d, 2, 32.0, 16.0);
-        assert_eq!(steps(&d, "kick"), vec![(0.0, 0.0), (12.0, 0.0), (28.0, 0.0)]);
     }
 }
