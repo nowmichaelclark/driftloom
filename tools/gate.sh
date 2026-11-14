@@ -14,6 +14,9 @@
 #                                 the core against its baseline ("nothing
 #                                 moved"); PARTS as baseline.mjs --only takes
 #                                 them, so CI can run them side by side
+#   tools/gate.sh flac            the FLAC writer on real renders against
+#                                 the reference decoder (queue item 104a,
+#                                 tools/flac.mjs; needs flac or ffmpeg)
 #   tools/gate.sh docs            the live docs' sizes
 #
 # What is not here runs nightly (.github/workflows/nightly.yml) and never
@@ -68,13 +71,18 @@ docs() {
   node tools/check-docs.mjs
 }
 
+flac_part() {
+  node tools/flac.mjs
+}
+
 case "${1:-all}" in
   core) core ;;
   sketch) sketch ;;
   node) node_part ;;
   baseline) baseline "${2:-}" ;;
   docs) docs ;;
-  all) docs; core; sketch; node_part; baseline ;;
-  *) echo "usage: tools/gate.sh [core | sketch | node | baseline [PARTS] | docs]" >&2; exit 2 ;;
+  flac) flac_part ;;
+  all) docs; core; sketch; node_part; flac_part; baseline ;;
+  *) echo "usage: tools/gate.sh [core | sketch | node | baseline [PARTS] | flac | docs]" >&2; exit 2 ;;
 esac
 echo "gate: ${1:-all} passed"

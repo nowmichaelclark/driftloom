@@ -97,6 +97,13 @@ the points where the next step is yours.
   variations' and the voice's, not the joins'; say if either bothers you.
 - Batch 6's and 84b's: brain session B2. B4 makes the albums again in the new codes.
 
+- **The FLAC writer (104a, session 19, #390):** nothing to hear yet; the
+  app gets export in session 20. One choice for your ears then: the core
+  writes 16 or 24 bits with **no dither** (the conservative pick: the file
+  nulls against the render, and at 24 bits it can't matter). If session 20's
+  export offers 16 bits and a very quiet fade-out ever sounds grainy on
+  headphones, say so and a seeded dither is a small change.
+
 ## Ears
 
 (none yet)

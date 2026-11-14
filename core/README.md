@@ -448,6 +448,29 @@ On every target, QEMU's included, a load's worst stage costs less than the
 same loop's worst audio block, so making a loop never makes a loop's worst
 block.
 
+## Exporting: FLAC (queue item 104a)
+
+`src/flac/` is the lossless export's encoder, the core's own: no
+dependencies, nothing allocated, the same bytes on every target. A host
+starts one (`Flac::start(rate, channels, bits)`: mono or stereo, 16 or 24
+bits), hands it what the player rendered, up to `flac::BLOCK` (4,096) frames
+a call (`write`, the channels as `render` fills them), and appends the bytes
+each call gives back; `finish` gives the last frame. Its state is a fixed
+122,576 bytes, so a three-hour export takes the memory of a minute. The
+header `start` gives leaves the length and the MD5 unknown, which FLAC
+allows, so the file plays at every moment; after `finish`, `header()` is the
+finished one, written over the file's first 42 bytes by a host that seeks.
+Floats become integers by one rule (`flac::quantize`: rounded, halves away
+from zero, held to full scale, no dither). Each block is coded with the
+cheapest of a constant, the samples as they are, or a fixed predictor with
+partitioned Rice codes, and stereo as left and right or with the side: about
+a fifth of a WAV's size at 16 bits, a third at 24. The C header has
+`dl_flac_*`; the web's `dl_flac_*` (`src/wasm.rs`) are behind the `flac`
+feature, out of `js/dlplayer.wasm` until the app exports. `dlrender --flac
+OUT [--bits 16|24]` writes one from a seed (streamed) or a note list, and
+`node tools/flac.mjs` (CI's `flac` job) holds real renders to the reference
+decoder.
+
 ## Sketches (queue item 83)
 
 `core/sketch/` is where an ears or brain session drops one block file and one

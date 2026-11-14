@@ -48,7 +48,7 @@ says the work goes on meanwhile.
 | 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | yes, 2026-11-14 (#385; the second set on `long-clips`) |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | |
-| 19 | `19-export-flac.md` | 104a: the FLAC writer in the core | Opus 5.5, high | |
+| 19 | `19-export-flac.md` | 104a: the FLAC writer in the core | Opus 5.5, high | yes, 2026-11-14 (#390; ran alongside 05 to 18, as the table allows) |
 | 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | |
 | 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | |
 | 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | |
