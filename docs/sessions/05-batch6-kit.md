@@ -4,6 +4,11 @@
 - **Start after:** session 04.
 - **Queue item:** item 101.
 
+**Changed by brain B3 (2026-11-14):** its yardsticks now name the long
+pieces' run (`tools/longform.mjs`, full), since these kits change the notes
+an arc's fills and floor outs are made from; the rule is in the README's
+"Rules for every session". Why: Mikey kept the long pieces as they are.
+
 Paste everything in the block as the session's first message.
 
 ````text
@@ -20,7 +25,7 @@ The work, two candidates, one PR each. Both levers fell short in the sketch, so 
 - tripletKit (#1): a kit in threes. Not the lever's re-timing: write the triplet hats itself (three a beat at the loop's hat velocities and density), move the eighth to two thirds of the beat (the shuffle's place) rather than dropping it, keep the kick on the beat, and leave 6/8 loops alone (their thirds are the eighths they already play). An option of a seeded per-loop choice, today's kit first. Yardstick: on the player's own note list, 60% or more of the non-kick hits on the beat's thirds (within a twelfth of a beat), under 5% on the straight eighth, the kick on the beat; the hats' share above 2 kHz no higher than the loop's own kit; refused notes no more than its straight kit. Soft and quiet, as the records play it.
 - dottedPulse (#8), two versions: "pulse", a soft part every three eighths (the sketch's rim at velocity 0.2 read 38 to 43 LU under the loop, too quiet to hear as a lilt: give it a level of its own, or a tuned tick, measured so it sits about where the kit's ghost hits do, and mark the level for Mikey's ears); and "kick332", the 3-3-2 kick written whole (all three hits), not the loop's kicks moved. Watch the low guard: moved kicks raised dust #69's 20-60 Hz past 1 dB in the sketch. Yardstick: the drum stem's strongest repeat at 1.5 beats (pulse: of the part itself) or a 3-3-2 over two beats; the beat still clear.
 
-Yardsticks: as above; the wander still does to these kits what it does to today's (floor drops, opened hats); refusals on full and lite.
+Yardsticks: as above; the wander still does to these kits what it does to today's (floor drops, opened hats); refusals on full and lite; the full node tools/longform.mjs run keeps every check it keeps on main (a fill is the loop's own snare or rim, a floor out takes its kit and bass: with a triplet kit or a written 3-3-2 kick they must still land as joins, not as holes or extra hits).
 
 When you finish: add the merged PRs' lines to docs/DONE.md, keep the queue's status line current, tick session 05's row in docs/sessions/README.md, and end with a plain summary for Mikey: what merged (PR numbers), what to listen for or check, and what you added to docs/notes/for-mikey.md. Do this session's work and stop: the next session has its own prompt.
 ````
