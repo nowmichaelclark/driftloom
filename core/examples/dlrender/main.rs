@@ -196,14 +196,20 @@ fn run(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("{path}: rendered {how:?} frames a call, the speaker output is {}, not {}", out.join(" "), want.join(" ")));
             }
         }
-        let stereo = layout == 2 && keep == Some(0);
-        if let Some(out) = &wav_to {
-            let bytes = if stereo { wav_channels(&first.kept, list.rate, 2) } else { wav(&first.kept, list.rate) };
-            std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
-        }
-        if let Some(out) = &flac_to {
-            println!("{}", flac::samples(out, &first.kept, list.rate, if stereo { 2 } else { 1 }, bits)?);
-        }
+        write_files(&first.kept, list.rate, layout == 2 && keep == Some(0), wav_to.as_deref(), flac_to.as_deref(), bits)?;
+    }
+    Ok(())
+}
+
+/// A note list's kept signal (both sides, interleaved, if `stereo`) to the
+/// WAV of `--wav` and the FLAC of `--flac`.
+fn write_files(kept: &[f32], rate: f64, stereo: bool, wav_to: Option<&str>, flac_to: Option<&str>, bits: u32) -> Result<(), String> {
+    if let Some(out) = wav_to {
+        let bytes = if stereo { wav_channels(kept, rate, 2) } else { wav(kept, rate) };
+        std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
+    }
+    if let Some(out) = flac_to {
+        println!("{}", flac::samples(out, kept, rate, if stereo { 2 } else { 1 }, bits)?);
     }
     Ok(())
 }
