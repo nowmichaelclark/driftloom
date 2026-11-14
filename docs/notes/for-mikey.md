@@ -148,6 +148,17 @@ the points where the next step is yours.
   site the line should show within about a minute of playing; send its
   `slow:` and `busiest:` lines either way.
 
+- **The first Android APK (item 107a, session 25, #389):** the shell only: the
+  page in a WebView, playing as in a browser (the native audio is session 26,
+  so a stutter there is no news). To try it on the Moto: open the PR's checks
+  on GitHub (signed in), the `android` run, and under Artifacts download
+  `driftloom-debug-apk` (a zip; the Files app opens it), then tap the `.apk`
+  (Android asks once to let that app install apps). Each later build installs
+  over this one (they share a throwaway test key, `android/test-signing/`),
+  so your loops stay. Check: it starts, Play plays, rotating the phone keeps
+  the music going; Diagnostics' `sw: failed` and `mediaSession: false` are
+  expected for now (sessions 27 and 28). A launcher icon is a placeholder.
+
 ## Accounts
 
 - **The new name's domain (2026-11-11):** when you're ready, buy it; the
