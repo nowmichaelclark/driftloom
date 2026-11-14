@@ -59,6 +59,19 @@ the points where the next step is yours.
   after, padWow's share); the opening kind takes the choice's vibes (the batch
   gave it no row of its own); on the widest loops the chords go past the
   batch's -4 dB (grove #62 at -1.8), as the sketch you approved did.
+- **tripletKit (101d, session 05, v167, #PRNUM):** a kit in threes, the
+  small hours' shuffle: about 1 loop in 9 with a kit (none in 6/8) plays its
+  hats three a beat, the eighth moved to two thirds of the beat, the kick on
+  the beat. To hear it before the album: dun-roar (corpus 20261009 #45) from
+  0:00, a busy machine kit at 129; thisk-doam (#76) from 0:00, a slow tape kit
+  at 55. Taste calls for your ears: 15% of the loops that may have it before
+  the vibes (swaying and skipping lean toward it, still and glacial away);
+  the hats written at the loop's own density and velocities, then the hats off
+  the beat turned down so the kit is no brighter than it was; a kick off the
+  beat goes to the nearer beat (a third of dust #69's would otherwise have
+  merged); and in a long piece the fill into a line still plays four
+  sixteenths over the last beat, not thirds. Each is a line of
+  `data/choices.txt` or `core/src/generator/kit.rs`.
 - **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
   on the branch `long-clips` (its `index.md`), not blind: each place now and
   as at v164. fei-no (seed 2158762586, `bars=256,journey=arc`) from 5:15, the
