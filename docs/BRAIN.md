@@ -308,7 +308,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   before, joins welcome (so the development's breaths stay), the arc "good
   enough for now" (`docs/notes/102-mikey.md`, `docs/DECISIONS.md`). Session
   16 now retunes nothing: it fixes the two holes and adds a yardstick.
-  **Next:** session 16, then 04 onward; brain B2 after batch 6. B3's
+  **Session 16 done (#385, v165), checked by B3:** short loops bit for bit as
+  v164; the pivot struck and the breath in place (fei-no 5:25 and 8:09);
+  the yardstick at 25 dB, not 20 (the kept breaths reach 21.8). Left for his
+  ears: about 2 s of variation's quiet before fei-no's breath, and vath-sei's
+  (for-mikey). **Next:** 04 onward; brain B2 after batch 6. B3's
   scratch scripts were not kept; the method (Methods): render the same span
   at dfe78c3 and now, compare unit by unit and join by join.
 - **Brain B1 (Opus 5.5, 2026-11-11): the road to 1.0's kickoff.** The plan
