@@ -23,3 +23,6 @@ node_modules
 # assets folder, and the pack file passed the 25 MiB asset limit (the preview
 # build failed on it); keep .git out of the upload.
 .git
+
+# The Android app's project (queue item 107): built in CI, not part of the site.
+android

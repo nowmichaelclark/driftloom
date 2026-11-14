@@ -55,7 +55,7 @@ says the work goes on meanwhile.
 | 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | |
 | 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | |
 | B4 | `brain-4-codes.md` | Brain: check 104 to 106; the albums again in the new codes | Opus 5.5, high | |
-| 25 | `25-android-shell.md` | 107a: the Android project and its CI build | Sonnet 5.5, high | |
+| 25 | `25-android-shell.md` | 107a: the Android project and its CI build | Sonnet 5.5, high | yes, 2026-11-14 (#389) |
 | 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | |
 | 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | |
 | | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | |
