@@ -261,3 +261,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   loops (corpus 20261009) that draw it: **ta-muin** (#121, the pulse) from
   0:16, as the kit comes in; **yi-yoar** (#51, the 3-3-2) from 0:00. A loop
   without it plays as before, its wander too.
+- #395, long pieces: no join a hole, on any piece (item 102g, session 16b,
+  v169), preview URL: the branch's preview (no hash kept): nothing in the
+  app changes yet (it can't take a journey; loops of up to 32 bars play bit
+  for bit as before, the core baseline unmoved). A tune alone, a floor out
+  or a breath that its notes say would leave the mix 12 dB under falls back
+  to a breath, or to nothing written; every other join is as Mikey kept it.
+  To hear, as Endless arcs (`bars=endless,journey=arc`): ta-muin
+  (1337654778) at 2:05 and 9:26, the loop now playing on across the line
+  where the tune alone left two seconds near silence; yi-yoar (819045617)
+  at 6:14, a short breath where the kit and the bass dropped out. The clips
+  are on `long-clips`.

@@ -56,7 +56,7 @@ v166, widePad, both kinds, #387); hands session 19 done alongside
 hands session 25 done alongside (2026-11-14: 107a, the Android project and its
 CI build, `android/`, #389; no app change); hands session 05 done (2026-11-14: 101d, v167 tripletKit #391, v168
 dottedPulse #392); hands session 16b done (2026-11-14: 102g, v169, no join
-a hole on any piece, #PRNUM; the listening set on `long-clips`); next: 06
+a hole on any piece, #395; the listening set on `long-clips`); next: 06
 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:

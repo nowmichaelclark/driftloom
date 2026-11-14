@@ -87,7 +87,7 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
-- **No join a hole, on any piece (102g, session 16b, v169, PR #PRNUM):** six
+- **No join a hole, on any piece (102g, session 16b, v169, PR #395):** six
   clips, 2:30, on the branch `long-clips` (its `index.md`, which replaces
   session 16's set; that one is in the branch's history), not blind: each
   place now and as at v168, as Endless arcs (`bars=endless,journey=arc`).
