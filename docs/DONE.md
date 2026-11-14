@@ -228,3 +228,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   with headphones, against the Mono switch; **broan-bro** (#39, the late
   kind) from 0:00 to 1:26 as it opens, then held wide. A loop without it
   plays as before, in stereo and mono.
+- #389, the Android project and its CI build (item 107a, session 25, no app
+  change; the only file outside `android/` and the workflow is
+  `.assetsignore`): nothing to hear (the page plays in the WebView as in a
+  browser). The APK is 2.0 MB (debug), builds from a clean checkout in about
+  1.5 minutes, and on an Android 15 emulator in CI the page loads, Play is
+  pressed and Diagnostics reads `rust (the core's player)  late: 0  missed: 0
+  dropped: 0  player: playing`. Where to get it and what to check:
+  `docs/notes/for-mikey.md`.
