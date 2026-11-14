@@ -51,7 +51,9 @@ page out, `docs/ALBUMS.md`); Mikey heard it (2026-11-14: every piece kept,
 `docs/notes/102-mikey.md`); hands session 16 done (2026-11-14: 102f, v165,
 the two holes fixed and a yardstick against holes, nothing retuned; the
 second listening set on `long-clips`); hands session 04 done (2026-11-14: 101c,
-v166, widePad, both kinds, #387); next: 05 onward, and Mikey's testers' pastes
+v166, widePad, both kinds, #387); hands session 25 done (2026-11-14: 107a, the
+Android project and its CI build, `android/`, #389: no app change); next: 05
+onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
