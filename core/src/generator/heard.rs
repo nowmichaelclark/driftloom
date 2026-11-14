@@ -137,6 +137,9 @@ const LOOP_MARGIN: f64 = 10.0;
 /// The spans `Heard::under` reads: the window's second half, and it again
 /// an echo before, two and three.
 const SPANS: usize = 4;
+/// An event's loudness over its life as the loop voices it and as the unit
+/// does, and its piece of the kit, looked up once (`Heard::power`).
+type Looked = (Option<[f64; 6]>, Option<[f64; 6]>, Option<Piece>);
 /// Where the tune may sit once a variation moves it an octave: up where its
 /// highest stays here or under (then anywhere under the doubling's 96),
 /// down where its lowest stays here or over.
@@ -850,7 +853,7 @@ impl Heard {
                 // texture keep theirs).
                 let heard = if matches!(layer, Layer::Bass | Layer::Chords) { voice(layer, name) } else { name };
                 // (Its voices and its piece looked up only where it sounds.)
-                let mut looked: Option<(Option<[f64; 6]>, Option<[f64; 6]>, Option<Piece>)> = None;
+                let mut looked: Option<Looked> = None;
                 places(layer, at, dur, &mut |s| {
                     let (p, q, piece) = *looked.get_or_insert_with(|| {
                         let p = table(layer, name);
