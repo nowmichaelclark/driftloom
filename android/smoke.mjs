@@ -92,7 +92,11 @@ class Page {
   send(method, params = {}) {
     const id = this.next++;
     this.ws.send(JSON.stringify({ id, method, params }));
-    return new Promise((ok, fail) => this.waiting.set(id, { ok, fail }));
+    // A page that is navigating or gone never answers: fail, don't wait.
+    return new Promise((ok, fail) => {
+      const t = setTimeout(() => { this.waiting.delete(id); fail(new Error(`no answer to ${method} in 15 s`)); }, 15000);
+      this.waiting.set(id, { ok: (v) => { clearTimeout(t); ok(v); }, fail: (e) => { clearTimeout(t); fail(e); } });
+    });
   }
   // `gesture`: counts as a tap, which is what lets the page start its audio.
   async eval(expression, gesture = false) {
@@ -114,13 +118,7 @@ await new Promise((ok, fail) => { ws.onopen = ok; ws.onerror = () => fail(new Er
 const page = new Page(ws);
 await page.send('Runtime.enable');
 await page.send('Log.enable');
-// What the page logged before the socket opened is read again from a reload,
-// so nothing the start does is missed (the page's time origin says it is the
-// new document that is answering).
-const origin = await page.eval('performance.timeOrigin');
-await page.send('Page.reload', { ignoreCache: true });
-await until('the page to reload', async () => (await page.eval('performance.timeOrigin')) !== origin);
-
+// Enabling these replays what the page logged before the socket opened.
 const diag = () => page.eval("document.getElementById('diagRefresh').click(); document.getElementById('diagOut').textContent");
 const checks = [];
 const check = (name, ok, detail = '') => {
