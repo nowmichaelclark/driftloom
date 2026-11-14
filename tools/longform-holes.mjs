@@ -5,8 +5,12 @@
 // moment: Endless arcs (their first 30 minutes) and 1,024-bar arcs (whole),
 // rendered by `dlrender` at the wander's amount 0 (the plan with nothing
 // breathing, so the two renders play the same notes but for the plan's). A
-// hole is session 16's: a join whose median 50 ms frame is HOLE_DB under the
-// loop there, made by the join (not the unit's own quiet before it).
+// hole is session 16's (a join whose median 50 ms frame is HOLE_DB under the
+// loop there, made by the join, not the unit's own quiet before it) that
+// stays that far under for more than half a beat: a half-beat breath (a
+// four-bar unit's, the shortest there is) is the gesture Mikey kept in
+// moan-teil's look-back (docs/notes/102-mikey.md), and half a beat is what
+// brain B3 held session 05's three places to. Those are listed, not held.
 // tools/longform.mjs plays a small set of its own (the three places session
 // 05 found among them); this is the nightly's (.github/workflows/nightly.yml).
 //
@@ -18,6 +22,7 @@
 //                                                 hundredth (0)
 //   node tools/longform-holes.mjs --shard 2/4     every fourth seed, from the
 //                                                 second (the nightly's jobs)
+//   node tools/longform-holes.mjs --only 51,109   those corpus seeds alone
 //   node tools/longform-holes.mjs --jobs 4        pieces played at once (the
 //                                                 cores)
 //   node tools/longform-holes.mjs --minutes 30    how long an Endless arc plays
@@ -88,9 +93,10 @@ const json = value('--json', null);
 
 const rng = new Rng(20261009);
 const corpus = Array.from({ length: FROM + Math.max(ENDLESS_N, LONG_N) }, () => Math.floor(rng.f() * 4294967296));
+const ONLY = value('--only', null)?.split(',').map(Number);
 const work = [];
 for (let k = FROM; k < corpus.length; k++) {
-  if ((k - FROM) % shards !== shard - 1) continue;
+  if ((k - FROM) % shards !== shard - 1 || (ONLY && !ONLY.includes(k))) continue;
   const requests = [...(k - FROM < ENDLESS_N ? [ENDLESS] : []), ...(k - FROM < LONG_N ? [LONG] : [])];
   if (requests.length) work.push({ k, seed: corpus[k], requests });
 }
@@ -122,7 +128,9 @@ joins.sort((a, b) => a.k - b.k || a.request.localeCompare(b.request) || a.t - b.
 if (json) fs.writeFileSync(json, joins.map((j) => JSON.stringify(j)).join('\n') + '\n');
 
 const med = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-const holes = joins.filter((j) => j.hole);
+// (Half a beat at most HOLE_DB under: a breath's, listed apart.)
+const holes = joins.filter((j) => j.hole && j.under > 0.5 + 1e-6);
+const brief = joins.filter((j) => j.hole && !(j.under > 0.5 + 1e-6));
 const kinds = [...new Set(joins.map((j) => j.join))].sort();
 const at = (j) => `${j.seed} (#${j.k}) "${j.request}" at ${j.t.toFixed(1)} s, section ${j.section}.${j.phrase}: a ${j.join} ${j.frames.toFixed(1)} dB under, from ${j.before.toFixed(1)}`;
 console.log(`longform-holes: ${pieces} pieces (${work.filter((w) => w.requests.includes(ENDLESS)).length} Endless arcs, ${MINUTES} minutes; ${work.filter((w) => w.requests.includes(LONG)).length} at 1,024 bars), ${joins.length} joins, in ${((Date.now() - t0) / 60000).toFixed(1)} min`);
@@ -130,5 +138,6 @@ console.log(`  dB under the loop as itself, median / deepest (count): ${kinds.ma
 const deepest = [...joins].sort((a, b) => b.frames - a.frames).slice(0, 8);
 console.log('  the deepest:');
 for (const j of deepest) console.log(`    ${at(j)}${j.inherited ? ' (the unit\'s own quiet)' : ''}`);
-console.log(holes.length ? `  FAIL  ${holes.length} holes (${HOLE_DB} dB under, made by the join):\n${holes.map((j) => `    ${at(j)}`).join('\n')}` : `  ok    no join a hole (${HOLE_DB} dB under the loop there, made by the join)`);
+if (brief.length) console.log(`  ${HOLE_DB} dB under for half a beat or less (a breath's own; listed, not held):\n${brief.map((j) => `    ${at(j)}, ${j.under.toFixed(2)} beats`).join('\n')}`);
+console.log(holes.length ? `  FAIL  ${holes.length} holes (${HOLE_DB} dB under for more than half a beat, made by the join):\n${holes.map((j) => `    ${at(j)}, ${j.under.toFixed(2)} beats`).join('\n')}` : `  ok    no join a hole (${HOLE_DB} dB under the loop there for more than half a beat, made by the join)`);
 if (holes.length && flag('--check')) process.exit(1);

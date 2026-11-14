@@ -270,5 +270,5 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   To hear, as Endless arcs (`bars=endless,journey=arc`): ta-muin
   (1337654778) at 2:05 and 9:26, the loop now playing on across the line
   where the tune alone left two seconds near silence; yi-yoar (819045617)
-  at 6:14, a short breath where the kit and the bass dropped out. The clips
-  are on `long-clips`.
+  at 6:14, the same where the kit and the bass dropped out. The clips are on
+  `long-clips`.

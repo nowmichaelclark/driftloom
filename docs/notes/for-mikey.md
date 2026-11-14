@@ -96,12 +96,12 @@ the points where the next step is yours.
   note fading, the mix 19 to 38 dB under the loop for about two seconds;
   now nothing is written there and the loop plays on across the line.
   yi-yoar (seed 819045617) from 5:59, the line into 6:14: at v168 the kit and
-  the bass out for half a bar, 29 to 38 dB under; now a breath, every layer
-  out for the last quarter bar. Listen for: no gap at those lines, and
+  the bass out for half a bar, 29 to 38 dB under; now nothing written there
+  either. Listen for: no gap at those lines, and
   nothing else different (every other join is as you kept it but where it
-  would have been a hole: 742 of about 30,000 written joins over the corpus's
-  maps, most of them breaths that become glides; the PR has the count by
-  kind). Taste call for your ears: a hole falls back to a breath where that
+  would have been a hole: 704 of about 30,000 written joins over the
+  corpus's maps, most of them breaths that become glides; the PR has the
+  count by kind). Taste call for your ears: a hole falls back to a breath where that
   would not be one, else to nothing written, never to a new kind of join.
 - **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
   once on the branch `long-clips` (replaced by 102g's set; they are in the

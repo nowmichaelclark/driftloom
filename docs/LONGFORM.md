@@ -376,15 +376,20 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
   velocity squared and its layer's level, and their echoes as the mix sends
   them; what the join keeps against the unit there without it (or the loop
   as itself, 10 dB less). Where it would leave the mix `[longform joins]
-  hole` (12) dB under, the join falls back to a breath, or where that would
-  too, to a glide: nothing written. Read against renders of 200 pieces
-  (7,035 joins), the measure caught all 88 holes there with 1 dB to spare;
-  158 joins changed, the 88 and 70 that sat 1 to 39 dB under (most 12 to
-  24). The wide run is the nightly's (`tools/longform-holes.mjs`: 140
-  Endless arcs, their first 30 minutes, and 60 arcs of 1,024 bars, every
-  join as played); `tools/longform.mjs` plays the three places session 05
-  found among its own, and `core/tests/joins.rs` holds them fallen back and
-  every join played under the line by its notes.
+  hole` (12) dB under, the join falls back to a breath where that reads
+  under half the line, else to a glide: nothing written. Fitted and checked
+  against renders of 200 pieces (7,035 joins): 88 holes before, none after
+  that stays 25 dB under for more than half a beat (mon-sha's three
+  half-beat breaths in a four-bar loop remain, the gesture Mikey kept in
+  moan-teil); 141 of the 7,035 changed, the 85 holes and 56 others (median
+  15 dB under before). Over the corpus's maps 704 of 29,729 written joins
+  changed: 558 breaths, 59 floors and 28 tunes alone to glides, 47 floors
+  and 12 tunes alone to breaths. The wide run is the nightly's
+  (`tools/longform-holes.mjs`: 140 Endless arcs, their first 30 minutes, and
+  60 arcs of 1,024 bars, every join as played); `tools/longform.mjs` plays
+  the three places session 05 found among its own, and
+  `core/tests/joins.rs` holds them fallen back and every join played under
+  the line by its notes.
 
 ## Endings that land (session 15)
 

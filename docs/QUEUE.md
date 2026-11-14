@@ -491,9 +491,10 @@ yardstick plays at least 200 pieces' joins, Endless arcs among them.
 from its notes when its unit is made (`Heard::under`: each voice's loudness
 over a note's life, `[longform loudness]`, `tools/voice-loudness.mjs`; the
 echoes as the mix sends them) and falls back to a breath, or to a glide,
-where it would leave the mix 12 dB under (`[longform joins] hole`); against
-renders of 200 pieces it caught all 88 holes there, and 742 of about 29,700
-written joins over the corpus's maps changed. The wide run is the nightly's
+where it would leave the mix 12 dB under (`[longform joins] hole`); over
+200 pieces rendered, 88 holes before and none after (but three half-beat
+breaths, the kind Mikey kept), and 704 of 29,729 written joins over the
+corpus's maps changed, most of them breaths become glides. The wide run is the nightly's
 (`tools/longform-holes.mjs`), the three places in `tools/longform.mjs`.
 
 **102e done** (session 15, v164; #381, #382): every line where a unit meets

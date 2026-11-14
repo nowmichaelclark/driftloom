@@ -780,7 +780,8 @@ impl Heard {
             }
             let t = LOUDNESS[l];
             let db = t.iter().find(|e| e.0 == name).or(t.first())?.1;
-            let lin = db.map(|x| crate::math::pow(10.0, x / 10.0));
+            // (-99 is nothing: the table's floor, never a sound.)
+            let lin = db.map(|x| if x <= -99.0 { 0.0 } else { crate::math::pow(10.0, x / 10.0) });
             if let Some(slot) = known.iter_mut().find(|k| k.1 == 9) {
                 *slot = (name, l, lin);
             }
@@ -801,9 +802,13 @@ impl Heard {
         // Every place an event of `layer` written at loop step `at`, `dur`
         // steps long, falls, from as far before the spans as it can still
         // sound (its length, or the table's life) to their end.
+        // (Each layer's cycle and where it stands at the section's start,
+        // worked out once: `placed`'s.)
+        let cycles: [f64; 5] = core::array::from_fn(|l| cycle(LAYERS[l]));
+        let shifts: [f64; 5] = core::array::from_fn(|l| if cycles[l] > 0.0 { self.start % cycles[l] } else { 0.0 });
         let places = |layer: Layer, at: f64, dur: f64, f: &mut dyn FnMut(f64)| {
-            let c = cycle(layer);
-            let placed = self.placed(at, c);
+            let c = cycles[layer as usize];
+            let placed = if c > 0.0 { at - shifts[layer as usize] } else { at };
             let back = if layer == Layer::Drums { kit } else { js::max(look, dur + 1.0) };
             let mut s = placed + js::ceil((first - back - placed) / c) * c;
             while s < last {
@@ -845,9 +850,10 @@ impl Heard {
                 if !(vel > 0.0 && n > 0.0) {
                     continue;
                 }
-                let p = table(layer, name);
-                let piece = if layer == Layer::Drums && self.arc { Some(Piece::of(name)) } else { None };
+                // (Its voice and its piece looked up only where it sounds.)
+                let mut looked: Option<(Option<[f64; 6]>, Option<Piece>)> = None;
                 places(layer, at, dur, &mut |s| {
+                    let (p, piece) = *looked.get_or_insert_with(|| (table(layer, name), (layer == Layer::Drums && self.arc).then(|| Piece::of(name))));
                     let v = piece.map_or(vel, |piece| vel * u.kit_at(s, piece));
                     add(layer, p, shaped, s, dur, lv * n * v * v);
                 });
@@ -871,9 +877,10 @@ impl Heard {
             }
             for (i, e) in notes.iter().enumerate().take(MELODY_MAX).filter(|(_, e)| e.vel > 0.0) {
                 let name = if e.voice.get().is_empty() { own_voice } else { e.voice.get() };
-                let p = table(Layer::Melody, voice(Layer::Melody, name));
+                let mut looked: Option<Option<[f64; 6]>> = None;
                 let mut one = |s: f64| {
                     if which(s) == whose && kept_note(whose == tune::OWN, i, s) {
+                        let p = *looked.get_or_insert_with(|| table(Layer::Melody, voice(Layer::Melody, name)));
                         add(Layer::Melody, p, false, s, e.dur, lv * e.vel * e.vel);
                     }
                 };
@@ -1253,7 +1260,7 @@ impl Heard {
         // Never a hole (session 16b): where what the join keeps would leave
         // the mix `[longform joins] hole` dB under the unit, by its notes
         // (`under`), it falls back to a breath (every layer heard there out
-        // for the join's last half), or where that would too, to a glide:
+        // for the join's last half) well clear of it, else to a glide:
         // nothing written. ta-muin's tune alone was a stab's one note over a
         // kit and a bass that are most of the loop, 19 to 38 dB under it.
         let Some(mut u) = self.units.get(p).copied() else { return };
@@ -1266,7 +1273,10 @@ impl Heard {
             let from = u.to - js::max(1.0, js::floor(len * JOINS.breath));
             let out = heard_out(cx, base, u.from, from, all);
             let under = if u.join == Join::Breath || out == 0 { f64::INFINITY } else { self.under(&u, cx, base, second, from, u.to, out) };
-            if under < JOINS.hole {
+            // (A breath in its place sits well clear of the line, half of it:
+            // measured, breaths read 8 dB under by their notes sat 20 to 27
+            // under the loop, those 7.4 and under 10 at most.)
+            if under < 0.5 * JOINS.hole {
                 u.join = Join::Breath;
                 u.join_from = from;
                 u.out = out;

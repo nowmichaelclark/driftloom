@@ -368,7 +368,7 @@ export function joinDepths(seed, request, count, start, piece, loop, rate) {
     const made = !(frames - before < HOLE_DB / 2);
     // (How long the window sits HOLE_DB under, in beats: session 16b's
     // three places are held to half a beat.)
-    const under = each.filter((d) => d >= HOLE_DB).length * FRAME / beat;
+    const under = Math.min(each.filter((d) => d >= HOLE_DB).length * FRAME, end - from) / beat;
     out.push({ t: from, section: u.section, phrase: u.phrase, join: u.join, depth: own - powerDb(piece, a, b), frames, before, under, hole: deep && made, inherited: deep && !made });
   }
   return out;
