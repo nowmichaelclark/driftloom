@@ -368,6 +368,11 @@ pub type Drums = List<DrumEvent, DRUMS_MAX>;
 #[derive(Clone, Copy)]
 pub struct DrumsOut {
     pub kit: Word,
+    /// Where the hits a kit choice wrote begin in the kit's list (queue item
+    /// 101d, `kit`), after the loop's own; 0 where it wrote none. The
+    /// wander draws for the loop's own hits on its own stream, as it always
+    /// has, and for these on another, so nothing it draws moves.
+    pub written: usize,
 }
 
 const KICK_PATTERNS: [&[f64]; 8] = [
@@ -415,7 +420,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     let total = bars * spb;
     out.clear();
     if !spec.forced(Layer::Drums) && !r.chance(c.drums.unwrap_or(f64::NAN)) && !asked::on(spec, Layer::Drums) {
-        return DrumsOut { kit: Word::new("none") };
+        return DrumsOut { kit: Word::new("none"), written: 0 };
     }
     let (kit, pool) = match c.kits {
         Some(p) => (r.weighted(p), p),
@@ -424,7 +429,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     let kit = asked::voice(spec, Layer::Drums, kit.unwrap_or("tape"), pool);
     if c.groove == Some("travel") {
         travel_groove(cx, bars, &mut r, kit, out);
-        return DrumsOut { kit: kit.into() };
+        return DrumsOut { kit: kit.into(), written: 0 };
     }
     let four_floor = match c.four_floor {
         Some(p) if p != 0.0 => spb == 16.0 && r.chance(p),
@@ -535,7 +540,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
             e.inst = hand(e.inst.get()).into();
         }
     }
-    DrumsOut { kit: kit.into() }
+    DrumsOut { kit: kit.into(), written: 0 }
 }
 
 const TRAVEL_SWELL: [f64; 4] = [0.78, 0.92, 1.08, 1.22];

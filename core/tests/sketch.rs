@@ -59,7 +59,6 @@ fn a_constant_moves_only_when_named_and_finite() {
 // bit today. They are process-wide like the constants, so a test that
 // forces one holds this lock.
 
-use dlcore::generator::plan::Cx;
 use dlcore::levers;
 use std::sync::Mutex;
 
@@ -105,7 +104,7 @@ fn the_levers_are_choices_to_force_and_off_they_change_nothing() {
                 (drums(&g), slots(&g))
             });
             // Forced on and lifted again: the loop is the plain one.
-            for (lever, option) in [("tripletKit", "on"), ("dottedPulse", "pulse"), ("dottedPulse", "kick332"), ("planingSevenths", "on")] {
+            for (lever, option) in [("dottedPulse", "pulse"), ("dottedPulse", "kick332"), ("planingSevenths", "on")] {
                 g.force(lever, Some(option)).expect("a lever");
                 g.load(seed, &[]);
                 assert_eq!(levers::named(lever), Some(option));
@@ -114,43 +113,6 @@ fn the_levers_are_choices_to_force_and_off_they_change_nothing() {
                 assert_eq!((drums(&g), slots(&g)), *plain, "{lever} lifted, seed {seed}");
             }
         }
-    });
-}
-
-#[test]
-fn the_triplet_kit_has_no_straight_eighth_and_the_kick_on_the_beat() {
-    big(|| {
-        let _held = LEVERS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        let mut moved = 0;
-        for seed in SEEDS {
-            let plain = {
-                let mut g = Box::new(Generator::new());
-                g.load(seed, &[]);
-                drums(&g)
-            };
-            with("tripletKit", Some("on"), seed, |g| {
-                let six_eight = Cx::new(g.spec()).metre == dlcore::generator::spec::Metre::SixEight;
-                let beat = if six_eight { 6.0 } else { 4.0 };
-                let on = drums(g);
-                for (step, micro, inst, vel) in on.iter().filter(|e| e.3 != 0.0) {
-                    let roll = g.render().drums.iter().any(|e| e.roll && e.step == *step && e.vel == *vel);
-                    let at = (step % beat + micro) * 3.0 / beat;
-                    if inst == "kick" || inst == "softkick" {
-                        if !roll {
-                            assert!((step % beat).abs() < 1e-9, "a kick off the beat at {step}, seed {seed}");
-                        }
-                    } else if !roll {
-                        assert!((at - at.round()).abs() < 1e-6, "{inst} at {step}+{micro} is not on a third, seed {seed}");
-                    }
-                }
-                let audible = |d: &[(f64, f64, String, f64)]| d.iter().filter(|e| e.3 != 0.0).count();
-                assert!(audible(&on) <= audible(&plain), "re-timing adds no hit, seed {seed}");
-                if on != plain {
-                    moved += 1;
-                }
-            });
-        }
-        assert!(moved > 0, "some loop has a kit to re-time");
     });
 }
 

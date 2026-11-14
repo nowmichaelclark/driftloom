@@ -208,6 +208,24 @@ alone = 0.15
 vibes = spacious 2, floating 2, soaring 2, dreamy 1.5, hazy 1.5, cosmic 1.5,
     glacial 1.5, intimate 0.3, minimal 0.4, cozy 0.5, plucky 0.5
 
+# tripletKit (queue item 101d; batch 6's #1, approved by Mikey 2026-11-09): a
+# kit in threes, the 12/8 shuffle (core/src/generator/kit.rs). The loop's own
+# kit, re-timed and filled: the eighth moves to two thirds of the beat (the
+# shuffle's place), a sixteenth to the third nearer it, and the first third
+# of every beat gets the loop's own hat at its own velocities and density, so
+# a beat plays three; the kick stays on the beat, and nothing is louder than
+# the loop's own kit plays it. For any loop with a kit but in 6/8 (its beat's
+# thirds are the eighths it already plays). Drawn alone, not among the
+# changes, for 15% of the loops that may have it before the vibes lean it:
+# the batch's conservative share, for Mikey's ears. The batch's [JUDGMENT]
+# row: toward the swaying and skipping vibes, away from the still ones.
+[choice tripletKit]
+options = today 1, on 1
+alone = 0.15
+vibes = swaying 2, skipping 2, bubbly 1.5, groovy 1.5, playful 1.5,
+    whimsical 1.5, cozy 1.5, dusky 1.5, glacial 0.3, still 0.3, reverent 0.4,
+    crisp 0.5
+
 # The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
 # every variable of the arc, named, with the range a loop draws it from, in
 # this one place, so phase 2's requests can pin them (docs/CORE.md, promises

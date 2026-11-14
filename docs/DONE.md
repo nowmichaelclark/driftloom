@@ -237,3 +237,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   --stereo --flac out.flac` writes a file any player opens; `node
   tools/flac.mjs` holds 328 renders to `flac` (about a fifth of a WAV at 16
   bits, a third at 24).
+- #391, tripletKit (item 101d, session 05, v167), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 7 with a kit (none in 6/8; a fifth of
+  the swaying ones, 1 in 11 of the still ones) plays it in threes, the 12/8
+  shuffle: the hats three a beat, the eighth moved to two thirds of the beat,
+  the kick on the beat, no brighter than its own kit. Two loops (corpus
+  20261009) that draw it: **dun-roar** (#45, a busy machine kit at 129) from
+  0:00; **thisk-doam** (#76, a slow tape kit at 55) from 0:00. A loop without
+  it plays as before, its wander too.
