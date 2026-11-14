@@ -17,6 +17,7 @@ use core::mem::{align_of, size_of};
 use core::ptr;
 
 use crate::Core;
+use crate::flac::Flac;
 use crate::generator::{LAYERS, Layer};
 use crate::player::{Handover, Moment, Player, Request, State};
 
@@ -824,4 +825,132 @@ pub unsafe extern "C" fn dl_player_note(player: *mut Engine, layer: u32, index: 
     // SAFETY: a writable `dl_note` (the caller's promise), checked not null.
     unsafe { out.write(c) };
     1
+}
+
+// FLAC, the lossless export (queue item 104a; `crate::flac`): an encoder in
+// the host's memory, as a player is. The host hands it what the player
+// rendered, a block at a time, and writes the bytes each call gives back.
+
+/// A new encoder, all zeros (so it costs the library's file nothing),
+/// copied into the host's memory by `dl_flac_start`.
+static FLAC: Template<Flac> = Template(Flac::new());
+
+/// The bytes an encoder takes, the same for a minute or three hours: the
+/// memory `dl_flac_start` is given.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_flac_size() -> usize {
+    size_of::<Flac>()
+}
+
+/// The alignment that memory needs.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_flac_align() -> usize {
+    align_of::<Flac>()
+}
+
+/// The host's encoder, or `None` for a null pointer.
+fn flac<'a>(f: *mut Flac) -> Option<&'a mut Flac> {
+    // SAFETY: the host passes what `dl_flac_start` returned, used from one
+    // thread at a time (the header's promise), or null.
+    unsafe { f.as_mut() }
+}
+
+/// Start an encoder in `memory` (`bytes` long, at least `dl_flac_size`,
+/// aligned to `dl_flac_align`): `channels` (1 or 2) of `bits`-bit samples
+/// (16 or 24) at `rate` Hz. Its first bytes, the file's header with the
+/// totals unknown, are at `dl_flac_bytes`. Null if the memory is too small
+/// or misaligned, or the export does not write that rate, layout or depth.
+///
+/// # Safety
+///
+/// `memory` is `bytes` writable bytes the host keeps for the encoder's life.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_start(memory: *mut c_void, bytes: usize, rate: u32, channels: u32, bits: u32) -> *mut Flac {
+    let p = memory.cast::<Flac>();
+    if p.is_null() || bytes < size_of::<Flac>() || !p.is_aligned() {
+        return ptr::null_mut();
+    }
+    // SAFETY: room and alignment checked above; the template is plain data.
+    unsafe { ptr::copy_nonoverlapping(&raw const FLAC.0, p, 1) };
+    let Some(f) = flac(p) else { return ptr::null_mut() };
+    if f.start(rate, channels, bits).is_ok() { p } else { ptr::null_mut() }
+}
+
+/// The bytes the last start, write or finish gave, to append to the file,
+/// and their count into `len`. Valid until the next call on the encoder.
+///
+/// # Safety
+///
+/// `len` is a writable `size_t`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_bytes(encoder: *mut Flac, len: *mut usize) -> *const u8 {
+    let bytes = flac(encoder).map_or(&[][..], |f| f.bytes());
+    if !len.is_null() {
+        // SAFETY: a writable `size_t` (the caller's promise), not null.
+        unsafe { len.write(bytes.len()) };
+    }
+    bytes.as_ptr()
+}
+
+/// Take the next `frames` frames (at most `DL_FLAC_BLOCK`): `planes` holds a
+/// pointer for each channel, each to `frames` floats, as `dl_player_render`
+/// fills them. The bytes to append (a whole frame when a block filled, else
+/// none) are at `dl_flac_bytes`. 0, or -1 if not started, finished, or too
+/// many frames.
+///
+/// # Safety
+///
+/// `planes` holds a readable pointer to `frames` floats for each of the
+/// encoder's channels.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_write(encoder: *mut Flac, planes: *const *const f32, frames: usize) -> c_int {
+    let Some(f) = flac(encoder) else { return -1 };
+    let channels = f.channels();
+    if planes.is_null() || channels == 0 || frames > crate::flac::BLOCK {
+        return -1;
+    }
+    let mut runs: [&[f32]; 2] = [&[], &[]];
+    for (c, run) in runs.iter_mut().enumerate().take(channels) {
+        // SAFETY: a pointer for each channel, each to `frames` floats (the
+        // caller's promise).
+        let at = unsafe { *planes.add(c) };
+        if at.is_null() {
+            return -1;
+        }
+        // SAFETY: as above.
+        *run = unsafe { core::slice::from_raw_parts(at, frames) };
+    }
+    match f.write(runs.get(..channels).unwrap_or(&[])) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// End the stream: the last frame's bytes at `dl_flac_bytes`. 0, or -1 if
+/// not started or already finished. Then `dl_flac_header` is finished.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_flac_finish(encoder: *mut Flac) -> c_int {
+    match flac(encoder).map(Flac::finish) {
+        Some(Ok(_)) => 0,
+        _ => -1,
+    }
+}
+
+/// The file's first `DL_FLAC_HEADER` (42) bytes into `out`: after
+/// `dl_flac_finish`, with the length and the MD5, for a host that seeks to
+/// write over the start of its file. 0, or -1 for a null encoder or `out`.
+///
+/// # Safety
+///
+/// `out` is 42 writable bytes, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_header(encoder: *mut Flac, out: *mut u8) -> c_int {
+    let Some(f) = flac(encoder) else { return -1 };
+    if out.is_null() {
+        return -1;
+    }
+    let head = f.header();
+    // SAFETY: 42 writable bytes (the caller's promise), not null.
+    unsafe { ptr::copy_nonoverlapping(head.as_ptr(), out, head.len()) };
+    0
 }

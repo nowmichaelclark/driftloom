@@ -3343,3 +3343,10 @@ mod tests {
         assert!(!core.event(CHORDS, Event::new(event::BEND, 9.0, 0.0)));
     }
 }
+
+// FLAC, the lossless export (queue item 104a): natively always, and in a web
+// build only with the `flac` feature, so the app's module stays the bytes it
+// was until the app exports (session 20). At the file's end, so no line of
+// shipped code moves (`core/AGENTS.md`).
+#[cfg(any(not(feature = "web"), feature = "flac"))]
+pub mod flac;

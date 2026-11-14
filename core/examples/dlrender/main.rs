@@ -49,6 +49,15 @@
 //!                                           speed (queue item 88,
 //!                                           `endless.rs`): no drift, no
 //!                                           growth, a line an hour
+//! cargo run --release --example dlrender -- --seed N | --corpus SEED:N | LIST
+//!     --flac OUT.flac [--bits 16|24] [the same options]
+//!                                           the render as FLAC, by the
+//!                                           core's own encoder (queue item
+//!                                           104a, `flac.rs`): from a seed
+//!                                           streamed a block at a time, a
+//!                                           directory for a corpus; 24 bits
+//!                                           unless asked; --wav beside it
+//!                                           writes the float WAV too
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! cargo run --release --example dlrender -- --block NAME/PROBE [--rate HZ] [--wav OUT.wav]
 //!                                           one building block alone, as the
@@ -69,6 +78,7 @@ mod change;
 mod clip;
 mod endless;
 mod fades;
+mod flac;
 mod notelist;
 mod seed;
 
@@ -79,7 +89,7 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--salt N] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] [--space NAME=V|LO:HI] [--route sketch[.N]=LAYER] (the last six: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--salt N] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] [--space NAME=V|LO:HI] [--route sketch[.N]=LAYER] (the last six: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --seed N | --corpus SEED:N | LIST --flac OUT.flac [--bits 16|24] [the options above]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -99,6 +109,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let mut by_seed = BySeed::default();
     let mut changes = Changes::default();
     let mut endless: Option<f64> = None;
+    let (mut flac_to, mut bits) = (None, 24u32);
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? {
@@ -112,6 +123,8 @@ fn run(args: Vec<String>) -> Result<(), String> {
             "--endless" => endless = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
             "--block" => block = Some(args.next().ok_or(USAGE)?),
             "--wav" => wav_to = Some(args.next().ok_or(USAGE)?),
+            "--flac" => flac_to = Some(args.next().ok_or(USAGE)?),
+            "--bits" => bits = args.next().ok_or(USAGE)?.parse::<u32>().map_err(|_| USAGE)?,
             "--signal" => signal = args.next().ok_or(USAGE)?,
             "--rate" => rate = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
             "--blocks" => {
@@ -141,14 +154,17 @@ fn run(args: Vec<String>) -> Result<(), String> {
         return changes.run(n, rate, &by_seed);
     }
     if !by_seed.seeds.is_empty() {
+        if let Some(to) = &flac_to {
+            return by_seed.flac(rate, layout, to, bits, wav_to.as_deref());
+        }
         return by_seed.run(rate, layout, wav_to.as_deref());
     }
-    if lists.is_empty() || (wav_to.is_some() && lists.len() != 1) {
+    if lists.is_empty() || ((wav_to.is_some() || flac_to.is_some()) && lists.len() != 1) {
         return Err(USAGE.to_string());
     }
     // In stereo `out` is both sides, written as a stereo file.
     let names = signals(layout);
-    let keep = match &wav_to {
+    let keep = match wav_to.as_ref().or(flac_to.as_ref()) {
         Some(_) if layout == 2 && signal == "out" => Some(0),
         Some(_) => Some(
             names
@@ -180,9 +196,13 @@ fn run(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("{path}: rendered {how:?} frames a call, the speaker output is {}, not {}", out.join(" "), want.join(" ")));
             }
         }
+        let stereo = layout == 2 && keep == Some(0);
         if let Some(out) = &wav_to {
-            let bytes = if layout == 2 && keep == Some(0) { wav_channels(&first.kept, list.rate, 2) } else { wav(&first.kept, list.rate) };
+            let bytes = if stereo { wav_channels(&first.kept, list.rate, 2) } else { wav(&first.kept, list.rate) };
             std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
+        }
+        if let Some(out) = &flac_to {
+            println!("{}", flac::samples(out, &first.kept, list.rate, if stereo { 2 } else { 1 }, bits)?);
         }
     }
     Ok(())
@@ -289,6 +309,19 @@ impl BySeed {
         let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, salt: 0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false, track: None };
         let request = way.request()?;
         endless::run(&endless::Way { hours, seed, rate: rate.unwrap_or(22_050.0), full: self.full, layout, wander: self.wander.unwrap_or(1.0), request })
+    }
+
+    /// `--seed` and `--corpus` with `--flac` (`flac.rs`): each loop
+    /// streamed to a FLAC file of `bits` bits.
+    fn flac(mut self, rate: Option<f64>, layout: u32, flac_to: &str, bits: u32, wav_to: Option<&str>) -> Result<(), String> {
+        if let Some(i) = self.pick {
+            self.seeds.retain(|(at, _)| *at == Some(i));
+            if self.seeds.is_empty() {
+                return Err(format!("--pick {i}: the corpus has no such loop"));
+            }
+        }
+        let way = seed::Way { seconds: self.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !self.lite, layout, wander: self.wander.unwrap_or(1.0), salt: self.salt, vibes: self.vibes, request: self.request, clip: self.clip, choices: false, track: self.track };
+        flac::seeds(&self.seeds, &way, flac_to, bits, wav_to)
     }
 
     /// `--seed` and `--corpus` (`seed.rs`): the loops rendered, or their

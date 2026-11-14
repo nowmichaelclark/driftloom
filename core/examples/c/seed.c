@@ -5,6 +5,7 @@
  *     cc -O2 -std=c11 -Iinclude examples/c/seed.c target/release/libdlcore.a -o seed
  *     ./seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite]
  *                 [--wander A] [--vibes ID,...] [--wav OUT.wav] [--ahead]
+ *                 [--flac OUT.flac [--bits 16|24]]
  *
  * It prints the line dlrender prints: the loop's name, how it was played and
  * the hashes of its samples (FNV-1a over the float words, a channel each, and
@@ -12,7 +13,10 @@
  * float, from a little-endian host). With --ahead it renders as a host with
  * no audio thread does (queue item 87): a pass at a time, each in one call
  * (dl_player_pass_frames), its cost estimated first (dl_player_estimate,
- * written to stderr); the line and the WAV are the same. */
+ * written to stderr); the line and the WAV are the same. With --flac it also
+ * writes the render as FLAC through the core's own encoder (queue item 104a,
+ * dl_flac_*), 16 or 24 bits (--bits, 24 by default), its header patched at
+ * the end: the same bytes as `dlrender --flac`. */
 
 #include <math.h>
 #include <stdint.h>
@@ -52,9 +56,10 @@ int main(int argc, char **argv) {
   uint32_t channels = 1;
   int full = 1;
   int ahead = 0;
-  const char *wav = NULL, *vibes = NULL, *request = NULL;
+  const char *wav = NULL, *vibes = NULL, *request = NULL, *flac_path = NULL;
+  uint32_t bits = 24;
   if (argc < 2) {
-    fprintf(stderr, "usage: seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--vibes ID,...] [--request TEXT] [--wav OUT.wav] [--ahead]\n");
+    fprintf(stderr, "usage: seed SEED [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--vibes ID,...] [--request TEXT] [--wav OUT.wav] [--ahead] [--flac OUT.flac [--bits 16|24]]\n");
     return 2;
   }
   uint32_t seed = (uint32_t)strtoul(argv[1], NULL, 10);
@@ -68,6 +73,8 @@ int main(int argc, char **argv) {
     else if (i + 1 < argc && !strcmp(argv[i], "--vibes")) vibes = argv[++i];
     else if (i + 1 < argc && !strcmp(argv[i], "--request")) request = argv[++i];
     else if (i + 1 < argc && !strcmp(argv[i], "--wav")) wav = argv[++i];
+    else if (i + 1 < argc && !strcmp(argv[i], "--flac")) flac_path = argv[++i];
+    else if (i + 1 < argc && !strcmp(argv[i], "--bits")) bits = (uint32_t)strtoul(argv[++i], NULL, 10);
     else {
       fprintf(stderr, "seed: no such option: %s\n", argv[i]);
       return 2;
@@ -128,6 +135,24 @@ int main(int argc, char **argv) {
     fwrite("data", 1, 4, f);
     put32(f, data);
   }
+  /* The encoder's memory, the host's too: a fixed size, however long. */
+  FILE *ff = NULL;
+  dl_flac *enc = NULL;
+  void *flac_memory = NULL;
+  size_t len = 0;
+  if (flac_path) {
+    size_t falign = dl_flac_align();
+    size_t fsize = (dl_flac_size() + falign - 1) / falign * falign;
+    flac_memory = aligned_alloc(falign, fsize);
+    enc = flac_memory ? dl_flac_start(flac_memory, fsize, (uint32_t)rate, channels, bits) : NULL;
+    ff = fopen(flac_path, "wb");
+    if (!enc || !ff) {
+      fprintf(stderr, "seed: no FLAC encoder for %s at %g Hz, %u bits\n", flac_path, rate, bits);
+      return 1;
+    }
+    const uint8_t *head = dl_flac_bytes(enc, &len);
+    fwrite(head, 1, len, ff);
+  }
   static float small[2][CHUNK], small_both[2 * CHUNK];
   float *left = small[0], *right = small[1], *both = small_both;
   size_t room = CHUNK;
@@ -177,6 +202,31 @@ int main(int argc, char **argv) {
       both[2 * i + 1] = right[i];
     }
     if (f) fwrite(channels == 2 ? both : left, 4 * channels, n, f);
+    for (size_t at = 0; enc && at < n; at += DL_FLAC_BLOCK) {
+      size_t take = n - at < DL_FLAC_BLOCK ? n - at : DL_FLAC_BLOCK;
+      const float *planes[2] = { left + at, right + at };
+      if (dl_flac_write(enc, planes, take) != 0) {
+        fprintf(stderr, "seed: the FLAC encoder refused a block\n");
+        return 1;
+      }
+      const uint8_t *bytes = dl_flac_bytes(enc, &len);
+      fwrite(bytes, 1, len, ff);
+    }
+  }
+  if (enc) {
+    /* The last frame, then the finished header over the first. */
+    uint8_t head[DL_FLAC_HEADER];
+    const uint8_t *bytes;
+    if (dl_flac_finish(enc) != 0 || dl_flac_header(enc, head) != 0) {
+      fprintf(stderr, "seed: the FLAC encoder could not finish\n");
+      return 1;
+    }
+    bytes = dl_flac_bytes(enc, &len);
+    fwrite(bytes, 1, len, ff);
+    fseek(ff, 0, SEEK_SET);
+    fwrite(head, 1, DL_FLAC_HEADER, ff);
+    fclose(ff);
+    free(flac_memory);
   }
   if (f) fclose(f);
   if (ahead) fprintf(stderr, "seed: rendered ahead in %d chunks, estimated %.0f ms on the reference host\n", chunks, estimated / 1000);

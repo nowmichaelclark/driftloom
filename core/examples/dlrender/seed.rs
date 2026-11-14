@@ -64,7 +64,7 @@ impl Way {
     }
 
     /// The line's description of it.
-    fn describe(&self) -> String {
+    pub fn describe(&self) -> String {
         let vibes = if self.vibes.is_empty() { String::new() } else { format!(" vibes={}", self.vibes.join(",")) };
         let request = self.request.as_ref().map_or(String::new(), |r| format!(" request={r}"));
         format!(
