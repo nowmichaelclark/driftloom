@@ -28,14 +28,17 @@ export PATH="$sdk/platform-tools:$sdk/emulator:$PATH"
 yes | "$sdkmanager" --licenses >/dev/null 2>&1 || true
 "$sdkmanager" "emulator" "platform-tools" "$image" >/dev/null
 
-echo no | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --force -n "$avd" -k "$image" -d pixel_6 >/dev/null
+export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+mkdir -p "$ANDROID_AVD_HOME"
+echo no | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --force -n "$avd" -k "$image"
+emulator -list-avds | grep -x "$avd" || { echo "the AVD $avd was not made (in $ANDROID_AVD_HOME)" >&2; ls -la "$ANDROID_AVD_HOME" >&2; exit 1; }
 
 log=$(mktemp)
 emulator -avd "$avd" -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics \
   -gpu swiftshader_indirect -accel on -memory 4096 -cores 3 >"$log" 2>&1 &
 emu=$!
 cleanup() {
-  adb logcat -d -t 400 2>/dev/null | grep -E "chromium|WebView|AndroidRuntime|DEBUG|driftloom|app.loops" | tail -80 || true
+  timeout 20 adb logcat -d -t 400 2>/dev/null | grep -E "chromium|WebView|AndroidRuntime|DEBUG|driftloom|app.loops" | tail -80 || true
   kill "$emu" 2>/dev/null || true
 }
 trap cleanup EXIT
