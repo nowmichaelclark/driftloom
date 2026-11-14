@@ -416,6 +416,10 @@ pub struct Joins {
     pub fill: [f64; 2],
     /// How many beats a pivot's chord holds past the line.
     pub hold: f64,
+    /// How far under the unit, in dB by its notes (`Heard::under`), a join
+    /// may leave the mix before it falls back to a lighter one, or to a
+    /// glide (session 16b: never a hole).
+    pub hole: f64,
 }
 
 /// How an arc's energy is heard (`[longform energy]`, queue item 102c):

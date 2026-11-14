@@ -929,17 +929,34 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     );
     // How a unit meets the next (session 15): the joins' numbers.
     let joins = find("joins");
-    joins.only(&["step", "bars", "share", "breath", "fill", "hold"]);
+    joins.only(&["step", "bars", "share", "breath", "fill", "hold", "hole"]);
     let _ = writeln!(
         out,
-        "/// How a long piece's units meet (`data/longform.txt`, `[longform joins]`).\npub static JOINS: Joins = Joins {{ step: {}, bars: {}, share: {}, breath: {}, fill: {}, hold: {} }};",
+        "/// How a long piece's units meet (`data/longform.txt`, `[longform joins]`).\npub static JOINS: Joins = Joins {{ step: {}, bars: {}, share: {}, breath: {}, fill: {}, hold: {}, hole: {} }};",
         joins.need_num("step"),
         joins.need_num("bars"),
         joins.need_num("share"),
         joins.need_num("breath"),
         joins.need_range("fill"),
-        joins.need_num("hold")
+        joins.need_num("hold"),
+        joins.need_num("hole")
     );
+    // Each voice's loudness over a note's life (session 16b), by layer in
+    // the generator's order: what a join reads its kept layers' share by.
+    let loud = find("loudness");
+    loud.only(&["drums.*", "bass.*", "chords.*", "melody.*", "texture.*"]);
+    let mut table = String::from("[");
+    for layer in ["drums", "bass", "chords", "melody", "texture"] {
+        table.push_str("&[");
+        for (voice, key) in loud.parts(layer) {
+            let n = loud.nums(&key).unwrap_or_else(|| panic!("{}: missing", loud.at(&key)));
+            assert!(n.len() == 6 && n.iter().all(|&x| (-99.0..=0.0).contains(&x)), "{}: expected six levels in dB, -99 to 0", loud.at(&key));
+            let _ = write!(table, "({}, [{}]),", quote(&voice), n.iter().map(|&x| f(x)).collect::<Vec<_>>().join(", "));
+        }
+        table.push_str("],");
+    }
+    table.push(']');
+    let _ = writeln!(out, "/// Each voice's loudness in the mix over a note's life (`data/longform.txt`, `[longform loudness]`), by layer.\npub static LOUDNESS: [&[(&str, [f64; 6])]; 5] = {table};");
 }
 
 fn main() {

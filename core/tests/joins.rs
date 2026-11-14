@@ -22,6 +22,7 @@ use dlcore::generator::plan::Cx;
 use dlcore::generator::request::{Journey, Request};
 use dlcore::generator::rng::Rng;
 use dlcore::generator::theory::SCALES;
+use dlcore::generator::data::JOINS;
 use dlcore::generator::{Generator, Layer};
 use dlcore::player::Player;
 
@@ -172,7 +173,13 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                         let what = format!("seed {seed} {text} section {n}.{p}");
                         // What the plan asked, or the next of its kind the
                         // loop could play (a fill with no kit is a glide).
-                        assert!(u.join == s.join || matches!((s.join, u.join), (Join::Fill | Join::Floor | Join::Alone | Join::Breath, Join::Glide) | (Join::Alone | Join::Pivot, Join::Breath) | (Join::Pivot, Join::Floor)), "{what}: planned {:?}, played {:?}", s.join, u.join);
+                        // (Or, where it would be a hole, a breath or a glide:
+                        // session 16b.)
+                        assert!(u.join == s.join || matches!((s.join, u.join), (Join::Fill | Join::Floor | Join::Alone | Join::Breath | Join::Pivot, Join::Glide) | (Join::Alone | Join::Pivot | Join::Floor, Join::Breath) | (Join::Pivot, Join::Floor)), "{what}: planned {:?}, played {:?}", s.join, u.join);
+                        // Never a hole, by its notes (session 16b).
+                        if matches!(u.join, Join::Alone | Join::Floor | Join::Breath) {
+                            assert!(u.under < JOINS.hole, "{what}: a {:?} {:.1} dB under the unit", u.join, u.under);
+                        }
                         if !matches!(u.join, Join::None | Join::Glide | Join::Prepared) {
                             assert!(u.join_from > u.from && u.join_from < u.to, "{what}: {:?} from {} in {}..{}", u.join, u.join_from, u.from, u.to);
                         }
@@ -203,6 +210,27 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
             assert!(heard_kinds[x] > 0, "no {} played", k.name());
         }
         assert!(lines > 500, "{lines} lines");
+    });
+}
+
+/// The holes session 05 found on Endless arcs (session 16b): ta-muin's tune
+/// alone over a stab's one note into sections 4 and 18, a kit and a bass
+/// that are most of the loop (19 to 38 dB under it), and yi-yoar's floor out
+/// of section 15, its kit and bass most of the mix (33 to 40 dB under). Each
+/// falls back where its notes say it would be a hole: a breath, or nothing
+/// written.
+#[test]
+fn a_join_that_would_be_a_hole_falls_back() {
+    roomy(|| {
+        let mut g = Box::new(Generator::new());
+        for (seed, n, planned) in [(1_337_654_778, 3, Join::Alone), (1_337_654_778, 17, Join::Alone), (819_045_617, 15, Join::Floor)] {
+            let form = load(&mut g, seed, "bars=endless", Journey::Arc);
+            let last = form.units_in(n) - 1;
+            assert_eq!(form.joined(n, last).join, planned, "seed {seed} section {n}: the plan's join");
+            let pass = g.section(n, 0.0);
+            let u = pass.heard.units().last().copied().expect("a unit");
+            assert!(matches!(u.join, Join::Breath | Join::Glide), "seed {seed} section {n}: {:?} played, {:.1} dB under", u.join, u.under);
+        }
     });
 }
 

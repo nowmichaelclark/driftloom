@@ -38,7 +38,7 @@ says the work goes on meanwhile.
 | | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | yes, 2026-11-14: all kept |
 | 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | yes, 2026-11-14 (#387) |
 | 05 | `05-batch6-kit.md` | 101d: tripletKit, dottedPulse | Opus 5.5, high | yes, 2026-11-14 (#391, #392) |
-| 16b | `16b-long-holes.md` | 102g: no join a hole, on any piece (three found by session 05 on Endless arcs); runs after 05, before 06 | Opus 5.5, high | |
+| 16b | `16b-long-holes.md` | 102g: no join a hole, on any piece (three found by session 05 on Endless arcs); runs after 05, before 06 | Opus 5.5, high | yes, 2026-11-14 (#PRNUM; the third set on `long-clips`) |
 | 06 | `06-batch6-color.md` | 101e: colorTone | Opus 5.5, high | |
 | 07 | `07-batch6-planing.md` | 101f: planingSevenths | Opus 5.5, high | |
 | 08 | `08-batch6-low-bell.md` | 101g: lowBell, dropSpotlight | Opus 5.5, high | |
@@ -213,6 +213,14 @@ Things earlier sessions learned:
   listening set again from the maps (`--before` a dlrender from dfe78c3 for
   the blind pairs). `tools/stalls.mjs --loops arc,arcs` is the stall test
   on an arc of 32,768 bars and on Endless arcs.
+- No join a hole (session 16b): a tune alone, a floor out or a breath is
+  read from its notes (`Heard::under`, each voice's loudness over a note's
+  life in `[longform loudness]`, which `node tools/voice-loudness.mjs
+  --check` holds to the voices: a new voice gets its line there) and falls
+  back where it would be a hole. `node tools/longform-holes.mjs` is the wide
+  run (200 pieces, about 90 minutes on four cores; the nightly's `holes`
+  job); `--endless 20 --long 4` for a look. A sound change that moves what a
+  loop plays can move which joins fall back: say so in the PR.
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.

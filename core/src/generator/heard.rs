@@ -88,7 +88,7 @@
 
 use super::canon::{Sink, Writer};
 use super::character::Names;
-use super::data::{ENERGY, JOINS, LONGFORM};
+use super::data::{ENERGY, JOINS, LONGFORM, LOUDNESS};
 use super::js;
 use super::list::{Empty, Word};
 use super::longform::{self, Form, Join, Key, Relation, Role, Span, State, Theme, Variation};
@@ -122,6 +122,21 @@ const THIN_SALT: u32 = 0x5448_494e;
 /// made with.
 const SECOND_SALT: u32 = 0x3254_4e45;
 const ANSWER_SALT: u32 = 0x414e_5357;
+/// The textures whose sound rises and falls over the length of their note,
+/// however long (the rest sound their voice's own life): `Heard::under`.
+const SWELLING: [&str; 3] = ["swell", "wind", "waves"];
+/// What `Heard::under` hears past a join's notes (session 16b): each
+/// layer's send into the echo, in `LAYERS`' order (the mix's `ECHO`,
+/// `core/src/mix.rs`), the echo's feedback, and its return, fitted against
+/// renders: four times its sends' power. A join's depth against the loop as
+/// itself counts `LOOP_MARGIN` dB less than against the unit.
+const ECHO_SENDS: [f64; 5] = [0.05, 0.0, 0.15, 0.12, 0.25];
+const ECHO_FEEDBACK: f64 = 0.34;
+const ECHO_RETURN: f64 = 4.0;
+const LOOP_MARGIN: f64 = 10.0;
+/// The spans `Heard::under` reads: the window's second half, and it again
+/// an echo before, two and three.
+const SPANS: usize = 4;
 /// Where the tune may sit once a variation moves it an octave: up where its
 /// highest stays here or under (then anywhere under the doubling's 96),
 /// down where its lowest stays here or over.
@@ -259,6 +274,9 @@ pub struct Unit {
     pub pivot_from: usize,
     pub pivot_vel: f64,
     pub pivot_hold: f64,
+    /// How far under the unit as it plays the join leaves the mix, by its
+    /// notes (`Heard::under`, session 16b), in dB.
+    pub under: f64,
 }
 
 impl Empty for Unit {
@@ -296,6 +314,7 @@ impl Empty for Unit {
         pivot_from: 0,
         pivot_vel: 0.0,
         pivot_hold: 0.0,
+        under: 0.0,
     };
 }
 
@@ -667,6 +686,211 @@ impl Heard {
         false
     }
 
+    /// How far under the mix the join of unit `u` would leave it, where
+    /// the layers `out` leave out the notes they strike from section step
+    /// `from` to `to` (session 16b; a note that rings across `to` plays, as
+    /// `Unit::joins_out` has it), in dB: from the notes alone, never from
+    /// audio. Read over the window's second half (what a yardstick's median
+    /// frame hears), each layer's notes sounding there and their echoes as
+    /// the mix sends them (`Heard::sounding`), what the join keeps against
+    /// the unit there without it, or against the loop as itself there less
+    /// `LOOP_MARGIN`, whichever is further: a unit whose own tune rests
+    /// there (a fragment's half) leaves the join little to keep.
+    #[allow(clippy::too_many_arguments)] // the unit and its window
+    fn under(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8) -> f64 {
+        let step = 15.0 / cx.spec.bpm;
+        if !(step > 0.0) || !(to > from) {
+            return 0.0;
+        }
+        let echo = 4.0 * super::choices::echo_time_of(cx.spec.seed, cx.spec.vibes.as_ref());
+        let [whole, kept] = self.sounding(u, cx, base, second, from, to, out, echo, step);
+        let db = |of: f64| {
+            if !(of > 0.0) {
+                0.0
+            } else if !(kept > 0.0) {
+                99.0
+            } else {
+                js::min(99.0, 10.0 * crate::math::log10(of / kept))
+            }
+        };
+        let by_unit = db(whole);
+        if by_unit >= JOINS.hole {
+            return by_unit;
+        }
+        let plain = Unit { from: u.from, to: u.to, ..Unit::EMPTY };
+        let [own, _] = self.sounding(&plain, cx, base, None, from, to, 0, echo, step);
+        js::max(by_unit, db(own) - LOOP_MARGIN)
+    }
+
+    /// The mix over the second half of section steps `from` to `to` of unit
+    /// `u` as it plays, and what of it is left where the layers `out` leave
+    /// out the notes they strike from `from` on (`[whole, kept]`, as
+    /// energies): the notes themselves and their echoes, `echo` steps apart
+    /// (three repeats, `ECHO_FEEDBACK` each, at `ECHO_RETURN` of the
+    /// layers' sends). The room's own ring is short (its combs fall about 70
+    /// dB a second), so it is left out: measured, adding it changed no
+    /// join's verdict.
+    #[allow(clippy::too_many_arguments)] // the unit, its window, the echo
+    fn sounding(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8, echo: f64, step: f64) -> [f64; 2] {
+        let mid = 0.5 * (from + to);
+        let spans: [[f64; 2]; SPANS] = core::array::from_fn(|k| [mid - k as f64 * echo, to - k as f64 * echo]);
+        let e = self.power(u, cx, base, second, from, to, out, &spans, step);
+        let mut sum = [0.0; 2];
+        let mut fall = 1.0;
+        for (k, span) in e.iter().enumerate() {
+            for (l, x) in span.iter().enumerate() {
+                let send = if k == 0 { 1.0 } else { ECHO_SENDS[l] * ECHO_SENDS[l] * fall };
+                sum[0] += send * x[0];
+                sum[1] += send * x[1];
+            }
+            fall = if k == 0 { ECHO_RETURN } else { fall * ECHO_FEEDBACK * ECHO_FEEDBACK };
+        }
+        sum
+    }
+
+    /// Each layer's energy over each of the `spans` (section steps) of unit
+    /// `u` as it plays (`[whole, kept]`, `LAYERS`' order), and with the
+    /// layers `out` leaving out the notes they strike from `from` to `to` (a
+    /// note that rings across `to` plays). Each note sounding there (struck
+    /// in it, or before and still ringing) is its voice's loudness over its
+    /// life (`[longform loudness]`) at its velocity squared and its layer's
+    /// level, for as long as it lasts there, every note of a chord. One walk
+    /// of the loop's notes over the spans and the few seconds before them,
+    /// the same at any section.
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)] // the unit, its window and the spans; a layer's notes each
+    #[inline(never)] // one walk, called from two places: kept out of line
+    fn power(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8, spans: &[[f64; 2]; SPANS], step: f64) -> [[[f64; 2]; 5]; SPANS] {
+        let mut sums = [[[0.0; 2]; 5]; SPANS];
+        let first = spans.iter().map(|s| s[0]).fold(f64::INFINITY, js::min);
+        let last = spans.iter().map(|s| s[1]).fold(f64::NEG_INFINITY, js::max);
+        if !(last > first) {
+            return sums;
+        }
+        // How far back a note struck can still sound: the table's life.
+        let look = js::ceil(EDGES[6] / step);
+        // (A kit hit is gone in half a second, every one in the table.)
+        let kit = js::ceil(EDGES[3] / step);
+        // Each voice's loudness as powers, worked out once a walk for the
+        // few voices it meets.
+        let mut known: [(&'static str, usize, [f64; 6]); 12] = [("", 9, [0.0; 6]); 12];
+        let mut table = |layer: Layer, name: &'static str| -> Option<[f64; 6]> {
+            let l = layer as usize;
+            if let Some(k) = known.iter().find(|k| k.1 == l && k.0 == name) {
+                return Some(k.2);
+            }
+            let t = LOUDNESS[l];
+            let db = t.iter().find(|e| e.0 == name).or(t.first())?.1;
+            let lin = db.map(|x| crate::math::pow(10.0, x / 10.0));
+            if let Some(slot) = known.iter_mut().find(|k| k.1 == 9) {
+                *slot = (name, l, lin);
+            }
+            Some(lin)
+        };
+        // (A kit hit is held no time: it sounds its voice's life.)
+        let mut add = |layer: Layer, p: Option<[f64; 6]>, shaped: bool, at: f64, dur: f64, power: f64| {
+            let Some(p) = p else { return };
+            if !(power > 0.0) {
+                return;
+            }
+            let l = layer as usize;
+            let rings = if layer == Layer::Drums { look } else { dur };
+            let taken = out & (1 << l) != 0 && at >= from && at < to && at + dur <= to + 0.5;
+            note_energy(&mut sums, spans, l, &p, shaped, at, dur, rings, power, taken, step);
+        };
+        let cycle = |layer: Layer| cx.spec.cycles.of(layer as usize).filter(|&c| c > 0.0).unwrap_or(cx.spec.bars * cx.spb);
+        // Every place an event of `layer` written at loop step `at`, `dur`
+        // steps long, falls, from as far before the spans as it can still
+        // sound (its length, or the table's life) to their end.
+        let places = |layer: Layer, at: f64, dur: f64, f: &mut dyn FnMut(f64)| {
+            let c = cycle(layer);
+            let placed = self.placed(at, c);
+            let back = if layer == Layer::Drums { kit } else { js::max(look, dur + 1.0) };
+            let mut s = placed + js::ceil((first - back - placed) / c) * c;
+            while s < last {
+                f(s);
+                s += c;
+            }
+        };
+        let mid = 0.5 * (spans[0][0] + spans[0][1]);
+        let level = |layer: Layer| {
+            let l = u.level(layer, mid);
+            if u.rests(layer) { 0.0 } else { l * l }
+        };
+        let voice = |layer: Layer, own: &'static str| {
+            let v = u.voice[layer as usize].get();
+            if v.is_empty() { own } else { v }
+        };
+        // The kit, the bass, the chords and the texture, one walk: each
+        // event's voice, its length and its power at its velocity (every
+        // note of a chord, a swell's).
+        for layer in [Layer::Drums, Layer::Bass, Layer::Chords, Layer::Texture] {
+            let lv = level(layer);
+            let count = match layer {
+                Layer::Drums => base.drums.len(),
+                Layer::Bass => base.bass.len(),
+                Layer::Chords => base.chords.len(),
+                _ => base.texture.len(),
+            };
+            for i in 0..count {
+                let (at, dur, vel, n, name, shaped) = match layer {
+                    Layer::Drums => base.drums.get(i).map(|e| (e.step, 0.0, e.vel, 1.0, e.inst.get(), false)),
+                    Layer::Bass => base.bass.get(i).map(|e| (e.step, e.dur, e.vel, 1.0, voice(layer, e.voice.get()), false)),
+                    Layer::Chords => base.chords.get(i).map(|e| (e.step, e.dur, e.vel, e.notes.len() as f64, voice(layer, e.voice.get()), false)),
+                    _ => base.texture.get(i).map(|e| {
+                        let k = e.kind.get();
+                        (e.step, e.dur, e.vel, if k == "swell" { js::max(1.0, e.notes.len() as f64) } else { 1.0 }, k, SWELLING.contains(&k))
+                    }),
+                }
+                .unwrap_or((0.0, 0.0, 0.0, 0.0, "", false));
+                if !(vel > 0.0 && n > 0.0) {
+                    continue;
+                }
+                let p = table(layer, name);
+                let piece = if layer == Layer::Drums && self.arc { Some(Piece::of(name)) } else { None };
+                places(layer, at, dur, &mut |s| {
+                    let v = piece.map_or(vel, |piece| vel * u.kit_at(s, piece));
+                    add(layer, p, shaped, s, dur, lv * n * v * v);
+                });
+            }
+        }
+        // The tune: its own and the second, by the half of the phrase each
+        // step is in, thinned past a note's rank, stretched where the unit
+        // stretches it (as `tune_plays` walks them).
+        let lv = level(Layer::Melody);
+        let which = |s: f64| u.tune[usize::from(self.phrase > 0.0 && s % self.phrase >= self.half)];
+        let kept_note = |own: bool, i: usize, s: f64| {
+            let thin = Unit::glide(u.thin, u.along(s));
+            let place = if own { f64::from(self.places.get(i).copied().unwrap_or(0.0)) } else { rank(self.seed ^ SECOND_SALT, i) };
+            thin <= 0.0 || place < 1.0 - thin
+        };
+        let tunes: [(u8, &[super::melody::MelodyEvent]); 2] = [(tune::OWN, &base.melody), (tune::SECOND, second.map_or(&[], |m| &m[..]))];
+        let own_voice = base.melody.iter().map(|e| e.voice.get()).next().unwrap_or("");
+        for (whose, notes) in tunes {
+            if !u.tune.contains(&whose) {
+                continue;
+            }
+            for (i, e) in notes.iter().enumerate().take(MELODY_MAX).filter(|(_, e)| e.vel > 0.0) {
+                let name = if e.voice.get().is_empty() { own_voice } else { e.voice.get() };
+                let p = table(Layer::Melody, voice(Layer::Melody, name));
+                let mut one = |s: f64| {
+                    if which(s) == whose && kept_note(whose == tune::OWN, i, s) {
+                        add(Layer::Melody, p, false, s, e.dur, lv * e.vel * e.vel);
+                    }
+                };
+                if u.stretched && self.phrase > 0.0 {
+                    let w = e.step % self.phrase;
+                    let s = e.step + w;
+                    if 2.0 * w < self.phrase && s >= first - js::max(look, e.dur + 1.0) && s < last {
+                        one(s);
+                    }
+                } else {
+                    places(Layer::Melody, e.step, e.dur, &mut one);
+                }
+            }
+        }
+        sums
+    }
+
     /// Each tune note's place by rank (`places`), counted in 256 bins: a
     /// walk of the tune, no sort.
     fn place_notes(&mut self, base: &Render) {
@@ -886,8 +1110,6 @@ impl Heard {
         let bit = |l: Layer| 1u8 << l as usize;
         let all = 0b1_1111u8;
         let cycle = |layer: Layer| cx.spec.cycles.of(layer as usize).filter(|&c| c > 0.0).unwrap_or(cx.spec.bars * spb);
-        // Whether a layer's notes fall in steps `from` to `to` of the section.
-        let falls = |step: f64, len: f64, from: f64, to: f64| len > 0.0 && step + js::ceil((from - step) / len) * len < to;
         // The kit's backbeat instrument, else its shimmer, and its loudest.
         let mut kit: [Option<(Word, f64)>; 2] = [None; 2];
         for e in base.drums.iter().filter(|e| e.vel > 0.0) {
@@ -1020,32 +1242,42 @@ impl Heard {
             // its last bar is the unit's bass, not a floor to take out
             // (session 15 measured such a unit 6 LU under the loop).
             if u.out != 0 {
-                let heard = |layer: Layer, starts: &mut dyn Iterator<Item = f64>| {
-                    let c = cycle(layer);
-                    starts.filter(|&step| falls(step, c, u.from, u.join_from)).take(2).count() >= 2
-                };
-                let mut keep = 0u8;
-                for layer in LAYERS {
-                    if u.out & bit(layer) == 0 {
-                        continue;
-                    }
-                    let ok = match layer {
-                        Layer::Drums => heard(layer, &mut base.drums.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
-                        Layer::Bass => heard(layer, &mut base.bass.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
-                        Layer::Chords => heard(layer, &mut base.chords.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
-                        Layer::Melody => heard(layer, &mut base.melody.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
-                        Layer::Texture => heard(layer, &mut base.texture.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
-                    };
-                    if ok || kind == Join::Pivot && layer == Layer::Chords {
-                        keep |= bit(layer);
-                    }
-                }
+                let keep = heard_out(cx, base, u.from, u.join_from, u.out) | if kind == Join::Pivot { u.out & bit(Layer::Chords) } else { 0 };
                 u.out = keep;
                 if keep == 0 && kind != Join::Pivot {
                     kind = Join::Glide;
                 }
             }
             u.join = kind;
+        }
+        // Never a hole (session 16b): where what the join keeps would leave
+        // the mix `[longform joins] hole` dB under the unit, by its notes
+        // (`under`), it falls back to a breath (every layer heard there out
+        // for the join's last half), or where that would too, to a glide:
+        // nothing written. ta-muin's tune alone was a stab's one note over a
+        // kit and a bass that are most of the loop, 19 to 38 dB under it.
+        let Some(mut u) = self.units.get(p).copied() else { return };
+        if !matches!(u.join, Join::Alone | Join::Floor | Join::Breath) {
+            return;
+        }
+        u.under = self.under(&u, cx, base, second, u.join_from, u.to, u.out);
+        if u.under >= JOINS.hole {
+            let len = js::max(1.0, js::floor(js::min(JOINS.bars * spb, JOINS.share * (u.to - u.from))));
+            let from = u.to - js::max(1.0, js::floor(len * JOINS.breath));
+            let out = heard_out(cx, base, u.from, from, all);
+            let under = if u.join == Join::Breath || out == 0 { f64::INFINITY } else { self.under(&u, cx, base, second, from, u.to, out) };
+            if under < JOINS.hole {
+                u.join = Join::Breath;
+                u.join_from = from;
+                u.out = out;
+                u.under = under;
+            } else {
+                u.join = Join::Glide;
+                u.out = 0;
+            }
+        }
+        if let Some(v) = self.units.get_mut(p) {
+            *v = u;
         }
     }
 
@@ -1472,6 +1704,83 @@ impl Default for Heard {
     fn default() -> Self {
         Self::NONE
     }
+}
+
+/// The spans of a note's life `[longform loudness]` reads its loudness in,
+/// in seconds from its start.
+const EDGES: [f64; 7] = [0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0];
+/// How long a note sounds past its end (its release), in seconds.
+const RELEASE: f64 = 0.1;
+
+/// One note's energy in each of the `spans` (section steps) into `sums`
+/// (layer `l`, its whole and, unless `taken`, what is kept): struck at step
+/// `at`, held `dur` steps and sounding `rings`, its voice's loudness over
+/// its life `p` (powers, `EDGES`' spans) at `power` (`Heard::power`). A
+/// swelling texture's life is its note's: it rises and falls over however
+/// long it is held, as the table's four seconds.
+#[allow(clippy::too_many_arguments)] // the note and where it goes
+#[inline(never)] // one body for every layer's walk
+fn note_energy(sums: &mut [[[f64; 2]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: usize, p: &[f64; 6], shaped: bool, at: f64, dur: f64, rings: f64, power: f64, taken: bool, step: f64) {
+    let life = |x: f64, y: f64| {
+        let mut e = 0.0;
+        for k in 0..6 {
+            let (lo, hi) = (js::max(x, EDGES[k]), if k == 5 { y } else { js::min(y, EDGES[k + 1]) });
+            if hi > lo {
+                e += (hi - lo) * p[k];
+            }
+        }
+        e
+    };
+    for (k, &[a, b]) in spans.iter().enumerate() {
+        let x = js::max(0.0, a - at) * step;
+        let y = js::min(b - at, rings) * step + RELEASE;
+        if !(y > x) {
+            continue;
+        }
+        let e = if shaped && dur > 0.0 {
+            let r = EDGES[6] / (dur * step);
+            power * life(x * r, js::min(y * r, EDGES[6])) / r
+        } else {
+            power * life(x, y)
+        };
+        if let Some(s) = sums.get_mut(k).and_then(|s| s.get_mut(l)) {
+            s[0] += e;
+            if !taken {
+                s[1] += e;
+            }
+        }
+    }
+}
+
+/// The layers of `out` heard from section step `from` to `to` of the loop
+/// rendered as `base` (two notes struck there at least, a bit each): what a
+/// join may take out (session 15). A sparse loop's one bass note in a
+/// unit's last bar is the unit's bass, not a floor to take out (session 15
+/// measured such a unit 6 LU under the loop).
+fn heard_out(cx: &Cx, base: &Render, from: f64, to: f64, out: u8) -> u8 {
+    let cycle = |layer: Layer| cx.spec.cycles.of(layer as usize).filter(|&c| c > 0.0).unwrap_or(cx.spec.bars * cx.spb);
+    let falls = |step: f64, len: f64| len > 0.0 && step + js::ceil((from - step) / len) * len < to;
+    let heard = |layer: Layer, starts: &mut dyn Iterator<Item = f64>| {
+        let c = cycle(layer);
+        starts.filter(|&step| falls(step, c)).take(2).count() >= 2
+    };
+    let mut keep = 0u8;
+    for layer in LAYERS {
+        if out & (1 << layer as usize) == 0 {
+            continue;
+        }
+        let ok = match layer {
+            Layer::Drums => heard(layer, &mut base.drums.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+            Layer::Bass => heard(layer, &mut base.bass.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+            Layer::Chords => heard(layer, &mut base.chords.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+            Layer::Melody => heard(layer, &mut base.melody.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+            Layer::Texture => heard(layer, &mut base.texture.iter().filter(|e| e.vel > 0.0).map(|e| e.step)),
+        };
+        if ok {
+            keep |= 1 << layer as usize;
+        }
+    }
+    keep
 }
 
 /// Unit `phrase` of section `n` of an arc, its energy smoothed over its

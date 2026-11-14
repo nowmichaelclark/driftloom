@@ -365,6 +365,26 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
   Where the beat before was already that far under, the quiet is the
   unit's, and is reported. `core/tests/joins.rs` holds every pivot struck
   above 0 and every tune alone over a tune that sounds there.
+- **Never a hole, on any piece** (session 16b): a join can still be a hole
+  where what it keeps carries little of the loop (ta-muin's tune alone, a
+  stab's one note over a kit and a bass that are most of it; yi-yoar's
+  floor out where the kit and the bass are the mix; a breath in a dry loop
+  with nothing ringing). So a tune alone, a floor out or a breath is read,
+  when its unit is made, from its notes (`Heard::under`): each note sounding
+  over the join's second half, its voice's loudness over its life
+  (`[longform loudness]`, measured by `tools/voice-loudness.mjs`), its
+  velocity squared and its layer's level, and their echoes as the mix sends
+  them; what the join keeps against the unit there without it (or the loop
+  as itself, 10 dB less). Where it would leave the mix `[longform joins]
+  hole` (12) dB under, the join falls back to a breath, or where that would
+  too, to a glide: nothing written. Read against renders of 200 pieces
+  (7,035 joins), the measure caught all 88 holes there with 1 dB to spare;
+  158 joins changed, the 88 and 70 that sat 1 to 39 dB under (most 12 to
+  24). The wide run is the nightly's (`tools/longform-holes.mjs`: 140
+  Endless arcs, their first 30 minutes, and 60 arcs of 1,024 bars, every
+  join as played); `tools/longform.mjs` plays the three places session 05
+  found among its own, and `core/tests/joins.rs` holds them fallen back and
+  every join played under the line by its notes.
 
 ## Endings that land (session 15)
 

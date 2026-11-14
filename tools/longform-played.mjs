@@ -361,11 +361,15 @@ export function joinDepths(seed, request, count, start, piece, loop, rate) {
     if (b > Math.min(piece.length, loop.length)) break;
     const own = powerDb(loop, a, b);
     if (own < -60) continue;
-    const frames = median(frameDepths(piece, loop, rate, from, end));
+    const each = frameDepths(piece, loop, rate, from, end);
+    const frames = median(each);
     const before = median(frameDepths(piece, loop, rate, from - beat, from));
     const deep = frames >= HOLE_DB;
     const made = !(frames - before < HOLE_DB / 2);
-    out.push({ t: from, join: u.join, depth: own - powerDb(piece, a, b), frames, before, hole: deep && made, inherited: deep && !made });
+    // (How long the window sits HOLE_DB under, in beats: session 16b's
+    // three places are held to half a beat.)
+    const under = each.filter((d) => d >= HOLE_DB).length * FRAME / beat;
+    out.push({ t: from, section: u.section, phrase: u.phrase, join: u.join, depth: own - powerDb(piece, a, b), frames, before, under, hole: deep && made, inherited: deep && !made });
   }
   return out;
 }

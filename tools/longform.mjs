@@ -368,7 +368,10 @@ if (!flag('--plan')) {
 // amount 0 (the plan with no breathing, so what is measured is the arc's
 // own shape: each unit against the loop as itself on the same bars), the
 // first of them at the app's amount too for what is heard.
-const arcs = { pieces: 0, verdicts: [], heard: [], joins: [], own: [], depths: [], costs: [], blocks: [] };
+const arcs = { pieces: 0, verdicts: [], heard: [], joins: [], own: [], depths: [], costs: [], blocks: [], places: [] };
+// The holes session 05 found on Endless arcs (docs/notes/for-mikey.md,
+// under dottedPulse), where each join began, in seconds as rendered.
+const PLACES = [{ seed: 1337654778, name: 'ta-muin', at: [124.0, 564.5] }, { seed: 819045617, name: 'yi-yoar', at: [373.5] }];
 if (!flag('--plan')) {
   const n = Number(value('--arcs', 30));
   const sets = [['bars=64', n], ['bars=256', Math.round(0.4 * n)], ['bars=1024', Math.max(1, Math.round(0.4 * 0.4 * n))]];
@@ -407,6 +410,20 @@ if (!flag('--plan')) {
     arcs.ratios = [...(arcs.ratios ?? []), ...joins.map((j) => j.piece / j.loop)];
     arcs.depths.push(...joins.depths.map((d) => ({ ...d, where: `${seed} "bars=endless,journey=arc"` })));
     check("arc played: no click at a line (each join within the loop's own step there, +25%)", joins.every((j) => j.piece <= 1.25 * j.loop + 0.002), `${seed} at ${worst.t.toFixed(1)} s: ${worst.piece.toFixed(4)} against ${worst.loop.toFixed(4)}`);
+  }
+  // The places session 05 found (session 16b): three joins of two Endless
+  // arcs the corpus run never played, each held to HOLE_DB under the loop
+  // there for half a beat at most (the wide run is the nightly's,
+  // tools/longform-holes.mjs).
+  for (const { seed, name, at } of PLACES) {
+    const request = 'bars=endless,journey=arc';
+    const joins = arcJoins(seed, request, Math.ceil(Math.max(...at) + 20));
+    arcs.depths.push(...joins.depths.map((d) => ({ ...d, where: `${seed} "${request}"` })));
+    for (const t of at) {
+      const d = joins.depths.find((j) => Math.abs(j.t - t) < 1.5);
+      arcs.places.push({ name, seed, t, d });
+      check(`arc played: the places session 05 found ${HOLE_DB} dB under the loop for half a beat at most`, !d || d.under <= 0.5, `${name} (${seed}) at ${t} s: a ${d?.join} ${d?.under.toFixed(2)} beats ${HOLE_DB} dB under`);
+    }
   }
   // No join a hole (session 16): every join of every arc played, as played,
   // against the loop as itself in the same window (`joinDepths`).
@@ -496,6 +513,7 @@ if (arcs.pieces) {
     const quiet = arcs.depths.filter((d) => d.inherited);
     console.log(`    ${HOLE_DB} dB under, as the beat before already was (the unit's quiet, not the join's; reported): ${quiet.length ? quiet.map((d) => `${d.where} at ${d.t.toFixed(1)} s (a ${d.join}, ${d.frames.toFixed(1)} from ${d.before.toFixed(1)})`).join('; ') : 'none'}`);
   }
+  for (const p of arcs.places) console.log(`  ${p.name} (${p.seed}) at ${p.t} s: ${p.d ? `a ${p.d.join} at ${p.d.t.toFixed(2)} s, ${p.d.frames.toFixed(1)} dB under the loop (median frame), ${p.d.under.toFixed(2)} beats ${HOLE_DB} dB under` : 'no join written there (a glide)'}`);
   console.log(`  an arc's section's making: ${arcs.costs.map((c) => c.join('/')).join(', ')} us at 1/1,000/10^9`);
   console.log(`  arc blocks: ${arcs.blocks.map((b) => `${b.seed}${b.lite ? ' lite' : ''} ${b.request.slice(5, b.request.indexOf(','))} pass ${b.pass}, steps ${b.steps}, audio ${b.audio} us`).join('; ')}`);
 }

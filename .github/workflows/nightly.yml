@@ -24,7 +24,9 @@
 # holds it to the same hashes. `endless` renders an Endless piece for 24
 # hours at speed on the player (queue item 88, `dlrender --endless`): no
 # drift, no growth. `slow` is what left the gate's own jobs: the other
-# sample rates and rendering ahead's sweep. (The generation goldens in
+# sample rates and rendering ahead's sweep. `holes` plays every join of
+# 200 long pieces against the loop as itself (queue item 102g): none a
+# hole. (The generation goldens in
 # Chromium and the balance lock on the page's own generator went with the
 # JavaScript generator, queue item 97: the gate holds both on the core's.)
 name: nightly
@@ -206,3 +208,32 @@ jobs:
       # sample for sample; with the wander and with a change waiting.
       - name: Rendering ahead, chunked against straight through
         run: node tools/ahead.mjs --sweep
+      # Each voice's loudness over a note's life, as data/longform.txt's
+      # [longform loudness] has it for the joins (queue item 102g): a voice
+      # whose sound moves, or a new one, is measured again there.
+      - name: The voices' loudness, as the joins read it
+        run: node tools/voice-loudness.mjs --check
+
+  # No join a hole, on any piece (queue item 102g, session 16b): every join
+  # of 200 long pieces as played (140 Endless arcs, their first 30 minutes,
+  # and 60 arcs of 1,024 bars, whole) against the loop as itself at the same
+  # moment (`tools/longform-holes.mjs`, session 16's yardstick widened), in
+  # two halves side by side, about 45 minutes each. tools/longform.mjs holds
+  # a small set of its own, the three places session 05 found among them.
+  holes:
+    name: long pieces, no join a hole (${{ matrix.shard }}/2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The tools' build of the core
+        run: tools/build-core.sh --tools
+      - name: Every join of the pieces, as played
+        run: node tools/longform-holes.mjs --shard ${{ matrix.shard }}/2 --quiet --check

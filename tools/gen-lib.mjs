@@ -170,10 +170,12 @@ const MAP_CHUNK = 200;
 /**
  * A long piece's joins as played (`dl_gen_played`, session 16): for `count`
  * sections from `from`, each unit's join as `heard` plays it, at the
- * wander's amount 0: `{ section, phrase, join, from, to, out, rests }`,
+ * wander's amount 0: `{ section, phrase, join, from, to, out, rests, under }`,
  * `from` and `to` in the section's steps (`steps` a section), `out` the
  * layers it takes out and `rests` those the unit rests, a bit each in
- * LAYERS' order. The map's join is the plan's; this, the one heard.
+ * LAYERS' order, `under` how far under the unit its notes leave the mix
+ * (dB, session 16b: `Heard::under`). The map's join is the plan's; this,
+ * the one heard.
  */
 export function playedJoins(seed, request = null, from = 0, count = 64) {
   load(seed, request);
@@ -184,7 +186,7 @@ export function playedJoins(seed, request = null, from = 0, count = 64) {
     if (!len) return null;
     const [head, ...rows] = parseCanonical(new TextDecoder('ascii').decode(new Uint8Array(x.memory.buffer, x.dl_gen_text(), len)));
     steps = head;
-    for (const [section, phrase, join, a, b, out, rests] of rows) units.push({ section, phrase, join, from: a, to: b, out, rests });
+    for (const [section, phrase, join, a, b, out, rests, under] of rows) units.push({ section, phrase, join, from: a, to: b, out, rests, under });
   }
   return { steps, units };
 }
