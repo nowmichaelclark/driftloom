@@ -477,6 +477,15 @@ as played, from a hole (25 dB under the loop as itself, and made by the
 join), and `core/tests/joins.rs` every pivot struck and every tune alone
 sounding.
 
+**102g** (session 16b; brain B3, 2026-11-14): no join a hole on any piece.
+Session 05 found three on Endless arcs that session 16's yardstick never
+plays (ta-muin 1337654778 at 2:05 and 9:26, "the tune alone" 19 to 38 dB
+under the loop for about 2 s; yi-yoar 819045617 at 6:14, a floor out 33 to
+40 dB under), the same since v164: a join whose kept layers carry little of
+the loop. A join that would be a hole falls back (decided from the unit's
+notes, at a flat cost); every other join stays as Mikey kept it; the
+yardstick plays at least 200 pieces' joins, Endless arcs among them.
+
 **102e done** (session 15, v164; #381, #382): every line where a unit meets
 the next and something changes is written, chosen by what changes and the
 energy either side (`longform::Join`, `Form::join_of`; heard in
