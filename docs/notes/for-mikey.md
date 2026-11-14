@@ -48,6 +48,17 @@ the points where the next step is yours.
   14 at 0.5 (the records' median is nearer 20). On a few loops where the
   chords are doubled, padWow makes the mix 0.2 to 0.35 LU quieter or
   louder, as the sketch did.
+- **widePad (101c, session 04, v166, #387):** the chord layer much wider in
+  stereo, on the side only (Mono and a phone's speaker hear exactly what they
+  did), in two kinds, half and half: wide from the start, and opening from
+  today's width to the wide one over 60 to 120 s. To hear it before the album,
+  on headphones: loa-yer (corpus 20261009 #23) from 0:10, flipping Mono to
+  hear what it adds; broan-bro (#39) from 0:00 to 1:26 as it opens. Taste
+  calls for your ears, each one line of `data/choices.txt` or
+  `core/src/space.rs`: 15% of the loops with chords before the vibes (16%
+  after, padWow's share); the opening kind takes the choice's vibes (the batch
+  gave it no row of its own); on the widest loops the chords go past the
+  batch's -4 dB (grove #62 at -1.8), as the sketch you approved did.
 - **The long pieces, what changed (102f, session 16, v165):** six clips, 2:40,
   on the branch `long-clips` (its `index.md`), not blind: each place now and
   as at v164. fei-no (seed 2158762586, `bars=256,journey=arc`) from 5:15, the

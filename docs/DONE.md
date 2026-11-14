@@ -217,3 +217,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   into the close (8:09) where v164 had three seconds near silence; loa-yer
   (#23, `bars=1024,adventurous=0.8`) from 3:44, the chord both keys share at
   3:54. Six clips, now and v164, on `long-clips` (`docs/notes/for-mikey.md`).
+- #387, widePad (item 101c, session 04, v166), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 6 with chords (a quarter of the
+  spacious or floating ones, 1 in 20 of the intimate ones) has its chord
+  layer much wider in stereo, on the side only: the Mono switch and a
+  phone's speaker hear exactly what they did, and the bass and the kick stay
+  centered. Half of them are wide from the start, half open from today's
+  width to the wide one over 60 to 120 s. Two loops (corpus 20261009) that
+  draw it: **loa-yer** (#23, wide from the start, a busy loop) from 0:10,
+  with headphones, against the Mono switch; **broan-bro** (#39, the late
+  kind) from 0:00 to 1:26 as it opens, then held wide. A loop without it
+  plays as before, in stereo and mono.

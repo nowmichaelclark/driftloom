@@ -36,7 +36,7 @@ says the work goes on meanwhile.
 | 15 | `15-long-joins.md` | 102e: the joins, endings that land, Endless, the measures, the listening set (rendered excerpts) | Opus 5.5, high | yes, 2026-11-13 (#381, #382; the clips on `long-clips`) |
 | B3 | `brain-3-long-pieces.md` | Brain: check 102; the long-piece album; turn Mikey's notes into session 16's brief (hands 04 onward may run alongside) | Opus 5.5, high | yes, 2026-11-14 (`docs/notes/102-b3-measured.md`, `102-mikey.md`) |
 | | **you** | Listen to the long pieces (the heart of it). Tell the brain what you hear. **Session 16 waits for this.** The work goes on meanwhile (04 onward); run 16 as soon as your notes are in. | | yes, 2026-11-14: all kept |
-| 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | |
+| 04 | `04-batch6-width.md` | 101c: widePad | Opus 5.5, high | yes, 2026-11-14 (#387) |
 | 05 | `05-batch6-kit.md` | 101d: tripletKit, dottedPulse | Opus 5.5, high | |
 | 06 | `06-batch6-color.md` | 101e: colorTone | Opus 5.5, high | |
 | 07 | `07-batch6-planing.md` | 101f: planingSevenths | Opus 5.5, high | |
