@@ -41,13 +41,16 @@ cleanup() {
 trap cleanup EXIT
 
 echo "waiting for the emulator to boot"
-adb wait-for-device
 n=0
 until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
   n=$((n + 1))
-  if [ "$n" -gt 120 ] || ! kill -0 "$emu" 2>/dev/null; then
-    echo "the emulator did not boot:" >&2; tail -30 "$log" >&2; exit 1
+  if ! kill -0 "$emu" 2>/dev/null; then
+    echo "the emulator stopped:" >&2; tail -60 "$log" >&2; exit 1
   fi
+  if [ "$n" -gt 120 ]; then
+    echo "the emulator did not boot in ten minutes:" >&2; tail -60 "$log" >&2; adb devices >&2 || true; exit 1
+  fi
+  [ "$n" = 3 ] && { echo "emulator log so far:"; tail -20 "$log"; adb devices; }
   sleep 5
 done
 echo "booted: $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), WebView $(adb shell dumpsys webviewupdate | grep -m1 'Current WebView package' | tr -d '\r')"
