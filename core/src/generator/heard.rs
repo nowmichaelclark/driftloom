@@ -703,7 +703,7 @@ impl Heard {
             return 0.0;
         }
         let echo = 4.0 * super::choices::echo_time_of(cx.spec.seed, cx.spec.vibes.as_ref());
-        let [whole, kept] = self.sounding(u, cx, base, second, from, to, out, echo, step);
+        let [whole, kept, own] = self.sounding(u, cx, base, second, from, to, out, echo, step);
         let db = |of: f64| {
             if !(of > 0.0) {
                 0.0
@@ -713,35 +713,30 @@ impl Heard {
                 js::min(99.0, 10.0 * crate::math::log10(of / kept))
             }
         };
-        let by_unit = db(whole);
-        if by_unit >= JOINS.hole {
-            return by_unit;
-        }
-        let plain = Unit { from: u.from, to: u.to, ..Unit::EMPTY };
-        let [own, _] = self.sounding(&plain, cx, base, None, from, to, 0, echo, step);
-        js::max(by_unit, db(own) - LOOP_MARGIN)
+        js::max(db(whole), db(own) - LOOP_MARGIN)
     }
 
     /// The mix over the second half of section steps `from` to `to` of unit
-    /// `u` as it plays, and what of it is left where the layers `out` leave
-    /// out the notes they strike from `from` on (`[whole, kept]`, as
-    /// energies): the notes themselves and their echoes, `echo` steps apart
-    /// (three repeats, `ECHO_FEEDBACK` each, at `ECHO_RETURN` of the
-    /// layers' sends). The room's own ring is short (its combs fall about 70
-    /// dB a second), so it is left out: measured, adding it changed no
-    /// join's verdict.
+    /// `u` as it plays, what of it is left where the layers `out` leave out
+    /// the notes they strike from `from` on, and the loop as itself there
+    /// (`[whole, kept, own]`, as energies): the notes themselves and their
+    /// echoes, `echo` steps apart (three repeats, `ECHO_FEEDBACK` each, at
+    /// `ECHO_RETURN` of the layers' sends). The room's own ring is short (its
+    /// combs fall about 70 dB a second), so it is left out: measured, adding
+    /// it changed no join's verdict.
     #[allow(clippy::too_many_arguments)] // the unit, its window, the echo
-    fn sounding(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8, echo: f64, step: f64) -> [f64; 2] {
+    fn sounding(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8, echo: f64, step: f64) -> [f64; 3] {
         let mid = 0.5 * (from + to);
         let spans: [[f64; 2]; SPANS] = core::array::from_fn(|k| [mid - k as f64 * echo, to - k as f64 * echo]);
         let e = self.power(u, cx, base, second, from, to, out, &spans, step);
-        let mut sum = [0.0; 2];
+        let mut sum = [0.0; 3];
         let mut fall = 1.0;
         for (k, span) in e.iter().enumerate() {
             for (l, x) in span.iter().enumerate() {
                 let send = if k == 0 { 1.0 } else { ECHO_SENDS[l] * ECHO_SENDS[l] * fall };
-                sum[0] += send * x[0];
-                sum[1] += send * x[1];
+                for (s, v) in sum.iter_mut().zip(x) {
+                    *s += send * v;
+                }
             }
             fall = if k == 0 { ECHO_RETURN } else { fall * ECHO_FEEDBACK * ECHO_FEEDBACK };
         }
@@ -749,18 +744,17 @@ impl Heard {
     }
 
     /// Each layer's energy over each of the `spans` (section steps) of unit
-    /// `u` as it plays (`[whole, kept]`, `LAYERS`' order), and with the
-    /// layers `out` leaving out the notes they strike from `from` to `to` (a
-    /// note that rings across `to` plays). Each note sounding there (struck
+    /// `u` as it plays, and with the layers `out` leaving out the notes they
+    /// strike from `from` to `to` (a note that rings across `to` plays), and
+    /// the loop as itself's there (`[whole, kept, own]`, `LAYERS`' order). Each note sounding there (struck
     /// in it, or before and still ringing) is its voice's loudness over its
     /// life (`[longform loudness]`) at its velocity squared and its layer's
     /// level, for as long as it lasts there, every note of a chord. One walk
     /// of the loop's notes over the spans and the few seconds before them,
     /// the same at any section.
     #[allow(clippy::too_many_arguments, clippy::too_many_lines)] // the unit, its window and the spans; a layer's notes each
-    #[inline(never)] // one walk, called from two places: kept out of line
-    fn power(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8, spans: &[[f64; 2]; SPANS], step: f64) -> [[[f64; 2]; 5]; SPANS] {
-        let mut sums = [[[0.0; 2]; 5]; SPANS];
+    fn power(&self, u: &Unit, cx: &Cx, base: &Render, second: Option<&Melody>, from: f64, to: f64, out: u8, spans: &[[f64; 2]; SPANS], step: f64) -> [[[f64; 3]; 5]; SPANS] {
+        let mut sums = [[[0.0; 3]; 5]; SPANS];
         let first = spans.iter().map(|s| s[0]).fold(f64::INFINITY, js::min);
         let last = spans.iter().map(|s| s[1]).fold(f64::NEG_INFINITY, js::max);
         if !(last > first) {
@@ -787,16 +781,18 @@ impl Heard {
             }
             Some(lin)
         };
-        // (A kit hit is held no time: it sounds its voice's life.)
-        let mut add = |layer: Layer, p: Option<[f64; 6]>, shaped: bool, at: f64, dur: f64, power: f64| {
+        // A note at `power` as the unit plays it and `own` as the loop as
+        // itself does, in the one voice `p`. (A kit hit is held no time: it
+        // sounds its voice's life.)
+        let mut add = |layer: Layer, p: Option<[f64; 6]>, shaped: bool, at: f64, dur: f64, power: f64, own: f64| {
             let Some(p) = p else { return };
-            if !(power > 0.0) {
+            if !(power > 0.0 || own > 0.0) {
                 return;
             }
             let l = layer as usize;
             let rings = if layer == Layer::Drums { look } else { dur };
             let taken = out & (1 << l) != 0 && at >= from && at < to && at + dur <= to + 0.5;
-            note_energy(&mut sums, spans, l, &p, shaped, at, dur, rings, power, taken, step);
+            note_energy(&mut sums, spans, l, &p, shaped, at, dur, rings, [power, own], taken, step);
         };
         let cycle = |layer: Layer| cx.spec.cycles.of(layer as usize).filter(|&c| c > 0.0).unwrap_or(cx.spec.bars * cx.spb);
         // Every place an event of `layer` written at loop step `at`, `dur`
@@ -839,8 +835,8 @@ impl Heard {
             for i in 0..count {
                 let (at, dur, vel, n, name, shaped) = match layer {
                     Layer::Drums => base.drums.get(i).map(|e| (e.step, 0.0, e.vel, 1.0, e.inst.get(), false)),
-                    Layer::Bass => base.bass.get(i).map(|e| (e.step, e.dur, e.vel, 1.0, voice(layer, e.voice.get()), false)),
-                    Layer::Chords => base.chords.get(i).map(|e| (e.step, e.dur, e.vel, e.notes.len() as f64, voice(layer, e.voice.get()), false)),
+                    Layer::Bass => base.bass.get(i).map(|e| (e.step, e.dur, e.vel, 1.0, e.voice.get(), false)),
+                    Layer::Chords => base.chords.get(i).map(|e| (e.step, e.dur, e.vel, e.notes.len() as f64, e.voice.get(), false)),
                     _ => base.texture.get(i).map(|e| {
                         let k = e.kind.get();
                         (e.step, e.dur, e.vel, if k == "swell" { js::max(1.0, e.notes.len() as f64) } else { 1.0 }, k, SWELLING.contains(&k))
@@ -850,12 +846,23 @@ impl Heard {
                 if !(vel > 0.0 && n > 0.0) {
                     continue;
                 }
-                // (Its voice and its piece looked up only where it sounds.)
-                let mut looked: Option<(Option<[f64; 6]>, Option<Piece>)> = None;
+                // The unit's voice where it plays another (the kit and the
+                // texture keep theirs).
+                let heard = if matches!(layer, Layer::Bass | Layer::Chords) { voice(layer, name) } else { name };
+                // (Its voices and its piece looked up only where it sounds.)
+                let mut looked: Option<(Option<[f64; 6]>, Option<[f64; 6]>, Option<Piece>)> = None;
                 places(layer, at, dur, &mut |s| {
-                    let (p, piece) = *looked.get_or_insert_with(|| (table(layer, name), (layer == Layer::Drums && self.arc).then(|| Piece::of(name))));
+                    let (p, q, piece) = *looked.get_or_insert_with(|| {
+                        let p = table(layer, name);
+                        (p, if heard == name { p } else { table(layer, heard) }, (layer == Layer::Drums && self.arc).then(|| Piece::of(name)))
+                    });
                     let v = piece.map_or(vel, |piece| vel * u.kit_at(s, piece));
-                    add(layer, p, shaped, s, dur, lv * n * v * v);
+                    if heard == name {
+                        add(layer, p, shaped, s, dur, lv * n * v * v, n * vel * vel);
+                    } else {
+                        add(layer, q, shaped, s, dur, lv * n * v * v, 0.0);
+                        add(layer, p, shaped, s, dur, 0.0, n * vel * vel);
+                    }
                 });
             }
         }
@@ -881,7 +888,7 @@ impl Heard {
                 let mut one = |s: f64| {
                     if which(s) == whose && kept_note(whose == tune::OWN, i, s) {
                         let p = *looked.get_or_insert_with(|| table(Layer::Melody, voice(Layer::Melody, name)));
-                        add(Layer::Melody, p, false, s, e.dur, lv * e.vel * e.vel);
+                        add(Layer::Melody, p, false, s, e.dur, lv * e.vel * e.vel, 0.0);
                     }
                 };
                 if u.stretched && self.phrase > 0.0 {
@@ -894,6 +901,15 @@ impl Heard {
                     places(Layer::Melody, e.step, e.dur, &mut one);
                 }
             }
+        }
+        // The loop as itself: its own tune whole, in its own voice.
+        for e in base.melody.iter().take(MELODY_MAX).filter(|e| e.vel > 0.0) {
+            let name = if e.voice.get().is_empty() { own_voice } else { e.voice.get() };
+            let mut looked: Option<Option<[f64; 6]>> = None;
+            places(Layer::Melody, e.step, e.dur, &mut |s| {
+                let p = *looked.get_or_insert_with(|| table(Layer::Melody, name));
+                add(Layer::Melody, p, false, s, e.dur, 0.0, e.vel * e.vel);
+            });
         }
         sums
     }
@@ -1723,17 +1739,22 @@ const EDGES: [f64; 7] = [0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0];
 const RELEASE: f64 = 0.1;
 
 /// One note's energy in each of the `spans` (section steps) into `sums`
-/// (layer `l`, its whole and, unless `taken`, what is kept): struck at step
+/// (layer `l`: its whole and, unless `taken`, what is kept at the unit's
+/// `power[0]`, and the loop as itself's at `power[1]`): struck at step
 /// `at`, held `dur` steps and sounding `rings`, its voice's loudness over
-/// its life `p` (powers, `EDGES`' spans) at `power` (`Heard::power`). A
+/// its life `p` (powers, `EDGES`' spans; `Heard::power`). A
 /// swelling texture's life is its note's: it rises and falls over however
 /// long it is held, as the table's four seconds.
 #[allow(clippy::too_many_arguments)] // the note and where it goes
 #[inline(never)] // one body for every layer's walk
-fn note_energy(sums: &mut [[[f64; 2]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: usize, p: &[f64; 6], shaped: bool, at: f64, dur: f64, rings: f64, power: f64, taken: bool, step: f64) {
+fn note_energy(sums: &mut [[[f64; 3]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: usize, p: &[f64; 6], shaped: bool, at: f64, dur: f64, rings: f64, power: [f64; 2], taken: bool, step: f64) {
     let life = |x: f64, y: f64| {
         let mut e = 0.0;
         for k in 0..6 {
+            // (The spans after `y` hold nothing of it.)
+            if EDGES[k] >= y {
+                break;
+            }
             let (lo, hi) = (js::max(x, EDGES[k]), if k == 5 { y } else { js::min(y, EDGES[k + 1]) });
             if hi > lo {
                 e += (hi - lo) * p[k];
@@ -1749,15 +1770,16 @@ fn note_energy(sums: &mut [[[f64; 2]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: 
         }
         let e = if shaped && dur > 0.0 {
             let r = EDGES[6] / (dur * step);
-            power * life(x * r, js::min(y * r, EDGES[6])) / r
+            life(x * r, js::min(y * r, EDGES[6])) / r
         } else {
-            power * life(x, y)
+            life(x, y)
         };
         if let Some(s) = sums.get_mut(k).and_then(|s| s.get_mut(l)) {
-            s[0] += e;
+            s[0] += power[0] * e;
             if !taken {
-                s[1] += e;
+                s[1] += power[0] * e;
             }
+            s[2] += power[1] * e;
         }
     }
 }
