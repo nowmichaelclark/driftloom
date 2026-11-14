@@ -52,7 +52,7 @@ page out, `docs/ALBUMS.md`); Mikey heard it (2026-11-14: every piece kept,
 the two holes fixed and a yardstick against holes, nothing retuned; the
 second listening set on `long-clips`); hands session 04 done (2026-11-14: 101c,
 v166, widePad, both kinds, #387); hands session 05 on (2026-11-14: 101d,
-v167 tripletKit, #PRNUM; dottedPulse next); next: 05's dottedPulse, then 06 onward, and Mikey's testers' pastes
+v167 tripletKit, #391; dottedPulse next); next: 05's dottedPulse, then 06 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.

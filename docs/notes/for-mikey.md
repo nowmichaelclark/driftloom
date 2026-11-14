@@ -59,8 +59,8 @@ the points where the next step is yours.
   after, padWow's share); the opening kind takes the choice's vibes (the batch
   gave it no row of its own); on the widest loops the chords go past the
   batch's -4 dB (grove #62 at -1.8), as the sketch you approved did.
-- **tripletKit (101d, session 05, v167, #PRNUM):** a kit in threes, the
-  small hours' shuffle: about 1 loop in 9 with a kit (none in 6/8) plays its
+- **tripletKit (101d, session 05, v167, #391):** a kit in threes, the
+  small hours' shuffle: about 1 loop in 7 with a kit (none in 6/8) plays its
   hats three a beat, the eighth moved to two thirds of the beat, the kick on
   the beat. To hear it before the album: dun-roar (corpus 20261009 #45) from
   0:00, a busy machine kit at 129; thisk-doam (#76) from 0:00, a slow tape kit

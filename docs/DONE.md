@@ -228,3 +228,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   with headphones, against the Mono switch; **broan-bro** (#39, the late
   kind) from 0:00 to 1:26 as it opens, then held wide. A loop without it
   plays as before, in stereo and mono.
+- #391, tripletKit (item 101d, session 05, v167), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 7 with a kit (none in 6/8; a fifth of
+  the swaying ones, 1 in 11 of the still ones) plays it in threes, the 12/8
+  shuffle: the hats three a beat, the eighth moved to two thirds of the beat,
+  the kick on the beat, no brighter than its own kit. Two loops (corpus
+  20261009) that draw it: **dun-roar** (#45, a busy machine kit at 129) from
+  0:00; **thisk-doam** (#76, a slow tape kit at 55) from 0:00. A loop without
+  it plays as before, its wander too.
