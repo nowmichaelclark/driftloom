@@ -527,6 +527,9 @@ pub struct Core {
     space_at: u64,
     space_drawn: space::Drawn,
     space_on: bool,
+    /// The frame the loop's space was taken from: where a space that moves
+    /// over the loop (widePad's late kind, queue item 101c) counts from.
+    space_from: u64,
     /// The bass layer's lift for the loop, in dB (queue item 76c), stamped on
     /// each bass note as it arrives. 0 is today's level.
     bass_lift: f64,
@@ -599,6 +602,7 @@ impl Core {
             spaced: false,
             space_waits: false,
             space_at: 0,
+            space_from: 0,
             space_drawn: space::ZERO,
             space_on: false,
             bass_lift: 0.0,
@@ -706,7 +710,7 @@ impl Core {
             self.fade = 1.0;
         } else if channels == 2 && self.master.layout() == 1 {
             self.master.switch_layout(2);
-            self.mix.restart_side(&self.drawn);
+            self.mix.restart_side(&self.drawn_now());
             self.fade = 0.0;
         }
         true
@@ -827,11 +831,21 @@ impl Core {
     pub fn quality(&mut self, full: bool) {
         self.mix.init(self.rate, full);
         self.master_ready = self.master.init(self.rate, full);
-        // The loop's space survives a rebuild.
-        self.mix.set_space(&self.drawn);
+        // The loop's space survives a rebuild, where it has got to.
+        let now = self.drawn_now();
+        self.mix.set_space(&now);
         if self.spaced {
-            self.master.set_width(0, self.drawn.ceiling);
+            self.master.set_width(0, now.ceiling);
         }
+    }
+
+    /// The loop's space where it has got to (`space::Drawn::at`): the draw
+    /// itself but for widePad's late kind, which opens over the loop (queue
+    /// item 101c).
+    fn drawn_now(&self) -> space::Drawn {
+        #[allow(clippy::cast_precision_loss)] // a frame count, exact for millennia
+        let seconds = self.next.saturating_sub(self.space_from) as f64 / self.rate.max(1.0);
+        self.drawn.at(seconds)
     }
 
     /// Set the space recipe's setting `which` (`space::n`, `space::SETTINGS`)
@@ -1567,9 +1581,21 @@ impl Core {
             self.drawn = drawn;
             self.spaced = on;
             self.space_waits = false;
-            self.mix.set_space(&drawn);
+            self.space_from = self.space_at;
+            let start = drawn.at(0.0);
+            self.mix.set_space(&start);
             if on {
-                self.master.set_width(0, drawn.ceiling);
+                self.master.set_width(0, start.ceiling);
+            }
+        } else if self.spaced && self.drawn.open > 0.0 {
+            // widePad's late kind (queue item 101c): the chords' spread and
+            // the ceiling open block by block, until a second past the end.
+            #[allow(clippy::cast_precision_loss)] // a frame count, exact for millennia
+            let seconds = block.saturating_sub(self.space_from) as f64 / self.rate.max(1.0);
+            if seconds <= self.drawn.open + 1.0 {
+                let now = self.drawn.at(seconds);
+                self.mix.move_space(&now);
+                self.master.set_width(0, now.ceiling);
             }
         }
         // Into mono once the side has faded out (`set_layout`), or at once
@@ -2691,6 +2717,63 @@ mod tests {
         let (both, alone) = (play(true, true, true), play(false, false, true));
         let diff = both[at(0.7)..].iter().zip(alone[at(0.7)..].iter()).fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
         assert!(diff < 1e-6 && peak(&both[at(0.7)..]) > 0.005, "the new hit is untouched: {diff}");
+    }
+
+    /// widePad (queue item 101c), as the core plays it: a held chord's side
+    /// far wider (here 5 dB and more, the room's side beside it) with the mid as it was, and the late
+    /// kind starting at the baseline's width and opening to the wide one
+    /// over its time (pinned to 4 s here, 60 to 120 in a loop), then holding.
+    #[test]
+    fn wide_pad_widens_the_side_alone_and_the_late_kind_opens_over_its_time() {
+        let rate = 48_000.0;
+        let seconds = 13.0;
+        let play = |kind: f64| -> (Vec<f32>, Vec<f32>) {
+            let mut core = boxed();
+            core.start(rate, 2).expect("stereo");
+            assert!(core.space_range(space::n::WIDE, kind, kind) && core.space_range(space::n::WIDE_OPEN, 4.0, 4.0));
+            for (id, value) in [(SPACE_SEED, 7.0), (SPACE_BUSY, 4.0), (SPACE_WET, 0.3), (SPACE_LIGHT, 0.0), (SPACE_START, 1.0)] {
+                core.param(id, mix::SET, value, 0.0, 0.0);
+            }
+            for (i, midi) in [60.0, 64.0, 67.0, 72.0].into_iter().enumerate() {
+                core.key(key(5, 0, 0, i as u32));
+                core.note(SOFTPAD, CHORDS, 0.05, midi, seconds, 0.8, 0, NO);
+            }
+            let (mut mid, mut side) = (Vec::new(), Vec::new());
+            for b in 0..(seconds * rate) as usize / QUANTUM {
+                core.process((b * QUANTUM) as u64);
+                let [l, r] = core.output();
+                mid.extend(l.iter().zip(r).map(|(a, b)| f32::midpoint(*a, *b)));
+                side.extend(l.iter().zip(r).map(|(a, b)| (a - b) * 0.5));
+            }
+            (mid, side)
+        };
+        let energy = |x: &[f32], a: f64, b: f64| x[(a * rate) as usize..(b * rate) as usize].iter().map(|v| f64::from(*v).powi(2)).sum::<f64>();
+        let db = |a: f64, b: f64| 10.0 * (a / b).log10();
+        let (base_mid, base_side) = play(0.0);
+        let (wide_mid, wide_side) = play(1.0);
+        let (late_mid, late_side) = play(2.0);
+        // The mid (what a mono speaker hears) as it was: within 0.1 dB, and
+        // what differs 40 dB under it. Not bit for bit: the master's ceiling
+        // hears both sides, so a wider side presses it a little harder on a
+        // chord this loud (the corpus's loops: 70 to 85 dB under, the fold
+        // 0.00 LU from the mono render).
+        let all = energy(&base_mid, 0.0, seconds);
+        for mid in [&wide_mid, &late_mid] {
+            let off: f64 = mid.iter().zip(&base_mid).map(|(a, b)| f64::from(a - b).powi(2)).sum();
+            let level = db(energy(mid, 0.0, seconds), all);
+            assert!(db(off, all) < -40.0 && level.abs() < 0.1, "the mid moved: {:.1} dB, {level:.3} dB", db(off, all));
+        }
+        let wider = |side: &[f32], a: f64, b: f64| db(energy(side, a, b), energy(&base_side, a, b));
+        assert!(wider(&wide_side, 1.0, 12.5) > 5.0, "wide: {:.1} dB", wider(&wide_side, 1.0, 12.5));
+        // The late kind: the baseline's at first, the wide one once open,
+        // and on the way between.
+        assert!(wider(&late_side, 0.3, 1.0).abs() < 1.5, "late, at first: {:.1} dB", wider(&late_side, 0.3, 1.0));
+        let (half, open) = (wider(&late_side, 1.8, 2.2), wider(&wide_side, 1.8, 2.2));
+        assert!(half > 1.0 && half < open - 1.0, "late, halfway: {half:.1} dB of {open:.1}");
+        // Open, once the ceiling's gain has come back up (its time constant
+        // is 3 s, from where it held the side on the way).
+        let held = db(energy(&late_side, 10.0, 12.5), energy(&wide_side, 10.0, 12.5));
+        assert!(held.abs() < 0.5, "late, open: {held:.2} dB from the wide one");
     }
 
     /// The listener's Mono switch (queue item 66), flipped while a chord

@@ -64,7 +64,9 @@ pub struct Space {
     pub wet: f64,
     pub light: bool,
     /// The request's pins for the space recipe's settings (queue item 85b),
-    /// by `space::n`, each `None` where it isn't pinned.
+    /// by `space::n`, each `None` where it isn't pinned; and widePad's kind
+    /// (`space::n::WIDE`, queue item 101c), which its choice sets the same
+    /// way, a request's own pin of it first.
     pub pins: [Option<f64>; crate::space::n::COUNT],
 }
 
@@ -212,7 +214,12 @@ impl Load {
                 // `spec.tone.space || 0`
                 wet: if space == 0.0 || space.is_nan() { 0.0 } else { space },
                 light: matches!(r.texture_kind.get(), "bells" | "chime" | "drops"),
-                pins: core::array::from_fn(|i| p.space(i)),
+                // widePad (queue item 101c) is the space's `wide`: 1 wide,
+                // 2 opening late. A request's own pin of it stands.
+                pins: core::array::from_fn(|i| {
+                    let wide = (i == crate::space::n::WIDE).then(|| plays("widePad")).flatten();
+                    p.space(i).or(wide.map(|o| if o == "late" { 2.0 } else { 1.0 }))
+                }),
             },
             echo_beats: Biased::of(p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v))),
             tuning: choices::tuning_of(spec.seed, v, p),

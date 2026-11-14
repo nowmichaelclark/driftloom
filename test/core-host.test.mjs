@@ -97,7 +97,7 @@ console.log('\nA context faster than the core holds (queue item 45)');
   const src = fs.readFileSync(new URL('../core/src/space.rs', import.meta.url), 'utf8');
   const body = src.slice(src.indexOf('pub const SETTINGS'), src.indexOf('];', src.indexOf('pub const SETTINGS')));
   const core = [...body.matchAll(/s\("([a-z-]+)", (-?[\d.]+), (-?[\d.]+)\)/g)].map((m) => [m[1], Number(m[2]), Number(m[3])]);
-  check('the space settings js/pins.js copies are the core\'s', core.length === 32 && JSON.stringify(core) === JSON.stringify(SPACE_SETTINGS), JSON.stringify(core));
+  check('the space settings js/pins.js copies are the core\'s', core.length === 40 && JSON.stringify(core) === JSON.stringify(SPACE_SETTINGS), JSON.stringify(core));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

@@ -187,6 +187,27 @@ vibes = hazy 2.5, wistful 2, dreamy 2, misty 1.5, dusky 1.5, rainy 1.5,
     mellow 1.5, foggy 1.5, crisp 0.3, bright 0.4, triumphant 0.4, frosty 0.5,
     refreshing 0.5
 
+# widePad (queue item 101c; batch 6's #4, approved by Mikey 2026-11-09): the
+# chord layer much wider, on the side only, so the mono render and the fold to
+# mono stay exactly as they are; the bass, the kick and every other part as
+# they were. A space option: the chords' spread, its most and the width
+# ceiling raised, the chords' side above 250 Hz (core/src/space.rs, the
+# `wide` settings, the Ears 13b sketch's numbers), all scaled by the loop's
+# width, so a sparse loop stays at the narrow end. `on` is wide from the
+# start; `late` opens from the baseline's width to the same over 60-120 s
+# (`space.wide-open`), as two records open theirs late; half and half. For
+# any loop that plays a chord. Drawn alone, not among the changes, on a
+# stream of its own, for 15% of the loops that may have it before the vibes
+# lean it: padWow's conservative share, for Mikey's ears. The batch's
+# [JUDGMENT] row: toward the spacious and floating vibes, away from the
+# intimate and the minimal; the late kind has no row of its own.
+[choice widePad]
+options = today 1, on 1, late 1
+ownStream = 1
+alone = 0.15
+vibes = spacious 2, floating 2, soaring 2, dreamy 1.5, hazy 1.5, cosmic 1.5,
+    glacial 1.5, intimate 0.3, minimal 0.4, cozy 0.5, plucky 0.5
+
 # The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
 # every variable of the arc, named, with the range a loop draws it from, in
 # this one place, so phase 2's requests can pin them (docs/CORE.md, promises
