@@ -1,5 +1,16 @@
 # Session 05: batch 6, the kit: tripletKit and dottedPulse (101d)
 
+**Left** (brain B3, 2026-11-14): tripletKit merged (#391, v167). dottedPulse
+is #392 (v168, branch `claude/batch-6-tripletkit-dottedpulse-9o4sqv`),
+green in CI and mergeable, with its Done line, for-Mikey lines and this
+row's tick inside it; the session stopped while waiting on its second full
+`tools/longform.mjs` run. Left: merge `main` into the branch if it moved;
+run the full `tools/longform.mjs` once more: it must keep every check
+`main` keeps, apart from the pass-block timing check on undertow #1 lite if
+it flips (the same flip shows on `main`: say so in the PR); then merge #392
+under the policy and stop. The holes it found on ta-muin and yi-yoar are
+session 16b's, not this session's.
+
 - **Model:** Opus 5.5. **Effort:** high.
 - **Start after:** session 04.
 - **Queue item:** item 101.
