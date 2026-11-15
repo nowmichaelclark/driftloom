@@ -17,10 +17,10 @@
 //! chords. It is a voice of its own rather than a note of the chord's
 //! voice, because that measures closer to the sketch: held and swelling
 //! whatever the chords' voice and rhythm (a note of a stab, an arpeggio or
-//! a plucked chord would be struck and fade with it), at the sketch's level
-//! by ear against the loop (a chord's own note would sit as loud as each of
-//! its notes, louder than the sketch's), and outside the voice budget, so it
-//! refuses no note (the PR has the figures).
+//! a plucked chord would be struck and fade with it), nearer the sketch's
+//! level by ear against the loop (on the sketch's loops a chord's own note
+//! read 2.7 to 4.9 LU off it, this 0.3 to 3.1), and outside the voice budget,
+//! so it refuses no note (the PR has the figures).
 //!
 //! A color event with a note the tone already holds, held on, holds on
 //! (the same color over a chord struck again); a color event with no note
