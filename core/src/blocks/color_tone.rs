@@ -266,7 +266,13 @@ mod tests {
     // when it is held no longer; set off, it lets go.
     #[test]
     fn it_plays_colors_only_when_on_and_lets_them_go() {
-        let waves = Box::new(Waves::new());
+        // It reads no wave, but a context holds them: 1.8 MB, made on a
+        // thread with room for them.
+        let waves = std::thread::Builder::new()
+            .stack_size(1 << 26)
+            .spawn(|| Box::new(Waves::new()))
+            .and_then(|t| t.join().map_err(|_| std::io::Error::other("panicked")))
+            .expect("waves");
         let cx = Context { rate: 48_000.0, waves: &waves, noise: &[] };
         let mut c = Box::new(ColorTone::new());
         let mut at = 0;
