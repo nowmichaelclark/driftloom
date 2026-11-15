@@ -14,7 +14,7 @@ use crate::block::Event;
 use crate::block::event::{CHOKE, RELEASE};
 use crate::blocks::own;
 use crate::blocks::midi_to_freq;
-use crate::blocks::{bass, drum, kalimba, pad_wow, struck, texture};
+use crate::blocks::{bass, color_tone, drum, kalimba, pad_wow, struck, texture};
 use crate::generator::data::{self, VOICE_COSTS};
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -557,6 +557,24 @@ impl Synth {
             None if had => host.set(CHORDS, own::PAD_WOW, pad_wow::DEPTH, 0.0, time),
             None => {}
         }
+    }
+
+    /// colorTone's setup for the loop (queue item 101e): the chords
+    /// channel's color on where the loop plays colors, off where it plays
+    /// none (any it holds let go), at `time`.
+    pub fn color_setup<H: Host>(host: &mut H, on: bool, time: f64) {
+        host.set(CHORDS, own::COLOR_TONE, color_tone::ON, if on { 1.0 } else { 0.0 }, time);
+    }
+
+    /// colorTone's color (queue item 101e): the chords channel's held color
+    /// moves to `midi` at `time` (the loop's tuning in it), held `seconds`.
+    pub fn color<H: Host>(&self, host: &mut H, midi: f64, time: f64, seconds: f64) {
+        host.event(CHORDS, Event::color(time, midi + self.tune, seconds));
+    }
+
+    /// colorTone's color lets go at `time`.
+    pub fn color_off<H: Host>(host: &mut H, time: f64) {
+        host.event(CHORDS, Event::color(time, f64::NAN, 0.0));
     }
 
     /// padSweep's settings for the loop.

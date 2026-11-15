@@ -330,6 +330,12 @@ pub struct Sequencer {
     had_sub_duck: bool,
     had_pad_sweep: bool,
     had_pad_wow: bool,
+    /// colorTone (queue item 101e): its setup still to send, whether the
+    /// loop plays colors, and until when (seconds on the core's clock) the
+    /// last color sent may sound.
+    color_change: bool,
+    had_color: bool,
+    color_until: f64,
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
@@ -373,6 +379,9 @@ impl Sequencer {
             had_sub_duck: false,
             had_pad_sweep: false,
             had_pad_wow: false,
+            color_change: false,
+            had_color: false,
+            color_until: 0.0,
             organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
@@ -421,6 +430,9 @@ impl Sequencer {
         self.had_sub_duck = s.sub_duck.is_some();
         self.had_pad_sweep = s.pad_sweep.is_some();
         self.had_pad_wow = s.pad_wow.is_some();
+        let colors = !lp.base.colors.is_empty();
+        self.color_change = colors || self.had_color;
+        self.had_color = colors;
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
@@ -481,6 +493,9 @@ impl Sequencer {
         self.had_sub_duck = s.sub_duck.is_some();
         self.had_pad_sweep = s.pad_sweep.is_some();
         self.had_pad_wow = s.pad_wow.is_some();
+        let colors = !lp.base.colors.is_empty();
+        self.color_change = colors != self.had_color;
+        self.had_color = colors;
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         synth.set_tone(host, lp.spec.tone, now);
@@ -717,6 +732,13 @@ impl Sequencer {
             synth.pad_wow_setup(host, s.pad_wow.as_ref(), time);
             self.pad_wow_change = false;
         }
+        // The last loop's color lets go at a new loop's first step, and the
+        // channel's color is on only where this one plays colors.
+        if self.color_change {
+            self.let_color_go(host, time);
+            Synth::color_setup(host, self.had_color, time);
+            self.color_change = false;
+        }
         if self.bass_lift_change {
             host.bass_lift(s.bass_lift);
             self.bass_lift_change = false;
@@ -733,6 +755,10 @@ impl Sequencer {
             if quiet && self.hold.on {
                 Synth::organ_off(host, time, 0.25);
                 self.hold = NO_HOLD;
+            }
+            // And so does the color.
+            if quiet {
+                self.let_color_go(host, time);
             }
             if quiet && !self.tails_ducked {
                 Synth::fade_tails(host, time);
@@ -908,6 +934,9 @@ impl Sequencer {
                     synth.budget.end();
                 }
             }
+            if self.had_color {
+                self.colors(host, synth, lp, s_at, t, sd);
+            }
             if s.organ.is_some() {
                 self.organ(host, synth, lp, s_at, t, sd, abs);
             } #[cfg(feature = "sketch")] if s.organ.is_none() { Self::retune_chords(host, lp, s_at, t); }
@@ -923,6 +952,9 @@ impl Sequencer {
         if (mutes[Layer::Chords as usize] || lp.rests(Layer::Chords)) && self.hold.on {
             Synth::organ_off(host, t, 0.25);
             self.hold = NO_HOLD;
+        }
+        if mutes[Layer::Chords as usize] || lp.rests(Layer::Chords) {
+            self.let_color_go(host, t);
         }
         if !mutes[Layer::Melody as usize] {
             let s_at = at(Layer::Melody);
@@ -1075,6 +1107,31 @@ impl Sequencer {
             }
             self.hold = hold;
         }
+    }
+
+    /// colorTone's colors that start at chords step `s` (queue item 101e):
+    /// each where the chord it sounds with is played this pass (not in a
+    /// gap, a rest or a breath), in the plan's key, held its length.
+    fn colors<H: Host>(&mut self, host: &mut H, synth: &Synth, lp: &Loop, s: f64, t: f64, sd: f64) {
+        for c in lp.base.colors.iter().filter(|c| c.step == s) {
+            let i = usize::from(c.anchor);
+            let Some(e) = lp.base.chords.get(i) else { continue };
+            if !truthy(lp.chord(i, e).0) {
+                continue;
+            }
+            let midi = f64::from(c.midi);
+            let seconds = c.dur * sd;
+            synth.color(host, midi + lp.moved(Layer::Chords, midi), t, seconds);
+            self.color_until = js::max(self.color_until, t + seconds);
+        }
+    }
+
+    /// The color lets go at `time`, if one may still sound.
+    fn let_color_go<H: Host>(&mut self, host: &mut H, time: f64) {
+        if self.color_until > time {
+            Synth::color_off(host, time);
+        }
+        self.color_until = 0.0;
     }
 
     /// `_glass`: on a chord's first beat, 55% of the time, two or three of

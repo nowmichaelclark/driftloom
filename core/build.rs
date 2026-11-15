@@ -768,6 +768,9 @@ fn choices(out: &mut String, blocks: &[Block]) {
     let dotted = find("setting", "dottedpulse");
     dotted.only(&["pulse", "low"]);
     let _ = writeln!(out, "/// dottedPulse's settings (`[setting dottedpulse]`).\npub static DOTTEDPULSE: Dotted = Dotted {{ pulse: {}, low: {} }};", dotted.need_num("pulse"), dotted.need_num("low"));
+    let color = find("setting", "colortone");
+    color.only(&["share"]);
+    let _ = writeln!(out, "/// colorTone's settings (`[setting colortone]`).\npub static COLORTONE: ColorTone = ColorTone {{ share: {} }};", color.need_num("share"));
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);
     let _ = writeln!(

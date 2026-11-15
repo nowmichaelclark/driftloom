@@ -53,6 +53,7 @@ pub mod asked;
 pub mod canon;
 pub mod character;
 pub mod choices;
+pub mod color;
 pub mod data;
 pub mod heard;
 pub mod js;

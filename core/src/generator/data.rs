@@ -303,6 +303,13 @@ pub struct Dotted {
     pub low: f64,
 }
 
+/// colorTone's settings (`[setting colortone]`, queue item 101e): the share
+/// of a loop's chords that take the color.
+#[derive(Clone, Copy, Debug)]
+pub struct ColorTone {
+    pub share: f64,
+}
+
 /// echoTime's settings (`[setting echo]`).
 #[derive(Clone, Copy, Debug)]
 pub struct Echo {
@@ -490,7 +497,7 @@ pub struct VoiceCosts {
 #[allow(clippy::unreadable_literal)]
 mod tables {
     use super::{
-        Arc, ArcPeriods, BassLift, Character, Choice, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
+        Arc, ArcPeriods, BassLift, Character, Choice, ColorTone, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
         Longform, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));

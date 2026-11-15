@@ -138,8 +138,14 @@ pub mod event {
     /// reaches every note held when its time comes, every time; a note
     /// passes by the choke sent with its own hit.
     pub const CHOKE: u32 = 4;
+    /// A color (colorTone, queue item 101e): the chords channel's held
+    /// color moves to the note `value` (MIDI) at the event's time, held for
+    /// `notes[0]` seconds, or, with `value` NaN, lets go. Reaches every held
+    /// note, every time (none of the notes hears it: the color is the
+    /// channel's own block, `blocks::color_tone`).
+    pub const COLOR: u32 = 5;
     /// How many kinds there are.
-    pub const KINDS: usize = 5;
+    pub const KINDS: usize = 6;
     /// The kinds that reach each note once are numbered first, `0..ONCE`:
     /// a note still waiting keeps one of each of these (`Core::event`).
     pub const ONCE: usize = 2;
@@ -164,7 +170,7 @@ pub mod event {
     pub const fn reach(kind: u32) -> Option<Reach> {
         match kind {
             DAMP | RELEASE => Some(Reach::Once),
-            BEND | RETUNE | CHOKE => Some(Reach::Every),
+            BEND | RETUNE | CHOKE | COLOR => Some(Reach::Every),
             _ => None,
         }
     }
@@ -179,6 +185,7 @@ pub mod event {
             BEND => "bend",
             RETUNE => "retune",
             CHOKE => "choke",
+            COLOR => "color",
             _ => "unknown",
         }
     }
@@ -218,6 +225,15 @@ impl Event {
         for (n, &m) in e.notes.iter_mut().zip(chord.iter()) {
             *n = m;
         }
+        e
+    }
+
+    /// A color (`event::COLOR`) at `time`: the note `midi` held for
+    /// `seconds`, or with `midi` NaN, the color let go.
+    #[must_use]
+    pub const fn color(time: f64, midi: f64, seconds: f64) -> Self {
+        let mut e = Event::new(event::COLOR, time, midi);
+        e.notes[0] = seconds;
         e
     }
 
@@ -595,7 +611,9 @@ pub enum Play {
 /// The events the test kit sends a block that hears a kind (`Block::HEARS`),
 /// for every probe: a damp or a release a quarter second in; a bend up a
 /// semitone, down one, and back; and a retune five times, through chords
-/// that share some notes and not others; a choke a quarter second in.
+/// that share some notes and not others; a choke a quarter second in; and
+/// a color three times (one the same note as the one before, which holds on)
+/// and let go.
 #[must_use]
 pub fn probe_events(kind: u32) -> &'static [Event] {
     const NAN: f64 = f64::NAN;
@@ -605,6 +623,12 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
     const DAMP: [Event; 1] = [Event::new(event::DAMP, 0.25, 0.0)];
     const RELEASE: [Event; 1] = [Event::new(event::RELEASE, 0.25, 0.0)];
     const CHOKE: [Event; 1] = [Event::new(event::CHOKE, 0.25, 0.0)];
+    const COLOR: [Event; 4] = [
+        Event::color(0.1, 69.0, 0.4),
+        Event::color(0.3, 76.0, 0.3),
+        Event::color(0.5, 76.0, 0.2),
+        Event::color(0.6, f64::NAN, 0.0),
+    ];
     const BEND: [Event; 3] = [
         Event::new(event::BEND, 0.15, 100.0),
         Event::new(event::BEND, 0.3, -100.0),
@@ -623,6 +647,7 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
         event::BEND => &BEND,
         event::RETUNE => &RETUNE,
         event::CHOKE => &CHOKE,
+        event::COLOR => &COLOR,
         _ => &[],
     }
 }

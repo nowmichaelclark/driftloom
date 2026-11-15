@@ -8,6 +8,7 @@
 
 use super::canon::{Sink, Writer};
 use super::choices::lean_of;
+use super::color::{self, Colors};
 use super::data::{self, CHOICES, MAX_BARS, PADSWEEP, PEDAL};
 use super::js;
 use super::kit;
@@ -85,6 +86,9 @@ pub struct Render {
     /// plans and draws those first for a loop with held chords); taken by
     /// the next melody part in place of its own reading.
     pub register_given: Option<f64>,
+    /// colorTone's held colors (queue item 101e), where the loop drew it:
+    /// made once the chords' octave is taken (`color::colors`).
+    pub colors: Colors,
     // Working room: the pedal's notes, a developing loop's sections.
     pedal_notes: Bass,
     a_notes: Melody,
@@ -117,6 +121,7 @@ impl Render {
             depth_made: false,
             chord_shift: 0.0,
             register_given: None,
+            colors: List::new(),
             pedal_notes: List::new(),
             a_notes: List::new(),
             section_notes: List::new(),
@@ -136,6 +141,7 @@ impl Render {
             + self.a_notes.lost()
             + self.section_notes.lost()
             + self.choices.lost()
+            + self.colors.lost()
     }
 
     /// Render the loop of `cx` over `plan` (made with the same `cx`): every
@@ -412,6 +418,11 @@ impl Render {
         }
         if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
             self.spell_over(cx);
+        }
+        self.colors.clear();
+        if self.choice("colorTone") == Some("on") {
+            #[allow(clippy::cast_possible_truncation)] // whole octaves
+            color::colors(&self.harmony.slots, &self.chords, spec, self.chord_shift as i16, &mut self.colors);
         }
 
         let cycle = spec.cycles.of(Layer::Melody as usize).filter(|&c| c != 0.0).unwrap_or(spec.bars * spb);
@@ -729,6 +740,8 @@ impl Render {
             // padWow and widePad: any loop that plays a chord (queue items
             // 101b and 101c).
             "organ" | "padWow" | "widePad" => plays_chords,
+            // colorTone (queue item 101e): a chord that can take a color.
+            "colorTone" => color::colorable(&self.harmony.slots, &self.chords, cx.spec),
             "wash" | "arc" => true,
             // tripletKit (queue item 101d): any loop with a kit, but in 6/8,
             // whose beat's thirds are the eighths it already plays.
@@ -1018,6 +1031,21 @@ impl Render {
             w.key("voice");
             w.str(ch.voice);
             w.end_obj();
+        }
+        if !self.colors.is_empty() {
+            w.key("colors");
+            w.list();
+            for c in self.colors.iter() {
+                w.obj();
+                w.key("dur");
+                w.num(c.dur);
+                w.key("midi");
+                w.num(f64::from(c.midi));
+                w.key("step");
+                w.num(c.step);
+                w.end_obj();
+            }
+            w.end_list();
         }
         if let (Some(dev), true) = (plan.development.as_ref(), self.depth_made) {
             let depth = &self.depth;

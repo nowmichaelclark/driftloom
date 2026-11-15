@@ -245,6 +245,24 @@ alone = 0.15
 vibes = groovy 2, quirky 1.5, cheeky 1.5, mischievous 1.5, intricate 1.5,
     jazzy 1.5, still 0.4, restful 0.4, glacial 0.4
 
+# colorTone (queue item 101e; batch 6's #5, approved by Mikey 2026-11-08): a
+# held 13th over the major chords and an 11th over the minor ones, on a share
+# of the chords (setting colortone, below), voiced just above the chord's top
+# note (C6 at the most), soft, swelling in and letting go
+# (core/src/generator/color.rs decides which chords and where;
+# core/src/blocks/color_tone.rs is the tone, the sketch's). For any loop with a
+# chord that can take one: a major or minor third, a perfect fifth or none,
+# the color not in it already, and in the chord's scale. Drawn alone, not
+# among the changes, for 15% of the loops that may have it before the vibes
+# lean it: the batch's conservative share, for Mikey's ears. The batch's
+# [JUDGMENT] row: toward the jazzy vibes, away from the minimal and the still.
+[choice colorTone]
+options = today 1, on 1
+alone = 0.15
+vibes = jazzy 2.5, intricate 2, mellow 1.5, velvety 1.5, dreamy 1.5,
+    cosmic 1.5, bubbly 1.5, golden 1.5, minimal 0.4, still 0.5, reverent 0.5,
+    earthy 0.5
+
 # The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
 # every variable of the arc, named, with the range a loop draws it from, in
 # this one place, so phase 2's requests can pin them (docs/CORE.md, promises
@@ -504,6 +522,14 @@ pulse = 0.5
 # than this over the loop's own kicks in that bar (the batch's low guard: the
 # lever's moved kicks raised dust #69's 20-60 Hz past 1 dB).
 low = 1
+
+# colorTone's settings (queue item 101e): the share of a loop's chords that
+# take the color, each chord drawn on the loop's own stream. The sketch drew
+# about 6 chords in 10, but its reading of the chords left many out; 0.45
+# holds the color over 43% of the chord time on 600 corpus loops, inside the
+# batch's 25 to 50% (0.55 held it over 52%). For Mikey's ears.
+[setting colortone]
+share = 0.45
 
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
