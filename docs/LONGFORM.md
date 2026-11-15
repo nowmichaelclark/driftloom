@@ -389,7 +389,10 @@ pass's text name it (`dlgen --map` writes "then fill"). The numbers are
   60 arcs of 1,024 bars, every join as played); `tools/longform.mjs` plays
   the three places session 05 found among its own, and
   `core/tests/joins.rs` holds them fallen back and every join played under
-  the line by its notes.
+  the line by its notes. Reading the joins costs a section a few microseconds
+  natively, so the player now draws a piece's next pass in one block and
+  hears its plan in the next (the same samples): each of those blocks
+  costs less than the one block did before.
 
 ## Endings that land (session 15)
 
