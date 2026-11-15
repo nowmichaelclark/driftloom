@@ -154,6 +154,9 @@ pub struct Player {
     current: usize,
     wandering: bool,
     next_drawn: bool,
+    /// Whether the next pass of a piece is drawn but not yet heard: it is
+    /// heard in a block of its own after it (session 16b, `decide`).
+    next_unheard: bool,
     /// Whether the loop playing is a piece whose plan is heard (`journeys`).
     journeyed: bool,
     seq: Sequencer,
@@ -237,6 +240,7 @@ impl Player {
             current: 0,
             wandering: false,
             next_drawn: false,
+            next_unheard: false,
             journeyed: false,
             seq: Sequencer::new(),
             synth: Synth::new(),
@@ -310,6 +314,7 @@ impl Player {
         self.was_playing = false;
         self.wandering = false;
         self.next_drawn = false;
+        self.next_unheard = false;
         self.journeyed = false;
         self.pending = [Maybe::NONE; SLOTS];
         self.handover = Handover::RingOut;
@@ -784,6 +789,16 @@ impl Player {
     /// Draw pass `number` into `passes[slot]`, at the wander's amount, on
     /// its stream salted as the host asked.
     fn draw(&mut self, slot: usize, number: u32) {
+        self.draw_unheard(slot, number);
+        // A long piece's plan, heard (queue items 102b and 102c).
+        if self.journeyed {
+            self.hear_pass(slot, number);
+        }
+    }
+
+    /// `draw`, the pass alone: a long piece's plan is heard after it
+    /// (`hear_pass`).
+    fn draw_unheard(&mut self, slot: usize, number: u32) {
         // What the section plays beside the loop's own tune (session 14):
         // made in the blocks before, a stage each (`decide`); here only
         // where the pass is drawn with no blocks to spare (a load's first).
@@ -795,10 +810,6 @@ impl Player {
         if let Some(p) = self.passes.get_mut(slot) {
             let cx = Cx::new(g.spec());
             p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
-        }
-        // A long piece's plan, heard (queue items 102b and 102c).
-        if self.journeyed {
-            self.hear_pass(slot, number);
         }
     }
 
@@ -925,6 +936,7 @@ impl Player {
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.pass_begins(&lp);
         self.next_drawn = false;
+        self.next_unheard = false;
         self.was_playing = false;
         self.asked_by = Asked::Load;
         self.handover = Handover::RingOut;
@@ -983,6 +995,7 @@ impl Player {
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.pass_begins(&lp);
         self.next_drawn = false;
+        self.next_unheard = false;
         self.was_playing = false;
         self.asked_by = Asked::Load;
         self.handover = Handover::RingOut;
@@ -1247,7 +1260,20 @@ impl Player {
             if self.journeyed && !self.generator.prepare(u64::from(n)) {
                 return Work::Pass;
             }
-            self.draw(1 - self.current, n);
+            // A piece's pass drawn in one block and heard in the next
+            // (session 16b: its joins read from their notes), so neither
+            // block holds both.
+            if self.journeyed && !self.next_unheard {
+                self.draw_unheard(1 - self.current, n);
+                self.next_unheard = true;
+                return Work::Pass;
+            }
+            if self.next_unheard {
+                self.hear_pass(1 - self.current, n);
+                self.next_unheard = false;
+            } else {
+                self.draw(1 - self.current, n);
+            }
             self.next_drawn = true;
             return Work::Pass;
         }
@@ -1276,6 +1302,7 @@ impl Player {
             self.wandering = false;
         }
         self.next_drawn = false;
+        self.next_unheard = false;
         let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
         self.seq.pass_begins(&lp);
     }
@@ -1301,6 +1328,7 @@ impl Player {
         if amount != self.wander.get() {
             self.wander.set(amount);
             self.next_drawn = false;
+            self.next_unheard = false;
         }
     }
 
@@ -1315,6 +1343,7 @@ impl Player {
         if salt != self.salt {
             self.salt = salt;
             self.next_drawn = false;
+            self.next_unheard = false;
         }
     }
 

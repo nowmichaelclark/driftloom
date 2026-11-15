@@ -815,6 +815,21 @@ impl Heard {
                 s += c;
             }
         };
+        // The kit's hits that can sound in the spans, found without the
+        // walk's ceiling for each (most fall nowhere near them): where a
+        // hit at loop step `at` first falls on or after `kit` steps before
+        // the spans, `near` says whether that is within a step of them.
+        let dc = cycles[Layer::Drums as usize];
+        let reach = last - (first - kit);
+        let edge = (first - kit + shifts[Layer::Drums as usize]) % dc;
+        let edge = if edge < 0.0 { edge + dc } else { edge };
+        let near = |at: f64| {
+            if !(at >= 0.0 && at < dc && reach + 2.0 < dc) {
+                return true;
+            }
+            let t = if at >= edge { at - edge } else { at - edge + dc };
+            t < reach + 1.0 || t > dc - 1.0
+        };
         let mid = 0.5 * (spans[0][0] + spans[0][1]);
         let level = |layer: Layer| {
             let l = u.level(layer, mid);
@@ -846,7 +861,7 @@ impl Heard {
                     }),
                 }
                 .unwrap_or((0.0, 0.0, 0.0, 0.0, "", false));
-                if !(vel > 0.0 && n > 0.0) {
+                if !(vel > 0.0 && n > 0.0) || layer == Layer::Drums && !near(at) {
                     continue;
                 }
                 // The unit's voice where it plays another (the kit and the
