@@ -87,6 +87,20 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
+- **colorTone (101e, session 06, v170, #396):** a soft held 13th over the
+  major chords and an 11th over the minor ones, just above the chord (C6 at
+  most), swelling in and letting go, on about 1 loop in 7 that can take it.
+  To hear it before the album: luir-wo (corpus 20261009 #97) from 0:05;
+  broan-mei (#163) from 0:02. Taste calls for your ears, each a line of
+  `data/choices.txt` or `core/src/blocks/color_tone.rs`: 15% of the loops
+  before the vibes (jazzy leans it to nearly a quarter); 45% of a loop's chords
+  drawn, so the color holds over about 43% of the chord time (the batch's 25
+  to 50%); its level is the sketch's rule (1.2 times the chords' level as each
+  color starts), which on tide #39 reads 3 LU louder than the sketch did,
+  because the sketch held one color through four chords and the build starts
+  one with each chord that takes it. Chords with no third (open fifths, sus,
+  quartal stacks) get none: shrine #0, which the sketch colored by reading two
+  chords as one, now has none.
 - **No join a hole, on any piece (102g, session 16b, v169, PR #395):** six
   clips, 2:30, on the branch `long-clips` (its `index.md`, which replaces
   session 16's set; that one is in the branch's history), not blind: each

@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-14:** `main` is at v169 (session 01 done: v154 the tools
+**Status, 2026-11-15:** `main` is at v170 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -56,7 +56,8 @@ v166, widePad, both kinds, #387); hands session 19 done alongside
 hands session 25 done alongside (2026-11-14: 107a, the Android project and its
 CI build, `android/`, #389; no app change); hands session 05 done (2026-11-14: 101d, v167 tripletKit #391, v168
 dottedPulse #392); hands session 16b done (2026-11-14: 102g, v169, no join
-a hole on any piece, #395; the listening set on `long-clips`); next: 06
+a hole on any piece, #395; the listening set on `long-clips`); hands session 06
+done (2026-11-15: 101e, v170, colorTone, #396); next: 07
 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:

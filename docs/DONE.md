@@ -272,3 +272,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   where the tune alone left two seconds near silence; yi-yoar (819045617)
   at 6:14, the same where the kit and the bass dropped out. The clips are on
   `long-clips`.
+- #396, colorTone (item 101e, session 06, v170), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 7 that can take it (nearly a quarter
+  of the jazzy ones, 1 in 11 of the minimal ones) holds a soft color over some of
+  its chords, a 13th over the major ones and an 11th over the minor ones,
+  just above the chord (C6 at most), swelling in and letting go; about 43% of
+  the chord time where it plays. Two loops (corpus 20261009) that draw it:
+  **luir-wo** (#97, 76 BPM) from 0:05; **broan-mei** (#163, 109 BPM, a kit in
+  threes too) from 0:02. A loop without it plays as before, its wander too.
