@@ -11,6 +11,7 @@
 
 use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
+use crate::generator::data;
 use crate::generator::js;
 use crate::generator::list::Biased;
 use crate::generator::heard::{self, tune};
@@ -28,7 +29,7 @@ use crate::rng::{Key, salt, unit};
 use crate::{BASS_CHANNEL, CHORDS, DRUMS_CHANNEL, MELODY, TEXTURE_CHANNEL};
 
 use super::host::Host;
-use super::synth::{Fm, KickHit, Opts, StabOpts, Synth};
+use super::synth::{Fm, KickHit, LOW_BELL_RING, Opts, StabOpts, Synth};
 
 /// A chord's level spread across its voicing (`CHORD_SPREAD`).
 const CHORD_SPREAD: f64 = 0.8;
@@ -61,6 +62,14 @@ const GLASS_CHORD_VEL: f64 = 0.5;
 /// (`GLASS_ORD`, `STAB_ORD`): past any place the layer's own notes take.
 const GLASS_ORD: u32 = 256;
 const STAB_ORD: u32 = 256;
+/// Where the low bell's strike sits among the chords' notes at a step
+/// (queue item 101g): past glass's and the stab's.
+const BELL_ORD: u32 = 512;
+/// The low bell's register: the lowest note it strikes (D2, 73 Hz, so its
+/// fundamental stays above the 60 Hz guard); it strikes up to 11 above.
+pub const BELL_LOW: f64 = 38.0;
+/// A full stop's damp on the low bell, in seconds to -60 dB (the sketch's).
+const BELL_DAMP: f64 = 0.25;
 
 /// How long the last loop's organ takes to let go at a new loop's first
 /// step, in seconds (`organOff(time, 0.15)` in the engine's setups).
@@ -336,6 +345,12 @@ pub struct Sequencer {
     color_change: bool,
     had_color: bool,
     color_until: f64,
+    /// lowBell (queue item 101g): the pitch class of the last root struck
+    /// and one (0: none yet), when it was struck, and until when (seconds
+    /// on the core's clock) a ring may sound.
+    bell_pc: u8,
+    bell_at: f64,
+    bell_until: f64,
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
@@ -382,6 +397,9 @@ impl Sequencer {
             color_change: false,
             had_color: false,
             color_until: 0.0,
+            bell_pc: 0,
+            bell_at: 0.0,
+            bell_until: 0.0,
             organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
@@ -756,9 +774,10 @@ impl Sequencer {
                 Synth::organ_off(host, time, 0.25);
                 self.hold = NO_HOLD;
             }
-            // And so does the color.
+            // And so does the color, and the low bell is damped.
             if quiet {
                 self.let_color_go(host, time);
+                self.damp_bell(host, time);
             }
             if quiet && !self.tails_ducked {
                 Synth::fade_tails(host, time);
@@ -937,6 +956,9 @@ impl Sequencer {
             if self.had_color {
                 self.colors(host, synth, lp, s_at, t, sd);
             }
+            if s.low_bell != 0 && !lp.rests(Layer::Chords) && !Self::is_silent_bar(lp, abs, rel) {
+                self.low_bell(host, synth, lp, s_at, t, s.low_bell == 2, Key { seed, pass, step: step32, ord: BELL_ORD });
+            }
             if s.organ.is_some() {
                 self.organ(host, synth, lp, s_at, t, sd, abs);
             } #[cfg(feature = "sketch")] if s.organ.is_none() { Self::retune_chords(host, lp, s_at, t); }
@@ -955,6 +977,7 @@ impl Sequencer {
         }
         if mutes[Layer::Chords as usize] || lp.rests(Layer::Chords) {
             self.let_color_go(host, t);
+            self.damp_bell(host, t);
         }
         if !mutes[Layer::Melody as usize] {
             let s_at = at(Layer::Melody);
@@ -1124,6 +1147,49 @@ impl Sequencer {
             synth.color(host, midi + lp.moved(Layer::Chords, midi), t, seconds);
             self.color_until = js::max(self.color_until, t + seconds);
         }
+    }
+
+    /// lowBell (queue item 101g): at the first step `s` of a chord of the
+    /// progression (a slot of the harmony) that plays this pass (an event of
+    /// the slot sounds: not all of it in a gap, a rest or a breath), the low
+    /// bell strikes the slot's root, in the plan's key, as its pitch class
+    /// between D2 and C#3, unless that is the root it struck last and less
+    /// than `regap` seconds ago (`[setting lowbell]`). The generator knows
+    /// its chords, so an arpeggio's chord is struck as a whole one is.
+    #[allow(clippy::too_many_arguments)] // the step's own place and times
+    fn low_bell<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, s: f64, t: f64, swell: bool, key: Key) {
+        let Some(slot) = lp.base.harmony.slots.iter().find(|x| x.start_step == s) else { return };
+        let end = slot.start_step + slot.length_steps;
+        let plays = lp.base.chords.iter().enumerate().any(|(i, e)| e.step >= slot.start_step && e.step < end && truthy(lp.chord(i, e).0));
+        if !plays {
+            return;
+        }
+        let root = slot.root_midi + lp.moved(Layer::Chords, slot.root_midi);
+        let pc = (((root - BELL_LOW) % 12.0) + 12.0) % 12.0;
+        if !pc.is_finite() {
+            return;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 0 to 11
+        let mark = js::round(pc) as u8 % 12 + 1;
+        // A millisecond's grace, so a chord exactly `regap` on is struck
+        // however the times round.
+        if mark == self.bell_pc && t - self.bell_at < data::LOWBELL.regap - 0.001 {
+            return;
+        }
+        self.bell_pc = mark;
+        self.bell_at = t;
+        synth.low_bell(host, key, BELL_LOW + pc, t, swell);
+        self.bell_until = js::max(self.bell_until, t + LOW_BELL_RING);
+    }
+
+    /// The low bell's ring damped at `time` (a full stop, the chords muted
+    /// or resting), if one may still sound; the next chord strikes afresh.
+    fn damp_bell<H: Host>(&mut self, host: &mut H, time: f64) {
+        if self.bell_until > time {
+            Synth::low_bell_off(host, time, BELL_DAMP);
+        }
+        self.bell_until = 0.0;
+        self.bell_pc = 0;
     }
 
     /// The color lets go at `time`, if one may still sound.

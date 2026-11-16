@@ -14,7 +14,7 @@ use crate::block::Event;
 use crate::block::event::{CHOKE, RELEASE};
 use crate::blocks::own;
 use crate::blocks::midi_to_freq;
-use crate::blocks::{bass, color_tone, drum, kalimba, pad_wow, struck, texture};
+use crate::blocks::{bass, color_tone, drum, kalimba, low_bell, pad_wow, struck, texture};
 use crate::generator::data::{self, VOICE_COSTS};
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -22,12 +22,16 @@ use crate::rng::{Key, salt, unit};
 use crate::{BASS_CHANNEL, CHORDS, DRUMS_CHANNEL, EXTRA, MELODY, TEXTURE_CHANNEL, Tap, WASH_CHANNEL};
 use crate::{
     ACCORDION, ANALOGLEAD, ANALOGPAD, BASS, BEEP, CHOIR, DRUM, DUBSTAB, FIDDLE, FLUTE, FM, HAT, HUM, KALIMBA, KNOCK, MOOG, NYLON,
-    OCARINA, PAD, PANFLUTE, SAWPLUCK, SINE, SOFTPAD, STAB, TEMPLEBELL, TEXTURE, TUBULAR, TUNEDKICK, VOWEL, WHISTLE,
+    LOWBELL, OCARINA, PAD, PANFLUTE, SAWPLUCK, SINE, SOFTPAD, STAB, TEMPLEBELL, TEXTURE, TUBULAR, TUNEDKICK, VOWEL, WHISTLE,
 };
 
 use super::budget::{Budget, YIELD_MARGIN};
 use super::formant::{self, HUM_REF, OPEN_HUM, Refs, VOWELS};
 use super::host::Host;
+
+/// How long the player says a low bell is held, in seconds: its ring (the
+/// voice ends it 60 dB down, `blocks::low_bell`).
+pub const LOW_BELL_RING: f64 = 5.5;
 
 /// Every voice's values a note leaves out (`x[i] ?? NaN`).
 const NONE: [f64; EXTRA] = [f64::NAN; EXTRA];
@@ -570,6 +574,26 @@ impl Synth {
     /// moves to `midi` at `time` (the loop's tuning in it), held `seconds`.
     pub fn color<H: Host>(&self, host: &mut H, midi: f64, time: f64, seconds: f64) {
         host.event(CHORDS, Event::color(time, midi + self.tune, seconds));
+    }
+
+    /// lowBell (queue item 101g): the low bell struck on `midi` (already in
+    /// its register, D2 to C#3, the loop's tuning added here) at `time`, the
+    /// swelling kind if `swell`. It yields as glass and the dub stab do: it
+    /// plays only where the budget has its cost and the margin to spare, and
+    /// holds nothing, so it never keeps another note out. Its level is the
+    /// voice's own, from the chords channel it follows (`blocks::low_bell`).
+    pub fn low_bell<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, swell: bool) {
+        if !self.budget.room(time, cost_or("lowbell", default_cost()) + YIELD_MARGIN) {
+            return;
+        }
+        let parts = if swell { low_bell::SWELL } else { 0 };
+        self.note(host, key, LOWBELL, CHORDS, time, midi, LOW_BELL_RING, 1.0, parts, NONE);
+    }
+
+    /// lowBell's ring damped at `time`, over `seconds` to -60 dB (a full
+    /// stop's quarter second).
+    pub fn low_bell_off<H: Host>(host: &mut H, time: f64, seconds: f64) {
+        host.event(CHORDS, Event::new(CHOKE, time, seconds));
     }
 
     /// colorTone's color lets go at `time`.

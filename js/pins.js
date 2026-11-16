@@ -3,7 +3,7 @@
 // `readRequest`). The game's and the ears' levers: any of item 54's choices
 // to one of its options, and the settings each choice draws by (the arc, the
 // tuned kick, subDuck, lateFloor, padSweep), the echo's time, the loop's
-// tuning (0 holds it at A440), the progression's kind and the space recipe's 40 (core/src/space.rs). `core/src/generator/request.rs` reads the
+// tuning (0 holds it at A440), the progression's kind, lowBell's kind and the space recipe's 40 (core/src/space.rs). `core/src/generator/request.rs` reads the
 // same table, in the same order.
 //
 // **A pin chooses within what the loop could draw.** Every setting is held
@@ -28,7 +28,7 @@
 // `echo.beats=1`, `tuning.cents=0`, `space.room=0.8` (numbers as JavaScript
 // writes them).
 
-import { ARC, CHOICES, ECHO, KICK, LATEFLOOR, PADSWEEP, SUBDUCK, TUNING } from './choices.js';
+import { ARC, CHOICES, ECHO, KICK, LATEFLOOR, LOWBELL, PADSWEEP, SUBDUCK, TUNING } from './choices.js';
 
 export class RequestError extends Error {}
 
@@ -100,6 +100,9 @@ const SETTINGS = [
   // The progression's kind (item 101f): today's, or planingSevenths' major
   // sevenths sliding a step or a minor third (core/src/generator/planing.rs).
   { name: 'progression.kind', words: ['today', 'planing'] },
+  // lowBell's kind (item 101g): none, struck or swelling, for a loop that
+  // plays a chord (core/src/blocks/low_bell.rs).
+  { name: 'lowBell.kind', words: ['today', ...ids(LOWBELL.kinds)] },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [

@@ -607,7 +607,7 @@ impl Reader<'_> {
 /// the draw's counts and leans, each choice's options and vibes, and the
 /// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
 /// shapes, the pedal, padSweep, padWow, the echo time, the tuning, the
-/// progression's kind and the bass's level, each block's keys exactly the
+/// progression's kind, lowBell and the bass's level, each block's keys exactly the
 /// ones `js/choices.js` reads.
 #[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
 fn choices(out: &mut String, blocks: &[Block]) {
@@ -779,6 +779,16 @@ fn choices(out: &mut String, blocks: &[Block]) {
         "/// The progression's per-loop draw (`[setting progression]`).\npub static PROGRESSION: Progression = Progression {{ planing: {}, vibes: {} }};",
         progression.need_num("planing"),
         progression.need_table("vibes")
+    );
+    let bell = find("setting", "lowbell");
+    bell.only(&["share", "kinds", "kindVibes.*", "regap"]);
+    let _ = writeln!(
+        out,
+        "/// lowBell's per-loop draw (`[setting lowbell]`).\npub static LOWBELL: LowBellDraw = LowBellDraw {{ share: {}, kinds: {}, kind_vibes: {}, regap: {} }};",
+        bell.need_num("share"),
+        bell.need_pool("kinds"),
+        bell.tables_by_name("kindVibes"),
+        bell.need_num("regap")
     );
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);

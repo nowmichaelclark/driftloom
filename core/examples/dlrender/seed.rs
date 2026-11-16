@@ -308,6 +308,13 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
         if dlcore::generator::planing::planes(player.generator().spec()) && !drawn.iter().any(|d| d == "planingSevenths") {
             drawn.push("planingSevenths".to_string());
         }
+        // The low bell (queue item 101g), drawn outside the choices:
+        // `lowBell`, or `lowBell:swell`.
+        match player.generator().settings().low_bell {
+            1 => drawn.push("lowBell".to_string()),
+            2 => drawn.push("lowBell:swell".to_string()),
+            _ => {}
+        }
         let _ = write!(line, " choices={}", if drawn.is_empty() { "-".to_string() } else { drawn.join(",") });
     }
     Ok(Rendered { line, samples, calls: calls.then_some(lines) })

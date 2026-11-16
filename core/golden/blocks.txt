@@ -173,3 +173,7 @@ pad_wow/gentle=rate bdb7d5efb0d5da81 -20.41 -8.81 34.4
 pad_wow/deepest=rate 3da1e4d1f1cc109a -20.43 -8.92 34.3
 color_tone/thirteen 2e8e6b896815bc1d -36.43 -29.52 0.0
 color_tone/thirteen@color 5fe586a6a635d409 -50.63 -28.35 0.0
+low_bell/struck 297e69fda844e6b8 -43.15 -25.53 0.0
+low_bell/swell 50ffcfd8fdbee1cf -46.13 -31.11 0.0
+low_bell/struck@choke d64a1aab055eadae -47.00 -25.53 0.0
+low_bell/swell@choke e18ea142c7776b23 -57.29 -34.22 0.0

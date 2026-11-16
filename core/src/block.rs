@@ -501,6 +501,17 @@ impl Note {
 /// No extra values: what a voice that reads none is handed.
 pub const NO_EXTRA: [f64; EXTRA] = [f64::NAN; EXTRA];
 
+/// Where a voice that follows its channel (`Voice::FOLLOWS`) finds the
+/// channel's level as its note starts: the mean square of the channel's
+/// signal, as it leaves the channel's own blocks, over about the last
+/// `FOLLOW` seconds (queue item 101g). The core writes it there; a host's
+/// value is overwritten.
+pub const HEARD: usize = EXTRA - 1;
+
+/// How long a channel's level is followed over, in seconds (`HEARD`): the
+/// Ears 13 lowBell sketch's.
+pub const FOLLOW: f64 = 1.5;
+
 /// A block played by a note: a voice the host plays by number.
 ///
 /// Its hooks are optional; a voice that draws nothing, plays no noise,
@@ -518,6 +529,14 @@ pub trait Voice: Block<Settings = Note> {
     /// (`render_sends`), past its channel's own sends: a stab thrown into
     /// the echo (queue item 60).
     const SENDS: bool = false;
+
+    /// Whether it follows its channel (queue item 101g, lowBell): its notes
+    /// sound into the channel after the channel's own blocks (a sweep, a
+    /// wow, a color), as a sketch on the whole channel did, rather than
+    /// before them, and each note is stamped as it starts with how loud the
+    /// channel has been without it (`HEARD`), so its level can follow the
+    /// layer's. It plays through nothing (`THROUGH` is `None`).
+    const FOLLOWS: bool = false;
 
     /// Render as `Block::render` does, and add what it sends into `sends`
     /// (`Sends`: the reverb's input, then the echo's). Called instead of

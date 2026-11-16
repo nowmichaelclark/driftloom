@@ -59,6 +59,12 @@ cost = hat 1, ohat 1, shaker 1, rim 1, kick 1, snare 1.5, clap 1.5,
     # it read 22.8 and 21.5.
     nylon 7, panflute 15,
     templebell 12, tubular 12,
+    # lowBell (queue item 101g): one ringing note, four sines, measured the
+    # same way (marginal render time of 32 notes held 1 s against an empty
+    # render, native, three passes: 1.01, 1.03 and 1.02 ms a note-second),
+    # converted through sine, keys, tubular and the templebell at their
+    # median rate (9.7 units a ms): 9.9. Against the tubular bell alone, 8.
+    lowbell 10,
     # The hand kit, measured the way the folk voices were, but priced against
     # the kit instruments they stand in for rather than through the tonal
     # voices: by the same render timing a kick reads 7.5 units and a hat 4.6,

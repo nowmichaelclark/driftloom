@@ -136,6 +136,14 @@ A **voice** is the same, with three differences:
 A voice too big for a slot of the pool goes in `pooled`, with the size of
 its own pool.
 
+A voice may follow its channel (`Voice::FOLLOWS`; the low bell,
+`src/blocks/low_bell.rs`, queue item 101g): its notes sound into the channel
+after the channel's own blocks (a sweep or a wow leaves them be), and each
+note is stamped as it starts with the channel's level so far
+(`block::HEARD`, its mean square over `block::FOLLOW` seconds), so its level
+can follow the layer's as a block on the whole channel would. A channel with
+no such note sounding renders bit for bit as before.
+
 ## The test kit
 
 `cargo test` plays every block in the registry alone, at 48 kHz, through

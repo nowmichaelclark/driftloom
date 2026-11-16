@@ -357,6 +357,24 @@ macro_rules! registry {
             matches!(voice, $( $($vn)|+ )|* $( | $($pn)|+ )*)
         }
 
+        /// Whether `voice` follows its channel (`Voice::FOLLOWS`).
+        pub(crate) fn follows(voice: u32) -> bool {
+            match voice {
+                $( $($vn)|+ => <$vm::$vt as Voice>::FOLLOWS, )*
+                $( $($pn)|+ => <$pm::$pt as Voice>::FOLLOWS, )*
+                _ => false,
+            }
+        }
+
+        /// Whether the voice in `held` follows its channel
+        /// (`Voice::FOLLOWS`).
+        pub(crate) fn follows_held(held: &Held) -> bool {
+            match held {
+                $( Held::$vt(_) => <$vm::$vt as Voice>::FOLLOWS, )*
+                $( Held::$pt(_) => <$pm::$pt as Voice>::FOLLOWS, )*
+            }
+        }
+
         /// Settle what `note` leaves to chance (`Voice::settle`).
         pub(crate) fn settle(note: &mut Note) {
             match note.voice {
@@ -524,6 +542,7 @@ registry! {
         drum::Drum = DRUM 24;
         dub_stab::DubStab = DUBSTAB 28;
         kick::TunedKick = TUNEDKICK 29;
+        low_bell::LowBell = LOWBELL 30;
     }
     pooled {
         sung::Sung [sung::POOL] = VOWEL 25, HUM 26, CHOIR 27;

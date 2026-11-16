@@ -552,6 +552,31 @@ planing = 0.15
 vibes = dreamy 2, floating 2, jazzy 1.5, cosmic 1.5, wondrous 1.5,
     bubbly 1.5, earthy 0.5, reverent 0.5, minimal 0.5
 
+# lowBell (queue item 101g; batch 6's #2, Ears 13, approved by Mikey
+# 2026-11-08, both kinds): a struck low bell on the chord's root, between D2
+# and C#3, at each chord whose root changes or the same root after 4 s; a new
+# voice of the core (core/src/blocks/low_bell.rs, the sketch's sound and its
+# level rule), which the player strikes from the chords it knows. Drawn per
+# loop at load on a stream of its own, outside the list of choices and not
+# counted among a loop's changes, as tuningOffset is: for any loop that plays
+# a chord. `struck` is the sketch's 35 ms attack, `swell` its swelling kind's
+# 0.4 s; half and half.
+[setting lowbell]
+# The share of loops that play the bell before the vibes lean it: 0.15, the
+# batch's conservative share, for Mikey's ears.
+share = 0.15
+kinds = struck 1, swell 1
+# The batch's [JUDGMENT] rows, one a kind (never 0): each leans its own
+# kind's share, so a glacial loop leans to the swell and a mysterious one to
+# the strike.
+kindVibes.struck = mysterious 2, moonlit 2, chiming 2, reflective 1.5,
+    starry 1.5, wistful 1.5, strange 1.5, cosmic 1.5, zesty 0.4, goofy 0.5,
+    bouncy 0.5, sunny 0.5
+kindVibes.swell = glacial 2, serene 1.5, still 1.5, floating 1.5,
+    meditative 1.5, lively 0.4, zesty 0.4, bouncy 0.5
+# The same root is struck again after this many seconds (the sketch's).
+regap = 4
+
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
 # loop as the sketch drew it, outside the list of choices and not counted

@@ -87,6 +87,21 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
+- **lowBell (101g, session 08, v172):** a struck low bell, D2 to C#3, on the
+  chord's root at each chord whose root changes (or the same root after 4 s),
+  on about 1 loop in 7 that plays a chord, half struck and half swelling in
+  over 0.4 s (mysterious, moonlit and chiming lean to the strike, glacial to
+  the swell). To hear it before the album: four-hoask (corpus 20261009 #101,
+  struck) from 0:00; muith-sei (#62, the sketch's grove loop, swelling) from
+  0:00. What plays is the sketch's, number for number, at its level rule
+  (1.4 times the chords' level, never under 0.045 nor over 0.12), and
+  measures within 1.1 LU of it on the four sketch loops. Taste calls for your
+  ears, each a line of `data/choices.txt` or `core/src/blocks/low_bell.rs`:
+  15% of the loops before the vibes; thaw #71's sparse pad, where the bell's
+  loudest 3 s are 5 dB under the loop (the sketch's 5.8; Ears measured 3.0 on
+  an older main): kept as approved, not capped; on a busy loop's busiest
+  passages a strike yields as glass does (about 1 in 60). A request can pin
+  it: `lowBell.kind=struck`, `=swell` or `=today`.
 - **planingSevenths (101f, session 07, v171, #397):** about 1 loop in 7 (1 in 5
   of the dreamy and floating ones, 1 in 10 of the earthy, reverent and
   minimal) slides major seventh chords a whole step or a minor third at a

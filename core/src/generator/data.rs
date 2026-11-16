@@ -322,6 +322,21 @@ pub struct Progression {
     pub vibes: Table,
 }
 
+/// lowBell's per-loop draw (`[setting lowbell]`, queue item 101g): how
+/// often a loop plays the low bell, its kinds by weight, each kind's vibes,
+/// and how long before the same root is struck again.
+#[derive(Clone, Copy, Debug)]
+pub struct LowBellDraw {
+    /// The share of loops that play it, before the vibes lean it.
+    pub share: f64,
+    /// Its kinds (`struck`, `swell`), by weight.
+    pub kinds: Pool,
+    /// The vibes that lean each kind's share.
+    pub kind_vibes: &'static [(&'static str, Table)],
+    /// The same root struck again after this many seconds.
+    pub regap: f64,
+}
+
 /// echoTime's settings (`[setting echo]`).
 #[derive(Clone, Copy, Debug)]
 pub struct Echo {
@@ -510,7 +525,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, ColorTone, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Longform, Progression, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
+        Longform, LowBellDraw, Progression, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

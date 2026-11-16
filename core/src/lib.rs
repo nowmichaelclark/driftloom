@@ -485,6 +485,15 @@ pub struct Core {
     queue: [Waiting; QUEUE],
     waiting: usize,
     out: [[f32; QUANTUM]; CHANNELS],
+    /// The notes of the voices that follow their channel
+    /// (`Voice::FOLLOWS`, queue item 101g), per channel and block, added in
+    /// after the channel's own blocks; whether any sounded this block; each
+    /// channel's level without them (its mean square, followed over
+    /// `block::FOLLOW` seconds), and the follower's step a block.
+    after: [[f32; QUANTUM]; CHANNELS],
+    after_on: [bool; CHANNELS],
+    heard: [f64; CHANNELS],
+    follow: f64,
     waves: Waves,
     fft: Fft,
     /// The voices that play through a channel's own block (a body) sum
@@ -583,6 +592,10 @@ impl Core {
             queue: [NOTHING; QUEUE],
             waiting: 0,
             out: [[0.0; QUANTUM]; CHANNELS],
+            after: [[0.0; QUANTUM]; CHANNELS],
+            after_on: [false; CHANNELS],
+            heard: [0.0; CHANNELS],
+            follow: 0.0,
             waves: Waves::new(),
             fft: Fft::new(),
             buses: [[[0.0; QUANTUM]; own::COUNT]; CHANNELS],
@@ -634,6 +647,10 @@ impl Core {
         self.missed = 0;
         self.dropped = [0; CAUSES];
         self.arc_next = blocks::arc::REST;
+        self.heard = [0.0; CHANNELS];
+        #[allow(clippy::cast_precision_loss)] // a block's frames, exact
+        let frames = QUANTUM as f64;
+        self.follow = 1.0 - math::exp(-frames / (block::FOLLOW * rate));
         self.clear();
         self.noise.make(rate);
         #[allow(clippy::cast_possible_truncation)] // the tables are 32-bit
@@ -1492,7 +1509,11 @@ impl Core {
     }
 
     // A waiting note's start has come: give it a voice.
-    fn begin_note(&mut self, w: Waiting) {
+    fn begin_note(&mut self, mut w: Waiting) {
+        // A voice that follows its channel hears how loud it has been.
+        if blocks::follows(w.note.voice) {
+            w.note.extra[block::HEARD] = self.heard.get(w.note.channel as usize).copied().unwrap_or(0.0);
+        }
         if self.slots.iter().all(|s| s.busy) {
             self.drop_for(VOICES_BUSY);
             return;
@@ -1619,12 +1640,17 @@ impl Core {
             if slot.begin >= end {
                 continue;
             }
+            // A voice that follows its channel sounds after its own blocks.
+            let follows = blocks::follows_held(&slot.voice);
             let (Some(out), Some(buses)) = (
-                self.out.get_mut(slot.channel),
+                if follows { self.after.get_mut(slot.channel) } else { self.out.get_mut(slot.channel) },
                 self.buses.get_mut(slot.channel),
             ) else {
                 continue;
             };
+            if follows && let Some(on) = self.after_on.get_mut(slot.channel) {
+                *on = true;
+            }
             let place = if spaced { places.get(usize::from(slot.place)).copied().unwrap_or(0.0) } else { 0.0 };
             // What a placed note added to its channel, taken as the
             // difference, so the channel (the mid) is the mono render's.
@@ -1657,8 +1683,17 @@ impl Core {
         // "Subnormal numbers"). The signals routed in are the taps' last
         // block (`Core::route`).
         let routes = &self.routes;
-        for (n, (((out, buses), own), input)) in
-            self.out.iter_mut().zip(self.buses.iter_mut()).zip(self.own.iter_mut()).zip(self.inputs.iter_mut()).enumerate()
+        let follow = self.follow;
+        #[allow(clippy::cast_precision_loss)] // a block's frames, exact
+        let frames = QUANTUM as f64;
+        for (n, ((((out, buses), own), input), ((after, after_on), heard))) in self
+            .out
+            .iter_mut()
+            .zip(self.buses.iter_mut())
+            .zip(self.own.iter_mut())
+            .zip(self.inputs.iter_mut())
+            .zip(self.after.iter_mut().zip(self.after_on.iter_mut()).zip(self.heard.iter_mut()))
+            .enumerate()
         {
             let mut mods = [Mods::NONE; own::COUNT];
             for r in routes.iter().filter(|r| r.on && r.to as usize == n) {
@@ -1673,13 +1708,25 @@ impl Core {
                     *y += *x;
                 }
                 own.whole(block, &cx, out, &mods);
-                for y in out.iter_mut() {
-                    *y = math::silence(*y);
-                }
             } else {
                 for (y, x) in out.iter_mut().zip(input.iter()) {
-                    *y = math::silence(*y + *x);
+                    *y += *x;
                 }
+            }
+            // The channel's level as its own blocks leave it, then the notes
+            // that follow it (queue item 101g), added only where any
+            // sounded, so a channel without one is the samples it was.
+            let ms = out.iter().map(|&x| f64::from(x) * f64::from(x)).sum::<f64>() / frames;
+            *heard += follow * (ms - *heard);
+            if *after_on {
+                for (y, x) in out.iter_mut().zip(after.iter()) {
+                    *y += *x;
+                }
+                after.fill(0.0);
+                *after_on = false;
+            }
+            for y in out.iter_mut() {
+                *y = math::silence(*y);
             }
             input.fill(0.0);
         }

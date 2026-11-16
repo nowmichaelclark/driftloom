@@ -15,7 +15,7 @@
 //! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
-use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, PADWOW, SUBDUCK, SweepRanges, TUNING, Table};
+use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, PADWOW, SUBDUCK, SweepRanges, TUNING, Table, LOWBELL};
 use super::js;
 use super::list::{Empty, List, Maybe};
 use super::layers::{DRUMS_MAX, DrumEvent};
@@ -833,6 +833,46 @@ pub fn tuning_of(seed: u32, v: Option<&Vibes>, p: &Pins) -> f64 {
         -size
     };
     p.get("tuning.cents").map_or(drawn, |x| held(x, [-hi, hi]))
+}
+
+const LOW_BELL_SALT: u32 = 0x6c62_656c;
+
+/// lowBell's kinds, today's first: the words the request's `lowBell.kind`
+/// pin takes (`js/pins.js`), and a loop's kind by its place here (0, none).
+pub const LOW_BELL_KINDS: data::Pool = &[("today", 1.0), ("struck", 1.0), ("swell", 1.0)];
+
+/// lowBell (queue item 101g; batch 6's #2): which kind of low bell the loop
+/// plays, by its place in [`LOW_BELL_KINDS`] (0: none, for most loops).
+/// Drawn at load on its own stream, outside the choices, as `tuning_of` is:
+/// one draw across today's `1 - share` and each kind's `share` split by the
+/// kinds' weights and leaned by that kind's vibes (`[setting lowbell]`), so
+/// each kind has its own leans and none goes to 0. Only for a loop that
+/// plays a chord (`plays`); a request's `lowBell.kind` pin plays that kind
+/// instead, where the loop may (today's keeps it off).
+#[must_use]
+pub fn low_bell_of(seed: u32, plays: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
+    let mut r = Rng::new(js::salted(seed, LOW_BELL_SALT, 1));
+    let x = r.f();
+    let total: f64 = LOWBELL.kinds.iter().map(|k| k.1).sum();
+    let mut weights = [1.0 - LOWBELL.share, 0.0, 0.0];
+    for &(id, k) in LOWBELL.kinds {
+        if let Some(w) = LOW_BELL_KINDS.iter().position(|x| x.0 == id).filter(|&i| i > 0).and_then(|i| weights.get_mut(i)) {
+            *w = LOWBELL.share * k / total * lean_of(data::table_named(LOWBELL.kind_vibes, id), v);
+        }
+    }
+    let sum: f64 = weights.iter().sum();
+    let mut at = x * sum;
+    let mut drawn = 0;
+    for (i, &w) in weights.iter().enumerate() {
+        if at < w {
+            drawn = i;
+            break;
+        }
+        at -= w;
+    }
+    let kind = p.word("lowBell.kind").map_or(drawn, |k| LOW_BELL_KINDS.iter().position(|x| x.0 == k).unwrap_or(0));
+    #[allow(clippy::cast_possible_truncation)] // three kinds
+    if plays { kind as u8 } else { 0 }
 }
 
 /// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the

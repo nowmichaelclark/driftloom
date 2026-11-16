@@ -115,6 +115,10 @@ pub struct Load {
     /// 101b; 0, A440, for most loops). The synth adds it to every pitched
     /// note.
     pub tuning: f64,
+    /// The low bell the loop plays (lowBell, queue item 101g), by its place
+    /// in `choices::LOW_BELL_KINDS`: 0 none (most loops), 1 struck, 2 the
+    /// swelling kind.
+    pub low_bell: u8,
     /// The profile's pump, and its level (`setCharacterLevel`).
     pub pump: f64,
     /// Its level, stored against 1.0 as `echo_beats` is against 0.75.
@@ -149,6 +153,7 @@ impl Load {
         space: Space { seed: 0, busy: 0.0, wet: 0.0, light: false, pins: [None; crate::space::n::COUNT] },
         echo_beats: Biased::DEFAULT,
         tuning: 0.0,
+        low_bell: 0,
         pump: 0.0,
         level: Biased::DEFAULT,
         bpm: 0.0,
@@ -223,6 +228,7 @@ impl Load {
             },
             echo_beats: Biased::of(p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v))),
             tuning: choices::tuning_of(spec.seed, v, p),
+            low_bell: choices::low_bell_of(spec.seed, chords > 0 && r.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty()), v, p),
             pump: cx.c.pump.unwrap_or(0.0),
             level: Biased::of(cx.c.level.unwrap_or(1.0)),
             bpm: spec.bpm,
@@ -255,6 +261,12 @@ impl Load {
         or_null(w, self.kick.as_ref(), write_kick);
         w.key("late");
         or_null(w, self.late.as_ref(), write_late);
+        // Written only where the loop plays one (queue item 101g), so the
+        // text of every loop without it is as it was.
+        if self.low_bell != 0 {
+            w.key("lowBell");
+            w.str(choices::LOW_BELL_KINDS.get(usize::from(self.low_bell)).map_or("today", |k| k.0));
+        }
         w.key("organ");
         or_null(w, self.organ.as_ref(), |w, o| w.nums(o));
         w.key("padSweep");
