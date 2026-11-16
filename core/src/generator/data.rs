@@ -343,6 +343,29 @@ pub struct LowBellDraw {
     pub spotlight_least: f64,
 }
 
+/// twang's per-loop draw (`[setting twang]`, queue item 101h): how often a
+/// loop it may play in plays it, its versions by weight, each version's
+/// vibes, how long before the same root is picked again, and the busiest kit
+/// it plays over.
+#[derive(Clone, Copy, Debug)]
+pub struct TwangDraw {
+    /// The share of the loops it may play in that play it, before the vibes
+    /// lean it.
+    pub share: f64,
+    /// Its versions (`soft`, `slow`, `bright`), by weight.
+    pub kinds: Pool,
+    /// The vibes that lean each version's share.
+    pub kind_vibes: &'static [(&'static str, Table)],
+    /// The same root picked again after this many seconds.
+    pub regap: f64,
+    /// How far apart a chord's picks come, in beats (0: together, as the
+    /// approved clips played them).
+    pub spread: f64,
+    /// The busiest kit it plays over, in hits a second over the kit's cycle
+    /// (a soft kit: the sketch was heard on loops without one).
+    pub kit_most: f64,
+}
+
 /// echoTime's settings (`[setting echo]`).
 #[derive(Clone, Copy, Debug)]
 pub struct Echo {
@@ -531,7 +554,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, ColorTone, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Longform, LowBellDraw, Progression, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
+        Longform, LowBellDraw, Progression, Progressions, SubDuck, SweepRanges, Tuning, TwangDraw, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

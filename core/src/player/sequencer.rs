@@ -11,7 +11,7 @@
 
 use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
-use crate::blocks::low_bell;
+use crate::blocks::{low_bell, twang};
 use crate::generator::data;
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -74,6 +74,22 @@ const BELL_DAMP: f64 = 0.25;
 /// dropSpotlight's damp as the floor comes back, in seconds to -60 dB (the
 /// Ears 13b sketch's): the bell belongs to the drop.
 const SPOT_DAMP: f64 = 1.5;
+/// Where twang's picks sit among the chords' notes at a step (queue item
+/// 101h): past the low bell's.
+const TWANG_ORD: u32 = 768;
+/// twang's register: the lowest root it picks (E2, 82 Hz, above the 60 Hz
+/// guard); it picks roots up to 11 above, and their fifths and tenths.
+pub const TWANG_LOW: f64 = 40.0;
+/// How many of twang's strings ring at once (the sketch's six): a seventh
+/// pick lets the oldest go.
+const TWANG_STRINGS: usize = 6;
+/// How fast a string taken by a new pick lets go, and a full stop's damp,
+/// in seconds to -60 dB.
+const TWANG_TAKEN: f64 = 0.05;
+const TWANG_DAMP: f64 = 0.3;
+/// A chord's picks: the root, the fifth and the tenth (`spread` beats
+/// apart, or together).
+const TWANG_PICKS: u8 = 3;
 
 /// How long the last loop's organ takes to let go at a new loop's first
 /// step, in seconds (`organOff(time, 0.15)` in the engine's setups).
@@ -364,6 +380,27 @@ pub struct Sequencer {
     /// Whether the floor was out in the bar before (a drop starts where it
     /// played there, in the pass before at a pass's first bar).
     bell_was_out: bool,
+    /// twang (queue item 101h): the pitch class of the last root picked and
+    /// one (0: none yet), and when; the chord's picks still to come (the
+    /// next's number, 0 none, its step from the load, and the step its
+    /// chord ends), its root's note and its tenth's offset over the octave;
+    /// the six strings: when each was last picked, its saws' phases then
+    /// and its note (`twang::string_phases`), the next to pick and how many
+    /// have been; until when a string may sound;
+    /// and the time the loop's tremolo starts from.
+    twang_pc: u8,
+    twang_at: f64,
+    twang_next: u8,
+    twang_due: f64,
+    twang_end: f64,
+    twang_low: f64,
+    twang_third: f64,
+    twang_rings: [f64; TWANG_STRINGS],
+    twang_strings: [([f64; 2], f64); TWANG_STRINGS],
+    twang_place: u8,
+    twang_count: u8,
+    twang_until: f64,
+    twang_zero: f64,
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
@@ -416,6 +453,19 @@ impl Sequencer {
             bell_drop: 0.0,
             bell_floor: false,
             bell_was_out: false,
+            twang_pc: 0,
+            twang_at: 0.0,
+            twang_next: 0,
+            twang_due: 0.0,
+            twang_end: 0.0,
+            twang_low: 0.0,
+            twang_third: 0.0,
+            twang_rings: [0.0; TWANG_STRINGS],
+            twang_strings: [([0.0; 2], 0.0); TWANG_STRINGS],
+            twang_place: 0,
+            twang_count: 0,
+            twang_until: 0.0,
+            twang_zero: 0.0,
             organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
@@ -472,6 +522,12 @@ impl Sequencer {
         self.bell_pc = 0;
         self.bell_drop = 0.0;
         self.bell_floor = false;
+        // A new loop's twang picks its first chord afresh, its tremolo from
+        // the loop's first step (queue item 101h); the strings still ringing
+        // from the last loop are the first a new pick takes.
+        self.twang_pc = 0;
+        self.twang_next = 0;
+        self.twang_zero = at;
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
@@ -799,6 +855,7 @@ impl Sequencer {
             if quiet {
                 self.let_color_go(host, time);
                 self.damp_bell(host, time);
+                self.damp_twang(host, time);
             }
             if quiet && !self.tails_ducked {
                 Synth::fade_tails(host, time);
@@ -1012,6 +1069,9 @@ impl Sequencer {
                 let kind = Bell { swell: s.low_bell == 2, spot: s.spotlight, first: spot_first };
                 self.low_bell(host, synth, lp, s_at, t, kind, Key { seed, pass, step: step32, ord: BELL_ORD });
             }
+            if s.twang != 0 && !lp.rests(Layer::Chords) && !Self::is_silent_bar(lp, abs, rel) {
+                self.twang(host, synth, lp, [s_at, abs], t, s.twang, Key { seed, pass, step: step32, ord: TWANG_ORD });
+            }
             if s.organ.is_some() {
                 self.organ(host, synth, lp, s_at, t, sd, abs);
             } #[cfg(feature = "sketch")] if s.organ.is_none() { Self::retune_chords(host, lp, s_at, t); }
@@ -1031,6 +1091,7 @@ impl Sequencer {
         if mutes[Layer::Chords as usize] || lp.rests(Layer::Chords) {
             self.let_color_go(host, t);
             self.damp_bell(host, t);
+            self.damp_twang(host, t);
         }
         if !mutes[Layer::Melody as usize] {
             let s_at = at(Layer::Melody);
@@ -1286,6 +1347,143 @@ impl Sequencer {
             at += spb;
         }
         at - from
+    }
+
+    /// twang (queue item 101h): at the first step of a chord of the
+    /// progression (a slot of the harmony, `at[0]` the chords' step) that
+    /// plays this pass, twang picks the lowest note the chords sound in the
+    /// slot (in the plan's key) as its pitch class between E2 and D#3 (the
+    /// sketch's: the chord's root where it is voiced in root position),
+    /// unless that is the one it picked last and less than `regap` seconds
+    /// ago (`[setting twang]`), and its fifth and its tenth (the chord's
+    /// third over it an octave up, major before minor; the octave where it
+    /// has none): `spread` beats apart while the chord lasts, or with it
+    /// (`spread` 0, as the approved clips played them: the sketch's clock
+    /// ran fast, so its picks a beat apart all came at once).
+    /// A new root's chord takes the place of picks still to come. `version`
+    /// is the loop's (`choices::TWANG_KINDS`); `at[1]` the step from the
+    /// load.
+    fn twang<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, at: [f64; 2], t: f64, version: u8, key: Key) {
+        let [s, abs] = at;
+        let h = &lp.base.harmony;
+        // How far apart the picks come, in steps (four a beat).
+        let gap = js::round(4.0 * data::TWANG.spread);
+        if let Some(slot) = h.slots.iter().find(|x| x.start_step == s) {
+            let end = slot.start_step + slot.length_steps;
+            // The chord as the chords play it in the slot (every note they
+            // sound there, in this pass's key): its lowest note, and what
+            // sits over it, as the sketch heard them.
+            let mut chord = [i16::MIN; NOTES];
+            let mut n = 0;
+            for (i, e) in lp.base.chords.iter().enumerate() {
+                let (vel, played) = lp.chord(i, e);
+                if e.step < slot.start_step || e.step >= end || !truthy(vel) {
+                    continue;
+                }
+                for &m in played.notes() {
+                    if n < NOTES && !chord[..n].contains(&m) {
+                        chord[n] = m;
+                        n += 1;
+                    }
+                }
+            }
+            let chord = &chord[..n];
+            let low = chord.iter().copied().min().map_or(f64::NAN, f64::from);
+            let pc = (((low - TWANG_LOW) % 12.0) + 12.0) % 12.0;
+            if n > 0 && pc.is_finite() {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 0 to 11
+                let mark = js::round(pc) as u8 % 12 + 1;
+                // A millisecond's grace, so a chord exactly `regap` on is
+                // picked however the times round.
+                if mark == self.twang_pc && t - self.twang_at < data::TWANG.regap - 0.001 {
+                    // The same root: its picks still to come go on, to this
+                    // chord's end.
+                    if self.twang_next != 0 {
+                        self.twang_end = abs + (end - s);
+                    }
+                } else {
+                    let has = |d: f64| chord.iter().any(|&m| (((f64::from(m) - low) % 12.0) + 12.0) % 12.0 == d);
+                    self.twang_third = if has(4.0) {
+                        4.0
+                    } else if has(3.0) {
+                        3.0
+                    } else {
+                        0.0
+                    };
+                    self.twang_pc = mark;
+                    self.twang_at = t;
+                    self.twang_low = TWANG_LOW + pc;
+                    self.twang_end = abs + (end - s);
+                    self.pick(host, synth, lp, self.twang_low, t, version, key);
+                    if gap > 0.0 {
+                        self.twang_next = 1;
+                        self.twang_due = abs + gap;
+                    } else {
+                        // Together (`spread` 0), as the approved clips
+                        // played them.
+                        let tenth = self.twang_low + 12.0 + self.twang_third;
+                        self.pick(host, synth, lp, self.twang_low + 7.0, t, version, Key { ord: key.ord + 1, ..key });
+                        self.pick(host, synth, lp, tenth, t, version, Key { ord: key.ord + 2, ..key });
+                        self.twang_next = 0;
+                    }
+                    return;
+                }
+            }
+        }
+        if self.twang_next != 0 && abs >= self.twang_due {
+            if abs < self.twang_end {
+                let midi = if self.twang_next == 1 { self.twang_low + 7.0 } else { self.twang_low + 12.0 + self.twang_third };
+                self.pick(host, synth, lp, midi, t, version, key);
+                self.twang_next += 1;
+                self.twang_due += gap;
+            }
+            if self.twang_next >= TWANG_PICKS || abs >= self.twang_end {
+                self.twang_next = 0;
+            }
+        }
+    }
+
+    /// One of twang's picks: `midi` at `time`, the loop's `version`; if six
+    /// strings already ring, the oldest lets go as it starts.
+    #[allow(clippy::too_many_arguments)] // the pick's own place and times
+    fn pick<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, midi: f64, time: f64, version: u8, key: Key) {
+        let place = usize::from(self.twang_place) % TWANG_STRINGS;
+        // The string's saws, run on from its last pick (a fresh one at 0).
+        let fresh = usize::from(self.twang_count) <= place && usize::from(self.twang_count) < TWANG_STRINGS;
+        let then = if fresh { f64::NAN } else { self.twang_rings.get(place).copied().unwrap_or(f64::NAN) };
+        let (was, last) = self.twang_strings.get(place).copied().unwrap_or(([0.0; 2], f64::NAN));
+        let phases = twang::string_phases(was, last + lp.settings.tuning / 100.0, then, time);
+        if !synth.twang(host, key, midi, time, u32::from(version.saturating_sub(1)), lp.spec.bpm / 60.0, self.twang_zero, phases) {
+            return;
+        }
+        if let Some(st) = self.twang_strings.get_mut(place) {
+            *st = (phases, midi);
+        }
+        if usize::from(self.twang_count) >= TWANG_STRINGS
+            && let Some(&oldest) = self.twang_rings.get(place)
+        {
+            Synth::twang_let_go(host, time, oldest, TWANG_TAKEN);
+        }
+        if let Some(r) = self.twang_rings.get_mut(place) {
+            *r = time;
+        }
+        #[allow(clippy::cast_possible_truncation)] // under six
+        let next = ((place + 1) % TWANG_STRINGS) as u8;
+        self.twang_place = next;
+        self.twang_count = self.twang_count.saturating_add(1).min(6);
+        self.twang_until = js::max(self.twang_until, time + twang::ring());
+    }
+
+    /// twang's strings damped at `time` (a full stop, the chords muted or
+    /// resting), if one may still sound; the next chord picks afresh, on
+    /// the strings as they stand (their saws run on).
+    fn damp_twang<H: Host>(&mut self, host: &mut H, time: f64) {
+        if self.twang_until > time {
+            Synth::twang_let_go(host, time, time, TWANG_DAMP);
+        }
+        self.twang_until = 0.0;
+        self.twang_pc = 0;
+        self.twang_next = 0;
     }
 
     /// The low bell's ring damped at `time` (a full stop, the chords muted

@@ -607,7 +607,7 @@ impl Reader<'_> {
 /// the draw's counts and leans, each choice's options and vibes, and the
 /// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
 /// shapes, the pedal, padSweep, padWow, the echo time, the tuning, the
-/// progression's kind, lowBell and the bass's level, each block's keys exactly the
+/// progression's kind, lowBell, twang and the bass's level, each block's keys exactly the
 /// ones `js/choices.js` reads.
 #[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
 fn choices(out: &mut String, blocks: &[Block]) {
@@ -792,6 +792,18 @@ fn choices(out: &mut String, blocks: &[Block]) {
         bell.need_num("spotlight"),
         bell.need_table("spotlightVibes"),
         bell.need_num("spotlightLeast")
+    );
+    let twang = find("setting", "twang");
+    twang.only(&["share", "kinds", "kindVibes.*", "regap", "spread", "kitMost"]);
+    let _ = writeln!(
+        out,
+        "/// twang's per-loop draw (`[setting twang]`).\npub static TWANG: TwangDraw = TwangDraw {{ share: {}, kinds: {}, kind_vibes: {}, regap: {}, spread: {}, kit_most: {} }};",
+        twang.need_num("share"),
+        twang.need_pool("kinds"),
+        twang.tables_by_name("kindVibes"),
+        twang.need_num("regap"),
+        twang.need_num("spread"),
+        twang.need_num("kitMost")
     );
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);

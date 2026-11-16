@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-16:** `main` is at v171 (session 01 done: v154 the tools
+**Status, 2026-11-16:** `main` is at v174 (session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -59,8 +59,9 @@ dottedPulse #392); hands session 16b done (2026-11-14: 102g, v169, no join
 a hole on any piece, #395; the listening set on `long-clips`); hands session 06
 done (2026-11-15: 101e, v170, colorTone, #396); hands session 07 done
 (2026-11-16: 101f, v171, planingSevenths, #397); hands session 08 done
-(2026-11-16: 101g, v172 lowBell #398, v173 dropSpotlight #399); next: 09
-onward, and Mikey's testers' pastes
+(2026-11-16: 101g, v172 lowBell #398, v173 dropSpotlight #399); hands
+session 09 under way (2026-11-16: 101h, v174 twang; the batch's locks
+next); next: 10 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.

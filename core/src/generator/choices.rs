@@ -15,7 +15,7 @@
 //! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
-use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, PADWOW, SUBDUCK, SweepRanges, TUNING, Table, LOWBELL};
+use super::data::{self, ARC, BASS_LIFT, ECHO, FLOORDROP, KICK, LATEFLOOR, PADSWEEP, PADWOW, SUBDUCK, SweepRanges, TUNING, TWANG, Table, LOWBELL};
 use super::js;
 use super::list::{Empty, List, Maybe};
 use super::layers::{DRUMS_MAX, DrumEvent};
@@ -896,6 +896,47 @@ pub fn spotlight_of(seed: u32, bell: u8, drops: bool, v: Option<&Vibes>, p: &Pin
     let drawn = r.f() * (1.0 - base + share) < share;
     let on = p.word("lowBell.drops").map_or(drawn, |w| w == "on");
     on && bell != 0 && drops
+}
+
+const TWANG_SALT: u32 = 0x7477_6e67;
+
+/// twang's versions, today's first: the words the request's `twang.kind` pin
+/// takes (`js/pins.js`), and a loop's version by its place here (0, none).
+pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0), ("slow", 1.0), ("bright", 1.0)];
+
+/// twang (queue item 101h; batch 6's #13): which version of twang the loop
+/// plays, by its place in [`TWANG_KINDS`] (0: none, for most loops). Drawn
+/// at load on its own stream, outside the choices, as `low_bell_of` is: one
+/// draw across today's `1 - share` and each version's `share` split by the
+/// versions' weights and leaned by that version's vibes (`[setting twang]`),
+/// so each has its own leans and none goes to 0. Only for a loop that may
+/// play it (`may`: a chord, and no kit busier than a soft one); a request's
+/// `twang.kind` pin plays that version instead, where the loop may (today's
+/// keeps it off).
+#[must_use]
+pub fn twang_of(seed: u32, may: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
+    let mut r = Rng::new(js::salted(seed, TWANG_SALT, 1));
+    let x = r.f();
+    let total: f64 = TWANG.kinds.iter().map(|k| k.1).sum();
+    let mut weights = [1.0 - TWANG.share, 0.0, 0.0, 0.0];
+    for &(id, k) in TWANG.kinds {
+        if let Some(w) = TWANG_KINDS.iter().position(|x| x.0 == id).filter(|&i| i > 0).and_then(|i| weights.get_mut(i)) {
+            *w = TWANG.share * k / total * lean_of(data::table_named(TWANG.kind_vibes, id), v);
+        }
+    }
+    let sum: f64 = weights.iter().sum();
+    let mut at = x * sum;
+    let mut drawn = 0;
+    for (i, &w) in weights.iter().enumerate() {
+        if at < w {
+            drawn = i;
+            break;
+        }
+        at -= w;
+    }
+    let kind = p.word("twang.kind").map_or(drawn, |k| TWANG_KINDS.iter().position(|x| x.0 == k).unwrap_or(0));
+    #[allow(clippy::cast_possible_truncation)] // four versions
+    if may { kind as u8 } else { 0 }
 }
 
 /// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the

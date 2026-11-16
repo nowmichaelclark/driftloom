@@ -596,6 +596,49 @@ spotlight = 0.5
 spotlightVibes = mysterious 1.5, reflective 1.5, spacious 1.5, chiming 1.5
 spotlightLeast = 2
 
+# twang (queue item 101h; batch 6's #13, Ears 13b, approved by Mikey
+# 2026-11-09, all three versions): a synth in the spirit of a tremolo baritone
+# guitar, picking each chord low and slow; a new voice of the core
+# (core/src/blocks/twang.rs, the sketch's sound and its level rule), which the
+# player picks from the chords it knows: at each chord whose root changes, or
+# the same root after `regap` seconds, the root's pitch class between E2 and
+# D#3, its fifth a beat later and its tenth a beat after that, while the
+# chord lasts; six strings ring, the oldest let go as a seventh is picked; one
+# tremolo moves them all. Drawn per loop at load on a stream of its own,
+# outside the list of choices and not counted among a loop's changes, as the
+# low bell is: for a loop that plays a chord and has no kit busier than a
+# soft one (`kitMost` hits a second, the corpus's quietest tenth of kits: the
+# sketch was heard only on loops without one; for Mikey's ears). `soft` is a
+# 4.5 Hz tremolo 35% deep, `slow` two cycles a beat 55% deep and rounder,
+# `bright` 5.5 Hz 45% deep with a brighter pick; a third each.
+[setting twang]
+# The share of the loops it may play in that play it before the vibes lean
+# it: 0.15, the batch's conservative share, for Mikey's ears.
+share = 0.15
+kinds = soft 1, slow 1, bright 1
+# The batch's [JUDGMENT] rows, one a version (never 0): each leans its own
+# version's share.
+kindVibes.soft = dusky 2, wistful 2, moonlit 1.5, spacious 1.5, mellow 1.5,
+    cruising 1.5, reflective 1.5, swaying 1.5, hazy 1.5, zany 0.4, goofy 0.4,
+    bouncy 0.5, frosty 0.5, crisp 0.5, sour 0.5
+kindVibes.slow = meditative 2, dusky 1.5, droning 1.5, floating 1.5,
+    dreamy 1.5, moonlit 1.5, zany 0.4, goofy 0.4, bouncy 0.5, frosty 0.5,
+    crisp 0.5, sour 0.5, lively 0.5
+kindVibes.bright = cruising 2, plucky 1.5, golden 1.5, warm 1.5,
+    adventurous 1.5, dusky 1.5, zany 0.4, goofy 0.4, bouncy 0.5, frosty 0.5,
+    crisp 0.5, sour 0.5, hushed 0.5
+# The same root is picked again after this many seconds (the sketch's).
+regap = 3
+# How far apart a chord's three picks come, in beats. The description (Ears
+# 13b, the queue) says a beat apart; the approved clips struck the three
+# together, since the sketch's clock ran 128 times fast (it read a block's
+# first frame as a block count), so every pick waiting came at once. As
+# heard: 0, together. 1 is the slow picking the description names, for
+# Mikey's ears.
+spread = 0
+# The busiest kit it plays over, in hits a second over the kit's own cycle.
+kitMost = 2
+
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
 # loop as the sketch drew it, outside the list of choices and not counted

@@ -65,6 +65,14 @@ cost = hat 1, ohat 1, shaker 1, rim 1, kick 1, snare 1.5, clap 1.5,
     # converted through sine, keys, tubular and the templebell at their
     # median rate (9.7 units a ms): 9.9. Against the tubular bell alone, 8.
     lowbell 10,
+    # twang (queue item 101h): one string, two band-limited saws through a
+    # two-pole lowpass, measured the same way against the low bell, the
+    # tubular bell and the sine in one run (marginal render time of 32 notes
+    # over 2 s against an empty render, native, three passes: 0.57 ms a
+    # note-second for each version, the low bell 1.88, the tubular 1.96, the
+    # sine 0.43): 3.0 by the low bell, 3.5 by the tubular, 5.3 by the sine;
+    # rounded up.
+    twang 4,
     # The hand kit, measured the way the folk voices were, but priced against
     # the kit instruments they stand in for rather than through the tonal
     # voices: by the same render timing a kick reads 7.5 units and a hat 4.6,

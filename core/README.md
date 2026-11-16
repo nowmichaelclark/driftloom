@@ -144,6 +144,12 @@ note is stamped as it starts with the channel's level so far
 can follow the layer's as a block on the whole channel would. A channel with
 no such note sounding renders bit for bit as before.
 
+twang (`src/blocks/twang.rs`, queue item 101h) follows its channel too, and
+hears the one event kind only it hears, a let-go (`event::LET_GO`): the
+strings picked at or before the event's value let go from its time, so the
+player can take the oldest of six strings as a seventh is picked, and damp
+them all at a full stop.
+
 ## The test kit
 
 `cargo test` plays every block in the registry alone, at 48 kHz, through

@@ -16,6 +16,7 @@
 
 use super::{LAYERS, Layer};
 use super::canon::{Sink, Writer};
+use super::data;
 use super::choices::{self, Arc, Fall, LateFloor, PadSweep, PadWow, SubDuck, TunedKick};
 use super::js;
 use super::list::Biased;
@@ -122,6 +123,10 @@ pub struct Load {
     /// Whether it strikes in the floor drops alone (dropSpotlight, queue
     /// item 101g).
     pub spotlight: bool,
+    /// The twang the loop plays (queue item 101h), by its place in
+    /// `choices::TWANG_KINDS`: 0 none (most loops), 1 soft, 2 slow, 3
+    /// bright.
+    pub twang: u8,
     /// The profile's pump, and its level (`setCharacterLevel`).
     pub pump: f64,
     /// Its level, stored against 1.0 as `echo_beats` is against 0.75.
@@ -158,6 +163,7 @@ impl Load {
         tuning: 0.0,
         low_bell: 0,
         spotlight: false,
+        twang: 0,
         pump: 0.0,
         level: Biased::DEFAULT,
         bpm: 0.0,
@@ -204,9 +210,17 @@ impl Load {
         // The low bell (queue item 101g), for a loop that plays a chord; its
         // spotlight where the floor can drop (the wander's floor drop: 4
         // bars or more, and a kick or a bass for it to take out).
-        let bell = choices::low_bell_of(spec.seed, chords > 0 && r.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty()), v, p);
+        let plays_chord = chords > 0 && r.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty());
+        let bell = choices::low_bell_of(spec.seed, plays_chord, v, p);
         let floor = r.drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame")) || r.bass.iter().any(|e| e.vel != 0.0);
         let drops = js::floor(total / spb) >= 4.0 && floor;
+        // twang (queue item 101h), for a loop that plays a chord and has no
+        // kit busier than a soft one: its hits a second over the kit's own
+        // cycle.
+        let kit_cycle = spec.cycles.of(Layer::Drums as usize).filter(|&c| c > 0.0).unwrap_or(total);
+        let hits = r.drums.iter().filter(|e| e.vel != 0.0).count();
+        let soft = js::num(hits) <= data::TWANG.kit_most * kit_cycle * step + 1e-9;
+        let twang = choices::twang_of(spec.seed, plays_chord && soft, v, p);
         Load {
             glass_scale: js::min(1.0, js::num(chords) / js::max(1.0, total / spb)),
             stab: on("dubStab").then(|| stab_of(spec.seed, busy)),
@@ -240,6 +254,7 @@ impl Load {
             tuning: choices::tuning_of(spec.seed, v, p),
             low_bell: bell,
             spotlight: choices::spotlight_of(spec.seed, bell, drops, v, p),
+            twang,
             pump: cx.c.pump.unwrap_or(0.0),
             level: Biased::of(cx.c.level.unwrap_or(1.0)),
             bpm: spec.bpm,
@@ -298,6 +313,12 @@ impl Load {
         or_null(w, self.sub_duck.as_ref(), write_sub_duck);
         w.key("tuning");
         w.num(self.tuning);
+        // Written only where the loop plays one (queue item 101h), so the
+        // text of every loop without it is as it was.
+        if self.twang != 0 {
+            w.key("twang");
+            w.str(choices::TWANG_KINDS.get(usize::from(self.twang)).map_or("today", |k| k.0));
+        }
         w.key("wash");
         or_null(w, self.wash.as_ref(), write_wash);
         w.end_obj();

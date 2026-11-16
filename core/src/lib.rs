@@ -3352,7 +3352,7 @@ mod tests {
         assert_eq!(reach(BEND), Some(Reach::Every));
         assert_eq!(reach(RETUNE), Some(Reach::Every));
         assert_eq!(reach(CHOKE), Some(Reach::Every));
-        assert_eq!(reach(COLOR), Some(Reach::Every));
+        assert_eq!(reach(COLOR), Some(Reach::Every)); assert_eq!(reach(event::LET_GO), Some(Reach::Every));
         assert_eq!(reach(KINDS as u32), None);
         for kind in 0..KINDS as u32 {
             assert_eq!(reach(kind) == Some(Reach::Once), (kind as usize) < ONCE, "the once-kinds come first");

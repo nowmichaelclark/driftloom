@@ -543,6 +543,7 @@ registry! {
         dub_stab::DubStab = DUBSTAB 28;
         kick::TunedKick = TUNEDKICK 29;
         low_bell::LowBell = LOWBELL 30;
+        twang::Twang = TWANG 31;
     }
     pooled {
         sung::Sung [sung::POOL] = VOWEL 25, HUM 26, CHOIR 27;

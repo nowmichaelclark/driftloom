@@ -87,6 +87,25 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
+- **twang (101h, session 09, v174):** a synth in the spirit of a tremolo
+  baritone guitar on the chord layer: at each chord whose lowest note
+  changes (or the same after 3 s) it picks that note between E2 and D#3 with
+  its fifth and its tenth, under one tremolo (soft 4.5 Hz 35%, slow two
+  cycles a beat 55% and rounder, bright 5.5 Hz 45% with a brighter pick),
+  on about 1 in 7 of the loops that play a chord and have no kit or a soft
+  one (6% of all loops). To hear it before the album: he-rosk (corpus
+  20261009 #33, bright) from 0:00; maisk-feim (#151, soft) from 0:00;
+  tom-wen (#172, slow) from 0:00. **One call for your ears:** the sketch's
+  description says the three notes come a beat apart, but the clips you
+  approved struck them together (the sketch's clock ran 128 times fast, so
+  every pick waiting came at once). The build plays what you heard
+  (together, measured within 0.2 LU of the clips on all twelve); one line of
+  `data/choices.txt`, `[setting twang] spread = 1`, makes it pick them a
+  beat apart, slowly, as the description meant. Say which you want. Other
+  taste calls, each a line there: "no kit busier than a soft one" read as 2
+  hits a second or fewer (the quietest tenth of kits; the sketch was heard
+  only without one); 15% of those loops. A request can pin it:
+  `twang.kind=soft`, `=slow`, `=bright` or `=today`.
 - **dropSpotlight (101g, session 08, v173, #399):** in about half of the
   loops that play the low bell and whose floor can drop, the bell rings only
   in the floor drops (wherever the kick and the bass both leave for 2 s or

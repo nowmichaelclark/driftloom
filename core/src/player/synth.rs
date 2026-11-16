@@ -11,10 +11,10 @@
 //! worked out in the JavaScript's order of operations, on the core's math.
 
 use crate::block::Event;
-use crate::block::event::{CHOKE, RELEASE};
+use crate::block::event::{CHOKE, LET_GO, RELEASE};
 use crate::blocks::own;
 use crate::blocks::midi_to_freq;
-use crate::blocks::{bass, color_tone, drum, kalimba, pad_wow, struck, texture};
+use crate::blocks::{bass, color_tone, drum, kalimba, pad_wow, struck, texture, twang};
 use crate::generator::data::{self, VOICE_COSTS};
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -22,7 +22,7 @@ use crate::rng::{Key, salt, unit};
 use crate::{BASS_CHANNEL, CHORDS, DRUMS_CHANNEL, EXTRA, MELODY, TEXTURE_CHANNEL, Tap, WASH_CHANNEL};
 use crate::{
     ACCORDION, ANALOGLEAD, ANALOGPAD, BASS, BEEP, CHOIR, DRUM, DUBSTAB, FIDDLE, FLUTE, FM, HAT, HUM, KALIMBA, KNOCK, MOOG, NYLON,
-    LOWBELL, OCARINA, PAD, PANFLUTE, SAWPLUCK, SINE, SOFTPAD, STAB, TEMPLEBELL, TEXTURE, TUBULAR, TUNEDKICK, VOWEL, WHISTLE,
+    LOWBELL, OCARINA, PAD, PANFLUTE, SAWPLUCK, SINE, SOFTPAD, STAB, TEMPLEBELL, TEXTURE, TUBULAR, TUNEDKICK, TWANG, VOWEL, WHISTLE,
 };
 
 use super::budget::{Budget, YIELD_MARGIN};
@@ -596,6 +596,36 @@ impl Synth {
     /// stop's quarter second).
     pub fn low_bell_off<H: Host>(host: &mut H, time: f64, seconds: f64) {
         host.event(CHORDS, Event::new(CHOKE, time, seconds));
+    }
+
+    /// twang (queue item 101h): a pick of `midi` (in its register, the
+    /// loop's tuning added here) at `time`, the version by `parts`
+    /// (`blocks::twang`), its tremolo synced to `beats` a second from
+    /// `zero` (the loop's start), its saws from `phases` (its string's,
+    /// `twang::string_phases`). It yields as the low bell does: it plays
+    /// only where the budget has its cost and the margin to spare, and holds
+    /// nothing. Whether it played.
+    #[allow(clippy::too_many_arguments)] // the pick's own values
+    pub fn twang<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, parts: u32, beats: f64, zero: f64, phases: [f64; 2]) -> bool {
+        if !self.budget.room(time, cost_or("twang", default_cost()) + YIELD_MARGIN) {
+            return false;
+        }
+        let mut x = NONE;
+        x[twang::BEATS] = beats;
+        x[twang::ZERO] = zero;
+        x[twang::PHASES] = phases[0];
+        x[twang::PHASES + 1] = phases[1];
+        self.note(host, key, TWANG, CHORDS, time, midi, twang::ring(), 1.0, parts, x);
+        true
+    }
+
+    /// twang's strings picked at or before `before` let go at `time`, over
+    /// `seconds` to -60 dB (the oldest as a seventh is picked; all at a full
+    /// stop).
+    pub fn twang_let_go<H: Host>(host: &mut H, time: f64, before: f64, seconds: f64) {
+        let mut e = Event::new(LET_GO, time, before);
+        e.notes[0] = seconds;
+        host.event(CHORDS, e);
     }
 
     /// colorTone's color lets go at `time`.

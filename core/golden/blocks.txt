@@ -179,3 +179,9 @@ low_bell/struck@choke d64a1aab055eadae -47.00 -25.53 0.0
 low_bell/swell@choke e18ea142c7776b23 -57.29 -34.22 0.0
 low_bell/spot bd6519af71a2d560 -42.23 -24.52 0.0
 low_bell/spot@choke 8b8e3ba9ed930fc8 -46.09 -24.52 0.0
+twang/soft a2d92092fba5cad5 -49.59 -27.53 0.6
+twang/slow 42e539c3b0973c3f -50.45 -26.67 0.1
+twang/bright 741f2857fe5f69fb -50.06 -28.84 1.8
+twang/soft@letgo e1ffea7843366d46 -52.75 -27.53 0.8
+twang/slow@letgo 59dd744e1b916404 -53.90 -26.67 0.1
+twang/bright@letgo d76eaf822e07c568 -53.40 -28.84 2.9

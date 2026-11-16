@@ -319,6 +319,11 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
         if player.generator().settings().spotlight {
             drawn.push("dropSpotlight".to_string());
         }
+        // twang (queue item 101h), drawn outside the choices: `twang:soft`,
+        // `twang:slow` or `twang:bright`.
+        if let Some(kind) = dlcore::generator::choices::TWANG_KINDS.get(usize::from(player.generator().settings().twang)).filter(|_| player.generator().settings().twang != 0) {
+            drawn.push(format!("twang:{}", kind.0));
+        }
         let _ = write!(line, " choices={}", if drawn.is_empty() { "-".to_string() } else { drawn.join(",") });
     }
     Ok(Rendered { line, samples, calls: calls.then_some(lines) })

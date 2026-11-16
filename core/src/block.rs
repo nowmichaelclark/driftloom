@@ -144,8 +144,15 @@ pub mod event {
     /// note, every time (none of the notes hears it: the color is the
     /// channel's own block, `blocks::color_tone`).
     pub const COLOR: u32 = 5;
+    /// A let-go (twang, queue item 101h): the notes of the channel that
+    /// hear it and started at or before `value` seconds let go from the
+    /// event's time, falling to -60 dB over `notes[0]` seconds (0: the
+    /// voice's own). The player takes a twang's oldest string as a seventh
+    /// is picked, and damps them all at a full stop. Reaches every held
+    /// note, every time; only twang hears it.
+    pub const LET_GO: u32 = 6;
     /// How many kinds there are.
-    pub const KINDS: usize = 6;
+    pub const KINDS: usize = 7;
     /// The kinds that reach each note once are numbered first, `0..ONCE`:
     /// a note still waiting keeps one of each of these (`Core::event`).
     pub const ONCE: usize = 2;
@@ -170,7 +177,7 @@ pub mod event {
     pub const fn reach(kind: u32) -> Option<Reach> {
         match kind {
             DAMP | RELEASE => Some(Reach::Once),
-            BEND | RETUNE | CHOKE | COLOR => Some(Reach::Every),
+            BEND | RETUNE | CHOKE | COLOR | LET_GO => Some(Reach::Every),
             _ => None,
         }
     }
@@ -186,6 +193,7 @@ pub mod event {
             RETUNE => "retune",
             CHOKE => "choke",
             COLOR => "color",
+            LET_GO => "letgo",
             _ => "unknown",
         }
     }
@@ -642,6 +650,7 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
     const DAMP: [Event; 1] = [Event::new(event::DAMP, 0.25, 0.0)];
     const RELEASE: [Event; 1] = [Event::new(event::RELEASE, 0.25, 0.0)];
     const CHOKE: [Event; 1] = [Event::new(event::CHOKE, 0.25, 0.0)];
+    const LET_GO: [Event; 1] = [Event { kind: event::LET_GO, time: 0.25, value: 0.25, notes: [0.0, NAN, NAN, NAN, NAN, NAN] }];
     const COLOR: [Event; 4] = [
         Event::color(0.1, 69.0, 0.4),
         Event::color(0.3, 76.0, 0.3),
@@ -667,6 +676,7 @@ pub fn probe_events(kind: u32) -> &'static [Event] {
         event::RETUNE => &RETUNE,
         event::CHOKE => &CHOKE,
         event::COLOR => &COLOR,
+        event::LET_GO => &LET_GO,
         _ => &[],
     }
 }
