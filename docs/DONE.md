@@ -280,3 +280,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   the chord time where it plays. Two loops (corpus 20261009) that draw it:
   **luir-wo** (#97, 76 BPM) from 0:05; **broan-mei** (#163, 109 BPM, a kit in
   threes too) from 0:02. A loop without it plays as before, its wander too.
+- #397, planingSevenths (item 101f, session 07, v171), preview URL: the
+  branch's preview (no hash kept): about 1 loop in 7 (1 in 5 of the dreamy and
+  floating ones) slides major seventh chords a whole step or a minor third at
+  a time (Ears 13b's chords), and the tune and the bass now follow each chord
+  in its own Lydian (its major pentatonic in a five-note mode): no rub against
+  the chords. Two loops (corpus 20261009) that draw it: **muith-sei** (#62, 89
+  BPM) from 0:01; **broan-bro** (#39, 122 BPM) from 0:06. The balance lock was
+  re-baselined (bars quoting it audibly 0.6364 to 0.6215); a loop that does
+  not plane plays as before.

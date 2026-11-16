@@ -40,7 +40,7 @@ says the work goes on meanwhile.
 | 05 | `05-batch6-kit.md` | 101d: tripletKit, dottedPulse | Opus 5.5, high | yes, 2026-11-14 (#391, #392) |
 | 16b | `16b-long-holes.md` | 102g: no join a hole, on any piece (three found by session 05 on Endless arcs); runs after 05, before 06 | Opus 5.5, high | yes, 2026-11-14 (#395; the third set on `long-clips`) |
 | 06 | `06-batch6-color.md` | 101e: colorTone | Opus 5.5, high | yes, 2026-11-15 (#396) |
-| 07 | `07-batch6-planing.md` | 101f: planingSevenths | Opus 5.5, high | yes, 2026-11-15 (#PR) |
+| 07 | `07-batch6-planing.md` | 101f: planingSevenths | Opus 5.5, high | yes, 2026-11-16 (#397) |
 | 08 | `08-batch6-low-bell.md` | 101g: lowBell, dropSpotlight | Opus 5.5, high | |
 | 09 | `09-batch6-twang.md` | 101h: twang; the batch's locks | Opus 5.5, high | |
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | |

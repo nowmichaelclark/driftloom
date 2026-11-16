@@ -87,7 +87,7 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
-- **planingSevenths (101f, session 07, v171):** about 1 loop in 7 (1 in 5
+- **planingSevenths (101f, session 07, v171, #397):** about 1 loop in 7 (1 in 5
   of the dreamy and floating ones, 1 in 10 of the earthy, reverent and
   minimal) slides major seventh chords a whole step or a minor third at a
   time, the chords Ears 13b's lever made, and now the tune and the bass
