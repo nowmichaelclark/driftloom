@@ -87,7 +87,7 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
-- **lowBell (101g, session 08, v172):** a struck low bell, D2 to C#3, on the
+- **lowBell (101g, session 08, v172, #398):** a struck low bell, D2 to C#3, on the
   chord's root at each chord whose root changes (or the same root after 4 s),
   on about 1 loop in 7 that plays a chord, half struck and half swelling in
   over 0.4 s (mysterious, moonlit and chiming lean to the strike, glacial to

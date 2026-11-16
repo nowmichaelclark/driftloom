@@ -289,3 +289,10 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   BPM) from 0:01; **broan-bro** (#39, 122 BPM) from 0:06. The balance lock was
   re-baselined (bars quoting it audibly 0.6364 to 0.6215); a loop that does
   not plane plays as before.
+- #398, lowBell (item 101g, session 08, v172), preview URL: the branch's
+  preview (no hash kept): about 1 loop in 7 that plays a chord strikes a low
+  bell (D2 to C#3) on the chord's root at each chord whose root changes, half
+  of them struck and half swelling in over 0.4 s, at the sketch's level (14 to
+  24 LU under the loop). Two loops (corpus 20261009) that draw it:
+  **four-hoask** (#101, struck) from 0:00; **muith-sei** (#62, swelling) from
+  0:00. A loop without it plays as before, its wander too.
