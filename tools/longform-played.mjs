@@ -36,7 +36,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LAYERS, newSpec, parts, pieceMap, playedJoins } from './gen-lib.mjs';
+import { LAYERS, newSpec, parts, pieceMap, playedJoins, render } from './gen-lib.mjs';
 import { SCALES } from '../js/theory.js';
 
 const SCALE_STEPS = Object.fromEntries(Object.entries(SCALES).map(([id, s]) => [id, s.steps]));
@@ -62,6 +62,15 @@ const SPREAD = (() => {
 })();
 
 /** The release dlrender, built once. */
+// Whether a loop's progression planes (planingSevenths, queue item 101f):
+// every chord of its harmony a major seventh with a scale of its own. Its
+// tonic chord is then major whatever the mode (the landing's triad,
+// `heard::Heard::land`).
+export function planes(seed, request) {
+  const slots = render(newSpec(seed, request)).harmony.slots;
+  return slots.length > 0 && slots.every((s) => s.steps && s.notes.map((n) => (((n - s.rootMidi) % 12) + 12) % 12).sort((a, b) => a - b).join() === '0,4,7,11');
+}
+
 export function dlrender(args) {
   if (!fs.existsSync(DLRENDER) || process.env.LONGFORM_BUILD !== 'no') {
     if (!dlrender.built) {
@@ -609,7 +618,7 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   const lift = lufs.map((l, i) => l - ownLufs[i]);
   // (Brightness as a ratio, in cents of the centroid: 1200 an octave.)
   const brighter = bright.map((b, i) => 1200 * Math.log2(Math.max(1, b) / Math.max(1, ownBright[i])));
-  return { form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), depths, rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
+  return { planing: planes(seed, request), form, units: units.filter(keep), lufs: lufs.filter(keep), bright: bright.filter(keep), lift: lift.filter(keep), brighter: brighter.filter(keep), ownTone: ownTone.filter(keep), depths, rms, own, landStep, after, last, lastT, later, endT, sectionSeconds, jump, ownJump, step, stepOwn };
 }
 
 /** Spearman's rank correlation of two lists. */
@@ -688,13 +697,13 @@ export function arcVerdict(r) {
   const pc = (n) => ((n % 12) + 12) % 12;
   const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   // The tonic's triad: the mode's third and fifth on the root (or their
-  // nearest where it has none), every one of them in the last chord, its
+  // nearest where it has none; a planed loop's major), every one of them in the last chord, its
   // lowest note one of them (a loop may voice its tonic with a seventh or
   // a ninth beside it).
   const root = NOTES.indexOf(r.form.home.root);
   const steps = SCALE_STEPS[r.form.home.scale] ?? [0, 2, 4, 5, 7, 9, 11];
-  const third = steps.includes(4) ? 4 : steps.includes(3) ? 3 : steps[1];
-  const fifth = steps.includes(7) ? 7 : steps.includes(8) ? 8 : 6;
+  const third = steps.includes(4) || r.planing ? 4 : steps.includes(3) ? 3 : steps[1];
+  const fifth = steps.includes(7) || r.planing ? 7 : steps.includes(8) ? 8 : 6;
   const triad = [0, third, fifth].map((x) => (root + x) % 12);
   const pcs = new Set(r.last.map(pc));
   const low = r.last.length ? pc(Math.min(...r.last)) : -1;
@@ -828,8 +837,9 @@ export function endingChecks(seed, request, bars, { wander = 1, rate = 44100 } =
   const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   const root = NOTES.indexOf(form.home.root);
   const steps = SCALE_STEPS[form.home.scale] ?? [0, 2, 4, 5, 7, 9, 11];
-  const third = steps.includes(4) ? 4 : steps.includes(3) ? 3 : steps[1];
-  const fifth = steps.includes(7) ? 7 : steps.includes(8) ? 8 : 6;
+  const planing = planes(seed, request);
+  const third = steps.includes(4) || planing ? 4 : steps.includes(3) ? 3 : steps[1];
+  const fifth = steps.includes(7) || planing ? 7 : steps.includes(8) ? 8 : 6;
   const triad = [0, third, fifth].map((x) => (root + x) % 12);
   const pcs = new Set(chord.map(pc));
   const tonic = chord.length > 0 && (pcs.size < 3 ? pcs.has(root) : triad.every((t) => pcs.has(t)) && triad.includes(pc(Math.min(...chord))));
