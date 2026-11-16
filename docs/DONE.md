@@ -305,3 +305,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   louder, damped as the floor comes back; never in a full stop. Two loops
   (corpus 20261009) that draw it: **sei-sheim** (#173, struck) from 0:13;
   **wu-hail** (#197, swelling) from 0:08. Every other loop plays as before.
+- #400, twang (item 101h, session 09, v174), preview URL: the branch's
+  preview (no hash kept): on about 1 in 7 of the loops that play a chord and
+  have no kit or a soft one, a low, round, plucked synth under one slow
+  tremolo picks each chord whose lowest note changes (or the same after 3 s):
+  that note between E2 and D#3 with its fifth and its tenth, struck
+  together as the approved clips struck them (`spread = 0`; 1 picks them a
+  beat apart: Mikey's call). soft trembles at 4.5 Hz, slow twice a beat and
+  rounder, bright at 5.5 Hz with a brighter pick; let go in a full stop. Two
+  loops (corpus 20261009) that draw it: **he-rosk** (#33, bright) from 0:00;
+  **maisk-feim** (#151, soft) from 0:00 (and tom-wen, #172, slow, from
+  0:00). Every other loop plays as before.
