@@ -289,7 +289,6 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
     if way.choices {
         // The options the loop drew other than today's, as the brain's
         // Session 26 index listed them: `lateFloor`, or `kick:soft`.
-        #[cfg_attr(not(feature = "sketch"), allow(unused_mut))]
         let mut drawn: Vec<String> = dlcore::generator::data::CHOICES
             .iter()
             .filter_map(|c| {
@@ -304,6 +303,11 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
             let option = dlcore::levers::named(l.id)?;
             (option != "today").then(|| if option == "on" { l.id.to_string() } else { format!("{}:{option}", l.id) })
         }));
+        // The progression's kind (queue item 101f), drawn outside the
+        // choices: `planingSevenths` where the loop planes.
+        if dlcore::generator::planing::planes(player.generator().spec()) && !drawn.iter().any(|d| d == "planingSevenths") {
+            drawn.push("planingSevenths".to_string());
+        }
         let _ = write!(line, " choices={}", if drawn.is_empty() { "-".to_string() } else { drawn.join(",") });
     }
     Ok(Rendered { line, samples, calls: calls.then_some(lines) })

@@ -3,7 +3,7 @@
 # a loop, as dlrender --corpus 1:80 prints it. The same on every target.
 0 seed=2693262067 name=reisk-waith quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=0a149651 hash=4a4ee9bf69163de7
 1 seed=11749833 name=yui-deng quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=3b0a7254 hash=2c5cd02ab50f34c2
-2 seed=2265367787 name=toask-ha quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=165439f6 hash=9b4ebf2d228cee26
+2 seed=2265367787 name=toask-ha quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=528d8301 hash=e673f2adc6d09343
 3 seed=4213581821 name=theith-yaing quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=242a3931 hash=0c76fc7f3003e7c2
 4 seed=4159151403 name=hai-waim quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=8f4aa516 hash=720ffab22208701f
 5 seed=1207330352 name=kor-thu quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=79692dc8 hash=7db859eff139e0fa
@@ -15,12 +15,12 @@
 11 seed=2099329838 name=shil-doask quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=02688d26 hash=8194aba1d9ec3f4b
 12 seed=596715197 name=broa-naisk quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=cc5a0c69 hash=39e36d1beaa2cf86
 13 seed=1734070562 name=shoar-brol quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=24ee5185 hash=830019a1120349b0
-14 seed=1063107040 name=foang-shou quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=1f067841 hash=0454dbff460b0e60
+14 seed=1063107040 name=foang-shou quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=23c49d90 hash=da6a17c8dd092c34
 15 seed=663542962 name=rei-saisk quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=7fd9cd62 hash=67ff4632b0ea4fd6
 16 seed=2100857034 name=sang-hoth quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=a6c8f25b hash=fd1acb1eb984ede0
 17 seed=289351446 name=ri-houng quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=59a94282 hash=0f691408ab3f183b
 18 seed=1694877057 name=koun-nuing quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=0e4a0532 hash=54a3d9bbb8723c59
-19 seed=3294703884 name=loung-rang quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=7b0ed981 hash=eed8a6756068cbc2
+19 seed=3294703884 name=loung-rang quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=657af941 hash=e02f2a9540447689
 20 seed=1227766539 name=duin-sar quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=0ff9d5e1 hash=7d2b2c04ecf636fb
 21 seed=819795777 name=loum-seng quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=fdb7b142 hash=c144e36722062f1a
 22 seed=183522707 name=han-vaing quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=170a2a96 hash=7167685fa95da8d7
@@ -29,7 +29,7 @@
 25 seed=3430322586 name=va-gloung quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=c7256494 hash=624766a2fcbf5181
 26 seed=1266456452 name=tei-har quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=22214386 hash=462f56c0c2c7c69b
 27 seed=882486014 name=war-bri quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=25857c14 hash=c894b071a6578748
-28 seed=2826645300 name=woung-shain quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=683ee2cd hash=495e41df0ef35f88
+28 seed=2826645300 name=woung-shain quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=0e9a7d25 hash=367a432876d110bc
 29 seed=2345405884 name=sheing-glar quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=c3b3a750 hash=77c6e3602eead35b
 30 seed=3257487196 name=dum-futh quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=1ac74a55 hash=e4934218e7ab7681
 31 seed=828129958 name=voth-rur quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=08c7602a hash=b1855ad94403f411
@@ -40,21 +40,21 @@
 36 seed=1027928796 name=shaisk-sha quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=20478509 hash=a926cf3915a2ab62
 37 seed=3251295801 name=vei-koan quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=9a9104d0 hash=4d30af0fa97e2c1a
 38 seed=658293683 name=vin-ten quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=579ce745 hash=61c4e33ffec7ec53
-39 seed=1388698732 name=leisk-tom quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=ed206395 hash=f8c3d466a03282ce
+39 seed=1388698732 name=leisk-tom quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=72bb46c8 hash=b13f1b76a21e9ee7
 40 seed=1774667495 name=fu-glur quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=f263edfa hash=a9d3b50b755aac93
-41 seed=1070360220 name=sei-vu quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=3c4ee838 hash=6615b8b68526d168
+41 seed=1070360220 name=sei-vu quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=e259279d hash=7df9da0bbafb0c03
 42 seed=653214154 name=fe-brom quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=ddc26691 hash=b77e70964deb5f04
 43 seed=3118596494 name=si-sui quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=fcb8a711 hash=d767f8bee4602c09
 44 seed=2475367674 name=deim-yo quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=23276321 hash=861bd4c6ae97849b
 45 seed=546366535 name=nong-lu quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=3af9d09c hash=7c51b850e72d0a1d
 46 seed=1136695837 name=theith-glith quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=1d27c5db hash=ff32016384370abd
 47 seed=209265687 name=sheing-shoa quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=b9b48647 hash=d4e49faccb16385a
-48 seed=2672414727 name=glui-shith quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=d7c20621 hash=7bdfc2f88b533b68
+48 seed=2672414727 name=glui-shith quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=522d3b16 hash=2f43090856666778
 49 seed=3718462709 name=brath-glask quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=318e3e83 hash=977f044865ccb830
 50 seed=1024324814 name=brur-nosk quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=d6e425f6 hash=83b147c969b5f2e6
 51 seed=4249343954 name=bruing-foung quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=90dd66b1 hash=cc2e546dc1bb7618
 52 seed=3085097013 name=yon-reil quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=bcbcf209 hash=4eb0685166c54ffe
-53 seed=1727856300 name=wou-sou quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=c48d7b5e hash=4173c55b146d7419
+53 seed=1727856300 name=wou-sou quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=dfecd562 hash=d3c2c4237d1496d7
 54 seed=1298681497 name=der-sui quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=b45824df hash=9b436a562a4f543a
 55 seed=2908616039 name=rain-deng quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=a85155d3 hash=82c74645c71239fc
 56 seed=4091520877 name=brosk-hem quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=f226c4c5 hash=bf3f171f90737198
@@ -80,4 +80,4 @@
 76 seed=1667974252 name=thu-tith quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=5dcf9183 hash=493f23bffbe79be3
 77 seed=505077962 name=gleng-lour quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=41bb8da4 hash=b30cb931afd06b66
 78 seed=1723323765 name=soask-bresk quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=3a4c8358 hash=852dd686591cfb31
-79 seed=1392964937 name=kem-thai quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=72758725 hash=6498013b453b62d1
+79 seed=1392964937 name=kem-thai quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=030f39fe hash=84b63d380f206ef6

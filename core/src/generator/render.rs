@@ -12,6 +12,7 @@ use super::color::{self, Colors};
 use super::data::{self, CHOICES, MAX_BARS, PADSWEEP, PEDAL};
 use super::js;
 use super::kit;
+use super::planing;
 use super::layers::{self, Bass, BassEvent, BassOut, DrumEvent, Drums, DrumsOut, PedalOut, Texture, TextureEvent};
 use super::list::{List, Maybe, Word};
 use super::melody::{self, Depth, Melody, MelodyOut, Over};
@@ -837,29 +838,70 @@ impl Render {
 
     /// `spelledMidi`: the pitch `spellOver` gives a note.
     fn spelled_midi(&self, cx: &Cx, midi: f64, step: f64) -> f64 {
-        let Some(st) = &self.harmony.slot_at(step).steps else { return midi };
+        let slot = self.harmony.slot_at(step);
+        let Some(st) = &slot.steps else { return midi };
         let scale = cx.spec.steps();
         let p = (((midi - cx.spec.root) % 12.0) + 12.0) % 12.0;
         match scale.iter().position(|&x| x == p) {
             Some(i) => midi + ((st[i] - scale[i] + 18.0) % 12.0) - 6.0,
+            None if cx.planing => planing::snap(midi, cx.spec.root, slot),
             None => midi,
         }
     }
 
-    /// `spellOver`, on the melody and then the bass.
+    /// `spellOver`, on the melody and then the bass; a planed loop's held
+    /// textures too (`plane_texture`).
     fn spell_over(&mut self, cx: &Cx) {
         Self::spell_tune(&self.harmony, cx, &mut self.melody);
         for e in self.bass.iter_mut() {
-            Self::respell(&self.harmony, cx, &mut e.midi, &mut e.steps, e.step);
+            Self::respell(&self.harmony, cx, &mut e.midi, &mut e.steps, e.step, false);
+        }
+        if cx.planing {
+            Self::plane_texture(&self.harmony, cx, &mut self.texture);
         }
     }
 
-    /// `spellOver`'s respelling of one note over the chord at its step.
-    fn respell(h: &plan::Harmony, cx: &Cx, midi: &mut f64, steps: &mut Option<List<f64, 7>>, step: f64) {
+    /// A planed loop's pitched textures (queue item 101f): a swell, a bell
+    /// or a chime sounds its chord's own notes, and where it would ring on
+    /// into a chord whose scale lacks one of them (planed chords move a step
+    /// or a minor third, so most of a two-bar swell's second bar would rub)
+    /// it ends where that chord comes in. One that fits the next chord rings
+    /// on as it did.
+    fn plane_texture(h: &plan::Harmony, cx: &Cx, texture: &mut Texture) {
+        let pc = |x: f64| ((x % 12.0) + 12.0) % 12.0;
+        let root = cx.spec.root;
+        let cycle = h.cycle_steps;
+        for e in texture.iter_mut().filter(|e| !e.notes.is_empty()) {
+            let s = h.slot_at(e.step);
+            let into = if cycle == 0.0 { e.step } else { ((e.step % cycle) + cycle) % cycle } - s.start_step;
+            let mut at = e.step - into + s.length_steps;
+            while s.length_steps > 0.0 && at < e.step + e.dur {
+                let next = h.slot_at(at);
+                let fits = next.steps.as_ref().is_some_and(|st| e.notes.iter().all(|&n| st.contains(&pc(f64::from(n) - root))));
+                if !fits || next.length_steps <= 0.0 {
+                    e.dur = at - e.step;
+                    break;
+                }
+                at += next.length_steps;
+            }
+        }
+    }
+
+    /// `spellOver`'s respelling of one note over the chord at its step,
+    /// along the mode's steps. Over a planed chord (queue item 101f) a note
+    /// of the bass (`tune` false), and any outside the mode, goes to the
+    /// nearest note of the chord's scale instead (`planing::snap`): the
+    /// bass plays the planed roots, not the mode's degrees.
+    fn respell(h: &plan::Harmony, cx: &Cx, midi: &mut f64, steps: &mut Option<List<f64, 7>>, step: f64, tune: bool) {
         let spec = cx.spec;
         let scale = spec.steps();
         let slot = h.slot_at(step);
         let Some(st) = &slot.steps else { return };
+        if cx.planing && (!tune || !scale.contains(&((((*midi - spec.root) % 12.0) + 12.0) % 12.0))) {
+            *midi = planing::snap(*midi, spec.root, slot);
+            *steps = Some(*st);
+            return;
+        }
         let p = (((*midi - spec.root) % 12.0) + 12.0) % 12.0;
         if let Some(i) = scale.iter().position(|&x| x == p) {
             *midi += ((st[i] - scale[i] + 18.0) % 12.0) - 6.0;
@@ -870,7 +912,7 @@ impl Render {
     /// `spellOver`, on a tune.
     fn spell_tune(h: &plan::Harmony, cx: &Cx, m: &mut Melody) {
         for e in m.iter_mut() {
-            Self::respell(h, cx, &mut e.midi, &mut e.steps, e.step);
+            Self::respell(h, cx, &mut e.midi, &mut e.steps, e.step, true);
         }
     }
 

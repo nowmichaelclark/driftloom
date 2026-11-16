@@ -65,6 +65,7 @@ pub mod longform;
 pub mod melody;
 pub mod piece;
 pub mod plan;
+pub mod planing;
 pub mod render;
 pub mod request;
 pub mod rng;

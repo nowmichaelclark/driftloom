@@ -193,13 +193,15 @@ fn a_finite_arc_lands_on_its_tonic_and_endless_never() {
                     pass.heard
                 };
                 let l = generator.section(struck[0], 1.0).heard.landing;
-                // The tonic's triad, the root lowest.
+                // The tonic's triad, the root lowest (a planed loop's major,
+                // its tonic's major seventh: queue item 101f).
                 if !l.chord.is_empty() {
                     let spec = generator.spec();
                     let root = (spec.root.round() as i16).rem_euclid(12);
                     let steps = SCALES[spec.scale].steps;
-                    let third: i16 = if steps.contains(&4.0) { 4 } else if steps.contains(&3.0) { 3 } else { steps[1] as i16 };
-                    let fifth: i16 = if steps.contains(&7.0) { 7 } else if steps.contains(&8.0) { 8 } else { 6 };
+                    let planing = dlcore::generator::plan::Cx::new(spec).planing;
+                    let third: i16 = if steps.contains(&4.0) || planing { 4 } else if steps.contains(&3.0) { 3 } else { steps[1] as i16 };
+                    let fifth: i16 = if steps.contains(&7.0) || planing { 7 } else if steps.contains(&8.0) { 8 } else { 6 };
                     let pcs: Vec<i16> = l.chord.iter().map(|n| n.rem_euclid(12)).collect();
                     for t in [0, third, fifth] {
                         assert!(pcs.contains(&(root + t).rem_euclid(12)), "{what}: the landing {:?} has no {t} over {root}", &l.chord[..]);

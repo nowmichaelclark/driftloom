@@ -38,7 +38,9 @@
 //                                            //   instead of the speakers (item 101a; any build)
 //
 // "force" also takes the levers that are not in the data (item 99; core/src/levers.rs):
-//   "planingSevenths": "on"                  every chord a major seventh, roots a step or a minor third apart
+//   "planingSevenths": "on"                  the loop planes as if it drew it (item 101f: every chord a major
+//                                            seventh, roots a step or a minor third apart, the tune following;
+//                                            "request": "progression.kind=today" holds a loop that drew it off)
 // and "set" takes these constants (core/src/tuning.rs, item 99):
 //   "latefloor.SECONDS_MAX": 90              the longest lateFloor wait, in seconds (the data's is 30)
 //   "latefloor.FADE": 12                     seconds the kit and bass take to rise once they arrive (0: at once)

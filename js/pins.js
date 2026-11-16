@@ -3,7 +3,7 @@
 // `readRequest`). The game's and the ears' levers: any of item 54's choices
 // to one of its options, and the settings each choice draws by (the arc, the
 // tuned kick, subDuck, lateFloor, padSweep), the echo's time, the loop's
-// tuning (0 holds it at A440) and the space recipe's 40 (core/src/space.rs). `core/src/generator/request.rs` reads the
+// tuning (0 holds it at A440), the progression's kind and the space recipe's 40 (core/src/space.rs). `core/src/generator/request.rs` reads the
 // same table, in the same order.
 //
 // **A pin chooses within what the loop could draw.** Every setting is held
@@ -97,6 +97,9 @@ const SETTINGS = [
   // tuningOffset, in cents off A440 either way (item 101b); 0 holds a loop
   // at A440, as a game's own sounds may need.
   { name: 'tuning.cents', range: [-TUNING.cents[1], TUNING.cents[1]] },
+  // The progression's kind (item 101f): today's, or planingSevenths' major
+  // sevenths sliding a step or a minor third (core/src/generator/planing.rs).
+  { name: 'progression.kind', words: ['today', 'planing'] },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [

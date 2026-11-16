@@ -606,8 +606,9 @@ impl Reader<'_> {
 /// The choices and every setting they draw from (queue items 80 and 81):
 /// the draw's counts and leans, each choice's options and vibes, and the
 /// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
-/// shapes, the pedal, padSweep, padWow, the echo time, the tuning and the bass's level, each
-/// block's keys exactly the ones `js/choices.js` reads.
+/// shapes, the pedal, padSweep, padWow, the echo time, the tuning, the
+/// progression's kind and the bass's level, each block's keys exactly the
+/// ones `js/choices.js` reads.
 #[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
 fn choices(out: &mut String, blocks: &[Block]) {
     let file = "data/choices.txt";
@@ -771,6 +772,14 @@ fn choices(out: &mut String, blocks: &[Block]) {
     let color = find("setting", "colortone");
     color.only(&["share"]);
     let _ = writeln!(out, "/// colorTone's settings (`[setting colortone]`).\npub static COLORTONE: ColorTone = ColorTone {{ share: {} }};", color.need_num("share"));
+    let progression = find("setting", "progression");
+    progression.only(&["planing", "vibes"]);
+    let _ = writeln!(
+        out,
+        "/// The progression's per-loop draw (`[setting progression]`).\npub static PROGRESSION: Progression = Progression {{ planing: {}, vibes: {} }};",
+        progression.need_num("planing"),
+        progression.need_table("vibes")
+    );
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);
     let _ = writeln!(

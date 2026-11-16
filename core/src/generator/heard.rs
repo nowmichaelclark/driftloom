@@ -1497,15 +1497,16 @@ impl Heard {
         let root = i16::from(form.home.root);
         let pc = |n: i16| n.rem_euclid(12);
         // The tonic chord: the mode's triad on the root (its third and its
-        // fifth, or their nearest where the mode has none), as the loop
+        // fifth, or their nearest where the mode has none; a planed loop's
+        // is major, its tonic's major seventh, queue item 101f), as the loop
         // voices it where it plays one in root position, else built at the
         // chords' lowest. (A loop whose chords are played a
         // note at a time has no chord of three: it lands on the triad,
         // rolled.)
         let steps = cx.spec.steps();
         let has = |x: f64| steps.contains(&x);
-        let third: i16 = if has(4.0) { 4 } else if has(3.0) { 3 } else { steps.get(1).map_or(4, |&x| x as i16) };
-        let fifth: i16 = if has(7.0) { 7 } else if has(8.0) { 8 } else { 6 };
+        let third: i16 = if has(4.0) || cx.planing { 4 } else if has(3.0) { 3 } else { steps.get(1).map_or(4, |&x| x as i16) };
+        let fifth: i16 = if has(7.0) || cx.planing { 7 } else if has(8.0) { 8 } else { 6 };
         let triad = [root, pc(root + third), pc(root + fifth)];
         let lowest = |e: &plan::ChordEvent| e.notes.iter().copied().min();
         let chords = || base.chords.iter().enumerate().filter(|(_, e)| !e.notes.is_empty());
@@ -2012,7 +2013,7 @@ impl Lift {
         if relation.is_fifth() {
             u.shift = ways.shift_up(relation.shift());
         } else if relation != Relation::Home {
-            u.map = key_map(form.home, span.key);
+            u.map = if ways.planing { planed_map(form.home, span.key) } else { key_map(form.home, span.key) };
             u.mapped = PITCHED;
             u.shift = ways.octaves(u.map[0]);
         }
@@ -2053,7 +2054,10 @@ impl Lift {
                 u.stretched = true;
                 u.stretch = ways.stretch(1);
             }
-            Variation::Reharmonized => {
+            // (A planed loop's chords are not reharmonized: they slide by
+            // a shape of their own, and the tune follows them, queue item
+            // 101f.)
+            Variation::Reharmonized if !ways.planing => {
                 if let Some(relative) = form.related().find(|k| k.relation == Relation::Relative) {
                     u.map = key_map(form.home, relative);
                     u.mapped = PITCHED & !(1 << melody);
@@ -2120,6 +2124,18 @@ pub fn key_map(home: Key, to: Key) -> [i8; 12] {
     map
 }
 
+/// `key_map` for a loop that planes (queue item 101f): its chords are
+/// major sevenths sliding around the home note, in no mode, so the relative
+/// key moves every pitch class alike to the new home note, the nearer way
+/// (the shape and the tune over it kept whole), and the parallel moves
+/// nothing (the same home note).
+#[must_use]
+#[allow(clippy::cast_possible_truncation)] // semitones, under 12
+pub fn planed_map(home: Key, to: Key) -> [i8; 12] {
+    let by = if to.relation == Relation::Relative { (i32::from(to.root) - i32::from(home.root) + 18).rem_euclid(12) - 6 } else { 0 };
+    [by as i8; 12]
+}
+
 /// How a loop's things move, worked out once a section from the loop: the
 /// voices its pools offer, which way its chords may move, which octave each
 /// layer takes in another key.
@@ -2141,6 +2157,9 @@ struct Ways {
     /// The same for the section's second tune, where it plays one with
     /// notes.
     second_gap: Option<f64>,
+    /// The loop planes (queue item 101f): its key moves whole, and its
+    /// chords are not reharmonized under the tune (`planing`).
+    planing: bool,
 }
 
 impl Ways {
@@ -2177,7 +2196,7 @@ impl Ways {
         let tune = mean(base.melody.iter().filter(|e| e.vel != 0.0).map(|e| e.midi).sum(), base.melody.iter().filter(|e| e.vel != 0.0).count());
         let under = mean(base.chords.iter().flat_map(|e| e.notes.iter()).map(|&n| f64::from(n)).sum(), base.chords.iter().map(|e| e.notes.len()).sum());
         let other = second.and_then(|m| mean(m.iter().filter(|e| e.vel != 0.0).map(|e| e.midi).sum(), m.iter().filter(|e| e.vel != 0.0).count()));
-        Ways { own, pools, chords, longer, shorter, ranges, gap: tune.zip(under).map(|(t, c)| t - c), second_gap: other.zip(under).map(|(t, c)| t - c) }
+        Ways { own, pools, chords, longer, shorter, ranges, gap: tune.zip(under).map(|(t, c)| t - c), second_gap: other.zip(under).map(|(t, c)| t - c), planing: cx.planing }
     }
 
     /// The voice `layer` plays for the plan's number `pick` (0 to 1 over its

@@ -310,6 +310,18 @@ pub struct ColorTone {
     pub share: f64,
 }
 
+/// The progression's per-loop draw (`[setting progression]`, queue item
+/// 101f): how often a loop's progression planes (planingSevenths, every
+/// chord a major seventh sliding a step or a minor third), and the vibes
+/// that lean it.
+#[derive(Clone, Copy, Debug)]
+pub struct Progression {
+    /// The share of loops that plane, before the vibes lean it.
+    pub planing: f64,
+    /// The vibes that lean the share.
+    pub vibes: Table,
+}
+
 /// echoTime's settings (`[setting echo]`).
 #[derive(Clone, Copy, Debug)]
 pub struct Echo {
@@ -498,7 +510,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, ColorTone, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Longform, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
+        Longform, Progression, Progressions, SubDuck, SweepRanges, Tuning, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }

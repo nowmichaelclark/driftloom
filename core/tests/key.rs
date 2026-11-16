@@ -32,6 +32,11 @@ fn roomy(f: impl FnOnce() + Send + 'static) {
 }
 
 /// A pitch class, 0 to 11.
+/// The `progression.kind` pin's number: held at 0, today's progression.
+fn today() -> usize {
+    dlcore::generator::request::Pins::number("progression.kind").expect("a pin")
+}
+
 fn pc(midi: f64) -> usize {
     (midi as i64).rem_euclid(12) as usize
 }
@@ -103,7 +108,9 @@ fn pinned() {
         let seed = r.seed32();
         let key = r.pick_index(12);
         let scale = r.pick_index(SCALES.len());
-        let request = Request::new().with_keys(1 << key).expect("a key").with_scales(1 << scale).expect("a mode");
+        // (Today's progression: a planed one leaves the mode on purpose, its
+        // notes in each chord's own scale, queue item 101f.)
+        let request = Request::new().with_keys(1 << key).expect("a key").with_scales(1 << scale).expect("a mode").with_pin(today(), 0.0).expect("a pin");
         let p = new_spec(seed, &request).character().lead;
         if loops >= 200 && led[p] >= 12 {
             continue;
@@ -289,7 +296,9 @@ fn played() {
     for i in 0..60usize {
         let seed = r.seed32();
         let (key, scale) = (r.pick_index(12), r.pick_index(SCALES.len()));
-        let request = Request::new().with_keys(1 << key).expect("a key").with_scales(1 << scale).expect("a mode");
+        // (Today's progression: a planed one leaves the mode on purpose, its
+        // notes in each chord's own scale, queue item 101f.)
+        let request = Request::new().with_keys(1 << key).expect("a key").with_scales(1 << scale).expect("a mode").with_pin(today(), 0.0).expect("a pin");
         let mut host = Pitches { frame: 0, melody: Vec::new(), chords: Vec::new() };
         player.attach(&mut host, 48_000.0, true);
         player.load(seed, &request);
@@ -325,7 +334,7 @@ fn played() {
         let _ = (r.pick_index(12), r.pick_index(SCALES.len()));
         let mut host = Pitches { frame: 0, melody: Vec::new(), chords: Vec::new() };
         player.attach(&mut host, 48_000.0, true);
-        player.load(seed, &Request::new());
+        player.load(seed, &Request::new().with_pin(today(), 0.0).expect("a pin"));
         player.ready(&mut host);
         let (key, scale) = (player.generator().spec().root as usize, player.generator().spec().scale);
         let tune = player.generator().settings().tuning / 100.0;

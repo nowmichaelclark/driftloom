@@ -87,6 +87,21 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
+- **planingSevenths (101f, session 07, v171):** about 1 loop in 7 (1 in 5
+  of the dreamy and floating ones, 1 in 10 of the earthy, reverent and
+  minimal) slides major seventh chords a whole step or a minor third at a
+  time, the chords Ears 13b's lever made, and now the tune and the bass
+  follow each chord (its own Lydian; its major pentatonic in a five-note
+  mode), so the rub you could hear on thaw #71's sketch is gone. To hear it
+  before the album: muith-sei (corpus 20261009 #62) from 0:01; broan-bro
+  (#39, a sketch loop that now draws it itself) from 0:06. Taste calls for
+  your ears, each a line of `data/choices.txt` or
+  `core/src/generator/planing.rs`: 15% of the loops before the vibes; the
+  Lydian over every chord (its raised fourth, rather than Ionian's fourth,
+  which rubs on the chord's third); a held swell, bell or chime that would
+  ring into a chord it rubs on ends where that chord comes in; the tuned
+  kick stays on the key's note. A request can pin it: `progression.kind=planing`
+  or `=today`.
 - **colorTone (101e, session 06, v170, #396):** a soft held 13th over the
   major chords and an 11th over the minor ones, just above the chord (C6 at
   most), swelling in and letting go, on about 1 loop in 7 that can take it.

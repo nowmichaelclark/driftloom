@@ -916,7 +916,7 @@ const _: () = assert!(PINS_MAX <= 128, "the pins' bits are a u128");
 
 /// The settings' pins, by number from `SETTING_PINS` (`js/pins.js`, the
 /// same order; append only).
-pub const SETTINGS: [&str; 19] = [
+pub const SETTINGS: [&str; 20] = [
     "arc.shape",
     "arc.period",
     "arc.from",
@@ -936,6 +936,7 @@ pub const SETTINGS: [&str; 19] = [
     "echo.beats",
     "lateFloor.fade",
     "tuning.cents",
+    "progression.kind",
 ];
 
 /// The least and the most of several ranges: what a setting drawn from
@@ -1036,6 +1037,8 @@ impl Pins {
             // tuningOffset either way, as far as the data draws it; 0 holds
             // the loop at A440 (queue item 101b).
             "tuning.cents" => Allowed::Range([-TUNING.cents[1], TUNING.cents[1]], false),
+            // The progression's kind: today's, or planing (queue item 101f).
+            "progression.kind" => Allowed::Words(super::planing::KINDS),
             _ => return None,
         })
     }

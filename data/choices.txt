@@ -531,6 +531,27 @@ low = 1
 [setting colortone]
 share = 0.45
 
+# planingSevenths (queue item 101f; batch 6's #10, approved by Mikey
+# 2026-11-09): an option of the progression's per-loop draw, today's first.
+# Every chord a major seventh (the root, the major third, the fifth and the
+# major seventh), the roots a whole step or a minor third apart, either way,
+# turning back where they would go more than a fourth from the tonic: the
+# shape sliding rather than a progression in a key (Ears 13b's lever, its
+# walk unchanged). The tune, the bass and everything else that reads the key
+# follow the planed chord: each of their notes in the chord's own Lydian
+# scale, a note that is not moving to the nearest that is, a chord tone where
+# two are as near (core/src/generator/planing.rs). Drawn per loop at load on a
+# stream of its own, outside the list of choices and not counted among a
+# loop's changes, as tuningOffset is; any loop may plane.
+[setting progression]
+# The share of loops that plane before the vibes lean it: 0.15, the batch's
+# conservative share, for Mikey's ears.
+planing = 0.15
+# The batch's [JUDGMENT] row: toward the dreamy and floating vibes, away from
+# the earthy, the reverent and the minimal (never 0). It leans the share.
+vibes = dreamy 2, floating 2, jazzy 1.5, cosmic 1.5, wondrous 1.5,
+    bubbly 1.5, earthy 0.5, reverent 0.5, minimal 0.5
+
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
 # loop as the sketch drew it, outside the list of choices and not counted
