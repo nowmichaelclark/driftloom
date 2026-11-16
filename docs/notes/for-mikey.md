@@ -256,4 +256,14 @@ the points where the next step is yours.
 
 ## Decisions
 
-(none open: the long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`)
+- **How many changes a loop gets, with batch 6 in (101h, session 09):** with
+  all of batch 6 counted, 52% of loops get one or two changes (75% before
+  the batch) and 43% three or more (10% before), because nine of the batch's
+  sounds are drawn beside the list's changes. Still "most", barely. Three
+  ways back are measured in `docs/notes/101h-change-counts.md`; each changes
+  the choices of 41 to 57% of the loops that exist today, so nothing is
+  built. The hands recommend A (those nine count against the changes a loop
+  drew, so the list fills only what they leave: 79% one or two, 16% three or
+  more, every batch 6 sound at its share). Say A, B, C or keep it as it is.
+
+(The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.)

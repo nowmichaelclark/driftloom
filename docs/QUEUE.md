@@ -60,8 +60,10 @@ a hole on any piece, #395; the listening set on `long-clips`); hands session 06
 done (2026-11-15: 101e, v170, colorTone, #396); hands session 07 done
 (2026-11-16: 101f, v171, planingSevenths, #397); hands session 08 done
 (2026-11-16: 101g, v172 lowBell #398, v173 dropSpotlight #399); hands
-session 09 under way (2026-11-16: 101h, v174 twang; the batch's locks
-next); next: 10 onward, and Mikey's testers' pastes
+session 09 done (2026-11-16: 101h, v174 twang #400; the batch's locks
+#401: the balance lock re-baselined, unchanged since session 07; how many
+changes a loop gets is Mikey's call, `docs/notes/101h-change-counts.md`);
+next: 10 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.

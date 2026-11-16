@@ -316,3 +316,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   loops (corpus 20261009) that draw it: **he-rosk** (#33, bright) from 0:00;
   **maisk-feim** (#151, soft) from 0:00 (and tom-wen, #172, slow, from
   0:00). Every other loop plays as before.
+- #401, batch 6's locks (item 101h, session 09; no app change), preview URL:
+  the branch's preview (no hash kept): nothing should sound different. The
+  balance lock re-baselined once for the batch at 10,000 loops (it came out
+  byte for byte as session 07 left it: of the 22 locked figures only 07's
+  planingSevenths moved any, from the pre-batch file); every batch 6
+  candidate's two album loops checked to still draw it; how many changes a
+  loop now gets with all of the batch in (52% one or two, 43% three or
+  more) left for Mikey with three measured ways back
+  (`docs/notes/101h-change-counts.md`). The batch's table (each candidate,
+  its options, its share, its two loops) is in the PR.
