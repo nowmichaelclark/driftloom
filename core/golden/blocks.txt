@@ -177,3 +177,5 @@ low_bell/struck 297e69fda844e6b8 -43.15 -25.53 0.0
 low_bell/swell 50ffcfd8fdbee1cf -46.13 -31.11 0.0
 low_bell/struck@choke d64a1aab055eadae -47.00 -25.53 0.0
 low_bell/swell@choke e18ea142c7776b23 -57.29 -34.22 0.0
+low_bell/spot bd6519af71a2d560 -42.23 -24.52 0.0
+low_bell/spot@choke 8b8e3ba9ed930fc8 -46.09 -24.52 0.0

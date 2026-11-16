@@ -11,6 +11,7 @@
 
 use crate::block::event::NOTES;
 use crate::generator::choices::{self, Fall};
+use crate::blocks::low_bell;
 use crate::generator::data;
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -70,6 +71,9 @@ const BELL_ORD: u32 = 512;
 pub const BELL_LOW: f64 = 38.0;
 /// A full stop's damp on the low bell, in seconds to -60 dB (the sketch's).
 const BELL_DAMP: f64 = 0.25;
+/// dropSpotlight's damp as the floor comes back, in seconds to -60 dB (the
+/// Ears 13b sketch's): the bell belongs to the drop.
+const SPOT_DAMP: f64 = 1.5;
 
 /// How long the last loop's organ takes to let go at a new loop's first
 /// step, in seconds (`organOff(time, 0.15)` in the engine's setups).
@@ -351,6 +355,15 @@ pub struct Sequencer {
     bell_pc: u8,
     bell_at: f64,
     bell_until: f64,
+    /// dropSpotlight (queue item 101g): the step from the load (`abs_step`)
+    /// at which the floor drop the bell strikes in ends (0: none).
+    bell_drop: f64,
+    /// Whether the floor has played since the load: a loop that opens
+    /// without its kit and bass has not dropped them.
+    bell_floor: bool,
+    /// Whether the floor was out in the bar before (a drop starts where it
+    /// played there, in the pass before at a pass's first bar).
+    bell_was_out: bool,
     /// How long the last loop's organ takes to let go at this one's first
     /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
     /// 86).
@@ -400,6 +413,9 @@ impl Sequencer {
             bell_pc: 0,
             bell_at: 0.0,
             bell_until: 0.0,
+            bell_drop: 0.0,
+            bell_floor: false,
+            bell_was_out: false,
             organ_fall: Biased::DEFAULT,
             glass: false,
             choir: false,
@@ -451,6 +467,11 @@ impl Sequencer {
         let colors = !lp.base.colors.is_empty();
         self.color_change = colors || self.had_color;
         self.had_color = colors;
+        // A new loop's bell strikes its first chord, and its floor has yet to
+        // play (queue item 101g).
+        self.bell_pc = 0;
+        self.bell_drop = 0.0;
+        self.bell_floor = false;
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
@@ -906,6 +927,37 @@ impl Sequencer {
             if choir { (unit(Key { seed, pass, step: step32, ord: 0 }, channel, salt::HOST_ENSEMBLE, 0) - 0.5) * 0.016 } else { 0.0 }
         };
 
+        // dropSpotlight (queue item 101g): in a loop that strikes the bell in
+        // its floor drops alone, at each bar line whether one starts (and so
+        // this step is its first) or the floor comes back (the bell damped).
+        let mut spot_first = false;
+        if s.spotlight && abs % spb == 0.0 {
+            let more = Self::floor_out_from(lp, stepf, abs);
+            self.bell_floor |= more == 0.0;
+            if self.bell_drop > 0.0 && abs >= self.bell_drop {
+                if more > 0.0 {
+                    // Still out across a pass's end: the drop goes on.
+                    self.bell_drop = abs + more;
+                } else {
+                    if self.bell_until > t {
+                        Synth::low_bell_off(host, t, SPOT_DAMP);
+                    }
+                    self.bell_until = 0.0;
+                    self.bell_pc = 0;
+                    self.bell_drop = 0.0;
+                }
+            } else if self.bell_drop == 0.0
+                && self.bell_floor
+                && !self.bell_was_out
+                && more * sd >= data::LOWBELL.spotlight_least - 0.001
+                && !late.is_some_and(|l| abs < js::max(l.drums, l.bass))
+            {
+                self.bell_drop = abs + more;
+                spot_first = true;
+            }
+            self.bell_was_out = more > 0.0;
+        }
+        let in_drop = self.bell_drop > 0.0 && abs < self.bell_drop;
         if !mutes[Layer::Chords as usize] {
             let s_at = at(Layer::Chords);
             let slip = ensemble(CHORDS);
@@ -956,8 +1008,9 @@ impl Sequencer {
             if self.had_color {
                 self.colors(host, synth, lp, s_at, t, sd);
             }
-            if s.low_bell != 0 && !lp.rests(Layer::Chords) && !Self::is_silent_bar(lp, abs, rel) {
-                self.low_bell(host, synth, lp, s_at, t, s.low_bell == 2, Key { seed, pass, step: step32, ord: BELL_ORD });
+            if s.low_bell != 0 && (!s.spotlight || in_drop) && !lp.rests(Layer::Chords) && !Self::is_silent_bar(lp, abs, rel) {
+                let kind = Bell { swell: s.low_bell == 2, spot: s.spotlight, first: spot_first };
+                self.low_bell(host, synth, lp, s_at, t, kind, Key { seed, pass, step: step32, ord: BELL_ORD });
             }
             if s.organ.is_some() {
                 self.organ(host, synth, lp, s_at, t, sd, abs);
@@ -1156,12 +1209,21 @@ impl Sequencer {
     /// between D2 and C#3, unless that is the root it struck last and less
     /// than `regap` seconds ago (`[setting lowbell]`). The generator knows
     /// its chords, so an arpeggio's chord is struck as a whole one is.
+    ///
+    /// dropSpotlight's (`kind.spot`, in a floor drop): the same, and on the
+    /// drop's first step (`kind.first`) the root of the chord of the
+    /// progression there, whatever it struck before and whether or not the
+    /// chords play it (`low_bell::ALONE` where they don't).
     #[allow(clippy::too_many_arguments)] // the step's own place and times
-    fn low_bell<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, s: f64, t: f64, swell: bool, key: Key) {
-        let Some(slot) = lp.base.harmony.slots.iter().find(|x| x.start_step == s) else { return };
+    fn low_bell<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, s: f64, t: f64, kind: Bell, key: Key) {
+        let h = &lp.base.harmony;
+        let slot = if kind.first { Some(h.slot_at(s)) } else { h.slots.iter().find(|x| x.start_step == s) };
+        let Some(slot) = slot else { return };
         let end = slot.start_step + slot.length_steps;
         let plays = lp.base.chords.iter().enumerate().any(|(i, e)| e.step >= slot.start_step && e.step < end && truthy(lp.chord(i, e).0));
-        if !plays {
+        // A drop's first strike is the bell alone in it, whatever the chords
+        // do there (as the Ears 13b sketch's rang over a chord gone quiet).
+        if !plays && !kind.first {
             return;
         }
         let root = slot.root_midi + lp.moved(Layer::Chords, slot.root_midi);
@@ -1173,13 +1235,57 @@ impl Sequencer {
         let mark = js::round(pc) as u8 % 12 + 1;
         // A millisecond's grace, so a chord exactly `regap` on is struck
         // however the times round.
-        if mark == self.bell_pc && t - self.bell_at < data::LOWBELL.regap - 0.001 {
+        if !kind.first && mark == self.bell_pc && t - self.bell_at < data::LOWBELL.regap - 0.001 {
             return;
         }
         self.bell_pc = mark;
         self.bell_at = t;
-        synth.low_bell(host, key, BELL_LOW + pc, t, swell);
+        let parts = (if kind.swell { low_bell::SWELL } else { 0 }) | (if kind.spot { low_bell::SPOT } else { 0 }) | (if plays { 0 } else { low_bell::ALONE });
+        synth.low_bell(host, key, BELL_LOW + pc, t, parts);
         self.bell_until = js::max(self.bell_until, t + LOW_BELL_RING);
+    }
+
+    /// dropSpotlight (queue item 101g): how many steps from loop step `from`
+    /// (a bar line, `abs` from the load) to the end of this pass the floor
+    /// stays out, bar by bar: none of the kit's kicks, soft kicks or frame
+    /// hits and no bass note sounding in the bar, as this pass plays them
+    /// (the wander's floor drop and its shapes, a form's bars without the
+    /// floor, a breath), each layer where its own cycle puts it, as
+    /// `schedule_step` places it. The generator's own marks, so it is known
+    /// on the drop's first beat.
+    fn floor_out_from(lp: &Loop, from: f64, abs: f64) -> f64 {
+        let spb = lp.spec.steps_per_bar;
+        let total = lp.total();
+        // Whether a note at step `step` of a layer whose cycle is `len`,
+        // lasting `dur` steps, sounds in loop steps `a` to `b` (`abs` from
+        // the load at `a`): a layer on the loop's cycle by the loop's step,
+        // one on a cycle of its own by the step from the load.
+        let sounds = |step: f64, dur: f64, len: f64, a: f64, b: f64| {
+            let (start, end, len) = if len == total || len <= 0.0 {
+                (a, b, total)
+            } else {
+                let at = abs + (a - from);
+                (at, at + (b - a), len)
+            };
+            let mut x = start - (((start - step) % len) + len) % len;
+            while x < end {
+                if x + dur > start {
+                    return true;
+                }
+                x += len;
+            }
+            false
+        };
+        let (drums, bass) = (lp.cycle(Layer::Drums), lp.cycle(Layer::Bass));
+        let plays = |a: f64, b: f64| {
+            lp.drums().any(|(vel, inst, e)| truthy(vel) && matches!(inst, "kick" | "softkick" | "frame") && sounds(e.step, 1.0, drums, a, b))
+                || lp.base.bass.iter().enumerate().any(|(i, e)| truthy(lp.bass(i, e).0) && sounds(e.step, js::max(1.0, e.dur), bass, a, b))
+        };
+        let mut at = from;
+        while at < total && !plays(at, at + spb) {
+            at += spb;
+        }
+        at - from
     }
 
     /// The low bell's ring damped at `time` (a full stop, the chords muted
@@ -1332,6 +1438,15 @@ impl Default for Sequencer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// How the low bell is struck at a step (queue item 101g): its swelling kind,
+/// in a floor drop (dropSpotlight), and on a drop's first step.
+#[derive(Clone, Copy)]
+struct Bell {
+    swell: bool,
+    spot: bool,
+    first: bool,
 }
 
 /// The core's channel a layer plays into.

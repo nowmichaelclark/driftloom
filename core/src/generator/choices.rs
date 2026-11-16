@@ -875,6 +875,29 @@ pub fn low_bell_of(seed: u32, plays: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
     if plays { kind as u8 } else { 0 }
 }
 
+const SPOTLIGHT_SALT: u32 = 0x7370_6f74;
+
+/// dropSpotlight's words, today's first (the bell on every chord): the
+/// request's `lowBell.drops` pin (`js/pins.js`).
+pub const SPOTLIGHT_KINDS: data::Pool = &[("today", 1.0), ("on", 1.0)];
+
+/// dropSpotlight (queue item 101g; batch 6's #11): whether a loop that plays
+/// the low bell (`bell`, `low_bell_of`'s) strikes it in its floor drops
+/// alone, stepping forward as the kit and the bass leave. Only where the
+/// floor can drop (`drops`: 4 bars or more, with a kick or a bass); drawn at
+/// load on its own stream, `[setting lowbell] spotlight` of those loops
+/// before its vibes lean it (never to none), unless a request pins
+/// `lowBell.drops`.
+#[must_use]
+pub fn spotlight_of(seed: u32, bell: u8, drops: bool, v: Option<&Vibes>, p: &Pins) -> bool {
+    let mut r = Rng::new(js::salted(seed, SPOTLIGHT_SALT, 1));
+    let base = LOWBELL.spotlight;
+    let share = base * lean_of(Some(LOWBELL.spotlight_vibes), v);
+    let drawn = r.f() * (1.0 - base + share) < share;
+    let on = p.word("lowBell.drops").map_or(drawn, |w| w == "on");
+    on && bell != 0 && drops
+}
+
 /// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the
 /// kick's for a loop that plays a kick, a soft kick or the hand kit's frame
 /// drum anywhere in it, else the other.

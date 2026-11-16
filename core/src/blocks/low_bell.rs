@@ -29,8 +29,13 @@
 //! is a note of its own that ends once its first partial is 60 dB under its
 //! peak (5.5 s), so a ring is never cut off.
 //!
+//! dropSpotlight (queue item 101g; batch 6's #11, Ears 13b) is the same bell
+//! stepping forward in a floor drop (`SPOT` in the parts, either kind): the
+//! spotlight sketch's louder rule, 2 times the chords' RMS, never under 0.05
+//! nor over 0.15.
+//!
 //! A choke (`event::CHOKE`, its value the fall in seconds to -60 dB, the
-//! player's 0.25 at a full stop) damps every partial from its time; a choke
+//! player's 0.25 at a full stop, 1.5 as a drop's floor comes back) damps every partial from its time; a choke
 //! at or before the note's own time passes it by. Centered: it has no width
 //! of its own, and it draws nothing.
 
@@ -45,6 +50,13 @@ use super::midi_to_freq;
 
 /// The note's parts: the swelling kind (a 0.4 s attack).
 pub const SWELL: u32 = 1;
+/// The note's parts: the bell stepping forward in a floor drop
+/// (dropSpotlight, Ears 13b): the spotlight sketch's louder level rule.
+pub const SPOT: u32 = 2;
+/// The note's parts: struck where the chords have left too (a drop's first
+/// strike over a chord gone quiet): its least level, whatever the channel
+/// held a moment before, as the sketch, coming in a second late, heard.
+pub const ALONE: u32 = 4;
 
 /// The partials: ratio to the fundamental, level, fall in dB a second.
 const PARTIALS: [(f64, f64, f64); 4] = [(1.0, 1.0, 11.0), (2.08, 0.42, 19.0), (3.11, 0.2, 29.0), (5.2, 0.08, 44.0)];
@@ -58,6 +70,11 @@ const SWELLING: f64 = 0.4;
 const LEVEL: f64 = 0.045;
 const REL: f64 = 1.4;
 const MOST: f64 = 0.12;
+/// The same three in a floor drop (`SPOT`): the Ears 13b dropSpotlight
+/// sketch's, a bell that steps forward as the kit and the bass leave.
+const SPOT_LEVEL: f64 = 0.05;
+const SPOT_REL: f64 = 2.0;
+const SPOT_MOST: f64 = 0.15;
 /// How far under its peak the first partial falls before the note ends, in
 /// dB.
 const END_DB: f64 = 60.0;
@@ -118,6 +135,7 @@ impl Block for LowBell {
     const PROBES: &'static [Probe<Note>] = &[
         Probe { name: "struck", settings: Note::probe(crate::LOWBELL, crate::CHORDS, 45.0, 0, NO_EXTRA) },
         Probe { name: "swell", settings: Note::probe(crate::LOWBELL, crate::CHORDS, 40.0, SWELL, NO_EXTRA) },
+        Probe { name: "spot", settings: Note::probe(crate::LOWBELL, crate::CHORDS, 43.0, SPOT, NO_EXTRA) },
     ];
 
     const HEARS: &'static [u32] = &[event::CHOKE];
@@ -128,8 +146,9 @@ impl Block for LowBell {
         self.rate = rate;
         self.time = note.time;
         let heard = note.extra[HEARD];
-        let heard = if heard > 0.0 { heard } else { 0.0 };
-        let peak = (REL * math::sqrt(heard)).clamp(LEVEL, MOST) * note.vel.clamp(0.0, 1.0);
+        let heard = if heard > 0.0 && note.parts & ALONE == 0 { heard } else { 0.0 };
+        let (level, rel, most) = if note.parts & SPOT != 0 { (SPOT_LEVEL, SPOT_REL, SPOT_MOST) } else { (LEVEL, REL, MOST) };
+        let peak = (rel * math::sqrt(heard)).clamp(level, most) * note.vel.clamp(0.0, 1.0);
         let f = midi_to_freq(note.midi);
         for (k, &(ratio, amp, dbps)) in PARTIALS.iter().enumerate() {
             self.step[k] = f * ratio / rate;

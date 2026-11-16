@@ -294,5 +294,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   bell (D2 to C#3) on the chord's root at each chord whose root changes, half
   of them struck and half swelling in over 0.4 s, at the sketch's level (14 to
   24 LU under the loop). Two loops (corpus 20261009) that draw it:
-  **four-hoask** (#101, struck) from 0:00; **muith-sei** (#62, swelling) from
-  0:00. A loop without it plays as before, its wander too.
+  **weith-yo** (#49, struck) from 0:00; **shu-san** (#16, swelling) from 0:00
+  (the PR named four-hoask and muith-sei, which since #399 strike it in their
+  floor drops alone). A loop without it plays as before, its wander too.
+- #399, dropSpotlight (item 101g, session 08, v173), preview URL: the branch's
+  preview (no hash kept): in about half of the loops that play the low bell
+  and whose floor can drop, the bell rings only where the kick and the bass
+  have both left for 2 s or more, struck on the drop's first beat (alone
+  there where the chords have gone too) and at each new root, a little
+  louder, damped as the floor comes back; never in a full stop. Two loops
+  (corpus 20261009) that draw it: **sei-sheim** (#173, struck) from 0:13;
+  **wu-hail** (#197, swelling) from 0:08. Every other loop plays as before.

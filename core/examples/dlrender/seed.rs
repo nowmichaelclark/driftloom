@@ -315,6 +315,10 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
             2 => drawn.push("lowBell:swell".to_string()),
             _ => {}
         }
+        // dropSpotlight: the bell in the floor drops alone.
+        if player.generator().settings().spotlight {
+            drawn.push("dropSpotlight".to_string());
+        }
         let _ = write!(line, " choices={}", if drawn.is_empty() { "-".to_string() } else { drawn.join(",") });
     }
     Ok(Rendered { line, samples, calls: calls.then_some(lines) })

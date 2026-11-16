@@ -781,14 +781,17 @@ fn choices(out: &mut String, blocks: &[Block]) {
         progression.need_table("vibes")
     );
     let bell = find("setting", "lowbell");
-    bell.only(&["share", "kinds", "kindVibes.*", "regap"]);
+    bell.only(&["share", "kinds", "kindVibes.*", "regap", "spotlight", "spotlightVibes", "spotlightLeast"]);
     let _ = writeln!(
         out,
-        "/// lowBell's per-loop draw (`[setting lowbell]`).\npub static LOWBELL: LowBellDraw = LowBellDraw {{ share: {}, kinds: {}, kind_vibes: {}, regap: {} }};",
+        "/// lowBell's per-loop draw (`[setting lowbell]`).\npub static LOWBELL: LowBellDraw = LowBellDraw {{ share: {}, kinds: {}, kind_vibes: {}, regap: {}, spotlight: {}, spotlight_vibes: {}, spotlight_least: {} }};",
         bell.need_num("share"),
         bell.need_pool("kinds"),
         bell.tables_by_name("kindVibes"),
-        bell.need_num("regap")
+        bell.need_num("regap"),
+        bell.need_num("spotlight"),
+        bell.need_table("spotlightVibes"),
+        bell.need_num("spotlightLeast")
     );
     let echo = find("setting", "echo");
     echo.only(&["beats", "vibes.*"]);

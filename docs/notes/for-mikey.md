@@ -87,13 +87,26 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
+- **dropSpotlight (101g, session 08, v173, #399):** in about half of the
+  loops that play the low bell and whose floor can drop, the bell rings only
+  in the floor drops (wherever the kick and the bass both leave for 2 s or
+  more), struck on the drop's first beat rather than the sketch's second
+  late, at the spotlight sketch's louder level, and damped over 1.5 s as the
+  floor comes back. To hear it before the album: sei-sheim (corpus 20261009
+  #173, struck) from 0:13; wu-hail (#197, swelling) from 0:08. Taste calls for
+  your ears, each a line of `data/choices.txt` or the player: half of those
+  loops (the batch's way with a choice's two versions); drops of 2 s or more;
+  the drop's first strike is the bell alone at its least where the chords have
+  left too, and nothing in a full stop (on grove #47 the sketch rang there:
+  its release never came); the sketch also struck the chord the floor came
+  back with, which the build does not, so dust #9 reads 1.9 LU quieter than
+  the sketch. A request can pin it: `lowBell.drops=on` or `=today`.
 - **lowBell (101g, session 08, v172, #398):** a struck low bell, D2 to C#3, on the
   chord's root at each chord whose root changes (or the same root after 4 s),
   on about 1 loop in 7 that plays a chord, half struck and half swelling in
   over 0.4 s (mysterious, moonlit and chiming lean to the strike, glacial to
-  the swell). To hear it before the album: four-hoask (corpus 20261009 #101,
-  struck) from 0:00; muith-sei (#62, the sketch's grove loop, swelling) from
-  0:00. What plays is the sketch's, number for number, at its level rule
+  the swell). To hear it before the album: weith-yo (corpus 20261009 #49,
+  struck) from 0:00; shu-san (#16, swelling) from 0:00. What plays is the sketch's, number for number, at its level rule
   (1.4 times the chords' level, never under 0.045 nor over 0.12), and
   measures within 1.1 LU of it on the four sketch loops. Taste calls for your
   ears, each a line of `data/choices.txt` or `core/src/blocks/low_bell.rs`:

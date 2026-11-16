@@ -91,7 +91,9 @@ export const TUNING = setting('tuning', { share: 'num', cents: 'range', vibes: '
 // lowBell's draw (queue item 101g): how often a loop plays the low bell and
 // its kinds, drawn per loop outside the list of choices, as tuningOffset is.
 // The page reads its kinds for the pin's words.
-export const LOWBELL = setting('lowbell', { share: 'num', kinds: 'pool', 'kindVibes.*': 'table', regap: 'num' });
+export const LOWBELL = setting('lowbell', {
+  share: 'num', kinds: 'pool', 'kindVibes.*': 'table', regap: 'num', spotlight: 'num', spotlightVibes: 'table', spotlightLeast: 'num',
+});
 // Every choice, in the file's order (the pins' order): its id and its
 // options, today's first.
 export const CHOICES = Object.keys(CHOICE_DATA).map((id) => ({ id, ...CHOICE_DATA[id] }));

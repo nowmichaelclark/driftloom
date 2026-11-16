@@ -21,7 +21,7 @@
 17 seed=289351446 name=ri-houng quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=d0e4a122 hash=d71814f9bbed4d05
 18 seed=1694877057 name=koun-nuing quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=0e4a0532 hash=54a3d9bbb8723c59
 19 seed=3294703884 name=loung-rang quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=657af941 hash=e02f2a9540447689
-20 seed=1227766539 name=duin-sar quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=f9484781 hash=a010f5f07ba1c45d
+20 seed=1227766539 name=duin-sar quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=f76c617d hash=b9be6759cdbe5590
 21 seed=819795777 name=loum-seng quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=fdb7b142 hash=c144e36722062f1a
 22 seed=183522707 name=han-vaing quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=170a2a96 hash=7167685fa95da8d7
 23 seed=1835591523 name=their-roask quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=04c4481d hash=d6304b00e7cda477
@@ -30,7 +30,7 @@
 26 seed=1266456452 name=tei-har quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=22214386 hash=462f56c0c2c7c69b
 27 seed=882486014 name=war-bri quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=25857c14 hash=c894b071a6578748
 28 seed=2826645300 name=woung-shain quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=0e9a7d25 hash=367a432876d110bc
-29 seed=2345405884 name=sheing-glar quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=038f6516 hash=885904469dc9baca
+29 seed=2345405884 name=sheing-glar quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=89c34e89 hash=061a0df7c37962e5
 30 seed=3257487196 name=dum-futh quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=1ac74a55 hash=e4934218e7ab7681
 31 seed=828129958 name=voth-rur quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=08c7602a hash=b1855ad94403f411
 32 seed=3096446930 name=broul-fuisk quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=37b7000c hash=6de086b95bcf6c58
@@ -63,7 +63,7 @@
 59 seed=3946575761 name=breir-their quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=d154094d hash=5b0f6b1ff94eb536
 60 seed=3583814619 name=nim-suth quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=478f1bc3 hash=fed526fc3b22ca65
 61 seed=4010804905 name=ni-va quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=55def015 hash=19447d9bcd541f1f
-62 seed=493086551 name=ril-lein quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=1a0a6ec5 hash=568af3bf810e2be8
+62 seed=493086551 name=ril-lein quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=ccca2942 hash=2cbea33ed3beba01
 63 seed=169427896 name=fui-theith quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=88f921ee hash=747e369b8d0a6254
 64 seed=3730978585 name=ku-fui quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=83c0ed1c hash=95b9f78598bb1e9d
 65 seed=1264764461 name=routh-your quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=e286187c hash=1762a690a40585ce
@@ -73,7 +73,7 @@
 69 seed=3025355066 name=fom-rask quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=60327fcd hash=ed2e373898a88652
 70 seed=714069137 name=task-glei quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=e61be026 hash=908937299aed200b
 71 seed=2906872543 name=wai-ler quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=6b392960 hash=fa08283b848e7e76
-72 seed=4075413787 name=wil-voask quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=536412f6 hash=0b6038aae6cf159f
+72 seed=4075413787 name=wil-voask quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=b325e456 hash=ae8b5457a7a387c8
 73 seed=566594588 name=thouth-thu quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=a8ccf7a5 hash=c01e4d081d367786
 74 seed=4199973687 name=yui-wol quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=c13105c9 hash=0b9292cc7b38e060
 75 seed=700134711 name=hou-vouth quality=full layout=mono seconds=45 rate=44100 wander=1 frames=1984500 out=d04941f3 hash=6bc9e6cb76dedf08

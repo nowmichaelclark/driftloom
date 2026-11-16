@@ -576,6 +576,25 @@ kindVibes.swell = glacial 2, serene 1.5, still 1.5, floating 1.5,
     meditative 1.5, lively 0.4, zesty 0.4, bouncy 0.5
 # The same root is struck again after this many seconds (the sketch's).
 regap = 4
+# dropSpotlight (queue item 101g; batch 6's #11, batch 5's, Ears 13b,
+# approved by Mikey 2026-11-09, struck and swelling): in a loop that plays the
+# bell and whose floor can drop (4 bars or more, with a kick or a bass), the
+# bell may step forward into the floor drops instead: struck only in them, on
+# the drop's first beat (alone there, at its least, where the chords have left
+# too) and at each new root while it lasts, at the Ears 13b sketch's louder
+# level, and damped as the floor comes back (the player,
+# core/src/player/sequencer.rs). Its kind is the loop's bell's. Drawn per
+# loop on a stream of its own: `spotlight` of those loops before the vibes
+# lean it (half and half with the bell on every chord: the batch's way with a
+# choice's two versions, for Mikey's ears), leaned by the batch's [JUDGMENT]
+# row (none away). A drop is where the kit's kick and the bass both leave for
+# a bar or more (the wander's floor drop and its shapes, a form's bars without
+# them); one shorter than `spotlightLeast` seconds strikes nothing: the sketch
+# caught drops of 2.4 s, and a stutter's drops last 2.2 s or more, while a
+# one-bar drop at a quick tempo would ring a bell a bar. Never in a full stop.
+spotlight = 0.5
+spotlightVibes = mysterious 1.5, reflective 1.5, spacious 1.5, chiming 1.5
+spotlightLeast = 2
 
 # echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
 # 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every

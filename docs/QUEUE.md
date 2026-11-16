@@ -58,8 +58,8 @@ CI build, `android/`, #389; no app change); hands session 05 done (2026-11-14: 1
 dottedPulse #392); hands session 16b done (2026-11-14: 102g, v169, no join
 a hole on any piece, #395; the listening set on `long-clips`); hands session 06
 done (2026-11-15: 101e, v170, colorTone, #396); hands session 07 done
-(2026-11-16: 101f, v171, planingSevenths, #397); hands session 08 under way
-(2026-11-16: 101g, v172 lowBell #398); next: 08's dropSpotlight, then 09
+(2026-11-16: 101f, v171, planingSevenths, #397); hands session 08 done
+(2026-11-16: 101g, v172 lowBell #398, v173 dropSpotlight #399); next: 09
 onward, and Mikey's testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:

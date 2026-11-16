@@ -25,7 +25,8 @@ use dlcore::generator::request::{BAD_SETTING, Request};
 use dlcore::generator::rng::Rng;
 use dlcore::player::host::Host;
 use dlcore::player::{Player, State};
-use dlcore::{CHORDS, Core, EXTRA, Key, LOWBELL as BELL, PAD, QUANTUM, Tap};
+use dlcore::blocks::{drum, low_bell};
+use dlcore::{BASS_CHANNEL, CHORDS, Core, DRUM, DRUMS_CHANNEL, EXTRA, Key, LOWBELL as BELL, PAD, QUANTUM, TUNEDKICK, Tap};
 
 fn roomy(f: impl FnOnce() + Send + 'static) {
     std::thread::Builder::new().stack_size(64 << 20).spawn(f).expect("a thread").join().expect("the test");
@@ -174,7 +175,7 @@ fn a_note_on_each_chord_whose_root_changes_at_the_root_s_pitch_class() {
         let mut g = Box::new(Generator::new());
         let (mut loops, mut strikes, mut changes) = (0, 0, 0);
         for (n, seed) in corpus(120).into_iter().enumerate() {
-            let text = if n % 2 == 0 { "lowBell.kind=struck,tuning.cents=0" } else { "lowBell.kind=swell,tuning.cents=0" };
+            let text = if n % 2 == 0 { "lowBell.kind=struck,lowBell.drops=today,tuning.cents=0" } else { "lowBell.kind=swell,lowBell.drops=today,tuning.cents=0" };
             g.load_with(seed, &ask(text));
             if g.settings().low_bell == 0 || g.render().form.is_some() {
                 continue;
@@ -232,7 +233,7 @@ fn never_in_a_full_stop_and_damped_there() {
         let mut g = Box::new(Generator::new());
         let mut stops = 0;
         for seed in corpus(400) {
-            g.load_with(seed, &ask("lowBell.kind=struck"));
+            g.load_with(seed, &ask("lowBell.kind=struck,lowBell.drops=today"));
             let r = g.render();
             if g.settings().low_bell == 0 || r.quiet.is_empty() {
                 continue;
@@ -241,7 +242,7 @@ fn never_in_a_full_stop_and_damped_there() {
             let bar = spec.steps_per_bar * 15.0 / spec.bpm;
             let total = spec.bars * bar;
             let quiet: Vec<f64> = r.quiet.iter().map(|&b| b as f64 * bar).collect();
-            let heard = play(seed, "lowBell.kind=struck", 1.0, 40);
+            let heard = play(seed, "lowBell.kind=struck,lowBell.drops=today", 1.0, 40);
             // The loop's first step, the player's `START` on.
             let start = 0.05;
             let into = |t: f64| ((t - start) % total + total) % total;
@@ -325,5 +326,155 @@ fn its_level_follows_the_chords_channel() {
         assert!(over > alone + 1.0, "louder over a louder chord layer");
         // Never past the most: 0.12 against the floor's 0.045.
         assert!(over - alone < 20.0 * (0.12f64 / 0.045).log10() + 0.1);
+    });
+}
+
+// ------------------------------------------------------------ dropSpotlight
+
+#[test]
+fn the_spotlight_goes_to_its_share_of_the_bell_s_loops_whose_floor_can_drop() {
+    roomy(|| {
+        let mut g = Box::new(Generator::new());
+        let (mut of, mut on, mut lean) = (0usize, 0usize, 0usize);
+        for seed in corpus(1500) {
+            g.load_with(seed, &ask("lowBell.kind=struck"));
+            let r = g.render();
+            let spb = g.spec().steps_per_bar;
+            let floor = r.drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame")) || r.bass.iter().any(|e| e.vel != 0.0);
+            let drops = floor && (g.spec().bars * spb / spb).floor() >= 4.0;
+            let spot = g.settings().spotlight;
+            if g.settings().low_bell != 0 && drops {
+                of += 1;
+                on += usize::from(spot);
+            } else {
+                assert!(!spot, "seed {seed}: no bell or no floor to drop, no spotlight");
+            }
+            g.load_with(seed, &ask("lowBell.kind=struck,mysterious"));
+            lean += usize::from(g.settings().spotlight);
+        }
+        let f = on as f64 / of as f64;
+        println!("dropSpotlight: {on} of {of} bell loops whose floor can drop ({f:.3}); {lean} with mysterious");
+        assert!(of > 800 && (f - LOWBELL.spotlight).abs() < 0.05, "{f:.3}");
+        assert!(lean > on, "mysterious leans it on");
+        g.load_with(corpus(1)[0], &ask("lowBell.kind=today,lowBell.drops=on"));
+        assert!(!g.settings().spotlight, "no bell, no spotlight, pinned or not");
+    });
+}
+
+/// A host that renders nothing and writes down the floor's notes (the kit's
+/// kicks and frame hits, every bass note: start and end), the other layers'
+/// note times, every low bell and every choke to the chords channel.
+#[derive(Default)]
+struct Drops {
+    frame: u64,
+    floor: Vec<(f64, f64)>,
+    music: Vec<f64>,
+    bells: Vec<(f64, u32)>,
+    chokes: Vec<(f64, f64)>,
+}
+
+impl Host for Drops {
+    fn frame(&self) -> u64 {
+        self.frame
+    }
+    fn key(&mut self, _: Key) {}
+    fn note(&mut self, voice: u32, channel: u32, time: f64, _: f64, dur: f64, _: f64, parts: u32, _: [f64; EXTRA]) {
+        if voice == BELL {
+            self.bells.push((time, parts));
+        } else if channel == BASS_CHANNEL {
+            self.floor.push((time, time + dur));
+        } else if channel == DRUMS_CHANNEL {
+            if (voice == DRUM || voice == TUNEDKICK) && matches!(parts, drum::KICK | drum::SOFTKICK | drum::FRAME) {
+                self.floor.push((time, time + 0.01));
+            }
+        } else if channel == CHORDS || channel == dlcore::MELODY {
+            self.music.push(time);
+        }
+    }
+    fn event(&mut self, channel: u32, e: Event) {
+        if channel == CHORDS && e.kind == CHOKE {
+            self.chokes.push((e.time, e.value));
+        }
+    }
+    fn damp(&mut self, _: u32, _: f64) {}
+    fn set(&mut self, _: u32, _: usize, _: usize, _: f64, _: f64) {}
+    fn route(&mut self, _: u32, _: usize, _: usize, _: Option<Tap>, _: f64) {}
+    fn param(&mut self, _: u32, _: u32, _: f64, _: f64, _: f64) {}
+    fn bass_lift(&mut self, _: f64) {}
+    fn space_range(&mut self, _: usize, _: f64, _: f64) {}
+    fn steal(&mut self, _: u32, _: Key, _: f64, _: f64) {}
+    fn fade_all(&mut self, _: f64, _: f64) {}
+}
+
+#[test]
+fn the_spotlight_strikes_in_the_drops_alone_on_their_first_beat_and_the_floor_damps_it() {
+    roomy(|| {
+        let mut g = Box::new(Generator::new());
+        let text = "floorDrop=shapes,lowBell.kind=struck,lowBell.drops=on";
+        let (mut loops, mut drops, mut caught, mut damped) = (0usize, 0usize, 0usize, 0usize);
+        for seed in corpus(160) {
+            g.load_with(seed, &ask(text));
+            if !g.settings().spotlight {
+                continue;
+            }
+            let spec = g.spec();
+            let bar = spec.steps_per_bar * 15.0 / spec.bpm;
+            let seconds = 60;
+            let mut player = Box::new(Player::new());
+            let mut host = Drops::default();
+            player.attach(&mut host, 48_000.0, true);
+            player.load(seed, &ask(text));
+            player.ready(&mut host);
+            while host.frame < seconds * 48_000 {
+                player.decide(&mut host);
+                host.frame += QUANTUM as u64;
+            }
+            // Between two times, a hit's 4 ms of humanizing jitter aside, and
+            // a note struck before them ringing a beat into them at most (the
+            // floor is what the bar strikes).
+            let out = |a: f64, b: f64| !host.floor.iter().any(|&(s, e)| s < b - 0.005 && (s >= a - 0.005 || e > a + bar / 4.0));
+            // Every strike is in a bar the floor leaves, and the spotlight's.
+            for &(t, parts) in &host.bells {
+                assert!(parts & low_bell::SPOT != 0, "seed {seed}: a bell at {t:.2} s not the spotlight's");
+                let b = 0.05 + ((t - 0.05) / bar + 1e-6).floor() * bar;
+                assert!(out(b, b + bar), "seed {seed}: a bell at {t:.2} s with the floor playing (bar {b:.2}, {bar:.3} s): bells {:?} chokes {:?} first floor {:?} {:?}", host.bells, host.chokes, host.floor.first(), host.floor.iter().filter(|f| f.1 > b - 3.0 && f.0 < b + 3.0).collect::<Vec<_>>());
+            }
+            // Every drop of two seconds or more after the floor has played,
+            // not a full stop, is struck on its first beat; each the bell
+            // rang in is damped as the floor comes back.
+            let first = host.floor.iter().map(|f| f.0).fold(f64::INFINITY, f64::min);
+            let mut b = 0.05 + bar;
+            while b + bar < seconds as f64 - 2.0 {
+                if b > first && !out(b - bar, b) && out(b, b + bar) {
+                    let mut end = b + bar;
+                    while out(end, end + bar) && end < seconds as f64 {
+                        end += bar;
+                    }
+                    let music = host.music.iter().any(|&m| m >= b - 1e-6 && m < b + bar);
+                    if end - b >= LOWBELL.spotlight_least - 0.001 && end < seconds as f64 - 1.0 && music {
+                        drops += 1;
+                        let struck = host.bells.iter().any(|&(t, _)| (t - b).abs() < 0.01);
+                        caught += usize::from(struck);
+                        let last = host.bells.iter().map(|&(t, _)| t).filter(|&t| t >= b - 0.01 && t < end).fold(f64::NEG_INFINITY, f64::max);
+                        if last.is_finite() && last + 5.5 > end {
+                            // By the floor's return (1.5 s), or before it by a full stop (0.25).
+                            assert!(host.chokes.iter().any(|&(c, v)| c > last && ((c - end).abs() < 0.05 && v == 1.5 || c < end && v == 0.25)), "seed {seed}: the drop {b:.2} to {end:.2} s not damped as the floor comes back: bells {:?} chokes {:?} floor {:?}", host.bells, host.chokes, host.floor.iter().filter(|f| f.1 > b - 3.0 && f.0 < end + 3.0).collect::<Vec<_>>());
+                            damped += 1;
+                        }
+                    }
+                    b = end;
+                    continue;
+                }
+                b += bar;
+            }
+            loops += 1;
+        }
+        println!("dropSpotlight: {loops} loops, {caught} of {drops} drops of 2 s or more struck on their first beat, {damped} damped as the floor came back");
+        assert!(loops > 10 && drops > 20, "{loops} loops, {drops} drops");
+        // A strike the budget has no room for is left out, and the build reads
+        // the floor bar by bar from its notes: a bar this host hears as
+        // empty, a note of the bar before ringing into it, starts the drop a
+        // bar later there (180 of 192 on its first beat when written).
+        assert!(caught as f64 >= 0.9 * drops as f64, "{caught} of {drops}");
     });
 }

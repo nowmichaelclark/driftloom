@@ -335,6 +335,12 @@ pub struct LowBellDraw {
     pub kind_vibes: &'static [(&'static str, Table)],
     /// The same root struck again after this many seconds.
     pub regap: f64,
+    /// dropSpotlight: the share of the bell's loops whose floor can drop
+    /// that strike it in the drops alone, before the vibes lean it; the
+    /// vibes; and the shortest drop it strikes in, in seconds.
+    pub spotlight: f64,
+    pub spotlight_vibes: Table,
+    pub spotlight_least: f64,
 }
 
 /// echoTime's settings (`[setting echo]`).

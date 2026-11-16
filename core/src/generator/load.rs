@@ -119,6 +119,9 @@ pub struct Load {
     /// in `choices::LOW_BELL_KINDS`: 0 none (most loops), 1 struck, 2 the
     /// swelling kind.
     pub low_bell: u8,
+    /// Whether it strikes in the floor drops alone (dropSpotlight, queue
+    /// item 101g).
+    pub spotlight: bool,
     /// The profile's pump, and its level (`setCharacterLevel`).
     pub pump: f64,
     /// Its level, stored against 1.0 as `echo_beats` is against 0.75.
@@ -154,6 +157,7 @@ impl Load {
         echo_beats: Biased::DEFAULT,
         tuning: 0.0,
         low_bell: 0,
+        spotlight: false,
         pump: 0.0,
         level: Biased::DEFAULT,
         bpm: 0.0,
@@ -197,6 +201,12 @@ impl Load {
         let chords = r.chords.iter().filter(|e| e.vel != 0.0).count();
         let kick = None;
         let space = spec.tone[1];
+        // The low bell (queue item 101g), for a loop that plays a chord; its
+        // spotlight where the floor can drop (the wander's floor drop: 4
+        // bars or more, and a kick or a bass for it to take out).
+        let bell = choices::low_bell_of(spec.seed, chords > 0 && r.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty()), v, p);
+        let floor = r.drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame")) || r.bass.iter().any(|e| e.vel != 0.0);
+        let drops = js::floor(total / spb) >= 4.0 && floor;
         Load {
             glass_scale: js::min(1.0, js::num(chords) / js::max(1.0, total / spb)),
             stab: on("dubStab").then(|| stab_of(spec.seed, busy)),
@@ -228,7 +238,8 @@ impl Load {
             },
             echo_beats: Biased::of(p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v))),
             tuning: choices::tuning_of(spec.seed, v, p),
-            low_bell: choices::low_bell_of(spec.seed, chords > 0 && r.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty()), v, p),
+            low_bell: bell,
+            spotlight: choices::spotlight_of(spec.seed, bell, drops, v, p),
             pump: cx.c.pump.unwrap_or(0.0),
             level: Biased::of(cx.c.level.unwrap_or(1.0)),
             bpm: spec.bpm,
@@ -266,6 +277,10 @@ impl Load {
         if self.low_bell != 0 {
             w.key("lowBell");
             w.str(choices::LOW_BELL_KINDS.get(usize::from(self.low_bell)).map_or("today", |k| k.0));
+        }
+        if self.spotlight {
+            w.key("lowBellDrops");
+            w.bool(true);
         }
         w.key("organ");
         or_null(w, self.organ.as_ref(), |w, o| w.nums(o));

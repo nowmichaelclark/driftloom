@@ -916,7 +916,7 @@ const _: () = assert!(PINS_MAX <= 128, "the pins' bits are a u128");
 
 /// The settings' pins, by number from `SETTING_PINS` (`js/pins.js`, the
 /// same order; append only).
-pub const SETTINGS: [&str; 21] = [
+pub const SETTINGS: [&str; 22] = [
     "arc.shape",
     "arc.period",
     "arc.from",
@@ -938,6 +938,7 @@ pub const SETTINGS: [&str; 21] = [
     "tuning.cents",
     "progression.kind",
     "lowBell.kind",
+    "lowBell.drops",
 ];
 
 /// The least and the most of several ranges: what a setting drawn from
@@ -1042,6 +1043,8 @@ impl Pins {
             "progression.kind" => Allowed::Words(super::planing::KINDS),
             // lowBell's kind: none, struck or swelling (queue item 101g).
             "lowBell.kind" => Allowed::Words(super::choices::LOW_BELL_KINDS),
+            // dropSpotlight: the bell on every chord, or in the drops alone.
+            "lowBell.drops" => Allowed::Words(super::choices::SPOTLIGHT_KINDS),
             _ => return None,
         })
     }

@@ -103,6 +103,9 @@ const SETTINGS = [
   // lowBell's kind (item 101g): none, struck or swelling, for a loop that
   // plays a chord (core/src/blocks/low_bell.rs).
   { name: 'lowBell.kind', words: ['today', ...ids(LOWBELL.kinds)] },
+  // dropSpotlight (item 101g): the bell on every chord (today), or struck in
+  // the floor drops alone ('on'), for a loop that plays it.
+  { name: 'lowBell.drops', words: ['today', 'on'] },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [

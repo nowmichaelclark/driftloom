@@ -14,7 +14,7 @@ use crate::block::Event;
 use crate::block::event::{CHOKE, RELEASE};
 use crate::blocks::own;
 use crate::blocks::midi_to_freq;
-use crate::blocks::{bass, color_tone, drum, kalimba, low_bell, pad_wow, struck, texture};
+use crate::blocks::{bass, color_tone, drum, kalimba, pad_wow, struck, texture};
 use crate::generator::data::{self, VOICE_COSTS};
 use crate::generator::js;
 use crate::generator::list::Biased;
@@ -582,11 +582,13 @@ impl Synth {
     /// plays only where the budget has its cost and the margin to spare, and
     /// holds nothing, so it never keeps another note out. Its level is the
     /// voice's own, from the chords channel it follows (`blocks::low_bell`).
-    pub fn low_bell<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, swell: bool) {
+    /// In a floor drop (`spot`, dropSpotlight) it steps forward, at the
+    /// spotlight sketch's level.
+    /// `parts` are the voice's (`low_bell::SWELL`, `SPOT`, `ALONE`).
+    pub fn low_bell<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, parts: u32) {
         if !self.budget.room(time, cost_or("lowbell", default_cost()) + YIELD_MARGIN) {
             return;
         }
-        let parts = if swell { low_bell::SWELL } else { 0 };
         self.note(host, key, LOWBELL, CHORDS, time, midi, LOW_BELL_RING, 1.0, parts, NONE);
     }
 
