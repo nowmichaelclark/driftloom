@@ -20,10 +20,15 @@
 //   notification. This file is fifteen seconds.
 //
 //   Level. A stream Chrome judges silent loses the session, so this is not
-//   digital silence: it is noise at roughly -62 dBFS RMS, inaudible under
-//   music but comfortably above the detector's threshold. That is also why
-//   it stays lossless — an MP3 encoder would discard a signal this quiet
-//   and hand back actual silence.
+//   digital silence. It was noise at roughly -62 dBFS RMS until v176, and
+//   Mikey heard it as a hiss behind every loop (2026-11-17): noise up to
+//   4 kHz, under the quiet passages. Now it is a 20 Hz sine at the same
+//   power (-60 dB, peak -57 dBFS; tools/keepalive.py writes it): the
+//   detector measures power, not pitch, so it clears the threshold as the
+//   noise did, and 20 Hz that quiet is far under hearing at any volume.
+//   Fifteen seconds is exactly 300 cycles, so the loop wraps without a
+//   click. That is also why it stays lossless — an MP3 encoder would
+//   discard a signal this quiet and hand back actual silence.
 //
 // The music itself goes straight to the speakers, untouched.
 
