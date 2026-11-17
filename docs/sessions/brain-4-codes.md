@@ -1,5 +1,7 @@
 # Brain session B4: export, the screens and the codes, checked; the albums again
 
+**Changed by brain B-parallel (2026-11-17), after #412:** Mikey's line on codes that may change (`docs/DECISIONS.md`, 2026-11-17) added to step 1.
+
 **Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" now names 18, 21 and 24, the ends of the long pieces', export's and codes' chains; Android may still be running (26 to 29), so its third step reads the Android prompts not yet run, and a flaw in the code format becomes a session before 1.0 freezes the codes, not before Android goes on.
 
 - **Model:** Opus 5.5. **Effort:** high. In the claude.ai Driftloom Project.
@@ -16,7 +18,7 @@ You are overseeing a run of hands sessions started from the prompts in docs/sess
 
 This session:
 
-1. Check sessions 16 to 24: 102's tuning against Mikey's notes; 106 (a jump to three hours in within a second; the screens against docs/PAINTER.md's rules); 104 (a file that decodes and nulls; flat memory; cancel and a full disk; nothing late in what plays); 105 (short codes; every pick round-trips; additions leave old codes as they sound: read the test with the dummy instrument closely, because codes freeze at 1.0 and this is the last chance to change the format). If the code format has a flaw, say so now and write the fix as a session before 1.0 freezes the codes (it runs alongside Android's sessions where the README's chains allow).
+1. Check sessions 16 to 24: 102's tuning against Mikey's notes; 106 (a jump to three hours in within a second; the screens against docs/PAINTER.md's rules); 104 (a file that decodes and nulls; flat memory; cancel and a full disk; nothing late in what plays); 105 (short codes; every pick round-trips; additions leave old codes as they sound: read the test with the dummy instrument closely, because codes freeze at 1.0 and this is the last chance to change the format). Hold the format to Mikey's line of 2026-11-17: short codes over sounding the same forever ("I don't want code rot"). Nothing in a code only to keep an old code's sound; a code naming something since removed (an instrument, an option) plays something close, not "needs a newer version" (today's reader refuses an unknown id: decide how a removed id is told apart from a newer one, without a longer code). If the code format has a flaw, say so now and write the fix as a session before 1.0 freezes the codes (it runs alongside Android's sessions where the README's chains allow).
 2. Make the albums again in the new codes: batch 6's, 84b's and the long pieces' (the old codes stopped working at session 23), and anything still out in docs/ALBUMS.md.
 3. Android runs alongside you (brain B-parallel's chains): check what of 26 to 29 has merged as the rest were checked, and read the Android prompts not yet run against F-Droid's current rules and what Mikey has decided (the package name, signing); adjust them.
 
