@@ -364,3 +364,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   keys) 18.0 to 13.2, **fum-doun** (#1982, accordion) 17.3 to 13.9, **fo-roan**
   (#1803, pad) 18.0 to 14.6, each from 0:00. A revert follows if Mikey hears
   worse.
+- #405, the checks a sound change needs, in minutes and in CI (2026-11-17;
+  Mikey's yes in session 10 to the rule). The core's tests optimized
+  (`[profile.test]` opt-level 3, debug assertions and overflow checks on):
+  `tools/gate.sh core` 6:55 to 1:22 locally, CI's `core` job 9:33 to 2:14
+  and `sketch` 14:10 to 1:54; the app's .wasm, the goldens, the baseline
+  and the seeds unmoved. The full `tools/longform.mjs` in CI: eight shards
+  (`--shard`, `--merge`), about 7 minutes, on PRs that touch the
+  generator, the player or `data/`; its table the one-process run's, check
+  for check. Main's table kept by the nightly and every push to main (the
+  `longform-table` artifact), and a PR's run held to it (`--against`:
+  "kept every check main kept"). The rule: the gate and the long pieces
+  read from CI, never run side by side at home.
