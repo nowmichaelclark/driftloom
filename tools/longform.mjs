@@ -259,15 +259,15 @@ const noDepths = ({ depths, ...v }) => v;
 /**
  * The run as pieces of work, in the order one run makes them: `run` plays
  * (in a shard), `finish` reads what the pieces before it found (in the
- * merge). `cost` is about how many seconds a piece takes on CI's runner,
- * for the shares; `group` keeps pieces that share a render in one shard.
+ * merge). `cost` is about how many seconds a piece takes on CI's runner
+ * (measured on PR #405's run: `--times` prints them), for the shares; `group` keeps pieces that share a render in one shard.
  */
 function work() {
   const w = [];
   const add = (name, cost, step, group) => w.push({ name, cost, group, ...step });
 
   for (const seed of seeds) {
-    add(`plan ${seed}`, 0.5, { run: () => {
+    add(`plan ${seed}`, 0.25, { run: () => {
       const r = { journeys: { arc: 0, wander: 0 }, grains: { section: 0, phrase: 0 }, pieces: 0, joins: {}, holds: { count: 0, seconds: 0, things: {} } };
       const { pieceMap } = L;
       for (const length of LENGTHS) {
@@ -342,7 +342,7 @@ function work() {
   const plans = w.map((_, i) => i);
 
   // What was asked is never moved (a few seeds: the Rust test walks more).
-  add('asked', 10, { run: () => {
+  add('asked', 6, { run: () => {
     for (const seed of seeds.slice(0, 20)) {
       for (const journey of JOURNEYS) {
         const map = (ask) => L.pieceMap(seed, `bars=endless,journey=${journey},${ask}`, 0, 1200);
@@ -363,7 +363,7 @@ function work() {
 
   // An arc lasts about as long in minutes at 50 bpm as at 150 (its spans are
   // set in time): the same seed asked both tempos.
-  add('tempos', 1, { run: () => {
+  add('tempos', 0.1, { run: () => {
     for (const seed of seeds.slice(0, 40)) {
       const at = (bpm) => L.pieceMap(seed, `bars=endless,journey=arc,bpm=${bpm}`, 0, 1).form;
       const [slow, fast] = [at(50), at(150)];
@@ -376,7 +376,7 @@ function work() {
   // A section's cost, timed: the map of 200 sections from section 1, from
   // 10^5 and from 10^9, the least of several runs each.
   const timedAt = w.length;
-  add('plan timed', 5, { run: () => {
+  add('plan timed', 2.5, { run: () => {
     const timed = {};
     for (const journey of JOURNEYS) {
       const request = `bars=endless,journey=${journey}`;
@@ -434,7 +434,7 @@ function work() {
       // The first two Endless pieces share their render with the sound
       // checks.
       const group = length === 'bars=endless' && WANDERED.indexOf(seed) < 2 ? 'wander sound' : undefined;
-      add(`played ${seed} ${request}`, 60, { run: () => {
+      add(`played ${seed} ${request}`, 40, { run: () => {
         const r = L.playedChecks(seed, request, 1500);
         if (length === 'bars=endless') moved.set(`${seed} ${request}`, r.moves);
         for (const name of ['at most one thing moves a section', "every move heard is one of the wander's things", 'nothing moves where the map draws nothing', "a move that can't glide starts on its line", 'every move the map draws is heard']) {
@@ -448,7 +448,7 @@ function work() {
   // Twenty lines at least, from as many pieces as that takes (two at least,
   // each over twenty minutes for its loudness).
   out.sound = w.length;
-  add('played, the joins and the loudness', 120, { run: () => {
+  add('played, the joins and the loudness', 165, { run: () => {
     const s = { joins: [], own: [], loud: [] };
     for (const seed of WANDERED) {
       if (s.joins.length >= 20 && s.loud.length >= 2) break;
@@ -467,7 +467,7 @@ function work() {
   // A section's making, timed natively (dlgen --section-cost): the same at
   // section 1, 10^4 and 10^9.
   out.wanderCosts = w.length;
-  add('played, a section\'s making', 60, { run: () => {
+  add('played, a section\'s making', 20, { run: () => {
     const costs = [];
     for (const seed of [7, ...seeds.slice(0, 3)]) {
       const line = dlgen(['--section-cost', String(seed), 'bars=endless,journey=wander']);
@@ -484,7 +484,7 @@ function work() {
   out.wanderBlocks = [];
   for (const seed of [7, ...seeds.slice(0, 3)]) {
     out.wanderBlocks.push(w.length);
-    add(`played, blocks ${seed}`, 30, { run: () => {
+    add(`played, blocks ${seed}`, 35, { run: () => {
       const blocks = [];
       for (const lite of [false, true]) {
         const text = L.dlrender(['--seed', String(seed), '--request', 'bars=endless,journey=wander', '--seconds', '300', '--costs', ...(lite ? ['--lite'] : [])]);
@@ -503,7 +503,7 @@ function work() {
   // own shape: each unit against the loop as itself on the same bars), the
   // first of them at the app's amount too for what is heard.
   const n = OPTIONS.arcs;
-  const sets = [['bars=64', n, 15], ['bars=256', Math.round(0.4 * n), 45], ['bars=1024', Math.max(1, Math.round(0.4 * 0.4 * n)), 180]];
+  const sets = [['bars=64', n, 9], ['bars=256', Math.round(0.4 * n), 35], ['bars=1024', Math.max(1, Math.round(0.4 * 0.4 * n)), 140]];
   out.arcs = [];
   for (const [length, count, cost] of sets) {
     for (const seed of seeds.slice(0, count)) {
@@ -533,7 +533,7 @@ function work() {
   out.heard = [];
   for (const seed of seeds.slice(0, Math.min(10, n))) {
     out.heard.push(w.length);
-    add(`arc heard ${seed}`, 15, { run: () => noDepths(L.arcVerdict(L.arcChecks(seed, 'bars=64,journey=arc', { wander: 1 }))) });
+    add(`arc heard ${seed}`, 9, { run: () => noDepths(L.arcVerdict(L.arcChecks(seed, 'bars=64,journey=arc', { wander: 1 }))) });
   }
   // The joins: every unit's line of two Endless arcs, twenty minutes each,
   // against the loop as itself in the same window (`arcJoins`: an arc has a
@@ -541,7 +541,7 @@ function work() {
   out.arcJoins = [];
   for (const seed of [7, seeds[1]]) {
     out.arcJoins.push(w.length);
-    add(`arc joins ${seed}`, 120, { run: () => {
+    add(`arc joins ${seed}`, 50, { run: () => {
       const joins = L.arcJoins(seed, 'bars=endless,journey=arc', 1200);
       const worst = joins.reduce((w, j) => (j.piece / j.loop > w.piece / w.loop ? j : w), joins[0]);
       check("arc played: no click at a line (each join within the loop's own step there, +25%)", joins.every((j) => j.piece <= 1.25 * j.loop + 0.002), `${seed} at ${worst.t.toFixed(1)} s: ${worst.piece.toFixed(4)} against ${worst.loop.toFixed(4)}`);
@@ -560,7 +560,7 @@ function work() {
   out.places = [];
   for (const { seed, name, at } of PLACES) {
     out.places.push(w.length);
-    add(`places ${name}`, 60, { run: () => {
+    add(`places ${name}`, 22, { run: () => {
       const request = 'bars=endless,journey=arc';
       const joins = L.arcJoins(seed, request, Math.ceil(Math.max(...at) + 20));
       const places = [];
@@ -585,7 +585,7 @@ function work() {
   out.arcCosts = [];
   for (const seed of [7, ...seeds.slice(0, 3)]) {
     out.arcCosts.push(w.length);
-    add(`arc costs ${seed}`, 90, { run: () => {
+    add(`arc costs ${seed}`, 125, { run: () => {
       const line = dlgen(['--section-cost', String(seed), 'bars=endless,journey=arc']);
       const us = [...line.matchAll(/=([\d.]+)us/g)].map((m) => Number(m[1]));
       check("arc played: a section's making costs the same at 10^9 as at 1 and 1,000", us[2] <= 2 * Math.max(us[0], us[1]) + 2, `${seed}: ${us.join(', ')} us`);
@@ -614,7 +614,7 @@ function work() {
     const seed = seeds[i];
     const request = asks[i % asks.length];
     out.endings.push(w.length);
-    add(`ending ${seed} ${request}`, 15, { run: () => {
+    add(`ending ${seed} ${request}`, 4, { run: () => {
       // A stop somewhere in the second to the fifth minute, by the seed.
       const { form } = L.pieceMap(seed, request, 0, 1);
       const bar = form.unitSeconds / form.unitBars;
@@ -832,7 +832,8 @@ if (flag('--times')) {
 }
 const TABLE = value('--table', null);
 if (TABLE) {
-  const commit = process.env.GITHUB_SHA ?? (() => { try { return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { return null; } })();
+  // The commit the table is of (CI names a PR's head, not its merge commit).
+  const commit = process.env.LONGFORM_COMMIT || (() => { try { return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { return null; } })();
   fs.writeFileSync(TABLE, `${JSON.stringify({ commit, date: new Date().toISOString().slice(0, 10), options: OPTIONS, checks: table.map(({ name, seen, failed, first }) => ({ name, seen, failed, first })) }, null, 1)}\n`);
 }
 const AGAINST = value('--against', null);

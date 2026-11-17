@@ -63,6 +63,10 @@ that changes how it sounds.
 - **The gate** (item 103): `tools/gate.sh` runs what CI holds a merge to
   (`core`, `sketch`, `node`, `baseline`, `docs`, or all); the slow renders
   are the nightly's (`.github/workflows/nightly.yml`) and hold nothing.
+  CI's run is the gate (Mikey, 2026-11-17): run a part locally only to find
+  a failure, and never two heavy runs at once (about 7 GB here). The long
+  pieces' full check is CI's `longform` workflow, in shards, against
+  main's table (`node tools/longform.mjs --shard`, `--merge`, `--against`).
 - Tests (Node 22): `worklet`, `core-host`, `data`, `dials`, `fit`,
   `golden`, `picks`, `quality`, `player`, each as
   `node test/<name>.test.mjs`. Those that read what the generator decides

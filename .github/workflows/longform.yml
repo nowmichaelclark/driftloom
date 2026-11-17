@@ -104,6 +104,8 @@ jobs:
           fi
       - name: The table, against main's
         shell: bash
+        env:
+          LONGFORM_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           against=()
           [ -f main/longform-table.json ] && against=(--against main/longform-table.json)
@@ -123,3 +125,24 @@ jobs:
             longform.txt
           retention-days: 90
           if-no-files-found: ignore
+
+  # TEMPORARY (PR #405 only, removed before merge): main's one-process tool,
+  # to compare its table with the shards' merge.
+  old-tool:
+    name: TEMP the old tool, one process
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: tools/build-core.sh --tools
+      - run: git show origin/main:tools/longform.mjs > tools/longform-old.mjs && node tools/longform-old.mjs | tee old.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: longform-old
+          path: old.txt

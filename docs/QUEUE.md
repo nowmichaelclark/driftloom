@@ -805,3 +805,12 @@ Mikey decides this line:
   means the fast gate (item 103: the `core` and `docs` workflows, locally
   `tools/gate.sh`); the nightly's slow renders (`nightly.yml`) never hold a
   merge, and a red nightly is fixed by the next session that sees it.
+- (Mikey, 2026-11-17, session 10) The gate is read from CI: green `core`
+  and `docs` workflows on the PR's last commit are the gate, and
+  `tools/gate.sh` locally is not required (CI runs the same script, side
+  by side, in about ten minutes); a session runs a part of it locally only
+  to find a failure. The long pieces' full check is read from CI too: on a
+  PR that moves what a loop plays, the `longform` workflow
+  (`.github/workflows/longform.yml`, `tools/longform.mjs` in shards) green
+  on the last commit, its table job saying it kept every check main kept.
+  Heavy checks never run side by side on Mikey's machine (about 7 GB).

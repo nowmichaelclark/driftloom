@@ -97,10 +97,13 @@ queue's standing rules and merge policy, and `core/AGENTS.md`.
   app change.
 - **Before each item,** look at `nightly.yml`'s latest run on `main` and
   fix a red one first. Never wait on the nightly.
-- **Merge under the policy:** `tools/gate.sh` green locally, the `core` and
-  `docs` workflows green in CI, and every check the prompt names passing.
-  Then merge your own PR and go on. Red or unfinished: don't merge, say
-  what fails.
+- **Merge under the policy:** the `core` and `docs` workflows green in CI
+  on the PR's last commit (the gate: `tools/gate.sh` locally is not
+  required, CI runs the same script), the `longform` workflow green where
+  it runs, and every check the prompt names passing. Then merge your own
+  PR and go on. Red or unfinished: don't merge, say what fails. Never run
+  two heavy checks at once on Mikey's machine (`tools/gate.sh`,
+  `tools/longform.mjs`, `tools/baseline.mjs`): it has about 7 GB.
 - **Measured, not guessed.** Where a musical choice is open, take the
   conservative option, write it in the PR and mark it "for Mikey's ears".
 - **Don't stop for Mikey.** Anything that needs his ears, his phone, his
@@ -138,9 +141,13 @@ queue's standing rules and merge policy, and `core/AGENTS.md`.
   into the code format (session 22).
 - **The long pieces hold** (brain B3, 2026-11-14: Mikey kept them as they
   are). A sound change that moves what a loop plays (a note, a hit, a
-  velocity: not a width or a tone) runs the full `node tools/longform.mjs`
-  (about an hour; the joins' hole yardstick, the endings and the arcs as
-  played) and keeps every check it kept on `main`; the joins read the kit
+  velocity: not a width or a tone) passes the full `node tools/longform.mjs`
+  (the joins' hole yardstick, the endings and the arcs as played) and keeps
+  every check it kept on `main`. CI runs it (`.github/workflows/longform.yml`:
+  eight shards, minutes, on any PR that touches `core/src/generator/`,
+  `core/src/player/` or `data/`; on any branch by hand), and its table job
+  compares with main's table (the nightly's, kept as an artifact): read it
+  there, never run it locally to compare with `main`; the joins read the kit
   (a fill is the loop's own snare or rim, a floor out its kit and bass), so
   a new kit is heard there too. Say in the PR what moved.
 - **Sound items** name, in their Done line, two corpus loops (corpus seed
