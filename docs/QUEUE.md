@@ -808,7 +808,7 @@ Mikey decides this line:
 - (Mikey, 2026-11-17, session 10) The gate is read from CI: green `core`
   and `docs` workflows on the PR's last commit are the gate, and
   `tools/gate.sh` locally is not required (CI runs the same script, side
-  by side, in about ten minutes); a session runs a part of it locally only
+  by side, in about five minutes); a session runs a part of it locally only
   to find a failure. The long pieces' full check is read from CI too: on a
   PR that moves what a loop plays, the `longform` workflow
   (`.github/workflows/longform.yml`, `tools/longform.mjs` in shards) green
