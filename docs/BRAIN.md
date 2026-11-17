@@ -300,20 +300,25 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   (said at its top); the merge-main rule in "Rules for every session".
   **Running:** see the sessions list below as it fills. This brain stops at
   B4 (`brain-4-codes.md`, the next brain's).
-  - Sessions: the plan merged (#409). **26 merged** (#411, 2026-11-17;
-    checked: five minutes native on the emulator, 0 underruns and 0 late,
-    the samples bit for bit the wasm's, Done line and row in). **22's PR
-    #412** green and merging when this was written (a loop with nothing
-    pinned 9 characters; every golden as a code; the dummy test bites with
-    the filter off; for B4: no custom name or slider setting in a code, and
-    settings' own pools in Rust not yet version-filtered). **17** proposed
-    as a card (the app starts a session only on Mikey's own words in this
-    chat, not from a session's report: he clicks the card or says "start
-    it"). Both sessions stopped once at the usage limit and resumed on a
-    message. The Android emulator's smoke job flakes (twice, two races in
-    `android/smoke.mjs`); 27's prompt now fixes it first. Next: 17 (twang
-    first), then 20 beside it; 23 after 22 once 17 and 20 are done (it
-    shares `js/gen.js` with 17, `js/main.js`'s actions with 20); 27 after 17.
+  - Sessions (as of 2026-11-18): **merged and checked** 26 (#411: five
+    minutes native on the emulator, 0 underruns, 0 late, samples bit for
+    bit the wasm's); 22 (#412, v178: a loop with nothing pinned 9
+    characters, every golden as a code, the dummy test bites with the
+    filter off; for B4: no custom name or slider setting in a code, the
+    settings' own pools in Rust not version-filtered, and Mikey's
+    2026-11-17 line on removed ids); 17 (#414 twang soft, v179: 239
+    goldens moved, every one a slow or bright twang loop, nothing else;
+    #417 the jump, v180: heard 0.059 s after asked, 0 late, the notes bit
+    for bit playing's on six loops, the audio within -12 dB of playing,
+    explained by twang's strings' and the organ's free-running phase); 20
+    (#416, v181: green on every check, the three-hour export included).
+    **Running:** 18 (long pieces on screen, Sonnet) and 27 (Android's
+    bridge; first fixes `android/smoke.mjs`'s flake). **Next:** 21 when a
+    place frees (beside 18 or 27), 23 once 18 is done (it shares
+    `js/library.js`), then 24; 28 after 27 and 21; 29; B4 after 18, 21, 24.
+    Sessions started from a report's turn come to Mikey as cards (the app
+    starts one only on his words here); sessions end a turn while CI runs,
+    so the brain wakes them to merge.
   - **Mikey heard the Batch 6 Album (2026-11-17)** and B-parallel read his
     verdicts from its db: every sound Keep but twang (soft only: session
     17's first PR, since 22 is in `data/`); 84b chosen 5 of 6, the control
