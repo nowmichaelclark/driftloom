@@ -63,10 +63,10 @@ done (2026-11-15: 101e, v170, colorTone, #396); hands session 07 done
 session 09 done (2026-11-16: 101h, v174 twang #400; the batch's locks
 #401: the balance lock re-baselined, unchanged since session 07; then
 Mikey's two calls, v175 #402: batch 6's draws count against a loop's
-changes, way A of `docs/notes/101h-change-counts.md`, and twang picks a
+changes, way A of `docs/archive/notes/101h-change-counts.md`, and twang picks a
 beat apart); hands session 10 done (2026-11-17: 84b, v177, the chords a
 fifth under the tune where 84's whole octave left them past an octave, #404);
-next: B2 onward, and Mikey's testers' pastes
+brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); next: session 17 onward, Mikey's album, and his testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.

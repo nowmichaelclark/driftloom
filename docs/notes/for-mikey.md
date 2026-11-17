@@ -14,6 +14,26 @@ the points where the next step is yours.
 
 ## The listening album
 
+- **The Batch 6 Album (brain B2, 2026-11-17, v177): start here.** One page,
+  <https://claude.ai/artifact/3zgBGFPzidGMt3wr1SQwzP>, about 28 minutes, on
+  headphones at one volume; your picks save as you tap. First fifteen cards,
+  every batch 6 sound on two or three of its own loops: **Keep, Tune or
+  Drop**, and a note for what to change. Each card's first loop has a **With /
+  Without** switch that keeps the moment, so you can hear just that sound
+  come and go, and each card names the taste calls the hands left for your
+  ears (the entries below, one a sound): how often, how loud, which way. Then
+  seven **blind pairs** for 84b, the chords nearer the tune against the build
+  before, matched in loudness, one pair a control: pick X, Y or Same. Listen
+  for whether the chords sitting nearer the tune sound better, worse or the
+  same. The hands go on meanwhile with the long pieces on screen (sessions 17
+  and 18), so nothing waits on you; your answers become small data changes.
+- **84b's far-off held chords (the brain's call, B2, for you after the
+  album):** 88 of 2,000 loops still have their chords more than an octave
+  under the tune, mostly loops with held chords. They stay as they are for
+  now: the one way that brought them nearer let a change of tempo move their
+  octave in 6 loops, the very flip item 84 was built to stop. If the pairs
+  tell you nearer is clearly better, say whether those 88 matter to you;
+  bringing them nearer needs a new way to read their octave, a later item.
 - **Phase 3 Control (brain B1; fixed at v155):** six loops, one album code,
   in the app before phase 3 (**Before**) and today's (**Now**, the live
   site). Code and links in `docs/ALBUMS.md`. On the Moto (it stays at full),
@@ -113,7 +133,7 @@ the points where the next step is yours.
   yardstick's 14 to 19), under 60 Hz unchanged. Back to together is one
   line of `data/choices.txt`, `[setting twang] spread = 0`. Also decided
   then: **how many changes a loop gets** (A in
-  `docs/notes/101h-change-counts.md`): batch 6's nine draws now count
+  `docs/archive/notes/101h-change-counts.md`): batch 6's nine draws now count
   against the changes a loop drew and the list fills what they leave, so
   78.5% of loops get one or two changes (52% before v175, 75% before batch
   6) and 16.6% three or more. It changes the choices of 56% of the loops
@@ -219,7 +239,7 @@ the points where the next step is yours.
   chord at 5:25 now sounds but dies away within a bar (that voice's own
   decay), so the last second before the peak is still thin. Both are the
   variations' and the voice's, not the joins'; say if either bothers you.
-- Batch 6's and 84b's: brain session B2. B4 makes the albums again in the new codes.
+- B4 makes the open albums again in the new codes (version 2).
 - **The chords nearer the tune (84b, session 10, #404):** where item 84 had
   dropped the chords a whole octave, 12 to 17 semitones under the tune, they
   now sit about a fifth under it, a few of each chord's top notes moved

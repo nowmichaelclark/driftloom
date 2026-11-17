@@ -6,6 +6,19 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B2, batch 6 and 84b checked and made into an album (Opus 5.5,
+2026-11-17).** On `main` at v177 (686543d): the module, the goldens and the
+balance lock as stored; all 35 album loops drawing their sounds; the change
+counts at 78.7% one or two by my own count; 84b's figures exactly; five
+spot checks with `tools/clips.mjs` (twang, lowBell, widePad, deepDuck in
+their yardsticks; colorTone on luir-wo 1.5 LU quieter than the batch's band,
+put to Mikey's ears). The 88 far-off held-chords loops left as they are (the
+brain's call; Mikey asked after the album). The "Batch 6 Album" page
+published (15 labeled cards with a With / Without switch, seven blind pairs,
+v176 against v177). #402's and #405's rules recorded in `docs/DECISIONS.md`;
+`docs/notes/101h-change-counts.md` archived. Prompts 17 and 22 adjusted for
+batch 6. The full "Start here" bullet is in `docs/BRAIN.md`.
+
 **Brain B3, long pieces checked and heard (Opus 5.5, 2026-11-14).** On
 `main` at v164 (88c98be): item 102 against the brief, LONGFORM and promise
 11 (every check in `docs/notes/102-b3-measured.md`); then every clip of the
@@ -1224,6 +1237,73 @@ moved whole at Session 28's archive pass.
   holds nothing) -- under the charter they may become the first
   instruments built as recipes; vibe tuning from the loops Mikey sends
   (`data/vibes.txt`, the brain's to edit).
+
+## Start here before B2
+
+Brain B1's bullets as they stood in `docs/BRAIN.md` until 2026-11-17:
+
+- **Brain B1 (Opus 5.5, 2026-11-11): the road to 1.0's kickoff.** The plan
+  is `docs/sessions/README.md`; each brain session has its prompt there.
+  **Checked on `main` at v153 (d9d6ffe), not taken from the reports:** items
+  97 and 100 (the queue's item 98 has the figures); the plain lines and the
+  too-slow rule: the switch to lite resets the count and skips 5 s of
+  warm-up, and the tablet (busiest about 55% of its time on lite) needs to
+  run about 1.8 times slower for 2 s in 20 to trip it, so it is safe today;
+  the margin is now a rule for every session (the README). **The control
+  album** ("Phase 3 Control", `docs/ALBUMS.md`) is out; 28 of 30 renders
+  null, two differ after a silent bar (session 01 explains). **The plan
+  reviewed:** sessions 11 and 14 on Fable 5.2; the long pieces' brief gained
+  the slider and pins rules, time not sections, endings that land,
+  movements, three musical ideas, the cost on the audio thread, and the
+  listening set as rendered excerpts with a blind before-and-after pair;
+  session 31a (the new name) added; smaller fixes in 01, 09, 22, 24, 25, 29,
+  30, 31 and B3, each file saying what changed at its top. **Mikey decided**
+  (`docs/DECISIONS.md`, 2026-11-11): the two plain lines shorter; the melody
+  twang after 1.0; the app is renamed at 1.0, a surprise for the testers, so
+  the name stays out of the repo (it is in the Project's private doc
+  `claude/new-name-at-1-0.md`, with the brain's plan: domain at Cloudflare
+  Registrar, release id from the domain, test builds on a working id).
+  **After B1:** hands session 01 done (#360 v154, #361 v155): the stall
+  table clean; the control's two loops were the width ceiling after a rest,
+  fixed; the brain re-rendered all 30 against v149: every loop -82 dB or
+  lower. Underruns can only be answered by the phones (no `playoutStats`
+  in Chromium 153): `docs/notes/98-testers.md`. Session 02 done (#363,
+  v156, run on Mikey's own machine): the brain checked that all 751 moved
+  golden cases (of 5,132) draw a new option (slow 415, deep 195, wide 117,
+  fast 45) and none that draws one stayed; goldens and balance lock pass;
+  the refusals moved a little (bass asked 1,368 to 1,352; lite chords
+  refused 1,187 to 1,165), from slow openings, nothing worse. Its three
+  choices (how often, the calm vibes, deepDuck's depth) wait for Mikey's
+  ears at B2. Session 03 done (#366 to #369, v159): the brain checked that
+  the stack fix (#368) moved no golden, seed or baseline; that against
+  v156's generator every one of 5,132 cases is the same apart from padWow's
+  choice (on in 776) and the load's tuning; tuningOffset on 168 of 1,000
+  corpus loops, 15 to 35 cents; goldens and balance lock pass. padWow moves
+  three baseline loops' mix past 0.2 LU, as the approved sketch does: for
+  Mikey's ears at B2. **Order changed 2026-11-12** (Mikey): the long pieces
+  (11 to 15, 11 and 14 on Fable) before batch 6's 04 to 10. **Next:**
+  session 11. Session 11 done (#373, v160): the brain checked the goldens
+  unchanged (5,135), `tools/longform.mjs` all passing, and read maps: arcs
+  sound in shape; the wander's longest stretch with nothing moving reached
+  about 400 s (to session 12); a 3,072-bar piece was 21 alike movements, so
+  movements differ in kind (Mikey, to session 14). Session 12 done (#375,
+  v161): goldens unchanged, the module matches its source; the longest
+  stretch with nothing moving now 300 s (was 587); the stall test clean on
+  two wander pieces in Chromium (autolite's slow case can't ask a journey
+  yet). The wander's tune hand-over waits for theme B: turned on in session
+  14. Session 13 done (#377, v162): two yardsticks short (brightness 87%
+  of 9 in 10; one 2.7 LU step); Mikey merged it as it is. The brain checked
+  main after: module matches, goldens 5,135 of 5,135. The step goes to
+  session 15. Session 14 (#379, v163): brightness order 77% (9 in 10
+  asked), from the variations by design; the brain checked CI all green on
+  its last push (baselines included) and every moved golden (120) a long
+  piece or Endless; recommended merging; Mikey merges. Session 15 judges
+  brightness on the opening, the peak and the close. **Next:** session 15,
+  then brain B3.
+- **Not done in B1:** the commit previews couldn't be fetched from here (no
+  approval for WebFetch while Mikey was away); the v149 link in the album is
+  from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
+  left to CI (green on `main`).
 
 ## History
 

@@ -324,7 +324,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   candidate's two album loops checked to still draw it; how many changes a
   loop now gets with all of the batch in (52% one or two, 43% three or
   more) left for Mikey with three measured ways back
-  (`docs/notes/101h-change-counts.md`). The batch's table (each candidate,
+  (`docs/archive/notes/101h-change-counts.md`). The batch's table (each candidate,
   its options, its share, its two loops) is in the PR.
 - #402, Mikey's two calls for batch 6 (item 101h, 2026-11-17, v175), preview
   URL: the branch's preview (no hash kept). **twang** picks a chord's three

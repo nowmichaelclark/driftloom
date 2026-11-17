@@ -42,9 +42,9 @@ says the work goes on meanwhile.
 | 06 | `06-batch6-color.md` | 101e: colorTone | Opus 5.5, high | yes, 2026-11-15 (#396) |
 | 07 | `07-batch6-planing.md` | 101f: planingSevenths | Opus 5.5, high | yes, 2026-11-16 (#397) |
 | 08 | `08-batch6-low-bell.md` | 101g: lowBell, dropSpotlight | Opus 5.5, high | yes, 2026-11-16 (#398, #399) |
-| 09 | `09-batch6-twang.md` | 101h: twang; the batch's locks | Opus 5.5, high | yes, 2026-11-16 (#400, #401; then Mikey's calls, 2026-11-17, #402: the change counts, `docs/notes/101h-change-counts.md`, and twang a beat apart) |
+| 09 | `09-batch6-twang.md` | 101h: twang; the batch's locks | Opus 5.5, high | yes, 2026-11-16 (#400, #401; then Mikey's calls, 2026-11-17, #402: the change counts, `docs/archive/notes/101h-change-counts.md`, and twang a beat apart) |
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | yes, 2026-11-17 (#404) |
-| B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | |
+| B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | yes, 2026-11-17 (the Batch 6 Album, `docs/ALBUMS.md`; 17 and 22's prompts adjusted) |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
 | 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | yes, 2026-11-14 (#385; the second set on `long-clips`) |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | |
@@ -228,6 +228,7 @@ Things earlier sessions learned:
   run (200 pieces, about 90 minutes on four cores; the nightly's `holes`
   job); `--endless 20 --long 4` for a look. A sound change that moves what a
   loop plays can move which joins fall back: say so in the PR.
+- Under way A (v175) a batch 6 draw pinned to today frees a change the list then fills: to hear a loop without one of them, pin the filled one off too (brain B2: wen-glui `tuning.cents=0,arc=today`); `tools/gen-lib.mjs`'s `parts()` shows it (`choices`, and the `load` part's `tuning`, `lowBell`, `lowBellDrops`, `twang`).
 - There is one generator and one engine, the core's (item 97). A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.

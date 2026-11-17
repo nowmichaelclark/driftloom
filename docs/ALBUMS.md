@@ -4,6 +4,37 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
+## "Batch 6 Album" (brain B2, 2026-11-17, v177; items 101 and 84b) -- out
+
+Page: <https://claude.ai/artifact/3zgBGFPzidGMt3wr1SQwzP> (private to its
+owner; verdicts in its database, collection `verdicts`, one document a card,
+a pair and `free`; the blind key in `brain/key`, which the page never shows).
+About 28 minutes, headphones. Rendered by the brain with `tools/clips.mjs`
+(the core's `dlrender`, stereo, wander 1, corpus seed 20261009), Opus 96 kbps.
+
+- **Labeled, Keep / Tune / Drop (15 cards, 44 clips, about 22 minutes):**
+  batch 6's sounds, wideSweep's and dottedPulse's two versions on cards of
+  their own, from main at v177 (686543d), each on the loops `docs/DONE.md`
+  names (#402's five far-end loops for deepDuck, fast and slowOpening). Each
+  card's first loop has a With / Without switch that keeps the moment; the
+  Without is the same request with the sound pinned to today's
+  (`subDuck=today`, `tuning.cents=0`, `lowBell.kind=today`, ...). Under way A
+  a batch 6 draw pinned off frees a change the list then fills, so that one
+  is pinned off too (wen-glui `arc=today`, weith-yo `organ=today`): checked,
+  every Without differs from its With in the sound alone. Card ids:
+  `deepDuck`, `wideSweep-wide`, `wideSweep-fast`, `slowOpening`,
+  `tuningOffset`, `padWow`, `widePad`, `tripletKit`, `dottedPulse-pulse`,
+  `dottedPulse-kick332`, `colorTone`, `planingSevenths`, `lowBell`,
+  `dropSpotlight`, `twang`.
+- **Blind, 84b against the build before (7 pairs, about 6 minutes):** the six
+  movers #404 names (shu-san, glai-thel, youn-ti, theim-rem, fum-doun,
+  fo-roan, 28 s from 0:00, glai-thel from 0:01) and a control, thuing-huim
+  (corpus #5), bit for bit the same on both builds; v176 (380ca7f) against
+  v177, each pair matched to its quieter side's integrated loudness (gains
+  0.00 to 0.14 dB: 84b moves the loops' loudness that little). Order and X / Y
+  by a fixed seed, kept in `brain/key`; written here once he has answered.
+  Pick X, Y or Same.
+
 ## "Long Pieces Album" (brain B3, 2026-11-14, v164; item 102) -- heard 2026-11-14
 
 Page: <https://claude.ai/artifact/5G7YcuFc7iRvCNz8JtT4VD> (private to its

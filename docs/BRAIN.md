@@ -287,10 +287,47 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-14
+## State -- 2026-11-17
 
 ### Start here (for the next brain)
 
+- **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
+  out.** On `main` at v177 (686543d), measured, not taken from the reports:
+  the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the
+  balance lock's 22 figures; CI green on main (the nightly last ran before
+  #400). **Every album loop** `docs/DONE.md` names (35, corpus 20261009)
+  still draws its sound at v177. **The change counts**, my own count over
+  10,000 loops (the list's changes, plus tuning, planing, lowBell and twang
+  read from `parts()`): 4.7% none, 39.3% one, 39.4% two, 15.2% three, 1.3%
+  four or more, 78.7% one or two (#402: 78.5%). **84b** reproduces exactly
+  (`octave.mjs --seed 20261009`: median gap 9.2, 100 over 12.5, 88 of them
+  moved down; no flips). **Spot checks, part = with minus without:** twang
+  bright on he-rosk 16.4 LU under the loop (yardstick 14 to 19); lowBell
+  struck on weith-yo 20.8 (14 to 22); colorTone on luir-wo **23.5, 1.5 under
+  the band** (its PR found grove 0.4 under; on the album as "quiet, say Tune
+  if you can't hear it"); widePad on loa-yer the fold within 0.001 LU, the
+  mix's side under 120 Hz -39 dB, correlation p5 0.81, its side above 250 Hz
+  -21.7 to -14.0 dB; deepDuck on vor-the's bass stem against the same stem
+  without, 13 dB at its deepest, 9 at 50 ms, back within 1 dB by 0.5 s (the
+  approved sketch's shape). 101c and 101f left no stop notes: both built
+  whole (widePad's late kind in #387; the tune follows the planed chords in
+  #397). **Decided by the brain:** 84b's 88 far-off loops stay (the only way
+  nearer flipped 6 octaves with the tempo); after the album, if nearer
+  clearly wins, ask Mikey whether they matter (a new flip-free read, a later
+  item). **The page:** "Batch 6 Album" (`docs/ALBUMS.md`; verdicts in its db
+  `verdicts`, the key in `brain/key`): 15 labeled cards with a With /
+  Without switch, and 84b's six movers plus a null control as blind pairs,
+  v176 against v177, level-matched. **Learned:** under way A, pinning a
+  batch 6 draw to today frees a change the list fills (wen-glui gains the
+  arc), so a Without pins that one off too. **Prompts:** 17 (what a jump
+  must do with batch 6's time and memory) and 22 (what version 2 carries
+  from batch 6, and the two couplings) adjusted; the rest read and right.
+  **Recorded:** #402's two calls and #405's checks in CI. **Next:** hands
+  session 17, then 18; when Mikey's verdicts are in, a brain session (or
+  the next hands session's first PR, for data lines) turns Tune and Drop
+  into `data/choices.txt` changes. Scratch renders were local
+  (`core/target/b2`), not kept; the method is `tools/clips.mjs` with request
+  pins, and `dlrender --stem` for a part's stem.
 - **Brain B3 (Opus 5.5, 2026-11-14): item 102 checked, heard, and briefed.** On `main` at v164 (88c98be), measured, not taken
   from the reports: module matches (801,267 bytes); goldens 5,135; balance
   lock; 15 short loops bit for bit as at dfe78c3; 27 Rust tests (straight or
@@ -315,68 +352,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   (for-mikey). **Next:** 04 onward; brain B2 after batch 6. B3's
   scratch scripts were not kept; the method (Methods): render the same span
   at dfe78c3 and now, compare unit by unit and join by join.
-- **Brain B1 (Opus 5.5, 2026-11-11): the road to 1.0's kickoff.** The plan
-  is `docs/sessions/README.md`; each brain session has its prompt there.
-  **Checked on `main` at v153 (d9d6ffe), not taken from the reports:** items
-  97 and 100 (the queue's item 98 has the figures); the plain lines and the
-  too-slow rule: the switch to lite resets the count and skips 5 s of
-  warm-up, and the tablet (busiest about 55% of its time on lite) needs to
-  run about 1.8 times slower for 2 s in 20 to trip it, so it is safe today;
-  the margin is now a rule for every session (the README). **The control
-  album** ("Phase 3 Control", `docs/ALBUMS.md`) is out; 28 of 30 renders
-  null, two differ after a silent bar (session 01 explains). **The plan
-  reviewed:** sessions 11 and 14 on Fable 5.2; the long pieces' brief gained
-  the slider and pins rules, time not sections, endings that land,
-  movements, three musical ideas, the cost on the audio thread, and the
-  listening set as rendered excerpts with a blind before-and-after pair;
-  session 31a (the new name) added; smaller fixes in 01, 09, 22, 24, 25, 29,
-  30, 31 and B3, each file saying what changed at its top. **Mikey decided**
-  (`docs/DECISIONS.md`, 2026-11-11): the two plain lines shorter; the melody
-  twang after 1.0; the app is renamed at 1.0, a surprise for the testers, so
-  the name stays out of the repo (it is in the Project's private doc
-  `claude/new-name-at-1-0.md`, with the brain's plan: domain at Cloudflare
-  Registrar, release id from the domain, test builds on a working id).
-  **After B1:** hands session 01 done (#360 v154, #361 v155): the stall
-  table clean; the control's two loops were the width ceiling after a rest,
-  fixed; the brain re-rendered all 30 against v149: every loop -82 dB or
-  lower. Underruns can only be answered by the phones (no `playoutStats`
-  in Chromium 153): `docs/notes/98-testers.md`. Session 02 done (#363,
-  v156, run on Mikey's own machine): the brain checked that all 751 moved
-  golden cases (of 5,132) draw a new option (slow 415, deep 195, wide 117,
-  fast 45) and none that draws one stayed; goldens and balance lock pass;
-  the refusals moved a little (bass asked 1,368 to 1,352; lite chords
-  refused 1,187 to 1,165), from slow openings, nothing worse. Its three
-  choices (how often, the calm vibes, deepDuck's depth) wait for Mikey's
-  ears at B2. Session 03 done (#366 to #369, v159): the brain checked that
-  the stack fix (#368) moved no golden, seed or baseline; that against
-  v156's generator every one of 5,132 cases is the same apart from padWow's
-  choice (on in 776) and the load's tuning; tuningOffset on 168 of 1,000
-  corpus loops, 15 to 35 cents; goldens and balance lock pass. padWow moves
-  three baseline loops' mix past 0.2 LU, as the approved sketch does: for
-  Mikey's ears at B2. **Order changed 2026-11-12** (Mikey): the long pieces
-  (11 to 15, 11 and 14 on Fable) before batch 6's 04 to 10. **Next:**
-  session 11. Session 11 done (#373, v160): the brain checked the goldens
-  unchanged (5,135), `tools/longform.mjs` all passing, and read maps: arcs
-  sound in shape; the wander's longest stretch with nothing moving reached
-  about 400 s (to session 12); a 3,072-bar piece was 21 alike movements, so
-  movements differ in kind (Mikey, to session 14). Session 12 done (#375,
-  v161): goldens unchanged, the module matches its source; the longest
-  stretch with nothing moving now 300 s (was 587); the stall test clean on
-  two wander pieces in Chromium (autolite's slow case can't ask a journey
-  yet). The wander's tune hand-over waits for theme B: turned on in session
-  14. Session 13 done (#377, v162): two yardsticks short (brightness 87%
-  of 9 in 10; one 2.7 LU step); Mikey merged it as it is. The brain checked
-  main after: module matches, goldens 5,135 of 5,135. The step goes to
-  session 15. Session 14 (#379, v163): brightness order 77% (9 in 10
-  asked), from the variations by design; the brain checked CI all green on
-  its last push (baselines included) and every moved golden (120) a long
-  piece or Endless; recommended merging; Mikey merges. Session 15 judges
-  brightness on the opening, the peak and the close. **Next:** session 15,
-  then brain B3.
-- **Not done in B1:** the commit previews couldn't be fetched from here (no
-  approval for WebFetch while Mikey was away); the v149 link in the album is
-  from `docs/DONE.md` (old commit previews stay live). Cargo's own tests were
-  left to CI (green on `main`).
+- Brain B1's "Start here" bullets (the road's kickoff, sessions 01 to 15 as checked): `docs/archive/brain-log.md`, "Start here before B2".
 - Sessions 29 and 30's "Start here" bullets (phase 2's proof, phase 3's
   items, the road to 1.0 written): `docs/archive/brain-log.md`, "Start here
   before B1".
