@@ -1,5 +1,7 @@
 # Session 23: codes, version 2, in the app (105b)
 
+**Changed by brain B-parallel (2026-11-18), after Mikey's answers (#421):** a loop's name travels with its code, so a first PR in the core adds the name to version 2 before the app moves to it.
+
 **Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 22; what may run beside it is new.
 
 - **Model:** Opus 5.5. **Effort:** high.
@@ -14,6 +16,10 @@ Hands session 23 on the road to Driftloom's 1.0 (Opus 5.5, high): codes, version
 Read first: AGENTS.md; docs/sessions/README.md (the order, and "Rules for every session": they are part of this prompt); docs/QUEUE.md (status, standing rules, merge policy, item 105); docs/PAINTER.md ("Share codes, version 2"); docs/DECISIONS.md (2026-10-12 and 2026-10-29: old codes may break, no compatibility bloat); session 22's PR and core/README.md's format; js/share.js, js/storage.js, js/library.js, js/main.js (share, paste, albums, the Library, backups); docs/ALBUMS.md; tools that read codes (tools/dials.mjs, tools/wordalbum.mjs, tools/stalls.mjs, tools/rows.mjs, tools/ranks.mjs, rank.html).
 
 Check your place: in docs/sessions/README.md every row above session 23 should be ticked, apart from rows the table says may run meanwhile. If one is not, stop and say so. If this file has a "Left" list at its top, an earlier session with this prompt stopped partway: start from that list.
+
+First, its own PR in the core (Mikey, 2026-11-17, docs/DECISIONS.md, "Share codes, requests and exports"): a renamed loop's name travels with its code, for loops and albums both, in any language and with emoji ("let's go with all characters and emojis"). Version 2 (#412, core/src/code.rs, core/README.md's format) has no such field yet: add it as an optional field, costing nothing when a loop has no name of its own. The decision's sketch is a starting point, not a design: the name as its UTF-8 bytes in the code's 64 link-safe characters (the core's output stays ASCII); invisible and control characters, direction overrides and piled-up combining marks refused; a cap in bytes, stated. Also hold the format to Mikey's line of the same day ("I don't want code rot": nothing in a code only to keep an old one's sound). Round-trip tests (Thai, emoji, the cap, the refusals, fuzzed), golden codes updated, the exports and the header, core/README.md. Merge it under the policy; then the app.
+
+Then the app's PR: the app's rename box allows what a code can carry, and no more.
 
 The work, one PR (BUILD and CACHE): the app speaks version 2 and only version 2. js/share.js's version 1 goes (no shims: Mikey, 2026-10-29), replaced by the core's encode and decode through js/gen.js's instance.
 
