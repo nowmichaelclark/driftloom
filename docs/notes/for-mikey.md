@@ -148,39 +148,8 @@ the points where the next step is yours.
 
 ## Decisions
 
-- **A shared loop's name (codes, version 2, session 22, #412):** the new
-  codes carry what a loop sounds like, not the name you gave it, nor the
-  length slider's setting (version 1's codes carried both). So a friend who
-  opens your code sees its own generated name. Say if you want a renamed
-  loop's name to travel with its code; a field can still be added before
-  1.0 (the brain's B4 looks at the format closely before it freezes). A code
-  carries no app name either: the app shows "needs a newer version" with its
-  own name, so a rename never touches a code.
-
-- **The export sheet's words (item 104b, session 20, #416):** approve or
-  change them (all in one place, `WORDS` in `js/export.js`). Choosing:
-  "Save what plays as an audio file, to keep or to play anywhere." /
-  "Lossless: full quality, as a FLAC file." / "How much" (1, 5, 10, 30 min,
-  1, 2, 3 h; "as it plays" where the length slider is set; "The whole
-  piece, …" for a finite piece) / "About 39 MB." / "You choose where it
-  goes." or "It downloads when it is done." / "Lighter on processor is on,
-  so it goes gently: slower, and the music never stutters." or "It goes as
-  fast as this device safely can." While it runs: "40% done, about 3 min
-  left." / "It keeps going in the background while the music plays.
-  Closing Driftloom stops it, and nothing is saved." Done: "Saved: NAME.flac,
-  12 MB, 10 min." with save, open, share. Failed: "There isn't enough free
-  space for this: it needs about 1.2 GB, and this device has about 800 MB. A
-  shorter length would fit." / "This device ran out of space before the
-  export finished, so nothing was saved. Free some space, or try a shorter
-  length. The music wasn't touched." / "Cancelled. Nothing was saved." /
-  "Something went wrong making the file, so nothing was saved. The music
-  wasn't touched; you can try again."
-- **The export's sound, for your ears (#416):** always full quality
-  whatever "lighter on processor" says; 44.1 kHz, 16-bit, stereo (mono with
-  the Mono switch); after the track's end what is sounding rings out until
-  quiet, at most 12 s, the last 2 s faded. Say if the end should be shorter
-  or longer.
-
-(The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
+(A shared loop's name, the export sheet's words and the export's ending
+were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and
+exports". The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and
 built in v175: see twang's entry above.)
