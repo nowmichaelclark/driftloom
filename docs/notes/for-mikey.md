@@ -133,6 +133,13 @@ the points where the next step is yours.
 
 ## Decisions
 
+- **A shared loop's name (codes, version 2, session 22, #412):** the new
+  codes carry what a loop sounds like, not the name you gave it, nor the
+  length slider's setting (version 1's codes carried both). So a friend who
+  opens your code sees its own generated name. Say if you want a renamed
+  loop's name to travel with its code; a field can still be added before
+  1.0 (the brain's B4 looks at the format closely before it freezes).
+
 (The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and
 built in v175: see twang's entry above.)

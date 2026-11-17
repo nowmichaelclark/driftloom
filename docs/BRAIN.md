@@ -300,11 +300,20 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   (said at its top); the merge-main rule in "Rules for every session".
   **Running:** see the sessions list below as it fills. This brain stops at
   B4 (`brain-4-codes.md`, the next brain's).
-  - Sessions: the plan merged (#409). Started 2026-11-17, each in its own
-    worktree: 26 (Android audio, `s26-android-audio`) and 22 (codes in the
-    core, `s22-codes-core`). Next in their places: 17 when 22 merges (then
-    23 after 17, since both change `js/gen.js`; or 20 in between), 27 after
-    26 and 17.
+  - Sessions: the plan merged (#409). **26 merged** (#411, 2026-11-17;
+    checked: five minutes native on the emulator, 0 underruns and 0 late,
+    the samples bit for bit the wasm's, Done line and row in). **22's PR
+    #412** green and merging when this was written (a loop with nothing
+    pinned 9 characters; every golden as a code; the dummy test bites with
+    the filter off; for B4: no custom name or slider setting in a code, and
+    settings' own pools in Rust not yet version-filtered). **17** proposed
+    as a card (the app starts a session only on Mikey's own words in this
+    chat, not from a session's report: he clicks the card or says "start
+    it"). Both sessions stopped once at the usage limit and resumed on a
+    message. The Android emulator's smoke job flakes (twice, two races in
+    `android/smoke.mjs`); 27's prompt now fixes it first. Next: 17 (twang
+    first), then 20 beside it; 23 after 22 once 17 and 20 are done (it
+    shares `js/gen.js` with 17, `js/main.js`'s actions with 20); 27 after 17.
   - **Mikey heard the Batch 6 Album (2026-11-17)** and B-parallel read his
     verdicts from its db: every sound Keep but twang (soft only: session
     17's first PR, since 22 is in `data/`); 84b chosen 5 of 6, the control
