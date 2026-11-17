@@ -43,7 +43,7 @@ says the work goes on meanwhile.
 | 07 | `07-batch6-planing.md` | 101f: planingSevenths | Opus 5.5, high | yes, 2026-11-16 (#397) |
 | 08 | `08-batch6-low-bell.md` | 101g: lowBell, dropSpotlight | Opus 5.5, high | yes, 2026-11-16 (#398, #399) |
 | 09 | `09-batch6-twang.md` | 101h: twang; the batch's locks | Opus 5.5, high | yes, 2026-11-16 (#400, #401; then Mikey's calls, 2026-11-17, #402: the change counts, `docs/notes/101h-change-counts.md`, and twang a beat apart) |
-| 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | |
+| 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | yes, 2026-11-17 (#404) |
 | B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
 | 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | yes, 2026-11-14 (#385; the second set on `long-clips`) |

@@ -220,6 +220,16 @@ the points where the next step is yours.
   decay), so the last second before the peak is still thin. Both are the
   variations' and the voice's, not the joins'; say if either bothers you.
 - Batch 6's and 84b's: brain session B2. B4 makes the albums again in the new codes.
+- **The chords nearer the tune (84b, session 10, #404):** where item 84 had
+  dropped the chords a whole octave, 12 to 17 semitones under the tune, they
+  now sit about a fifth under it, a few of each chord's top notes moved
+  instead of the whole chord. Listen to six of 84's downward movers, now
+  nearer (in the brain's B2 album): shu-san, glai-thel and youn-ti by a lot;
+  theim-rem, fum-doun and fo-roan by a little (names and times in
+  `docs/DONE.md`). Choices for your ears: how near (a fifth; your blind
+  album's winners sat nearer still), the new inversions, and that the chords
+  now read a little louder and the loops a little wider. If it sounds worse,
+  say so: a revert follows.
 
 - **The FLAC writer (104a, session 19, #390):** nothing to hear yet; the
   app gets export in session 20. One choice for your ears then: the core

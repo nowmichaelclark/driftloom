@@ -349,3 +349,18 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   `tools/keepalive.py`. Any loop, a quiet one best, on headphones: no hiss;
   and the lock-screen and Bluetooth controls still come up (his phone's
   check).
+- #404, the chords nearer the tune (item 84b, session 10, v177), preview URL:
+  the branch's preview (no hash kept). Where item 84's whole octave down left
+  the chords 12 to 17 semitones under the tune, they now go down only as far
+  as a fifth under it: a few of each chord's top notes an octave down, the
+  same chord in another inversion (2 semitones deeper with held chords). 1,003
+  of 2,000 corpus loops move, every one nearer; the median gap 12.6 to 9.2,
+  loops over 12.5 942 to 100; inside the arcs the same (theme A at home 13.4
+  to 8.6). The chords read up to 2.5 LU louder and the loops wider in stereo,
+  both from sitting higher. Item 84's downward movers, now nearer (corpus
+  20261009): by a lot **shu-san** (#16, nylon) 17.0 to 8.0 from 0:00,
+  **glai-thel** (#1843, keys) 18.0 to 8.5 from 0:01, **youn-ti** (#1956,
+  prepared piano) 18.3 to 9.3 from 0:00; by a little **theim-rem** (#68,
+  keys) 18.0 to 13.2, **fum-doun** (#1982, accordion) 17.3 to 13.9, **fo-roan**
+  (#1803, pad) 18.0 to 14.6, each from 0:00. A revert follows if Mikey hears
+  worse.
