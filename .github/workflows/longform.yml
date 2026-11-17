@@ -1,0 +1,125 @@
+# The long pieces hold (docs/sessions/README.md's rule): the full
+# `node tools/longform.mjs` (about an hour on one core) in eight shards side
+# by side, so a sound change reads it from CI in minutes instead of running
+# it at home. Each shard plays its share of the pieces of work
+# (`--shard i/8`, weighed by what each costs) and writes what it found; the
+# table job merges them into the table one run prints, the checks in the
+# same order, and holds it to main's: every check main kept, kept here.
+#
+# Main's table is this workflow's own, run on main: on every push to main
+# that touches what it reads, and every night (nightly.yml calls it). Each
+# run keeps its table as the `longform-table` artifact (90 days); a PR's run
+# compares with the latest kept on main, so a check main already fails
+# (the table says which) holds nothing, and a check main kept that fails
+# here fails the job. On main the same comparison is with the run before.
+#
+# A PR runs it when it touches what a loop plays: the generator, the
+# player, the data; and the tool and this workflow. Any branch by hand:
+# Actions, longform, "Run workflow".
+name: longform
+
+on:
+  pull_request:
+    paths:
+      - 'core/src/generator/**'
+      - 'core/src/player/**'
+      - 'data/**'
+      - 'tools/longform*.mjs'
+      - '.github/workflows/longform.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'core/src/generator/**'
+      - 'core/src/player/**'
+      - 'data/**'
+      - 'tools/longform*.mjs'
+      - '.github/workflows/longform.yml'
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # To find main's table among the runs' artifacts.
+  actions: read
+
+# A PR's newer push replaces its older run; main's runs each finish.
+concurrency:
+  group: longform-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  shard:
+    name: long pieces (${{ matrix.shard }}/8)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The tools' build of the core; dlrender and dlgen build on first use.
+      - name: The tools' build of the core
+        run: tools/build-core.sh --tools
+      - name: This shard's pieces of work
+        run: node tools/longform.mjs --shard ${{ matrix.shard }}/8 --out longform-${{ matrix.shard }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: longform-shard-${{ matrix.shard }}
+          path: longform-${{ matrix.shard }}.json
+          retention-days: 7
+
+  table:
+    name: long pieces, the table against main's
+    needs: shard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: longform-shard-*
+          merge-multiple: true
+          path: shards
+      # The latest table kept on main (none the first time, or after 90
+      # days without a run: then every check must pass).
+      - name: Main's table
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=longform-table&per_page=100" \
+            --jq '[.artifacts[] | select(.workflow_run.head_branch == "main" and .expired == false)] | sort_by(.created_at) | last | .id // empty')
+          if [ -n "$id" ]; then
+            gh api "repos/${{ github.repository }}/actions/artifacts/$id/zip" > main.zip
+            mkdir main && unzip -q main.zip -d main
+            echo "main's table: artifact $id, $(node -p "const t = require('./main/longform-table.json'); t.commit + ', ' + t.date")"
+          else
+            echo "no table kept on main yet: every check must pass"
+          fi
+      - name: The table, against main's
+        shell: bash
+        run: |
+          against=()
+          [ -f main/longform-table.json ] && against=(--against main/longform-table.json)
+          node tools/longform.mjs --merge shards/*.json --table longform-table.json --times "${against[@]}" --check | tee longform.txt
+      - name: The summary
+        if: always()
+        run: |
+          if [ -f longform.txt ]; then
+            { echo '```'; grep -E '^longform:|^  (LOST|GONE|FAIL|also on main|fixed|new) ' longform.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: longform-table
+          path: |
+            longform-table.json
+            longform.txt
+          retention-days: 90
+          if-no-files-found: ignore

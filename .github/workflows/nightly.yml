@@ -26,7 +26,10 @@
 # drift, no growth. `slow` is what left the gate's own jobs: the other
 # sample rates and rendering ahead's sweep. `holes` plays every join of
 # 200 long pieces against the loop as itself (queue item 102g): none a
-# hole. (The generation goldens in
+# hole. `longform` is the full long-piece check on main
+# (.github/workflows/longform.yml, `node tools/longform.mjs` in eight
+# shards), its table kept as the `longform-table` artifact that a PR's run
+# compares with. (The generation goldens in
 # Chromium and the balance lock on the page's own generator went with the
 # JavaScript generator, queue item 97: the gate holds both on the core's.)
 name: nightly
@@ -237,3 +240,13 @@ jobs:
         run: tools/build-core.sh --tools
       - name: Every join of the pieces, as played
         run: node tools/longform-holes.mjs --shard ${{ matrix.shard }}/2 --quiet --check
+
+  # The long pieces' full check on main (tools/longform.mjs, in shards;
+  # .github/workflows/longform.yml), so a PR's run has main's table to hold
+  # it to: every check main kept, kept.
+  longform:
+    name: long pieces, main's table
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/longform.yml

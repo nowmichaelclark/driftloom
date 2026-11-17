@@ -81,3 +81,15 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# The core's tests (`cargo test`, tools/gate.sh's core and sketch parts),
+# optimized: they render minutes of audio, which at opt-level 0 took most
+# of the gate's time. The checks a debug build makes stay on: debug
+# assertions (and what reads `cfg!(debug_assertions)`) and overflow checks.
+# Floating point is not reordered at any opt-level, so every render the
+# tests hold to a hash is the same. The app's .wasm is the release
+# profile's, untouched (tools/build-core.sh --check).
+[profile.test]
+opt-level = 3
+debug-assertions = true
+overflow-checks = true
