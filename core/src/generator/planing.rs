@@ -29,8 +29,8 @@
 //! turns around the tonic), for Mikey's ears.
 //!
 //! The draw ([`planes`]) is per loop, on the loop's seed salted on a stream
-//! of its own, outside the list of choices and not counted among a loop's
-//! changes, as tuningOffset is (`[setting progression]`); a request may pin
+//! of its own, outside the list of choices and counted against a loop's
+//! changes (queue item 101h), as tuningOffset is (`[setting progression]`); a request may pin
 //! it (`progression.kind`). A loop that does not plane draws and plays
 //! exactly as before.
 

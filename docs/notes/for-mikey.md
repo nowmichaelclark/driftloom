@@ -25,11 +25,13 @@ the points where the next step is yours.
   may sound the same as Before or wider after the rest.
 - **Batch 6's far ends (101a, session 02, v156):** deepDuck, wideSweep (wide
   and fast) and slowOpening now play in the app, each an option of its
-  approved choice. To hear them before the album: deepDuck on loa-yer (corpus
-  20261009 #23) and toam-woar (#67), any time after 0:20; wide on brai-fei
-  (#46) and sol-sham (#77) from 0:15; fast on li-roun (#96) and broa-glou
-  (#292) from 0:10; slowOpening on rong-wuisk (#6) from 0:45 (the kit at 0:49,
-  the bass at 0:53, full by about 1:01) and gluith-vuisk (#0) from 1:10.
+  approved choice. To hear them before the album (since v175, where five of
+  the loops first named gave their far end to batch 6's later sounds):
+  deepDuck on vor-the (corpus 20261009 #136) from 0:10 and toam-woar (#67)
+  any time after 0:20; wide on brai-fei (#46) and sol-sham (#77) from 0:15;
+  fast on meil-broa (#264) and moal-doang (#812) from 0:00; slowOpening on
+  tui-doask (#2) from 1:14 (the bass; it has no kit) and sir-houl (#105)
+  from 0:48 (the bass, the kit at 1:03).
   Three taste calls for your ears (the PR's "For Mikey's ears"): each new
   option weighs the same as the approved one, so about 1 loop in 12 now
   opens with 40 to 90 s of no kit or bass; the calm vibes lean them away
@@ -95,14 +97,22 @@ the points where the next step is yours.
   on about 1 in 7 of the loops that play a chord and have no kit or a soft
   one (6% of all loops). To hear it before the album: he-rosk (corpus
   20261009 #33, bright) from 0:00; maisk-feim (#151, soft) from 0:00;
-  tom-wen (#172, slow) from 0:00. **One call for your ears:** the sketch's
-  description says the three notes come a beat apart, but the clips you
-  approved struck them together (the sketch's clock ran 128 times fast, so
-  every pick waiting came at once). The build plays what you heard
-  (together, measured within 0.2 LU of the clips on all twelve); one line of
-  `data/choices.txt`, `[setting twang] spread = 1`, makes it pick them a
-  beat apart, slowly, as the description meant. Say which you want. Other
-  taste calls, each a line there: "no kit busier than a soft one" read as 2
+  tom-wen (#172, slow) from 0:00. **Decided 2026-11-17 (v175, you: "as
+  the albums' producer would"):** the three notes come a beat apart, picked
+  low and slow as the description says, not struck together as the
+  approved clips did (the sketch's clock ran 128 times fast, so every pick
+  waiting came at once); a producer of those records lets a baritone's
+  notes ring one by one under the tremolo, and the nylon already strums.
+  Measured on the twelve clips: 15.9 to 18.6 LU under the loop (the
+  yardstick's 14 to 19), under 60 Hz unchanged. Back to together is one
+  line of `data/choices.txt`, `[setting twang] spread = 0`. Also decided
+  then: **how many changes a loop gets** (A in
+  `docs/notes/101h-change-counts.md`): batch 6's nine draws now count
+  against the changes a loop drew and the list fills what they leave, so
+  78.5% of loops get one or two changes (52% before v175, 75% before batch
+  6) and 16.6% three or more. It changes the choices of 56% of the loops
+  that exist (their codes play differently). Other taste calls, each a
+  line there: "no kit busier than a soft one" read as 2
   hits a second or fewer (the quietest tenth of kits; the sketch was heard
   only without one); 15% of those loops. A request can pin it:
   `twang.kind=soft`, `=slow`, `=bright` or `=today`.
@@ -256,14 +266,6 @@ the points where the next step is yours.
 
 ## Decisions
 
-- **How many changes a loop gets, with batch 6 in (101h, session 09):** with
-  all of batch 6 counted, 52% of loops get one or two changes (75% before
-  the batch) and 43% three or more (10% before), because nine of the batch's
-  sounds are drawn beside the list's changes. Still "most", barely. Three
-  ways back are measured in `docs/notes/101h-change-counts.md`; each changes
-  the choices of 41 to 57% of the loops that exist today, so nothing is
-  built. The hands recommend A (those nine count against the changes a loop
-  drew, so the list fills only what they leave: 79% one or two, 16% three or
-  more, every batch 6 sound at its share). Say A, B, C or keep it as it is.
-
-(The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.)
+(The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
+How many changes a loop gets, and twang's picks, were decided 2026-11-17 and
+built in v175: see twang's entry above.)

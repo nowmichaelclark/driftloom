@@ -91,12 +91,21 @@ fn each_kind_is_leaned_by_its_own_vibes_never_to_none() {
     });
 }
 
+/// The list's changes with a setting on (`on`) against off (`off`), as
+/// option words: the same, or the list giving way to the setting (queue
+/// item 101h), which drops the last change the list drew and nothing else.
+fn gives_way(on: &[&str], off: &[&str]) -> bool {
+    let changed = |c: &[&str]| c.iter().filter(|w| !w.is_empty() && **w != "today").count();
+    on == off || changed(on) + 1 == changed(off) && on.iter().zip(off).all(|(a, b)| a == b || *a == "today")
+}
+
 #[test]
 fn a_pin_plays_its_kind_or_keeps_it_off_and_nothing_else_moves() {
     roomy(|| {
         assert_eq!(Request::parse("lowBell.kind=loud").err(), Some(BAD_SETTING));
         let mut g = Box::new(Generator::new());
         let mut a = Box::new(Generator::new());
+        let mut gave = 0;
         for seed in corpus(200) {
             for (i, &(kind, _)) in LOW_BELL_KINDS.iter().enumerate() {
                 g.load_with(seed, &ask(&format!("lowBell.kind={kind}")));
@@ -105,13 +114,22 @@ fn a_pin_plays_its_kind_or_keeps_it_off_and_nothing_else_moves() {
                 let plays = on.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty());
                 assert_eq!(usize::from(g.settings().low_bell), if plays { i } else { 0 }, "seed {seed}: {kind}");
                 assert_eq!(a.settings().low_bell, 0, "seed {seed}: today's plays none");
-                assert_eq!(on.choices.iter().map(|w| w.get()).collect::<Vec<_>>(), off.choices.iter().map(|w| w.get()).collect::<Vec<_>>(), "seed {seed}");
+                let (cs, ds) = (on.choices.iter().map(|w| w.get()).collect::<Vec<_>>(), off.choices.iter().map(|w| w.get()).collect::<Vec<_>>());
+                assert!(gives_way(&cs, &ds), "seed {seed}: {cs:?} against {ds:?}");
+                if cs != ds {
+                    // The list gave way: what it drops may move the notes.
+                    gave += 1;
+                    assert_eq!(g.settings().tuning, a.settings().tuning, "seed {seed}");
+                    continue;
+                }
                 assert!(on.chords.iter().zip(off.chords.iter()).all(|(x, y)| x.step == y.step && x.vel == y.vel && x.notes[..] == y.notes[..]), "seed {seed}: a chord moved");
                 assert!(on.melody.iter().zip(off.melody.iter()).all(|(x, y)| x.step == y.step && x.midi == y.midi), "seed {seed}: the tune moved");
                 assert!(on.bass.iter().zip(off.bass.iter()).all(|(x, y)| x.step == y.step && x.midi == y.midi), "seed {seed}: the bass moved");
                 assert_eq!(g.settings().tuning, a.settings().tuning, "seed {seed}");
             }
         }
+        println!("the list gave way {gave} times");
+        assert!(gave > 0, "the list never gave way");
     });
 }
 

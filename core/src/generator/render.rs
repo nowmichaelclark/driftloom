@@ -614,8 +614,33 @@ impl Render {
         if CHOICES.is_empty() {
             return;
         }
+        // The choices drawn alone (`alone`, queue item 101b), each on a
+        // stream of its own, before the list so it knows how many there are;
+        // in their order, as dottedPulse's eligibility reads tripletKit's.
+        // No choice in the list reads one of them.
+        let mut alone = 0;
+        for (i, c) in CHOICES.iter().enumerate() {
+            let Some(share) = c.alone else { continue };
+            if !self.eligible(cx, c.id) {
+                continue;
+            }
+            #[allow(clippy::cast_possible_truncation)] // a choice's place, under CHOICES_MAX
+            let mut r = Rng::new(js::salted(spec.seed, ALONE_SALT + i as u32, 1));
+            let leaned = share * lean_of(c.vibes, v);
+            if r.f() * (1.0 - share + leaned) < leaned {
+                let pick = if c.own_stream { self.own_option(cx, i) } else { c.options.get(1).map_or("", |o| o.0) };
+                if let Some(x) = self.choices.get_mut(i) {
+                    *x = pick.into();
+                }
+                alone += 1;
+            }
+        }
         let mut r = Rng::new(js::salted(spec.seed, 0x4348_4f49, 1));
-        let count = r.weighted(data::CHANGE_COUNTS).unwrap_or(0.0);
+        // How many changes the loop gets, less those batch 6's own draws
+        // give it (queue item 101h, Mikey 2026-11-17): the choices drawn
+        // alone and the four settings drawn outside the list. The list fills
+        // only what they leave, so most loops still get one or two.
+        let count = r.weighted(data::CHANGE_COUNTS).unwrap_or(0.0) - js::num(alone) - js::num(self.settings_changes(cx));
         let mut pool: List<(usize, f64), CHOICES_MAX> = List::new();
         for (i, c) in CHOICES.iter().enumerate() {
             if c.alone.is_none() && self.eligible(cx, c.id) {
@@ -644,24 +669,6 @@ impl Render {
             }
             k += 1.0;
         }
-        // A choice drawn alone (`alone`, queue item 101b): not among the
-        // changes, on a stream of its own, so the draws above are as they
-        // were before it came.
-        for (i, c) in CHOICES.iter().enumerate() {
-            let Some(share) = c.alone else { continue };
-            if !self.eligible(cx, c.id) {
-                continue;
-            }
-            #[allow(clippy::cast_possible_truncation)] // a choice's place, under CHOICES_MAX
-            let mut r = Rng::new(js::salted(spec.seed, ALONE_SALT + i as u32, 1));
-            let leaned = share * lean_of(c.vibes, v);
-            if r.f() * (1.0 - share + leaned) < leaned {
-                let pick = if c.own_stream { self.own_option(cx, i) } else { c.options.get(1).map_or("", |o| o.0) };
-                if let Some(x) = self.choices.get_mut(i) {
-                    *x = pick.into();
-                }
-            }
-        }
         // The request's pins (queue item 85b), laid over the draws once they
         // are all made: today's option always, another where the loop is
         // eligible for it, and today's where it is not (a loop not eligible
@@ -684,6 +691,46 @@ impl Render {
                 *x = o.0.into();
             }
         }
+    }
+
+    /// How many of the four settings drawn outside the list of choices the
+    /// loop plays (queue item 101h): tuningOffset, planingSevenths, lowBell
+    /// (dropSpotlight with it, a kind of its bell) and twang, each as load
+    /// draws it, from the loop as it stands before its choices. twang's kit
+    /// is the kit before the choices add to it (tripletKit, dottedPulse), so
+    /// in a loop they make busy it is counted where load then refuses it.
+    fn settings_changes(&self, cx: &Cx) -> usize {
+        let spec = cx.spec;
+        let (v, p) = (spec.vibes.as_ref(), &spec.pins);
+        let chord = self.plays_chord();
+        [
+            super::choices::tuning_of(spec.seed, v, p) != 0.0,
+            cx.planing,
+            super::choices::low_bell_of(spec.seed, chord, v, p) != 0,
+            super::choices::twang_of(spec.seed, chord && self.soft_kit(cx), v, p) != 0,
+        ]
+        .iter()
+        .filter(|&&b| b)
+        .count()
+    }
+
+    /// Whether the loop plays a chord: one with a note, heard.
+    #[must_use]
+    pub fn plays_chord(&self) -> bool {
+        self.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty())
+    }
+
+    /// Whether the kit is no busier than twang's soft one (queue item 101h):
+    /// its hits a second over the kit's own cycle, `[setting twang] kitMost`
+    /// or fewer (no kit at all among them).
+    #[must_use]
+    pub fn soft_kit(&self, cx: &Cx) -> bool {
+        let spec = cx.spec;
+        let step = 60.0 / spec.bpm / 4.0;
+        let total = spec.bars * cx.spb;
+        let cycle = spec.cycles.of(Layer::Drums as usize).filter(|&c| c > 0.0).unwrap_or(total);
+        let hits = self.drums.iter().filter(|e| e.vel != 0.0).count();
+        js::num(hits) <= data::TWANG.kit_most * cycle * step + 1e-9
     }
 
     /// The option choice number `i` plays once picked, for a choice whose

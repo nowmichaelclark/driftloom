@@ -13,13 +13,18 @@
 # the choices it is eligible for (weighted by the vibes, without repeats),
 # then each chosen one's option other than today's. A choice the loop is not
 # eligible for is never drawn, so a loop eligible for fewer changes than it
-# drew gets all it can.
+# drew gets all it can. Batch 6's own draws (the choices drawn alone, and
+# the settings tuningOffset, planingSevenths, lowBell and twang) count
+# against the changes a loop drew, and the list fills only what they leave
+# (queue item 101h, Mikey 2026-11-17): a loop that drew two changes and
+# plays twang gets one from the list.
 
 [choices all]
 # How many changes a loop gets: none 15%, one 45%, two 30%, three 10%. A
 # taste call, for Mikey's ears: most loops get one or two (his rule), a few
 # stay as they are, and three is rare enough that a loop never feels like a
-# demo of the batch.
+# demo of the batch. With batch 6's draws counted (above), over 10,000
+# loops: none 4.8%, one 39.2%, two 39.3%, three or more 16.6%.
 changes = 0 15, 1 45, 2 30, 3 10
 # A choice's lean for one vibe is held between these: toward x1.5 to x3,
 # away x0.2 to x0.5, never 0 (docs/ears/batch-5.md, "The [JUDGMENT] lines").
@@ -36,10 +41,10 @@ lean = 0.2 3
 # stream, so options added to a choice that had one move no other choice's
 # draw. A choice without it draws its option on the choices' stream, as
 # tunedKick always has. `alone = SHARE` (queue item 101b): the choice is not
-# among the changes at all. It is drawn by itself, on a stream of its own,
+# in the list's draw. It is drawn by itself, on a stream of its own,
 # for that share of the loops it may go to (leaned by `vibes`, never to 0),
-# so adding it moves no other choice, and a loop may have it beside its
-# changes.
+# so it moves no other choice's option; it counts against the changes the
+# loop drew (above), so a loop that has it gets one fewer from the list.
 
 # glass (queue item 59; the prototypes, approved by Mikey 2026-10-10): on
 # a chord's first beat, now and then, two or three of its notes ring out
@@ -176,8 +181,8 @@ optionVibes.fast = lively 1.5, pulsing 1.5, soaring 1.5, zesty 1.5, still 0.3,
 
 # padWow (queue item 101b; batch 6's #3, approved by Mikey 2026-11-08): a
 # slow tape-like wow on the chord layer alone, the kick and the bass steady
-# (setting padwow, below). For any loop that plays a chord. Drawn alone, not
-# among the changes, for 15% of the loops that may have it before the vibes
+# (setting padwow, below). For any loop that plays a chord. Drawn alone,
+# counted against the changes (above), for 15% of the loops that may have it before the vibes
 # lean it: the conservative share, for Mikey's ears. The batch's [JUDGMENT]
 # row: toward the hazy vibes, away from the clear and bright ones.
 [choice padWow]
@@ -196,7 +201,7 @@ vibes = hazy 2.5, wistful 2, dreamy 2, misty 1.5, dusky 1.5, rainy 1.5,
 # width, so a sparse loop stays at the narrow end. `on` is wide from the
 # start; `late` opens from the baseline's width to the same over 60-120 s
 # (`space.wide-open`), as two records open theirs late; half and half. For
-# any loop that plays a chord. Drawn alone, not among the changes, on a
+# any loop that plays a chord. Drawn alone, counted against the changes (above), on a
 # stream of its own, for 15% of the loops that may have it before the vibes
 # lean it: padWow's conservative share, for Mikey's ears. The batch's
 # [JUDGMENT] row: toward the spacious and floating vibes, away from the
@@ -215,8 +220,8 @@ vibes = spacious 2, floating 2, soaring 2, dreamy 1.5, hazy 1.5, cosmic 1.5,
 # of every beat gets the loop's own hat at its own velocities and density, so
 # a beat plays three; the kick stays on the beat, and nothing is louder than
 # the loop's own kit plays it. For any loop with a kit but in 6/8 (its beat's
-# thirds are the eighths it already plays). Drawn alone, not among the
-# changes, for 15% of the loops that may have it before the vibes lean it:
+# thirds are the eighths it already plays). Drawn alone, counted against the
+# changes (above), for 15% of the loops that may have it before the vibes lean it:
 # the batch's conservative share, for Mikey's ears. The batch's [JUDGMENT]
 # row: toward the swaying and skipping vibes, away from the still ones.
 [choice tripletKit]
@@ -233,8 +238,8 @@ vibes = swaying 2, skipping 2, bubbly 1.5, groovy 1.5, playful 1.5,
 # dottedpulse, below); `kick332` writes the kick whole on a 3-3-2 of the bar's
 # eighths in place of the loop's own, only where the kit has a kick; half and
 # half. For a loop with a kit in a bar of 16 steps (4/4, where it was heard),
-# never beside a kit in threes (tripletKit is drawn first). Drawn alone, not
-# among the changes, on a stream of its own, for 15% of the loops that may
+# never beside a kit in threes (tripletKit is drawn first). Drawn alone,
+# counted against the changes (above), on a stream of its own, for 15% of the loops that may
 # have it before the vibes lean it: the batch's conservative share, for
 # Mikey's ears. The batch's [JUDGMENT] row, one for both versions: toward the
 # groovy and the quirky, away from the still.
@@ -252,8 +257,8 @@ vibes = groovy 2, quirky 1.5, cheeky 1.5, mischievous 1.5, intricate 1.5,
 # (core/src/generator/color.rs decides which chords and where;
 # core/src/blocks/color_tone.rs is the tone, the sketch's). For any loop with a
 # chord that can take one: a major or minor third, a perfect fifth or none,
-# the color not in it already, and in the chord's scale. Drawn alone, not
-# among the changes, for 15% of the loops that may have it before the vibes
+# the color not in it already, and in the chord's scale. Drawn alone,
+# counted against the changes (above), for 15% of the loops that may have it before the vibes
 # lean it: the batch's conservative share, for Mikey's ears. The batch's
 # [JUDGMENT] row: toward the jazzy vibes, away from the minimal and the still.
 [choice colorTone]
@@ -541,8 +546,8 @@ share = 0.45
 # follow the planed chord: each of their notes in the chord's own Lydian
 # scale, a note that is not moving to the nearest that is, a chord tone where
 # two are as near (core/src/generator/planing.rs). Drawn per loop at load on a
-# stream of its own, outside the list of choices and not counted among a
-# loop's changes, as tuningOffset is; any loop may plane.
+# stream of its own, outside the list of choices and counted
+# against a loop's changes (above), as tuningOffset is; any loop may plane.
 [setting progression]
 # The share of loops that plane before the vibes lean it: 0.15, the batch's
 # conservative share, for Mikey's ears.
@@ -557,10 +562,10 @@ vibes = dreamy 2, floating 2, jazzy 1.5, cosmic 1.5, wondrous 1.5,
 # and C#3, at each chord whose root changes or the same root after 4 s; a new
 # voice of the core (core/src/blocks/low_bell.rs, the sketch's sound and its
 # level rule), which the player strikes from the chords it knows. Drawn per
-# loop at load on a stream of its own, outside the list of choices and not
-# counted among a loop's changes, as tuningOffset is: for any loop that plays
-# a chord. `struck` is the sketch's 35 ms attack, `swell` its swelling kind's
-# 0.4 s; half and half.
+# loop at load on a stream of its own, outside the list of choices and
+# counted against a loop's changes (above), as tuningOffset is: for any
+# loop that plays a chord. `struck` is the sketch's 35 ms attack, `swell`
+# its swelling kind's 0.4 s; half and half.
 [setting lowbell]
 # The share of loops that play the bell before the vibes lean it: 0.15, the
 # batch's conservative share, for Mikey's ears.
@@ -605,7 +610,7 @@ spotlightLeast = 2
 # D#3, its fifth a beat later and its tenth a beat after that, while the
 # chord lasts; six strings ring, the oldest let go as a seventh is picked; one
 # tremolo moves them all. Drawn per loop at load on a stream of its own,
-# outside the list of choices and not counted among a loop's changes, as the
+# outside the list of choices and counted against a loop's changes (above), as the
 # low bell is: for a loop that plays a chord and has no kit busier than a
 # soft one (`kitMost` hits a second, the corpus's quietest tenth of kits: the
 # sketch was heard only on loops without one; for Mikey's ears). `soft` is a
@@ -629,13 +634,14 @@ kindVibes.bright = cruising 2, plucky 1.5, golden 1.5, warm 1.5,
     crisp 0.5, sour 0.5, hushed 0.5
 # The same root is picked again after this many seconds (the sketch's).
 regap = 3
-# How far apart a chord's three picks come, in beats. The description (Ears
-# 13b, the queue) says a beat apart; the approved clips struck the three
-# together, since the sketch's clock ran 128 times fast (it read a block's
-# first frame as a block count), so every pick waiting came at once. As
-# heard: 0, together. 1 is the slow picking the description names, for
-# Mikey's ears.
-spread = 0
+# How far apart a chord's three picks come, in beats: 1, the slow picking
+# the description names (Ears 13b, the queue), Mikey's call (2026-11-17,
+# as the albums' producer would play it: a baritone picked low and slow,
+# each note let ring under the tremolo, and not the nylon's strum again).
+# The approved clips struck the three together (0), since the sketch's
+# clock ran 128 times fast (it read a block's first frame as a block
+# count), so every pick waiting came at once.
+spread = 1
 # The busiest kit it plays over, in hits a second over the kit's own cycle.
 kitMost = 2
 
@@ -669,8 +675,8 @@ noKick = 0
 # tuningOffset (queue item 101b; batch 6's #12, approved by Mikey
 # 2026-11-09): the whole loop a little off A440, the "old tape" cue at the
 # scale of a loop. Drawn per loop at load on a stream of its own, outside the
-# list of choices and not counted among a loop's changes, as echoTime is
-# (`tuningOf`). Every pitched voice moves by it together; the drums (the
+# list of choices (`tuningOf`), as echoTime is, but counted against a
+# loop's changes (above). Every pitched voice moves by it together; the drums (the
 # tuned kick too) and the noises keep their pitch, as in the sketch.
 [setting tuning]
 # The share of loops off A440 before the vibes lean it; the rest play at

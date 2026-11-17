@@ -16,7 +16,6 @@
 
 use super::{LAYERS, Layer};
 use super::canon::{Sink, Writer};
-use super::data;
 use super::choices::{self, Arc, Fall, LateFloor, PadSweep, PadWow, SubDuck, TunedKick};
 use super::js;
 use super::list::Biased;
@@ -210,17 +209,14 @@ impl Load {
         // The low bell (queue item 101g), for a loop that plays a chord; its
         // spotlight where the floor can drop (the wander's floor drop: 4
         // bars or more, and a kick or a bass for it to take out).
-        let plays_chord = chords > 0 && r.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty());
+        let plays_chord = chords > 0 && r.plays_chord();
         let bell = choices::low_bell_of(spec.seed, plays_chord, v, p);
         let floor = r.drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame")) || r.bass.iter().any(|e| e.vel != 0.0);
         let drops = js::floor(total / spb) >= 4.0 && floor;
         // twang (queue item 101h), for a loop that plays a chord and has no
         // kit busier than a soft one: its hits a second over the kit's own
         // cycle.
-        let kit_cycle = spec.cycles.of(Layer::Drums as usize).filter(|&c| c > 0.0).unwrap_or(total);
-        let hits = r.drums.iter().filter(|e| e.vel != 0.0).count();
-        let soft = js::num(hits) <= data::TWANG.kit_most * kit_cycle * step + 1e-9;
-        let twang = choices::twang_of(spec.seed, plays_chord && soft, v, p);
+        let twang = choices::twang_of(spec.seed, plays_chord && r.soft_kit(cx), v, p);
         Load {
             glass_scale: js::min(1.0, js::num(chords) / js::max(1.0, total / spb)),
             stab: on("dubStab").then(|| stab_of(spec.seed, busy)),

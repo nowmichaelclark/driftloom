@@ -145,8 +145,9 @@ pub struct Choice {
     /// own (`ownStream`, queue item 101), so options added to a choice move
     /// no other choice's draw.
     pub own_stream: bool,
-    /// Drawn by itself for this share of the loops it may go to, not among
-    /// the changes (`alone`, queue item 101b), or `None`.
+    /// Drawn by itself for this share of the loops it may go to, outside the
+    /// list's draw but counted against its changes (`alone`, queue items
+    /// 101b and 101h), or `None`.
     pub alone: Option<f64>,
 }
 

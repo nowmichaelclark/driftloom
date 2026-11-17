@@ -1,8 +1,13 @@
 # 101h: how many changes a loop gets, with all fourteen in
 
-Hands session 09, 2026-11-16, for Mikey (and the brain). Nothing here is
-built: it is a proposal, because each way of restoring the rule changes the
-choices of about half the loops that exist today.
+Hands session 09, 2026-11-16, for Mikey (and the brain). **Decided
+2026-11-17: A** (Mikey: "going with your recommendation"), built in v175:
+over the same 10,000 loops, none 4.8%, one 39.2%, two 39.3%, three 15.3%,
+four or more 1.3% (78.5% one or two); 2,868 of the 5,139 generation cases
+moved, every one in its choices. twang's kit is counted as it stands before
+the choices add to it (tripletKit, dottedPulse), so a loop they make busy
+spends a change on a twang load then refuses. Below is the proposal as it
+was written.
 
 ## What moved
 
@@ -53,6 +58,4 @@ few in the draw) but makes two changes the norm. C trades batch 6's
 presence for the old list.
 
 Each changes the choices of 41 to 57% of the loops that exist today (their
-codes would play differently), so it is Mikey's call, not the hands'. Until
-he says, nothing moves; the generation goldens, the baseline and the
-balance lock are as #400 left them.
+codes would play differently), so it is Mikey's call, not the hands'.

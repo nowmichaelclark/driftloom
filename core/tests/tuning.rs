@@ -17,7 +17,7 @@ use dlcore::block::Event;
 use dlcore::block::event::RETUNE;
 use dlcore::blocks::texture;
 use dlcore::generator::Generator;
-use dlcore::generator::data::TUNING;
+use dlcore::generator::data::{CHOICES, TUNING};
 use dlcore::generator::request::{Request, SETTING_OUT};
 use dlcore::generator::rng::Rng;
 use dlcore::player::host::Host;
@@ -106,7 +106,12 @@ fn a_pin_plays_its_offset_and_0_holds_a440() {
             (g.settings().tuning, g.spec().bpm, g.render().choices.iter().map(|w| w.get()).collect::<Vec<_>>())
         };
         let (drawn, bpm, choices) = ask(&mut g, "");
-        assert_eq!(ask(&mut g, "tuning.cents=0"), (0.0, bpm, choices.clone()), "seed {seed} (drawn {drawn}): held at A440, nothing else moved");
+        // At A440 the offset no longer takes one of the loop's changes, and
+        // the list may fill it (queue item 101h); nothing else moves.
+        let (zero, zero_bpm, more) = ask(&mut g, "tuning.cents=0");
+        let changed = |c: &[&str]| c.iter().filter(|w| !w.is_empty() && **w != "today").count();
+        assert_eq!((zero, zero_bpm), (0.0, bpm), "seed {seed} (drawn {drawn}): held at A440");
+        assert!(more == choices || changed(&more) == changed(&choices) + 1 && more.iter().zip(&choices).all(|(a, b)| a == b || *b == "today"), "seed {seed}: {more:?} against {choices:?}");
         assert_eq!(ask(&mut g, "tuning.cents=-20"), (-20.0, bpm, choices), "seed {seed}");
     });
 }
@@ -195,8 +200,15 @@ fn every_pitched_note_moves_by_the_offset_and_the_kit_keeps_its_pitch() {
         drop(g);
         let (mut moved, mut kept) = (0, 0);
         for seed in seeds {
-            let a440 = play(seed, "tuning.cents=0", 40);
-            let off = play(seed, "tuning.cents=-30", 40);
+            // The choices the loop draws at A440, pinned for both, since the
+            // offset counts against its changes (queue item 101h).
+            let held = {
+                let mut g = Box::new(Generator::new());
+                g.load_with(seed, &Request::parse("tuning.cents=0").expect("a request"));
+                CHOICES.iter().zip(g.render().choices.iter()).map(|(c, w)| format!("{}={}", c.id, w.get())).collect::<Vec<_>>().join(",")
+            };
+            let a440 = play(seed, &format!("tuning.cents=0,{held}"), 40);
+            let off = play(seed, &format!("tuning.cents=-30,{held}"), 40);
             assert_eq!(a440.notes.len(), off.notes.len(), "seed {seed}: the same notes");
             for (a, b) in a440.notes.iter().zip(&off.notes) {
                 assert_eq!((a.0, a.1, a.2, a.4), (b.0, b.1, b.2, b.4), "seed {seed}: the same note at the same time");

@@ -175,9 +175,9 @@ fn the_vibes_lean_them_as_the_batch_s_table_says() {
     });
 }
 
-/// The first of the corpus's loops (up to 400) where `test` holds.
+/// The first of the corpus's loops (up to 2000) where `test` holds.
 fn find(g: &mut Generator, test: impl Fn(&Generator) -> bool) -> u32 {
-    corpus(400)
+    corpus(2000)
         .into_iter()
         .find(|&seed| {
             g.load_with(seed, &Request::new());

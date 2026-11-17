@@ -326,3 +326,17 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   more) left for Mikey with three measured ways back
   (`docs/notes/101h-change-counts.md`). The batch's table (each candidate,
   its options, its share, its two loops) is in the PR.
+- #402, Mikey's two calls for batch 6 (item 101h, 2026-11-17, v175), preview
+  URL: the branch's preview (no hash kept). **twang** picks a chord's three
+  notes a beat apart, low and slow (`spread = 1`), where v174 struck them
+  together: he-rosk (#33, bright), maisk-feim (#151, soft) and tom-wen
+  (#172, slow) from 0:00. **How many changes a loop gets:** batch 6's nine
+  draws count against the changes a loop drew and the list fills what they
+  leave (way A), so 78.5% of loops get one or two (52% at v174) and 16.6%
+  three or more (43%); 56% of loops' choices move, so their codes play
+  differently. Five album loops gave their far end to the batch's later
+  sounds; the far ends' loops now (corpus 20261009): deepDuck **vor-the**
+  (#136) from 0:10 and **toam-woar** (#67) after 0:20; fast **meil-broa**
+  (#264) and **moal-doang** (#812) from 0:00; slowOpening **tui-doask** (#2)
+  from 1:14 and **sir-houl** (#105) from 0:48. Every other candidate's two
+  loops still draw it.

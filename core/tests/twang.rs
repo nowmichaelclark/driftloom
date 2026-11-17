@@ -109,13 +109,21 @@ fn each_version_is_leaned_by_its_own_vibes_never_to_none() {
     });
 }
 
+/// The list's changes with a setting on (`on`) against off (`off`), as
+/// option words: the same, or the list giving way to the setting (queue
+/// item 101h), which drops the last change the list drew and nothing else.
+fn gives_way(on: &[&str], off: &[&str]) -> bool {
+    let changed = |c: &[&str]| c.iter().filter(|w| !w.is_empty() && **w != "today").count();
+    on == off || changed(on) + 1 == changed(off) && on.iter().zip(off).all(|(a, b)| a == b || *a == "today")
+}
+
 #[test]
 fn a_pin_plays_its_version_or_keeps_it_off_and_nothing_else_moves() {
     roomy(|| {
         assert_eq!(Request::parse("twang.kind=loud").err(), Some(BAD_SETTING));
         let mut g = Box::new(Generator::new());
         let mut a = Box::new(Generator::new());
-        let (mut busy, mut played) = (0, 0);
+        let (mut busy, mut played, mut gave) = (0, 0, 0);
         for seed in corpus(200) {
             for (i, &(kind, _)) in TWANG_KINDS.iter().enumerate() {
                 g.load_with(seed, &ask(&format!("twang.kind={kind}")));
@@ -126,7 +134,15 @@ fn a_pin_plays_its_version_or_keeps_it_off_and_nothing_else_moves() {
                 played += usize::from(m && i == 1);
                 assert_eq!(usize::from(g.settings().twang), if m { i } else { 0 }, "seed {seed}: {kind}");
                 assert_eq!(a.settings().twang, 0, "seed {seed}: today's plays none");
-                assert_eq!(on.choices.iter().map(|w| w.get()).collect::<Vec<_>>(), off.choices.iter().map(|w| w.get()).collect::<Vec<_>>(), "seed {seed}");
+                let (cs, ds) = (on.choices.iter().map(|w| w.get()).collect::<Vec<_>>(), off.choices.iter().map(|w| w.get()).collect::<Vec<_>>());
+                assert!(gives_way(&cs, &ds), "seed {seed}: {cs:?} against {ds:?}");
+                if cs != ds {
+                    // The list gave way: what it drops may move the notes.
+                    gave += 1;
+                    assert_eq!(g.settings().tuning, a.settings().tuning, "seed {seed}");
+                    assert_eq!(g.settings().low_bell, a.settings().low_bell, "seed {seed}");
+                    continue;
+                }
                 assert!(on.chords.iter().zip(off.chords.iter()).all(|(x, y)| x.step == y.step && x.vel == y.vel && x.notes[..] == y.notes[..]), "seed {seed}: a chord moved");
                 assert!(on.melody.iter().zip(off.melody.iter()).all(|(x, y)| x.step == y.step && x.midi == y.midi), "seed {seed}: the tune moved");
                 assert!(on.bass.iter().zip(off.bass.iter()).all(|(x, y)| x.step == y.step && x.midi == y.midi), "seed {seed}: the bass moved");
@@ -135,8 +151,9 @@ fn a_pin_plays_its_version_or_keeps_it_off_and_nothing_else_moves() {
                 assert_eq!(g.settings().low_bell, a.settings().low_bell, "seed {seed}");
             }
         }
-        println!("pinned soft: {played} loops play it, {busy} keep it off (no chord, or a kit busier than a soft one)");
+        println!("pinned soft: {played} loops play it, {busy} keep it off (no chord, or a kit busier than a soft one); the list gave way {gave} times");
         assert!(played > 60 && busy > 60, "{played} played, {busy} kept off");
+        assert!(gave > 0 && gave < played * 3, "the list gave way {gave} times");
     });
 }
 
