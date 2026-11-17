@@ -225,6 +225,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 | 87b on his devices (v142 preview) | Moto stays on full (busiest 18-24%, no late notes); tablet moved to lite by itself (75% at full; on lite 55%, 40% of real time); the switch "doesn't bother" him, a crossfade in phase 3; the tablet lost 10 notes at two new loops: folded into phase 3 (the queue's "For phase 3") |
 | Long Pieces Album (v164, 33 clips, 3 blind pairs, 2026-11-14) | all ten pieces Keep; composed chosen over before (brum-yei's B); a wander move and the control Same; arc "good enough for now"; joins welcome, wander right, endings real |
 | Phase 2 Blind Album (v128 against v149, 11 pairs, 2026-11-07) | the null pair Same; no pair worse for phase 2 apart from item 84's downward octave moves (old preferred 2 of 3); upward moves new preferred 3 of 3: 84b after phase 3; the stab chords "Fine" in all three |
+| Batch 6 Album (v177, 15 labeled cards and 7 blind pairs, 2026-11-17) | every batch 6 sound Keep but twang: soft only (bright and slow "sounded off"); 84b's nearer chords chosen 5 of 6, the control Same |
 
 ## Methods that proved themselves
 
@@ -304,6 +305,10 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
     core, `s22-codes-core`). Next in their places: 17 when 22 merges (then
     23 after 17, since both change `js/gen.js`; or 20 in between), 27 after
     26 and 17.
+  - **Mikey heard the Batch 6 Album (2026-11-17)** and B-parallel read his
+    verdicts from its db: every sound Keep but twang (soft only: session
+    17's first PR, since 22 is in `data/`); 84b chosen 5 of 6, the control
+    Same; the key written in `docs/ALBUMS.md`; `docs/DECISIONS.md`.
 - **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
   out.** On `main` at v177 (686543d), measured, not taken from the reports:
   the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the

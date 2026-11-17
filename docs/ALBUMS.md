@@ -4,7 +4,7 @@ Blind albums the brain has sent Mikey and not yet heard back on. Each
 key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
-## "Batch 6 Album" (brain B2, 2026-11-17, v177; items 101 and 84b) -- out
+## "Batch 6 Album" (brain B2, 2026-11-17, v177; items 101 and 84b) -- heard 2026-11-17
 
 Page: <https://claude.ai/artifact/3zgBGFPzidGMt3wr1SQwzP> (private to its
 owner; verdicts in its database, collection `verdicts`, one document a card,
@@ -34,6 +34,14 @@ About 28 minutes, headphones. Rendered by the brain with `tools/clips.mjs`
   0.00 to 0.14 dB: 84b moves the loops' loudness that little). Order and X / Y
   by a fixed seed, kept in `brain/key`; written here once he has answered.
   Pick X, Y or Same.
+- **Heard 2026-11-17 (Mikey, the page's verdicts, read by B-parallel):**
+  every card Keep (wideSweep wide in words, its card left blank) but twang,
+  Tune: "I only liked the soft version. The bright and slow sounded off to
+  me." **The key, now he has answered** (X / Y, his pick, so which build he
+  chose): 1 glai-thel X=v177, X (84b); 2 fo-roan X=v177, X (84b); 3 shu-san
+  X=v176, Y (84b); 4 the control (thuing-huim) Same; 5 fum-doun X=v176, Same;
+  6 youn-ti X=v176, Y (84b); 7 theim-rem X=v177, X (84b). 84b chosen in 5 of
+  6, never the build before, and the control heard as Same.
 
 ## "Long Pieces Album" (brain B3, 2026-11-14, v164; item 102) -- heard 2026-11-14
 

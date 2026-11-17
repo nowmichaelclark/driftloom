@@ -66,7 +66,7 @@ Mikey's two calls, v175 #402: batch 6's draws count against a loop's
 changes, way A of `docs/archive/notes/101h-change-counts.md`, and twang picks a
 beat apart); hands session 10 done (2026-11-17: 84b, v177, the chords a
 fifth under the tune where 84's whole octave left them past an octave, #404);
-brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; next: the chains, Mikey's album, and his testers' pastes
+brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; Mikey heard the Batch 6 Album (2026-11-17: every sound kept, twang soft only, in session 17's first PR; 84b kept); next: the chains, and his testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -749,6 +749,14 @@ didn't work, skip this item.**
   line reads in `ranks.mjs`; tests three times.
 
 ## Later, not queued
+
+Each sound's share, vibe by vibe (Mikey, 2026-11-17, after the Batch 6
+Album): how often a sound plays is tuned mood by mood across the vibes, some
+leaning into it (the soft twang, say) and some away, and the real share of
+loops follows from that; not before the vibes are looked at one by one.
+84b's 88 far-off held chords: maybe a later item, maybe never ("having
+differing kinds of music is okay"); a flip-free way to read their octave if
+it is ever wanted.
 
 Mikey liked the fiddle, accordion and drone as they are, and may want
 more nuance in them later. Not now. New instruments are welcome again
