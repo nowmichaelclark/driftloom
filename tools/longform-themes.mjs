@@ -29,6 +29,11 @@
 //              no higher than over theme A's own statements
 //   octave     where the loop keeps its tune's centre five semitones from
 //              its chords', so does every unit
+//   gap        (reported, queue item 84b) the tune's centre less the
+//              chords' in each unit, by kind: theme A at home, in a related
+//              key, theme B, a return, a register variation (which moves an
+//              octave on purpose); and how many units sit more than an
+//              octave (12.5) under the tune
 //
 // `--one` prints one piece unit by unit. Needs the tools' build
 // (tools/build-core.sh --tools); builds dlrender.
@@ -74,6 +79,10 @@ export function play(seed, request) {
     const to = from + u.bars * spb;
     const s = secs.get(u.section);
     const layers = [0, 1, 2, 3].map((l) => (s ? s.layers[l].filter((n) => n.step >= from && n.step < to).map((n) => ({ ...n, step: n.step - from })) : []));
+    // A voice's own partial an octave over a chord tone (the piano's: a
+    // sixth of its velocity, struck with it) is its timbre, not a chord
+    // tone: left out of the chords' notes, so a centre reads the chord.
+    layers[CHORDS] = layers[CHORDS].filter((n) => !layers[CHORDS].some((m) => m.t === n.t && m.midi === n.midi - 12 && n.vel < m.vel / 3));
     units.push({ ...u, from, to, steps: to - from, layers });
     from = to;
   }
@@ -123,7 +132,7 @@ const bag = (unit) => unit.layers.map((l) => l.map((n) => `${n.step}|${n.kind}|$
 export function themeChecks(piece) {
   const { units, form, spb, own, drifts } = piece;
   const problems = [];
-  const seen = { variations: {}, rests: 0, seconds: 0, returns: [], clash: {}, likeA: 0, prepared: 0, calls: 0 };
+  const seen = { variations: {}, rests: 0, seconds: 0, returns: [], clash: {}, likeA: 0, prepared: 0, calls: 0, gaps: {} };
   const home = form.home;
   const all = [MELODY, CHORDS, BASS, TEXTURE];
   const statements = units.filter((u) => u.role === 'theme' && u.variation === 'plain');
@@ -157,6 +166,10 @@ export function themeChecks(piece) {
     add(u.role === 'theme' ? 'theme A stated' : u.variation === 'reharmonized' ? 'reharmonized' : u.key.relation === 'parallel' ? 'the parallel key' : b ? 'another tune (B, an answer)' : 'theme A elsewhere', clash(u));
     const a = tuneIn(u);
     const tune = u.layers[MELODY];
+    if (tune.length >= 3 && u.layers[CHORDS].length && !u.fragment) {
+      const kind = u.variation === 'register' ? 'register variation' : u.role === 'return' ? 'a return' : u.theme === 'B' ? 'theme B' : u.key.relation !== 'home' ? 'a related key' : 'theme A at home';
+      (seen.gaps[kind] ??= []).push(centre(tune) - centre(u.layers[CHORDS]));
+    }
     // The octave rule: theme A's units against the loop's own in the same
     // bars; a second theme's over all its statement.
     if (pitched && !drifts && !b && !u.fragment && tune.length >= 3 && u.layers[CHORDS].length && Math.abs(gapIn(u)) >= 5) {
@@ -226,7 +239,7 @@ function one(seed, request) {
 function corpus() {
   const rng = new Rng(20261009);
   const seeds = Array.from({ length: SEEDS }, () => rng.seed32());
-  const total = { pieces: 0, problems: 0, variations: {}, seconds: 0, rests: 0, likeA: 0, returns: {}, copies: 0, clash: {}, prepared: 0, calls: 0 };
+  const total = { pieces: 0, problems: 0, variations: {}, seconds: 0, rests: 0, likeA: 0, returns: {}, copies: 0, clash: {}, prepared: 0, calls: 0, gaps: {} };
   const failing = [];
   const run = (seed, request) => {
     const { problems, seen } = themeChecks(play(seed, request));
@@ -237,6 +250,7 @@ function corpus() {
     for (const k of ['seconds', 'rests', 'likeA', 'prepared', 'calls']) total[k] += seen[k];
     for (const r of seen.returns) (total.returns[r.variation] ??= []).push(r.kept);
     for (const [k, v] of Object.entries(seen.clash)) v.forEach((n, i) => ((total.clash[k] ??= [0, 0])[i] += n));
+    for (const [k, v] of Object.entries(seen.gaps)) (total.gaps[k] ??= []).push(...v);
   };
   for (const [i, seed] of seeds.entries()) {
     run(seed, 'bars=256,journey=arc');
@@ -247,6 +261,11 @@ function corpus() {
   console.log(`second themes stated: ${total.seconds}; theme A in the key, where the second theme rests (85f): ${total.likeA}; silent: ${total.rests}`);
   console.log(`returns, the share of theme A's notes kept: ${Object.entries(total.returns).map(([k, v]) => `${k} ${v.length} (${Math.min(...v).toFixed(2)} to ${Math.max(...v).toFixed(2)}, mean ${mean(v.filter((x) => !Number.isNaN(x))).toFixed(2)})`).join('; ')}`);
   console.log(`variations played (units): ${VARIATIONS.map((v) => `${v} ${total.variations[v] ?? 0}`).join(', ')}; returns prepared ${total.prepared}; call-and-response units ${total.calls}`);
+  const pc = (v, q) => v[Math.min(v.length - 1, Math.floor(q * v.length))].toFixed(1);
+  for (const k of ['theme A at home', 'a related key', 'theme B', 'a return', 'register variation']) {
+    const v = (total.gaps[k] ?? []).slice().sort((x, y) => x - y);
+    if (v.length) console.log(`the gap (84b), ${k}: ${v.length} units; p10 ${pc(v, 0.1)}, median ${pc(v, 0.5)}, p90 ${pc(v, 0.9)}; under 5 ${v.filter((x) => Math.abs(x) < 5).length}, over 12.5 ${v.filter((x) => x > 12.5).length}`);
+  }
   const rest = Object.entries(total.clash).filter(([k]) => k !== 'theme A stated').reduce((a, [, v]) => [a[0] + v[0], a[1] + v[1]], [0, 0]);
   console.log(`clash (the tune a semitone over a sounding chord tone, share of its time): ${Object.entries(total.clash).map(([k, v]) => `${k} ${(share(v) * 100).toFixed(2)}%`).join('; ')}; every unit but the statements ${(share(rest) * 100).toFixed(2)}%`);
   let bad = total.problems;

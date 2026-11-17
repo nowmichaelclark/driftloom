@@ -81,7 +81,9 @@ pub struct Render {
     pub depth_made: bool,
     /// The octave (in semitones) the chords take, decided from the
     /// progression once the melody is drawn (`chordsOctave`, queue item
-    /// 84), and applied by the register work.
+    /// 84), and applied by the register work; less than an octave down
+    /// where a whole one would leave them too far under the tune (`lower`,
+    /// queue item 84b).
     pub chord_shift: f64,
     /// An octave decided elsewhere, on today's chord lengths (`Generator`
     /// plans and draws those first for a loop with held chords); taken by
@@ -94,6 +96,60 @@ pub struct Render {
     pedal_notes: Bass,
     a_notes: Melody,
     section_notes: Melody,
+}
+
+/// How near under the tune the chords go where a whole octave down would
+/// leave them more than an octave under it (queue item 84b): a fifth, from
+/// the tune's centre to theirs. For Mikey's ears: nearer than this, the
+/// chords' top notes start to meet the tune's low ones.
+pub const NEAR: f64 = 7.0;
+
+/// How much deeper than `NEAR` a loop with held chords goes (queue item
+/// 84b): its octave is read on today's chord lengths (`Render::held_octave`),
+/// whose tune can sit a few semitones from its own.
+pub const HELD: f64 = 2.0;
+
+/// Whether `by` moves a chord whole (whole octaves, or nothing) rather than
+/// only its top notes (queue item 84b).
+fn whole_octaves(by: f64) -> bool {
+    by % 12.0 == 0.0 || !(by > -12.0 && by < 0.0)
+}
+
+/// The line over which a chord's notes go an octave down for a move of
+/// less than an octave down (queue item 84b): its top notes, as many as take
+/// its centre at least `by` down (each moves it an octave over the chord's
+/// size), so the chord keeps its notes and changes its inversion. `None`
+/// for a chord of no notes.
+#[must_use]
+pub fn line(chord: &[i16], by: f64) -> Option<i16> {
+    let mut sorted: List<i16, { plan::NOTES_MAX }> = List::new();
+    for &n in chord.iter().take(plan::NOTES_MAX) {
+        sorted.push(n);
+    }
+    sorted.sort_unstable();
+    let size = js::num(sorted.len());
+    let down = js::index(js::clamp(js::ceil(size * -by / 12.0), 1.0, size));
+    sorted.len().checked_sub(down).and_then(|i| sorted.get(i).copied())
+}
+
+/// A chord's notes moved by `by` semitones, as the chords' octave moves
+/// them (queue items 84 and 84b): whole octaves move every note; less than
+/// an octave down moves every note at or over `over`'s line (`line`: the
+/// chord as the progression voices it, which the layer's notes may
+/// arpeggiate) an octave down. The notes stay in their places in the list
+/// (the wander opens a chord a ninth over its first).
+pub fn lower(notes: &mut [i16], over: &[i16], by: f64) {
+    if whole_octaves(by) {
+        #[allow(clippy::cast_possible_truncation)] // whole octaves
+        let by = by as i16;
+        for n in notes.iter_mut() {
+            *n += by;
+        }
+    } else if let Some(at) = line(over, by).or_else(|| line(notes, by)) {
+        for n in notes.iter_mut().filter(|n| **n >= at) {
+            *n -= 12;
+        }
+    }
 }
 
 impl Render {
@@ -188,7 +244,7 @@ impl Render {
                 melody::gen_melody(cx, layer_bars(cx, Layer::Melody), spec.layer_seed(Layer::Melody), &over, None, &mut self.melody);
         }
         // Read here, from the whole tune before form, rests and gaps touch it.
-        self.chord_shift = self.register_given.take().unwrap_or_else(|| self.chords_octave(cx));
+        self.chord_shift = self.register_given.take().map_or_else(|| self.chords_octave(cx), Self::held_octave);
     }
 
     /// The loop's tune made again as another tune's (session 14, a long
@@ -414,16 +470,14 @@ impl Render {
         let spec = cx.spec;
         let spb = cx.spb;
         if self.chord_shift != 0.0 {
-            #[allow(clippy::cast_possible_truncation)] // whole octaves
-            self.shift_chords(self.chord_shift as i16);
+            self.shift_chords(self.chord_shift);
         }
         if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
             self.spell_over(cx);
         }
         self.colors.clear();
         if self.choice("colorTone") == Some("on") {
-            #[allow(clippy::cast_possible_truncation)] // whole octaves
-            color::colors(&self.harmony.slots, &self.chords, spec, self.chord_shift as i16, &mut self.colors);
+            color::colors(&self.harmony.slots, &self.chords, spec, self.chord_shift, &mut self.colors);
         }
 
         let cycle = spec.cycles.of(Layer::Melody as usize).filter(|&c| c != 0.0).unwrap_or(spec.bars * spb);
@@ -455,17 +509,20 @@ impl Render {
     }
 
     /// Move every chord, in the harmony and in the layer, by `shift`
-    /// semitones.
-    pub fn shift_chords(&mut self, shift: i16) {
-        for e in self.harmony.events.iter_mut() {
-            for n in e.notes.iter_mut() {
-                *n += shift;
+    /// semitones (`lower`): whole octaves move every note; less than an
+    /// octave down, each chord's notes go by its slot's chord (`line`), so
+    /// an arpeggio moves as its chord does.
+    pub fn shift_chords(&mut self, shift: f64) {
+        let h = &mut self.harmony;
+        for i in 0..h.events.len() {
+            let Some(step) = h.events.get(i).map(|e| e.step) else { break };
+            let over = h.slot_at(step).notes;
+            if let Some(e) = h.events.get_mut(i) {
+                lower(&mut e.notes, &over, shift);
             }
         }
         for e in self.chords.iter_mut() {
-            for n in e.notes.iter_mut() {
-                *n += shift;
-            }
+            lower(&mut e.notes, &h.slot_at(e.step).notes, shift);
         }
     }
 
@@ -831,10 +888,11 @@ impl Render {
         n / seconds
     }
 
-    /// `chordsOctave(harmony, melodyEvents, spec, choir)`: how many
-    /// semitones the chords move, from the progression's voicing and the
-    /// whole tune (spelled over its chords), not from what sounds.
-    fn chords_octave(&self, cx: &Cx) -> f64 {
+    /// The progression's pooled notes and the whole tune (spelled over its
+    /// chords) the chords' octave is read from: the tune's centre, the
+    /// chords', and the chords' lowest and highest notes. `None` where
+    /// either has no notes.
+    fn centres(&self, cx: &Cx) -> Option<[f64; 4]> {
         let mut sum = 0.0;
         let mut n = 0usize;
         let (mut lowest, mut highest) = (f64::INFINITY, f64::NEG_INFINITY);
@@ -853,11 +911,24 @@ impl Render {
             msum += self.spelled_midi(cx, e.midi, e.step);
             mn += 1;
         }
-        if n == 0 || mn == 0 {
-            return 0.0;
-        }
-        let melody_centre = msum / js::num(mn);
-        let chord_centre = sum / js::num(n);
+        (n > 0 && mn > 0).then(|| [msum / js::num(mn), sum / js::num(n), lowest, highest])
+    }
+
+    /// A loop with held chords takes the octave read on today's lengths
+    /// (`by`, queue item 84): whole octaves, or none, as they are. Less
+    /// than an octave down (queue item 84b) is read there for a tune that
+    /// may sit a few semitones from the loop's own, so it goes `HELD` deeper,
+    /// never past an octave: still read only on today's lengths, so nothing
+    /// the chords' lengths follow (a tempo, a pin) can move it.
+    fn held_octave(by: f64) -> f64 {
+        if whole_octaves(by) { by } else { js::max(-12.0, by - HELD) }
+    }
+
+    /// `chordsOctave(harmony, melodyEvents, spec, choir)`: how many
+    /// semitones the chords move, from the progression's voicing and the
+    /// whole tune (spelled over its chords), not from what sounds.
+    fn chords_octave(&self, cx: &Cx) -> f64 {
+        let Some([melody_centre, chord_centre, lowest, highest]) = self.centres(cx) else { return 0.0 };
         let room = |sh: f64| lowest + sh >= 33.0 && highest + sh <= 96.0;
         let gap = |sh: f64| js::abs(melody_centre - (chord_centre + sh));
         let mut shift = 0.0;
@@ -879,6 +950,17 @@ impl Render {
             } else {
                 down.first().copied().unwrap_or(0.0)
             };
+            // Queue item 84b: a whole octave down from a centre already
+            // under the tune's leaves the chords more than an octave under
+            // it (Mikey's blind album preferred them nearer). They go down
+            // only as far as a fifth under the tune (`NEAR`), their top
+            // notes an octave down (`lower`): the same chords, another
+            // inversion. Room holds, as the whole octave had it (nothing
+            // goes lower than it would have).
+            let under = melody_centre - chord_centre;
+            if shift == -12.0 && under > 0.0 {
+                shift = under - NEAR;
+            }
         }
         shift
     }

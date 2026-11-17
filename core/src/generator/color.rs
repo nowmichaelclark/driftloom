@@ -25,6 +25,7 @@ use super::data::COLORTONE;
 use super::js;
 use super::list::{Empty, List};
 use super::plan::{ChordEvent, NOTES_MAX, SLOTS_MAX, Slot};
+use super::render;
 use super::rng::Rng;
 use super::spec::Spec;
 
@@ -129,10 +130,10 @@ pub fn colorable(slots: &[Slot], chords: &[ChordEvent], spec: &Spec) -> bool {
 /// (`[setting colortone] share`), one draw a slot whether it can take one or
 /// not, so a chord's draw is its place's. A slot that takes one holds it from
 /// where its chord first sounds in it to its end, voiced over the chord as
-/// the layer plays it (`shift`, the chords' octave); one held on from the
+/// the layer plays it (`shift`, the chords' octave, `render::lower`); one held on from the
 /// slot before (the same color, the same chord event sounding: a long chord)
 /// holds on.
-pub fn colors(slots: &[Slot], chords: &[ChordEvent], spec: &Spec, shift: i16, out: &mut Colors) {
+pub fn colors(slots: &[Slot], chords: &[ChordEvent], spec: &Spec, shift: f64, out: &mut Colors) {
     out.clear();
     let mut r = Rng::new(js::salted(spec.seed, COLOR_SALT, 1));
     for slot in slots {
@@ -148,9 +149,10 @@ pub fn colors(slots: &[Slot], chords: &[ChordEvent], spec: &Spec, shift: i16, ou
         let Ok(anchor) = u16::try_from(i) else { continue };
         let mut notes: List<i16, NOTES_MAX> = List::new();
         for &n in slot.notes.iter() {
-            notes.push(n + shift);
+            notes.push(n);
         }
-        let Some(midi) = voiced(&notes, whole(slot.root_midi) + i32::from(shift), iv) else { continue };
+        render::lower(&mut notes, &slot.notes, shift);
+        let Some(midi) = voiced(&notes, whole(slot.root_midi), iv) else { continue };
         let step = js::max(slot.start_step, at);
         let end = slot.start_step + slot.length_steps;
         if let Some(last) = out.last_mut()

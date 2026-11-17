@@ -95,7 +95,7 @@ export function readCalls(file) {
       if (!secs.has(key.pass)) secs.set(key.pass, { start: Infinity, steps: 0, layers: CH.map(() => []) });
       const s = secs.get(key.pass);
       const t = num(p[3]);
-      s.layers[Number(p[2])].push({ step: key.step, kind: `${p[1]}.${p[7]}`, tone: p[8], midi: num(p[4]), dur: num(p[5]), t });
+      s.layers[Number(p[2])].push({ step: key.step, kind: `${p[1]}.${p[7]}`, tone: p[8], midi: num(p[4]), dur: num(p[5]), t, vel: num(p[6]) });
       s.steps = Math.max(s.steps, key.step + 1);
       if (key.step === 0) s.start = Math.min(s.start, t);
     } else if (p[0] === 'param') params.push({ id: Number(p[1]), v: num(p[3]), t: num(p[4]) });

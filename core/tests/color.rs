@@ -104,8 +104,6 @@ fn every_color_is_the_thirteen_over_major_or_the_eleven_over_minor_above_the_cho
             }
             loops += 1;
             let spec = g.spec();
-            #[allow(clippy::cast_possible_truncation)] // whole octaves
-            let shift = r.chord_shift as i16;
             for c in r.colors.iter() {
                 colors += 1;
                 let slot = r.harmony.slot_at(c.step);
@@ -134,7 +132,9 @@ fn every_color_is_the_thirteen_over_major_or_the_eleven_over_minor_above_the_cho
                 assert!(c.midi <= TOP, "seed {seed}: above C6");
                 let e = &r.chords[usize::from(c.anchor)];
                 assert!(e.vel != 0.0 && e.step < c.step + c.dur && e.step + e.dur > c.step, "seed {seed}: its chord sounds with it");
-                let top = slot.notes.iter().copied().max().unwrap_or(0) + shift;
+                let mut played = slot.notes;
+                dlcore::generator::render::lower(&mut played, &slot.notes, r.chord_shift);
+                let top = played.iter().copied().max().unwrap_or(0);
                 if c.midi <= top {
                     assert!(c.midi + 12 > TOP, "seed {seed}: under the top note only where C6 holds it");
                 }
