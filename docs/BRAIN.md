@@ -299,7 +299,11 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   (said at its top); the merge-main rule in "Rules for every session".
   **Running:** see the sessions list below as it fills. This brain stops at
   B4 (`brain-4-codes.md`, the next brain's).
-  - Sessions: (none started yet)
+  - Sessions: the plan merged (#409). Started 2026-11-17, each in its own
+    worktree: 26 (Android audio, `s26-android-audio`) and 22 (codes in the
+    core, `s22-codes-core`). Next in their places: 17 when 22 merges (then
+    23 after 17, since both change `js/gen.js`; or 20 in between), 27 after
+    26 and 17.
 - **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
   out.** On `main` at v177 (686543d), measured, not taken from the reports:
   the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the
