@@ -340,3 +340,12 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (#264) and **moal-doang** (#812) from 0:00; slowOpening **tui-doask** (#2)
   from 1:14 and **sir-houl** (#105) from 0:48. Every other candidate's two
   loops still draw it.
+- #403, the keepalive without the hiss (2026-11-17, v176), preview URL: the
+  branch's preview (no hash kept). Mikey heard a hiss behind every loop: the
+  media session's hidden keepalive was noise at -62 dBFS up to 4 kHz, played
+  under everything (the core's renders of his six loops have no floor: their
+  quietest tenth falls to -79 to -141 dBFS above 5 kHz). It is now a 20 Hz
+  sine at the same power (-60 dB), 300 cycles in its 15 s, written by
+  `tools/keepalive.py`. Any loop, a quiet one best, on headphones: no hiss;
+  and the lock-screen and Bluetooth controls still come up (his phone's
+  check).

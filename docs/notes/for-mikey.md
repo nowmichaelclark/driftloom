@@ -89,6 +89,12 @@ the points where the next step is yours.
   fills a gap's silence; 15% of the loops that may have it before the vibes.
   The holes found while measuring it (ta-muin and yi-yoar as Endless arcs)
   are fixed in 102g, below.
+- **The hiss (v176, #403):** the hiss you heard behind every loop was the
+  page's hidden keepalive (the file that keeps the lock-screen controls), not
+  the music: noise at -62 dBFS. It is now a 20 Hz tone at the same power, far
+  under hearing. Check on your phone, a quiet loop on headphones: no hiss,
+  and the lock-screen and Bluetooth controls still come up. If the controls
+  are gone, say so: the old file is one revert away.
 - **twang (101h, session 09, v174):** a synth in the spirit of a tremolo
   baritone guitar on the chord layer: at each chord whose lowest note
   changes (or the same after 3 s) it picks that note between E2 and D#3 with

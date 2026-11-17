@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-17:** `main` is at v175 (session 01 done: v154 the tools
+**Status, 2026-11-17:** `main` is at v176 (v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
