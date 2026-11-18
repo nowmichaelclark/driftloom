@@ -40,7 +40,7 @@ center() {
     const want = process.argv[1];
     for (const m of xml.matchAll(/<node [^>]*>/g)) {
       const n = m[0];
-      // The WebView's accessibility tree gives the button's label as its text.
+      // A button is in the tree with its label as the text.
       if (!n.includes(`text="${want}"`) && !n.includes(`content-desc="${want}"`)) continue;
       const b = /bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(n);
       if (b) { console.log(`${(+b[1] + +b[3]) >> 1} ${(+b[2] + +b[4]) >> 1}`); process.exit(0); }
