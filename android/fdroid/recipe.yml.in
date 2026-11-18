@@ -24,7 +24,7 @@ Builds:
     subdir: android
     sudo:
       - apt-get update
-      - apt-get install -y gcc
+      - apt-get install -y gcc libc6-dev
     gradle:
       - yes
     output: app/build/outputs/apk/release/*-universal-release-unsigned.apk

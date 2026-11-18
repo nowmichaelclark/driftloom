@@ -155,17 +155,29 @@ fun siteFiles(): List<String> {
     return entries
 }
 
+val licenseFiles = listOf("LICENSE", "fonts/LICENSE-inter.txt", "fonts/LICENSE-space-grotesk.txt")
+
 val bundleApp by tasks.registering(Sync::class) {
     group = "driftloom"
     description = "Copies the app's files (sw.js's list) from the repo into assets/www."
     val files = siteFiles()
     inputs.file(File(siteRoot, "sw.js"))
+    inputs.files(licenseFiles.map { File(siteRoot, it) })
     into(layout.buildDirectory.dir("generated/bundled-site/www"))
     doFirst {
         val missing = files.filterNot { File(siteRoot, it).isFile }
         if (missing.isNotEmpty()) throw GradleException("sw.js lists files that are not in the repo: $missing")
     }
     for (rel in files) {
+        from(File(siteRoot, rel)) {
+            val dir = rel.substringBeforeLast('/', "")
+            if (dir.isNotEmpty()) into(dir)
+        }
+    }
+    // The licenses that go with the files: the repository's (MIT) and the two
+    // fonts' (SIL OFL 1.1 asks that each copy carries its license). The same
+    // list is in fdroid/check-apk.sh.
+    for (rel in licenseFiles) {
         from(File(siteRoot, rel)) {
             val dir = rel.substringBeforeLast('/', "")
             if (dir.isNotEmpty()) into(dir)

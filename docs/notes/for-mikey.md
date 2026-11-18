@@ -12,6 +12,78 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
+
+Nothing here is submitted or signed yet and no account was made. Two choices
+are yours; the submission itself waits until after session 31, because the
+merge request to F-Droid is public and carries the app's new name.
+
+**1. Who signs the app (decide before 31; it can wait until you submit).**
+
+- *F-Droid signs it* (the default). F-Droid builds the app from the tagged
+  commit and signs the APK with its own key. You do nothing more. Cost: the
+  F-Droid app's copy is signed with F-Droid's key, not yours, so a copy from
+  somewhere else (a GitHub release, Play later) will not install over it or be
+  replaced by it (Android refuses a different key). Choose this if you only
+  want people to get the app from F-Droid.
+- *Your own key plus reproducible builds*. You sign the release APK with a key
+  only you hold. F-Droid builds it too and, because the two files match byte
+  for byte, publishes yours: one app, one key, whether it comes from F-Droid,
+  GitHub or Play. Cost: you keep the key safe for good (lose it and the app
+  can never be updated), and the build must stay reproducible
+  (`docs/notes/107-reproducible.md`: CI checks it on every Android change).
+- **Recommendation:** your own key, because the build is reproducible (see
+  that note for the checked result) and because you plan Play later. If you
+  would rather not hold a key, F-Droid signing is fine and you can still move
+  later by releasing under a new app id.
+
+If you choose your own key (do this on your computer, never in CI, never in a
+chat or the repo):
+
+1. Make the key: `keytool -genkeypair -v -keystore release.jks -alias release
+   -keyalg RSA -keysize 4096 -validity 36500` (it asks for a password and your
+   name; any answers do). Keep `release.jks` and the password in your password
+   manager and in a second backup place.
+2. Get its fingerprint: `keytool -list -v -keystore release.jks -alias release`
+   and copy the **SHA-256** line, lowercase, without the colons.
+3. At each release (the tag workflow gives you the unsigned APK as an
+   artifact): sign it with `apksigner` from build-tools 34 (not 35 or newer;
+   F-Droid's tool reads only what it makes): `apksigner sign --ks release.jks
+   --out signed.apk driftloom-universal-release-unsigned.apk`, and upload
+   `signed.apk` to the release page as the file F-Droid compares with.
+4. When you render the recipe (below), add `--signed-by <that SHA-256>`.
+
+**2. How to submit (after session 31 has renamed the app and set 1.0).**
+
+1. Make a GitLab account at gitlab.com (the free one), and fork
+   <https://gitlab.com/fdroid/fdroiddata>.
+2. On the public repository's tag for 1.0 (a tag named `v1.0`), run in a
+   checkout of that tag: `node android/fdroid/render.mjs --repo-url
+   <the public repository's address> > /tmp/recipe.yml` (add `--signed-by ...`
+   for your own key). It prints the recipe with the id, the name, the version
+   and the tag's commit filled in.
+3. In your fork, create `metadata/<the app's id>.yml` and paste that text in.
+   Open a merge request to `fdroid/fdroiddata`, titled "New app: <name>", using
+   the "New app" template it offers; tick what it asks. Its CI runs F-Droid's
+   own build and lint, as `.github/workflows/fdroid.yml` here already does.
+4. Reviewers answer in the merge request, usually within a few weeks. Likely
+   questions: the NDK (r28c: if F-Droid's build server lacks it they add it),
+   why the app deletes the committed wasm and rebuilds it (the recipe's
+   comments say), and WebView use (the app is a WebView around its own files;
+   no network permission). Answer them there; the recipe's comments hold the
+   reasons.
+5. Once merged, the listing appears in a few days (the first build takes
+   longest). Then set the app's own link, one line: in `js/main.js` set
+   `APP_LINK` to `https://f-droid.org/packages/<the app's id>/` (it shows a
+   404 until the listing is live, which is why it is empty now), bump `BUILD`
+   and `CACHE`, and merge.
+
+The other way in, if you prefer not to touch GitLab: open a "Request for
+Packaging" issue at <https://gitlab.com/fdroid/rfp/-/issues> with the public
+repository's address and the one-line description; someone from F-Droid may
+write the recipe, but it takes longer and they build it their own way. The
+merge request is faster and keeps the recipe in this repository.
+
 ## The Android app, screen off (item 107d, v188, PR #431)
 
 Install the universal APK from the PR's `driftloom-debug-apk` artifact over

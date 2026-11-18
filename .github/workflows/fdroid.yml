@@ -14,7 +14,7 @@
 #            directories (a, b), and then against F-Droid's build: the APKs
 #            byte for byte (docs/notes/107-reproducible.md).
 #   licenses the anti-features check and the list of what is in the APK
-#            (docs/notes/107-licenses.md says what the lists must hold).
+#            (android/LICENSES.md says what the lists must hold).
 name: fdroid
 
 on:

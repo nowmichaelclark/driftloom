@@ -5,7 +5,7 @@
 #   android/fdroid/check-apk.sh APK DEPENDENCIES.txt
 #
 # 1. The permissions are exactly the ones AndroidManifest.xml declares and
-#    docs/notes/107-licenses.md names: no network, no location, no storage.
+#    android/LICENSES.md names: no network, no location, no storage.
 # 2. No tracker, no ad or analytics library, no Google Play Services: none of
 #    their classes are in the code. (F-Droid's anti-features: Ads, Tracking,
 #    NonFreeNet, NonFreeDep, NonFreeAdd, NonFreeAssets, KnownVuln: none apply.)
@@ -48,13 +48,17 @@ cat "$tmp/kinds"
 extra=$(grep -v -x -E 'assets/www/|res/|lib/(arm64-v8a|armeabi-v7a|x86_64)/libdriftloom\.so|classes\.dex|META-INF/|kotlin/|AndroidManifest\.xml|resources\.arsc|assets/dexopt/baseline\.prof(m)?|DebugProbesKt\.bin|androidsupportmultidexversion\.txt' "$tmp/kinds" || true)
 [ -z "$extra" ] && ok "the APK holds the app's files, the core's library, the code and the resources" || bad "other entries in the APK: $extra"
 unzip -Z1 "$apk" | grep '^lib/' | grep -v 'libdriftloom\.so$' && bad "a native library besides the core's" || ok "the only native library is libdriftloom.so (built from this repository's source)"
-# the app's files are the list sw.js keeps
+# the app's files are the list sw.js keeps, and the three licenses that go with them
+for lic in LICENSE fonts/LICENSE-inter.txt fonts/LICENSE-space-grotesk.txt; do
+  unzip -Z1 "$apk" | grep -qx "assets/www/$lic" && ok "assets/www/$lic is in the APK" || bad "assets/www/$lic is not in the APK"
+done
 n=$(unzip -Z1 "$apk" | grep -c '^assets/www/' || true)
 want_n=$(node -e '
   const t = require("fs").readFileSync(process.argv[1] + "/sw.js", "utf8");
   const b = /const FILES = \[(.*?)\n\];/s.exec(t)[1].split("\n").filter((l) => !l.trim().startsWith("//"));
   console.log(b.flatMap((l) => [...l.matchAll(/\x27\.\/([^\x27]*)\x27/g)]).length);' "$root")
-[ "$n" = "$want_n" ] && ok "assets/www holds the $n files sw.js lists" || bad "assets/www holds $n files; sw.js lists $want_n"
+want_n=$((want_n + 3))
+[ "$n" = "$want_n" ] && ok "assets/www holds the $n files: sw.js's list and the three licenses" || bad "assets/www holds $n files; sw.js lists $((want_n - 3)) and there are 3 licenses"
 
 # 4. the libraries and their licenses
 sed -n 's/^.*--- \([^ :]*:[^ :]*\):\([^ ]*\).*/\1/p' "$deps" | sort -u >"$tmp/libs"
