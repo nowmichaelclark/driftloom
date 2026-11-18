@@ -212,6 +212,13 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders"
     dependsOn(buildNative)
 }
 
+// Lint reads the same generated folders (the release build runs "lint vital"
+// before it packages, and Gradle refuses a task that reads another's output
+// with no dependency declared).
+tasks.matching { it.name.contains("Lint") }.configureEach {
+    dependsOn(bundleApp, buildNative)
+}
+
 // The golden line (BuildConfig.GOLDEN_LINE): the first loop of
 // core/golden/seeds.hashes, without its number.
 fun goldenLine(): String {

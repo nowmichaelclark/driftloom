@@ -6,8 +6,9 @@ core built natively for Android's own audio. Session 25 (107a) made the shell
 and its CI build; session 26 (107b) the core native on AAudio, with a debug
 screen and tests; session 27 (107c) the page talking to it, so the app plays
 on the native core and the WebView plays no audio of its own; session 28 (107d) the screen
-off, the notification and saving an export; F-Droid's metadata is 29
-(`docs/sessions/`).
+off, the notification and saving an export; session 29 (107e) F-Droid's
+listing, build recipe, release workflow and checks (the sections "F-Droid",
+"Versions and releases" and "Licenses" below).
 
 ## What is here
 
@@ -65,6 +66,15 @@ off, the notification and saving an export; F-Droid's metadata is 29
 - `app/src/androidTest/`: the instrumented tests (`NativeCoreTest.kt`): the
   samples against the golden line and js/dlplayer.wasm's, a device change, and
   five minutes of play with no underrun and nothing late.
+- `fdroid/` (session 29): everything F-Droid needs and CI's `fdroid` workflow
+  runs: `recipe.yml.in` and `render.mjs` (the build recipe, filled from
+  `gradle.properties`), `build-in-container.sh` (the build in F-Droid's own
+  buildserver container), `check-metadata.mjs` (the listing's files and the
+  version scheme), `check-apk.sh` (permissions, trackers, what the APK holds,
+  the licenses list), `compare-apks.sh` (two builds, byte for byte).
+  `emulator-release.sh` plays a release APK on an emulator;
+  `screenshots.mjs`, `emulator-screenshots.sh` take the listing's screenshots.
+  `../fastlane/` holds the listing itself.
 - `smoke.mjs`, `emulator-smoke.sh`: the smoke test (the page plays on the
   native core; its main thread blocked 5 s, the music plays on).
   `emulator-rows.sh`: `tools/rows.mjs --app`, every row of item 94a's table
@@ -196,5 +206,82 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   reached the page). `AppWebView` tells the WebView it is shown while the app
   plays or saves; the page then runs as in front, the emulator's CPU for the
   app being 0% with the screen off.
+- **The icon** (session 29): the adaptive icon is the web app's own orbit
+  (`icons/maskable-512.png`) in vectors, with its monochrome layer for themed
+  icons, and the notification's small icon is the same orbit in one color. A
+  Painter may replace them (`docs/PAINTER.md`, "Platforms").
 - **Not yet:** the system bars' color following the page's theme (a Painter's
-  choice), the launcher icon (a placeholder in plain vectors).
+  choice).
+
+## Versions and releases
+
+**The scheme** (session 29). A release is `major.minor` or `major.minor.patch`,
+and its version code is `major * 10000 + minor * 100 + patch`: 1.0 is 10000,
+1.0.1 is 10001, 1.2 is 10200, 1.2.3 is 10203. Both live in `gradle.properties`
+(`driftloom.versionName`, `driftloom.versionCode`), once; the tag is
+`v<versionName>` (`v1.0`); and the changelog for the code is
+`fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (F-Droid shows it
+as "what's new"). A test build's name ends in `-test` and CI numbers its code by
+run, so each installs over the last. `fdroid/check-metadata.mjs` holds all of
+this (CI runs it; the release workflow runs it on the tag). Session 31 sets 1.0.
+Room is left for per-ABI codes later (a factor of ten, F-Droid's `VercodeOperation`),
+should the universal APK ever be too big.
+
+**A release:** change the three values (name, code, changelog), merge, then
+
+```sh
+git tag v1.0 && git push origin v1.0
+```
+
+The `android-release` workflow checks the tag against `gradle.properties`,
+checks that `js/dlplayer.wasm` is what `core/` builds, builds the unsigned
+release APKs (one for each ABI and the universal one) and keeps them, with
+their checksums, as the run's artifact. Nothing is signed or published by CI,
+and no key is stored there: `docs/notes/for-mikey.md` ("Signing") says what is
+done with the artifact.
+
+## F-Droid
+
+F-Droid builds the app itself, from the tagged commit, with its own tooling, and
+signs it (or, with a reproducible build, publishes the APK you signed).
+
+- **The listing** is `fastlane/metadata/android/en-US/`: the title (the app's
+  name: the one place a listing holds it, so the rename is one file and the
+  screenshots), the short and full descriptions, the changelogs, the icon, the
+  feature graphic and the phone screenshots (taken from the app by the
+  `screenshots` job of `android.yml`: download its artifact into
+  `images/phoneScreenshots/`).
+- **The recipe** (`fdroid/recipe.yml.in`, filled by `fdroid/render.mjs`): `node
+  android/fdroid/render.mjs --commit <the tag's commit> --repo-url <the public
+  repository's address>` prints the text of fdroiddata's `metadata/<id>.yml`.
+  The id, the name and the version come from `gradle.properties`, so the rename
+  (31a) changes nothing in it. `--signed-by <sha256>` adds the lines for an APK
+  signed with your own key.
+- **What it does**: builds from `android/` with Gradle's `assembleRelease` (the
+  universal APK); F-Droid refuses what is prebuilt, so it deletes the committed
+  `js/dlplayer.wasm` before its scan and builds it again (`tools/build-core.sh`,
+  the same bytes: `--check` proves it), deletes the research archives and a
+  `package.json` without a lock file, and installs the Rust compiler the
+  repository pins with rustup's own script (the `rustup` source library at a
+  pinned release). The NDK is the pinned r28c.
+- **Tested in CI** (`.github/workflows/fdroid.yml`): `check-metadata.mjs`;
+  fdroidserver's `lint` and `rewritemeta` on the recipe, in both forms; the
+  update check finding a new tag; **the build in F-Droid's own buildserver
+  container** (`build-in-container.sh`, modelled on the `fdroid build` job of
+  fdroiddata's CI: `fdroid build --on-server` from a clean clone, with its
+  scanner); that APK on an emulator, test-signed (`emulator-release.sh`: not
+  debuggable, the page loads, Play plays, nothing crashes in logcat, which is
+  what R8's renaming could break); and two builds compared byte for byte
+  (`docs/notes/107-reproducible.md`).
+- **Release builds are R8-minified** and carry no Google dependency blob and no
+  VCS stamp (`app/build.gradle.kts`).
+
+## Licenses
+
+`LICENSES.md` lists everything in the APK with its license; the repository is
+MIT. `fdroid/check-apk.sh` (CI) fails when a library is in the release and not
+in that list, when the list holds one that is not in the APK, when the APK asks
+for a permission beyond the five the manifest names (none is the network), or
+when it holds a tracker's or Google Play Services' classes. F-Droid's
+anti-features (Ads, Tracking, NonFreeNet, NonFreeDep, NonFreeAdd,
+NonFreeAssets, KnownVuln): none apply.

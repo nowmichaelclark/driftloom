@@ -44,6 +44,12 @@ const page = await AppPage.open({ pkg: appId(), ms: 90000, log: console.log });
 const ev = (expression) => page.evaluate(expression, undefined, { gesture: true });
 const click = (id) => ev(`document.getElementById('${id}').click()`);
 const shown = (view) => until(`the ${view} view`, () => ev(`!document.getElementById('${view}').hidden`), 20000);
+// The bottom row's Now Playing key toggles (it goes back to the last edit view
+// from Now Playing itself): press it only when Now Playing is not shown.
+const goNow = async () => {
+  if (await ev("document.getElementById('viewNow').hidden")) await click('nowBtn');
+  await shown('viewNow');
+};
 let failed = 0;
 async function screen(n, name, steps) {
   try {
@@ -65,14 +71,12 @@ try {
     await click('playBtn');
     await until('the player to play', () => ev("document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'"), 60000);
     await sleep(6000);
-    await click('nowBtn');
-    await shown('viewNow');
+    await goNow();
   });
   // The bottom-right key opens the last of Sound and Layers, and switches
   // between them from there: press it until the one wanted is shown.
   const edit = async (view) => {
-    await click('nowBtn');
-    await shown('viewNow');
+    await goNow();
     for (let i = 0; i < 2; i++) {
       await click('viewBtn');
       await sleep(600);
@@ -91,8 +95,7 @@ try {
   });
   // 4. The vibe panel: what new loops lean toward.
   await screen(4, 'Vibe', async () => {
-    await click('nowBtn');
-    await shown('viewNow');
+    await goNow();
     await click('vibesBtn');
     await shown('viewVibe');
   });

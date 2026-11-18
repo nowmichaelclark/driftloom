@@ -53,9 +53,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: the listing's files and the version
-        run: node android/fdroid/check-metadata.mjs
-
       - name: fdroidserver
         run: |
           python3 -m venv "$RUNNER_TEMP/fdv"
@@ -116,6 +113,9 @@ jobs:
           fdroid checkupdates --allow-dirty -v "$id" 2>&1 | tee checkupdates.log
           grep -q 'updating to version 1.2 (10200)' checkupdates.log
           echo "ok   checkupdates found 1.2 (10200) from the tag v1.2"
+
+      - name: the listing's files and the version
+        run: node android/fdroid/check-metadata.mjs
 
   build:
     name: F-Droid's tooling builds the APK from a clean clone
@@ -261,7 +261,13 @@ jobs:
         working-directory: ${{ matrix.dir }}/android/native
         run: |
           rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal \
-            --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+            --target wasm32-unknown-unknown,aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      # F-Droid builds js/dlplayer.wasm from source (it refuses the committed
+      # binary): it must be the same bytes, which core.yml proves on every PR.
+      - name: the committed core module is its source
+        working-directory: ${{ matrix.dir }}
+        run: tools/build-core.sh --check
 
       - name: build the release APKs
         working-directory: ${{ matrix.dir }}/android

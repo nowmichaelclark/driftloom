@@ -11,7 +11,12 @@ here=$(cd "$(dirname "$0")" && pwd)
 . "$here/emulator-lib.sh"
 boot_emulator
 adb install -r -g "$apk"
-# A phone's shape: the default AVD is a 1080 x 1920 phone; say what it is.
+# A phone's shape: the AVD from the plain system image is 320 x 640 at 160 dpi,
+# a small thing; a current phone is 1080 x 2400 at 420 dpi (about 411 dp wide),
+# which is what the screenshots show. The activity takes the change in place.
+adb shell wm size 1080x2400
+adb shell wm density 420
+sleep 3
 adb shell wm size
 adb shell wm density
 node "$here/screenshots.mjs" "$out"
