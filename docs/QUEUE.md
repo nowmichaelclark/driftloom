@@ -870,3 +870,7 @@ Mikey decides this line:
   (`.github/workflows/longform.yml`, `tools/longform.mjs` in shards) green
   on the last commit, its table job saying it kept every check main kept.
   Heavy checks never run side by side on Mikey's machine (about 7 GB).
+- (Mikey, 2026-11-18) The `export` workflow is not part of the gate, but the
+  hands usually wait for it to pass before they merge. They can merge
+  without it when the PR is docs-only or a minor change. Say in the PR
+  when you do.
