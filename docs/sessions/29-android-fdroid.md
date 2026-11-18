@@ -5,7 +5,7 @@
 **Changed by brain B1 (2026-11-11):** the recipe's id and name are filled in by session 31a (the new name at 1.0), and the submission waits until after 1.0, since fdroiddata's merge request is public.
 
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** session 28. It may run alongside 18, 22, 23 and 24.
+- **Start after:** session 28. It may run alongside 18, 22, 23, 24, 24b and 30a to 30e (brain B-parallel 2, 2026-11-18: those rows named 29 already; this one had not caught up).
 - **Queue item:** item 107.
 
 Paste everything in the block as the session's first message.

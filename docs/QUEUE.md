@@ -845,3 +845,6 @@ Mikey decides this line:
   hands usually wait for it to pass before they merge. They can merge
   without it when the PR is docs-only or a minor change. Say in the PR
   when you do.
+- (Mikey, 2026-11-18) The brain may merge any hands PR, not only a
+  docs-only one, once CI is green on its last commit and it checks out
+  against its prompt.

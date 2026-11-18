@@ -109,6 +109,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Platforms and games
 
+- 2026-11-18 -- **The new name may be in the repo (Mikey, 2026-11-18, to brain B-parallel 2):** "It's okay if it's in the repo itself": the three files that already name it (this file's export line of 2026-11-17, `docs/sessions/21-export-small.md`, `test/ogg.test.mjs`) stay as they are. The rename still comes from one place, at 31a.
 - 2026-11-18 -- **The new name's domain bought (Mikey, 2026-11-18):** on Cloudflare. The name and domain stay out of this public repo; Mikey pastes them into session 31a.
 - 2026-11-18 -- **Android's Now Playing shows the loop's cover (Mikey, 2026-11-18):** "it would be nice if the now playing notification on android shows the cover art of a song instead of the app's icon" (session 28: the notification and the lock screen).
 - 2026-11-18 -- **The Android app on the native core, heard on his devices (Mikey, 2026-11-18):** he installed the APK from #420 (107c, the page driving the native core): "it works perfectly". The APK check before 28 is done; no Diagnostics figures were sent.
@@ -128,6 +129,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## How the project runs
 
+- 2026-11-18 -- **The brain merges any PR once it is green (Mikey, 2026-11-18, to brain B-parallel 2):** "You should be able to merge any once they are green as well, yes?" The brain may merge a hands PR, not only docs-only ones, once CI is green on its last commit and it checks out against its prompt (the yardsticks, the Done line, the row ticked). The merge policy's last line.
 - 2026-11-18 -- **Wait for the export workflow, except for small changes (Mikey, 2026-11-18):** the `export` workflow stays out of the gate, but the hands usually wait for it before they merge; a docs-only or minor PR can merge without it, and the PR says so. The merge policy's 2026-11-18 line.
 - 2026-11-18 -- **Seven more for 1.0 (Mikey, 2026-11-18):** fewer words in the app (icons, switches, short phrases; the share screen as keys); Previous in an album fixed; the info card's lines clean on any display, the rest a tap away; its playhead round; the layers drawn as heard; Track length its own view, to the second, out of the sliders and the export; a final Painter pass with accessibility. Queue items 109 to 114, sessions 30a to 30f, before the polish. Then: the Track length view gets a fade in and fade out option; with no length set, export opens that view first; the export keys are named by format ("export flac", "export midi").
 - 2026-11-17 -- **Sessions 17 on run as chains, two at a time (Mikey, 2026-11-17):** a brain session in Claude Code (B-parallel) runs four chains (long pieces 17-18, export 20-21, codes 22-24, Android 26-29), at most two hands sessions at once on his machine (a third only if app-only and light), each in its own worktree, and oversees them up to B4; each session merges the latest `main` into its branch before merging (force-pushes are refused there). The chains are `docs/sessions/README.md`, "From 17 on".
