@@ -46,6 +46,9 @@ on:
       minutes:
         description: 'Minutes the background job keeps the screen off (10 in a PR)'
         default: '10'
+      commit_screenshots:
+        description: 'With only=screenshots: commit the screenshots to the branch run on (fastlane/.../phoneScreenshots)'
+        default: 'false'
 
 permissions:
   contents: read
@@ -366,6 +369,8 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -403,3 +408,22 @@ jobs:
           path: ${{ runner.temp }}/shots
           if-no-files-found: ignore
           retention-days: 30
+
+      # By hand ("Run workflow", only=screenshots, commit_screenshots=true, on
+      # the branch to change): the screenshots are committed to that branch,
+      # as the listing's phoneScreenshots. A push by this token starts no
+      # workflow of its own, so the next push to the branch runs them.
+      - name: commit the screenshots to the branch
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.commit_screenshots == 'true'
+        run: |
+          set -eu
+          dir=fastlane/metadata/android/en-US/images/phoneScreenshots
+          mkdir -p "$dir"
+          git rm -q -r --ignore-unmatch "$dir"
+          mkdir -p "$dir"
+          cp "$RUNNER_TEMP"/shots/*.png "$dir"/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$dir"
+          git commit -m "The listing's phone screenshots, taken from the app on an emulator (android/screenshots.mjs)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
