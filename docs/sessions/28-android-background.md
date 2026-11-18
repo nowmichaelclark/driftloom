@@ -1,5 +1,7 @@
 # Session 28: the Android app: the screen off, the notification, saving an export (107d)
 
+**Changed by brain B-parallel (2026-11-18), at Mikey's request:** the notification and the lock screen show the loop's own cover art, not the app's icon.
+
 **Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "session 27": it saves 20's and 21's exports on Android (Small shown only where the WebView has the encoder), so it waits for 21 too. Mikey's APK check after 27 doesn't hold it (that row: the work goes on meanwhile).
 
 - **Model:** Sonnet 5.5. **Effort:** high.
@@ -17,7 +19,7 @@ Check your place: in docs/sessions/README.md every row above session 28 should b
 
 The work, one PR (two if the export is cleaner apart):
 
-- Playing with the screen off and the app in the background: a foreground service of the media-playback kind with its notification, a MediaSession (play, pause, next, previous; the loop's name and the app's artwork on the lock screen and in the notification), audio focus handled properly (pause on a call, duck or pause as Android asks, stop when headphones are pulled), no wake lock held when nothing plays. The native player needs nothing from the WebView to keep playing, so the service owns the audio.
+- Playing with the screen off and the app in the background: a foreground service of the media-playback kind with its notification, a MediaSession (play, pause, next, previous; the loop's name and the loop's own cover art (the cover the page draws for it, js/cover.js; Mikey, 2026-11-18), not the app's icon, on the lock screen and in the notification, changing with each loop), audio focus handled properly (pause on a call, duck or pause as Android asks, stop when headphones are pulled), no wake lock held when nothing plays. The native player needs nothing from the WebView to keep playing, so the service owns the audio.
 - Battery: nothing running when paused; say what the app costs while playing with the screen off (the emulator's figures, said to be only that).
 - Export in the app: session 20's and 21's exports work in the WebView or go native where they must (the file saved through Android's own picker, the Storage Access Framework, written as it is made; free space checked with the platform's call). Small is shown only if the WebView has the encoder.
 - Permissions: only what this needs (the foreground service's, notifications on Android 13 and later, asked at the moment of first Play in the background, with the app still working if refused).
