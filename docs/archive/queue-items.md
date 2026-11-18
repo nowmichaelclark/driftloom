@@ -100,6 +100,8 @@ queue is `docs/QUEUE.md`. The notes the hands left on these items are in
 - [80. The Rust generator, 2](#80-the-rust-generator-2-the-layers)
 - [81. The Rust generator, 3](#81-the-rust-generator-3-the-choices-the-load-and-the-wander)
 - [82. The player](#82-the-player-a-loop-from-a-seed-in-the-core)
+- [106. Long pieces on screen (done, hands, 2026-11-18)](#106-long-pieces-on-screen-done-hands-2026-11-18)
+- [104. Audio export (done, hands, 2026-11-18)](#104-audio-export-done-hands-2026-11-18)
 
 ## Old status notes (until 2026-10-25)
 
@@ -4200,3 +4202,34 @@ player are about 300 KB of code. One module can replace the two (it exports
 every call the worklet makes). Gzipped, the module is 217 KB (it was 222 KB). The brain accepted the size
 (Session 30).
 All in `docs/notes/93-module-size.md`.
+
+## 106. Long pieces on screen (done, hands, 2026-11-18)
+
+**Hands:** any, high. After 102. Plain screens (above), from
+`docs/PAINTER.md`, "Long pieces": where you are (bar 812 of 3,072, time
+played and left; for Endless, time played), moving within a piece (a jump
+to a section or a point, from the seed and the section's number, promise
+11), section markers from 102's piece map, and a piece's length or
+duration in the Library. **Yardsticks:** a jump to three hours in starts
+within a second, nothing late (`tools/rows.mjs` gains the rows). **106a done** (session 17, #417): the core's jump
+(`Player::jump`, `dl_play_jump`, the worklet's `playJump`), where it is
+(`Player::place`) and the map (`pieceMarks` in `js/gen.js`):
+`docs/LONGFORM.md`, "The jump and the map". **106b done** (session 18, #419, v183): Now Playing's line, place and jumps, the journey pick, the Library's lengths (`js/piece.js`).
+
+## 104. Audio export (done, hands, 2026-11-18)
+
+**Hands:** Opus or Fable, high. `docs/CORE.md` phase 7, "Exports, safe
+first" (Mikey, 2026-10-13), and `docs/PAINTER.md`, "Exporting audio": the
+core renders in small chunks straight to the file (memory the same for a
+minute or three hours); free space checked first; progress with Cancel;
+it survives the app going to the background. **Lossless** (FLAC, written
+by the core) and **small** (Opus, through the browser's own encoder where it
+has one, else that choice is hidden: built in 104c, `js/ogg.js` and
+`js/export-opus.js`, 64 kbit/s mono and 96 kbit/s stereo at a constant rate,
+so the size is known, 8,100 and 12,100 bytes a second); the format chosen in the export sheet
+each time; "lighter on processor" sets the speed (on: gentle; off: as fast
+as is safe). Endless asks how much. **Yardsticks:** a three-hour lossless
+export on the Moto-class figures in `tools/autolite.mjs`'s slow case
+finishes with flat memory and nothing glitching in what plays; the file
+decodes and nulls against a straight render; cancel and a full disk leave
+nothing broken.

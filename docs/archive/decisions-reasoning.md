@@ -105,3 +105,11 @@ Each heading is what the short line links to.
   albums only; until he decides, the Vibes key stays); (2) how to set
   only length, or only tempo, back to "any" (line two's any key clears
   both; until he decides, the line-level key alone is built).
+
+## A loop's name in its code (Mikey, 2026-11-17)
+
+A sketch for B4 to check (not the brain's): the name is carried as its UTF-8 bytes in the code's 64 link-safe characters (about 4 code characters a Thai letter, 1.3 an English one), so the core's output stays ASCII; invisible and control characters, direction overrides and piled-up combining marks are refused, and the name has a byte cap.
+
+## Short codes over sounding the same forever (Mikey, 2026-11-17)
+
+The brain's reading: the version filter on additions costs no characters and stays; nothing is added to a code only to keep an old one's sound; a code naming something since removed plays something close rather than being refused. B4 checks the format against this.

@@ -17,7 +17,7 @@ stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
 (54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
 checked by the brain's Session 29 and heard by Mikey in its blind album
 (2026-11-07). **Phase 3: item 93 done** (the player's module, 636 KB; the
-brain accepted the size, `docs/notes/93-module-size.md`) and **94a done**
+brain accepted the size, `docs/archive/notes/93-module-size.md`) and **94a done**
 (#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
 and **95** (the picks through the core's commands); Ears 13b approved
 (2026-11-09). **The road to 1.0 (a long hands run, 2026-11-10; what waits
@@ -370,6 +370,8 @@ with the feature; the standing checks unchanged.
 
 ## The road to 1.0 (Mikey, 2026-11-10)
 
+Items 106 and 104 are done (sessions 17 to 21, 2026-11-18): `docs/archive/queue-items.md`.
+
 **The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends
 and the other games wait (the core already works in Broken Friends); the
 music app is finished first, and **1.0 includes the Android app on
@@ -557,37 +559,6 @@ number; then, for Mikey, a listening set: a few pieces each at 64, 256 and
 1,024 bars and Endless, as album codes he plays in the app, with short
 excerpts (the start, a quarter, half, three quarters, the close) so a piece
 can be judged in minutes.
-
-## 106. Long pieces on screen
-
-**Hands:** any, high. After 102. Plain screens (above), from
-`docs/PAINTER.md`, "Long pieces": where you are (bar 812 of 3,072, time
-played and left; for Endless, time played), moving within a piece (a jump
-to a section or a point, from the seed and the section's number, promise
-11), section markers from 102's piece map, and a piece's length or
-duration in the Library. **Yardsticks:** a jump to three hours in starts
-within a second, nothing late (`tools/rows.mjs` gains the rows). **106a done** (session 17, #417): the core's jump
-(`Player::jump`, `dl_play_jump`, the worklet's `playJump`), where it is
-(`Player::place`) and the map (`pieceMarks` in `js/gen.js`):
-`docs/LONGFORM.md`, "The jump and the map". **106b done** (session 18, #419, v183): Now Playing's line, place and jumps, the journey pick, the Library's lengths (`js/piece.js`).
-
-## 104. Audio export
-
-**Hands:** Opus or Fable, high. `docs/CORE.md` phase 7, "Exports, safe
-first" (Mikey, 2026-10-13), and `docs/PAINTER.md`, "Exporting audio": the
-core renders in small chunks straight to the file (memory the same for a
-minute or three hours); free space checked first; progress with Cancel;
-it survives the app going to the background. **Lossless** (FLAC, written
-by the core) and **small** (Opus, through the browser's own encoder where it
-has one, else that choice is hidden: built in 104c, `js/ogg.js` and
-`js/export-opus.js`, 64 kbit/s mono and 96 kbit/s stereo at a constant rate,
-so the size is known, 8,100 and 12,100 bytes a second); the format chosen in the export sheet
-each time; "lighter on processor" sets the speed (on: gentle; off: as fast
-as is safe). Endless asks how much. **Yardsticks:** a three-hour lossless
-export on the Moto-class figures in `tools/autolite.mjs`'s slow case
-finishes with flat memory and nothing glitching in what plays; the file
-decodes and nulls against a straight render; cancel and a full disk leave
-nothing broken.
 
 ## 105. Short codes and links (codes, version 2)
 

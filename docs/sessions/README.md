@@ -78,6 +78,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | # | File | What | Model, effort | After | Alongside | Done |
 |---|---|---|---|---|---|---|
 | B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17), and 30a to 30d as they open (2026-11-18) | Opus 5.5, high | B2 | every row to 30d | |
+| B-par2 | `brain-parallel-2.md` | Brain, in Claude Code: picks up B-parallel's chains (24b, 28, 29) and starts Mikey's 30a to 30d, two at a time; tells Mikey when B4 can start; stops when 30e is next (Mikey, 2026-11-18) | Opus 5.5, high | B-par | every row to 30d, and B4 | |
 | | | **Long pieces** | | | | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | yes, 2026-11-18 (#414 twang soft only, #417) |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | yes, 2026-11-18 (#419) |
