@@ -107,6 +107,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Platforms and games
 
+- 2026-11-18 -- **The Android app on the native core, heard on his devices (Mikey, 2026-11-18):** he installed the APK from #420 (107c, the page driving the native core): "it works perfectly". The APK check before 28 is done; no Diagnostics figures were sent.
 - 2026-11-11 -- **The plain lines, shorter (Mikey, 2026-11-11):** when the core's module never arrives, the card's place says "Please refresh." (it said "Driftloom couldn't load. Check the connection and reload."); when a browser is too slow even on lite, "This browser is too slow." (it said "...too slow to play Driftloom smoothly."), still in the card's place. Hands session 01 makes both.
 - 2026-10-12 -- **A native Android app (F-Droid) is the likely later step**, from the same Rust core, with the web screens inside it; the website stays, on the same core. Chromium is not a requirement for the website (it plays in Firefox); the test tools use it.
 - 2026-10-12 -- **Platforms, each its own phase, after the core:** the native Android app on F-Droid; later Google Play; an **itch.io** desktop release for people who run it locally. **No iOS app for now** (Apple's yearly developer fee), but the core must make iOS and macOS easy if that changes. His first multi-platform app: the brain and hands carry as much of it as they can.
