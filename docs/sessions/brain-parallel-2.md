@@ -1,10 +1,10 @@
 # Brain session B-parallel 2: the chains' ends and Mikey's seven, two at a time
 
-Written by brain B-parallel (2026-11-18), at Mikey's request, when that session grew long: it ran 17 to 23, 26 and 27, and handed over with 24 and 28 at their ends. This one picks up the same work under the same rules, up to the point where 30e is next.
+Written by brain B-parallel (2026-11-18), at Mikey's request, when that session grew long: it ran 17 to 24 and 26 to 28, and handed over with nothing running. This one picks up the same work under the same rules, up to the point where 30e is next.
 
 - **Model:** Opus 5.5. **Effort:** high.
 - **Where:** a Claude Code session (the desktop app's Code tab) on the repo's own folder, not a worktree: it starts the hands sessions itself, each in its own worktree.
-- **Start after:** brain B-parallel (its State in `docs/BRAIN.md` says what it left running).
+- **Start after:** brain B-parallel (it ended 2026-11-18 with nothing running; its State in `docs/BRAIN.md`).
 
 Paste everything in the block as the session's first message.
 
@@ -13,9 +13,9 @@ Brain session B-parallel 2 for Driftloom's road to 1.0 (Opus 5.5, high), in Clau
 
 Start as docs/BRAIN.md says ("Start here": brain B-parallel's bullet first, its State is where you pick up). Then read docs/sessions/README.md (the order from 17 on: every row's After and Alongside, "Mikey's seven", and "Rules for every session"), docs/QUEUE.md (status, the road to 1.0, items 105, 107 and 109 to 114, the merge policy), docs/notes/for-mikey.md, docs/DECISIONS.md's lines of 2026-11-17 and 2026-11-18, and the prompts still to come (24b, 29, 30a to 30d; brain-4 and brain-5 for where you stop). You are the brain: you verify, plan, keep the docs true and merge docs-only changes (Mikey, 2026-11-18: docs-only fixes merge without asking, once CI is green); you never write app or core code.
 
-1. Pick up what B-parallel left. Its State names each hands session still open (24, 28) with its PR. Read each PR and its CI. A session that is idle with its PR green needs a message to merge it; a session stopped at the usage limit needs a message to carry on (when Mikey says "try again"); a session waiting on Mikey's answer is his to answer, not yours.
+1. Pick up what B-parallel left. Its State says nothing was running when it ended (24 and 28 merged as #433 and #431). Check main's CI and the latest nightly first; look at #431's screen-off run (540 s against the prompt's ten minutes) and ask for the rest if it matters. Later: a session idle with its PR green needs a message to merge; one stopped at the usage limit needs a message to carry on (when Mikey says "try again"); one waiting on Mikey's answer is his to answer, not yours.
 
-2. Run the rows that are left, in their order, at most two hands sessions at once on this machine (about 7 GB; it crashed once on 2026-11-18; never two heavy local runs: tools/gate.sh, tools/longform.mjs, tools/baseline.mjs, a gradle build with an emulator; CI runs those). The rows: 24b after 24 (an album's code carries how each track plays; before B4, since the format freezes at 1.0); 29 after 28 (F-Droid); 30b now (it needed only 27); 30d after 23 (done); 30a after 24; 30c after 21, 24 and 28. Check each row's After and Alongside in the README before starting it. Start each with start_session, use_worktree true, the prompt's block from its file as the whole brief, the model and effort its file names, and a background naming who runs alongside and the rules below. Prefer the critical path: 24 then 24b (B4 waits on them), and 28 then 29 (Android's end).
+2. Run the rows that are left, in their order, at most two hands sessions at once on this machine (about 7 GB; it crashed once on 2026-11-18; never two heavy local runs: tools/gate.sh, tools/longform.mjs, tools/baseline.mjs, a gradle build with an emulator; CI runs those). The rows, all open now: 24b (an album's code carries how each track plays; before B4, since the format freezes at 1.0); 29 (F-Droid); 30b (the layers); 30d (the info card); 30a (Previous in an album); 30c (Track length). Check each row's After and Alongside in the README before starting it. Start each with start_session, use_worktree true, the prompt's block from its file as the whole brief, the model and effort its file names, and a background naming who runs alongside and the rules below. Prefer the critical path: 24b first (B4 waits on it), and 29 beside it (Android's end).
 
 3. Oversee. When a session reports, check its PR against its prompt: CI green on its last commit, the yardsticks, the Done line, the README row ticked with every cell's `|` kept (session 21's tick dropped one). Where a claim matters, measure it yourself, one heavy run at a time, or read it from CI. After any PR that moves what is generated or played, look at the next nightly (`.github/workflows/nightly.yml`): B-parallel missed that #414 left the stored render hashes stale, and the nightly stayed red a day.
 

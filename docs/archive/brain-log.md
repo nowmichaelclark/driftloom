@@ -6,6 +6,18 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B-parallel, the chains two at a time (Opus 5.5, in Claude Code,
+2026-11-17 to 18).** Made the road from 17 parallel (#409) and ran it:
+sessions 17, 18, 20 to 24, 26 to 28 started (from report turns as cards
+Mikey clicked), checked and merged, v178 to v188, with a sixth of the
+turns spent waking sessions that ended while CI ran. Read Mikey's Batch 6
+verdicts from the album's db and turned them into twang soft only (#414),
+then his answers on codes, names, export and Android into decisions and
+prompts (#410, #415, #421, #422, #429, #432). Missed #414's stale render
+hashes; session 23 bisected the red nightly in CI to #402. Handed over to
+`docs/sessions/brain-parallel-2.md`; the full "Start here" bullet is in
+`docs/BRAIN.md`.
+
 **Brain B2, batch 6 and 84b checked and made into an album (Opus 5.5,
 2026-11-17).** On `main` at v177 (686543d): the module, the goldens and the
 balance lock as stored; all 35 album loops drawing their sounds; the change

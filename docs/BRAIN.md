@@ -292,49 +292,41 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
-- **Brain B-parallel (Opus 5.5, 2026-11-17, in Claude Code): the chains.**
-  Started on `main` at v177 (bffafa4, CI green, the nightly green on
-  2026-11-16). The plan made parallel (`docs/sessions/README.md`, "From 17
-  on"): four chains with an After and an Alongside for every row, checked
-  against the prompts and the code; each prompt's "Start after" corrected
-  (said at its top); the merge-main rule in "Rules for every session".
-  **Running:** see the sessions list below as it fills. This brain stops at
-  B4 (`brain-4-codes.md`, the next brain's).
-  - Sessions (as of 2026-11-18): **merged and checked** 26 (#411: five
-    minutes native on the emulator, 0 underruns, 0 late, samples bit for
-    bit the wasm's); 22 (#412, v178: a loop with nothing pinned 9
-    characters, every golden as a code, the dummy test bites with the
-    filter off; for B4: no custom name or slider setting in a code, the
-    settings' own pools in Rust not version-filtered, and Mikey's
-    2026-11-17 line on removed ids); 17 (#414 twang soft, v179: 239
-    goldens moved, every one a slow or bright twang loop, nothing else;
-    #417 the jump, v180: heard 0.059 s after asked, 0 late, the notes bit
-    for bit playing's on six loops, the audio within -12 dB of playing,
-    explained by twang's strings' and the organ's free-running phase); 20
-    (#416, v181: green on every check, the three-hour export included).
-    Then **merged and checked** 27 (#420, v182: the page drives the native
-    core, all 35 rows on the emulator, the page's thread blocked 5 s and
-    the music plays on, the smoke job's races fixed: ten of ten) and 18
-    (#419, v183: rows ten in a row 48 of 48, views 0 long tasks with a
-    32,768-bar piece open, screenshots; the export's three-hour job still
-    pending at its merge, not its yardstick). Mikey installed #420's APK:
-    "it works perfectly" (#423). Mikey's answers #421: a loop's name in its
-    code (23's first PR, in the core), the sheet's words (21 makes the two
-    changes), the export's ending kept. **Missed by the brain:** #414 moved
-    twang loops without updating the nightly's stored render hashes; the
-    nightly went red (b04c0df: three golden-render targets, and holes 2/2
-    on corpus piece #27); 23 fixes it first, its own PR. **Running (as of
-    2026-11-18):** 21 (#424, small export, resumed after a usage limit;
-    v184) and 23 (the nightly fix, then the name in codes, then the app).
-    **Next:** 28 after 21 (the APK check is done), 24 after 23, then 29;
-    B4 after 21 and 24.
-    Sessions started from a report's turn come to Mikey as cards (the app
-    starts one only on his words here); sessions end a turn while CI runs,
-    so the brain wakes them to merge.
-  - **Mikey heard the Batch 6 Album (2026-11-17)** and B-parallel read his
-    verdicts from its db: every sound Keep but twang (soft only: session
-    17's first PR, since 22 is in `data/`); 84b chosen 5 of 6, the control
-    Same; the key written in `docs/ALBUMS.md`; `docs/DECISIONS.md`.
+- **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
+  chains run two at a time; ended at Mikey's request (long session).** The
+  plan made parallel (#409: four chains, an After and an Alongside for every
+  row, the merge-main rule). **Merged, each checked against its prompt:**
+  26 (#411, native audio on Android: 5 min on the emulator, 0 underruns,
+  samples bit for bit the wasm's); 22 (#412, codes v2 in the core, v178);
+  17 (#414 twang soft v179, #417 the jump v180: heard 0.059 s after asked,
+  notes bit for bit playing's); 20 (#416, lossless export, v181); 27 (#420,
+  the page on the native core, v182; the smoke job's races fixed); 18
+  (#419, long pieces on screen, v183); 21 (#424, the Small format, v184);
+  23 (#425 a loop's name in its code, #430 the nightly green again v185,
+  #427 the app on v2 only v186); 24 (#433, links after `#c=`, an album from
+  one seed, the plain lines, v187); 28 (#431, Android screen off, the
+  loop's cover on the lock screen, saving through the picker, v188; its
+  screen-off run was 540 s, not the prompt's ten minutes: for the next
+  brain to look at). **Mikey answered** (all in `docs/DECISIONS.md`): the
+  Batch 6 Album (every sound kept, twang soft only; 84b kept); codes may
+  change between versions, no code rot; a loop's name travels in its code;
+  the export's words and ending; the APK "works perfectly"; an album's code
+  carries each track's length (new session 24b, before B4); the long pieces'
+  words but "arc" (open); the domain bought (not named here); the
+  Android notification shows the loop's cover; his seven (#426, sessions 30a
+  to 30f); wait for the export workflow except docs-only or minor PRs
+  (#434). **Missed by this brain:** #414 left the nightly's stored render
+  hashes stale (red a day; #430 fixed it and found #402 behind piece #27's
+  holes). **Not running at the end; next:** 24b, 29, 30b, 30d, 30a, 30c, by
+  `brain-parallel-2.md`; B4 when 24b merges. **Open with Mikey:** the word
+  "arc"; whether to take the new name out of three public files
+  (`docs/DECISIONS.md`'s export line of 2026-11-17, `21-export-small.md`,
+  `test/ogg.test.mjs`); attaching the domain and the Android id (31a).
+  **Learned:** sessions end a turn while CI runs, so the brain waits and
+  wakes them; from a report's turn the app only proposes (cards); usage
+  limits stop sessions (a message resumes them); a timing test in
+  `tests/longform.rs` (a section's cost at 1 and 10^9) flaked once on a
+  docs-only PR (#434): one re-run.
 - **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
   out.** On `main` at v177 (686543d), measured, not taken from the reports:
   the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the
