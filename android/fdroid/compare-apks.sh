@@ -26,6 +26,18 @@ differ() { # X Y: explain a difference
   if diff -q /tmp/entries-x /tmp/entries-y >/dev/null; then
     echo "every entry's bytes are the same: the difference is in the zip's own layout (order, dates, extra fields)"
   fi
+  # The native libraries first, in the terms that find a leaked path: the
+  # strings that differ, and the sections whose size or place moved.
+  for lib in $(diff /tmp/entries-x /tmp/entries-y | awk '/^[<>] lib\/.*\.so /{print $2}' | sort -u); do
+    rm -rf /tmp/lib-x /tmp/lib-y; mkdir -p /tmp/lib-x /tmp/lib-y
+    unzip -qo "$1" "$lib" -d /tmp/lib-x; unzip -qo "$2" "$lib" -d /tmp/lib-y
+    echo "-- $lib: strings that differ"
+    strings -a "/tmp/lib-x/$lib" >/tmp/str-x; strings -a "/tmp/lib-y/$lib" >/tmp/str-y
+    diff /tmp/str-x /tmp/str-y | head -20 || true
+    echo "-- $lib: sections that differ"
+    readelf -SW "/tmp/lib-x/$lib" >/tmp/sec-x; readelf -SW "/tmp/lib-y/$lib" >/tmp/sec-y
+    diff /tmp/sec-x /tmp/sec-y | head -20 || true
+  done
   # diffoscope is installed only when there is a difference to explain, and
   # neither step may hold the job (an install that waited for an answer once
   # held it for twenty minutes).

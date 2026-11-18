@@ -483,3 +483,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   length, then the next. A loop's own code and an album from one seed carry
   none. `docs/ALBUMS.md`'s six old albums that set lengths have them again.
   Share an album with lengths set and open its link elsewhere.
+- #437, the Android app on F-Droid (item 107e, no app change: still v189):
+  F-Droid's listing (`fastlane/metadata/android/en-US/`: title, short and
+  full description, the changelog for 1.0, icon, feature graphic, six phone
+  screenshots taken from the app on an emulator), the launcher icon drawn as
+  vectors from the web icon's orbit with a monochrome layer, the build recipe
+  as a template filled from `gradle.properties` (`android/fdroid/render.mjs`),
+  built from a clean clone by F-Droid's own tooling in CI, the two-builds
+  comparison and the licenses and anti-features check (`android/LICENSES.md`,
+  `docs/notes/107-reproducible.md`), the release APK on an emulator, the tag's
+  release workflow, and Mikey's steps (signing, the submission after 31) in
+  `docs/notes/for-mikey.md`. Nothing sounds different. Check the six
+  screenshots look like the app, and read the signing choice.

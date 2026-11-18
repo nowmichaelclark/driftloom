@@ -96,7 +96,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | yes, 2026-11-18 (#420) |
 | | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | yes, 2026-11-18: "it works perfectly" |
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | yes, 2026-11-18 (#431) |
-| 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24, 24b, 30a, 30b, 30c, 30d, 30e | |
+| 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24, 24b, 30a, 30b, 30c, 30d, 30e | yes, 2026-11-18 (#437; no app change) |
 | | | **Mikey's seven, before the polish** (2026-11-18) | | | | |
 | 30a | `30a-album-previous.md` | 109: Previous works in an album | Sonnet 5.5, high | 24 | 21, 28, 29, 30b, 30c, 30d | |
 | 30b | `30b-layers-heard.md` | 110: the layers show what is heard, in time with it | Opus 5.5, high | 27 | 21, 23, 24, 29, 30a | |

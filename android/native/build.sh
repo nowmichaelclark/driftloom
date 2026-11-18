@@ -15,7 +15,12 @@
 # Before each build the NDK's clang checks abi-check.c: the JNI slots and the
 # AAudio numbers and shapes written by hand in src/ against the NDK's own
 # headers. Paths are remapped so the library holds no machine's directories
-# (reproducible builds, F-Droid's).
+# (reproducible builds, F-Droid's), and the sources are built from a copy at
+# one fixed place: cargo's hash of a path dependency (the core, outside this
+# crate's folder) includes where it is, the hash orders the library's
+# symbols, and so the same commit built in two checkouts was two different
+# libraries (docs/notes/107-reproducible.md). DRIFTLOOM_NATIVE_STAGE names
+# another place; it must be the same on every machine that is to agree.
 
 set -eu
 
@@ -25,7 +30,26 @@ shift 2
 [ $# -gt 0 ] || set -- arm64-v8a armeabi-v7a x86_64
 
 here=$(cd "$(dirname "$0")" && pwd)
-root=$(cd "$here/../.." && pwd)
+src=$(cd "$here/../.." && pwd)
+# The copy: this crate, the core and the data its build script reads, kept
+# with their dates so cargo's own rebuild check still works; the build's
+# target folder stays in it between builds.
+root=${DRIFTLOOM_NATIVE_STAGE:-/tmp/driftloom-native-stage}
+here=$root/android/native
+mkdir -p "$root/android"
+for part in core data android/native LICENSE; do
+  if [ "$part" = android/native ]; then
+    mkdir -p "$here"
+    for f in "$src/android/native"/* "$src/android/native"/.[!.]*; do
+      [ -e "$f" ] || continue
+      [ "$(basename "$f")" = target ] && continue
+      rm -rf "$here/$(basename "$f")"; cp -Rp "$f" "$here/"
+    done
+  else
+    rm -rf "${root:?}/$part"; cp -Rp "$src/$part" "$root/$part"
+  fi
+done
+rm -rf "$root/core/target"
 api=27
 
 case "$(uname -s)" in
