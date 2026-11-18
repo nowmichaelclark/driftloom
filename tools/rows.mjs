@@ -110,7 +110,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { decodeSong, encodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
+import { decodeSong, encodeSong, encodeAlbum, decodeAlbum, linkOf } from '../js/share.js';
 import { newSpec } from '../js/gen.js';
 import { LOOPS } from './stalls.mjs';
 import { pages } from './ogg-read.mjs';
@@ -306,6 +306,44 @@ const HOOK_APP = `(() => {
   };
   hook();
   document.addEventListener('readystatechange', hook);
+  // The app's second bridge (session 28): a file the page saves goes through
+  // Android's own picker, which a row can't answer. So the rows answer for it:
+  // the page is told it was saved where it asked, and the bytes it sent are
+  // the Blob a download would have been (the MIDI row reads it as ever).
+  R.saves = [];
+  let appHooked = false;
+  const hookApp = () => {
+    const A = window.DriftloomApp;
+    if (appHooked || !A) return;
+    appHooked = true;
+    const sendApp = A.postMessage.bind(A);
+    const listenApp = A.addEventListener.bind(A);
+    const heard = [];
+    let chunks = [];
+    const answer = (id, more) => {
+      const data = JSON.stringify({ type: 'reply', id, ok: true, ...more });
+      setTimeout(() => heard.forEach((fn) => fn({ data })), 0);
+    };
+    const shim = {
+      postMessage(text) {
+        let m = null;
+        try { m = JSON.parse(text); } catch { /* not ours to read */ }
+        if (m && m.type === 'save') { chunks = []; R.saves.push({ name: m.name, mime: m.mime, need: m.need }); return answer(m.id, { name: m.name, free: 1e12, seekable: true }); }
+        if (m && m.type === 'save-write') { chunks.push(Uint8Array.from(atob(m.data), (c) => c.charCodeAt(0))); return answer(m.id, {}); }
+        if (m && m.type === 'save-close') { R.blobs.push(new Blob(chunks)); return answer(m.id, {}); }
+        if (m && m.type === 'save-abort') { chunks = []; return answer(m.id, {}); }
+        return sendApp(text);
+      },
+      addEventListener(type, fn, ...rest) {
+        if (type === 'message') heard.push(fn);
+        return listenApp(type, fn, ...rest);
+      },
+      removeEventListener: (...a) => A.removeEventListener(...a),
+    };
+    Object.defineProperty(window, 'DriftloomApp', { configurable: true, value: shim });
+  };
+  hookApp();
+  document.addEventListener('readystatechange', hookApp);
   R.inject = (batch) => { for (const fn of R.listeners) fn({ data: JSON.stringify(batch) }); };
   R.level = () => (R.native ? R.native.level : 0);
   R.probe = () => new Promise((resolve) => {
@@ -1285,6 +1323,7 @@ async function main() {
     if (!APP) await longRows(browser, PORT, errors);
     if (!APP) await plainRows(browser);
     if (!APP) await codeRows(browser);
+    if (!APP) await linkRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -1443,6 +1482,151 @@ async function codeRows(browser) {
   row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+ loops/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
   row('codes: no page errors in their tab', !bad.length, bad.join('; '));
   await tab.close();
+}
+
+// Links, an album from one seed and the plain lines (session 24; queue item
+// 105c), each in fresh tabs (a fresh profile each): a link opens the loop or
+// the album ready, not playing, online and offline; a damaged one says so
+// and the app goes on; sharing a link copies it (or uses the share sheet
+// where there is one); an album of one seed has a short code and the same
+// tracks in a second profile; the plain lines.
+async function linkRows(browser) {
+  console.log('\n  links and the album from one seed (session 24)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const fresh = async (url, { init } = {}) => {
+    const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    tab.on('pageerror', (e) => bad.push(e.message));
+    await tab.addInitScript(HOOK);
+    if (init) await tab.addInitScript(init);
+    await tab.goto(url);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1800);
+    return tab;
+  };
+  const state = (tab) => tab.evaluate(() => ({
+    card: document.getElementById('loopName').textContent,
+    toast: document.getElementById('toast').textContent,
+    hash: location.hash,
+    playing: document.getElementById('playBtn').getAttribute('aria-label') === 'Pause',
+  }));
+  const library = async (tab) => {
+    await tab.evaluate(() => {
+      if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+      document.querySelector('[data-tab="albums"]').click();
+    });
+    await sleep(300);
+  };
+
+  // A loop's link, online.
+  const spec = newSpec(31337, ['rainy', 'mellow']);
+  spec.name = 'ฝนตก 🎧';
+  const loopCode = encodeSong(spec);
+  const loopLink = linkOf(`${ORIGIN}/`, loopCode);
+  let tab = await fresh(loopLink);
+  let st = await state(tab);
+  row('links: a loop\'s link opens the loop on the card, ready and not playing, its code out of the address', st.card === spec.name && !st.playing && st.hash === '' && /Imported Loops/.test(st.toast), JSON.stringify(st));
+  await tab.reload();
+  await sleep(1500);
+  st = await state(tab);
+  row('links: a reload brings the loop in no second time (the address has no code left to open)', !/Imported|Already/.test(st.toast) && st.hash === '', JSON.stringify(st));
+  await tab.close();
+
+  // The same link offline, the app installed (its worker holding the page).
+  tab = await fresh(`${ORIGIN}/`);
+  await tab.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await sleep(2500);
+  await tab.context().setOffline(true);
+  await tab.goto(loopLink);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1800);
+  st = await state(tab);
+  row('links: the same link offline, the app installed, opens the loop', st.card === spec.name && !st.playing, JSON.stringify(st));
+  await tab.context().setOffline(false);
+  await tab.close();
+
+  // An album's link, and the album of one seed: made in one profile, opened
+  // by its link in another.
+  const share = await fresh(`${ORIGIN}/`);
+  await share.evaluate(() => { document.getElementById('seedCount').value = '12'; document.getElementById('seedCount').dispatchEvent(new Event('input')); });
+  await share.evaluate(() => document.getElementById('seedAlbumCode').click());
+  await sleep(600);
+  const seedCode = await share.evaluate(() => window.__rows.clip);
+  const toastCode = await share.evaluate(() => document.getElementById('toast').textContent);
+  row('links: an album from one seed of 12 tracks has a code under 20 characters', typeof seedCode === 'string' && /^[A-Za-z0-9_-]{5,19}$/.test(seedCode) && /^Code copied/.test(toastCode), `${seedCode} ${toastCode}`);
+  await share.evaluate(() => document.getElementById('seedAlbumLink').click());
+  await sleep(600);
+  const seedLink = await share.evaluate(() => window.__rows.clip);
+  const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
+  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Link copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Link copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
+  await share.close();
+  const want = decodeAlbum(linkCode);
+  const second = await fresh(seedLink);
+  await library(second);
+  const tracks = await second.evaluate(() => {
+    const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Untitled');
+    if (r) r.querySelector('.lrow-main').click();
+    return !!r;
+  });
+  await sleep(400);
+  const names = await second.evaluate(() => [...document.querySelectorAll('.lrow.track .lrow-title')].map((x) => x.textContent.trim().replace(/^\d+\.\s*/, '').replace(/, now playing$/, '')));
+  st = await state(second);
+  row('links: a second fresh profile opens the album of 12 from its link, the same 12 tracks in the same order', tracks && names.length === 12 && names.every((n, i) => n === want.specs[i].name), `${names.join(' | ')} / ${want.specs.map((s) => s.name).join(' | ')}`);
+  await second.evaluate(() => document.getElementById('viewLibrary').hidden || document.getElementById('saveBtn').click());
+  await sleep(300);
+  st = await state(second);
+  row('links: the album is open at its first track, ready, not playing', st.card === want.specs[0].name && !st.playing, JSON.stringify(st));
+  await second.close();
+
+  // A damaged link: a plain line, the app still works.
+  const damaged = `${ORIGIN}/#c=${loopCode.slice(0, 4)}${loopCode[4] === 'A' ? 'B' : 'A'}${loopCode.slice(5)}`;
+  tab = await fresh(damaged);
+  st = await state(tab);
+  row('links: a link with a damaged code says so in one plain line', st.toast === 'That link\'s code can\'t be read.' && st.hash === '', JSON.stringify(st));
+  await tab.evaluate((c) => { window.__rows.clip = c; }, loopCode);
+  await tab.evaluate(() => document.getElementById('pasteCode').click());
+  await sleep(1500);
+  st = await state(tab);
+  row('links: and the app still works: a code pasted after it opens', st.card === spec.name && /Imported Loops/.test(st.toast), JSON.stringify(st));
+  // A link pasted is its code.
+  await tab.evaluate((c) => { window.__rows.clip = `try this: ${c}`; }, loopLink);
+  await tab.evaluate(() => document.getElementById('pasteCode').click());
+  await sleep(1500);
+  st = await state(tab);
+  row('links: a link pasted opens as its code does', /Already saved/.test(st.toast), JSON.stringify(st));
+  await tab.close();
+
+  // Sharing a link: copied where there is no share sheet; the sheet where
+  // there is one.
+  tab = await fresh(`${ORIGIN}/`);
+  await tab.evaluate(() => document.getElementById('shareSong').click());
+  await sleep(600);
+  const copied = await tab.evaluate(() => ({ clip: window.__rows.clip, toast: document.getElementById('toast').textContent }));
+  row('links: share link without a share sheet copies the link', /^http:\/\/127\.0\.0\.1:\d+\/#c=[A-Za-z0-9_-]+$/.test(copied.clip) && /^Link copied/.test(copied.toast), JSON.stringify(copied));
+  await tab.close();
+  tab = await fresh(`${ORIGIN}/`, { init: () => { navigator.share = async (d) => { window.__shared = d; }; } });
+  await tab.evaluate(() => document.getElementById('shareSong').click());
+  await sleep(600);
+  const sheet = await tab.evaluate(() => ({ shared: window.__shared, clip: window.__rows.clip }));
+  row('links: share link with a share sheet hands it the link and copies nothing', !!sheet.shared && /#c=[A-Za-z0-9_-]+$/.test(sheet.shared.url) && !sheet.clip, JSON.stringify(sheet));
+  await tab.close();
+
+  // The plain lines: a code from a newer build, and one from an older.
+  tab = await fresh(`${ORIGIN}/`);
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let h = 0;
+  for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
+  const newer = `GRiSNBA${A[h & 63]}${A[h >> 6]}`;
+  const newerTab = await fresh(`${ORIGIN}/#c=${newer}`);
+  st = await state(newerTab);
+  row('links: a link from a newer build says it needs a newer Driftloom', st.toast === 'That code needs a newer Driftloom.', st.toast);
+  await newerTab.close();
+  const olderTab = await fresh(`${ORIGIN}/#c=DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR`);
+  st = await state(olderTab);
+  row('links: a link with a version 1 code says it is from an older Driftloom', st.toast === 'That code is from an older Driftloom and can\'t be opened.', st.toast);
+  await olderTab.close();
+  await tab.close();
+  row('links: no page errors in their tabs', !bad.length, bad.join('; '));
 }
 
 // The plain lines, each in a tab of its own.

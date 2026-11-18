@@ -5,8 +5,9 @@ the page's own files inside the APK, served to it from a local origin, and the
 core built natively for Android's own audio. Session 25 (107a) made the shell
 and its CI build; session 26 (107b) the core native on AAudio, with a debug
 screen and tests; session 27 (107c) the page talking to it, so the app plays
-on the native core and the WebView plays no audio of its own; the background
-service and exports are 28, F-Droid's metadata 29 (`docs/sessions/`).
+on the native core and the WebView plays no audio of its own; session 28 (107d) the screen
+off, the notification and saving an export; F-Droid's metadata is 29
+(`docs/sessions/`).
 
 ## What is here
 
@@ -39,6 +40,23 @@ service and exports are 28, F-Droid's metadata 29 (`docs/sessions/`).
   WebView message listener for the app's origin) and carries text both ways
   on a thread of its own: each message from the page into the core's bridge,
   and every 25 ms what is due back (`js/native.js` is the page's end).
+- `.../Playback.kt` (session 28): what the page has told the app (what is
+  playing, the loop's name and own cover, a file being saved), and the
+  `StreamKeeper`, which keeps the native stream running only while something
+  needs it (playing, or the ring-out after a pause, or a message to the core).
+- `.../PlaybackService.kt`: the foreground service (media playback; data sync
+  while a file is saved with the music paused) with its notification, the
+  `MediaSession` (play, pause, next, previous; the loop's name and its cover),
+  audio focus, the headphones-pulled pause and a partial wake lock held only
+  while playing or saving. A button's action goes to the page, which does what
+  its own button does; with no page the service ends.
+- `.../AppBridge.kt` (the page's `DriftloomApp`, `js/app.js` its end): the
+  page's media state and cover, Android's own picker for a file to save
+  (`SaveFile.kt`, written as it is made, free space from the platform's
+  `fstatvfs`), the restore file's picker, and the one notification question.
+- `background.mjs`, `emulator-background.sh`: the screen-off test (CI's
+  `background` job), with the debug build's `CallSimulator` standing in for a
+  call.
 - `app/src/debug/`: the **Native audio test**, a second launcher icon in debug
   builds only (`NativeTestActivity.kt`): "Play the test" plays the golden loop
   natively and shows underruns, the busiest callback against its deadline, and
@@ -144,6 +162,39 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   (item 100) can't show in the app. A WebView without the message listener
   (older than 2020's) plays the page as a browser does. No service worker in
   the app: Diagnostics says `sw: none (the app holds its own files)`.
-- **Not yet:** the screen off and a notification (28), saving an export and the
-  restore file picker (28), the system bars' color following the page's theme
-  (a Painter's choice), the launcher icon (a placeholder in plain vectors).
+- **The screen off** (session 28): the page's `MediaBridge` (`js/media.js`)
+  tells the app what plays; the service holds the rest. Paused, nothing is
+  held: no wake lock, no focus, the stream closed after an eight-second
+  ring-out; the notification stays with Play for fifteen minutes, then goes. A
+  transient focus loss (a call) pauses and returns with the focus; a lasting
+  one pauses for good; another app's short sound ducks the music (the system
+  does that, as the request does not ask to pause when ducked). The page holds
+  a Web Lock while it plays, so Chromium does not put it on its slow timer
+  with the screen off. Back with music playing leaves the app like Home does
+  (before Android 12 it would close the page, and the music with it); a swipe
+  from the recents ends both. Permissions are the foreground service's
+  (media playback, data sync), the notification (Android 13 and later: asked
+  once, at the first Play with the app in front; refused, the music and the
+  lock screen's controls work all the same), and the wake lock; no network.
+- **Saving a file** (session 28): the export's bytes go from its Worker
+  through the page to the app a megabyte at a time (base64 in the bridge's
+  text; one piece at a time, each acknowledged), straight into the file the
+  listener chose in Android's picker. FLAC's header is written again at the
+  end, so a place that only streams (a cloud folder) is refused for Lossless
+  with a plain line; Small is written front to back and goes anywhere. A MIDI
+  file and the backup go through the same picker (`ui.download`).
+- **Workers** (session 28): a Worker's own requests (its imports, a `fetch`)
+  are never served by `shouldInterceptRequest` (measured on the emulator,
+  Chromium 124: the Worker's script loads, a Blob module Worker loads, one that
+  imports a file of the app fails), so `js/worker-blob.js` makes the export's
+  Worker from Blob URLs the page builds. The cover Worker (`js/covers.js`)
+  fails the same way and falls back to drawing on the main thread, as it
+  always did in the app; giving it the same loader is a follow-up.
+- **The page while the screen is off** (session 28): measured, a WebView whose
+  window is not shown is hidden to Chromium and its timers stopped for minutes
+  (a 50 ms interval last ran 3 minutes before; the lock screen's buttons never
+  reached the page). `AppWebView` tells the WebView it is shown while the app
+  plays or saves; the page then runs as in front, the emulator's CPU for the
+  app being 0% with the screen off.
+- **Not yet:** the system bars' color following the page's theme (a Painter's
+  choice), the launcher icon (a placeholder in plain vectors).

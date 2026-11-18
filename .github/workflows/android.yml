@@ -40,6 +40,12 @@ on:
       smoke_runs:
         description: 'Smoke tests to run, each on an emulator of its own'
         default: '1'
+      only:
+        description: 'Run only this emulator job (background, smoke, native, rows); empty runs all'
+        default: ''
+      minutes:
+        description: 'Minutes the background job keeps the screen off (10 in a PR)'
+        default: '10'
 
 permissions:
   contents: read
@@ -123,6 +129,20 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest -Pdriftloom.versionCode=${{ github.run_number }}
 
+      # Android's lint (session 28: the app passes it with no errors). The
+      # report is kept; an error fails the build.
+      - name: Android lint
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain lintDebug -Pdriftloom.versionCode=${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: android/app/build/reports/lint-results-debug.*
+          if-no-files-found: ignore
+          retention-days: 14
+
       # One APK for each ABI and a universal one (all three); the size of
       # each, and of the core's library inside it.
       - name: the APKs
@@ -155,6 +175,7 @@ jobs:
           retention-days: 14
 
   smoke:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'smoke'
     name: the APK installs, starts and plays on an emulator (${{ matrix.run }})
     needs: build
     runs-on: ubuntu-24.04
@@ -205,6 +226,7 @@ jobs:
           retention-days: 14
 
   native:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'native'
     name: the core plays natively on the emulator's audio
     needs: build
     runs-on: ubuntu-24.04
@@ -252,6 +274,7 @@ jobs:
             "$(ls apk/*-x86_64-debug.apk)" "$(ls test-apk/*.apk)" "$GITHUB_STEP_SUMMARY"
 
   rows:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'rows'
     name: the app's rows on the native core, on an emulator (tools/rows.mjs --app)
     needs: build
     runs-on: ubuntu-24.04
@@ -288,3 +311,47 @@ jobs:
       # WebView's DevTools port.
       - name: the rows
         run: sh android/emulator-rows.sh "$(ls apk/*-x86_64-debug.apk)" --long
+
+  # The screen off (session 28, queue item 107d): the music plays on for ten
+  # minutes with the screen off and the app in the background (the service's
+  # heartbeat says what the audio thread did, once a minute), the session's
+  # and the notification's controls work, a call (another app taking the
+  # audio focus) pauses it and gives it back, nothing is held when it is
+  # paused, and an export (lossless, and small where the WebView has the
+  # encoder) finishes with the screen off into a file chosen in Android's own
+  # picker. The emulator's figures are the emulator's, said to be only that.
+  background:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'background'
+    name: the screen off, the controls, a call and an export, on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the screen-off test
+        run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" "${{ github.event.inputs.minutes || '10' }}"

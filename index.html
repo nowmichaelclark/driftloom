@@ -6,6 +6,26 @@
 <meta name="theme-color" content="#160830">
 <meta name="description" content="A procedural loop machine for relaxing, meditative and joyful nostalgic loops.">
 <title>Driftloom</title>
+<!-- The preview a link shows (Discord, Messages, Slack, search): one title,
+     description and picture for every address, since there is no server to
+     draw one per loop. The name and address are APP_NAME and APP_URL in
+     js/main.js and the manifest's; test/preview.test.mjs holds the four
+     together. The picture is the app's icon until a Painter draws one. -->
+<link rel="canonical" href="https://driftloom.nowmichaelclark.workers.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Driftloom">
+<meta property="og:title" content="Driftloom">
+<meta property="og:description" content="A procedural loop machine for relaxing, meditative and joyful nostalgic loops.">
+<meta property="og:url" content="https://driftloom.nowmichaelclark.workers.dev/">
+<meta property="og:image" content="https://driftloom.nowmichaelclark.workers.dev/icons/icon-512.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="The Driftloom icon">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Driftloom">
+<meta name="twitter:description" content="A procedural loop machine for relaxing, meditative and joyful nostalgic loops.">
+<meta name="twitter:image" content="https://driftloom.nowmichaelclark.workers.dev/icons/icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -193,7 +213,8 @@
               <h2 class="sec">This loop</h2>
               <p class="hint">A loop is a recipe, not a recording, so it fits in a code.
                 No internet needed at either end.</p>
-              <div class="keys2">
+              <div class="keys3">
+                <button id="shareSong" type="button" class="vkey">share link</button>
                 <button id="copySong" type="button" class="vkey">copy its code</button>
                 <button id="exportMidi" type="button" class="vkey">export midi</button>
               </div>
@@ -243,6 +264,20 @@
                 <div class="keys2">
                   <button id="exportOk" type="button" class="vkey">ok</button>
                 </div>
+              </div>
+            </section>
+            <!-- An album drawn from one seed (queue item 105c): a code of a
+                 few characters whatever its length, each track asked the
+                 picks set now. -->
+            <section class="adv-sec" id="seedAlbum" aria-label="Album from one seed">
+              <h2 class="sec">Album from one seed</h2>
+              <p class="hint">A whole album from one short code: its tracks are
+                drawn from a single seed, each asked for the picks set now.</p>
+              <label class="srow"><span>Tracks <b id="seedCountVal">12</b></span>
+                <input type="range" id="seedCount" min="2" max="48" step="1" value="12"></label>
+              <div class="keys2">
+                <button id="seedAlbumLink" type="button" class="vkey">share link</button>
+                <button id="seedAlbumCode" type="button" class="vkey">copy its code</button>
               </div>
             </section>
             <section class="adv-sec">

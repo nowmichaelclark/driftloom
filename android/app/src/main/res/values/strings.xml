@@ -3,4 +3,14 @@
     <!-- The launcher's label: one of the three lines the new name (session
          31a) changes. The other two are in android/gradle.properties. -->
     <string name="app_name">Driftloom</string>
+
+    <!-- The notification and the lock screen's controls (session 28). -->
+    <string name="channel_playback">Playback</string>
+    <string name="channel_playback_about">The loop playing, with its controls, and a file being saved.</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="saving">Saving %1$s</string>
+    <string name="saving_percent">Saving, %1$d%%</string>
 </resources>

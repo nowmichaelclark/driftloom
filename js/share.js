@@ -19,8 +19,9 @@
 // Version 1 codes (DL1-, DLA1-) are gone (Mikey, 2026-10-29: no shims): one
 // pasted is told plainly it is from an older app, and nothing else.
 
-import { newSpec, playedSpec, loopCode, readLoopCode, albumCode, albumTracks, codeKind as kindOf, nameRefusal, CodeError } from './gen.js';
+import { newSpec, playedSpec, loopCode, readLoopCode, albumCode, seedAlbumCode, albumTracks, codeKind as kindOf, nameRefusal, CodeError } from './gen.js';
 import { LAYERS, readRequest, requestOf, askFor } from './request.js';
+import { randomSeed } from './rng.js';
 
 export { CodeError };
 
@@ -164,13 +165,43 @@ export function decodeAlbum(code) {
   return { title: name || 'Untitled', specs: tracks.map(decodeSong) };
 }
 
+// An album of `count` tracks drawn from one seed (a fresh one unless given),
+// each asked `request` (the picks now set; js/picks.js's requestFor): its
+// code, a few characters whatever the count (core/README.md, "An album").
+export function encodeSeedAlbum(title, count, request, seed = randomSeed()) {
+  return seedAlbumCode(seed, count, askFor(readRequest(request)), fitName(title));
+}
+
+// ------------------------------------------------------------------ links
+//
+// A link is the site's address with the code after "#c=". The fragment is
+// never sent to a server (so a code stays out of its logs, and out of a
+// referrer), and a request for the page has none, so the service worker's
+// cached page answers it offline as it answers the plain address; a query
+// would be a different request, not in the cache.
+
+const KEY = 'c=';
+
+export function linkOf(base, code) {
+  return `${String(base).split('#')[0].split('?')[0]}#${KEY}${code}`;
+}
+
+// The code in `text` where it is a link (any address, with "#c=" in it), else
+// `text` itself: a pasted link opens as its code does.
+export function codeOfLink(text) {
+  const s = String(text || '').trim();
+  const at = s.indexOf(`#${KEY}`);
+  return at < 0 ? s : s.slice(at + 1 + KEY.length).trim();
+}
+
 // ------------------------------------------------------------ what it is
 
 // A version 1 code, from an older build: "DL1-" or "DLA1-" before it.
 const OLD = /^\s*DLA?1-/i;
 
 // What `text` is: 'song', 'album', 'old' (a version 1 code, from an older
-// build), 'newer' (from a newer build) or null (no code). Read whole, so a
+// build), 'newer' (from a newer build), 'instrument' (needs one this device
+// lacks) or null (no code). Read whole, so a
 // word that happens to be the alphabet's is no code.
 export function codeKind(text) {
   if (OLD.test(String(text || ''))) return 'old';

@@ -452,6 +452,7 @@ function renderAlbum(album) {
       : key('play album', () => lib.app.playAlbum(album.id, 0)),
     key('add loops', () => { lib.mode = 'pick'; render(); }),
     key('share', () => lib.app.shareAlbum(album.id)),
+    key('link', () => lib.app.shareAlbumLink(album.id)),
   );
   hero.append(artFor(album, byId, true), meta, keys);
 

@@ -12,6 +12,72 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The Android app, screen off (item 107d, v188, PR #431)
+
+Install the universal APK from the PR's `driftloom-debug-apk` artifact over
+the last one (same key). On the **Moto** and on the **tablet**:
+
+- **Ten minutes with the screen off.** Play a loop, set Track length to one
+  minute (Sounds), press Home, switch the screen off, put the phone down for
+  ten minutes. Listen for: no gap, no crackle, the loops changing on the
+  minute; the notification and the lock screen show the loop's **own cover**
+  and its name, changing with each loop. Then in Diagnostics (screen on):
+  `engine:` with `late: 0 missed: 0 dropped: 0` and its underruns, and
+  `while hidden:`; send me those two lines and the phone's name.
+- **The controls.** From the lock screen and the notification: Pause, Play,
+  Next, Previous; from a headset's or Bluetooth's buttons too. Pull the
+  headphones (or switch the Bluetooth off) while it plays: it should pause.
+  Call the phone (or play a video in another app): it pauses, and returns when
+  the other sound ends. A short sound from another app (a message tone) should
+  only lower it for a moment.
+- **A long piece and an export with the screen off.** Start a long piece
+  (a Journey, a few minutes) and an export (Save, Share, export audio: pick a
+  place in the system's picker, a 30-minute length, **lossless**), then switch
+  the screen off. Both should finish: the export says "Saved where you chose"
+  and the file plays. Try **small** too where the choice shows, and a MIDI
+  export and a backup (they use the same picker now), and "Restore" (it opens
+  Android's file picker).
+- **The notification question** (Android 13 and later): the first Play asks
+  whether Driftloom may show notifications. Say no once: the music and the
+  lock screen's controls should work all the same (the notification itself is
+  what is missing).
+- **Battery.** Nothing runs when it is paused (no wake lock, no stream). While
+  playing with the screen off the app costs what a music player does: one
+  audio thread and one wake lock. The emulator's figures are in the PR and
+  say only that; a phone's battery is its own: play for an hour with the
+  screen off and send me what Settings, Battery says Driftloom used.
+- Not tested without a device (the emulator can't say): that another app's short
+  sound ducks the music (the system does it for this stream; tell me if it
+  doesn't), and Bluetooth buttons.
+## Links, an album from one seed, the plain lines (item 105c, v187)
+
+- **Approve the link's shape.** A link is the site's address with the code
+  after `#c=`: `https://driftloom.nowmichaelclark.workers.dev/#c=GRiSNBAxx`.
+  The fragment never reaches a server (so no code in its logs or a
+  referrer), and the page's own request has none, so the installed app's
+  cached page opens a link offline (a `?c=` query would be a different
+  request, not in the cache). It opens the loop (in Imported Loops) or the
+  album (in the Library, open at its first track) **ready, not playing**
+  (a browser won't let a page make sound before a tap). Save, Share has
+  **share link** (the phone's share sheet where there is one, else copied)
+  and an album's page has **link**. A pasted link works as its code.
+- **Approve the preview.** Discord, Messages and Slack show one preview for
+  every link: the title "Driftloom", the description, and the app icon
+  (512 px, `icons/icon-512.png`) as a small card. A Painter may draw a
+  wider picture. Paste the site's address into Discord to see it (it shows
+  after this deploys; Discord caches a preview for a while).
+- **Album from one seed:** Save, Share, "Album from one seed": a Tracks
+  slider (2 to 48), each track asked the picks now set; 12 tracks is a
+  14-character code. Its album has no name (it opens as "Untitled").
+- **The plain lines** (a toast each): "That code needs a newer Driftloom.",
+  "That code needs an instrument this device doesn't have." (wired to the
+  core's refusal; it can't show yet, since the core says "needs a newer
+  version" for any id it lacks, and B4 settles playing something close
+  instead), the older-code line, and "That link's code can't be read."
+  The name comes from the page's one constant. At the rename (31a) change
+  `APP_NAME`/`APP_URL` in `js/main.js`, index.html's preview tags and the
+  manifest together: `test/preview.test.mjs` fails if they disagree.
+
 ## Small audio export (item 104c, v184, PR #424)
 
 - **Listen to a Small export.** Save, Share, Audio: pick **small**, a few

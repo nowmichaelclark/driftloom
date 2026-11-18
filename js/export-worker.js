@@ -15,6 +15,12 @@
 //            download at the end.
 //   memory   neither: the bytes kept here, to a limit the page states before
 //            it starts, and handed to the page as one Blob.
+//   app      the Android app (session 28): a file made in Android's own
+//            picker, which only the page can reach (the app's bridge is in
+//            the page, not in a Worker). Each megabyte goes to the page as
+//            base64, the page gives it to the app, which writes it to the
+//            file as it comes, and the answer (`ack`) comes back before the
+//            next is made: memory stays as it is for any length.
 //
 // Cancel, a failure or a full disk removes what was written: no partial file
 // is left behind. A page closed mid-export takes this Worker with it; its
@@ -32,16 +38,19 @@
 // browser can encode Opus at all.
 //
 // Messages in: { type: 'hello' }; { type: 'start', bytes, job, sink, name,
-// title, pace, limit }; { type: 'pace', pace }; { type: 'cancel' }.
+// title, pace, limit }; { type: 'pace', pace }; { type: 'cancel' }; { type:
+// 'ack', id, ok, why } (the app sink's answer).
 // Out: { type: 'hello', private, opus } (whether the private file system
 // works here, and whether Opus can be encoded); { type: 'progress', frames,
 // expected, bytes }; { type: 'done', file (private and memory), bytes,
 // frames, seconds, took, counts, format }; { type:
 // 'cancelled' }; { type: 'failed', why ('space', 'write', 'render',
-// 'memory'), message }.
+// 'memory'), message }; { type: 'relay', id, op ('write', 'header',
+// 'close', 'abort'), data } (the app sink's, for the page to pass on).
 
 import { Render } from './export-render.js';
 import { OpusMaker, opusWorks } from './export-opus.js';
+import { toBase64 } from './app.js';
 
 // One slice of rendering before a yield, in milliseconds.
 const SLICE = 25;
@@ -166,6 +175,40 @@ class HandleSink {
   }
 }
 
+// The app's file, through the page (see the top). Each call waits for the
+// app's answer, so what the disk can take is what is made.
+const acks = new Map();
+let relayed = 0;
+
+class RelaySink {
+  open() {}
+
+  write(bytes) {
+    return this.relay('write', bytes);
+  }
+
+  header(bytes) {
+    return this.relay('header', bytes);
+  }
+
+  async close() {
+    await this.relay('close');
+    return null;
+  }
+
+  async remove() {
+    try { await this.relay('abort'); } catch { /* nothing was open */ }
+  }
+
+  relay(op, bytes) {
+    const id = ++relayed;
+    return new Promise((resolve, reject) => {
+      acks.set(id, { resolve, reject });
+      self.postMessage({ type: 'relay', id, op, data: bytes ? toBase64(bytes) : '' });
+    });
+  }
+}
+
 class MemorySink {
   constructor(limit, type) {
     this.limit = limit;
@@ -236,7 +279,7 @@ class Gather {
 async function run(m) {
   const started = performance.now();
   const opus = m.job.format === 'opus';
-  const sink = m.sink === 'handle' ? new HandleSink(m.handle) : m.sink === 'private' ? new PrivateSink() : new MemorySink(m.limit, opus ? 'audio/ogg' : 'audio/flac');
+  const sink = m.sink === 'handle' ? new HandleSink(m.handle) : m.sink === 'app' ? new RelaySink() : m.sink === 'private' ? new PrivateSink() : new MemorySink(m.limit, opus ? 'audio/ogg' : 'audio/flac');
   job = { cancelled: false, pace: m.pace, sink };
   let render;
   let maker = null;
@@ -324,4 +367,16 @@ self.onmessage = async (e) => {
   else if (m.type === 'start' && !job) run(m);
   else if (m.type === 'pace' && job) job.pace = m.pace;
   else if (m.type === 'cancel' && job) job.cancelled = true;
+  else if (m.type === 'ack') {
+    const a = acks.get(m.id);
+    acks.delete(m.id);
+    if (!a) return;
+    if (m.ok) a.resolve();
+    else {
+      // The disk filling is the one failure the page says in its own words.
+      const err = new Error(m.why || 'the app could not write the file');
+      if (m.why === 'space') err.name = 'QuotaExceededError';
+      a.reject(err);
+    }
+  }
 };

@@ -2,6 +2,7 @@ import { LAYERS, LAYER_LABELS, STEPS_PER_BAR, loopBars } from './request.js';
 import { CHARACTERS, resolveKey } from './characters.js';
 import { NOTE_NAMES, SCALES } from './theory.js';
 import { moodWord, pointWord } from './moods.js';
+import { appLink } from './app.js';
 
 export const el = (id) => document.getElementById(id);
 
@@ -445,6 +446,13 @@ export function download(blob, filename) {
     .replace(/\s+/g, ' ')
     .replace(/^[.\s]+/, '')
     .slice(0, 120) || 'driftloom.dat';
+  // The Android app has no downloads: the file goes through its own picker
+  // (js/app.js, session 28).
+  const app = appLink();
+  if (app) {
+    app.saveBlob(blob, safe).then((r) => toast(r.name ? `Saved ${r.name}` : r.why === 'cancelled' ? 'Nothing saved' : 'Could not save that file'));
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

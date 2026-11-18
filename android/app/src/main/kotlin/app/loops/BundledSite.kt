@@ -22,7 +22,7 @@ class BundledSite(private val context: Context) : WebViewAssetLoader.PathHandler
         if (name.split('/').any { it == ".." || it.isEmpty() }) return notFound()
         return try {
             val stream = context.assets.open("www/$name")
-            WebResourceResponse(typeOf(name), encodingOf(name), stream)
+            WebResourceResponse(typeOf(name), encodingOf(name), 200, "OK", HEADERS, stream)
         } catch (e: IOException) {
             notFound()
         }
@@ -37,6 +37,13 @@ class BundledSite(private val context: Context) : WebViewAssetLoader.PathHandler
          *  it, so it never changes once listeners have used it. */
         const val HOST = "appassets.androidplatform.net"
         const val START = "https://$HOST/"
+
+        /**
+         * A module Worker (the export's, the covers') loads its script and its imports as CORS requests, and a
+         * response the app makes up has no headers to answer one with: measured in the app, every module Worker
+         * failed to load while a classic one loaded its file. The page's own origin may read its files.
+         */
+        private val HEADERS = mapOf("Access-Control-Allow-Origin" to "https://$HOST")
 
         private val TYPES = mapOf(
             "html" to "text/html",

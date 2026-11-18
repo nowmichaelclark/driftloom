@@ -42,6 +42,8 @@ class PageBridge(private val view: WebView) {
             if (!isMainFrame) return@addWebMessageListener
             proxy = reply
             val text = message.data ?: return@addWebMessageListener
+            // Anything sent to the core while paused finds the stream there to take it (session 28).
+            StreamKeeper.touched()
             bridge.post { NativeCore.send(text)?.let { post(it) } }
         }
         bridge.post(drain)
@@ -62,6 +64,7 @@ class PageBridge(private val view: WebView) {
     fun close() {
         proxy = null
         bridge.removeCallbacksAndMessages(null)
+        StreamKeeper.close()
         bridge.post {
             NativeCore.pageGone()
             NativeCore.stop()

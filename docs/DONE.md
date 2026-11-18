@@ -457,3 +457,21 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   notes v183 played). A shared code doesn't carry the length slider, so an
   album's pacing no longer travels. The module grew 124 KB (48 KB gzipped):
   the codes.
+- #431, the Android app with the screen off, the notification and saving a
+  file (item 107d, session 28, v188), the APK from the PR's
+  `driftloom-debug-apk` artifact (no preview URL: the web page is unchanged
+  but for the app's own calls): the web sounds as it did. In the app: Play,
+  Home, switch the screen off: the music plays on, the notification and the
+  lock screen show the loop's own cover and name and change with each loop,
+  and Previous, Pause or Play, Next work (a headset's too); pulling the
+  headphones or a call pauses it, and it returns when the call ends. Save,
+  Share, export audio now opens Android's own picker and writes the file as it
+  is made; MIDI and the backup and Restore use it too. Details and what to
+  send back are in `docs/notes/for-mikey.md`.
+- #433, links, an album from one seed and the plain lines (item 105c, v187): a
+  link is the address with `#c=` and the code (no server sees it; the cached
+  page opens it offline), opening a loop or an album ready, not playing; share
+  link (share sheet, else copied); a static preview (title, description, the
+  app icon); an album of one seed from Save, Share (12 tracks, 14
+  characters); the newer, instrument, older and damaged-link lines. Check the
+  preview in Discord and a link on a phone.

@@ -15,5 +15,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- A phone call, for the emulator's test (session 28): takes the audio focus and gives it back. -->
+        <receiver
+            android:name=".CallSimulator"
+            android:exported="true" />
     </application>
 </manifest>

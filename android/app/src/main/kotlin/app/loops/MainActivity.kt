@@ -6,11 +6,16 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.window.OnBackInvokedDispatcher
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -28,6 +33,7 @@ class MainActivity : Activity() {
 
     private var web: WebView? = null
     private var page: PageBridge? = null
+    private var app: AppBridge? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +67,11 @@ class MainActivity : Activity() {
             }
         }
         setContentView(root)
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
+                if (Playback.busy) moveTaskToBack(true) else finish()
+            }
+        }
         attachPage(root)
     }
 
@@ -70,7 +81,7 @@ class MainActivity : Activity() {
             .addPathHandler("/", BundledSite(this))
             .build()
 
-        val view = WebView(this)
+        val view = AppWebView(this)
         view.settings.apply {
             javaScriptEnabled = true
             // The page keeps the loops, the library and the preferences in
@@ -85,6 +96,17 @@ class MainActivity : Activity() {
             safeBrowsingEnabled = false
         }
         view.setBackgroundColor(Color.parseColor("#160830"))
+        // With the screen off and the app in the background the page goes on (its export, the next loop's
+        // choice): the renderer keeps its priority when the window is not shown (session 28).
+        view.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+        val bridge = AppBridge(this, view)
+        app = bridge
+        // The restore file's picker (an <input type=file>): Android's own.
+        view.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                v: WebView, callback: ValueCallback<Array<Uri>>, params: WebChromeClient.FileChooserParams,
+            ): Boolean = bridge.chooseFile(callback, params.acceptTypes)
+        }
         view.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(v: WebView, request: WebResourceRequest): WebResourceResponse? =
                 loader.shouldInterceptRequest(request.url)
@@ -103,6 +125,7 @@ class MainActivity : Activity() {
             // it, as a closed tab's does.
             override fun onPageStarted(v: WebView, url: String?, favicon: Bitmap?) {
                 page?.pageGone()
+                app?.pageGone()
             }
 
             // WebView's renderer was killed (memory): the page is rebuilt.
@@ -110,6 +133,8 @@ class MainActivity : Activity() {
                 (v.parent as? ViewGroup)?.removeView(v)
                 page?.close()
                 page = null
+                app?.close()
+                app = null
                 v.destroy()
                 web = null
                 recreate()
@@ -119,13 +144,52 @@ class MainActivity : Activity() {
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         web = view
         // The page's player on the native core: put in before the page loads.
-        if (PageBridge.supported()) page = PageBridge(view).also { it.attach() }
+        if (PageBridge.supported()) {
+            page = PageBridge(view).also { it.attach() }
+            bridge.attach()
+        }
         view.loadUrl(BundledSite.START)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        app?.resumed = true
+    }
+
+    override fun onPause() {
+        app?.resumed = false
+        super.onPause()
+    }
+
+    // The picker's answers (a new file to save into, the restore file) and the notification permission's.
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        app?.onResult(requestCode, resultCode, data)
+    }
+
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        app?.onPermissions(requestCode)
+    }
+
+    // Back with the music playing or a file being saved leaves the app, as Home does, and the page goes on;
+    // it would otherwise close the page, and the music with it. Android 13 and later send the back gesture to
+    // a callback (and from Android 16 to nothing else); before that it is the back key.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && Build.VERSION.SDK_INT < 33 && Playback.busy) {
+            moveTaskToBack(true)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onDestroy() {
         page?.close()
         page = null
+        app?.close()
+        app = null
         web?.let { (it.parent as? ViewGroup)?.removeView(it); it.destroy() }
         web = null
         super.onDestroy()

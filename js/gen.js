@@ -20,7 +20,8 @@
 //                            it (js/request.js)
 //   playedSpec(spec)         the record of the loop a record plays
 //                            (`askOf`): what the Library and a code hear
-//   loopCode, readLoopCode, albumCode, albumTracks, codeKind, nameRefusal
+//   loopCode, readLoopCode, albumCode, seedAlbumCode, albumTracks, codeKind,
+//   nameRefusal
 //                            share codes, version 2, written and read by the
 //                            core (session 23; js/share.js is the page's
 //                            side, core/README.md the format)
@@ -364,6 +365,21 @@ export function albumCode(codes, name = '') {
   return codeText(n);
 }
 
+// An album of `count` tracks drawn from `seed`, each asked what `a` asks (the
+// core's numbers: js/request.js's askFor; edits have no place in it), named
+// `name` ('' for none): its code, a few characters whatever the count.
+export function seedAlbumCode(seed, count, a, name = '') {
+  need();
+  x.dl_play_stop();
+  const ok = ask(a);
+  const n = ok ? x.dl_code_album_seed(seed >>> 0, count, input(utf8.encode(name))) : 0;
+  const err = !ok ? new CodeError(text(x.dl_play_refusal_at(), x.dl_play_refusal()) || "can't do that") : n ? null : refused();
+  const code = n ? codeText(n) : null;
+  dropAsked(seed);
+  if (err) throw err;
+  return code;
+}
+
 // An album's { name, tracks }, each track a loop's code.
 export function albumTracks(code) {
   need();
@@ -381,8 +397,8 @@ export function albumTracks(code) {
   return { name, tracks };
 }
 
-// What `text` is, read whole: 'loop', 'album', 'newer' (a newer build's) or
-// null (no code).
+// What `text` is, read whole: 'loop', 'album', 'newer' (a newer build's),
+// 'instrument' (needs one this device lacks) or null (no code).
 export function codeKind(text) {
   need();
   const len = input(utf8.encode(String(text || '')));
@@ -392,8 +408,11 @@ export function codeKind(text) {
     dropAsked(x.dl_code_seed());
     return 'loop';
   }
-  // A newer build's code says so from its head, loop or album.
-  return refused().message === NEWER ? 'newer' : null;
+  // A newer build's code says so from its head, loop or album; a code that
+  // names an instrument this device does not have (the core says so in
+  // words with "instrument" in them, once it can) its own line.
+  const why = refused().message;
+  return why === NEWER ? 'newer' : /instrument/i.test(why) ? 'instrument' : null;
 }
 
 const NEWER = 'needs a newer version';

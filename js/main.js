@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v186';
+const BUILD = 'v188';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -40,9 +40,21 @@ const TOO_SLOW = 'This browser is too slow.';
 // 31a changes it here). The lines a pasted code gets name it, as the core's
 // "needs a newer version" leaves the host to.
 const APP_NAME = 'Driftloom';
+// The app's address, where a link to a loop has none of the page's own (the
+// Android app's files are inside it). Renamed with the app; index.html's
+// preview tags carry the same address and name (test/preview.test.mjs holds
+// them, the manifest and these two together).
+const APP_URL = 'https://driftloom.nowmichaelclark.workers.dev/';
 const OLD_CODE = `That code is from an older ${APP_NAME} and can't be opened.`;
 const NEWER_CODE = `That code needs a newer ${APP_NAME}.`;
 const NOT_A_CODE = `That doesn't look like a ${APP_NAME} code.`;
+// The core's refusal for a code that names an instrument this device does
+// not have (it can't say so yet: today it says "needs a newer version" for
+// any id it lacks, and session B4 settles whether it plays something close
+// instead). share.codeKind answers 'instrument' for such a refusal.
+const INSTRUMENT_CODE = `That code needs an instrument this device doesn't have.`;
+// A link whose code is damaged (cut short, or a character changed).
+const BAD_LINK = `That link's code can't be read.`;
 const GET_APP = 'Get the Driftloom app.';
 const APP_LINK = '';
 
@@ -707,7 +719,7 @@ function viewsReset() {
 // engine while the audio graph is being built, before any load happens.
 function syncMediaMetadata() {
   if (!state.media || !state.spec) return;
-  state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm · Driftloom`);
+  state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm · Driftloom`, state.spec);
 }
 
 // Passes are the honest unit -- a track ends on a whole loop -- but nobody
@@ -1306,24 +1318,27 @@ function leaveAlbum() {
   ui.toast('Left the album. Next makes new loops');
 }
 
-function playAlbum(albumId, index = 0) {
+function playAlbum(albumId, index = 0, play = true) {
   const album = store.loadAlbums().find((a) => a.id === albumId);
   if (!album) return;
   const saved = new Set(store.loadAll().map((e) => e.id));
   const present = album.ids.filter((id) => saved.has(id));
   if (!present.length) { ui.toast('That album is empty'); return; }
   state.playlist = { albumId: album.id, title: album.title, ids: present, index: index - 1 };
-  advancePlaylist(1);
+  advancePlaylist(1, play);
 }
 
-async function shareAlbum(albumId) {
+async function shareAlbum(albumId, asLink = false) {
   const album = store.loadAlbums().find((a) => a.id === albumId);
   if (!album) return;
   const byId = new Map(store.loadAll().map((e) => [e.id, e]));
   const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
   if (!specs.length) { ui.toast('That album is empty'); return; }
   try {
-    await offerCode(share.encodeAlbum(album.title, specs), `${album.title} · ${specs.length} loops`);
+    const code = share.encodeAlbum(album.title, specs);
+    const label = `${album.title} · ${specs.length} loops`;
+    if (asLink) await shareLink(code, label);
+    else await offerCode(code, label);
   } catch (err) {
     console.warn('Could not build an album code', err);
     ui.toast('Could not build a code for this album');
@@ -1332,18 +1347,55 @@ async function shareAlbum(albumId) {
 
 // Put a code where it can be taken. The clipboard is the quick path; the
 // box below is the one that still works when the clipboard is refused.
-async function offerCode(code, label) {
+async function offerCode(code, label, what = 'Code') {
   const out = ui.el('shareOut');
   out.hidden = false;
   out.textContent = `${label}\n\n${code}`;
   try {
     await navigator.clipboard.writeText(code);
-    ui.toast('Code copied');
+    ui.toast(`${what} copied`);
   } catch {
     // The box lives under Save > Share; take them to it.
     setView('save');
     library.showShare();
     ui.toast('Copy it from the box below');
+  }
+}
+
+// The address a link is made on: the page's own where it is served over
+// http(s) (so a link follows the site, through the rename), else the app's.
+function linkBase() {
+  if (nativeBridge() || !location.protocol.startsWith('http')) return APP_URL;
+  return (location.origin + location.pathname).replace(/index\.html$/, '');
+}
+
+// Share a code as a link: the system's share sheet where there is one, else
+// copied (and the box, where the clipboard is refused).
+async function shareLink(code, label) {
+  const url = share.linkOf(linkBase(), code);
+  if (navigator.share && !nativeBridge()) {
+    try {
+      await navigator.share({ title: label, url });
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+    }
+  }
+  await offerCode(url, label, 'Link');
+}
+
+// An album of one seed, as many tracks as the slider says, each asked the
+// picks now set: its short code, as a link or as the code.
+async function seedAlbum(asLink) {
+  const count = Number(ui.el('seedCount').value) || 12;
+  try {
+    const code = share.encodeSeedAlbum('', count, picks.requestFor(state));
+    const label = `${count} tracks from one seed`;
+    if (asLink) await shareLink(code, label);
+    else await offerCode(code, label);
+  } catch (err) {
+    console.warn('Could not make an album', err);
+    ui.toast(err instanceof RequestError ? err.message : 'Could not make that album');
   }
 }
 
@@ -1418,7 +1470,7 @@ function onTrackEnd() {
   }, 0);
 }
 
-function advancePlaylist(step) {
+function advancePlaylist(step, play = true) {
   const pl = state.playlist;
   if (!pl || !pl.ids.length) return;
   pl.index = (pl.index + step + pl.ids.length) % pl.ids.length;
@@ -1428,11 +1480,11 @@ function advancePlaylist(step) {
     pl.ids.splice(pl.index, 1);
     if (!pl.ids.length) { state.playlist = null; return; }
     pl.index %= pl.ids.length;
-    advancePlaylist(0);
+    advancePlaylist(0, play);
     return;
   }
   loadSpec(cloneSpec(entry.spec), { id: entry.id, pushToHistory: false });
-  if (!state.engine.playing) togglePlay();
+  if (play && !state.engine.playing) togglePlay();
   ui.toast(`${pl.title} · ${pl.index + 1}/${pl.ids.length}`);
 }
 
@@ -1570,16 +1622,38 @@ async function pasteCode() {
   } catch {
     text = '';
   }
+  // A link pasted is its code.
+  text = share.codeOfLink(text);
   if (!share.codeKind(text)) {
-    text = prompt(`Paste a ${APP_NAME} code`) || '';
+    text = share.codeOfLink(prompt(`Paste a ${APP_NAME} code`) || '');
   }
+  openCode(text, { play: true });
+}
+
+// A link opened (the page's address has "#c=" and a code): the loop or the
+// album ready to play, never started by itself (a browser does not let a
+// page make sound before a tap). The address is cleared of it, so a reload
+// does not bring the album in twice.
+function openLink() {
+  if (!location.hash.startsWith('#c=')) return;
+  const code = share.codeOfLink(location.hash);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch { /* the code is read already */ }
+  openCode(code, { play: false, link: true });
+}
+
+// Take a song or album code: from a paste (`play`: the loop starts) or a
+// link (ready, not playing).
+function openCode(text, { play, link = false }) {
   const kind = share.codeKind(text);
   // A version 1 code (session 23: the app speaks version 2 only), or one
-  // from a newer build: one plain line each, not an error.
+  // from a newer build, or one that needs what this device lacks: one plain
+  // line each, not an error.
   if (kind === 'old') { ui.toast(OLD_CODE); return; }
   if (kind === 'newer') { ui.toast(NEWER_CODE); return; }
+  if (kind === 'instrument') { ui.toast(INSTRUMENT_CODE); return; }
   if (!kind) {
-    if (text.trim()) ui.toast(NOT_A_CODE);
+    if (link) ui.toast(BAD_LINK);
+    else if (text.trim()) ui.toast(NOT_A_CODE);
     return;
   }
   try {
@@ -1599,7 +1673,7 @@ async function pasteCode() {
         loadSpec(spec, { id: ids ? ids[0] : null });
         ui.toast(ids ? `Added ${spec.name} to Imported Loops` : `Playing ${spec.name} (could not save it)`);
       }
-      if (!state.engine.playing) togglePlay();
+      if (play && !state.engine.playing) togglePlay();
     } else {
       const { title, specs } = share.decodeAlbum(text);
       const ids = store.addSpecs(specs);
@@ -1611,10 +1685,13 @@ async function pasteCode() {
       if (album) store.setAlbumIds(album.id, ids);
       savedChanged();
       ui.toast(`Added ${title} · ${specs.length} loops`);
+      // From a link the album is open at its first track, ready to play.
+      if (link && album) playAlbum(album.id, 0, false);
     }
   } catch (err) {
     console.warn('Could not open the code', err);
-    ui.toast(err instanceof share.CodeError && err.message === 'needs a newer version' ? NEWER_CODE : NOT_A_CODE);
+    if (err instanceof share.CodeError && err.message === 'needs a newer version') ui.toast(NEWER_CODE);
+    else ui.toast(link ? BAD_LINK : NOT_A_CODE);
   }
 }
 
@@ -1721,6 +1798,7 @@ function wire() {
     updateSaved,
     saveAsNew,
     shareAlbum,
+    shareAlbumLink: (id) => shareAlbum(id, true),
     openSaved,
     pasteCode,
     exportMidi: (spec) => exportMidi(cloneSpec(spec)),
@@ -1956,6 +2034,18 @@ function wire() {
   });
 
   ui.el('pasteCode').addEventListener('click', pasteCode);
+  ui.el('shareSong').addEventListener('click', async () => {
+    if (!state.spec) return;
+    try {
+      await shareLink(share.encodeSong(sharedSpec()), state.spec.name);
+    } catch (err) {
+      console.warn('Could not build a link', err);
+      ui.toast('Could not build a link for this loop');
+    }
+  });
+  ui.el('seedCount').addEventListener('input', () => { ui.el('seedCountVal').textContent = ui.el('seedCount').value; });
+  ui.el('seedAlbumLink').addEventListener('click', () => seedAlbum(true));
+  ui.el('seedAlbumCode').addEventListener('click', () => seedAlbum(false));
 
   ui.el('copyBackup').addEventListener('click', async () => {
     try {
@@ -2095,6 +2185,10 @@ if (noGenerator) {
   } else {
     fetchCore().catch(() => {});
     try { prepareAudio(); } catch { state.ctx = null; }
+    // A link to a loop or an album (an address with "#c=" and a code), from
+    // first load or opened over this page.
+    window.addEventListener('hashchange', openLink);
+    openLink();
   }
 }
 

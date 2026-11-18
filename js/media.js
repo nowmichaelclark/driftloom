@@ -31,6 +31,16 @@
 //   discard a signal this quiet and hand back actual silence.
 //
 // The music itself goes straight to the speakers, untouched.
+//
+// In the Android app (session 28) none of this is the browser's: the core
+// plays natively and a foreground service of the app's own holds the audio
+// focus, the notification and a MediaSession, so what the page tells the
+// phone (what is playing, the loop's name and its own cover, whether it
+// plays) goes to the app (js/app.js), and the lock screen's, the
+// notification's and a headset's buttons come back as the page's own Play,
+// Pause, Next and Previous.
+
+import { appLink } from './app.js';
 
 const KEEPALIVE = [
   ['audio/keepalive.flac', 'audio/flac'],
@@ -45,6 +55,8 @@ export class MediaBridge {
     this.mode = 'pending';
     this.lastError = '';
     this.handlersSet = 0;
+    // The Android app's end (js/app.js), when this is the app.
+    this.app = null;
     // Told of every change in what the phone is told is playing: the
     // session's state as the app sets it, and the keepalive element stopping
     // or starting (Diagnostics' "while hidden", queue item 39).
@@ -61,9 +73,13 @@ export class MediaBridge {
     this.source = sourceNode;
     // The Android app (session 27): the core plays natively, and the WebView
     // plays no audio of its own, the keepalive included. The lock screen's
-    // controls there are the app's own (session 28).
+    // controls there are the app's own service's (session 28).
     if (this.ctx && this.ctx.native) {
       this.mode = 'native';
+      this.app = appLink();
+      this.title = '';
+      this.line = '';
+      this.playing = false;
       return;
     }
 
@@ -101,7 +117,17 @@ export class MediaBridge {
     }
   }
 
+  // What the app is told: whether it plays, and what.
+  _tell(playing) {
+    this.playing = playing;
+    if (this.app) this.app.media(playing, this.title, this.line);
+  }
+
   async start() {
+    if (this.app) {
+      this._tell(true);
+      return this.mode;
+    }
     if (!this.audio) return this.mode;
     try {
       await this.audio.play();
@@ -116,6 +142,7 @@ export class MediaBridge {
   }
 
   stop() {
+    if (this.app) this._tell(false);
     if (this.audio) this.audio.pause();
   }
 
@@ -142,6 +169,11 @@ export class MediaBridge {
   }
 
   setHandlers({ onPlay, onPause, onNext, onPrev }) {
+    if (this.app) {
+      this.app.handlers = { onPlay, onPause, onNext, onPrev };
+      this.handlersSet = 4;
+      return;
+    }
     if (!('mediaSession' in navigator)) return;
     const set = (action, fn) => {
       try {
@@ -161,7 +193,15 @@ export class MediaBridge {
     this.handlersSet = ok.filter(Boolean).length;
   }
 
-  setMetadata(title, subtitle) {
+  setMetadata(title, subtitle, spec) {
+    if (this.app) {
+      this.title = title;
+      this.line = subtitle;
+      // The loop's own cover goes along; a loop changing while it plays is told at once.
+      this.app.cover(spec);
+      if (this.playing) this._tell(true);
+      return;
+    }
     if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -177,6 +217,11 @@ export class MediaBridge {
   }
 
   setPlaybackState(playing) {
+    if (this.app) {
+      this._tell(playing);
+      this._changed(`session ${playing ? 'playing' : 'paused'}`);
+      return;
+    }
     if (!('mediaSession' in navigator)) return;
     try {
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
