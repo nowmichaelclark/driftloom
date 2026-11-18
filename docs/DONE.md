@@ -475,3 +475,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   app icon); an album of one seed from Save, Share (12 tracks, 14
   characters); the newer, instrument, older and damaged-link lines. Check the
   preview in Discord and a link on a phone.
+- #438, an album's code carries how long each track plays (item 105d,
+  session 24b, v189): each track's length slider setting (passes, or bars to
+  a phrase line) travels with its album, the one most tracks share written
+  once (two characters for twelve tracks of two passes), nothing where every
+  track plays on (the code as before); opening it plays each track its
+  length, then the next. A loop's own code and an album from one seed carry
+  none. `docs/ALBUMS.md`'s six old albums that set lengths have them again.
+  Share an album with lengths set and open its link elsewhere.

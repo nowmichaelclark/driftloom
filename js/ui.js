@@ -188,6 +188,32 @@ export function barSeconds(spec) {
   return (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
 }
 
+// Track length is chosen as a time, which is how anyone thinks of it, and
+// stored as passes (a track ends on a whole loop), worked out at this tempo
+// when the slider moves; a time shorter than one pass (a long loop's pass
+// can be hours) as bars, and the track ends at the first phrase line after
+// them (queue item 88b; `trackLength`). The stops are curated: fine at the
+// short end, where people actually set it, and reaching a whole day at the
+// top. Here, beside the passes and bars they come to, so a test walks them
+// (session 24b: an album's code carries each).
+export const TRACK_TIMES = [
+  0, 60, 120, 180, 300, 600, 900, 1200, 1800, 2700,
+  3600, 5400, 7200, 10800, 14400, 21600, 28800, 43200, 86400,
+];
+
+// The slider's time, `secs` (0 for off), as the spec keeps it: whole passes
+// where it is a pass or longer, as ever; shorter than a pass, the bars it
+// comes to, rounded up (queue item 88b: the track ends at the first phrase
+// line after them, its notes fading).
+export function trackLength(spec, secs) {
+  spec.playFor = null;
+  delete spec.playBars;
+  if (!secs) return;
+  const pass = passSeconds(spec);
+  if (secs >= pass) spec.playFor = Math.max(1, Math.round(secs / pass));
+  else spec.playBars = Math.max(1, Math.ceil(secs / barSeconds(spec) - 1e-9));
+}
+
 export function formatTime(secs) {
   if (secs < 90) return `${Math.round(secs)}s`;
   if (secs < 5400) return `${Math.round(secs / 60)}m`;

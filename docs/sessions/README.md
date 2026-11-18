@@ -89,7 +89,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | B2 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-17 (#412) |
 | 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | 22 | 21, 26, 27, 28, 29 | yes, 2026-11-18 (#425, #427) |
 | 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | 23 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-18 (#433) |
-| 24b | `24b-album-pacing.md` | 105d: an album's code carries how each track plays (Mikey, 2026-11-18) | Opus 5.5, high | 24 | 26, 27, 28, 29, 30b | |
+| 24b | `24b-album-pacing.md` | 105d: an album's code carries how each track plays (Mikey, 2026-11-18) | Opus 5.5, high | 24 | 26, 27, 28, 29, 30b | yes, 2026-11-18 (#438) |
 | B4 | `brain-4-codes.md` | Brain: check 16 to 24b; the albums again in the new codes | Opus 5.5, high | 18, 21, 24b | 26 to 29 | |
 | | | **Android** | | | | |
 | 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | yes, 2026-11-17 (#411; no app change) |

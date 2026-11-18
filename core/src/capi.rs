@@ -1155,9 +1155,39 @@ pub unsafe extern "C" fn dl_album_track(code: *const c_char, index: usize, out: 
     unsafe { written(out, room, |buf| crate::code::album_track(code, index, buf)) }
 }
 
+/// How long track `index` (from 0) of the album `code` plays before the
+/// next, as its maker set it (`code::album_pace`): `kind` 0 on and on, 1
+/// whole passes, 2 bars to a phrase line, and `count` of them, as the
+/// player's track takes them. Null, or the line saying why not.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; `kind` and `count` each
+/// writable, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_pace(code: *const c_char, index: usize, kind: *mut c_int, count: *mut u32) -> *const c_char {
+    // SAFETY: the caller's promise, passed on.
+    match crate::code::album_pace(unsafe { bytes(code) }, index) {
+        Ok(p) => {
+            // SAFETY: each writable, or null (the caller's promise).
+            unsafe {
+                if !kind.is_null() {
+                    *kind = c_int::try_from(p.kind()).unwrap_or(0);
+                }
+                if !count.is_null() {
+                    *count = p.count();
+                }
+            }
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
 /// Write the album of the `count` loops' codes at `codes`, in their order,
-/// named `name` (UTF-8; null for none), into `out`. Null, or the line
-/// saying why not.
+/// named `name` (UTF-8; null for none), into `out`. A code may carry its
+/// track's pace after it (`code::paced`: `:p2` two passes, `:b8` eight
+/// bars; nothing, on and on). Null, or the line saying why not.
 ///
 /// # Safety
 ///
@@ -1171,7 +1201,11 @@ pub unsafe extern "C" fn dl_album_write(codes: *const *const c_char, count: usiz
     // SAFETY: `count` pointers (the caller's promise).
     let list = unsafe { core::slice::from_raw_parts(codes, count) };
     // SAFETY: each NUL-terminated (the caller's promise).
-    let tracks = list.iter().map(|&c| unsafe { bytes(c) });
+    if list.iter().any(|&c| crate::code::paced(unsafe { bytes(c) }).is_err()) {
+        return line(crate::code::BAD_PACE);
+    }
+    // SAFETY: as above.
+    let tracks = list.iter().map(|&c| unsafe { bytes(c) }).map(|t| crate::code::paced(t).unwrap_or((t, crate::code::Pace::On)));
     // SAFETY: the caller's promise.
     let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
     // SAFETY: the caller's promise, passed on.

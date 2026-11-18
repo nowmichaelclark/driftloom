@@ -555,6 +555,7 @@ place is "not a code".
 | 19 | the tempo the slider set (an edit) | decimal |
 | 20 | the layers muted | a set of layer ids |
 | 21 | the wander's salt (item 92) | seed, not 0 |
+| 22 | a track's pace (album tracks, and an album's own, only) | a number: 0 on and on, `2n - 1` for `n` passes, `2n` for `n` bars (`n` 1 to 2^31 - 1) |
 | 30 | a name of its own (a loop's, a track's, an album's) | how many bytes of UTF-8 (1 to 60), then the bytes, eight bits each packed six to a sextet, highest first, the last sextet's spare bits 0 (base64url, no padding) |
 
 **A name** (session 23; Mikey, 2026-11-17: a renamed loop's name travels
@@ -590,7 +591,8 @@ Library does, reads a code back into that record from it.
 - **0, a list of loops:** how many (1 to 1,024); each track as how many
   characters it takes, then its *seed* and *fields* (a loop's code less head
   and check; tag 0 first where its version is older than the album's, which is
-  its newest track's; its name last, if it has one); then the album's name
+  its newest track's; its own pace where it is not the album's; its name
+  last, if it has one); then the album's pace field or nothing, its name
   field or nothing; *check*.
 - **1, drawn from one seed:** the album's *seed*, how many tracks, the picks
   they share (fields 1 to 16) and the album's name field or nothing;
@@ -598,6 +600,26 @@ Library does, reads a code back into that record from it.
   (from 0) is the loop of the `i + 1`th `seed32` of the generator's stream of
   the album's seed (`code::track_seed`), asked the picks, at the album's
   version.
+
+**A track's pace** (session 24b; Mikey, 2026-11-18: "an album's code
+should carry track lengths and all necessary info"): how long it plays
+before the next, as the album's maker had the app's length slider, which is
+how the player takes it (`code::Pace`, `player::Track`): on and on (until
+the listener moves on), whole passes, or bars ended on the next phrase line.
+The pace most of an album's tracks share (the smaller number on a tie) is
+written once, after the tracks; each track whose pace is another writes its
+own (0 for one that plays on beside paced ones). An album whose tracks all
+play on writes none, so its code is as it was before paces; twelve tracks
+of two passes each cost two characters. Anything else saying the same (the
+album's pace 0, a track's own the album's, the album's not the one most
+share) is no code, so each album has one code. A loop's own code carries
+none (one loop sounds the same however long it plays; when the listener's
+app moves on is the listener's), and neither does an album from one seed
+(its maker set no track's length). A host writes a track and its pace as
+text, `ENBAAAAEmBO_7:p2` (two passes) or `:b8` (eight bars), the code
+alone on and on (`code::paced`: `dl_album_write`, `dl_code_album_write`,
+`node tools/codes.mjs album`), and reads it back with `code::album_pace`
+(`dl_album_pace`, `dl_code_pace`).
 
 A plain loop is 9 characters; with a few picks (two vibes, 64 bars, a tempo)
 19; eight plain loops as an album 61; twelve tracks of 3,072 bars drawn from

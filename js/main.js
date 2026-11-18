@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v188';
+const BUILD = 'v189';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -91,16 +91,6 @@ function gpuReport() {
   } catch { /* not in this browser */ }
   return gpuInfo;
 }
-// Track length is chosen as a time, which is how anyone thinks of it, and
-// stored as passes (a track ends on a whole loop), worked out at this tempo
-// when the slider moves; a time shorter than one pass (a long loop's pass
-// can be hours) as bars, and the track ends at the first phrase line after
-// them (queue item 88b; `trackLength`). The stops are curated: fine at the short end, where
-// people actually set it, and reaching a whole day at the top.
-const TRACK_TIMES = [
-  0, 60, 120, 180, 300, 600, 900, 1200, 1800, 2700,
-  3600, 5400, 7200, 10800, 14400, 21600, 28800, 43200, 86400,
-];
 import { coverImage, paint } from './covers.js';
 import * as store from './storage.js';
 import * as ui from './ui.js';
@@ -737,19 +727,6 @@ function lengthSeconds(spec) {
   if (spec.playFor) return spec.playFor * ui.passSeconds(spec);
   if (spec.playBars) return spec.playBars * ui.barSeconds(spec);
   return 0;
-}
-
-// The slider's time, `secs` (0 for off), as the spec keeps it: whole passes
-// where it is a pass or longer, as ever; shorter than a pass, the bars it
-// comes to, rounded up (queue item 88b: the track ends at the first phrase
-// line after them, its notes fading).
-function trackLength(spec, secs) {
-  spec.playFor = null;
-  delete spec.playBars;
-  if (!secs) return;
-  const pass = ui.passSeconds(spec);
-  if (secs >= pass) spec.playFor = Math.max(1, Math.round(secs / pass));
-  else spec.playBars = Math.max(1, Math.ceil(secs / ui.barSeconds(spec) - 1e-9));
 }
 
 // The playing loop's cover on the card. Drawn off the main thread
@@ -1402,8 +1379,8 @@ async function seedAlbum(asLink) {
 function syncToneInputs(spec) {
   ui.el('bpm').value = spec.bpm;
   const secs = lengthSeconds(spec);
-  const idx = secs ? TRACK_TIMES.reduce((best, v, i) =>
-    (i && Math.abs(v - secs) < Math.abs(TRACK_TIMES[best] - secs) ? i : best), 1) : 0;
+  const idx = secs ? ui.TRACK_TIMES.reduce((best, v, i) =>
+    (i && Math.abs(v - secs) < Math.abs(ui.TRACK_TIMES[best] - secs) ? i : best), 1) : 0;
   ui.el('trackLen').value = idx;
   ui.el('lenVal').textContent = describeLength(spec);
   ui.el('warmth').value = spec.tone.warmth;
@@ -1876,8 +1853,8 @@ function wire() {
   });
   ui.el('trackLen').addEventListener('input', (e) => {
     if (!state.spec) return;
-    const secs = TRACK_TIMES[parseInt(e.target.value, 10)] || 0;
-    trackLength(state.spec, secs);
+    const secs = ui.TRACK_TIMES[parseInt(e.target.value, 10)] || 0;
+    ui.trackLength(state.spec, secs);
     // Counted from what is heard now, the pass playing as the first; on the
     // player, with the loop that follows armed for its end.
     if (state.engine) state.engine.trackChanged(nextForEnd());

@@ -99,6 +99,11 @@
 //                       core with the picks and is held whole; Endless: time
 //                       played, no time left, and a wander's own markers;
 //                       the Library's line says each loop's length
+//   album pacing        (session 24b) an album made with each track's length
+//                       set (passes, bars to a phrase line), shared from the
+//                       Library and opened by its link in a fresh profile:
+//                       each track plays as long as its maker set it, then
+//                       the next, the card following, round to the first
 //   length (--long)     a minute: the track ends on its line and the core's
 //                       own loop starts there, with the picks (queue item
 //                       95), the card following; Now Playing counts down
@@ -112,6 +117,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { decodeSong, encodeSong, encodeAlbum, decodeAlbum, linkOf } from '../js/share.js';
 import { newSpec } from '../js/gen.js';
+import { passSeconds, barSeconds } from '../js/ui.js';
 import { LOOPS } from './stalls.mjs';
 import { pages } from './ogg-read.mjs';
 
@@ -1324,6 +1330,7 @@ async function main() {
     if (!APP) await plainRows(browser);
     if (!APP) await codeRows(browser);
     if (!APP) await linkRows(browser);
+    if (!APP) await paceRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -1627,6 +1634,112 @@ async function linkRows(browser) {
   await olderTab.close();
   await tab.close();
   row('links: no page errors in their tabs', !bad.length, bad.join('; '));
+}
+
+// An album's pacing (session 24b): each track plays as long as the album's
+// maker set it, then the next, in a profile that has never seen it.
+async function paceRows(browser) {
+  console.log('\n  an album carries how long each track plays (session 24b)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const fresh = async (url) => {
+    const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    tab.on('pageerror', (e) => bad.push(e.message));
+    await tab.addInitScript(HOOK);
+    await tab.goto(url);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1800);
+    return tab;
+  };
+  // Three short tracks, each its own length as its maker's slider set it:
+  // two whole passes of a 2-bar loop; 4 bars of a 16-bar loop (shorter than
+  // its pass, so it ends on the phrase line 4 bars in); one pass of a 4-bar
+  // loop. Each takes a few seconds.
+  const made = [[101, 'bars=2,bpm=160', 1, 2], [202, 'bars=16,bpm=150', 2, 4], [303, 'bars=4,bpm=130', 1, 1]];
+  const specs = made.map(([seed, request, kind, n]) => {
+    const s = newSpec(seed, request);
+    if (kind === 1) s.playFor = n;
+    else s.playBars = n;
+    return s;
+  });
+  // How long each plays: whole passes, or the bars to the phrase line (a
+  // 16-bar loop's lines are 4 bars apart).
+  const want = specs.map((s) => (s.playFor ? s.playFor * passSeconds(s) : s.playBars * barSeconds(s)));
+
+  // The maker's Library: the three saved in an album, shared from it.
+  let tab = await fresh(`${ORIGIN}/`);
+  await tab.evaluate(async (list) => {
+    const store = await import('/js/storage.js');
+    const ids = list.map((s) => store.save(s).id);
+    const a = store.createAlbum('Paced');
+    store.setAlbumIds(a.id, ids);
+  }, specs);
+  await tab.reload();
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  let code = null;
+  for (let k = 0; k < 2 && !code; k++) {
+    await tab.evaluate(() => {
+      window.__rows.clip = '';
+      if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+      document.querySelector('[data-tab="albums"]').click();
+    });
+    await sleep(300);
+    await tab.evaluate(() => {
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Paced');
+      if (r) r.querySelector('.lrow-main').click();
+    });
+    await sleep(300);
+    await tab.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'share'); if (b) b.click(); });
+    for (let w = 0; w < 20 && !code; w++) {
+      code = await tab.evaluate(() => window.__rows.clip) || null;
+      await sleep(150);
+    }
+  }
+  await tab.close();
+  let back = null;
+  try { back = code && decodeAlbum(code); } catch (err) { back = { error: err.message }; }
+  const paced = (s) => (s.playFor ? `p${s.playFor}` : s.playBars ? `b${s.playBars}` : '-');
+  row('album pacing: shared from the Library, the album\'s code carries each track\'s length', back && back.specs && back.specs.map(paced).join(' ') === specs.map(paced).join(' '), `${code} ${back && back.specs ? back.specs.map(paced).join(' ') : JSON.stringify(back)}`);
+
+  // A fresh profile opens it by its link and plays: when does each track
+  // hand over? The core's loop (its seed) and the card, read every tenth of
+  // a second.
+  tab = await fresh(linkOf(`${ORIGIN}/`, code || ''));
+  const ready = await tab.evaluate(() => ({ card: document.getElementById('loopName').textContent, playing: document.getElementById('playBtn').getAttribute('aria-label') === 'Pause' }));
+  await tab.click('#playBtn');
+  const samples = await tab.evaluate(async (ms) => {
+    const out = [];
+    const start = performance.now();
+    while (performance.now() - start < ms) {
+      const p = await window.__rows.probe();
+      const seed = p && p.about ? Number((/(?:^|\n)seed=(\d+)/.exec(p.about) || [])[1]) : NaN;
+      out.push({ seed, at: (performance.now() - start) / 1000, card: document.getElementById('loopName').textContent });
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return out;
+  }, Math.round((want.reduce((a, b) => a + b, 0) + 8) * 1000));
+  await tab.close();
+  // Each run of one loop: its track, from when it started (Play, for the
+  // first), and the names the card showed through it.
+  const seen = [];
+  for (const x of samples.filter((y) => Number.isFinite(y.seed))) {
+    const last = seen[seen.length - 1];
+    if (!last || last.seed !== x.seed) seen.push({ seed: x.seed, at: seen.length ? x.at : 0, cards: [] });
+    seen[seen.length - 1].cards.push(x.card);
+  }
+  const order = seen.map((x) => specs.findIndex((s) => s.seed === x.seed));
+  const lasted = seen.slice(1).map((x, i) => x.at - seen[i].at);
+  const near = (i) => Math.abs(lasted[i] - want[i]) < 0.75;
+  // The card names the track for most of its run (it follows within a
+  // moment of the hand-over).
+  const follows = seen.length >= 3 && seen.slice(0, 3).every((x, i) => x.cards.filter((c) => c === specs[order[i]]?.name).length > x.cards.length * 0.8);
+  row('album pacing: opened by its link in a fresh profile, ready at its first track, not playing', ready.card === specs[0].name && !ready.playing, JSON.stringify(ready));
+  row('album pacing: played, each track hands over to the next in order, round to the first', order.slice(0, 4).join(',') === '0,1,2,0', `${order.join(',')}`);
+  row(`album pacing: each plays as long as its maker set it (2 passes ${want[0].toFixed(1)} s, from Play and round again; 4 bars ${want[1].toFixed(1)} s; 1 pass ${want[2].toFixed(1)} s)`,
+    lasted.length >= 4 && Math.abs(lasted[0] - want[0]) < 1.5 && near(1) && near(2) && Math.abs(lasted[3] - want[0]) < 0.75, `${lasted.map((x) => x.toFixed(2)).join(' s, ')} s`);
+  row('album pacing: the card follows the track playing', follows, seen.map((x) => `${x.cards[0]}..${x.cards[x.cards.length - 1]}`).join(' | '));
+  row('album pacing: no page errors in its tabs', !bad.length, bad.join('; '));
 }
 
 // The plain lines, each in a tab of its own.

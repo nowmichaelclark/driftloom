@@ -11,7 +11,11 @@
 //   node tools/codes.mjs read CODE  a loop's seed, mutes, salt and name (and
 //                                   whether it reads), or an album's tracks
 //   node tools/codes.mjs album [--name T] CODE...
-//                                   an album of loops' codes, in order
+//                                   an album of loops' codes, in order, each
+//                                   with how long it plays before the next
+//                                   after it where it has one (session 24b:
+//                                   CODE:p2 two whole passes, CODE:b8 eight
+//                                   bars to a phrase line)
 //   node tools/codes.mjs seed-album SEED COUNT [REQUEST] [--name T]
 //                                   an album of COUNT tracks drawn from SEED,
 //                                   sharing REQUEST's picks
@@ -77,7 +81,7 @@ export function nameRefusal(name) {
   return core().dl_code_name_ok(put(enc.encode(name))) ? null : refused().message;
 }
 
-/** The album of loops' `codes`, named `name` (or none). */
+/** The album of loops' `codes` (each with its pace after it where it has one: `CODE:p2`), named `name` (or none). */
 export function albumCode(codes, name = '') {
   const t = enc.encode(name);
   const n = core().dl_code_album_write(put(new Uint8Array([...t, ...enc.encode(codes.join('.'))])), t.length);
@@ -93,7 +97,16 @@ export function seedAlbumCode(seed, count, request = '', name = '') {
   return text(n);
 }
 
-/** An album's { name, tracks } (each track a loop's code). */
+/** A pace, [kind, count] as the player takes it (0 on and on, 1 passes, 2 bars), as text: '', 'p2', 'b8'. */
+export function paceText([kind, count]) {
+  return kind === 1 ? `p${count}` : kind === 2 ? `b${count}` : '';
+}
+
+/**
+ * An album's { name, tracks, paces, paced }: each track a loop's code, its
+ * pace ([kind, count]), and the two as text (`CODE:p2`, or the code alone
+ * where it plays on and on), as `albumCode` takes them.
+ */
 export function albumTracks(code) {
   const c = core();
   const len = put(enc.encode(code));
@@ -102,12 +115,17 @@ export function albumTracks(code) {
   const mem = new Uint8Array(c.memory.buffer, c.dl_code_text(), 64);
   const name = dec.decode(mem.slice(0, mem.indexOf(0)));
   const tracks = [];
+  const paces = [];
   for (let i = 0; i < count; i++) {
     const n = c.dl_code_track(len, i);
     if (!n) throw refused();
     tracks.push(text(n));
+    const kind = c.dl_code_pace(len, i);
+    if (!kind) throw refused();
+    paces.push([kind - 1, c.dl_code_pace_count() >>> 0]);
   }
-  return { name, tracks };
+  const paced = tracks.map((t, i) => (paces[i][0] ? `${t}:${paceText(paces[i])}` : t));
+  return { name, tracks, paces, paced };
 }
 
 function main(argv) {
@@ -132,10 +150,11 @@ function main(argv) {
     if (kind === 2) {
       const a = albumTracks(rest[0]);
       if (a.name) console.log(`name: ${a.name}`);
-      for (const t of a.tracks) {
+      a.tracks.forEach((t, i) => {
         const l = readLoop(t);
-        console.log(`${t}  seed ${l.seed}`);
-      }
+        const pace = paceText(a.paces[i]);
+        console.log(`${t}  seed ${l.seed}${pace ? `  plays ${a.paces[i][1]} ${a.paces[i][0] === 1 ? 'passes' : 'bars'}` : ''}`);
+      });
     } else {
       console.log(JSON.stringify(readLoop(rest[0])));
     }

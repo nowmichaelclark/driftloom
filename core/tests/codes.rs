@@ -10,7 +10,7 @@
 //! (session 23). The dummy build's test (`tests/dummy.rs`) holds the
 //! version rule: what joins later moves no older code.
 
-use dlcore::code::{self, ALPHABET, Album, BAD_NAME, Kind, Loop, MARKS_MOST, NAME_MOST, NEEDS_NEWER, NOT_A_CODE, Name};
+use dlcore::code::{self, ALPHABET, Album, BAD_NAME, BAD_PACE, Kind, Loop, MARKS_MOST, NAME_MOST, NEEDS_NEWER, NOT_A_CODE, Name, PACE_MOST, Pace};
 use dlcore::generator::data::{self, CHARACTERS, CHOICES, Ids, MOODS, VIBES};
 use dlcore::generator::request::{self, Journey, LAYER_NAMES, LENGTH_MOST, LayerAsk, Length, PROFILE_ORDER, Pins, Request, VOICE_ORDER};
 use dlcore::generator::rng::{Rng, seed_name};
@@ -421,6 +421,11 @@ fn every_golden_case_as_a_code_makes_its_hashes() {
 
 // ------------------------------------------------------------- the albums
 
+/// Each track's code, playing on and on (no pace set).
+fn on(tracks: &[String]) -> impl Iterator<Item = (&[u8], Pace)> + Clone {
+    tracks.iter().map(|t| (t.as_bytes(), Pace::On))
+}
+
 fn album_tracks(album: &str) -> Vec<String> {
     let a = code::read_album(album.as_bytes()).expect("an album");
     (0..a.count)
@@ -438,7 +443,7 @@ fn an_album_of_loops_holds_each_as_it_was() {
     let tracks: Vec<String> = (0..12).map(|_| write(&random_loop(&mut r))).collect();
     let title = name("ฝนตกวันอาทิตย์ side A 🌧️");
     let mut out = vec![0u8; 8192];
-    let n = code::write_album(tracks.iter().map(String::as_bytes), &title, &mut out).expect("an album");
+    let n = code::write_album(on(&tracks), &title, &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).expect("ASCII");
     assert_eq!(code::kind(album.as_bytes()), Some(Kind::Album));
     let a = code::read_album(album.as_bytes()).expect("an album");
@@ -446,7 +451,7 @@ fn an_album_of_loops_holds_each_as_it_was() {
     assert_eq!(album_tracks(&album), tracks);
     // Eight plain loops: about 60 characters (promise 8).
     let plain: Vec<String> = (0..8).map(|s| write(&Loop::of(s * 1_000_003))).collect();
-    let n = code::write_album(plain.iter().map(String::as_bytes), &Name::NONE, &mut out).expect("an album");
+    let n = code::write_album(on(&plain), &Name::NONE, &mut out).expect("an album");
     assert!(n <= 64, "eight plain loops: {n} characters");
     assert_eq!(album_tracks(core::str::from_utf8(&out[..n]).unwrap()), plain);
     // A loop's code is no album's, nor an album's a loop's.
@@ -483,6 +488,201 @@ fn an_album_from_one_seed_is_one_short_code() {
     let first = code::read_loop(album_tracks(core::str::from_utf8(&out[..n]).unwrap())[0].as_bytes()).expect("a track");
     assert!(first.request.edits().bpm().is_none());
     assert!(first.name.is_none());
+}
+
+// ---------------------------------------------------- an album's pacing
+
+/// Each track's pace, as the album's maker set it.
+fn album_paces(album: &str) -> Vec<Pace> {
+    let a = code::read_album(album.as_bytes()).expect("an album");
+    (0..a.count).map(|i| code::album_pace(album.as_bytes(), i).expect("a pace")).collect()
+}
+
+/// The album of `tracks`, each with its pace.
+fn paced_album(tracks: &[String], paces: &[Pace], title: &Name) -> String {
+    let mut out = vec![0u8; 1 << 16];
+    let n = code::write_album(tracks.iter().map(String::as_bytes).zip(paces.iter().copied()), title, &mut out).expect("an album");
+    String::from_utf8(out[..n].to_vec()).expect("ASCII")
+}
+
+/// `paces` on `tracks`: written, read back to the same tracks and paces,
+/// and written again to the same code. Its code.
+fn pace_round_trip(tracks: &[String], paces: &[Pace], title: &Name) -> String {
+    let album = paced_album(tracks, paces, title);
+    assert!(album.bytes().all(|b| ALPHABET.contains(&b)), "{album}: the alphabet only");
+    assert_eq!(album_tracks(&album), tracks, "{album}: its tracks");
+    assert_eq!(album_paces(&album), paces, "{album}: its paces");
+    assert_eq!(code::read_album(album.as_bytes()).expect("an album").name, *title);
+    let back: Vec<String> = album_tracks(&album);
+    assert_eq!(paced_album(&back, &album_paces(&album), title), album, "read and written again");
+    album
+}
+
+#[test]
+fn every_pace_round_trips() {
+    // Every kind, every count a listener's slider gives (a day of the
+    // shortest pass is about 72,000; a time shorter than a pass, bars), and
+    // the ends; on a track alone and beside tracks of another pace (where it
+    // writes its own) and of the same (where the album writes it once).
+    let mut r = Rng::new(24);
+    let tracks: Vec<String> = (0..3).map(|_| write(&random_loop(&mut r))).collect();
+    let mut counts: Vec<u32> = (1..=2048).collect();
+    counts.extend([4095, 4096, 72_000, 86_400, 1 << 20, PACE_MOST - 1, PACE_MOST]);
+    let mut walked = 0;
+    for count in counts {
+        for pace in [Pace::Passes(count), Pace::Bars(count)] {
+            assert_eq!(Pace::of(pace.kind(), pace.count()), Some(pace));
+            pace_round_trip(&tracks[..1], &[pace], &Name::NONE);
+            pace_round_trip(&tracks, &[pace, Pace::On, Pace::On], &Name::NONE);
+            pace_round_trip(&tracks, &[pace, pace, Pace::Bars(3)], &name("Side B"));
+            walked += 1;
+        }
+    }
+    // And on and on: "until moved on", the slider at its start.
+    assert_eq!(Pace::of(0, 0), Some(Pace::On));
+    pace_round_trip(&tracks, &[Pace::On, Pace::Passes(2), Pace::Passes(2)], &Name::NONE);
+    pace_round_trip(&tracks, &[Pace::On; 3], &Name::NONE);
+    assert!(walked > 4000);
+    // What no slider gives is no pace: refused as it is written.
+    for (kind, count) in [(1, 0), (2, 0), (0, 1), (3, 1), (1, PACE_MOST + 1), (2, u32::MAX)] {
+        assert_eq!(Pace::of(kind, count), None, "{kind} {count}");
+    }
+    let mut out = [0u8; 256];
+    for bad in [Pace::Passes(0), Pace::Bars(0), Pace::Passes(PACE_MOST + 1)] {
+        assert_eq!(code::write_album(tracks.iter().take(1).map(|t| (t.as_bytes(), bad)), &Name::NONE, &mut out).err(), Some(BAD_PACE), "{bad:?}");
+    }
+}
+
+#[test]
+fn a_few_thousand_random_albums_round_trip() {
+    roomy(|| {
+        let mut r = Rng::new(2024);
+        let pool: Vec<String> = (0..64).map(|_| write(&random_loop(&mut r))).collect();
+        let mut most_over = 0;
+        for i in 0..3000 {
+            let count = 1 + r.pick_index(if i % 50 == 0 { 300 } else { 16 });
+            let tracks: Vec<String> = (0..count).map(|_| pool[r.pick_index(pool.len())].clone()).collect();
+            // Paces as albums have them: most tracks one, a few another,
+            // some on and on, now and then every track its own.
+            let common = [Pace::On, Pace::Passes(2), Pace::Passes(1 + u32::try_from(r.pick_index(40)).unwrap()), Pace::Bars(1 + u32::try_from(r.pick_index(64)).unwrap())][r.pick_index(4)];
+            let wild = r.f() < 0.1;
+            let paces: Vec<Pace> = (0..count)
+                .map(|_| {
+                    let most = if r.f() < 0.9 { 30 } else { 100_000 };
+                    let n = 1 + u32::try_from(r.pick_index(most)).unwrap();
+                    match r.pick_index(if wild { 3 } else { 8 }) {
+                        0 => Pace::On,
+                        1 => Pace::Passes(n),
+                        2 => Pace::Bars(n),
+                        _ => common,
+                    }
+                })
+                .collect();
+            let title = if r.f() < 0.2 { name(NAMES[r.pick_index(NAMES.len())]) } else { Name::NONE };
+            let album = pace_round_trip(&tracks, &paces, &title);
+            let plain = paced_album(&tracks, &vec![Pace::On; count], &title);
+            // A pace costs nothing where every track plays on; else what
+            // its pace and those apart from it take.
+            if paces.iter().all(|&p| p == Pace::On) {
+                assert_eq!(album, plain);
+            }
+            most_over = most_over.max(album.len() - plain.len());
+        }
+        assert!(most_over > 0);
+    });
+}
+
+#[test]
+fn an_album_without_pacing_is_its_code_as_before() {
+    // The format's fixtures (written before paces) hold it to the byte; and
+    // here each of them written again with every track on and on.
+    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/share-codes.txt")).expect("the fixtures");
+    let mut held = 0;
+    for line in text.lines().filter(|l| l.starts_with("album ")) {
+        let f: Vec<&str> = line.split(' ').collect();
+        if f[2].contains(':') {
+            continue;
+        }
+        let tracks: Vec<String> = f[2].split(',').map(String::from).collect();
+        let title = if f[1] == "-" { Name::NONE } else { name(&unescape(f[1])) };
+        assert_eq!(paced_album(&tracks, &vec![Pace::On; tracks.len()], &title), f[3], "{line}");
+        assert_eq!(album_paces(f[3]), vec![Pace::On; tracks.len()]);
+        held += 1;
+    }
+    assert!(held >= 3);
+}
+
+#[test]
+fn twelve_tracks_of_two_passes_cost_a_few_characters() {
+    let mut r = Rng::new(12);
+    let tracks: Vec<String> = (0..12).map(|_| write(&random_loop(&mut r))).collect();
+    let plain = paced_album(&tracks, &[Pace::On; 12], &Name::NONE);
+    let two = pace_round_trip(&tracks, &[Pace::Passes(2); 12], &Name::NONE);
+    // Written once, for the album: its tag and its number.
+    assert_eq!(two.len() - plain.len(), 2, "{plain} {two}");
+    // Under about 20 longer however the slider was set on each (the
+    // brief's yardstick), with a pace shared: twelve tracks of 2 passes
+    // but one of 9 bars and one of 30 passes.
+    let mut mixed = [Pace::Passes(2); 12];
+    mixed[3] = Pace::Bars(9);
+    mixed[7] = Pace::Passes(30);
+    let some = pace_round_trip(&tracks, &mixed, &Name::NONE);
+    assert!(some.len() - plain.len() <= 8, "{}", some.len() - plain.len());
+    // And each track its own time of a day's length: still a few each.
+    let own: Vec<Pace> = (1..=12).map(|i| Pace::Passes(i * 997)).collect();
+    let each = pace_round_trip(&tracks, &own, &Name::NONE);
+    assert!(each.len() - plain.len() <= 12 * 5, "{}", each.len() - plain.len());
+}
+
+#[test]
+fn an_album_has_one_code_for_its_paces() {
+    let tracks: Vec<String> = (0..3).map(|s| write(&Loop::of(s * 7))).collect();
+    let bodies: Vec<String> = tracks.iter().map(|t| t[1..t.len() - 2].to_string()).collect();
+    let head = |n: usize| format!("{}{}{}", uv(5), uv(0), uv(n as u64));
+    let track = |b: &str, extra: &str| format!("{}{b}{extra}", uv((b.len() + extra.len()) as u64));
+    let pace = |p: u64| format!("{}{}", uv(22), uv(p));
+    // What the writer writes reads: two passes shared, a track's own 9 bars.
+    let good = sealed(&format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], &pace(18)), track(&bodies[2], ""), pace(3)));
+    assert_eq!(good, paced_album(&tracks, &[Pace::Passes(2), Pace::Bars(9), Pace::Passes(2)], &Name::NONE));
+    assert_eq!(album_paces(&good), [Pace::Passes(2), Pace::Bars(9), Pace::Passes(2)]);
+    // Anything else saying the same is no code's: on and on written for the
+    // album; a track's own pace that is the album's; the album's not the one
+    // most tracks share; a pace twice, or after the album's name; a pace in
+    // a loop's code, or in an album from one seed.
+    let refused = [
+        format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), pace(0)),
+        format!("{}{}{}{}", head(3), track(&bodies[0], &pace(0)), track(&bodies[1], ""), track(&bodies[2], "")),
+        format!("{}{}{}{}{}", head(3), track(&bodies[0], &pace(3)), track(&bodies[1], &pace(18)), track(&bodies[2], ""), pace(3)),
+        format!("{}{}{}{}{}", head(3), track(&bodies[0], &pace(18)), track(&bodies[1], &pace(18)), track(&bodies[2], ""), pace(3)),
+        format!("{}{}{}{}", head(3), track(&bodies[0], &pace(3)), track(&bodies[1], &pace(3)), track(&bodies[2], "")),
+        format!("{}{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), pace(3), pace(3)),
+        format!("{}{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), name_field(b"x"), pace(3)),
+        format!("{}{}{}{}", head(3), track(&bodies[0], &format!("{}{}", pace(3), pace(5))), track(&bodies[1], ""), track(&bodies[2], "")),
+    ];
+    for (i, chars) in refused.iter().enumerate() {
+        assert_eq!(code::read_album(sealed(chars).as_bytes()).err(), Some(NOT_A_CODE), "{i}: {chars}");
+    }
+    assert_eq!(code::read_loop(sealed(&format!("{}{}", &tracks[0][..tracks[0].len() - 2], pace(3))).as_bytes()).err(), Some(NOT_A_CODE));
+    let mut out = [0u8; 64];
+    let n = code::write_seed_album(3, 4, &Request::new(), &Name::NONE, &mut out).expect("an album");
+    let seeded = core::str::from_utf8(&out[..n]).unwrap();
+    assert_eq!(album_paces(seeded), [Pace::On; 4]);
+    assert_eq!(code::read_album(sealed(&format!("{}{}", &seeded[..seeded.len() - 2], pace(3))).as_bytes()).err(), Some(NOT_A_CODE));
+    // A field this build lacks after the tracks is a newer build's.
+    assert_eq!(code::read_album(sealed(&format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), uv(25))).as_bytes()).err(), Some(NEEDS_NEWER));
+    // A track read from the album is the loop it was, its pace left out.
+    assert_eq!(album_tracks(&good), tracks);
+}
+
+#[test]
+fn a_track_and_its_pace_in_text() {
+    assert_eq!(code::paced(b"ENBAAAAEmBO_7"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::On)));
+    assert_eq!(code::paced(b"ENBAAAAEmBO_7:p2"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::Passes(2))));
+    assert_eq!(code::paced(b"ENBAAAAEmBO_7:b16"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::Bars(16))));
+    assert_eq!(code::paced(format!("X:p{PACE_MOST}").as_bytes()), Ok((&b"X"[..], Pace::Passes(PACE_MOST))));
+    for bad in ["X:", "X:p", "X:p0", "X:p02", "X:x2", "X:p2x", "X:b-1", "X:p 2", "X:p2147483648", "X:p99999999999"] {
+        assert_eq!(code::paced(bad.as_bytes()).err(), Some(BAD_PACE), "{bad}");
+    }
 }
 
 // ------------------------------------------------------------- refusals
@@ -573,13 +773,16 @@ fn corrupt_and_truncated_codes_never_panic() {
     let mut seeds = Rng::new(1);
     let codes: Vec<String> = (0..200).map(|_| write(&random_loop(&mut seeds))).collect();
     let mut out = vec![0u8; 8192];
-    let n = code::write_album(codes[..10].iter().map(String::as_bytes), &name("x"), &mut out).expect("an album");
+    let n = code::write_album(on(&codes[..10]), &name("x"), &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).unwrap();
     let n = code::write_seed_album(3, 5, &Request::parse("cozy,bars=8").unwrap(), &Name::NONE, &mut out).expect("an album");
     let seeded = String::from_utf8(out[..n].to_vec()).unwrap();
+    let set = [Pace::Passes(2), Pace::Passes(2), Pace::Bars(9), Pace::On, Pace::Passes(2), Pace::Passes(40), Pace::Bars(1), Pace::Passes(2), Pace::On, Pace::Passes(1)];
+    let with_paces = paced_album(&codes[10..20], &set, &Name::NONE);
     let mut all = codes.clone();
     all.push(album);
     all.push(seeded);
+    all.push(with_paces);
     let mut tried = 0;
     for _ in 0..40 {
         for c in &all {
@@ -613,6 +816,8 @@ fn corrupt_and_truncated_codes_never_panic() {
                     if let Ok(n) = code::album_track(text.as_bytes(), i, &mut t) {
                         code::read_loop(&t[..n]).expect("an album's track reads as a loop");
                     }
+                    let pace = code::album_pace(text.as_bytes(), i).expect("an album's track has a pace");
+                    assert_eq!(Pace::of(pace.kind(), pace.count()), Some(pace));
                 }
             }
             let _ = code::kind(text.as_bytes());
@@ -665,10 +870,13 @@ fn the_formats_fixtures_are_its_bytes() {
                 assert_eq!(write(&code::read_loop(f[6].as_bytes()).expect("reads")), f[6]);
             }
             "album" => {
-                let codes: Vec<&str> = f[2].split(',').collect();
-                let n = code::write_album(codes.iter().map(|c| c.as_bytes()), &title(f[1]), &mut out).expect("an album");
+                // Each track its code, and its pace after it where it has one.
+                let paced: Vec<(&[u8], Pace)> = f[2].split(',').map(|t| code::paced(t.as_bytes()).expect("a track")).collect();
+                let n = code::write_album(paced.iter().copied(), &title(f[1]), &mut out).expect("an album");
                 assert_eq!(core::str::from_utf8(&out[..n]).unwrap(), f[3], "{line}");
-                assert_eq!(album_tracks(f[3]), codes);
+                let codes: Vec<&[u8]> = paced.iter().map(|p| p.0).collect();
+                assert_eq!(album_tracks(f[3]).iter().map(String::as_bytes).collect::<Vec<_>>(), codes);
+                assert_eq!(album_paces(f[3]), paced.iter().map(|p| p.1).collect::<Vec<_>>(), "{line}");
             }
             "seed-album" => {
                 let n = code::write_seed_album(f[1].parse().unwrap(), f[2].parse().unwrap(), &req(f[3]), &title(f[4]), &mut out).expect("an album");
@@ -774,7 +982,7 @@ fn a_name_travels_with_its_code_in_any_script() {
     // An album's track keeps its own name; the album has its own.
     let tracks: Vec<String> = NAMES.iter().take(4).enumerate().map(|(i, s)| write(&Loop { name: name(s), ..Loop::of(u32::try_from(i).unwrap()) })).collect();
     let mut out = vec![0u8; 4096];
-    let n = code::write_album(tracks.iter().map(String::as_bytes), &name("อัลบั้ม 🎧"), &mut out).expect("an album");
+    let n = code::write_album(on(&tracks), &name("อัลบั้ม 🎧"), &mut out).expect("an album");
     let album = core::str::from_utf8(&out[..n]).unwrap();
     assert_eq!(album_tracks(album), tracks);
     assert_eq!(code::read_album(album.as_bytes()).expect("an album").name, name("อัลบั้ม 🎧"));

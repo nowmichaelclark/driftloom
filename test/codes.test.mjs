@@ -43,7 +43,7 @@ for (const line of lines) {
     const codes = list.split(',');
     check(`album of ${codes.length} ${t}`, albumCode(codes, named(t)) === code);
     const a = albumTracks(code);
-    check('  its tracks and name', a.tracks.join(',') === list && a.name === named(t), JSON.stringify(a));
+    check('  its tracks, their paces and its name', a.paced.join(',') === list && a.name === named(t), JSON.stringify(a));
   } else if (f[0] === 'seed-album') {
     const [, seed, count, request, t, code] = f;
     check(`seed-album ${seed} x${count}`, seedAlbumCode(Number(seed), Number(count), req(request), named(t)) === code);

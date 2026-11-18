@@ -8,7 +8,10 @@
 //! key, mode, style, voices, layers, pins and theme; a code's edits; the
 //! listener's mutes; the wander's salt of a play that wandered
 //! unrepeatably; a name of its own, if it was renamed: `name.rs`). A loop
-//! with nothing asked is nine characters.
+//! with nothing asked is nine characters. **An album's** holds its tracks'
+//! bodies, and how long each plays before the next where its maker set it
+//! (`Pace`, session 24b): the pace most tracks share once, the others each
+//! their own.
 //!
 //! **Everything is named by its id** (`data/codes.txt`): a vibe, a profile, a
 //! choice or a voice by the number given it there once, never by its place
@@ -48,6 +51,9 @@ pub const NO_ROOM: &str = "no room for the code";
 pub const NOT_AT_VERSION: &str = "asks for something its version does not have";
 /// The line for an album of no tracks, or more than `ALBUM_MOST`.
 pub const BAD_ALBUM: &str = "a bad album";
+/// The line for a track's pace a code can't carry: a count of none, or past
+/// `PACE_MOST`, or a kind the player has no track for.
+pub const BAD_PACE: &str = "a bad track length";
 
 /// The alphabet, a character a sextet (its value, 0 to 63, by place).
 pub const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -85,6 +91,7 @@ mod tag {
     pub const BPM: u64 = 19;
     pub const MUTES: u64 = 20;
     pub const SALT: u64 = 21;
+    pub const PACE: u64 = 22;
     pub const NAME: u64 = 30;
 }
 
@@ -113,6 +120,130 @@ impl Loop {
     pub const fn of(seed: u32) -> Self {
         Loop { seed, request: Request::new(), mutes: 0, salt: 0, name: Name::NONE }
     }
+}
+
+/// The most passes or bars a track's pace counts: room for a day of the
+/// shortest pass many times over, and every pace's number (`Pace::number`)
+/// a 32-bit one.
+pub const PACE_MOST: u32 = (1 << 31) - 1;
+
+/// How long an album's track plays before the next (session 24b; Mikey,
+/// 2026-11-18: "an album's code should carry track lengths and all
+/// necessary info"): the app's length slider as the album's maker had it,
+/// as the player takes it (`player::Track`; `spec.playFor` and
+/// `spec.playBars` in the app), so an album plays as its maker heard it. A
+/// loop's own code carries none: one loop sounds the same however long the
+/// listener lets it play, and when the listener's app moves on from it is
+/// the listener's (#412).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Pace {
+    /// On and on: the track plays until the listener moves on.
+    #[default]
+    On,
+    /// This many whole passes, 1 to `PACE_MOST`.
+    Passes(u32),
+    /// This many bars, ended on the next phrase line, 1 to `PACE_MOST`.
+    Bars(u32),
+}
+
+impl Pace {
+    /// The pace of the player's track kind and count (`Player::set_track`,
+    /// js/player.js's `trackOf`): kind 0 on and on (count 0), 1 whole
+    /// passes, 2 bars to a phrase line (count 1 to `PACE_MOST`). `None` for
+    /// anything else.
+    #[must_use]
+    pub const fn of(kind: u32, count: u32) -> Option<Pace> {
+        match (kind, count) {
+            (0, 0) => Some(Pace::On),
+            (1, 1..=PACE_MOST) => Some(Pace::Passes(count)),
+            (2, 1..=PACE_MOST) => Some(Pace::Bars(count)),
+            _ => None,
+        }
+    }
+
+    /// Its kind, as `of` takes it.
+    #[must_use]
+    pub const fn kind(self) -> u32 {
+        match self {
+            Pace::On => 0,
+            Pace::Passes(_) => 1,
+            Pace::Bars(_) => 2,
+        }
+    }
+
+    /// Its count, as `of` takes it.
+    #[must_use]
+    pub const fn count(self) -> u32 {
+        match self {
+            Pace::On => 0,
+            Pace::Passes(n) | Pace::Bars(n) => n,
+        }
+    }
+
+    /// The number a code writes: 0 on and on, `2n - 1` for `n` passes, `2n`
+    /// for `n` bars, so a pace of up to 16 passes or 15 bars is one
+    /// character. `None` for a count a code can't carry.
+    const fn number(self) -> Option<u32> {
+        match self {
+            Pace::On => Some(0),
+            Pace::Passes(n @ 1..=PACE_MOST) => Some(2 * n - 1),
+            Pace::Bars(n @ 1..=PACE_MOST) => Some(2 * n),
+            _ => None,
+        }
+    }
+
+    /// The pace of a number `number` wrote.
+    const fn from_number(p: u32) -> Pace {
+        if p == 0 {
+            Pace::On
+        } else if p % 2 == 1 {
+            Pace::Passes(p / 2 + 1)
+        } else {
+            Pace::Bars(p / 2)
+        }
+    }
+}
+
+/// A track as a host writes it beside its pace, in text (`dl_album_write`,
+/// `dl_code_album_write`, `node tools/codes.mjs album`): the loop's code,
+/// then `:p` and the passes or `:b` and the bars where it has a pace
+/// (`ENBAAAAEmBO_7:p2`), nothing where it plays on. Split here into the
+/// code and its pace.
+///
+/// # Errors
+/// `BAD_PACE` for a pace written any other way (a count of 0, one with a 0
+/// before it, one past `PACE_MOST`).
+pub fn paced(text: &[u8]) -> Result<(&[u8], Pace), &'static str> {
+    let Some(at) = text.iter().rposition(|&b| b == b':') else { return Ok((text, Pace::On)) };
+    let (code, rest) = (&text[..at], &text[at + 1..]);
+    let kind = match rest.first() {
+        Some(b'p') => 1,
+        Some(b'b') => 2,
+        _ => return Err(BAD_PACE),
+    };
+    let digits = &rest[1..];
+    if digits.is_empty() || digits.len() > 10 || digits[0] == b'0' || !digits.iter().all(u8::is_ascii_digit) {
+        return Err(BAD_PACE);
+    }
+    let n = digits.iter().fold(0u64, |n, &d| n * 10 + u64::from(d - b'0'));
+    let pace = u32::try_from(n).ok().and_then(|n| Pace::of(kind, n)).ok_or(BAD_PACE)?;
+    Ok((code, pace))
+}
+
+/// The pace most of `paces` share (their numbers), the smaller on a tie:
+/// the one an album writes once for all (`write_album`). Sorts `paces`.
+fn most_common(paces: &mut [u32]) -> u32 {
+    paces.sort_unstable();
+    let (mut best, mut most) = (0, 0);
+    let mut i = 0;
+    while i < paces.len() {
+        let run = paces[i..].iter().take_while(|&&p| p == paces[i]).count();
+        if run > most {
+            (best, most) = (paces[i], run);
+        }
+        i += run;
+    }
+    best
 }
 
 /// What a code is, by its first character: a loop's or an album's.
@@ -357,9 +488,11 @@ fn version_of(r: &Request) -> u32 {
 }
 
 /// A loop's seed and fields (everything but its head and check), at
-/// `version`; a track of an album at another version writes its own first.
+/// `version`; a track of an album at another version writes its own first,
+/// and a track whose pace is not its album's writes its own (`pace`, its
+/// number) before its name.
 #[allow(clippy::too_many_lines)] // one field after another, in their order
-fn body(w: &mut Out, song: &Loop, version: u32, own_version: Option<u32>, picks_only: bool) -> Result<(), &'static str> {
+fn body(w: &mut Out, song: &Loop, version: u32, own_version: Option<u32>, picks_only: bool, pace: Option<u32>) -> Result<(), &'static str> {
     let req = &song.request;
     w.seed(song.seed);
     if let Some(v) = own_version {
@@ -500,6 +633,10 @@ fn body(w: &mut Out, song: &Loop, version: u32, own_version: Option<u32>, picks_
         w.uv(tag::SALT);
         w.seed(song.salt);
     }
+    if let Some(p) = pace {
+        w.uv(tag::PACE);
+        w.uv(u64::from(p));
+    }
     if !song.name.is_none() {
         w.uv(tag::NAME);
         song.name.write(w);
@@ -580,7 +717,7 @@ pub fn write_loop(l: &Loop, out: &mut [u8]) -> Result<usize, &'static str> {
     let version = version_of(&l.request);
     let mut w = Out::new(out);
     w.uv(u64::from(version) * 2);
-    body(&mut w, l, version, None, false)?;
+    body(&mut w, l, version, None, false, None)?;
     w.check()
 }
 
@@ -745,10 +882,19 @@ enum Fields {
     Picks,
 }
 
+/// A track's own pace as its body holds it: its number, and where its
+/// field is in the body's characters (from its tag to its end).
+#[derive(Clone, Copy)]
+struct OwnPace {
+    number: u32,
+    from: usize,
+    to: usize,
+}
+
 /// A loop's seed and fields, read from `r` up to its end, at `version`
-/// (a track's own first field may change it).
+/// (a track's own first field may change it), and a track's own pace.
 #[allow(clippy::too_many_lines)] // one field after another, in their order
-fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<Loop, &'static str> {
+fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<OwnPace>), &'static str> {
     let seed = r.seed()?;
     let mut version = version;
     let mut req = Request::new();
@@ -758,10 +904,12 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<Loop, &'static 
     let mut last: Option<(u64, u64)> = None;
     let mut ids = [0u32; 64];
     let mut first = true;
+    let mut pace = None;
     while !r.done() {
+        let from = r.at;
         let t = r.uv()?;
         // A field this build does not know is a newer build's.
-        if t > tag::SALT && t != tag::NAME {
+        if t > tag::PACE && t != tag::NAME {
             return Err(NEEDS_NEWER);
         }
         // The key read with the tag, to hold the order.
@@ -776,7 +924,7 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<Loop, &'static 
         last = Some((t, k));
         let picks = t != tag::VERSION && t <= tag::SETTING;
         let allowed = match fields {
-            Fields::Loop => t != tag::VERSION,
+            Fields::Loop => t != tag::VERSION && t != tag::PACE,
             Fields::Track => t != tag::VERSION || first,
             Fields::Picks => picks || t == tag::NAME,
         };
@@ -928,12 +1076,17 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<Loop, &'static 
                     return Err(NOT_A_CODE);
                 }
             }
+            tag::PACE => {
+                #[allow(clippy::cast_possible_truncation)] // below 2^32
+                let number = r.below(2 * u64::from(PACE_MOST) + 1)? as u32;
+                pace = Some(OwnPace { number, from, to: r.at });
+            }
             tag::NAME => name = Name::read(r)?,
             _ => return Err(NEEDS_NEWER),
         }
     }
     let request = met(req.with_version(version))?;
-    Ok(Loop { seed, request, mutes, salt, name })
+    Ok((Loop { seed, request, mutes, salt, name }, pace))
 }
 
 /// Read a loop's code (spaces around it are let be).
@@ -948,7 +1101,7 @@ pub fn read_loop(code: &[u8]) -> Result<Loop, &'static str> {
     if kind != Kind::Loop {
         return Err(NOT_A_CODE);
     }
-    read_body(&mut r, version, Fields::Loop)
+    read_body(&mut r, version, Fields::Loop).map(|b| b.0)
 }
 
 // ------------------------------------------------------------------- albums
@@ -988,6 +1141,9 @@ struct Tracks<'a> {
     picks: Option<Request>,
     /// A list: the characters from the first track's length on.
     list: &'a [u8],
+    /// A list: the pace its tracks share (its number; 0 on and on), each
+    /// track's but those that write their own.
+    shared: u32,
 }
 
 /// Read an album's head and walk its tracks once (each checked, so a bad
@@ -1007,33 +1163,70 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
             }
             let start = r.at;
             let mut newest = FIRST_VERSION;
-            for _ in 0..count {
+            // Each track's own pace, or none (`u32::MAX`, past any number).
+            let mut paces = [u32::MAX; ALBUM_MOST];
+            for own in paces.iter_mut().take(count) {
                 let len = usize::try_from(r.below(LOOP_MOST as u64)?).map_err(|_| NOT_A_CODE)?;
                 let end = r.at.checked_add(len).filter(|&e| e <= chars.len()).ok_or(NOT_A_CODE)?;
                 let mut t = In { chars: &chars[..end], at: r.at };
-                let l = read_body(&mut t, version, Fields::Track)?;
+                let (l, pace) = read_body(&mut t, version, Fields::Track)?;
                 // A track's own version is older than the album's (the
                 // album's is its newest).
                 if l.request.version() > version {
                     return Err(NOT_A_CODE);
                 }
                 newest = newest.max(l.request.version());
+                if let Some(p) = pace {
+                    *own = p.number;
+                }
                 r.at = end;
             }
             if newest != version {
                 return Err(NOT_A_CODE);
             }
-            let mut name = Name::NONE;
-            if !r.done() {
-                if r.uv()? != tag::NAME {
+            // The album's fields: the pace its tracks share, then its name,
+            // each at most once.
+            let (mut shared, mut name) = (0, Name::NONE);
+            let mut last = None;
+            while !r.done() {
+                let t = r.uv()?;
+                if t > tag::PACE && t != tag::NAME {
+                    return Err(NEEDS_NEWER);
+                }
+                if last.is_some_and(|l| t <= l) {
                     return Err(NOT_A_CODE);
                 }
-                name = Name::read(&mut r)?;
-                if !r.done() {
-                    return Err(NOT_A_CODE);
+                last = Some(t);
+                match t {
+                    tag::PACE => {
+                        #[allow(clippy::cast_possible_truncation)] // below 2^32
+                        let p = r.below(2 * u64::from(PACE_MOST) + 1)? as u32;
+                        // On and on is no field's: an album without one.
+                        if p == 0 {
+                            return Err(NOT_A_CODE);
+                        }
+                        shared = p;
+                    }
+                    tag::NAME => name = Name::read(&mut r)?,
+                    _ => return Err(NOT_A_CODE),
                 }
             }
-            Ok(Tracks { album: Album { count, version, seed: None, name }, picks: None, list: &chars[start..] })
+            // One code for each album: a track writes its own pace only
+            // where it is not the album's, and the album's is the one most
+            // of its tracks share (the smaller on a tie), as `write_album`
+            // writes it.
+            for p in paces.iter_mut().take(count) {
+                if *p == shared {
+                    return Err(NOT_A_CODE);
+                }
+                if *p == u32::MAX {
+                    *p = shared;
+                }
+            }
+            if most_common(&mut paces[..count]) != shared {
+                return Err(NOT_A_CODE);
+            }
+            Ok(Tracks { album: Album { count, version, seed: None, name }, picks: None, list: &chars[start..], shared })
         }
         1 => {
             let seed = r.seed()?;
@@ -1047,8 +1240,8 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
             let room = picks.get_mut(..rest.len() + 6).ok_or(NOT_A_CODE)?;
             room[..6].fill(b'A');
             room[6..].copy_from_slice(rest);
-            let l = read_body(&mut In { chars: room, at: 0 }, version, Fields::Picks)?;
-            Ok(Tracks { album: Album { count, version, seed: Some(seed), name: l.name }, picks: Some(l.request), list: &[] })
+            let (l, _) = read_body(&mut In { chars: room, at: 0 }, version, Fields::Picks)?;
+            Ok(Tracks { album: Album { count, version, seed: Some(seed), name: l.name }, picks: Some(l.request), list: &[], shared: 0 })
         }
         _ => Err(NEEDS_NEWER),
     }
@@ -1064,8 +1257,23 @@ pub fn read_album(code: &[u8]) -> Result<Album, &'static str> {
     album_of(code).map(|t| t.album)
 }
 
+/// Track `index`'s body in a list album `t` (its seed and fields, its own
+/// version and pace among them), and its own pace.
+fn body_of<'a>(t: &Tracks<'a>, index: usize) -> Result<(&'a [u8], Option<OwnPace>), &'static str> {
+    let mut r = In { chars: t.list, at: 0 };
+    for _ in 0..index {
+        let len = usize::try_from(r.uv()?).map_err(|_| NOT_A_CODE)?;
+        r.at += len;
+    }
+    let len = usize::try_from(r.uv()?).map_err(|_| NOT_A_CODE)?;
+    let body = t.list.get(r.at..r.at + len).ok_or(NOT_A_CODE)?;
+    let (_, pace) = read_body(&mut In { chars: body, at: 0 }, t.album.version, Fields::Track)?;
+    Ok((body, pace))
+}
+
 /// Write track `index` (from 0) of the album `code` into `out` as its own
-/// loop's code: its length.
+/// loop's code: its length. Its pace is not in it (a loop's code carries
+/// none: `album_pace` reads it).
 ///
 /// # Errors
 /// As `read_album`; `BAD_ALBUM` for an index past the last track, `NO_ROOM`
@@ -1078,14 +1286,9 @@ pub fn album_track(code: &[u8], index: usize, out: &mut [u8]) -> Result<usize, &
     if let (Some(seed), Some(picks)) = (t.album.seed, t.picks) {
         return write_loop(&Loop { request: picks, ..Loop::of(track_seed(seed, index)) }, out);
     }
-    let mut r = In { chars: t.list, at: 0 };
-    for _ in 0..index {
-        let len = usize::try_from(r.uv()?).map_err(|_| NOT_A_CODE)?;
-        r.at += len;
-    }
-    let len = usize::try_from(r.uv()?).map_err(|_| NOT_A_CODE)?;
-    let body = t.list.get(r.at..r.at + len).ok_or(NOT_A_CODE)?;
-    // The track's own version, where it writes one, comes off its body.
+    let (body, pace) = body_of(&t, index)?;
+    // The track's own version, where it writes one, comes off its body, and
+    // its own pace.
     let mut b = In { chars: body, at: 6 };
     let mut version = t.album.version;
     let mut from = 6;
@@ -1093,43 +1296,73 @@ pub fn album_track(code: &[u8], index: usize, out: &mut [u8]) -> Result<usize, &
         version = u32::try_from(b.uv()?).map_err(|_| NOT_A_CODE)?;
         from = b.at;
     }
+    let (cut, to) = pace.map_or((body.len(), body.len()), |p| (p.from, p.to));
     let mut w = Out::new(out);
     w.uv(u64::from(version) * 2);
-    for &c in body[..6].iter().chain(&body[from..]) {
+    for &c in body[..6].iter().chain(&body[from..cut]).chain(&body[to..]) {
         w.put(sextet(c).unwrap_or(0));
     }
     w.check()
 }
 
-/// Write the album of the loops' codes `tracks`, in their order, named
-/// `name` (`Name::NONE` for none), into `out`: its length. Each track keeps
-/// its own version, and its own name; the album's version is its newest
-/// track's.
+/// How long track `index` (from 0) of the album `code` plays before the
+/// next, as its maker set it: its own pace, or the one its album's tracks
+/// share. An album from one seed sets none.
+///
+/// # Errors
+/// As `album_track`.
+pub fn album_pace(code: &[u8], index: usize) -> Result<Pace, &'static str> {
+    let t = album_of(code)?;
+    if index >= t.album.count {
+        return Err(BAD_ALBUM);
+    }
+    if t.album.seed.is_some() {
+        return Ok(Pace::On);
+    }
+    let (_, pace) = body_of(&t, index)?;
+    Ok(Pace::from_number(pace.map_or(t.shared, |p| p.number)))
+}
+
+/// Write the album of the loops' codes `tracks`, each with its pace (how
+/// long it plays before the next), in their order, named `name`
+/// (`Name::NONE` for none), into `out`: its length. Each track keeps its
+/// own version, and its own name; the album's version is its newest
+/// track's. The pace most tracks share is written once, for the album (none
+/// where most play on and on, so an album with no pace set costs nothing),
+/// and a track whose pace is another writes its own.
 ///
 /// # Errors
 /// What `read_loop` says of a track, `BAD_ALBUM` for no tracks or more than
-/// `ALBUM_MOST`, `NO_ROOM` if the album does not fit.
-pub fn write_album<'a>(tracks: impl Iterator<Item = &'a [u8]> + Clone, name: &Name, out: &mut [u8]) -> Result<usize, &'static str> {
+/// `ALBUM_MOST`, `BAD_PACE` for a pace of no count or past `PACE_MOST`,
+/// `NO_ROOM` if the album does not fit.
+pub fn write_album<'a>(tracks: impl Iterator<Item = (&'a [u8], Pace)> + Clone, name: &Name, out: &mut [u8]) -> Result<usize, &'static str> {
     let mut count = 0;
     let mut version = FIRST_VERSION;
-    for t in tracks.clone() {
+    let mut paces = [0u32; ALBUM_MOST];
+    for (t, pace) in tracks.clone() {
         let l = read_loop(t)?;
         version = version.max(l.request.version());
+        let p = pace.number().ok_or(BAD_PACE)?;
+        if let Some(slot) = paces.get_mut(count) {
+            *slot = p;
+        }
         count += 1;
     }
     if count == 0 || count > ALBUM_MOST {
         return Err(BAD_ALBUM);
     }
+    let shared = most_common(&mut paces[..count]);
     let mut w = Out::new(out);
     w.uv(u64::from(version) * 2 + 1);
     w.uv(0);
     w.uv(count as u64);
     let mut scratch = [0u8; LOOP_MOST];
-    for t in tracks {
+    for (t, pace) in tracks {
         let l = read_loop(t)?;
         let own = l.request.version();
+        let number = pace.number().ok_or(BAD_PACE)?;
         let mut b = Out::new(&mut scratch);
-        body(&mut b, &l, own, (own != version).then_some(own), false)?;
+        body(&mut b, &l, own, (own != version).then_some(own), false, (number != shared).then_some(number))?;
         let n = b.len;
         if b.full {
             return Err(NO_ROOM);
@@ -1138,6 +1371,10 @@ pub fn write_album<'a>(tracks: impl Iterator<Item = &'a [u8]> + Clone, name: &Na
         for &c in &scratch[..n] {
             w.put(sextet(c).unwrap_or(0));
         }
+    }
+    if shared != 0 {
+        w.uv(tag::PACE);
+        w.uv(u64::from(shared));
     }
     if !name.is_none() {
         w.uv(tag::NAME);
@@ -1168,7 +1405,7 @@ pub fn write_seed_album(seed: u32, count: usize, picks: &Request, name: &Name, o
     // which is then dropped.
     let mut scratch = [0u8; LOOP_MOST];
     let mut b = Out::new(&mut scratch);
-    body(&mut b, &Loop { request: picks, ..Loop::of(0) }, version, None, true)?;
+    body(&mut b, &Loop { request: picks, ..Loop::of(0) }, version, None, true, None)?;
     if b.full {
         return Err(NO_ROOM);
     }

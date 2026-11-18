@@ -12,6 +12,8 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { render } from '../js/gen.js';
 import { encodeSong, decodeSong, encodeAlbum, decodeAlbum, codeKind, fitName, carries } from '../js/share.js';
+import { TRACK_TIMES, trackLength } from '../js/ui.js';
+import { Rng } from '../js/rng.js';
 
 let failures = 0;
 function check(label, condition, detail = '') {
@@ -46,6 +48,53 @@ for (const a of fixture.albums.filter((x) => x.ids.length)) {
   const back = decodeAlbum(code);
   check(`album ${a.title} (${specs.length} loops, ${code.length} characters): its title and every track as it plays`, back.title === a.title && codeKind(code) === 'album'
     && back.specs.length === specs.length && back.specs.every((s, i) => hash(s) === fixture.plays[a.ids[i]].notes && s.name === specs[i].name.normalize('NFC')));
+}
+
+console.log('\nAn album carries how long each track plays (session 24b)');
+{
+  const pace = (s) => (s.playFor ? `p${s.playFor}` : s.playBars ? `b${s.playBars}` : '-');
+  const specs = fixture.saves.map((e) => JSON.parse(JSON.stringify(e.spec)));
+  // Every stop of the length slider, "until moved on" (its start) among
+  // them, on every saved loop (short loops, long pieces, Endless; slow and
+  // fast): set on a track beside a plain one, shared and opened again.
+  let walked = 0;
+  let wrong = [];
+  for (const spec of specs) {
+    for (const secs of TRACK_TIMES) {
+      const s = JSON.parse(JSON.stringify(spec));
+      trackLength(s, secs);
+      const back = decodeAlbum(encodeAlbum('Paced', [s, specs[0], s]));
+      if (pace(back.specs[0]) !== pace(s) || pace(back.specs[2]) !== pace(s) || pace(back.specs[1]) !== pace(specs[0])) wrong.push(`${s.name} ${secs}s: ${pace(s)} came back ${pace(back.specs[0])}`);
+      walked++;
+    }
+  }
+  check(`every slider stop on every saved loop round-trips (${walked})`, !wrong.length, wrong.slice(0, 4).join('; '));
+  // A few hundred albums of saved loops, each track at a stop of its own
+  // (most sharing one): the same paces, the same notes, back.
+  const r = new Rng(105);
+  wrong = [];
+  for (let i = 0; i < 300; i++) {
+    const n = 1 + Math.floor(r.next() * 14);
+    const shared = TRACK_TIMES[Math.floor(r.next() * TRACK_TIMES.length)];
+    const tracks = Array.from({ length: n }, () => {
+      const s = JSON.parse(JSON.stringify(specs[Math.floor(r.next() * specs.length)]));
+      trackLength(s, r.next() < 0.7 ? shared : TRACK_TIMES[Math.floor(r.next() * TRACK_TIMES.length)]);
+      return s;
+    });
+    const back = decodeAlbum(encodeAlbum(`Album ${i}`, tracks));
+    if (back.specs.length !== n || back.specs.some((s, k) => pace(s) !== pace(tracks[k]))) wrong.push(`album ${i}: ${tracks.map(pace)} came back ${back.specs.map(pace)}`);
+  }
+  check('300 random albums: every track\'s pace back', !wrong.length, wrong.slice(0, 2).join('; '));
+  // No pace set: the code as before (the tracks alone); twelve tracks of
+  // two passes, two characters more.
+  const plain = specs.slice(0, 12).map((s) => ({ ...s, playFor: null }));
+  const before = encodeAlbum('Twelve', plain);
+  const two = plain.map((s) => ({ ...s, playFor: 2 }));
+  const paced = encodeAlbum('Twelve', two);
+  check(`twelve tracks of two passes: ${paced.length - before.length} characters more (under 20)`, paced.length - before.length <= 20 && paced.length > before.length);
+  const opened = decodeAlbum(paced);
+  check('  and each opens to play two passes, then the next', opened.specs.every((s) => s.playFor === 2 && !s.playBars) && opened.specs.every((s, k) => hash(s) === hash(plain[k])));
+  check('  with none set, every track plays on until moved on', decodeAlbum(before).specs.every((s) => !s.playFor && !s.playBars));
 }
 
 console.log('\nWhat is no code');

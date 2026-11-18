@@ -121,6 +121,21 @@ the last one (same key). On the **Moto** and on the **tablet**:
 - Not tested without a device (the emulator can't say): that another app's short
   sound ducks the music (the system does it for this stream; tell me if it
   doesn't), and Bluetooth buttons.
+## An album's code carries each track's length (item 105d, v189, PR #438)
+
+- **Check it once:** set Track length (Sounds) on two or three loops of an
+  album, share the album's link from the Library, and open it on another
+  device (or a private window). Each track should play its length, then the
+  next. Albums whose tracks play on cost nothing extra; twelve tracks of two
+  passes are two characters longer.
+- **Left out on purpose:** a single loop's code carries no length (it sounds
+  the same however long it plays; when your app moves on is yours), nor does
+  an album from one seed (its tracks are drawn, and a slider's passes would
+  be a different time on each). Session 30c may turn a track's length into
+  a time to the second; this field then carries seconds instead, before the
+  codes freeze. Say if you want a single loop's code to carry it too.
+- `docs/ALBUMS.md`: the six old albums that set lengths have them back.
+
 ## Links, an album from one seed, the plain lines (item 105c, v187)
 
 - **Approve the link's shape.** A link is the site's address with the code

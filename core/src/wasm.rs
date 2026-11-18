@@ -1568,6 +1568,12 @@ mod codes {
     unsafe impl Sync for Last {}
     static LAST: Last = Last(UnsafeCell::new((0, 0, 0, Name::NONE)));
 
+    /// The last pace read's count (`dl_code_pace`).
+    struct Count(UnsafeCell<u32>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Count {}
+    static PACE: Count = Count(UnsafeCell::new(0));
+
     /// The text written at `dl_code_text`, as far as it fits.
     struct At(usize);
     impl core::fmt::Write for At {
@@ -1772,10 +1778,36 @@ mod codes {
         length(code::album_track(input(len), index as usize, text()))
     }
 
+    /// How long track `index` (from 0) of the album in the first `len`
+    /// bytes at `dl_code_input` plays before the next (`code::album_pace`):
+    /// 1 on and on, 2 whole passes, 3 bars to a phrase line (the player's
+    /// track kind, plus one), their count at `dl_code_pace_count`; or 0 with
+    /// the refusal noted.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_pace(len: u32, index: u32) -> u32 {
+        match code::album_pace(input(len), index as usize) {
+            Ok(p) => {
+                // SAFETY: single-threaded, and no export keeps the reference.
+                unsafe { *PACE.0.get() = p.count() };
+                met();
+                p.kind() + 1
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
+    /// The count of the last pace read (`dl_code_pace`): passes or bars.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_pace_count() -> u32 {
+        // SAFETY: single-threaded.
+        unsafe { *PACE.0.get() }
+    }
+
     /// Write the album of the loops' codes in the first `len` bytes at
     /// `dl_code_input` (its name's `name` bytes first, then the codes, a
-    /// `.` between each), at `dl_code_text`: its length, or 0 with the
-    /// refusal noted.
+    /// `.` between each, each with its pace after it where it has one:
+    /// `code::paced`), at `dl_code_text`: its length, or 0 with the refusal
+    /// noted.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_code_album_write(len: u32, name: u32) -> u32 {
         let all = input(len);
@@ -1784,7 +1816,11 @@ mod codes {
             Ok(n) => n,
             Err(why) => return length(Err(why)),
         };
-        length(code::write_album(codes.split(|&b| b == b'.'), &name, text()))
+        let tracks = codes.split(|&b| b == b'.');
+        if tracks.clone().any(|t| code::paced(t).is_err()) {
+            return refuse(code::BAD_PACE);
+        }
+        length(code::write_album(tracks.map(|t| code::paced(t).unwrap_or((t, code::Pace::On))), &name, text()))
     }
 
     /// Write the album of `count` tracks drawn from `seed`, each asked what

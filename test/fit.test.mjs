@@ -76,6 +76,7 @@ console.log('\nWord albums (35b)');
   check('every track is four bars or longer, and about 40 s', album.tracks.every((t) => t.spec.bars >= 4 && t.spec.playFor >= 1));
   const back = decodeAlbum(album.code);
   check('the album code reads back, titled "Lofty?"', back.title === 'Lofty?' && back.specs.length === 8);
+  check('  each track playing as long as the album set it (session 24b)', back.specs.every((s, i) => s.playFor === album.tracks[i].spec.playFor));
   check('the same seed builds the same album', buildAlbum({ word: 'lofty', target, n: 600, seed: 3, scale }).code === album.code);
 }
 

@@ -5,9 +5,12 @@ key is derivable from the album code itself (decode it with
 `share.js decodeAlbum` and read the specs), so no key is written here.
 
 **The codes are version 2** (session 23, v184): each album below was
-converted from its version 1 code and checked to play the same notes. A
-track's length of play (the slider, which version 2 doesn't carry) no
-longer travels with an album: the listener's slider decides.
+converted from its version 1 code and checked to play the same notes. Each
+track's length of play (the slider) travels with its album again (session
+24b, v189): the six albums whose version 1 codes set it (43 tracks, every
+Session 26 album, Phase 1 check, Heartwarming? and Joyful?) were written
+again with it, checked to play the same notes for the same passes; the
+others never set it, so their tracks play on until moved on, as they did.
 
 ## "Batch 6 Album" (brain B2, 2026-11-17, v177; items 101 and 84b) -- heard 2026-11-17
 
@@ -235,7 +238,7 @@ length is set in its code (`playFor`), so the album moves on by itself.
 - echoTime: one beat: haven #38, 2 x 24.9 s = 50 s; draws: floorDrop:shapes
 
 ```
-FAIwBnRvonASA4-191h19_iBdSBwn81xn39l9LfSC6tunr64pr1Ef0BiV2Y-CSAi0gprzjzo0LfSBo6yuwo0zj5gChBSCqhqowkpuu9kBhByBRY8itASAy4jmwh66rlbhBSBwn81xn39l9LfSC-wnkwjt875ShBwBH2FBzBSAiv4nr_6-9hGfSBor6uujp-x_IfSC0786krn0g5FfzB1MHzgASAor6ygshw_yzChBSBk-w7k1r-lyIfSCuuzjw5oy2gQhBvBIN6ytBSA8hv0hx9-x0FfSB0glktkz9gtBdSCqwigoxo1kLfyBJgm7vBSA6tunr64pr1EfSBuuzjw5oy2gQfSC63-1g-2i6whDjByBMVVlyCSAq1q15u7olvJfSBuuz7sm0zq9IfSCgloxgz2mi0sCjBeOUzI2IE5ldyBzb3VuZHM0j
+FAIyBnRvonASA4-191h19_iBdSBwn81xn39l9LfSC6tunr64pr1EfWH2BiV2Y-CSAi0gprzjzo0LfSBo6yuwo0zj5gChBSCqhqowkpuu9kBhBWD0BRY8itASAy4jmwh66rlbhBSBwn81xn39l9LfSC-wnkwjt875ShBWJyBH2FBzBSAiv4nr_6-9hGfSBor6uujp-x_IfSC0786krn0g5FfWJ1B1MHzgASAor6ygshw_yzChBSBk-w7k1r-lyIfSCuuzjw5oy2gQhBWFvBIN6ytBSA8hv0hx9-x0FfSB0glktkz9gtBdSCqwigoxo1kLfyBJgm7vBSA6tunr64pr1EfSBuuzjw5oy2gQfSC63-1g-2i6whDjB0BMVVlyCSAq1q15u7olvJfSBuuz7sm0zq9IfSCgloxgz2mi0sCjBWDWBeOUzI2IE5ldyBzb3VuZHMeo
 ```
 
 ### S26 Mixing ideas
@@ -247,7 +250,7 @@ FAIwBnRvonASA4-191h19_iBdSBwn81xn39l9LfSC6tunr64pr1Ef0BiV2Y-CSAi0gprzjzo0LfSBo6y
 - pedalBass: undertow #8, 2 x 15.9 s = 32 s; draws: pedalBass
 
 ```
-FAFwBXpKi6ASA078u20xz2qJfSB-r_iwvkoxnNfSCohq0xus0o-EfwBQ8_-nDSA-r_iwvkoxnNfSBiv478ol-zzJfSCor6uujp-x_IfyBLjgyGBSA25ti42ozw5KfSBoyx8s16yijNfSC8hvogn643zlBhBwBtesCJDSAmyxo7rwzsxJfSBi0gprzjzo0LfSCiv4z51w_nwCfmBEbirVBSA63-154_yqoMfSBk-wv2-197jMfSCEBeQUzI2IE1peGluZyBpZGVhcwYD
+FAFwBXpKi6ASA078u20xz2qJfSB-r_iwvkoxnNfSCohq0xus0o-EfwBQ8_-nDSA-r_iwvkoxnNfSBiv478ol-zzJfSCor6uujp-x_IfyBLjgyGBSA25ti42ozw5KfSBoyx8s16yijNfSC8hvogn643zlBhBwBtesCJDSAmyxo7rwzsxJfSBi0gprzjzo0LfSCiv4z51w_nwCfmBEbirVBSA63-154_yqoMfSBk-wv2-197jMfSCEBWDeQUzI2IE1peGluZyBpZGVhcwMJ
 ```
 
 ### S26 Flagged
@@ -259,7 +262,7 @@ FAFwBXpKi6ASA078u20xz2qJfSB-r_iwvkoxnNfSCohq0xus0o-EfwBQ8_-nDSA-r_iwvkoxnNfSBiv4
 - padSweep: dust #77, 7 x 6.8 s = 47 s; draws: pedalBass padSweep
 
 ```
-FAFyBEeJfLBSAo6yuwo0zj5gChBSBk5ou2qtpxxGfSC83-t2lr0-kFfwBKky18BSA2lt1hgk-p6JfSB-1v1pxszulKfSCglohg0o0qyFfyBDuHdOASA2ltxw1nxrqtChBSBmtpv-q89tiLfSCwi00xzup7qGfwBteKB5CSAuz78s68n1vOfSB0glyujik1hBdSCwi0oj94ox8Jf0B3dR2bCSAw4ji4xm-9sJfSBkloxgz2mi0sChBSCokjxwwl849rChBeLUzI2IEZsYWdnZWQmo
+FAF0BEeJfLBSAo6yuwo0zj5gChBSBk5ou2qtpxxGfSC83-t2lr0-kFfWDwBKky18BSA2lt1hgk-p6JfSB-1v1pxszulKfSCglohg0o0qyFf1BDuHdOASA2ltxw1nxrqtChBSBmtpv-q89tiLfSCwi00xzup7qGfWhBzBteKB5CSAuz78s68n1vOfSB0glyujik1hBdSCwi0oj94ox8JfWjB2B3dR2bCSAw4ji4xm-9sJfSBkloxgz2mi0sChBSCokjxwwl849rChBWNWBeLUzI2IEZsYWdnZWQgw
 ```
 
 ## "Phase 1 check" (2026-10-18, blind A/B, v92 against v99) -- heard 2026-10-18: "everything sounds the same on both versions"
@@ -291,7 +294,7 @@ same audio on both links to the bit (its seed is 12-vapor's in
 test-retest noise.
 
 ```
-FAJwBTTjPoASA6omigjvzi4JfSB20lp7109xqMfSC0gloz1lp15HfyB0AhWsCSA-1v1pxszulKfSB0glyujik1hBdSC8m3pg7itimrBhBmBS8a9mDSAs_6rnj1u9tBdSB-1v1pxszulKfSCIB0BtoMQABSAm35tg8--0p9BhBSB6y205k3-_1GfSCqmypw4xi5vqBhBxBIgCmtBSA2v97sr2o9pKfSBo351p2uohyLfSCiqwigoxo1kLhB0B7hArLCSA0glogi4jlnkBhBSB2v9jw-qnptRfSC63-1g-2i6whDjB0BedVrLBSA2turw2-gp7yBhBSB078u20xz2qJfSCwxs0gls58x6CjBoBCT8JoDSAs_6nzwj0itGfSB4m3xw6pm-2uChBSCEBxBLBBHVASAs6yu2vv-j-HfSBqwiymy5uwWdSC0q1qgqps6rvBhBeNUGhhc2UgMSBjaGVjawGO
+FAJwBTTjPoASA6omigjvzi4JfSB20lp7109xqMfSC0gloz1lp15HfyB0AhWsCSA-1v1pxszulKfSB0glyujik1hBdSC8m3pg7itimrBhBmBS8a9mDSAs_6rnj1u9tBdSB-1v1pxszulKfSCIB0BtoMQABSAm35tg8--0p9BhBSB6y205k3-_1GfSCqmypw4xi5vqBhBxBIgCmtBSA2v97sr2o9pKfSBo351p2uohyLfSCiqwigoxo1kLhB0B7hArLCSA0glogi4jlnkBhBSB2v9jw-qnptRfSC63-1g-2i6whDjB0BedVrLBSA2turw2-gp7yBhBSB078u20xz2qJfSCwxs0gls58x6CjBoBCT8JoDSAs_6nzwj0itGfSB4m3xw6pm-2uChBSCEBxBLBBHVASAs6yu2vv-j-HfSBqwiymy5uwWdSC0q1qgqps6rvBhBWBeNUGhhc2UgMSBjaGVjaw_l
 ```
 
 ## "Heartwarming?" and "Joyful?" (2026-10-11, on v85 or later) -- the first word albums; heard 2026-10-11
@@ -314,13 +317,13 @@ brain took from them is in `docs/VIBES.md` (the first recipes).
 Heartwarming?
 
 ```
-FAIzBMINAAASA2v9v-0goz7NfSB4tuzg2l6ks2ChBSC6y2kgrg838UhBzBWyMAAASA0gl8k_vorrLfSB2turw2-gp7yBhBSCqr6igtz9nxMhB1B8DNAAASA8hvogn643zlBhBSB4tuzg2l6ks2ChBSCq1qlg1km91XhByBnsMAAASA-m3pzuwyy4OfSBo8hvm3i-_gKfSCokjxwwl849rChBwBtxMAAASA-r_iwvkoxnNfSB6y2oruh-1nKfSC6tunr64pr1EfyBnENAAASA0gl8k_vorrLfSBukjpzksot_LfSC0glogi4jlnkBhB2BQINAAASAk-wng4z5_thBhBSB2skzgxjly_0ChBSCyi0owprjhqmBhBwBYzMAAASAyskvuorzksKfSBo8hvm3i-_gKfSCk5ou2qtpxxGfeNSGVhcnR3YXJtaW5nPw96
+FAI1BMINAAASA2v9v-0goz7NfSB4tuzg2l6ks2ChBSC6y2kgrg838UhBWDzBWyMAAASA0gl8k_vorrLfSB2turw2-gp7yBhBSCqr6igtz9nxMhB3B8DNAAASA8hvogn643zlBhBSB4tuzg2l6ks2ChBSCq1qlg1km91XhBWNyBnsMAAASA-m3pzuwyy4OfSBo8hvm3i-_gKfSCokjxwwl849rChByBtxMAAASA-r_iwvkoxnNfSB6y2oruh-1nKfSC6tunr64pr1EfWD0BnENAAASA0gl8k_vorrLfSBukjpzksot_LfSC0glogi4jlnkBhBWH2BQINAAASAk-wng4z5_thBhBSB2skzgxjly_0ChBSCyi0owprjhqmBhBwBYzMAAASAyskvuorzksKfSBo8hvm3i-_gKfSCk5ou2qtpxxGfWFeNSGVhcnR3YXJtaW5nPw5h
 ```
 
 Joyful?
 
 ```
-FAIxBGFNAAASAglohg0o0qyFfSB6y2oruh-1nKfSCuuzjw5oy2gQhBzBTuMAAASAmwiswgjru01BhBSBiv4r_xs54iBdSCy78mguvv60ehBwBc8MAAASAy20hoqz-hqHfSBiv4vuyv9plNfSCysknr1204oDfyB_ENAAASA0i0wgpy886pChBSB0gloz1lp15HfSC8hv0hx9-x0Ff1ByDNAAASA2ltxw1nxrqtChBSBkloxgz2mi0sChBSC6tujg33ntqPhByB8JNAAASAyxsorp_oj7IfSB4m3xw6pm-2uChBSC6tunr64pr1EfwBUJNAAASA25ti42ozw5KfSB8m31hlmz8mLfSC8hv0hx9-x0FfxBHDNAAASAq1qholxpv9FfSB68mv25zop3KfSCi0glgwixqpWhBeHSm95ZnVsPwYK
+FAIzBGFNAAASAglohg0o0qyFfSB6y2oruh-1nKfSCuuzjw5oy2gQhBWJ1BTuMAAASAmwiswgjru01BhBSBiv4r_xs54iBdSCy78mguvv60ehBWJyBc8MAAASAy20hoqz-hqHfSBiv4vuyv9plNfSCysknr1204oDfWH0B_ENAAASA0i0wgpy886pChBSB0gloz1lp15HfSC8hv0hx9-x0FfWJ1ByDNAAASA2ltxw1nxrqtChBSBkloxgz2mi0sChBSC6tujg33ntqPhByB8JNAAASAyxsorp_oj7IfSB4m3xw6pm-2uChBSC6tunr64pr1EfwBUJNAAASA25ti42ozw5KfSB8m31hlmz8mLfSC8hv0hx9-x0FfzBHDNAAASAq1qholxpv9FfSB68mv25zop3KfSCi0glgwixqpWhBWFWDeHSm95ZnVsPwVi
 ```
 
 ## "Moods" (2026-09-28, on v64 or later) -- retired 2026-09-28

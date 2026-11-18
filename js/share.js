@@ -13,8 +13,11 @@
 // a part of the tone or the tempo only where the listener changed it. A
 // name only where the loop was renamed.
 //
-// What a code does not carry: the length slider's setting (how long a track
-// plays before the next; the listener's, not the loop's, as #412 decided).
+// What a loop's code does not carry: the length slider's setting (the
+// listener's, not the loop's, as #412 decided: one loop sounds the same
+// however long it plays). An album's code does (session 24b; Mikey,
+// 2026-11-18: "an album's code should carry track lengths"): each track
+// plays as long as its maker's slider had it, then the next.
 //
 // Version 1 codes (DL1-, DLA1-) are gone (Mikey, 2026-10-29: no shims): one
 // pasted is told plainly it is from an older app, and nothing else.
@@ -156,13 +159,35 @@ export function decodeSong(code) {
 
 // ---------------------------------------------------------------- albums
 
+// The most passes or bars a track's pace counts (core/src/code.rs,
+// PACE_MOST).
+const PACE_MOST = 2 ** 31 - 1;
+const isCount = (n) => Number.isInteger(n) && n >= 1 && n <= PACE_MOST;
+
+// How long `spec` plays before the next, as a code writes it after the
+// track's code: whole passes (`spec.playFor`), bars to a phrase line
+// (`spec.playBars`, a time shorter than a pass), or nothing, on and on (as
+// js/player.js's trackOf tells the core).
+function paceOf(spec) {
+  if (isCount(spec.playFor)) return `:p${spec.playFor}`;
+  if (isCount(spec.playBars)) return `:b${spec.playBars}`;
+  return '';
+}
+
 export function encodeAlbum(title, specs) {
-  return albumCode(specs.map(encodeSong), fitName(title));
+  return albumCode(specs.map((s) => encodeSong(s) + paceOf(s)), fitName(title));
 }
 
 export function decodeAlbum(code) {
-  const { name, tracks } = albumTracks(code);
-  return { title: name || 'Untitled', specs: tracks.map(decodeSong) };
+  const { name, tracks, paces } = albumTracks(code);
+  const specs = tracks.map((t, i) => {
+    const spec = decodeSong(t);
+    const [kind, n] = paces[i];
+    if (kind === 1) spec.playFor = n;
+    else if (kind === 2) spec.playBars = n;
+    return spec;
+  });
+  return { title: name || 'Untitled', specs };
 }
 
 // An album of `count` tracks drawn from one seed (a fresh one unless given),

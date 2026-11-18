@@ -351,8 +351,10 @@ export function readLoopCode(code) {
   return out;
 }
 
-// An album's code: the loops' codes in their order, named `name` ('' for
-// none).
+// An album's code: the loops' codes in their order, each with how long it
+// plays before the next after it where it has one (`CODE:p2` two whole
+// passes, `CODE:b8` eight bars: core/src/code.rs's `paced`), named `name`
+// ('' for none).
 export function albumCode(codes, name = '') {
   need();
   const head = utf8.encode(name);
@@ -380,7 +382,9 @@ export function seedAlbumCode(seed, count, a, name = '') {
   return code;
 }
 
-// An album's { name, tracks }, each track a loop's code.
+// An album's { name, tracks, paces }: each track a loop's code, and how long
+// it plays before the next as [kind, count], as the player takes it
+// (js/player.js's trackOf: 0 on and on, 1 whole passes, 2 bars).
 export function albumTracks(code) {
   need();
   const len = input(utf8.encode(String(code)));
@@ -389,12 +393,16 @@ export function albumTracks(code) {
   const mem = new Uint8Array(x.memory.buffer, x.dl_code_text(), 256);
   const name = fromUtf8.decode(mem.slice(0, mem.indexOf(0)));
   const tracks = [];
+  const paces = [];
   for (let i = 0; i < count; i++) {
     const n = x.dl_code_track(len, i);
     if (!n) throw refused();
     tracks.push(codeText(n));
+    const kind = x.dl_code_pace(len, i);
+    if (!kind) throw refused();
+    paces.push([kind - 1, x.dl_code_pace_count() >>> 0]);
   }
-  return { name, tracks };
+  return { name, tracks, paces };
 }
 
 // What `text` is, read whole: 'loop', 'album', 'newer' (a newer build's),

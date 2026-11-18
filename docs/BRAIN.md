@@ -305,8 +305,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   underruns. Nothing to ask for. Session 29's Alongside caught up with the
   rows that already named it (24b, 30a to 30e). Mikey answered B-parallel's
   question on the new name in three public files: "It's okay if it's in the
-  repo itself" (`docs/DECISIONS.md`). **Running:** see the next
-  update of this bullet.
+  repo itself" (`docs/DECISIONS.md`). **Merged:** #436 (docs), 24b (#438,
+  v189: checked, `cargo test --test codes` 26 of 26 here, the old share-code
+  fixtures unchanged, every check green on de59304; its first push had a
+  stale module, rebuilt). B4 may start (18, 21, 24, 24b in). **Running
+  (2026-11-18, 17:55 UTC):** 29 (draft #437) and 30b; briefs in the
+  project's files, `brain/<row>-brief.md`. **Next:** 30d, 30a, 30c.
 - **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
   chains run two at a time; ended at Mikey's request (long session).** The
   plan made parallel (#409: four chains, an After and an Alongside for every
