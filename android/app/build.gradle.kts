@@ -84,7 +84,19 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // The release is built the same on any machine (session 29, item
+            // 107e: docs/notes/107-reproducible.md). AGP 8.3 and later stamp the
+            // git commit into the APK unless told not to.
+            vcsInfo.include = false
         }
+    }
+
+    // Google's encrypted dependency list, which Android Gradle Plugin adds to
+    // an APK's signing block and to its bundle: a blob F-Droid refuses (it is
+    // closed, and it differs from build to build of the same source).
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     compileOptions {

@@ -1,0 +1,83 @@
+# The release (queue item 107e, session 29): a tag `v<versionName>` builds the
+# unsigned release APKs from that commit and keeps them as an artifact. Nothing
+# is signed or published here, and no key is in this repository or its secrets:
+# docs/notes/for-mikey.md ("Signing") says what is done with the artifact.
+#
+#   git tag v1.0 && git push origin v1.0
+#
+# The tag must be the version in android/gradle.properties, the version code
+# must follow the scheme (android/README.md, "Versions"), and the changelog for
+# that code must be in fastlane/metadata/android/en-US/changelogs/ (all checked
+# first). By hand ("Run workflow") it builds the commit without the tag check.
+name: android-release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: the unsigned release APKs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: the tag, the version and the changelog
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            node android/fdroid/check-metadata.mjs --tag "$GITHUB_REF_NAME"
+          else
+            node android/fdroid/check-metadata.mjs
+          fi
+
+      # JDK 21: the same as F-Droid's buildserver (docs/notes/107-reproducible.md).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: the Android SDK pieces
+        run: |
+          ndk=$(sed -n 's/^driftloom\.ndkVersion=//p' android/gradle.properties)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;$ndk" >/dev/null
+
+      - name: the Rust toolchain
+        working-directory: android/native
+        run: |
+          rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal \
+            --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: build the release APKs
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain assembleRelease
+
+      - name: the APKs
+        run: |
+          set -eu
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/*-release-unsigned.apk dist/
+          (cd dist && sha256sum *.apk | tee SHA256SUMS)
+          {
+            echo "### The unsigned release APKs ($GITHUB_REF_NAME, commit $GITHUB_SHA)"
+            echo
+            echo '```'; cat dist/SHA256SUMS; echo '```'
+            echo "The universal one is what F-Droid builds and what you sign (docs/notes/for-mikey.md)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-unsigned-${{ github.ref_name }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 90

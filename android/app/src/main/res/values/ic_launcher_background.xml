@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The adaptive icon's background: the web app's own icon ground
+         (icons/maskable-512.png; the manifest's background_color). -->
+    <color name="ic_launcher_background">#0C1618</color>
+</resources>

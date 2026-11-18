@@ -1,0 +1,48 @@
+# F-Droid's build recipe for the app: what fdroiddata's metadata/<id>.yml holds
+# (queue item 107e, session 29). Not the file itself: render.mjs fills the
+# @...@ values from android/gradle.properties and the git checkout, so the id,
+# the name and the version are each written once, in gradle.properties, and
+# session 31a (the new name) changes nothing here. docs/notes/for-mikey.md says
+# how it is submitted; android/README.md ("F-Droid") says how it is tested.
+Categories:
+  - Ambient Sound
+  - Meditation
+License: MIT
+SourceCode: @REPO_URL@
+IssueTracker: @REPO_URL@/issues
+Changelog: @REPO_URL@/releases
+
+AutoName: @APP_NAME@
+
+RepoType: git
+Repo: @REPO_GIT@
+@BINARIES@
+Builds:
+  - versionName: @VERSION_NAME@
+    versionCode: @VERSION_CODE@
+    commit: @COMMIT@
+    subdir: android
+    gradle:
+      - yes
+    output: app/build/outputs/apk/release/*-universal-release-unsigned.apk
+    # The core is Rust (android/native, built by Gradle's buildNative task with
+    # the NDK below): rustup's own script, from its source at a pinned release
+    # (the srclib), installs the compiler android/native/rust-toolchain.toml
+    # pins, with Android's three targets. No crate is downloaded: the core
+    # has no dependency (Cargo.lock lists the two crates of this repository).
+    srclibs:
+      - rustup@1.28.2
+    build:
+      - toolchain=$(sed -n 's/^channel = "\(.*\)"/\1/p' native/rust-toolchain.toml)
+      - $$rustup$$/rustup-init.sh -y --default-toolchain $toolchain --profile minimal
+        --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - source $HOME/.cargo/env
+    # The same NDK as android/gradle.properties (driftloom.ndkVersion).
+    ndk: r28c
+
+@ALLOWED@
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9][0-9.]*$
+UpdateCheckData: android/gradle.properties|driftloom\.versionCode=(\d+)|android/gradle.properties|driftloom\.versionName=(.+)
+CurrentVersion: @VERSION_NAME@
+CurrentVersionCode: @VERSION_CODE@

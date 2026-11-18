@@ -1,0 +1,25 @@
+Press play and listen. This app makes calm, nostalgic loops from nothing and plays them for as long as you like. Every loop is new: a tune, chords, a bass, drums and soft textures, written and played right on your phone.
+
+<b>What you hear</b>
+
+Soft, slow, meditative and joyful loops, made one after another. If you like one, keep it. If you want another, press next. If one part is not right, roll just that part again: the drums, the bass, the keys, the melody or the air around them. Choose a mood, such as cozy, misty or joyful, and new loops lean that way.
+
+<b>Made here, not downloaded</b>
+
+Nothing is a recording. Every sound is built on your phone from a small music engine, so the app is small and works with no network at all. There is no account, no ads, no tracking, and the app asks for no internet permission.
+
+<b>Plays with the screen off</b>
+
+Put the phone in your pocket or on the nightstand. The music goes on with the screen off, with controls on the lock screen and in the notification, which shows the loop's own picture. A call or another app pauses it and it comes back when they are done.
+
+<b>Short loops and long pieces</b>
+
+A loop can repeat forever, or a piece can wander for minutes and hours, with its own build-ups, quiet parts and endings. Say how long a track should be, or let it run endlessly.
+
+<b>Keep and share</b>
+
+Save loops into albums, rename them, and find them again in the library. Every loop is a short code that anyone can paste into the app to hear the very same loop, so sharing needs no file. You can also save a loop as a sound file (lossless or small) or as a MIDI file, and back up your library.
+
+<b>Open and free</b>
+
+The app is free software, under the MIT license. Its music engine is written in Rust, and the whole source is public.

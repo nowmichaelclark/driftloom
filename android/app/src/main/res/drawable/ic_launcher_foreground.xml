@@ -1,24 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A placeholder icon in plain vectors (a loop of three threads); the
-     Painter's adaptive icon replaces it (docs/PAINTER.md, "Platforms"). -->
+<!-- The adaptive icon's foreground: the orbit of icons/maskable-512.png (the web app's own icon) in vectors, drawn inside the 66 dp safe zone of the 108 dp canvas. A Painter may replace it (docs/PAINTER.md, "Platforms"). The monochrome layer is ic_launcher_monochrome.xml. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:strokeColor="#C9B8FF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:pathData="M30,40 C42,28 54,52 78,40" />
-    <path
-        android:strokeColor="#9F86F0"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:pathData="M30,54 C42,42 54,66 78,54" />
-    <path
-        android:strokeColor="#7A5FD6"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:pathData="M30,68 C42,56 54,80 78,68" />
+    <group
+        android:scaleX="0.2"
+        android:scaleY="0.2"
+        android:translateX="2.8"
+        android:translateY="2.8">
+        <path
+            android:strokeColor="#2B484E"
+            android:strokeWidth="23"
+            android:pathData="M123.5,256 a132.5,132.5 0 1,0 265,0 a132.5,132.5 0 1,0 -265,0" />
+        <path
+            android:strokeColor="#8FD3B8"
+            android:strokeWidth="28"
+            android:pathData="M186,256 a70,70 0 1,0 140,0 a70,70 0 1,0 -140,0" />
+        <path
+            android:fillColor="#E4A24E"
+            android:pathData="M233,256 a23,23 0 1,0 46,0 a23,23 0 1,0 -46,0" />
+        <path
+            android:fillColor="#8FD3B8"
+            android:pathData="M301.5,132.2 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 M373,256 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 M301.5,379.8 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0" />
+    </group>
 </vector>

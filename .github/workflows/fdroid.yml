@@ -1,0 +1,322 @@
+# The app for F-Droid (queue item 107e, session 29): what F-Droid will do with
+# the repository, done here first. Not part of the merge gate; it runs on PRs
+# that touch android/ or fastlane/, by hand, and weekly.
+#
+#   lint     the listing's files and the version scheme (check-metadata.mjs),
+#            and the build recipe (render.mjs) through fdroidserver's own lint
+#            and rewritemeta, with the update check run on a tag.
+#   build    the app built from a clean clone with F-Droid's own tooling, in
+#            F-Droid's buildserver container (build-in-container.sh): the
+#            unsigned release APK is the artifact.
+#   plays    that APK, signed with the test key, installed on an emulator: not
+#            debuggable, the page loads, Play plays (emulator-release.sh).
+#   reproducible  the same commit built twice, on two machines in two
+#            directories (a, b), and then against F-Droid's build: the APKs
+#            byte for byte (docs/notes/107-reproducible.md).
+#   licenses the anti-features check and the list of what is in the APK
+#            (docs/notes/107-licenses.md says what the lists must hold).
+name: fdroid
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'fastlane/**'
+      - '.github/workflows/fdroid.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fdroid-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # fdroidserver for the lint: a release, pinned. (The build job uses the
+  # commit of master that fdroiddata's own CI uses, build-in-container.sh.)
+  FDROIDSERVER: '2.4.5'
+
+jobs:
+  lint:
+    name: the listing, the version and the recipe pass fdroidserver's lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: the listing's files and the version
+        run: node android/fdroid/check-metadata.mjs
+
+      - name: fdroidserver
+        run: |
+          python3 -m venv "$RUNNER_TEMP/fdv"
+          "$RUNNER_TEMP/fdv/bin/pip" install -q "fdroidserver==$FDROIDSERVER"
+          echo "$RUNNER_TEMP/fdv/bin" >> "$GITHUB_PATH"
+
+      # fdroiddata's own config (the categories, the anti-features) and the
+      # rustup srclib the recipe names, as the recipe will meet them there.
+      - name: fdroiddata's config
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse https://gitlab.com/fdroid/fdroiddata.git "$RUNNER_TEMP/fdroiddata"
+          git -C "$RUNNER_TEMP/fdroiddata" sparse-checkout set config srclibs
+          git -C "$RUNNER_TEMP/fdroiddata" log -1 --format='fdroiddata %H %cs'
+
+      # The recipe, rendered for this commit, in fdroiddata's layout: the lint
+      # and rewritemeta (F-Droid's merge request jobs) must pass it, and
+      # rewritemeta must change nothing (the text is in its own form).
+      - name: lint and rewritemeta
+        run: |
+          set -eu
+          id=$(sed -n 's/^driftloom\.applicationId=//p' android/gradle.properties)
+          work="$RUNNER_TEMP/recipe"
+          mkdir -p "$work"
+          cp -r "$RUNNER_TEMP/fdroiddata/config" "$RUNNER_TEMP/fdroiddata/srclibs" "$work/"
+          touch "$work/config.yml"
+          sha=$(git rev-parse HEAD)
+          for variant in plain signed; do
+            rm -rf "$work/metadata" "$work/before"
+            extra=""
+            [ "$variant" = signed ] && extra="--signed-by $(printf 'ab%.0s' $(seq 32))"
+            node android/fdroid/render.mjs --commit "$sha" --repo-url "https://github.com/$GITHUB_REPOSITORY" $extra --out "$work/metadata"
+            cp -r "$work/metadata" "$work/before"
+            (cd "$work" && fdroid lint "$id" && fdroid rewritemeta "$id")
+            diff -r "$work/before" "$work/metadata" || { echo "::error::fdroid rewritemeta would change the $variant recipe"; exit 1; }
+            echo "ok   the $variant recipe passes lint and is in rewritemeta's form"
+          done
+          cat "$work/metadata/$id.yml"
+
+      # The update check (what makes F-Droid notice a release): on a copy of
+      # this repository, a tag one release up, and `fdroid checkupdates`
+      # must find that version from the tag, in gradle.properties.
+      - name: the update check finds a new tag
+        run: |
+          set -eu
+          id=$(sed -n 's/^driftloom\.applicationId=//p' android/gradle.properties)
+          work="$RUNNER_TEMP/updates"
+          rm -rf "$work" && mkdir -p "$work/metadata" "$work/src/android"
+          cp -r "$RUNNER_TEMP/fdroiddata/config" "$RUNNER_TEMP/fdroiddata/srclibs" "$work/"
+          touch "$work/config.yml"
+          cd "$work/src"
+          git init -q && git config user.email ci@example.org && git config user.name ci
+          cp "$GITHUB_WORKSPACE/android/gradle.properties" android/
+          git add . && git commit -qm base && git tag v0.1
+          sed -i 's/^driftloom.versionCode=.*/driftloom.versionCode=10200/; s/^driftloom.versionName=.*/driftloom.versionName=1.2/' android/gradle.properties
+          git commit -qam release && git tag v1.2
+          cd "$work"
+          node "$GITHUB_WORKSPACE/android/fdroid/render.mjs" --commit "$(git -C src rev-parse v0.1)" --repo-url https://example.org/app --repo-git "$work/src" --out metadata
+          fdroid checkupdates --allow-dirty -v "$id" 2>&1 | tee checkupdates.log
+          grep -q 'updating to version 1.2 (10200)' checkupdates.log
+          echo "ok   checkupdates found 1.2 (10200) from the tag v1.2"
+
+  build:
+    name: F-Droid's tooling builds the APK from a clean clone
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: the recipe, for this commit
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/fdroid" "$RUNNER_TEMP/out"
+          node android/fdroid/render.mjs --commit "$(git rev-parse HEAD)" --repo-url "https://github.com/$GITHUB_REPOSITORY" \
+            --repo-git /home/vagrant/src --out "$RUNNER_TEMP/fdroid"
+          cat "$RUNNER_TEMP/fdroid"/*.yml
+          p=android/gradle.properties
+          {
+            echo "APP_ID=$(sed -n 's/^driftloom\.applicationId=//p' $p)"
+            echo "VERSION_CODE=$(sed -n 's/^driftloom\.versionCode=//p' $p)"
+            echo "NDK=$(sed -n 's/^driftloom\.ndkVersion=//p' $p)"
+          } >> "$GITHUB_ENV"
+
+      - name: the build, in F-Droid's buildserver container
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src:ro" -v "$RUNNER_TEMP/fdroid:/recipe:ro" -v "$RUNNER_TEMP/out:/out" \
+            -e APP_ID -e VERSION_CODE -e NDK -e "RECIPE=/recipe/$APP_ID.yml" \
+            registry.gitlab.com/fdroid/fdroidserver:buildserver-trixie \
+            bash /src/android/fdroid/build-in-container.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fdroid-build
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+          retention-days: 14
+
+  plays:
+    name: the F-Droid build plays on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: fdroid-build
+          path: apk
+
+      # The build is unsigned (F-Droid signs what it publishes): signed here
+      # with the test key (android/test-signing, which signs the debug builds),
+      # for this test only.
+      - name: signed with the test key
+        run: |
+          set -eu
+          ls -l apk
+          base64 -d android/test-signing/debug.keystore.base64 > "$RUNNER_TEMP/test.keystore" 2>/dev/null \
+            || tr -d '\n\r ' < android/test-signing/debug.keystore.base64 | base64 -d > "$RUNNER_TEMP/test.keystore"
+          apk=$(ls apk/*.apk)
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$RUNNER_TEMP/test.keystore" --ks-pass pass:android \
+            --ks-key-alias androiddebugkey --key-pass pass:android --out "$RUNNER_TEMP/release-test-signed.apk" "$apk" \
+            || { yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0" >/dev/null
+                 "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$RUNNER_TEMP/test.keystore" --ks-pass pass:android \
+                   --ks-key-alias androiddebugkey --key-pass pass:android --out "$RUNNER_TEMP/release-test-signed.apk" "$apk"; }
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$RUNNER_TEMP/release-test-signed.apk" | head -3
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the release APK plays
+        run: sh android/emulator-release.sh "$RUNNER_TEMP/release-test-signed.apk" "$RUNNER_TEMP/release.png"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-screenshot
+          path: ${{ runner.temp }}/release.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The same commit, built twice on two machines, each in a directory of its
+  # own and in its own time zone: the two APKs must be the same bytes.
+  release:
+    name: the release APK, built on machine ${{ matrix.copy }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - copy: a
+            dir: driftloom
+            tz: UTC
+          - copy: b
+            dir: some/other/deeper/place/checkout
+            tz: Asia/Bangkok
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ matrix.dir }}
+
+      # JDK 21: the buildserver's (Debian trixie's) JDK, so the same compiler
+      # runs here as there.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: the Android SDK pieces
+        working-directory: ${{ matrix.dir }}
+        run: |
+          ndk=$(sed -n 's/^driftloom\.ndkVersion=//p' android/gradle.properties)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;$ndk" >/dev/null
+
+      - name: the Rust toolchain
+        working-directory: ${{ matrix.dir }}/android/native
+        run: |
+          rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal \
+            --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: build the release APKs
+        working-directory: ${{ matrix.dir }}/android
+        run: |
+          java -version
+          ./gradlew --no-daemon --console=plain assembleRelease
+          ls -l app/build/outputs/apk/release/
+
+      - name: what is in the APK
+        working-directory: ${{ matrix.dir }}/android
+        run: |
+          mkdir -p "$RUNNER_TEMP/stage"
+          ./gradlew --no-daemon --console=plain -q :app:dependencies --configuration releaseRuntimeClasspath | tee "$RUNNER_TEMP/stage/dependencies.txt"
+          unzip -v app/build/outputs/apk/release/*-universal-release-unsigned.apk | tail -8
+
+      - name: the files to compare
+        run: |
+          mkdir -p "$RUNNER_TEMP/stage"
+          cp "${{ matrix.dir }}"/android/app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/stage/"
+          ls -l "$RUNNER_TEMP/stage"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.copy }}
+          path: ${{ runner.temp }}/stage
+          if-no-files-found: error
+          retention-days: 14
+
+  reproducible:
+    name: the two builds, and F-Droid's, are the same bytes
+    needs: [release, build]
+    if: ${{ !cancelled() && needs.release.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-a
+          path: a
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-b
+          path: b
+
+      - uses: actions/download-artifact@v4
+        if: needs.build.result == 'success'
+        with:
+          name: fdroid-build
+          path: f
+
+      - name: compare
+        run: sh android/fdroid/compare-apks.sh
+
+      - name: the APK holds only what it should (anti-features, permissions, licenses)
+        run: sh android/fdroid/check-apk.sh a/driftloom-universal-release-unsigned.apk a/dependencies.txt

@@ -41,7 +41,7 @@ on:
         description: 'Smoke tests to run, each on an emulator of its own'
         default: '1'
       only:
-        description: 'Run only this emulator job (background, smoke, native, rows); empty runs all'
+        description: 'Run only this emulator job (background, smoke, native, rows, screenshots); empty runs all'
         default: ''
       minutes:
         description: 'Minutes the background job keeps the screen off (10 in a PR)'
@@ -355,3 +355,51 @@ jobs:
 
       - name: the screen-off test
         run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" "${{ github.event.inputs.minutes || '10' }}"
+
+  # The F-Droid listing's phone screenshots (session 29, queue item 107e), taken
+  # from the app on an emulator (android/screenshots.mjs). The artifact's files
+  # are what fastlane/metadata/android/en-US/images/phoneScreenshots/ holds;
+  # retake them when the screens or the app's name change (session 31a).
+  screenshots:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'screenshots'
+    name: the listing's screenshots, from the app on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the screenshots
+        run: sh android/emulator-screenshots.sh "$(ls apk/*-x86_64-debug.apk)" "$RUNNER_TEMP/shots"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phone-screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
+          retention-days: 30

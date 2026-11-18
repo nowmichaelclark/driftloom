@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The monochrome layer of the adaptive icon (Android's themed icons tint it): the same orbit, in one opaque color. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.2"
+        android:scaleY="0.2"
+        android:translateX="2.8"
+        android:translateY="2.8">
+        <path
+            android:strokeColor="#FF000000"
+            android:strokeWidth="23"
+            android:pathData="M123.5,256 a132.5,132.5 0 1,0 265,0 a132.5,132.5 0 1,0 -265,0" />
+        <path
+            android:strokeColor="#FF000000"
+            android:strokeWidth="28"
+            android:pathData="M186,256 a70,70 0 1,0 140,0 a70,70 0 1,0 -140,0" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M233,256 a23,23 0 1,0 46,0 a23,23 0 1,0 -46,0" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M301.5,132.2 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 M373,256 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 M301.5,379.8 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0" />
+    </group>
+</vector>
