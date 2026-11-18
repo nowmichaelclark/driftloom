@@ -10,20 +10,23 @@
 #   views  (by hand: jobs = views) tools/views.mjs on every view with a
 #          32,768-bar piece open (session 18, queue item 106b): the long
 #          tasks per view, the new drawing's among them
-#   long   tools/export-long.mjs: a three-hour lossless export on
+#   long   tools/export-long.mjs: a three-hour export (lossless, or small:
+#          Opus through the browser's encoder, queue item 104c) on
 #          tools/autolite.mjs's slow case (burn 1700 us, lighter on processor
 #          on) while the music plays: memory flat, nothing late or behind,
 #          and the file decodes and nulls against a straight render
+#          (lossless) or decodes clean, whole and aligned (small)
 #
 # By hand: `jobs` (rows, views, long or all), `repeat` (the rows, that many
 # times in a row, all must pass), `length` (seconds, one of the sheet's
-# lengths) and `burn` for the long job.
+# lengths), `burn` and `format` (lossless or small) for the long job.
 name: export
 
 on:
   pull_request:
     paths:
       - 'js/export*.js'
+      - 'js/ogg.js'
       - 'js/main.js'
       - 'js/piece.js'
       - 'js/picks.js'
@@ -37,6 +40,7 @@ on:
       - 'index.html'
       - 'tools/rows.mjs'
       - 'tools/export*.mjs'
+      - 'tools/ogg-read.mjs'
       - '.github/workflows/export.yml'
   workflow_dispatch:
     inputs:
@@ -52,6 +56,9 @@ on:
       burn:
         description: 'Microseconds added to each block the playing core renders'
         default: '1700'
+      format:
+        description: 'The format of the long export: lossless or small'
+        default: 'lossless'
 
 permissions:
   contents: read
@@ -105,7 +112,7 @@ jobs:
           node-version: 22
       - name: Playwright's Chromium, and the reference decoder
         run: |
-          sudo apt-get update && sudo apt-get install -y flac
+          sudo apt-get update && sudo apt-get install -y flac ffmpeg
           npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: A long export while the music plays
-        run: node tools/export-long.mjs --length "${{ github.event.inputs.length || '10800' }}" --burn "${{ github.event.inputs.burn || '1700' }}"
+        run: node tools/export-long.mjs --length "${{ github.event.inputs.length || '10800' }}" --burn "${{ github.event.inputs.burn || '1700' }}" --format "${{ github.event.inputs.format || 'lossless' }}"

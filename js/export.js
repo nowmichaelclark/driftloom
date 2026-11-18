@@ -15,12 +15,16 @@
 // it to gentle, and they never move the app to lite (the export's load is
 // not the device's).
 //
-// The format is chosen each time: Lossless (FLAC, the core's own writer) now;
-// Small is in the sheet but hidden until session 21 builds it.
+// The format is chosen each time: Lossless (FLAC, the core's own writer) or
+// Small (queue item 104c: Opus through the browser's own encoder, written
+// into an Ogg file by js/ogg.js, in the Worker). Small shows only where the
+// Worker says the browser can encode Opus (never a fallback that could fail
+// on a weak phone); a browser with AAC and not Opus has it hidden too.
 
 import { askOf, trackOf } from './player.js';
 import { LAYERS, pieceOf, loopBars } from './request.js';
 import { fetchCore } from './core.js';
+import { newSpec } from './gen.js';
 import * as ui from './ui.js';
 import { TAIL_MAX } from './export-render.js';
 
@@ -38,6 +42,9 @@ const MEMORY_BYTES = 160 * 1024 * 1024;
 // and 47,662 stereo, the medians 18,212 and 32,505; session 20), with a
 // third more. And the margin the free space must hold beyond it.
 const BYTES_PER_SECOND = { 1: 36000, 2: 64000 };
+// And of Small's Opus, by lanes: its bit rates (js/export-opus.js: 64 and 96
+// kbit/s, constant) and the Ogg pages' 0.8%, rounded up.
+const SMALL_BYTES_PER_SECOND = { 1: 8100, 2: 12100 };
 const MARGIN = 1.25;
 // A busy audio thread while exporting (its busiest quarter-second, as a
 // share of its own time; js/quality.js's reports): past this the export goes
@@ -48,6 +55,7 @@ const BUSY_LINE = 0.5;
 export const WORDS = {
   intro: 'Save what plays as an audio file, to keep or to play anywhere.',
   lossless: 'Lossless: full quality, as a FLAC file.',
+  small: 'Small: much smaller, as an Opus file, for sharing and for phones.',
   whole: (t) => `The whole piece, ${t}.`,
   gentle: 'Lighter on processor is on, so it goes gently: slower, and the music never stutters.',
   fast: 'It goes as fast as this device safely can.',
@@ -55,7 +63,7 @@ export const WORDS = {
   private: 'It downloads when it is done.',
   memory: (t) => `This browser can't write a file as it goes, so it keeps the export in memory: ${t} at most.`,
   progress: (pct, left) => `${pct}% done${left ? `, about ${left} left` : ''}.`,
-  background: 'It keeps going in the background while the music plays. Closing Driftloom stops it, and nothing is saved.',
+  background: 'It keeps going in the background while the music plays. Closing the app stops it, and nothing is saved.',
   saved: (name, size, t) => `Saved: ${name}, ${size}, ${t}.`,
   savedPicked: (name, size, t) => `Saved where you chose: ${name}, ${size}, ${t}.`,
   cancelled: 'Cancelled. Nothing was saved.',
@@ -113,10 +121,24 @@ export function choices(spec) {
   return out;
 }
 
-// The file's name: the loop's, made safe (as ui.download makes it).
-function fileName(spec) {
-  const safe = String(spec.name || 'driftloom').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').replace(/^[.\s]+/, '').slice(0, 100) || 'driftloom';
-  return `${safe}.flac`;
+// The loop's name for the file: its own, or (a loop with none of its own)
+// the name the core makes for it, made safe (as ui.download makes it).
+function loopName(spec) {
+  let name = String(spec.name || '').trim();
+  if (!name) {
+    try { name = newSpec(spec.seed >>> 0, null).name || ''; } catch { name = ''; }
+  }
+  return String(name).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').replace(/^[.\s]+/, '').slice(0, 100) || 'loop';
+}
+
+// What each format is called in a file: its extension and media type.
+export const FORMATS = {
+  lossless: { ext: 'flac', type: 'audio/flac', description: 'FLAC audio', bytes: BYTES_PER_SECOND },
+  small: { ext: 'opus', type: 'audio/ogg', description: 'Opus audio', bytes: SMALL_BYTES_PER_SECOND },
+};
+
+export function fileName(spec, format = 'lossless') {
+  return `${loopName(spec)}.${FORMATS[format].ext}`;
 }
 
 // The sheet's states: 'choose', 'run', 'done', 'failed'.
@@ -128,6 +150,10 @@ export class AudioExport {
     // How the file is written here: 'picker', 'private' or 'memory'; null
     // until the Worker has said, false if it can't export at all.
     this.mode = null;
+    // The format chosen ('lossless' or 'small'), and whether this browser can
+    // make Small (the Worker says: false until it has).
+    this.format = 'lossless';
+    this.opus = false;
     this.choice = null;
     this.running = null;
     this.result = null;
@@ -138,6 +164,13 @@ export class AudioExport {
   wire() {
     el('exportIntro').textContent = WORDS.intro;
     el('exportFormat').textContent = WORDS.lossless;
+    for (const b of document.querySelectorAll('[data-format]')) {
+      b.addEventListener('click', () => {
+        if (b.hidden || this.running) return;
+        this.format = b.dataset.format;
+        this.refresh();
+      });
+    }
     el('exportAudio').addEventListener('click', () => this.start());
     el('exportCancel').addEventListener('click', () => this.cancel());
     el('exportOk').addEventListener('click', () => this.show('choose'));
@@ -183,6 +216,7 @@ export class AudioExport {
   receive(m) {
     if (m.type === 'hello') {
       this.mode = typeof window.showSaveFilePicker === 'function' ? 'picker' : m.private ? 'private' : 'memory';
+      this.opus = !!m.opus;
       this.refresh();
     } else if (m.type === 'progress' && this.running) {
       this.progress(m);
@@ -215,6 +249,15 @@ export class AudioExport {
       el('exportLengths').replaceChildren();
       return;
     }
+    // Small shows only where it works; chosen where it doesn't, Lossless.
+    if (!this.opus) this.format = 'lossless';
+    const small = document.querySelector('[data-format="small"]');
+    small.hidden = !this.opus;
+    for (const b of document.querySelectorAll('[data-format]')) {
+      b.setAttribute('aria-checked', String(b.dataset.format === this.format));
+      b.disabled = !!this.running;
+    }
+    el('exportFormat').textContent = this.format === 'small' ? WORDS.small : WORDS.lossless;
     const list = choices(spec);
     const memory = this.mode === 'memory';
     if (!this.choice || !list.some((c) => c.key === this.choice)) {
@@ -252,7 +295,7 @@ export class AudioExport {
     const lanes = this.host.mono() ? 1 : 2;
     const lines = [];
     if (list.length === 1) lines.push(WORDS.whole(words(list[0].seconds)));
-    if (chosen) lines.push(`About ${size((chosen.seconds + TAIL_MAX) * BYTES_PER_SECOND[lanes])}.`);
+    if (chosen) lines.push(`About ${size((chosen.seconds + TAIL_MAX) * FORMATS[this.format].bytes[lanes])}.`);
     lines.push(this.mode === 'picker' ? WORDS.picker : this.mode === 'private' ? WORDS.private : this.mode === 'memory' ? WORDS.memory(words(MEMORY_SECONDS)) : '');
     lines.push(this.pace() === 'gentle' ? WORDS.gentle : WORDS.fast);
     about.textContent = lines.filter(Boolean).join(' ');
@@ -292,8 +335,9 @@ export class AudioExport {
     const chosen = choices(spec).find((c) => c.key === this.choice);
     if (!chosen) return;
     const lanes = this.host.mono() ? 1 : 2;
-    const need = (chosen.seconds + TAIL_MAX) * BYTES_PER_SECOND[lanes] * MARGIN;
-    const name = fileName(spec);
+    const format = this.format === 'small' && this.opus ? 'small' : 'lossless';
+    const need = (chosen.seconds + TAIL_MAX) * FORMATS[format].bytes[lanes] * MARGIN;
+    const name = fileName(spec, format);
     // Free space first (the origin's share of the disk, as the browser
     // counts it; the picker's file lands outside it, but on the same disk).
     if (this.mode !== 'memory') {
@@ -314,7 +358,7 @@ export class AudioExport {
     let handle = null;
     if (this.mode === 'picker') {
       try {
-        handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'FLAC audio', accept: { 'audio/flac': ['.flac'] } }] });
+        handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: FORMATS[format].description, accept: { [FORMATS[format].type]: [`.${FORMATS[format].ext}`] } }] });
       } catch (err) {
         // Closed without choosing: nothing to do. Anything else: the
         // private file system instead.
@@ -337,15 +381,16 @@ export class AudioExport {
       salt: engine ? engine.wanderSalt : 0,
       layout: lanes,
       track: chosen.track,
+      format: format === 'small' ? 'opus' : 'flac',
     };
     const sink = handle ? 'handle' : this.mode === 'memory' ? 'memory' : 'private';
-    this.running = { name, sink, handle, chosen, began: performance.now(), slowed: false, spec };
+    this.running = { name, sink, handle, chosen, format, began: performance.now(), slowed: false, spec };
     this.result = null;
     el('exportFill').style.width = '0%';
     el('exportProgress').textContent = WORDS.progress(0, null);
     el('exportNote').textContent = WORDS.background;
     this.show('run');
-    this.worker.postMessage({ type: 'start', bytes, job, sink, handle, name, pace: this.pace(), limit: MEMORY_BYTES });
+    this.worker.postMessage({ type: 'start', bytes, job, sink, handle, name, title: loopName(spec), pace: this.pace(), limit: MEMORY_BYTES });
   }
 
   progress(m) {
@@ -368,7 +413,7 @@ export class AudioExport {
   done(m) {
     const r = this.running;
     this.running = null;
-    this.result = { ...m, name: r.name, sink: r.sink, handle: r.handle, url: null };
+    this.result = { ...m, name: r.name, sink: r.sink, handle: r.handle, format: r.format, url: null };
     const t = words(m.seconds);
     el('exportSaved').textContent = r.sink === 'handle' ? WORDS.savedPicked(r.name, size(m.bytes), t) : WORDS.saved(r.name, size(m.bytes), t);
     el('exportSave').hidden = r.sink === 'handle';
@@ -403,13 +448,14 @@ export class AudioExport {
     const f = await this.file();
     if (!f) return;
     if (this.result.url) URL.revokeObjectURL(this.result.url);
-    this.result.url = URL.createObjectURL(f instanceof File ? f : new File([f], this.result.name, { type: 'audio/flac' }));
+    this.result.url = URL.createObjectURL(f instanceof File ? f : new File([f], this.result.name, { type: FORMATS[this.result.format || 'lossless'].type }));
     window.open(this.result.url, '_blank', 'noopener');
   }
 
   canShare() {
     try {
-      const probe = new File([new Uint8Array(4)], 'x.flac', { type: 'audio/flac' });
+      const kind = FORMATS[(this.result && this.result.format) || 'lossless'];
+      const probe = new File([new Uint8Array(4)], `x.${kind.ext}`, { type: kind.type });
       return !!(navigator.canShare && navigator.canShare({ files: [probe] }));
     } catch {
       return false;
@@ -419,7 +465,7 @@ export class AudioExport {
   async share() {
     const f = await this.file();
     if (!f) return;
-    const file = f instanceof File && f.name === this.result.name ? f : new File([f], this.result.name, { type: 'audio/flac' });
+    const file = f instanceof File && f.name === this.result.name ? f : new File([f], this.result.name, { type: FORMATS[this.result.format || 'lossless'].type });
     try {
       await navigator.share({ files: [file], title: this.result.name });
     } catch { /* closed, or not allowed: the file is still saved */ }

@@ -26,15 +26,22 @@
 // yielding between slices only to hear Cancel. The page can move a running
 // export to gentle (the audio thread getting busy).
 //
+// Two formats (the job's `format`): 'flac', the core's own writer, and
+// 'opus' (queue item 104c), the browser's AudioEncoder through js/ogg.js
+// (js/export-opus.js), which also gets the Worker's say on whether this
+// browser can encode Opus at all.
+//
 // Messages in: { type: 'hello' }; { type: 'start', bytes, job, sink, name,
-// pace, limit }; { type: 'pace', pace }; { type: 'cancel' }.
-// Out: { type: 'hello', private } (whether the private file system works
-// here); { type: 'progress', frames, expected, bytes }; { type: 'done', file
-// (private and memory), bytes, frames, seconds, took, counts }; { type:
+// title, pace, limit }; { type: 'pace', pace }; { type: 'cancel' }.
+// Out: { type: 'hello', private, opus } (whether the private file system
+// works here, and whether Opus can be encoded); { type: 'progress', frames,
+// expected, bytes }; { type: 'done', file (private and memory), bytes,
+// frames, seconds, took, counts, format }; { type:
 // 'cancelled' }; { type: 'failed', why ('space', 'write', 'render',
 // 'memory'), message }.
 
-import { Render, RATE } from './export-render.js';
+import { Render } from './export-render.js';
+import { OpusMaker, opusWorks } from './export-opus.js';
 
 // One slice of rendering before a yield, in milliseconds.
 const SLICE = 25;
@@ -160,8 +167,9 @@ class HandleSink {
 }
 
 class MemorySink {
-  constructor(limit) {
+  constructor(limit, type) {
     this.limit = limit;
+    this.type = type;
   }
 
   open() {
@@ -186,7 +194,7 @@ class MemorySink {
   }
 
   close() {
-    const blob = new Blob(this.parts, { type: 'audio/flac' });
+    const blob = new Blob(this.parts, { type: this.type });
     this.parts = null;
     return blob;
   }
@@ -227,31 +235,42 @@ class Gather {
 
 async function run(m) {
   const started = performance.now();
-  const sink = m.sink === 'handle' ? new HandleSink(m.handle) : m.sink === 'private' ? new PrivateSink() : new MemorySink(m.limit);
+  const opus = m.job.format === 'opus';
+  const sink = m.sink === 'handle' ? new HandleSink(m.handle) : m.sink === 'private' ? new PrivateSink() : new MemorySink(m.limit, opus ? 'audio/ogg' : 'audio/flac');
   job = { cancelled: false, pace: m.pace, sink };
   let render;
+  let maker = null;
   try {
     const module = await WebAssembly.compile(m.bytes);
     const x = (await WebAssembly.instantiate(module, {})).exports;
     render = new Render(x, m.job);
+    if (opus) {
+      maker = new OpusMaker(render, { title: m.title || '' });
+      await maker.open();
+    }
   } catch (err) {
+    if (maker) maker.close();
     self.postMessage({ type: 'failed', why: 'render', message: String((err && err.message) || err) });
     job = null;
     return;
   }
   try {
     await sink.open(m.name);
-    // The header first, its own write: the memory sink swaps it at the end.
-    if (sink instanceof MemorySink) sink.write(render.first);
     const out = new Gather(sink);
-    if (!(sink instanceof MemorySink)) await out.add(render.first);
-    else out.total = render.first.length;
+    // FLAC: the header first, its own write: the memory sink swaps it at the
+    // end. Opus has no header to come back to: the file is written once,
+    // front to back.
+    if (render.first) {
+      if (sink instanceof MemorySink) sink.write(render.first);
+      if (!(sink instanceof MemorySink)) await out.add(render.first);
+      else out.total = render.first.length;
+    }
     let posted = 0;
     let more = true;
     while (more) {
       const t0 = performance.now();
       while (performance.now() - t0 < SLICE) {
-        const bytes = render.step();
+        const bytes = maker ? maker.step() : render.step();
         if (!bytes) {
           more = false;
           break;
@@ -264,30 +283,35 @@ async function run(m) {
         posted = now;
         self.postMessage({ type: 'progress', frames: render.frames, expected: render.expectedFrames, bytes: out.total });
       }
+      // The encoder's outputs come between slices; it is not let to queue
+      // more than a few chunks.
+      if (maker) await maker.settle();
       if (more) {
         if (job.pace === 'gentle') await rest(REST * (performance.now() - t0));
         else await yieldNow();
         if (job.cancelled) throw new Cancelled();
       }
     }
-    await out.add(render.last());
+    await out.add(maker ? await maker.last() : render.last());
     await out.flush();
-    await sink.header(render.header().slice());
+    if (!maker) await sink.header(render.header().slice());
     const file = await sink.close();
     self.postMessage({
-      type: 'done', file, bytes: out.total, frames: render.frames, seconds: render.frames / RATE,
+      type: 'done', file, format: render.format, bytes: out.total, frames: render.frames, seconds: render.frames / render.rate,
       took: (performance.now() - started) / 1000, counts: render.counts(), lateEnd: render.lateEnd,
       // Where the core was told to stop, and where the tail's fade began:
       // what a straight render needs to null the file (tools/export.mjs).
       stop: render.stopFrame == null ? null : { frame: render.stopFrame, time: render.endTime }, fade: render.fadeFrom,
     });
   } catch (err) {
+    if (maker) maker.close();
     await sink.remove();
     if (err instanceof Cancelled) self.postMessage({ type: 'cancelled' });
     else if (isSpace(err)) self.postMessage({ type: 'failed', why: 'space', message: String(err.message || err) });
     else if (err && err.name === 'MemoryLimit') self.postMessage({ type: 'failed', why: 'memory', message: err.message });
     else self.postMessage({ type: 'failed', why: 'write', message: String((err && err.message) || err) });
   } finally {
+    if (maker) maker.close();
     job = null;
   }
 }
@@ -296,7 +320,7 @@ class Cancelled extends Error {}
 
 self.onmessage = async (e) => {
   const m = e.data || {};
-  if (m.type === 'hello') self.postMessage({ type: 'hello', private: await privateWorks() });
+  if (m.type === 'hello') self.postMessage({ type: 'hello', private: await privateWorks(), opus: await opusWorks() });
   else if (m.type === 'start' && !job) run(m);
   else if (m.type === 'pace' && job) job.pace = m.pace;
   else if (m.type === 'cancel' && job) job.cancelled = true;

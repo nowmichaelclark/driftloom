@@ -12,6 +12,19 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## Small audio export (item 104c, v184, PR #424)
+
+- **Listen to a Small export.** Save, Share, Audio: pick **small**, a few
+  minutes of a loop you know, and play the file (`.opus`) in the player you
+  use, on your phone and in VLC. Compare with the lossless file of the same
+  loop. It is Opus at a constant 96 kbit/s stereo (64 mono): meant to be the
+  same to your ears; if you hear a difference (a soft top end, a shimmer in
+  the reverb), say where, and the rate goes up (for Mikey's ears). Small
+  shows only where the browser can encode Opus: tested in Chromium and
+  Firefox on desktop; not tested on a phone or in Safari, so say whether the
+  choice shows on the Moto, the tablet and an iPhone (where it doesn't,
+  Lossless is the only one, by design).
+
 ## The listening album
 
 - **Phase 3 Control (brain B1; fixed at v155):** six loops, one album code,

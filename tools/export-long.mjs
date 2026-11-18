@@ -1,10 +1,10 @@
-// The long export's yardstick (queue item 104b): a three-hour lossless
-// export in the real app, in headless Chromium, on tools/autolite.mjs's slow
+// The long export's yardstick (queue item 104b, and 104c for `--format
+// small`): a three-hour lossless (or small, Opus) export in the real app, in headless Chromium, on tools/autolite.mjs's slow
 // case (`?burn=1700`: the Moto-class audio thread, every block the core
 // renders made 1.7 ms slower), while the music plays.
 //
 //   node tools/export-long.mjs [--length 10800] [--burn 1700] [--lite on|off]
-//                              [--keep DIR] [--port 8772]
+//                              [--format lossless|small] [--keep DIR] [--port 8772]
 //
 // The app starts as the Moto ends up in autolite's slow case: "lighter on
 // processor" on (so the export goes gently), unless `--lite off`. There is no
@@ -19,8 +19,11 @@
 // (Diagnostics' engine line), the audio device's fill-ins
 // (AudioContext.playoutStats, where Chromium has it) and the windows in
 // which the audio thread fell behind (the worklet's busy reports). Then the
-// file the app downloaded is checked by tools/export.mjs --file: it decodes
-// and nulls against a straight render of the job the page sent.
+// file the app downloaded is checked by tools/export.mjs --file: lossless,
+// it decodes and nulls against a straight render of the job the page sent;
+// small, it decodes with no warning (ffmpeg), holds exactly the frames the
+// Worker rendered, and is the straight render's samples to the sample
+// within the coding error.
 //
 // The browser runs on a profile on disk, as a phone's does (an incognito
 // profile keeps the private file in memory). Passes when: the export
@@ -48,6 +51,8 @@ const flag = (name, dflt) => {
 const LENGTH = Number(flag('--length', 10800));
 const BURN = Number(flag('--burn', 1700));
 const LITE = flag('--lite', 'on') !== 'off';
+const SMALL = flag('--format', 'lossless') === 'small';
+const RATE = SMALL ? 48000 : 44100;
 const PORT = Number(flag('--port', 8772));
 const KEEP = flag('--keep', null);
 const EVERY = 30000;
@@ -62,7 +67,7 @@ function loadPlaywright() {
   return null;
 }
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.flac': 'audio/flac', '.wav': 'audio/wav', '.png': 'image/png', '.svg': 'image/svg+xml', '.wasm': 'application/wasm', '.woff2': 'font/woff2', '.txt': 'text/plain' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.flac': 'audio/flac', '.opus': 'audio/ogg', '.wav': 'audio/wav', '.png': 'image/png', '.svg': 'image/svg+xml', '.wasm': 'application/wasm', '.woff2': 'font/woff2', '.txt': 'text/plain' };
 function serve(port) {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
@@ -182,13 +187,17 @@ async function main() {
       document.querySelector('[data-stab="share"]').click();
     });
     await sleep(1500);
+    if (SMALL) {
+      const small = await ev(() => { const b = document.querySelector('[data-format="small"]'); if (b && !b.hidden) b.click(); return !!b && !b.hidden; });
+      if (!small) throw new Error('the sheet does not offer Small in this browser');
+    }
     const lengthKey = await ev((len) => { const b = document.querySelector(`#exportLengths [data-length="${len}"]`); if (b) b.click(); return !!b; }, String(LENGTH));
     if (!lengthKey) throw new Error(`the sheet has no length of ${LENGTH} s`);
     const before = await engine();
     const fills0 = await ev(() => window.__long.fills());
     const behind0 = await ev(() => window.__long.behind);
     const download = page.waitForEvent('download', { timeout: 0 });
-    console.log(`export-long: ${LENGTH / 3600} hours of ${LOOPS.shatter.name}, lossless, burn ${BURN} us, lighter on processor ${LITE ? 'on' : 'off'}`);
+    console.log(`export-long: ${LENGTH / 3600} hours of ${LOOPS.shatter.name}, ${SMALL ? 'small (Opus)' : 'lossless'}, burn ${BURN} us, lighter on processor ${LITE ? 'on' : 'off'}`);
     await ev(() => document.getElementById('exportAudio').click());
     const t0 = Date.now();
     const samples = [];
@@ -198,7 +207,7 @@ async function main() {
       const s = await ev(() => ({ progress: window.__long.progress, exports: window.__long.exports, behind: window.__long.behind, busiest: window.__long.busiest, fills: window.__long.fills() }));
       const e = await engine();
       const rss = chromiumRss();
-      const minutes = s.progress ? s.progress.frames / 44100 / 60 : 0;
+      const minutes = s.progress ? s.progress.frames / RATE / 60 : 0;
       samples.push({ at: (Date.now() - t0) / 1000, minutes, rss, late: e.late, fills: s.fills, behind: s.behind });
       console.log(`  ${((Date.now() - t0) / 60000).toFixed(1).padStart(6)} min: ${minutes.toFixed(1).padStart(6)} min exported, memory ${mb(rss)} MB, late ${e.late} missed ${e.missed} dropped ${e.dropped}, fill-ins ${s.fills ?? '-'}, behind ${s.behind - behind0}, busiest ${(100 * s.busiest).toFixed(0)}%`);
       end = s.exports.find((x) => ['done', 'failed', 'cancelled'].includes(x.type)) || null;
@@ -225,13 +234,13 @@ async function main() {
     check('no page errors', errors.length === 0, errors.join('; '));
     if (end.type === 'done') {
       const d = await download;
-      const file = path.join(out, 'export.flac');
+      const file = path.join(out, SMALL ? 'export.opus' : 'export.flac');
       await d.saveAs(file);
       const job = path.join(out, 'export.json');
-      fs.writeFileSync(job, JSON.stringify({ job: start.job, stop: end.stop, fade: end.fade }));
+      fs.writeFileSync(job, JSON.stringify({ job: start.job, stop: end.stop, fade: end.fade, frames: end.frames }));
       check('the download is the file the Worker wrote', fs.statSync(file).size === end.bytes, `${fs.statSync(file).size} bytes`);
       const r = spawnSync('node', [path.join(ROOT, 'tools', 'export.mjs'), '--file', file, '--job', job], { stdio: 'inherit' });
-      check('the file decodes and nulls against a straight render (tools/export.mjs --file)', r.status === 0);
+      check(SMALL ? 'the file decodes with no warning, holds the frames the Worker rendered, and is the straight render within the coding error (tools/export.mjs --file)' : 'the file decodes and nulls against a straight render (tools/export.mjs --file)', r.status === 0);
       if (!KEEP) fs.rmSync(out, { recursive: true, force: true });
     }
   } finally {

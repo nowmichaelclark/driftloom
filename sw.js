@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v183';
+const CACHE = 'driftloom-v184';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -31,10 +31,13 @@ const FILES = [
   // Covers are drawn on a thread of their own (queue item 41).
   './js/covers.js',
   './js/cover-worker.js',
-  // Exporting audio (queue item 104b): the sheet, its Worker and the render.
+  // Exporting audio (queue item 104b): the sheet, its Worker and the render;
+  // and (104c) the small format's encoder and its Ogg writer.
   './js/export.js',
   './js/export-worker.js',
   './js/export-render.js',
+  './js/export-opus.js',
+  './js/ogg.js',
   './js/library.js',
   './js/picks.js',
   './js/piece.js',

@@ -17,11 +17,21 @@
 //
 // Always at full quality (the six-comb mix), whatever "lighter on processor"
 // says: the export is not in real time, so it can afford the better mix (for
-// Mikey's ears). Stereo unless the Mono switch is on; 44.1 kHz, 16-bit.
+// Mikey's ears). Stereo unless the Mono switch is on.
+//
+// Two formats (queue item 104b and 104c), the job's `format`: 'flac' (the
+// default, lossless: 44.1 kHz, 16-bit, the core's own FLAC writer; `step`
+// gives the file's next bytes) and 'opus' (the small one: the core renders at
+// 48 kHz, the rate Opus works at, so nothing is resampled, and `pcm` gives
+// each chunk's samples for the browser's encoder, js/export-opus.js). The
+// track, its end and its tail are the same in both.
 
-// The file's format: CD's rate and depth, which every player reads.
+// The lossless file's format: CD's rate and depth, which every player reads.
 export const RATE = 44100;
 export const BITS = 16;
+// The small format's rate: what Opus takes, and what a browser's own
+// encoder is given.
+export const OPUS_RATE = 48000;
 // Frames a chunk: the most `dl_play_render` makes in stereo in one call.
 // Well under the player's lookahead (a quarter of a second), so the track's
 // end is always heard of before a chunk renders past it.
@@ -70,15 +80,20 @@ export function ask(x, a) {
 
 // Start an instance as the export plays: `job` is
 //   { seed, ask, mutes: [5 booleans], wander, salt, layout: 1 | 2,
-//     track: [kind, count] }   (kind 1 whole passes, 2 bars; never 0)
+//     track: [kind, count], format: 'flac' | 'opus' }
+// (kind 1 whole passes, 2 bars; never 0)
 // in the order the page starts the core that plays (js/player.js's
 // `_begin`: the wander and its salt, the loop, then the mutes and the
 // track), and the loop made at once (`dl_play_ready`: an export has no
 // deadline). Returns { refused, seconds }: the parts of the request the core
 // refused, and how long the track plays, as the core counts it.
+// The rate a job is rendered at.
+export const rateOf = (job) => (job.format === 'opus' ? OPUS_RATE : RATE);
+
 export function begin(x, job) {
-  x.dl_init(RATE);
-  if (!x.dl_quality(1)) throw new Error(`no mix at ${RATE} Hz`);
+  const rate = rateOf(job);
+  x.dl_init(rate);
+  if (!x.dl_quality(1)) throw new Error(`no mix at ${rate} Hz`);
   if (job.layout === 2 && !x.dl_layout(2)) throw new Error('no stereo render');
   x.dl_play_attach(1);
   x.dl_play_wander(job.wander || 0);
@@ -96,22 +111,30 @@ export function begin(x, job) {
   return { refused, seconds };
 }
 
-// The export's render, a chunk at a time, into the core's FLAC encoder: the
-// bytes each step gives are the file's next bytes, written by the caller
-// before the next step (they sit in the instance's memory). Memory is the
-// instance's own and a few views: the same for a minute or three hours.
+// The export's render, a chunk at a time. In 'flac' it goes into the core's
+// FLAC encoder: the bytes each step gives are the file's next bytes, written
+// by the caller before the next step (they sit in the instance's memory). In
+// 'opus' `pcm()` gives the chunk's samples instead, for the browser's
+// encoder. Memory is the instance's own and a few views: the same for a
+// minute or three hours.
 export class Render {
   constructor(x, job) {
     this.x = x;
+    this.format = job.format === 'opus' ? 'opus' : 'flac';
+    this.rate = rateOf(job);
     const { refused, seconds } = begin(x, job);
     this.refused = refused;
     // How long the track plays, as the core counts it; the file is that and
     // its tail.
     this.seconds = seconds;
     this.lanes = x.dl_outputs();
-    const head = x.dl_flac_start(RATE, this.lanes, BITS);
-    if (head < 0) throw new Error('the FLAC writer refused the format');
-    this.first = this.bytes(head);
+    if (this.format === 'flac') {
+      const head = x.dl_flac_start(RATE, this.lanes, BITS);
+      if (head < 0) throw new Error('the FLAC writer refused the format');
+      this.first = this.bytes(head);
+    } else {
+      this.first = null;
+    }
     this.frames = 0;
     // The frame the track ends at (from its End event), when the core
     // stopped deciding, and how long the output has been quiet since.
@@ -121,9 +144,10 @@ export class Render {
     this.quietFrames = 0;
     this.fadeFrom = null;
     this.finished = false;
+    this.owed = false;
     this.lateEnd = 0;
     const most = Math.max(this.seconds == null ? 0 : this.seconds * OVERRUN, (this.seconds || 0) + OVERRUN_MIN);
-    this.limit = Math.ceil(most * RATE);
+    this.limit = Math.ceil(most * this.rate);
     this.views = null;
   }
 
@@ -137,8 +161,8 @@ export class Render {
   // The frames the file will hold, as far as is known: the track and the
   // longest tail. For progress.
   get expectedFrames() {
-    if (this.endFrame != null) return this.endFrame + TAIL_MAX * RATE;
-    return this.seconds == null ? null : Math.ceil((this.seconds + TAIL_MAX) * RATE);
+    if (this.endFrame != null) return this.endFrame + TAIL_MAX * this.rate;
+    return this.seconds == null ? null : Math.ceil((this.seconds + TAIL_MAX) * this.rate);
   }
 
   // The track's end, heard as the core decides it (an End event, up to the
@@ -163,21 +187,29 @@ export class Render {
     // The time as the core gave it (a straight render stops the same way),
     // and the frame it falls on.
     this.endTime = time;
-    this.endFrame = Math.round(time * RATE);
+    this.endFrame = Math.round(time * this.rate);
     // The frames rendered when it stopped (before the next chunk).
     this.stopFrame = this.frames;
     // Should never be: the end heard after it was rendered.
     if (this.endFrame < this.frames) this.lateEnd++;
   }
 
-  // Render the next chunk and encode it. Returns the bytes to append (a view,
-  // possibly empty), or null once the file is finished (then `last` holds
-  // the final bytes and `header()` the finished header).
-  step() {
-    if (this.finished) return null;
+  // Render the next chunk, with the tail's rules, into `planes` (a view a
+  // lane, valid until the next call). Returns how many frames of it are in
+  // the file, or -1 once the file is finished. In 'flac' the planes are the
+  // FLAC writer's input; in 'opus' they are the core's own output.
+  chunk() {
+    // The track's end heard in the last chunk's events (in 'opus', the
+    // samples were the core's own buffer until now).
+    if (this.owed) {
+      this.owed = false;
+      if (!this.finished) this.watch();
+    }
+    if (this.finished) return -1;
     const x = this.x;
+    const rate = this.rate;
     // Past the limit with no end heard: end it here, with the tail's fade.
-    if (this.endFrame == null && this.frames >= this.limit) this.stopAt(this.frames / RATE);
+    if (this.endFrame == null && this.frames >= this.limit) this.stopAt(this.frames / rate);
     const at = x.dl_play_render(CHUNK);
     if (!at) throw new Error('the core would not render');
     const lanes = this.lanes;
@@ -185,18 +217,27 @@ export class Render {
     // memory never grows and the buffers never move.
     if (!this.views || this.views.at !== at) {
       const buffer = x.memory.buffer;
-      const input = x.dl_flac_input();
-      this.views = {
-        at,
-        input: [0, 1].map((c) => new Float32Array(buffer, input + c * 4096 * 4, 4096)),
-        runs: [0, 1].map((c) => new Float32Array(buffer, at + c * CHUNK * 4, CHUNK)),
-      };
+      const runs = [0, 1].map((c) => new Float32Array(buffer, at + c * CHUNK * 4, CHUNK));
+      if (this.format === 'flac') {
+        const input = x.dl_flac_input();
+        this.views = { at, runs, input: [0, 1].map((c) => new Float32Array(buffer, input + c * 4096 * 4, 4096)) };
+      } else {
+        this.views = { at, runs, input: runs };
+      }
     }
     const input = this.views.input;
     let peak = 0;
     for (let c = 0; c < lanes; c++) {
       const run = this.views.runs[c];
       const to = input[c];
+      if (to === run) {
+        for (let i = 0; i < CHUNK; i++) {
+          const v = run[i];
+          const a = v < 0 ? -v : v;
+          if (a > peak) peak = a;
+        }
+        continue;
+      }
       for (let i = 0; i < CHUNK; i++) {
         const v = run[i];
         to[i] = v;
@@ -210,8 +251,8 @@ export class Render {
       const from = this.frames;
       const since = from - this.endFrame;
       if (since >= 0) this.quietFrames = peak < QUIET ? this.quietFrames + CHUNK : 0;
-      if (this.fadeFrom == null && since >= (TAIL_MAX - FADE) * RATE) this.fadeFrom = from;
-      const span = FADE * RATE;
+      if (this.fadeFrom == null && since >= (TAIL_MAX - FADE) * rate) this.fadeFrom = from;
+      const span = FADE * rate;
       if (this.fadeFrom != null) {
         for (let i = 0; i < CHUNK; i++) {
           const g = Math.max(0, 1 - (from + i - this.fadeFrom) / span);
@@ -219,15 +260,43 @@ export class Render {
         }
         frames = Math.min(CHUNK, Math.max(0, this.fadeFrom + span - from));
       }
-      const quietLongEnough = since + CHUNK >= TAIL_MIN * RATE && this.quietFrames >= QUIET_FOR * RATE;
+      const quietLongEnough = since + CHUNK >= TAIL_MIN * rate && this.quietFrames >= QUIET_FOR * rate;
       if (quietLongEnough || (this.fadeFrom != null && from + CHUNK >= this.fadeFrom + span)) this.finished = true;
     }
-    const out = this.bytes(x.dl_flac_write(frames));
+    this.planes = input;
+    return frames;
+  }
+
+  // The chunk's frames are in the file: count them, and hear where the track
+  // ends before the next chunk is rendered (events the chunk made).
+  taken(frames) {
     this.frames += frames;
-    // After the bytes are taken: the events a chunk made say where the
-    // track ends before the next chunk is rendered.
-    if (!this.finished) this.watch();
+    if (this.format === 'flac') {
+      if (!this.finished) this.watch();
+    } else {
+      this.owed = true;
+    }
+  }
+
+  // 'flac': render the next chunk and encode it. Returns the bytes to append
+  // (a view, possibly empty), or null once the file is finished (then `last`
+  // holds the final bytes and `header()` the finished header).
+  step() {
+    const frames = this.chunk();
+    if (frames < 0) return null;
+    const out = this.bytes(this.x.dl_flac_write(frames));
+    this.taken(frames);
     return out;
+  }
+
+  // 'opus': render the next chunk. Returns { planes, frames } (the samples
+  // of each lane, valid until `pcm` is called again; `frames` of them are
+  // the file's), or null once the file is finished.
+  pcm() {
+    const frames = this.chunk();
+    if (frames < 0) return null;
+    this.taken(frames);
+    return { planes: this.planes, frames };
   }
 
   // The last frame's bytes, once `step` has returned its last.

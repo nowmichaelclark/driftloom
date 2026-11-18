@@ -11,6 +11,15 @@
 //                                          tools/export-long.mjs writes both)
 //   node tools/export.mjs --sizes N        N corpus loops for the sizes (24)
 //
+// The small format (queue item 104c) is checked here as far as Node can: the
+// same render at 48 kHz (`format: 'opus'`, the samples the browser's encoder
+// is given) nulls against a straight render at 48 kHz, float for float; and
+// `--file F.opus --job J` checks an Opus file the app exported (the encoder
+// is the browser's, so it is held to what it must keep: the file decodes
+// with no warning, it holds exactly the frames the Worker said, and the
+// samples are the straight render's within a coding error, aligned to the
+// sample). The Ogg writer itself is test/ogg.test.mjs's.
+//
 // The null checks: loops and pieces of each kind the sheet exports (a loop
 // to a length, mono and stereo; the wander and its salt; mutes and edits; a
 // finite piece whole, an arc whole, Endless to a length), each exported to a
@@ -36,9 +45,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { Render, ask, RATE, BITS, TAIL_MAX, FADE } from '../js/export-render.js';
+import { Render, ask, RATE, OPUS_RATE, BITS, TAIL_MAX, FADE } from '../js/export-render.js';
 import { decodeSong } from '../js/share.js';
 import { askOf, LAYERS } from '../js/request.js';
 import { LOOPS } from './stalls.mjs';
@@ -54,11 +63,13 @@ const SIZES = Number(flag('--sizes', 24));
 const FILE = flag('--file', null);
 const JOB = flag('--job', null);
 // What js/export.js plans a second with, by lanes (BYTES_PER_SECOND).
-const PLANNED = (() => {
+const planned = (name) => {
   const src = fs.readFileSync(path.join(ROOT, 'js', 'export.js'), 'utf8');
-  const m = /BYTES_PER_SECOND = \{ 1: (\d+), 2: (\d+) \}/.exec(src);
+  const m = new RegExp(`\\b${name} = \\{ 1: (\\d+), 2: (\\d+) \\}`).exec(src);
   return m ? { 1: Number(m[1]), 2: Number(m[2]) } : null;
-})();
+};
+const PLANNED = planned('BYTES_PER_SECOND');
+const PLANNED_SMALL = planned('SMALL_BYTES_PER_SECOND');
 
 const QUANTUM = 128;
 const MODULE = new WebAssembly.Module(fs.readFileSync(path.join(ROOT, 'js', 'dlplayer.wasm')));
@@ -104,9 +115,9 @@ function exportTo(job, file, sample = null) {
 // with the same commands, and the core told to stop where the export told
 // it (after the chunk in which it heard the track's end). A function that
 // gives the next block's lanes (views, valid until the next call).
-function straight(job, stop) {
+function straight(job, stop, rate = RATE) {
   const x = instance();
-  x.dl_init(RATE);
+  x.dl_init(rate);
   x.dl_quality(1);
   if (job.layout === 2) x.dl_layout(2);
   x.dl_play_attach(1);
@@ -223,8 +234,7 @@ function jobOf(spec, { layout = 2, wander = 1, salt = 0, track, mutes = [] } = {
   return { seed: spec.seed >>> 0, ask: askOf(spec), mutes: LAYERS.map((l) => mutes.includes(l) || !!(spec.mutes && spec.mutes[l])), wander, salt, layout, track };
 }
 
-function nulls() {
-  console.log(`export: the null checks (the export's render against a straight one; decoder ${DECODER})`);
+function cases() {
   const shatter = specOf(LOOPS.shatter.code);
   const edited = { ...specOf(LOOPS.cinder.code) };
   edited.tone = { warmth: 0.13, space: 0.77, wobble: 0.21 };
@@ -232,7 +242,7 @@ function nulls() {
   const piece = { ...specOf(LOOPS.piece.code), length: 48 };
   const arc = { ...specOf(LOOPS.arc.code), length: 96 };
   const endless = specOf(LOOPS.endless.code);
-  const cases = [
+  return [
     ['a loop to 16 bars, stereo', jobOf(shatter, { track: [2, 16] })],
     ['a loop to 8 bars, mono, wandering far with a salt', jobOf(shatter, { layout: 1, wander: 2.4, salt: 777, track: [2, 8] })],
     ['a loop to two passes, its drums muted, its tone and tempo edited', jobOf(edited, { mutes: ['drums'], track: [1, 2] })],
@@ -240,7 +250,11 @@ function nulls() {
     ['an arc of 96 bars whole', jobOf(arc, { track: [1, 1] })],
     ['Endless to 24 bars', jobOf(endless, { track: [2, 24] })],
   ];
-  for (const [label, job] of cases) {
+}
+
+function nulls() {
+  console.log(`export: the null checks (the export's render against a straight one; decoder ${DECODER})`);
+  for (const [label, job] of cases()) {
     const file = path.join(tmp, 'case.flac');
     const t0 = process.hrtime.bigint();
     const out = exportTo(job, file);
@@ -257,6 +271,141 @@ function nulls() {
     if (r.refused) fail(`${label}: the core refused ${r.refused} parts of the request`);
     console.log(`  ${n.differ ? 'FAIL' : 'pass'}  ${label}: ${(r.endFrame / RATE).toFixed(2)} s and a ${tail.toFixed(2)} s tail${out.fade != null ? ' (faded)' : ''}, ${out.bytes} bytes, nulls (${n.frames} frames), ${(r.frames / RATE / took).toFixed(1)}x real time`);
   }
+}
+
+// The small format's render (js/export-render.js, 'opus'): the samples the
+// browser's encoder is given, at 48 kHz, nulled float for float against a
+// straight render of the same job (the core block by block, told to stop
+// where the export stopped it, the tail's fade applied as the export does),
+// with the same length and tail rules as the lossless render.
+function smallNulls() {
+  console.log('\nexport: the small format\'s render (48 kHz samples for the encoder) against a straight one');
+  for (const [label, job0] of cases()) {
+    const job = { ...job0, format: 'opus' };
+    const lanes = job.layout === 2 ? 2 : 1;
+    const x = instance();
+    const r = new Render(x, job);
+    // Everything the encoder would be given, kept (the cases are minutes).
+    const got = [];
+    let p;
+    while ((p = r.pcm())) {
+      const part = Array.from({ length: lanes }, (_, c) => p.planes[c].slice(0, p.frames));
+      got.push(part);
+    }
+    if (r.endFrame == null) fail(`${label}: the track's end was never heard`);
+    const next = straight(job, r.stopFrame == null ? null : { frame: r.stopFrame, time: r.endTime }, OPUS_RATE);
+    let block = null;
+    let used = 128;
+    let at = 0;
+    let differ = 0;
+    let first = null;
+    for (const part of got) {
+      for (let i = 0; i < part[0].length; i++, at++) {
+        if (used === 128) {
+          block = next();
+          used = 0;
+        }
+        const g = r.fadeFrom == null || at < r.fadeFrom ? 1 : Math.max(0, 1 - (at - r.fadeFrom) / (FADE * OPUS_RATE));
+        for (let c = 0; c < lanes; c++) {
+          let v = block[c][used];
+          if (g !== 1) v = Math.fround(v * g);
+          if (part[c][i] !== v && !(Number.isNaN(v) && Number.isNaN(part[c][i]))) {
+            differ++;
+            if (first == null) first = { frame: at, lane: c, got: part[c][i], want: v };
+          }
+        }
+        used++;
+      }
+    }
+    const tail = (r.frames - r.endFrame) / OPUS_RATE;
+    const counts = r.counts();
+    if (differ) fail(`${label}: ${differ} samples differ from the straight render at 48 kHz, the first ${JSON.stringify(first)}`);
+    if (r.rate !== OPUS_RATE || r.first !== null) fail(`${label}: not the small format's render (${r.rate} Hz)`);
+    if (r.seconds != null && Math.abs(r.endFrame / OPUS_RATE - r.seconds) > 1) fail(`${label}: it ends at ${(r.endFrame / OPUS_RATE).toFixed(2)} s, the core counted ${r.seconds.toFixed(2)} s`);
+    if (!(tail >= 0 && tail <= TAIL_MAX + 0.1)) fail(`${label}: a tail of ${tail.toFixed(2)} s`);
+    if (r.lateEnd) fail(`${label}: the end was heard after it was rendered`);
+    if (counts.late || counts.missed || counts.dropped) fail(`${label}: late ${counts.late}, missed ${counts.missed}, dropped ${counts.dropped}`);
+    if (r.refused) fail(`${label}: the core refused ${r.refused} parts of the request`);
+    console.log(`  ${differ ? 'FAIL' : 'pass'}  ${label}: ${(r.endFrame / OPUS_RATE).toFixed(2)} s and a ${tail.toFixed(2)} s tail${r.fadeFrom != null ? ' (faded)' : ''}, ${r.frames} frames at 48 kHz, nulls`);
+  }
+}
+
+// An Opus file the app exported, against a straight render of its job: it
+// decodes with no warning (ffmpeg), holds exactly the frames the Worker said
+// it rendered, and its samples are the straight render's, aligned to the
+// sample (the best lag is 0) within what a coding error allows (a signal to
+// error ratio of at least 12 dB over the whole file; 96 kbit/s stereo gives
+// about 24 dB). Streamed: a three-hour file is never held whole.
+async function opusFileCheck(file, { job, stop, fade }) {
+  const lanes = job.layout === 2 ? 2 : 1;
+  const head = fs.readFileSync(file).subarray(0, 4);
+  if (head.toString('latin1') !== 'OggS') throw new Error(`${file}: not Ogg`);
+  const next = straight({ ...job, format: 'opus' }, stop, OPUS_RATE);
+  // The straight render a frame at a time, the tail's fade as the export
+  // made it: frame i of it, with the one before and the one after.
+  let block = null;
+  let used = 128;
+  let made = 0;
+  const make = () => {
+    if (used === 128) {
+      block = next();
+      used = 0;
+    }
+    const g = fade == null || made < fade ? 1 : Math.max(0, 1 - (made - fade) / (FADE * OPUS_RATE));
+    const f = new Float32Array(lanes);
+    for (let c = 0; c < lanes; c++) {
+      const v = block[c][used];
+      f[c] = g !== 1 ? Math.fround(v * g) : v;
+    }
+    used++;
+    made++;
+    return f;
+  };
+  let prev = new Float32Array(lanes);
+  let cur = make();
+  let after = make();
+  // Signal and error energy, decoded frame i against straight frame i + lag.
+  const lags = [-1, 0, 1];
+  const sig = [0, 0, 0];
+  const err = [0, 0, 0];
+  const ff = spawn('ffmpeg', ['-v', 'warning', '-i', file, '-f', 'f32le', '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let warnings = '';
+  ff.stderr.on('data', (d) => { warnings += d; });
+  let rest = Buffer.alloc(0);
+  let decoded = 0;
+  for await (const chunk of ff.stdout) {
+    rest = rest.length ? Buffer.concat([rest, chunk]) : chunk;
+    const n = Math.floor(rest.length / (4 * lanes));
+    for (let k = 0; k < n; k++, decoded++) {
+      const sets = [prev, cur, after];
+      for (let c = 0; c < lanes; c++) {
+        const b = rest.readFloatLE(k * 4 * lanes + 4 * c);
+        for (let j = 0; j < 3; j++) {
+          const a = sets[j][c];
+          sig[j] += a * a;
+          err[j] += (a - b) ** 2;
+        }
+      }
+      prev = cur;
+      cur = after;
+      after = make();
+    }
+    rest = rest.subarray(n * 4 * lanes);
+  }
+  await new Promise((resolve) => ff.on('close', resolve));
+  return { decoded, warnings: warnings.trim(), snr: { [-1]: 10 * Math.log10(sig[0] / err[0]), 0: 10 * Math.log10(sig[1] / err[1]), 1: 10 * Math.log10(sig[2] / err[2]) } };
+}
+
+async function smallFileCheck() {
+  const { job, stop, fade, frames } = JSON.parse(fs.readFileSync(JOB, 'utf8'));
+  console.log(`export: ${FILE} (Opus) against a straight render of its job`);
+  const r = await opusFileCheck(FILE, { job, stop, fade });
+  if (r.warnings) fail(`ffmpeg warned: ${r.warnings}`);
+  if (frames != null && r.decoded !== frames) fail(`${r.decoded} frames decoded, the Worker said ${frames}`);
+  const best = Object.entries(r.snr).sort((a, b) => b[1] - a[1])[0];
+  if (best[0] !== '0') fail(`the samples line up best at a lag of ${best[0]}, not 0 (${JSON.stringify(r.snr)})`);
+  if (!(r.snr[0] >= 12)) fail(`the samples are ${r.snr[0].toFixed(1)} dB over the coding error, 12 dB is the least`);
+  console.log(`  ${failures ? 'FAIL' : 'pass'}  ${r.decoded} frames (${(r.decoded / OPUS_RATE / 60).toFixed(1)} min): decodes with no warning, aligned to the sample, ${r.snr[0].toFixed(1)} dB over the coding error`);
 }
 
 // The tempo of the loop of `seed`, as the core draws it.
@@ -296,6 +445,8 @@ function sizes() {
   const med = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   for (const layout of [1, 2]) {
     const name = layout === 2 ? 'stereo' : 'mono';
+    const small = PLANNED_SMALL ? PLANNED_SMALL[layout] : null;
+    if (small) console.log(`  ${name}: Small (Opus, a constant ${layout === 2 ? 96 : 64} kbit/s) takes ${small} bytes a second: the median lossless file is ${(med(all[layout]) / small).toFixed(1)} times that, the largest ${(most[layout] / small).toFixed(1)} times`);
     console.log(`  ${name}: median ${Math.round(med(all[layout]))} bytes a second, the most ${Math.round(most[layout])} (js/export.js plans ${PLANNED ? PLANNED[layout] : '?'}; a WAV is ${RATE * 2 * layout})`);
     if (PLANNED && most[layout] > PLANNED[layout]) fail(`${name}: a loop took ${Math.round(most[layout])} bytes a second, more than the ${PLANNED[layout]} js/export.js plans`);
   }
@@ -345,10 +496,12 @@ function fileCheck() {
 }
 
 try {
-  if (!DECODER) throw new Error('no reference decoder: install flac (or ffmpeg)');
-  if (FILE && JOB) fileCheck();
+  if (!DECODER && !(FILE && FILE.endsWith('.opus'))) throw new Error('no reference decoder: install flac (or ffmpeg)');
+  if (FILE && JOB && FILE.endsWith('.opus')) await smallFileCheck();
+  else if (FILE && JOB) fileCheck();
   else {
     nulls();
+    smallNulls();
     if (SIZES > 0) sizes();
     if (HOURS > 0) long();
   }

@@ -51,8 +51,10 @@
 //                       core's own and leaning on it; held again after a
 //                       reload
 //   export MIDI         a MIDI file
-//   export audio        (queue item 104b) the sheet: Lossless, Small hidden,
-//                       the lengths for a loop that plays on; a minute
+//   export audio        (queue item 104b and 104c) the sheet: Lossless and,
+//                       where the browser can encode Opus, Small (hidden
+//                       where it can't: tested with the encoder taken
+//                       away), the lengths for a loop that plays on; a minute
 //                       exported to the file chosen (the save picker,
 //                       answered here with a file in the site's private
 //                       file system), written as it is made: a FLAC that
@@ -65,7 +67,13 @@
 //                       made small while it runs) ends with the plain
 //                       message, no file, the music playing; and where
 //                       there is no save picker, the private file and a
-//                       download at the end
+//                       download at the end. Small (104c) has its own: a
+//                       minute to the file chosen (an Ogg file, every page's
+//                       checksum good, the pre-skip and the last granule
+//                       position giving exactly the frames the Worker
+//                       rendered, the browser decoding it to that length),
+//                       its size near the constant bit rate, Cancel, the
+//                       private file and a disk that fills
 //   share code          the code decodes to the loop the core plays
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
@@ -96,6 +104,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { decodeSong } from '../js/share.js';
 import { LOOPS } from './stalls.mjs';
+import { pages } from './ogg-read.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -209,7 +218,7 @@ const HOOK = `(() => {
       this.addEventListener('message', (e) => {
         const m = e.data;
         if (m && m.type === 'progress') R.exportProgress++;
-        else if (m) R.exports.push({ type: m.type, why: m.why, bytes: m.bytes, frames: m.frames, seconds: m.seconds, took: m.took, counts: m.counts, private: m.private });
+        else if (m) R.exports.push({ type: m.type, format: m.format, opus: m.opus, why: m.why, bytes: m.bytes, frames: m.frames, seconds: m.seconds, took: m.took, counts: m.counts, private: m.private });
       });
       const post = this.postMessage;
       this.postMessage = (m, t) => {
@@ -218,9 +227,9 @@ const HOOK = `(() => {
       };
     }
   };
-  window.showSaveFilePicker = async () => {
+  window.showSaveFilePicker = async (opts) => {
     const d = await navigator.storage.getDirectory();
-    R.picked = await d.getFileHandle('picked.flac', { create: true });
+    R.picked = await d.getFileHandle(String(opts && opts.suggestedName).endsWith('.opus') ? 'picked.opus' : 'picked.flac', { create: true });
     return R.picked;
   };
   R.opfs = async () => {
@@ -324,6 +333,30 @@ function streaminfo(b) {
   };
 }
 
+// An exported Ogg Opus file's facts (queue item 104c): every page's checksum
+// is verified (the reader throws on one that fails); the headers, the end of
+// stream and the granule positions as RFC 7845 has them.
+function oggFacts(bytes) {
+  const ps = pages(bytes);
+  const head = ps[0] && ps[0].packets[0];
+  const tags = ps[1] && ps[1].packets[0];
+  const ascii = (b, n) => String.fromCharCode(...b.slice(0, n));
+  if (!head || ascii(head, 8) !== 'OpusHead') return null;
+  const preSkip = head[10] | (head[11] << 8);
+  const last = ps[ps.length - 1];
+  return {
+    pages: ps.length,
+    channels: head[9],
+    preSkip,
+    beginning: ps[0].flags === 2,
+    tagged: !!tags && ascii(tags, 8) === 'OpusTags' && ps[1].flags === 0,
+    end: (last.flags & 4) === 4 && ps.slice(0, -1).every((p) => (p.flags & 4) === 0),
+    ordered: ps.every((p, i) => p.sequence === i && (i < 3 || p.granule >= ps[i - 1].granule)),
+    frames: last.granule - preSkip,
+    packets: ps.slice(2).reduce((n, p) => n + p.packets.length, 0),
+  };
+}
+
 // The audio export's rows (queue item 104b), on the page playing.
 async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const origin = `http://127.0.0.1:${PORT}`;
@@ -370,11 +403,11 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     }
   };
 
-  console.log('\n  export audio (queue item 104b)');
+  console.log('\n  export audio (queue items 104b and 104c)');
   await share();
   await sleep(1200);
   let s = await sheet();
-  row('export audio: the sheet offers Lossless, Small hidden, and the lengths for a loop that plays on', s.choose && s.lossless && !s.small && s.lengths.length === 7 && s.lengths.includes('600*') && /^About \d+ MB\./.test(s.about), `${s.lengths.join(' ')}; ${s.about}`);
+  row('export audio: the sheet offers Lossless and Small (this browser can encode Opus), and the lengths for a loop that plays on', s.choose && s.lossless && s.small && s.lengths.length === 7 && s.lengths.includes('600*') && /^About \d+ MB\./.test(s.about), `${s.lengths.join(' ')}; ${s.about}`);
 
   // A minute, both speeds.
   const speeds = {};
@@ -437,6 +470,56 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await clickId('exportOk');
   await probe();
 
+  // Small (104c): a minute to the file chosen, then Cancel.
+  await share();
+  await ev(() => document.querySelector('[data-format="small"]').click());
+  await ev(() => document.querySelector('#exportLengths [data-length="60"]').click());
+  s = await sheet();
+  const smallAbout = s.about;
+  from = await count();
+  const progress0 = await ev(() => window.__rows.exportProgress);
+  await clickId('exportAudio');
+  const small = await said(['done', 'failed', 'cancelled'], from, 240000);
+  const smallMeanwhile = await playing();
+  const smallStart = await ev(() => window.__rows.exportStart);
+  const smallGot = await ev(async () => {
+    const f = await window.__rows.picked.getFile();
+    const b = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    let decoded;
+    try { decoded = (await new OfflineAudioContext(2, 1, 48000).decodeAudioData(b.buffer.slice(0))).length; } catch (e) { decoded = String(e); }
+    return { name: f.name, size: f.size, base64: bin ? btoa(bin) : '', decoded };
+  });
+  let ogg = null;
+  let oggWhy = '';
+  try { ogg = oggFacts(new Uint8Array(Buffer.from(smallGot.base64, 'base64'))); } catch (e) { oggWhy = e.message; }
+  s = await sheet();
+  const smallMoved = (await ev(() => window.__rows.exportProgress)) - progress0;
+  const smallLine = await lateLine();
+  const rate = small && small.seconds ? smallGot.size / small.seconds : 0;
+  row('export audio (small): a minute to the file chosen, written as it went, an Ogg Opus file whose end and length are the Worker\'s frames to the sample, the browser decodes it, the music on and nothing late',
+    small && small.type === 'done' && small.format === 'opus' && smallStart.sink === 'handle' && smallStart.job.format === 'opus' && /\.opus$/.test(smallStart.name) && smallGot.name === 'picked.opus' && smallGot.size === small.bytes
+    && ogg && ogg.beginning && ogg.tagged && ogg.end && ogg.ordered && ogg.channels === 2 && ogg.preSkip > 0 && ogg.frames === small.frames && smallGot.decoded === small.frames
+    && small.seconds >= 60 && small.seconds < 60 + 30 && smallMoved >= 2 && !small.counts.late && !small.counts.missed && !small.counts.dropped && s.done && smallMeanwhile && nothingLate(smallLine),
+    `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
+  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /^About \d+ MB\./.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
+  await clickId('exportDoneBtn');
+  await share();
+  await ev(() => document.querySelector('#exportLengths [data-length="600"]').click());
+  from = await count();
+  await clickId('exportAudio');
+  await sleep(1500);
+  await clickId('exportCancel');
+  m = await said(['cancelled', 'done', 'failed'], from, 30000);
+  s = await sheet();
+  files = await ev(() => window.__rows.opfs());
+  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && /Nothing was saved/.test(s.why) && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
+  await clickId('exportOk');
+  await ev(() => document.querySelector('[data-format="lossless"]').click());
+  await probe();
+
   // The private file, and a disk that fills while it is written: another
   // tab, with no save picker (as Android's Chrome and Safari have none).
   const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
@@ -497,8 +580,96 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const tl = await tev(async () => { let w = 0; for (let i = 0; i < 15; i++) { w = Math.max(w, window.__rows.level()); await new Promise((r) => setTimeout(r, 100)); } return w; });
   row('export audio: a disk that fills mid-export ends with the plain message, no file left, the music playing', end && end.type === 'failed' && end.why === 'space' && /ran out of space/.test(why) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.flac')) && tp && tp.player.state === 3 && tl > 1e-4,
     `${end && end.type} ${end && end.why || ''}; ${why}; files ${files.join(',') || 'none'}`);
+  await tev(() => document.getElementById('exportOk').click());
+
+  // Small in the same tab: the private file, and a disk that fills.
+  await tev(() => document.querySelector('[data-format="small"]').click());
+  await tev(() => document.querySelector('#exportLengths [data-length="60"]').click());
+  const blobs2 = await tev(() => window.__rows.blobs.length);
+  const n1 = (await tev(() => window.__rows.exports)).length;
+  await tev(() => document.getElementById('exportAudio').click());
+  t0 = Date.now();
+  let done2 = null;
+  while (Date.now() - t0 < 240000 && !done2) {
+    await sleep(500);
+    done2 = (await tev(() => window.__rows.exports)).slice(n1).find((x) => x.type === 'done' || x.type === 'failed');
+  }
+  const got2 = await tev(async (n) => {
+    const b = window.__rows.blobs[n];
+    if (!b) return null;
+    const u = new Uint8Array(await b.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000));
+    return { size: b.size, base64: btoa(bin) };
+  }, blobs2);
+  const start2 = await tev(() => window.__rows.exportStart);
+  let ogg2 = null;
+  try { ogg2 = got2 && oggFacts(new Uint8Array(Buffer.from(got2.base64, 'base64'))); } catch { ogg2 = null; }
+  row('export audio (small), with no save picker: written to the private file as it went, an Ogg Opus file downloaded at the end', done2 && done2.type === 'done' && done2.format === 'opus' && start2.sink === 'private' && got2 && got2.size === done2.bytes && ogg2 && ogg2.end && ogg2.ordered && ogg2.frames === done2.frames,
+    `${done2 && done2.type} ${done2 && done2.why || ''}, ${got2 && got2.size} bytes, ${ogg2 ? ogg2.frames : '?'} frames`);
+  await tev(() => document.getElementById('exportDoneBtn').click());
+  await tev(() => document.querySelector('#exportLengths [data-length="3600"]').click());
+  const n2 = (await tev(() => window.__rows.exports)).length;
+  await tev(() => document.getElementById('exportAudio').click());
+  t0 = Date.now();
+  while (Date.now() - t0 < 30000 && (await tev(() => window.__rows.exportProgress)) < 6) await sleep(250);
+  const used2 = await tev(async () => (await navigator.storage.estimate()).usage);
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: used2 + 128 * 1024 });
+  t0 = Date.now();
+  let end2 = null;
+  while (Date.now() - t0 < 120000 && !end2) {
+    await sleep(500);
+    end2 = (await tev(() => window.__rows.exports)).slice(n2).find((x) => ['done', 'failed', 'cancelled'].includes(x.type));
+  }
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin });
+  files = await tev(() => window.__rows.opfs());
+  const why2 = await tev(() => document.getElementById('exportWhy').textContent);
+  const tp2 = await tev(() => window.__rows.probe());
+  row('export audio (small): a disk that fills mid-export ends with the plain message, no file left, the music playing', end2 && end2.type === 'failed' && end2.why === 'space' && /ran out of space/.test(why2) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.opus')) && tp2 && tp2.player.state === 3,
+    `${end2 && end2.type} ${end2 && end2.why || ''}; ${why2}; files ${files.join(',') || 'none'}`);
   row('export audio: no page errors in the tab with no save picker', bad.length === 0, bad.join('; '));
   await tab.close();
+
+  // A browser with no Opus encoder (the Worker's taken away: the sheet's
+  // choice is the Worker's word; what the page posts before the Worker's
+  // module has loaded is kept and handed to it): Small is not offered,
+  // Lossless is.
+  const bare = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bareBad = [];
+  bare.on('pageerror', (e) => bareBad.push(e.message));
+  await bare.addInitScript(HOOK);
+  await bare.addInitScript(() => {
+    const Real = window.Worker;
+    window.Worker = class extends Real {
+      constructor(url, options) {
+        let u = url;
+        if (String(url).includes('export-worker')) {
+          const abs = new URL(String(url), location.href).href;
+          u = URL.createObjectURL(new Blob([`self.AudioEncoder = undefined; const early = []; const keep = (e) => early.push(e); self.addEventListener('message', keep); await import(${JSON.stringify(abs)}); self.removeEventListener('message', keep); for (const e of early) self.onmessage(e);`], { type: 'text/javascript' }));
+        }
+        super(u, options);
+      }
+    };
+  });
+  await bare.goto(`${origin}/`);
+  await bare.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  await bare.evaluate((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await bare.evaluate(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await bare.evaluate(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+  });
+  await sleep(1500);
+  const seen = await bare.evaluate(() => ({
+    lossless: !document.querySelector('[data-format="lossless"]').hidden,
+    small: !document.querySelector('[data-format="small"]').hidden,
+    go: !document.getElementById('exportAudio').disabled,
+    about: document.getElementById('exportAbout').textContent,
+  }));
+  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^About \d+ MB\./.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
+  await bare.close();
 }
 
 // The app's own rows (`--app`, session 27), on the page playing.

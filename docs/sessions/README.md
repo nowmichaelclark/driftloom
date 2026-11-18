@@ -83,7 +83,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | yes, 2026-11-18 (#419) |
 | | | **Export** | | | | |
 | 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | B2 (19 is in) | 17, 18, 22, 24, 26 | yes, 2026-11-18 (#416) |
-| 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27 | |
+| 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27  yes, 2026-11-18 (#424) |
 | | | **Codes** | | | | |
 | 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | B2 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-17 (#412) |
 | 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | 22 | 21, 26, 27, 28, 29 | |
