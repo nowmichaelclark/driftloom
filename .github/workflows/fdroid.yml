@@ -273,7 +273,7 @@ jobs:
         working-directory: ${{ matrix.dir }}/android
         run: |
           java -version
-          ./gradlew --no-daemon --console=plain assembleRelease
+          ./gradlew --no-daemon --console=plain --stacktrace assembleRelease
           ls -l app/build/outputs/apk/release/
 
       - name: what is in the APK

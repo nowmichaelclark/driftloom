@@ -20,7 +20,7 @@ pkg=$(sed -n 's/^driftloom\.applicationId=//p' "$here/gradle.properties")
 . "$here/emulator-lib.sh"
 boot_emulator
 
-fail() { echo "FAIL $*" >&2; exit 1; }
+fail() { failure="$*"; echo "FAIL $*" >&2; exit 1; }
 
 adb install -r -g "$apk"
 flags=$(adb shell dumpsys package "$pkg" | grep -m1 -E '^\s*flags=' || true)
@@ -50,7 +50,11 @@ wait_for() { # what, label
   n=0
   until pos=$(center "$2"); do
     n=$((n + 1))
-    [ "$n" -gt 40 ] && { adb exec-out screencap -p >"${shot:-/tmp/release-fail.png}" || true; fail "the page never showed \"$2\" ($1)"; }
+    if [ "$n" -gt 40 ]; then
+      adb exec-out screencap -p >"${shot:-/tmp/release-fail.png}" || true
+      tree=$(adb exec-out cat /sdcard/ui.xml 2>/dev/null | tr '>' '\n' | grep -o -E '(text|content-desc)="[^"]+"' | sort -u | head -40 | tr '\n' ';' || true)
+      fail "the page never showed \"$2\" ($1); the accessibility tree held: $tree"
+    fi
     sleep 3
   done
   echo "ok   $1 (\"$2\" at $pos)"

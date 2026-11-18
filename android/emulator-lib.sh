@@ -55,5 +55,7 @@ boot_emulator() {
 
 stop_emulator() {
   timeout 20 adb logcat -d -t 400 2>/dev/null | grep -E "chromium|WebView|AndroidRuntime|DEBUG|driftloom|app.loops|AAudio" | tail -80 || true
+  # What the calling script said went wrong, after the log, where it is read.
+  [ -z "${failure:-}" ] || echo "FAILED: $failure"
   kill "$emu" 2>/dev/null || true
 }
