@@ -312,10 +312,22 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
     for bit playing's on six loops, the audio within -12 dB of playing,
     explained by twang's strings' and the organ's free-running phase); 20
     (#416, v181: green on every check, the three-hour export included).
-    **Running:** 18 (long pieces on screen, Sonnet) and 27 (Android's
-    bridge; first fixes `android/smoke.mjs`'s flake). **Next:** 21 when a
-    place frees (beside 18 or 27), 23 once 18 is done (it shares
-    `js/library.js`), then 24; 28 after 27 and 21; 29; B4 after 18, 21, 24.
+    Then **merged and checked** 27 (#420, v182: the page drives the native
+    core, all 35 rows on the emulator, the page's thread blocked 5 s and
+    the music plays on, the smoke job's races fixed: ten of ten) and 18
+    (#419, v183: rows ten in a row 48 of 48, views 0 long tasks with a
+    32,768-bar piece open, screenshots; the export's three-hour job still
+    pending at its merge, not its yardstick). Mikey installed #420's APK:
+    "it works perfectly" (#423). Mikey's answers #421: a loop's name in its
+    code (23's first PR, in the core), the sheet's words (21 makes the two
+    changes), the export's ending kept. **Missed by the brain:** #414 moved
+    twang loops without updating the nightly's stored render hashes; the
+    nightly went red (b04c0df: three golden-render targets, and holes 2/2
+    on corpus piece #27); 23 fixes it first, its own PR. **Running (as of
+    2026-11-18):** 21 (#424, small export, resumed after a usage limit;
+    v184) and 23 (the nightly fix, then the name in codes, then the app).
+    **Next:** 28 after 21 (the APK check is done), 24 after 23, then 29;
+    B4 after 21 and 24.
     Sessions started from a report's turn come to Mikey as cards (the app
     starts one only on his words here); sessions end a turn while CI runs,
     so the brain wakes them to merge.
