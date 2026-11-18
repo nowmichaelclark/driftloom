@@ -273,7 +273,17 @@ jobs:
         working-directory: ${{ matrix.dir }}/android
         run: |
           java -version
-          ./gradlew --no-daemon --console=plain --stacktrace assembleRelease
+          # Maven Central and Google's repository sometimes refuse a plugin or
+          # a library to a busy runner ("plugin not found" after 20 s): the
+          # build retries the download longer, and is run again up to twice
+          # (a real failure fails three times, the same way).
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon --console=plain \
+              -Dorg.gradle.internal.repository.max.retries=8 -Dorg.gradle.internal.repository.initial.backoff=2000 \
+              assembleRelease && break
+            [ "$attempt" = 3 ] && exit 1
+            echo "attempt $attempt failed; again in 30 s"; sleep 30
+          done
           ls -l app/build/outputs/apk/release/
 
       - name: what is in the APK

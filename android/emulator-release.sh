@@ -32,7 +32,7 @@ adb logcat -c
 adb shell am start -W -n "$pkg/app.loops.MainActivity" >/dev/null
 
 # The accessibility tree, as text: the page's buttons are in it by their
-# labels. Prints "x y" for the center of the node whose label is $1.
+# labels (as text or content-desc). Prints "x y" for the center of the node whose label is $1.
 center() {
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || return 1
   adb exec-out cat /sdcard/ui.xml | node -e '
@@ -40,7 +40,8 @@ center() {
     const want = process.argv[1];
     for (const m of xml.matchAll(/<node [^>]*>/g)) {
       const n = m[0];
-      if (!n.includes(`content-desc="${want}"`)) continue;
+      // The WebView's accessibility tree gives the button's label as its text.
+      if (!n.includes(`text="${want}"`) && !n.includes(`content-desc="${want}"`)) continue;
       const b = /bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(n);
       if (b) { console.log(`${(+b[1] + +b[3]) >> 1} ${(+b[2] + +b[4]) >> 1}`); process.exit(0); }
     }
