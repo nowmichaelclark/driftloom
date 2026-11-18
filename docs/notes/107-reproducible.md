@@ -52,7 +52,24 @@ APK against the one F-Droid's own tooling built from a clean clone (the job
 differ, the strings and sections of a differing library, and diffoscope's
 report, and fails the job.
 
-RESULT
+**Result** (commit 3a91fe1, CI run 44389330525; the commit before it failed
+with the differences above): every release APK built on machine a is the same
+bytes as the one built on machine b, in other directories and another time
+zone, and the universal one is the same bytes as F-Droid's own build of it from
+a clean clone.
+
+| APK | a against b | sha-256 (first 16) | bytes |
+|---|---|---|---|
+| arm64-v8a | same | `6db04a55a97f8257` | 2282394 |
+| armeabi-v7a | same | `a09f90f0714b7516` | 2004556 |
+| x86_64 | same | `1cbfc948f4548592` | 2631695 |
+| universal | same | `d974e11f7c0d2b3f` | 5335207 |
+| universal, a against F-Droid's build | same | `d974e11f7c0d2b3f` | 5335207 |
+
+What this does not cover: a different machine type or a newer base image (the
+runners are `ubuntu-24.04`, F-Droid's build is in its buildserver image, and
+both agreed), and a new Rust, NDK, AGP or JDK, which move the bytes on their
+own: bump them together and let this job say whether they still agree.
 
 ## Who signs
 

@@ -65,7 +65,7 @@ set -- $pos
 adb shell input tap "$1" "$2"
 wait_for "Play was pressed and the button became Pause" "Pause"
 
-playing() { adb shell dumpsys media_session | grep -c 'state=PlaybackState {state=3' || true; }
+playing() { adb shell dumpsys media_session | grep -cE 'state=PlaybackState \{state=(3|PLAYING\(3\))' || true; }
 n=0
 until [ "$(playing)" -ge 1 ]; do
   n=$((n + 1))
