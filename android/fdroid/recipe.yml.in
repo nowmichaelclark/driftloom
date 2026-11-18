@@ -22,9 +22,13 @@ Builds:
     versionCode: @VERSION_CODE@
     commit: @COMMIT@
     subdir: android
+    sudo:
+      - apt-get update
+      - apt-get install -y gcc
     gradle:
       - yes
     output: app/build/outputs/apk/release/*-universal-release-unsigned.apk
+    # (sudo: Rust's build scripts, the core's build.rs, link with the host's cc.)
     # F-Droid builds everything from source and refuses what is prebuilt in the
     # tree: the committed js/dlplayer.wasm is deleted before its scan and built
     # again from core/ by tools/build-core.sh (which proves the committed file

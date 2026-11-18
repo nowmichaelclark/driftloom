@@ -215,7 +215,7 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders"
 // Lint reads the same generated folders (the release build runs "lint vital"
 // before it packages, and Gradle refuses a task that reads another's output
 // with no dependency declared).
-tasks.matching { it.name.contains("Lint") }.configureEach {
+tasks.matching { it.name.contains("lint", ignoreCase = true) }.configureEach {
     dependsOn(bundleApp, buildNative)
 }
 
