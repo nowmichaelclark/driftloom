@@ -93,6 +93,8 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Share codes, requests and exports
 
+- 2026-11-18 -- **An album's code carries how each track plays (Mikey, 2026-11-18):** "Yes, an album's code should carry track lengths and all necessary info." (#427's question: version 2 left the length slider out.) Session 24b, before B4.
+- 2026-11-18 -- **The long pieces' words approved (Mikey, 2026-11-18):** "The screen words are okay" (`ROLE_WORDS` in `js/piece.js`, #419); the journey's word "arc" is still open: "I don't know how a user would read 'arc' when selected."
 - 2026-11-17 -- **A renamed loop's name travels with its code, in any language (Mikey, 2026-11-17):** "yes, a loops name should travel with its code", for loops and albums both; then "let's go with all characters and emojis", so Thai, other scripts and emoji are allowed, not only A-Z and digits. Renaming is limited to what can be shared. A sketch for B4 to check (not the brain's): the name is carried as its UTF-8 bytes in the code's 64 link-safe characters (about 4 code characters a Thai letter, 1.3 an English one), so the core's output stays ASCII; invisible and control characters, direction overrides and piled-up combining marks are refused, and the name has a byte cap. This replaces version 2's "no custom name in a code" (#412).
 - 2026-11-17 -- **The export sheet's words approved, without the app's name (Mikey, 2026-11-17):** `WORDS` in `js/export.js` stand as #416 wrote them, except "Closing Driftloom stops it" becomes "Closing the app stops it" ("the export screen doesn't need to show the name of the app"). A loop with no name saves as `Ballad Falls.flac`, not `driftloom.flac` (proposed with the rename; he did not object).
 - 2026-11-17 -- **An export's ending kept (Mikey, 2026-11-17):** after the track's end what is sounding rings out until quiet, at most 12 s, the last 2 s faded (#416's `TAIL_MAX`, `FADE` in `js/export-render.js`).
@@ -107,6 +109,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Platforms and games
 
+- 2026-11-18 -- **The new name's domain bought (Mikey, 2026-11-18):** on Cloudflare. The name and domain stay out of this public repo; Mikey pastes them into session 31a.
 - 2026-11-18 -- **Android's Now Playing shows the loop's cover (Mikey, 2026-11-18):** "it would be nice if the now playing notification on android shows the cover art of a song instead of the app's icon" (session 28: the notification and the lock screen).
 - 2026-11-18 -- **The Android app on the native core, heard on his devices (Mikey, 2026-11-18):** he installed the APK from #420 (107c, the page driving the native core): "it works perfectly". The APK check before 28 is done; no Diagnostics figures were sent.
 - 2026-11-11 -- **The plain lines, shorter (Mikey, 2026-11-11):** when the core's module never arrives, the card's place says "Please refresh." (it said "Driftloom couldn't load. Check the connection and reload."); when a browser is too slow even on lite, "This browser is too slow." (it said "...too slow to play Driftloom smoothly."), still in the card's place. Hands session 01 makes both.

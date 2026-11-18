@@ -157,28 +157,16 @@ the points where the next step is yours.
 
 ## Accounts
 
-- **The new name's domain (2026-11-11):** when you're ready, buy it; the
-  brain's advice is in its reply of 2026-11-11 (Cloudflare Registrar, kept on
-  the same Cloudflare Workers hosting). Then confirm the Android release id
-  (the brain proposes the reverse of the domain plus `.app`). Session 31a
-  needs both; nothing before it does.
+- **The new name (2026-11-18: the domain is bought, on Cloudflare):** attach
+  it to the Worker when you're ready (Workers, driftloom, Settings, Domains),
+  and confirm the Android release id (the brain proposes the reverse of the
+  domain plus `.app`). Session 31a needs both.
 
 ## Decisions
 
-- **The long pieces' words (item 106b, session 18, #419):** approve or change
-  them (`ROLE_WORDS` in `js/piece.js`; the line's second row is "1:12:03
-  played · 2:10:00 left", Endless "1:12:03 played"). What the playhead is in:
-  the opening, the theme, building, a second theme, developing, the peak,
-  easing, the return, the close, a breath, a lift, holding, turning. The
-  journey keys read "arc" and "wander"; the pills beside the bars say the
-  same. A piece past a day shows hours ("32,768 bars · 30h") in the Library.
-- **An album's pacing in a share code (#427, session 23):** version 2 codes
-  don't carry the length slider (how many passes a track plays before the
-  next; #412 left it out as the listener's, not the loop's), so an album
-  shared now plays each track until your own slider moves on. Twenty-six
-  tracks of the old listening albums had a pacing that is gone in their new
-  codes (`docs/ALBUMS.md`). Say if albums should carry it: it would be one
-  more field, a few characters a track.
+- **The journey's word "arc" (item 106b, #419):** the other words are
+  approved (2026-11-18); you weren't sure how a listener reads "arc". Pick
+  a word, or keep it.
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

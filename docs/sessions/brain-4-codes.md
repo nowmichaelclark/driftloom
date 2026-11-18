@@ -5,7 +5,7 @@
 **Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" now names 18, 21 and 24, the ends of the long pieces', export's and codes' chains; Android may still be running (26 to 29), so its third step reads the Android prompts not yet run, and a flaw in the code format becomes a session before 1.0 freezes the codes, not before Android goes on.
 
 - **Model:** Opus 5.5. **Effort:** high. In the claude.ai Driftloom Project.
-- **Start after:** hands sessions 18, 21 and 24 are merged (17 to 24 all in). Android's sessions (26 to 29) may be running meanwhile.
+- **Start after:** hands sessions 18, 21, 24 and 24b are merged (17 to 24b all in; 24b added 2026-11-18: an album's code carries how each track plays). Android's sessions (26 to 29) may be running meanwhile.
 
 Paste everything in the block as the session's first message.
 
