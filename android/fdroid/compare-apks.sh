@@ -26,8 +26,14 @@ differ() { # X Y: explain a difference
   if diff -q /tmp/entries-x /tmp/entries-y >/dev/null; then
     echo "every entry's bytes are the same: the difference is in the zip's own layout (order, dates, extra fields)"
   fi
+  # diffoscope is installed only when there is a difference to explain, and
+  # neither step may hold the job (an install that waited for an answer once
+  # held it for twenty minutes).
+  command -v diffoscope >/dev/null 2>&1 \
+    || DEBIAN_FRONTEND=noninteractive timeout 240 sudo -E apt-get install -y -qq --no-install-recommends diffoscope-minimal </dev/null >/dev/null 2>&1 \
+    || true
   if command -v diffoscope >/dev/null 2>&1; then
-    diffoscope --text-color=never --max-report-size 40000 "$1" "$2" 2>&1 | head -150 || true
+    timeout 300 diffoscope --text-color=never --max-report-size 40000 "$1" "$2" </dev/null 2>&1 | head -150 || true
   fi
 }
 
@@ -44,8 +50,6 @@ compare() { # label X Y
     return 1
   fi
 }
-
-command -v diffoscope >/dev/null 2>&1 || sudo apt-get install -y -qq diffoscope-minimal >/dev/null 2>&1 || true
 
 { echo "### Reproducible builds"; echo; echo "| APK | result | sha-256 |"; echo "|---|---|---|"; } >>"$summary"
 for x in a/*-release-unsigned.apk; do
