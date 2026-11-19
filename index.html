@@ -58,7 +58,16 @@
           <h1 id="loopName" class="name" tabindex="0" role="button" title="Tap to rename">—</h1>
           <input id="nameEdit" class="name-edit" type="text" maxlength="24" autocomplete="off"
                  spellcheck="false" aria-label="Name" hidden>
-          <ul id="loopDetail" class="meta" aria-label="Loop details"><li>press play to begin</li></ul>
+          <!-- The details: the lines shown (what fits, each whole), every fact for
+               a screen reader, and, where some are left off, the tap that shows
+               the rest (js/ui.js, session 30d). -->
+          <div id="metaWrap" class="meta-wrap">
+            <ul id="loopDetail" class="meta" aria-hidden="true"><li>press play to begin</li></ul>
+            <ul id="loopFacts" class="meta vh" aria-label="Loop details"><li>press play to begin</li></ul>
+            <button id="metaMore" class="meta-more" type="button" aria-label="More details" hidden>
+              <span id="metaDots" class="meta-dots" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
       </div>
       <div id="playhead" class="playhead" aria-hidden="true"></div>

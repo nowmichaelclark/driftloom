@@ -1,5 +1,55 @@
 # Session 30d: the info card: clean lines, the rest a tap away, a round playhead (112)
 
+## Left (2026-11-18: stopped partway at Mikey's usage limit; start from here)
+
+Branch `claude/project-thread-g37m5i`, draft PR. Built and checked in the
+branch, **not yet merged, BUILD/CACHE not yet bumped** (main was v190; 30a's
+#442 takes v191; take the next number after main's when you finish).
+
+**Done**
+- `tools/card.mjs`: a check of the card at 320 / 360 / 412 / tablet /
+  landscape phone / landscape tablet, text 100 / 130 / 200%, for loops, a
+  long piece, Endless, long, Thai and emoji names, an album on the card and
+  playing (`--only <case>`, `--shots <dir>`, `--verbose`). Before the work it
+  failed (lines cut, over the card's edge, the name cut at 200%). It also
+  walks the taps: every page whole, the pages together every fact, the last
+  back to the first, and the screen-reader list complete. The "busy loop"
+  cases pass (18 views); the other cases are **not run yet**.
+- `js/ui.js`: the details are facts of atoms with a rank; `layoutDetails`
+  measures them, keeps what fits as whole lines (never wrapped or ellipsised),
+  leaves the rest to further pages (`paginate`, `compose`), `moreDetails()`
+  turns the page, `fitCard()` refits (resize observer, fonts, main.js's two
+  calls). Order of what is kept longest: key, tempo, bars, meter, first style,
+  album playing, first feeling, second style, second feeling, the shape word
+  (airy, drifting), third style, third feeling, pass count. Tail facts share
+  a line only when the card is too short for the loop's own four.
+- `index.html`: `#loopDetail` (the lines drawn, `aria-hidden`), `#loopFacts`
+  (every fact, for a screen reader), `#metaMore` (a button over the details
+  with `#metaDots`, a dot a page); `js/main.js` wires its click.
+- `css/style.css`: the playhead is round dots (5px, beats 7px, the lit one 14px
+  with the ring and halo); the old per-width `.meta` steps removed; the
+  `.meta-wrap` / `.meta-more` / `.meta-dots` rules.
+
+**Left**
+1. Run `node tools/card.mjs` whole and fix what fails (the album cards,
+   Thai and emoji names, 320 px at 200%; a fact wider than the column on its
+   own is on no page: see if any such exists).
+2. Look at the round playhead in every theme, light and dark, forced colors
+   and reduced motion (the light themes' glint offset in `i.on::before` is a
+   first guess); 4/4, 6/8, 5/4, 7/8. Beats are still every fourth step
+   (`buildPlayhead`): note in the PR that 6/8's dotted beats are Mikey's call.
+3. Check `moveCursor` still touches only two dots a step; `tools/rows.mjs` ten
+   passes (it reads `#loopDetail`'s text for the bpm and `#playhead`'s `.on`).
+   Add a row or two for the tap (to the rest and back) if card.mjs alone is
+   not enough for CI.
+4. `tools/views.mjs`: no long task over 100 ms from the card.
+5. Screenshots before and after, light and dark, in the PR; the order of what
+   is left off first in the PR and in `docs/notes/for-mikey.md` (the card to
+   look at on his phone and tablet).
+6. Bump BUILD and CACHE; merge main's latest in (never rebase); CI; merge;
+   `docs/DONE.md`, the queue's status line, tick this row in
+   `docs/sessions/README.md` (keep every cell's `|`).
+
 Written 2026-11-18 at Mikey's request (his list of seven for 1.0, items 3
 and 4: the card's detail text on every display, and its playhead round).
 

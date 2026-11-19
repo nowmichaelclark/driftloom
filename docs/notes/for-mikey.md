@@ -12,6 +12,28 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The info card: whole lines, the rest a tap away, a round playhead (item 112, v192, PR #446)
+
+- **Look at the card on your phone and your tablet** (portrait and on its
+  side), with a loop that has three styles and three feelings, a long piece,
+  Endless, an album open on the card and an album playing, and a long name
+  (Thai, emoji): every line should be whole, never cut or squeezed. Turn the
+  phone's text size up to the largest and look again.
+- **When something doesn't fit it is left off, whole,** least important
+  first: the pass count, the third feeling, the third style, the shape word
+  (airy, drifting), the second feeling, the second style, the first feeling,
+  the album playing, the first style, the meter, then the bars, the tempo and
+  the key last. A quiet column of dots at the card's right edge (a dot a page,
+  or a thin track when there are too many) says there is more: tap the details
+  and the rest shows in the same place; tap again to go on, and the last goes
+  back to the first. Tapping the name still renames. A screen reader hears
+  every fact whatever is showing. Say if the order feels wrong.
+- **The playhead is round:** a dot a step, the beats a little bigger, the lit
+  one bigger and brighter with the layers' ring and halo. For your eyes in
+  each theme. In 6/8 the beats are still every fourth step (a step is a
+  sixteenth, so they fall at 1, 5 and 9 of 12): say if you want the dotted
+  beats (1 and 7) marked instead.
+
 ## The layers show what is heard (item 110, v190, PR #440)
 
 - **Watch the Layers view with a long piece**, on your phone and in the

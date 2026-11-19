@@ -133,14 +133,25 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 .meta > * { display: block; }
 .meta b { font-weight: 700; }
 
+/* The playhead is a row of round dots, a dot a step, as the layers' dots
+   are (session 30d, item 112): a guide dot of 5px, the beats 7px, and the
+   one lit a ring and a halo of 14px, bigger and bolder than the layers'
+   notes. The row keeps its 8px: the lit dot's ring and halo overhang it
+   into the card's padding. */
 .playhead {
   display: grid; grid-template-columns: repeat(16, 1fr);
-  gap: 3px; height: 8px; margin: 10px 0 0;
+  align-items: center; justify-items: center;
+  gap: 0; height: 8px; margin: 10px 0 0;
   flex: 0 0 auto;
 }
-.playhead i { display: block; border-radius: 1.5px; position: relative; }
+.playhead i {
+  display: block; position: relative;
+  width: 5px; height: 5px; border-radius: 50%;
+}
+.playhead i.beat { width: 7px; height: 7px; }
 .playhead i.on::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
   transition: opacity 180ms ease;
 }
 
@@ -285,34 +296,15 @@ h1, h2, h3, h4, h5, p { margin: 0; }
    changes is what happens INSIDE a zone, in steps. The phone is a
    size container, so each step is measured in ems of the phone's
    own font size:  340px / (16px x scale).
-      Q0  <= 21em    scale >= 1.02   Info: tighter leading
-      Q1  <= 17.5em  scale >= 1.21   Layers stack; meter line trims
-      Q2  <= 15.5em  scale >= 1.38   key line trims
+      Q1  <= 17.5em  scale >= 1.21   Layers stack
+   (The info card's lines no longer step: script lays out whole
+   lines and leaves off what does not fit, session 30d.)
    No media query, no JS, no class: the same rules answer to the
    browser's own text-size setting.
    ============================================================ */
 .zone-info, .zone-buttons, .info-inner { min-height: 0; }
 .info-text { overflow: hidden; }
 
-/* Session 11 — the fit guard (script, see INFO FIT GUARD) adds
-   .fit-trim to a meta line only when the lines still overflow
-   after every rule above: user text-spacing overrides, a long
-   track name, a fallback font. Same 1px clip as the steps. */
-.meta .fit-trim {
-  position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip-path: inset(50%); white-space: nowrap;
-}
-
-@container phone (max-width: 21em) {
-  /* Info: at 100% the card has 2px to spare, so any growth at all
-     needs tighter leading. The mood line may take two lines. */
-  .meta { line-height: 1.25; }
-  .meta .m-mix,
-  .meta .m-mood {
-    display: -webkit-box; -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
-  }
-}
 /* Session 12 — the same stacked layer layout, applied by the fit
    guard when a label would otherwise be cut short (user text
    spacing at 102–120% made "Melody" read "Melo…"). */
@@ -327,25 +319,6 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 .phone.fit-stack .layer .pattern  { grid-area: pat;  align-self: start; }
 .phone.fit-stack .layer .btn-roll { grid-area: roll; }
 .phone.fit-stack .layer .btn-on   { grid-area: on;   }
-
-/* Session 12 — split meta: when one item is wider than the
-   column on its own (e.g. "93% enthusiastic ·" under user
-   spacing), the guard drops the dots and puts each item on its
-   own line. Nothing is lost; the items just stack. */
-/* The sep holds its own trailing space, so the line can break
-   after the dot. A bare space between spans was not reliable:
-   Chromium dropped it after the -webkit-box line clamp switched
-   off (Session 12 re-review). */
-.meta .sep { white-space: normal; }
-/* A comma for screen readers only, so "53% Tide, 47% Glade" is
-   not read as one run of words (the dot itself is hidden). */
-.meta .vh {
-  position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip-path: inset(50%); white-space: nowrap;
-}
-.meta.fit-split .sep { display: none; }
-.meta.fit-split > * > span:not(.sep):not(.vh) { display: block; }
-
 
 @container phone (max-width: 17.5em) {
   /* Layers: the label moves ABOVE the pattern and the two buttons
@@ -362,19 +335,6 @@ h1, h2, h3, h4, h5, p { margin: 0; }
   .layer .pattern  { grid-area: pat;  align-self: start; }
   .layer .btn-roll { grid-area: roll; }
   .layer .btn-on   { grid-area: on;   }
-  /* Info: lowest-priority line trims. Clipped to 1px rather than
-     display:none, so a screen reader still gets all four lines. */
-  .meta .m-meter {
-    position: absolute; width: 1px; height: 1px; overflow: hidden;
-    clip-path: inset(50%); white-space: nowrap;
-  }
-}
-@container phone (max-width: 15.5em) {
-  .meta { line-height: 1.2; }
-  .meta .m-key {
-    position: absolute; width: 1px; height: 1px; overflow: hidden;
-    clip-path: inset(50%); white-space: nowrap;
-  }
 }
 
 
@@ -532,9 +492,11 @@ h1, h2, h3, h4, h5, p { margin: 0; }
    in grayscale and under every colour-blindness simulation.
    Dark themes keep their own glow.
    ============================================================ */
-/* Every theme's lit cell is 4px taller than the rest, so "lit"
-   is shape as well as colour and brightness. */
-body .phone .playhead i.on::after { inset: -2px 0; border-radius: 2.5px; }
+/* Every theme's lit dot is bigger than the rest, so "lit" is shape as
+   well as colour and brightness. */
+/* The dark themes' lit dot has the layers' ring and glow (the halo recipe
+   a note gets under the playhead); the light themes' own recipe follows. */
+body .phone .playhead i.on::after { box-shadow: 0 0 0 2px var(--halo-inner), var(--playhead-on-shadow); }
 .t-dawn {
   --lit-fill: linear-gradient(180deg, #cd6000, #b25400);
   --lit-ring: rgba(255,251,244,0.96);
@@ -583,7 +545,7 @@ body :where(.t-dawn, .t-ember, .t-tidal, .t-olive).phone .playhead i.on::after {
 }
 body :where(.t-dawn, .t-ember, .t-tidal, .t-olive).phone .playhead i.on::before {
   content: ''; position: absolute; z-index: 1; pointer-events: none;
-  width: 11px; height: 11px; left: -1.5px; top: -5.5px;
+  width: 11px; height: 11px; left: calc(50% - 7.5px); top: calc(50% - 9.5px);
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.95'/%3E%3Cstop offset='.32' stop-color='%23fff' stop-opacity='.5'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='13' cy='13' r='9' fill='url%28%23g%29'/%3E%3Cpath d='M13 1C13.8 9.4 16.6 12.2 25 13 16.6 13.8 13.8 16.6 13 25 12.2 16.6 9.4 13.8 1 13 9.4 12.2 12.2 9.4 13 1Z' fill='%23fff'/%3E%3C/svg%3E") center / contain no-repeat;
   animation: dl-twinkle 4.2s ease-in-out infinite;
   transition: opacity 180ms ease;
@@ -2179,11 +2141,46 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   outline: none;
 }
 .meta { margin: 0; padding: 0; list-style: none; }
-.meta li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Every line is whole (session 30d): the script sets only lines that fit
+   and leaves off the rest, so nothing here wraps or shows an ellipsis. */
+.meta li { white-space: nowrap; overflow: hidden; }
 .meta li.mix { font-weight: 700; color: var(--text-primary); }
-.meta li.key { white-space: normal; }
 .meta li.album-line { font-weight: 700; color: var(--mark); }
-.meta.tight { line-height: 1.3; }
+/* The details, and the tap that shows what was left off. The strip at the
+   side holds the quiet mark (a dot a page) where there is more. */
+.meta-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.meta-wrap.paged > .meta:not(.vh) { margin-right: 14px; }
+.meta-more {
+  position: absolute; inset: 0; width: 100%; margin: 0; padding: 0;
+  background: transparent; border: 0; border-radius: 8px;
+  color: var(--text-secondary); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.meta-more:focus { outline: none; }
+.meta-more:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; }
+.meta-dots {
+  position: absolute; right: 0; top: 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  pointer-events: none;
+}
+.meta-dots i {
+  display: block; width: 6px; height: 6px; border-radius: 50%;
+  box-sizing: border-box; border: 1px solid currentColor; opacity: 0.75;
+}
+.meta-dots i.on { background: currentColor; opacity: 1; }
+/* Too many pages for dots to fit: a thin track, its thumb on the page. */
+.meta-dots.track { top: 2px; bottom: 2px; width: 4px; display: block; border-radius: 2px; }
+.meta-dots.track::before {
+  content: ''; position: absolute; inset: 0; border-radius: 2px;
+  background: currentColor; opacity: 0.25;
+}
+.meta-dots.track i {
+  position: absolute; left: 0; width: 4px; min-height: 3px; border: 0; border-radius: 2px;
+  background: currentColor; opacity: 1;
+}
+@media (forced-colors: active) {
+  .meta-dots { forced-color-adjust: none; color: CanvasText; }
+}
 
 /* ---------- Layers: the halo follows the playhead --------------- */
 .v-layers { padding: 0; }

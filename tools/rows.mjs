@@ -1179,7 +1179,7 @@ async function main() {
     const first = await name();
     {
       row('Play: the core plays the loop on the card', p && p.player.state === 3 && p.d.name === first, `${p && p.d && p.d.name} / ${first}`);
-      const detail = await ev(() => document.getElementById('loopDetail').textContent);
+      const detail = await ev(() => document.getElementById('loopFacts').textContent);
       row('info card: its key, tempo and name as the core describes the loop', detail.includes(`${p.d.bpm} bpm`) && p.d.name === first, detail.replace(/\s+/g, ' '));
     }
     row('cover: drawn', await ev(() => {
