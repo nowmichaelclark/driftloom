@@ -10,6 +10,9 @@
 #   views  (by hand: jobs = views) tools/views.mjs on every view with a
 #          32,768-bar piece open (session 18, queue item 106b): the long
 #          tasks per view, the new drawing's among them
+#   card   tools/card.mjs: the info card's lines at every width and text size
+#          (session 30d, item 112): whole, inside, apart, the rest a tap
+#          away, the playhead's round dots; its screenshots are uploaded
 #   long   tools/export-long.mjs: a three-hour export (lossless, or small:
 #          Opus through the browser's encoder, queue item 104c) on
 #          tools/autolite.mjs's slow case (burn 1700 us, lighter on processor
@@ -39,13 +42,14 @@ on:
       - 'js/dlplayer.wasm'
       - 'index.html'
       - 'tools/rows.mjs'
+      - 'tools/card.mjs'
       - 'tools/export*.mjs'
       - 'tools/ogg-read.mjs'
       - '.github/workflows/export.yml'
   workflow_dispatch:
     inputs:
       jobs:
-        description: 'Which jobs: rows, views, long or all'
+        description: 'Which jobs: rows, views, card, long or all'
         default: 'all'
       repeat:
         description: 'The rows, this many times in a row'
@@ -100,6 +104,25 @@ jobs:
       - name: Every view with a 32,768-bar piece open
         run: node tools/views.mjs --loops piece,arc --throttle 4,6 --quality full,lite --md views.md && cat views.md
 
+  card:
+    if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'card'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright's Chromium
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: The info card at every width and text size
+        run: node tools/card.mjs --shots card-shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: card-shots
+          path: card-shots
+          if-no-files-found: ignore
 
   long:
     if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'long'
