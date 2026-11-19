@@ -10,10 +10,11 @@
 // What is exported is what plays: the record's seed, request and edits as
 // the page asks the core that plays them (`askOf`, the same calls in the
 // same order as js/worklet.js's `ask`), its mutes, the wander and the play's
-// salt, and the length slider's track (or, for Endless and a loop that plays
-// on and on, the bars the sheet asked for, ended on a phrase line). The track
-// is played to its end as the app plays it, then the core stops deciding and
-// what it has started rings out (the tail) before the file ends.
+// salt, and the track length (session 30c: a time to the second, with its
+// fade in and fade out, as the Track length view set it; or a finite piece
+// whole). The track is played to its end as the app plays it, then the core
+// stops deciding and what it has started rings out (the tail) before the
+// file ends: with the fade out, from silence.
 //
 // Always at full quality (the six-comb mix), whatever "lighter on processor"
 // says: the export is not in real time, so it can afford the better mix (for
@@ -81,7 +82,8 @@ export function ask(x, a) {
 // Start an instance as the export plays: `job` is
 //   { seed, ask, mutes: [5 booleans], wander, salt, layout: 1 | 2,
 //     track: [kind, count], format: 'flac' | 'opus' }
-// (kind 1 whole passes, 2 bars; never 0)
+// (the core's kinds, `Track::of`: 1 whole passes, 2 bars, 3 seconds, with
+// the fades' bits; never on and on)
 // in the order the page starts the core that plays (js/player.js's
 // `_begin`: the wander and its salt, the loop, then the mutes and the
 // track), and the loop made at once (`dl_play_ready`: an export has no
@@ -102,12 +104,15 @@ export function begin(x, job) {
   x.dl_play_load(job.seed >>> 0, 0);
   (job.mutes || []).forEach((m, i) => x.dl_play_mute(i, m ? 1 : 0));
   const [kind, count] = job.track;
-  if (!(kind === 1 || kind === 2) || !x.dl_play_track(kind, count >>> 0)) throw new Error(`no such track: ${job.track}`);
+  if (!((kind & 3) >= 1) || !x.dl_play_track(kind >>> 0, count >>> 0)) throw new Error(`no such track: ${job.track}`);
   x.dl_play_ready();
+  // A time's track ends on its second on the core's clock; a count of
+  // passes or bars on its step.
+  const at = x.dl_play_track_at();
   const end = x.dl_play_track_end();
   const about = text(x, x.dl_play_about_at(), x.dl_play_describe());
   const bpm = Number((/^bpm=(.*)$/m.exec(about) || [])[1]);
-  const seconds = end >= 0 && bpm > 0 ? end * (60 / bpm / 4) : null;
+  const seconds = at >= 0 ? at : end >= 0 && bpm > 0 ? end * (60 / bpm / 4) : null;
   return { refused, seconds };
 }
 

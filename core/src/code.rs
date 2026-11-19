@@ -34,6 +34,7 @@ use crate::generator::data::{self, CHOICES, Ids, VIBE_COUNT, VIBES};
 use crate::generator::request::{self, FIRST_VERSION, Journey, LAYER_NAMES, LENGTH_MOST, LayerAsk, Length, PROFILE_ORDER, Pins, Request, TONE_NAMES, VOICE_ORDER};
 use crate::generator::rng::Rng;
 use crate::generator::theory::SCALES;
+use crate::fades::{Fades, KIND_FADE_IN, KIND_FADE_OUT, TRACK_MOST};
 
 pub use crate::generator::request::NEEDS_NEWER;
 pub use name::{BAD_NAME, MARKS_MOST, NAME_MOST, Name, TAGS_MOST};
@@ -51,8 +52,9 @@ pub const NO_ROOM: &str = "no room for the code";
 pub const NOT_AT_VERSION: &str = "asks for something its version does not have";
 /// The line for an album of no tracks, or more than `ALBUM_MOST`.
 pub const BAD_ALBUM: &str = "a bad album";
-/// The line for a track's pace a code can't carry: a count of none, or past
-/// `PACE_MOST`, or a kind the player has no track for.
+/// The line for a track's pace a code can't carry: a time of none, or past
+/// `PACE_MOST`, or a kind the player has no such track for (whole passes and
+/// bars among them, since session 30c).
 pub const BAD_PACE: &str = "a bad track length";
 
 /// The alphabet, a character a sextet (its value, 0 to 63, by place).
@@ -122,41 +124,52 @@ impl Loop {
     }
 }
 
-/// The most passes or bars a track's pace counts: room for a day of the
-/// shortest pass many times over, and every pace's number (`Pace::number`)
-/// a 32-bit one.
-pub const PACE_MOST: u32 = (1 << 31) - 1;
+/// The most seconds a track's pace counts: a day, as the player's longest
+/// time (`fades::TRACK_MOST`; session 30c).
+pub const PACE_MOST: u32 = TRACK_MOST;
 
 /// How long an album's track plays before the next (session 24b; Mikey,
 /// 2026-11-18: "an album's code should carry track lengths and all
-/// necessary info"): the app's length slider as the album's maker had it,
-/// as the player takes it (`player::Track`; `spec.playFor` and
-/// `spec.playBars` in the app), so an album plays as its maker heard it. A
-/// loop's own code carries none: one loop sounds the same however long the
-/// listener lets it play, and when the listener's app moves on from it is
-/// the listener's (#412).
+/// necessary info"): the Track length view as the album's maker had it, as
+/// the player takes it (`player::Track`, `player::Fades`; `spec.track` in
+/// the app), so an album plays as its maker heard it. Since session 30c a
+/// time to the second, with its fade in and fade out (Mikey, 2026-11-18:
+/// "Should be able to set track length to an exact second"), where it was
+/// whole passes or bars. A loop's own code carries none: one loop sounds
+/// the same however long the listener lets it play, and when the listener's
+/// app moves on from it is the listener's (#412).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Pace {
     /// On and on: the track plays until the listener moves on.
     #[default]
     On,
-    /// This many whole passes, 1 to `PACE_MOST`.
-    Passes(u32),
-    /// This many bars, ended on the next phrase line, 1 to `PACE_MOST`.
-    Bars(u32),
+    /// On and on, up from silence at its start (its fade in).
+    OnFadingIn,
+    /// This many seconds, 1 to `PACE_MOST`, with its fades.
+    Time {
+        /// How long it plays.
+        seconds: u32,
+        /// Its fade in and its fade out.
+        fades: Fades,
+    },
 }
 
+/// The numbers a pace is written as, all of them (`Pace::number`): 0 and 1
+/// on and on, and four for each second (its two fades).
+const PACE_NUMBERS: u64 = 2 + 4 * PACE_MOST as u64;
+
 impl Pace {
-    /// The pace of the player's track kind and count (`Player::set_track`,
-    /// js/player.js's `trackOf`): kind 0 on and on (count 0), 1 whole
-    /// passes, 2 bars to a phrase line (count 1 to `PACE_MOST`). `None` for
-    /// anything else.
+    /// The pace of the player's track kind and count (`Player::set_track_with`,
+    /// `player::Track::of`, js/player.js's `trackOf`): kind 0 on and on
+    /// (count 0; 4 added for its fade in), 3 a time of `count` seconds (1 to
+    /// `PACE_MOST`; 4 added for a fade in, 8 for a fade out). `None` for
+    /// anything else: whole passes and bars are no pace a code carries.
     #[must_use]
     pub const fn of(kind: u32, count: u32) -> Option<Pace> {
-        match (kind, count) {
-            (0, 0) => Some(Pace::On),
-            (1, 1..=PACE_MOST) => Some(Pace::Passes(count)),
-            (2, 1..=PACE_MOST) => Some(Pace::Bars(count)),
+        let fades = Fades { fade_in: kind & KIND_FADE_IN != 0, fade_out: kind & KIND_FADE_OUT != 0 };
+        match (kind & !(KIND_FADE_IN | KIND_FADE_OUT), count, fades.fade_out) {
+            (0, 0, false) => Some(if fades.fade_in { Pace::OnFadingIn } else { Pace::On }),
+            (3, 1..=PACE_MOST, _) => Some(Pace::Time { seconds: count, fades }),
             _ => None,
         }
     }
@@ -166,8 +179,8 @@ impl Pace {
     pub const fn kind(self) -> u32 {
         match self {
             Pace::On => 0,
-            Pace::Passes(_) => 1,
-            Pace::Bars(_) => 2,
+            Pace::OnFadingIn => KIND_FADE_IN,
+            Pace::Time { fades, .. } => 3 | if fades.fade_in { KIND_FADE_IN } else { 0 } | if fades.fade_out { KIND_FADE_OUT } else { 0 },
         }
     }
 
@@ -175,59 +188,74 @@ impl Pace {
     #[must_use]
     pub const fn count(self) -> u32 {
         match self {
-            Pace::On => 0,
-            Pace::Passes(n) | Pace::Bars(n) => n,
+            Pace::On | Pace::OnFadingIn => 0,
+            Pace::Time { seconds, .. } => seconds,
         }
     }
 
-    /// The number a code writes: 0 on and on, `2n - 1` for `n` passes, `2n`
-    /// for `n` bars, so a pace of up to 16 passes or 15 bars is one
-    /// character. `None` for a count a code can't carry.
+    /// The number a code writes: 0 on and on, 1 on and on fading in, and
+    /// `2 + 4 (s - 1) + f` for `s` seconds with fades `f` (1 the fade in, 2
+    /// the fade out), so a track of up to four seconds is one character,
+    /// and of up to an hour and a quarter three. `None` for a time a code
+    /// can't carry.
     const fn number(self) -> Option<u32> {
         match self {
             Pace::On => Some(0),
-            Pace::Passes(n @ 1..=PACE_MOST) => Some(2 * n - 1),
-            Pace::Bars(n @ 1..=PACE_MOST) => Some(2 * n),
-            _ => None,
+            Pace::OnFadingIn => Some(1),
+            Pace::Time { seconds: s @ 1..=PACE_MOST, fades } => {
+                Some(2 + 4 * (s - 1) + if fades.fade_in { 1 } else { 0 } + if fades.fade_out { 2 } else { 0 })
+            }
+            Pace::Time { .. } => None,
         }
     }
 
-    /// The pace of a number `number` wrote.
+    /// The pace of a number `number` wrote (every number below
+    /// `PACE_NUMBERS` is one: a code made before session 30c, whose numbers
+    /// were passes and bars, still reads, as times of a few seconds).
     const fn from_number(p: u32) -> Pace {
-        if p == 0 {
-            Pace::On
-        } else if p % 2 == 1 {
-            Pace::Passes(p / 2 + 1)
-        } else {
-            Pace::Bars(p / 2)
+        match p {
+            0 => Pace::On,
+            1 => Pace::OnFadingIn,
+            _ => {
+                let v = p - 2;
+                Pace::Time { seconds: v / 4 + 1, fades: Fades { fade_in: v % 4 & 1 != 0, fade_out: v % 4 & 2 != 0 } }
+            }
         }
     }
 }
 
 /// A track as a host writes it beside its pace, in text (`dl_album_write`,
 /// `dl_code_album_write`, `node tools/codes.mjs album`): the loop's code,
-/// then `:p` and the passes or `:b` and the bars where it has a pace
-/// (`ENBAAAAEmBO_7:p2`), nothing where it plays on. Split here into the
-/// code and its pace.
+/// then `:t` and the seconds where it has a time, `i` after them for its
+/// fade in and `o` for its fade out (`ENBAAAAEmBO_7:t5025o`), `:i` alone for
+/// one that plays on and on fading in, nothing where it plays on. Split
+/// here into the code and its pace.
 ///
 /// # Errors
-/// `BAD_PACE` for a pace written any other way (a count of 0, one with a 0
-/// before it, one past `PACE_MOST`).
+/// `BAD_PACE` for a pace written any other way (a time of 0, one with a 0
+/// before it, one past `PACE_MOST`, the fades out of order).
 pub fn paced(text: &[u8]) -> Result<(&[u8], Pace), &'static str> {
     let Some(at) = text.iter().rposition(|&b| b == b':') else { return Ok((text, Pace::On)) };
     let (code, rest) = (&text[..at], &text[at + 1..]);
-    let kind = match rest.first() {
-        Some(b'p') => 1,
-        Some(b'b') => 2,
-        _ => return Err(BAD_PACE),
-    };
-    let digits = &rest[1..];
-    if digits.is_empty() || digits.len() > 10 || digits[0] == b'0' || !digits.iter().all(u8::is_ascii_digit) {
+    if rest == b"i" {
+        return Ok((code, Pace::OnFadingIn));
+    }
+    let Some(rest) = rest.strip_prefix(b"t") else { return Err(BAD_PACE) };
+    let digits = rest.iter().take_while(|b| b.is_ascii_digit()).count();
+    let (digits, flags) = rest.split_at(digits);
+    if digits.is_empty() || digits.len() > 10 || digits[0] == b'0' {
         return Err(BAD_PACE);
     }
+    let fades = match flags {
+        b"" => Fades::NONE,
+        b"i" => Fades { fade_in: true, fade_out: false },
+        b"o" => Fades { fade_in: false, fade_out: true },
+        b"io" => Fades { fade_in: true, fade_out: true },
+        _ => return Err(BAD_PACE),
+    };
     let n = digits.iter().fold(0u64, |n, &d| n * 10 + u64::from(d - b'0'));
-    let pace = u32::try_from(n).ok().and_then(|n| Pace::of(kind, n)).ok_or(BAD_PACE)?;
-    Ok((code, pace))
+    let seconds = u32::try_from(n).ok().filter(|n| (1..=PACE_MOST).contains(n)).ok_or(BAD_PACE)?;
+    Ok((code, Pace::Time { seconds, fades }))
 }
 
 /// The pace most of `paces` share (their numbers), the smaller on a tie:
@@ -1078,7 +1106,7 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
             }
             tag::PACE => {
                 #[allow(clippy::cast_possible_truncation)] // below 2^32
-                let number = r.below(2 * u64::from(PACE_MOST) + 1)? as u32;
+                let number = r.below(PACE_NUMBERS)? as u32;
                 pace = Some(OwnPace { number, from, to: r.at });
             }
             tag::NAME => name = Name::read(r)?,
@@ -1200,7 +1228,7 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
                 match t {
                     tag::PACE => {
                         #[allow(clippy::cast_possible_truncation)] // below 2^32
-                        let p = r.below(2 * u64::from(PACE_MOST) + 1)? as u32;
+                        let p = r.below(PACE_NUMBERS)? as u32;
                         // On and on is no field's: an album without one.
                         if p == 0 {
                             return Err(NOT_A_CODE);

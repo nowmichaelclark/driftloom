@@ -1837,8 +1837,6 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 /* Exporting audio (queue item 104b): the length chosen is pressed in
    with a ring, as a lit choice; the progress is a groove filled with
    the theme's mark. */
-.export-lengths { margin: 6px 0 4px; }
-.export-lengths .vkey { font-size: min(0.6875rem, 18px); }
 .vkey[role="radio"][aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--text-primary); color: var(--text-primary); }
 .vkey:disabled { opacity: 0.55; }
 .export-bar {
@@ -2434,7 +2432,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
 }
 .ln-head .vkey { font-size: min(0.75rem, 18px); }
-.ln-head #lenCancel { justify-self: start; }
+.ln-head :is(#lenCancel, #trkCancel) { justify-self: start; }
 .ln-head .ln-done { justify-self: end; font-weight: 700; }
 .ln-title { flex: none; text-align: center; font-size: min(0.8125rem, 19.5px); }
 /* The body sits in the middle of the space under the head. */
@@ -2565,6 +2563,23 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
 }
 .ln-step:disabled { opacity: 0.4; }
+/* ---------- the Track length view (session 30c) ------------------ */
+/* Built on the Bars view's parts: the time as the big number (h:mm:ss),
+   its words under it; a row of four step keys (a minute and a second
+   either way) under that, so the number keeps the width at 360 px; the
+   coarse slider; then on and on and the two fades, lit the app's way. A
+   Painter session restyles it later. */
+.v-track .ln-body { gap: 18px; }
+.tk-num { width: 100%; }
+.tk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tk-steps .ln-step { min-height: 44px; padding: 2px 4px; white-space: nowrap; }
+.vkey.word.tk-on { flex: 0 0 auto; min-width: 72px; min-height: 48px; padding: 2px 12px; font-size: min(0.75rem, 18px); }
+.vkey.tk-on[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
+.tk-fades { justify-content: flex-end; }
+.tk-fades #trkFadeOut:disabled { opacity: 0.4; }
+.v-track.endless .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: min(1.75rem, 40px); }
+.v-track.endless .ln-slide input[type="range"]::-webkit-slider-thumb { opacity: 0.5; }
+.v-track.endless .ln-slide input[type="range"]::-moz-range-thumb { opacity: 0.5; }
 
 @media (prefers-reduced-motion: reduce) {
   .phone .np-picks:active, .phone button.pk-val:active { transform: none !important; }

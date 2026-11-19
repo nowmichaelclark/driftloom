@@ -188,7 +188,7 @@ class DriftloomCore extends AudioWorkletProcessor {
           core.dl_play_revise(m.seed >>> 0);
         }
         return;
-      // The length slider (queue item 94b): the track's length, and the loop
+      // The track length (queue item 94b; a time since session 30c), and the loop
       // that follows when it has run (a change at the track's end, 5).
       case 'playTrack':
         if (core) {
@@ -247,6 +247,8 @@ class DriftloomCore extends AudioWorkletProcessor {
             player: { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() },
             trackEnd: core.dl_play_track_end(), nextChange: core.dl_play_next_change(), lost: core.dl_play_events_lost(), refused: this.refused,
             picksTag: core.dl_play_picks_tag(),
+            // A time's track: the second it ends on, the core's clock (session 30c).
+            trackAt: core.dl_play_track_at(),
           });
         } else {
           this.port.postMessage({ type: 'probe', id: m.id, about: null });

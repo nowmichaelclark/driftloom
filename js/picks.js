@@ -4,7 +4,8 @@
 // panel lists the five lines (the vibe key and the pills open it; it was
 // "New loops" in the brief, renamed by Mikey 2026-10-14), and the Bars
 // picker (was Length; queue item 88b) sets how many bars a new loop is.
-// When a loop ends is the Sound panel's length slider, not the picks.
+// When a loop ends is the Track length view's (js/tracklen.js; its key on
+// the pace line), the loop playing's, not a pick.
 //
 // The five lines are moods, tempo and length (sharing a line), key, style
 // and voices. Moods are today's vibes (state.vibes). Length and tempo are
@@ -18,6 +19,7 @@
 // but cannot be tapped until a Painter session designs their pickers.
 
 import { el } from './ui.js';
+import { clock, spokenTime, trackOfSpec } from './tracklen.js';
 import { readRequest, RequestError, pieceTime, LAYERS, JOURNEYS } from './request.js';
 import { NOTE_NAMES, SCALES, SCALE_ORDER } from './theory.js';
 import { PROFILE_ORDER, VOICE_ORDER } from './characters.js';
@@ -269,6 +271,28 @@ function lineButton(cls, onClick) {
   return b;
 }
 
+// The Track length key (session 30c): the time set, or that the loop plays
+// on; plain beside "any tempo · any bars", a pill beside picks.
+function trackKey(state, plainLine) {
+  const t = trackOfSpec(state.spec);
+  const b = lineButton('pk-track', () => api.openTrack());
+  const text = t.secs != null ? clock(t.secs) : 'plays on';
+  if (plainLine) {
+    const sep = document.createElement('span');
+    sep.className = 'pk-any pk-sep';
+    sep.setAttribute('aria-hidden', 'true');
+    sep.textContent = '·';
+    const wrap = document.createDocumentFragment();
+    b.append(t.secs != null ? pill(text, 'length') : plain(text));
+    wrap.append(sep, b);
+    b.setAttribute('aria-label', `Track length: ${t.secs != null ? spokenTime(t.secs) : 'plays on'}`);
+    return wrap;
+  }
+  b.append(t.secs != null ? pill(text, 'length') : pill(text, 'length', { dashed: true }));
+  b.setAttribute('aria-label', `Track length: ${t.secs != null ? spokenTime(t.secs) : 'plays on'}`);
+  return b;
+}
+
 function plain(text) {
   const s = document.createElement('span');
   s.className = 'pk-any';
@@ -304,8 +328,9 @@ export function renderPanel() {
       vals.append(b);
     } else if (line.id === 'pace') {
       // Tempo has no picker yet, so it is shown, not tapped. The bars open
-      // the Bars picker (queue item 88b: was Length; when a loop ends is the
-      // Sound panel's length slider).
+      // the Bars picker (queue item 88b: was Length). Beside them, the
+      // Track length view's key (session 30c): the loop playing's, not a
+      // pick for new loops, so the line's any key leaves it.
       if (isAny.pace) {
         vals.append(plain('any tempo'));
         const sep = document.createElement('span');
@@ -328,6 +353,7 @@ export function renderPanel() {
         b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any'}${journey ? `, ${journey} journey` : ''}`);
         vals.append(b);
       }
+      vals.append(trackKey(state, isAny.pace));
       const cant = pickProblem(state);
       if (cant) {
         const note = document.createElement('span');

@@ -5,10 +5,12 @@
 #
 #   loop SEED REQUEST MUTES SALT NAME CODE    (REQUEST "-" for nothing)
 #   album NAME CODE,CODE,... CODE             (NAME "-" for none; a track's
-#                                              pace after it, session 24b:
-#                                              CODE:p2 two whole passes,
-#                                              CODE:b9 nine bars, the code
-#                                              alone on and on)
+#                                              pace after it, session 24b,
+#                                              a time since 30c:
+#                                              CODE:t5025 1:23:45, `i` and
+#                                              `o` after it for its fades,
+#                                              CODE:i on and on fading in,
+#                                              the code alone on and on)
 #   seed-album SEED COUNT REQUEST NAME CODE
 #
 # A NAME is its text, UTF-8, with `%20` for a space and `%25` for `%`
@@ -38,11 +40,11 @@ loop 5 - 0 0 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa EFAAAA
 album - ERiSNBA2k,EAAAAAAUP,E_____DyO,EAgyauDBNBbDoBF_Bga,ENBAAAABuBCbOBh4 FAFGRiSNBAGAAAAAAG_____DQAgyauDBNBbDoBF_BNNBAAAABuBCbOB59
 album Rain EAgyauDBNBbDoBF_Bga,ENBAAAABuBCbOBh4,ENBAAAAEmBO_7,ENBAAAAGHB-x,ENBAAAAF__CHANC FAFQAgyauDBNBbDoBF_BNNBAAAABuBCbOBKNBAAAAEmBOJNBAAAAGHBMNBAAAAF__CHAeEUmFpbgVl
 album อัลบั้ม%20🎧 EBAAAAAeG4Lid4LiZvJ,ECAAAAABNeE8J-MmQRs,EDAAAAAUq FADQBAAAAAeG4Lid4LiZQCAAAAABNeE8J-MmQGDAAAAAea4Lit4Lix4Lil4Lia4Lix4LmJ4LihIPCfjqcTb
-album - ERiSNBA2k:p2,EAAAAAAUP:p2,E_____DyO:b9 FADGRiSNBAGAAAAAAI_____DWSWDYD
-album Rain ENBAAAABuBCbOBh4:p4,ENBAAAAEmBO_7,ENBAAAAGHB-x:p4 FADNNBAAAABuBCbOBMNBAAAAEmBOWAJNBAAAAGHBWHeEUmFpbgMd
-album - ENBAAAAF__CHANC:b16,ENBAAAAICCEJCAA5f:p1 FACPNBAAAAF__CHAWgBONBAAAAICCEJCAAWBQD
-album - ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2,ERiSNBA2k:p2 FAMGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAWDOr
-album - EAAAAAAUP:p72000,E_____DyO:b2147483647 FACGAAAAAAO_____DW-_____DW_zsExI
+album - ERiSNBA2k:t120o,EAAAAAAUP:t120o,E_____DyO:t45 FADGRiSNBAGAAAAAAJ_____DWyFWgPKJ
+album Rain ENBAAAABuBCbOBh4:t300io,ENBAAAAEmBO_7,ENBAAAAGHB-x:t300io FADNNBAAAABuBCbOBMNBAAAAEmBOWAJNBAAAAGHBWxlBeEUmFpbgQM
+album - ENBAAAAF__CHANC:t5025o,ENBAAAAICCEJCAA5f:i FACQNBAAAAF__CHAWk0TONBAAAAICCEJCAAWB6m
+album - ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o,ERiSNBA2k:t120o FAMGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAGRiSNBAWgPRt
+album - EAAAAAAUP:t86400io,E_____DyO:t1 FACLAAAAAAWhwxKG_____DWCM-
 seed-album 424242 12 glacial,cozy,bars=3072 - FByknBAAMBNBbF__CL8
 seed-album 7 3 cozy,bpm=80 Night FBHAAAAADBNDwBeFTmlnaHQfp
 seed-album 9 4 cozy คืนนี้%20🌙 FBJAAAAAEBNeX4LiE4Li34LiZ4LiZ4Li14LmJIPCfjJkVU

@@ -22,6 +22,7 @@ function patternSteps(spec) {
   return Math.max(base, ...Object.values(spec.cycles).filter(Boolean));
 }
 import { encodeAlbum } from '../js/share.js';
+import { setTrack } from '../js/tracklen.js';
 import { SCALES } from '../js/theory.js';
 import { CHARACTERS } from '../js/characters.js';
 import { Rng } from '../js/rng.js';
@@ -115,9 +116,10 @@ export function buildAlbum({ word, target, guesses = 6, decoys = 2, n = 3000, se
   const far = pick(rest.map((c) => ({ ...c, negFar: -c.far })), decoys, 'negFar').map((c) => ({ ...c, role: 'decoy' }));
   const tracks = new Rng(((seed ^ 0x41b) >>> 0) || 1).shuffle([...near, ...far]);
   for (const t of tracks) {
-    // About `seconds` a track: whole passes of the loop as composed.
+    // About `seconds` a track: whole passes of the loop as composed, as a
+    // time to the second (session 30c), fading out.
     const loopSeconds = patternSteps(t.spec) * (60 / t.spec.bpm / 4);
-    t.spec.playFor = Math.max(1, Math.round(seconds / loopSeconds));
+    setTrack(t.spec, { secs: Math.round(Math.max(1, Math.round(seconds / loopSeconds)) * loopSeconds) });
   }
   const title = `${word[0].toUpperCase()}${word.slice(1)}?`;
   const code = encodeAlbum(title, tracks.map((t) => t.spec));
@@ -135,7 +137,7 @@ function describe(album) {
   out.push(`  target: ${album.target.map((t) => `${t.dial} ${t.lo.toFixed(2)}-${t.hi.toFixed(2)}`).join(', ')}`);
   out.push('  ' + ['track', 'role', 'profile', 'mode', 'bpm', 'secs', ...album.target.map((t) => t.dial)].map((h, i) => (i < 3 ? h.padEnd(i === 2 ? 11 : 7) : i === 3 ? h.padEnd(18) : h.padStart(9))).join(''));
   album.tracks.forEach((t, i) => {
-    const secs = Math.round(t.spec.playFor * patternSteps(t.spec) * (60 / t.spec.bpm / 4));
+    const secs = t.spec.track.secs;
     out.push('  ' + [String(i + 1).padEnd(7), t.role.padEnd(7), (CHARACTERS[lead(t.spec)]?.label || lead(t.spec)).padEnd(11),
       (SCALES[t.spec.scale]?.label || t.spec.scale).padEnd(18), String(t.spec.bpm).padStart(9), String(secs).padStart(9),
       ...album.target.map((tg) => t.d[tg.dial].toFixed(2).padStart(9))].join(''));

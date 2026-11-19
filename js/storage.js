@@ -2,6 +2,8 @@
 // numbers and a handful of seeds, under a kilobyte as JSON — so a hundred
 // saves is well under a hundred kilobytes.
 
+import { fromOldLength } from './tracklen.js';
+
 const KEY = 'driftloom.saves.v1';
 const PREFS = 'driftloom.prefs.v1';
 
@@ -10,7 +12,15 @@ export function loadAll() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const list = JSON.parse(raw);
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    // A loop kept before session 30c played for whole passes or bars: its
+    // length becomes the time it came to, to the second, at its tempo, and
+    // the list is written back so this happens once (nothing of the old
+    // fields is kept: Mikey, 2026-10-29).
+    let moved = false;
+    for (const e of list) if (e && fromOldLength(e.spec)) moved = true;
+    if (moved) persist(list);
+    return list;
   } catch (err) {
     console.warn('Could not read saved loops', err);
     return [];
@@ -89,9 +99,11 @@ export function importAll(json) {
   for (const e of incoming) {
     if (!e || have.has(e.id)) continue;
     if (!usable(e)) { rejected++; continue; }
-    // Defaults for anything a very old save predates.
+    // Defaults for anything a very old save predates; a length in passes or
+    // bars as its time (session 30c).
     e.spec.mutes = e.spec.mutes || { drums: false, bass: false, chords: false, melody: false, texture: false };
     e.spec.stepsPerBar = e.spec.stepsPerBar || 16;
+    fromOldLength(e.spec);
     list.push(e);
     added++;
   }
@@ -295,7 +307,7 @@ export function findSame(spec) {
 }
 
 function recipeKey(spec) {
-  const { name, playFor, playBars, wanderSalt, ...rest } = spec;
+  const { name, track, wanderSalt, ...rest } = spec;
   return stable(rest);
 }
 

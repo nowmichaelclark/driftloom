@@ -66,8 +66,9 @@ pub enum Moment {
     /// The end of the pass, where the loop would start again.
     Pass,
     /// The end of the track (queue item 94a, `Player::set_track`): the
-    /// app's length slider, a number of passes or of bars counted from when
-    /// it was set. The old loop hands over as the app's does: its notes ring
+    /// app's track length, a number of passes or of bars counted from when
+    /// it was set, or a time (session 30c: its next loop starts on its
+    /// second, the old one ringing out or faded out there). The old loop hands over as the app's does: its notes ring
     /// out at a pass's end, and fall over the crossfade asked at a phrase line
     /// inside one. It waits while no length is set, and for Endless.
     End,
@@ -149,6 +150,8 @@ pub(super) struct Change {
     pub own: bool,
     pub sets_track: bool,
     pub track: super::Track,
+    /// The fades the track plays with (session 30c), with `track`.
+    pub fades: super::track::Fades,
 }
 
 /// The grid a moment's boundaries lie on, in steps of the loop playing:
@@ -183,6 +186,7 @@ impl crate::generator::list::Empty for Change {
             own: false,
             sets_track: false,
             track: super::Track::Always,
+            fades: super::track::Fades::NONE,
         };
 }
 

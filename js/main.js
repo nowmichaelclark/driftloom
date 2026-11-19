@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v191';
+const BUILD = 'v192';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -97,6 +97,7 @@ import * as ui from './ui.js';
 import * as library from './library.js';
 import { VIBE_IDS } from './vibes.js';
 import * as picks from './picks.js';
+import * as tracklen from './tracklen.js';
 import * as piece from './piece.js';
 
 const state = {
@@ -493,7 +494,7 @@ function loadSpec(spec, { keepPosition = false, id = null, pushToHistory = false
 // the page asleep; onTrackEnd then takes the same one.
 function nextForEnd() {
   const spec = state.spec;
-  if (!spec || !(spec.playFor || spec.playBars)) return null;
+  if (!spec || !tracklen.ends(spec)) return null;
   const pl = state.playlist;
   if (pl && pl.ids.length) {
     const id = pl.ids[(pl.index + 1) % pl.ids.length];
@@ -718,21 +719,27 @@ function syncMediaMetadata() {
   state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm · Driftloom`, state.spec);
 }
 
-// Passes are the honest unit -- a track ends on a whole loop -- but nobody
-// thinks in passes, so show the time it comes to at this tempo instead:
-// whole passes, or a length shorter than a pass counted in time (queue item
-// 88b). Kept short: it sits beside the slider and must not change width much.
-function describeLength(spec) {
-  const secs = lengthSeconds(spec);
-  return secs ? ui.formatTime(secs) : 'off';
+// Track length (session 30c, queue item 111): its view, opened from the Vibe
+// panel's pace line (`from` 'vibe') or from the export when nothing would
+// end it ('export').
+function openTrackView(from) {
+  if (!state.spec) return;
+  tracklen.openTrack(state.spec, from);
+  setView('track');
 }
 
-// The time the track length set comes to at this tempo, or 0 for none.
-function lengthSeconds(spec) {
-  if (!spec) return 0;
-  if (spec.playFor) return spec.playFor * ui.passSeconds(spec);
-  if (spec.playBars) return spec.playBars * ui.barSeconds(spec);
-  return 0;
+// The Track length view's done: the loop playing plays this long, with these
+// fades, as the Length slider's setting did (the loop's own: a saved loop
+// keeps it, an album's tracks and the history's keep theirs, a new loop
+// plays on). Counted from what is heard now, on the core, with the loop that
+// follows armed for its end.
+function setTrackLength(track) {
+  if (!state.spec) return;
+  tracklen.setTrack(state.spec, track);
+  if (state.engine) state.engine.trackChanged(nextForEnd());
+  state.passCount = 0;
+  renderNow();
+  updateSaveButton();
 }
 
 // The playing loop's cover on the card. Drawn off the main thread
@@ -932,6 +939,7 @@ function setView(view) {
   if (view === 'vibes') renderVibes();
   if (view === 'vibe') picks.renderPanel();
   if (view === 'length') picks.renderLength();
+  if (view === 'track') tracklen.renderTrack();
   refreshCard();
   store.setPrefs({ view: state.lastView, edit: state.lastEdit });
 }
@@ -1032,7 +1040,7 @@ function heldRequest(entry) {
 }
 
 // A loop the core made itself has started (queue item 95): at Next, or where
-// the length slider's time ran out with nothing of the page's armed. The
+// the track length's time ran out with nothing of the page's armed. The
 // page draws the same spec for its card, history and share codes from the
 // seed and the picks the core took (the generation goldens hold the two
 // generators to the same loop), and loads it: the engine sees the core has
@@ -1386,11 +1394,6 @@ async function seedAlbum(asLink) {
 
 function syncToneInputs(spec) {
   ui.el('bpm').value = spec.bpm;
-  const secs = lengthSeconds(spec);
-  const idx = secs ? ui.TRACK_TIMES.reduce((best, v, i) =>
-    (i && Math.abs(v - secs) < Math.abs(ui.TRACK_TIMES[best] - secs) ? i : best), 1) : 0;
-  ui.el('trackLen').value = idx;
-  ui.el('lenVal').textContent = describeLength(spec);
   ui.el('warmth').value = spec.tone.warmth;
   ui.el('space').value = spec.tone.space;
   ui.el('wobble').value = spec.tone.wobble;
@@ -1824,6 +1827,7 @@ function wire() {
     setView,
     openVibes: () => setView('vibes'),
     openLength: () => { picks.openLength(); setView('length'); },
+    openTrack: () => openTrackView('vibe'),
     setLength: (length, journey) => setPicks({ length, journey }),
     clearLine: clearPickLine,
   });
@@ -1871,6 +1875,17 @@ function wire() {
     engine: () => state.engine,
     mono: () => state.mono,
     lite: () => state.lite,
+    // Nothing would end the export: how long, first (session 30c).
+    openTrack: () => openTrackView('export'),
+  });
+  tracklen.wireTrack({
+    done: (track, from) => {
+      setTrackLength(track);
+      setView(from === 'export' ? 'save' : 'vibe');
+      // From the export, it goes on once something ends it.
+      if (from === 'export' && state.audioExport && state.spec && tracklen.ends(state.spec)) state.audioExport.start();
+    },
+    cancel: (from) => setView(from === 'export' ? 'save' : 'vibe'),
   });
   ui.el('prevBtn').addEventListener('click', goBack);
   ui.el('nextBtn').addEventListener('click', goForward);
@@ -1885,25 +1900,10 @@ function wire() {
     ui.el('wanderRow').classList.toggle('off', !on);
     store.setPrefs(on ? { drift: true, driftAmount: v } : { drift: false });
   });
-  ui.el('trackLen').addEventListener('input', (e) => {
-    if (!state.spec) return;
-    const secs = ui.TRACK_TIMES[parseInt(e.target.value, 10)] || 0;
-    ui.trackLength(state.spec, secs);
-    // Counted from what is heard now, the pass playing as the first; on the
-    // player, with the loop that follows armed for its end.
-    if (state.engine) state.engine.trackChanged(nextForEnd());
-    ui.el('lenVal').textContent = describeLength(state.spec);
-    state.passCount = 0;
-    renderNow();
-    updateSaveButton();
-  });
-
   ui.el('bpm').addEventListener('input', (e) => {
     if (!state.spec) return;
     state.spec.bpm = parseInt(e.target.value, 10);
     ui.el('bpmVal').textContent = state.spec.bpm;
-    // The same number of passes takes a different time at a new tempo.
-    ui.el('lenVal').textContent = describeLength(state.spec);
     if (state.engine) state.engine.setTempo(state.spec.bpm);
   });
 

@@ -46,6 +46,8 @@ pub mod delay;
 pub mod generator;
 #[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
 pub mod code;
+#[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
+pub mod fades;
 pub mod master;
 pub mod math;
 pub mod mix;
@@ -206,6 +208,11 @@ pub const ARC_SHALLOW: u32 = TONE_FREQ + 25;
 /// would have it, open past its opening. Any other space is the same
 /// throughout, and this moves nothing of it.
 pub const SPACE_AGE: u32 = TONE_FREQ + 26;
+/// The track's gain (session 30c): 1, and moved by the player alone for a
+/// track's fade in and fade out (`player::Player::set_track_with`), after
+/// the kill gain, so neither the listener's volume nor the transport's
+/// silence is touched. Any `op`.
+pub const TRACK_GAIN: u32 = TONE_FREQ + 27;
 
 /// How long a layout changed while the core plays takes (queue item 66;
 /// `Core::set_layout`), in seconds: the side fades in over it, or out
@@ -958,6 +965,7 @@ impl Core {
             ARC_LOWER => mix::apply(self.master.arc_aim(0), op, v, time, tau, now),
             ARC_SHALLOW => mix::apply(self.master.arc_aim(1), op, v, time, tau, now),
             KILL => mix::apply(self.master.kill(), op, v, time, tau, now),
+            TRACK_GAIN => mix::apply(self.master.track(), op, v, time, tau, now),
             BYPASS => {
                 self.master.set_bypass(value != 0.0);
                 true

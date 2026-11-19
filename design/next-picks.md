@@ -93,8 +93,19 @@ weight, `--text-secondary`.
 
 **Renamed "Bars" (Mikey, 2026-11-03; queue item 88b):** its head reads
 "Bars" and the panel's "any length" reads "any bars"; it sets how many bars
-a loop is, and when a loop ends is the Sound panel's length slider. Text
-only; the rest of this section stands.
+a loop is. Text only; the rest of this section stands.
+
+**When a loop ends is the Track length view's** (session 30c, queue item
+111; Mikey, 2026-11-18): its key is the pace line's third, after "any tempo
+· any bars", saying the time set ("1:23:45") or "plays on"; the loop
+playing's, not a pick, so the line's any key leaves it. The view is built
+like Bars, plain until a Painter session restyles it: the time to the
+second as the big number (h:mm:ss, or m:ss under an hour; typed, or digits
+a timer's way), its words under it, a row of four keys (−1 min, −1 s, +1 s,
++1 min), a coarse slider of sixteen stops from a minute to a day (ticks 1m,
+15m, 1h, 4h, 1d), then **on and on** on the left and **fade in**, **fade
+out** on the right, each lit the app's way while on (the fade out dimmed
+while it plays on); cancel and done in the head.
 
 Opened from the length value in the panel. A view of its own in the
 middle viewport.

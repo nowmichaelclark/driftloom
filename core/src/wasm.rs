@@ -787,24 +787,22 @@ mod player {
         player().set_tone(core(), [warmth, space, wobble]);
     }
 
-    /// How long the track plays (`Player::set_track`): `kind` 0 on and on, 1
-    /// `count` whole passes, 2 `count` bars (to the next phrase line). 1 if
-    /// it is a kind there is.
+    /// How long the track plays (`Player::set_track_with`): `kind` 0 on and
+    /// on, 1 `count` whole passes, 2 `count` bars (to the next phrase line),
+    /// 3 `count` seconds (session 30c); with 4 added for a fade in and 8 for
+    /// a fade out (a time's only): `Track::of`. 1 if it is a kind there is.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_track(kind: u32, count: u32) -> u32 {
-        let Some(track) = track_of(kind, count) else { return 0 };
-        player().set_track(core(), track);
+        let Some((track, fades)) = Track::of(kind, count) else { return 0 };
+        player().set_track_with(core(), track, fades);
         1
     }
 
-    /// The track `kind` and `count` say (`dl_play_track`'s numbers).
-    fn track_of(kind: u32, count: u32) -> Option<Track> {
-        match kind {
-            0 => Some(Track::Always),
-            1 => Some(Track::Passes(count.max(1))),
-            2 => Some(Track::Bars(count.max(1))),
-            _ => None,
-        }
+    /// The second a time's track ends on, on the core's clock
+    /// (`Player::track_at`; session 30c); -1 for none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_track_at() -> f64 {
+        player().track_at().unwrap_or(-1.0)
     }
 
     /// The step from the loop's load the track ends at
@@ -988,9 +986,9 @@ mod player {
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_change_track(seed: u32, moment: u32, crossfade: f64, kind: u32, count: u32) -> u32 {
         let Some(m) = Moment::of(moment) else { return 0 };
-        let Some(track) = track_of(kind, count) else { return 0 };
+        let Some(track) = Track::of(kind, count) else { return 0 };
         let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
-        player().change_with_track(seed, &taken().0, m, handover, Some(track));
+        player().change_with(seed, &taken().0, m, handover, Some(track));
         1
     }
 
@@ -1780,9 +1778,10 @@ mod codes {
 
     /// How long track `index` (from 0) of the album in the first `len`
     /// bytes at `dl_code_input` plays before the next (`code::album_pace`):
-    /// 1 on and on, 2 whole passes, 3 bars to a phrase line (the player's
-    /// track kind, plus one), their count at `dl_code_pace_count`; or 0 with
-    /// the refusal noted.
+    /// the player's track kind plus one (`code::Pace::kind`: 1 on and on, 4
+    /// a time, each with its fades' bits, 4 for a fade in and 8 for a fade
+    /// out, added before the one), its seconds at `dl_code_pace_count`; or 0
+    /// with the refusal noted.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_code_pace(len: u32, index: u32) -> u32 {
         match code::album_pace(input(len), index as usize) {
@@ -1796,7 +1795,7 @@ mod codes {
         }
     }
 
-    /// The count of the last pace read (`dl_code_pace`): passes or bars.
+    /// The count of the last pace read (`dl_code_pace`): its seconds.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_code_pace_count() -> u32 {
         // SAFETY: single-threaded.

@@ -51,7 +51,7 @@ export function pieceOf(spec) {
 
 // The bars a pass of the loop of `spec` plays (queue item 88b): the length
 // asked (Infinity for 'endless'), else the loop's own. What the card shows,
-// and what the length slider counts a pass as.
+// and what a track of whole passes counts one as.
 export function loopBars(spec) {
   if (!spec) return 0;
   if (spec.length === 'endless') return Infinity;

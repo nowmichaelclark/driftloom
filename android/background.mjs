@@ -215,12 +215,17 @@ try {
   sh('pm', 'grant', pkg, 'android.permission.POST_NOTIFICATIONS');
   sh('logcat', '-c');
 
-  // One minute for each track, so the core hands the music from loop to loop
-  // by itself while the page is hidden.
+  // One minute for the track (the Track length view, session 30c), so the
+  // core hands the music from loop to loop by itself while the page is
+  // hidden.
   await ev(() => {
-    const r = document.getElementById('trackLen');
-    r.value = '1';
-    r.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('vibesBtn').click();
+    document.querySelector('.pk-track').click();
+    const n = document.getElementById('trkNum');
+    n.value = '1:00';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+    document.getElementById('picksClose').click();
   });
 
   // ---------------------------------------------------------------- play

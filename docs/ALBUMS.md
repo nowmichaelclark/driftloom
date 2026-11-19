@@ -11,6 +11,10 @@ track's length of play (the slider) travels with its album again (session
 Session 26 album, Phase 1 check, Heartwarming? and Joyful?) were written
 again with it, checked to play the same notes for the same passes; the
 others never set it, so their tracks play on until moved on, as they did.
+Since session 30c a track's length is a time with its fades: the three
+albums in the app below are written again with each track's passes or bars
+as the seconds they came to at its tempo, fading out (their old links still
+open, their tracks a few seconds each).
 
 ## Three albums in the app (brain B4, 2026-11-18, v189) -- out, labeled
 
@@ -19,14 +23,14 @@ links the app plays (short codes, version 2), so he can hear them on his
 own devices and keep them in the Library. Labeled, nothing blind, no key.
 Each loop checked at main (c5b2862) to still draw its sound (`parts()`;
 planing from its chords); twang's loops all play soft now (#414). Each
-track plays the passes shown (about a minute, longer where the sound comes
-late), then the next; the long pieces play whole, the Endless ones until
+track plays about a minute (longer where the sound comes late), then the
+next; the long pieces play whole, the Endless ones until
 Next. Every code decoded back; the long pieces' link opened in the app as
 "1 of 10", bar 5 of 64. One word a track if anything sounds wrong.
 
 #### Batch 6 in the app
 
-<https://driftloom.nowmichaelclark.workers.dev/#c=FAPIKOYsYDWFI7ZatZAWbIfJIxZAWRI4c7hKCWLIu7pCOAWHGKky18BGHbNWxCIXpKi6AWFG63vuPBIxTa0wAWFGTYm7NBIH3VwoDWFI8i3bEBWLICVXKDBWNGFzdmMAWDeSQmF0Y2ggNiBpbiB0aGUgYXBwdB>
+<https://driftloom.nowmichaelclark.workers.dev/#c=FAPJKOYsYDW0FJ7ZatZAW0HGfJIxZAJ4c7hKCWkMJu7pCOAWsHJKky18BWgJJHbNWxCWwHJXpKi6AWkLJ63vuPBW8HJxTa0wAW4IJTYm7NBWwJJH3VwoDWkGJ8i3bEBW0GGCVXKDBJFzdmMAWwKWgIeSQmF0Y2ggNiBpbiB0aGUgYXBwTr>
 
 1. deepDuck (vor-the), 3 passes
 2. wideSweep wide (brai-fei), 14 passes
@@ -46,7 +50,7 @@ Next. Every code decoded back; the long pieces' link opened in the app as
 
 #### Nearer chords (84b)
 
-<https://driftloom.nowmichaelclark.workers.dev/#c=FAGIZIRo3DWTIWHNQHCWHGKreV6AIAgQiVBWDIem_wlDWJILMMy3AWLWBeTTmVhcmVyIGNob3JkcyAoODRiKQIz>
+<https://driftloom.nowmichaelclark.workers.dev/#c=FAGGZIRo3DJWHNQHCW4HJKreV6AW4IJAgQiVBW8HJem_wlDW8IJLMMy3AWkGWgGeTTmVhcmVyIGNob3JkcyAoODRiKQeS>
 
 1. shu-san, 10 passes
 2. glai-thel, 4 passes
@@ -57,7 +61,7 @@ Next. Every code decoded back; the long pieces' link opened in the app as
 
 #### Long pieces in the app
 
-<https://driftloom.nowmichaelclark.workers.dev/#c=FAKO0U0niCF_BHAWgEOlG_oEBF_HHAWgQOapBrACF_HHAWgQPAcCz6BF_fHAWggCRHbNWxCCAQBF_fWggCJHAAAAAGHBJJeyuABGHBMB1tFqACmCQBGJlG_oEBGHAOxkMs_AF_BHAWgEeWTG9uZyBwaWVjZXMgaW4gdGhlIGFwcAkP>
+<https://driftloom.nowmichaelclark.workers.dev/#c=FAKO0U0niCF_BHAWgLPlG_oEBF_HHAWwmCPapBrACF_HHAWwhCPAcCz6BF_fHAWskIRHbNWxCCAQBF_fWosHJHAAAAAGHBJJeyuABGHBMB1tFqACmCQBGJlG_oEBGHAOxkMs_AF_BHAWwdeWTG9uZyBwaWVjZXMgaW4gdGhlIGFwcAKc>
 
 1. tha-vol 64 bars, an arc
 2. brum-yei 256 bars, an arc in two movements

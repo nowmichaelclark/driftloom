@@ -73,10 +73,10 @@ console.log('\nWord albums (35b)');
   check('the guesses are inside the target', guesses.every((t) => distance(t.d, target) === 0),
     guesses.map((t) => `${t.d.height.toFixed(2)}/${t.d.warmth.toFixed(2)}`).join(' '));
   check('the decoys are outside it', decoys.every((t) => distance(t.d, target) > 0));
-  check('every track is four bars or longer, and about 40 s', album.tracks.every((t) => t.spec.bars >= 4 && t.spec.playFor >= 1));
+  check('every track is four bars or longer, and about 40 s', album.tracks.every((t) => t.spec.bars >= 4 && t.spec.track && t.spec.track.secs >= 1));
   const back = decodeAlbum(album.code);
   check('the album code reads back, titled "Lofty?"', back.title === 'Lofty?' && back.specs.length === 8);
-  check('  each track playing as long as the album set it (session 24b)', back.specs.every((s, i) => s.playFor === album.tracks[i].spec.playFor));
+  check('  each track playing as long as the album set it (session 24b; a time since 30c)', back.specs.every((s, i) => s.track && s.track.secs === album.tracks[i].spec.track.secs));
   check('the same seed builds the same album', buildAlbum({ word: 'lofty', target, n: 600, seed: 3, scale }).code === album.code);
 }
 

@@ -415,9 +415,9 @@ pub extern "C" fn dl_player_change(player: *mut Engine, seed: u32, moment: u32, 
 pub extern "C" fn dl_player_change_track(player: *mut Engine, seed: u32, moment: u32, crossfade: f64, kind: u32, count: u32) -> c_int {
     let Some(e) = engine(player) else { return 0 };
     let Some(m) = Moment::of(moment) else { return 0 };
-    let Some(track) = track_of(kind, count) else { return 0 };
+    let Some(track) = crate::player::Track::of(kind, count) else { return 0 };
     let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
-    e.player.change_with_track(seed, &e.request, m, handover, Some(track));
+    e.player.change_with(seed, &e.request, m, handover, Some(track));
     e.request = Request::new();
     1
 }
@@ -666,24 +666,16 @@ pub extern "C" fn dl_player_tone(player: *mut Engine, warmth: f64, space: f64, w
     }
 }
 
-/// How long the track plays (`Player::set_track`): `kind` 0 on and on, 1
-/// `count` passes, 2 `count` bars. 1 if it is a kind there is.
+/// How long the track plays (`Player::set_track_with`): `kind` 0 on and
+/// on, 1 `count` passes, 2 `count` bars, 3 `count` seconds, with 4 added
+/// for a fade in and 8 for a fade out (`Track::of`; session 30c). 1 if it
+/// is a kind there is.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_track(player: *mut Engine, kind: u32, count: u32) -> c_int {
     let Some(e) = engine(player) else { return 0 };
-    let Some(track) = track_of(kind, count) else { return 0 };
-    e.player.set_track(&e.core, track);
+    let Some((track, fades)) = crate::player::Track::of(kind, count) else { return 0 };
+    e.player.set_track_with(&e.core, track, fades);
     1
-}
-
-/// The track `kind` and `count` say (`dl_player_track`'s numbers).
-fn track_of(kind: u32, count: u32) -> Option<crate::player::Track> {
-    match kind {
-        0 => Some(crate::player::Track::Always),
-        1 => Some(crate::player::Track::Passes(count.max(1))),
-        2 => Some(crate::player::Track::Bars(count.max(1))),
-        _ => None,
-    }
 }
 
 /// The step from the loop's load the track ends at (`Player::track_end`);
@@ -1156,9 +1148,10 @@ pub unsafe extern "C" fn dl_album_track(code: *const c_char, index: usize, out: 
 }
 
 /// How long track `index` (from 0) of the album `code` plays before the
-/// next, as its maker set it (`code::album_pace`): `kind` 0 on and on, 1
-/// whole passes, 2 bars to a phrase line, and `count` of them, as the
-/// player's track takes them. Null, or the line saying why not.
+/// next, as its maker set it (`code::album_pace`): `kind` and `count` as the
+/// player's track takes them (`dl_player_track`: 0 on and on, 3 a time of
+/// `count` seconds, with DL_FADE_IN and DL_FADE_OUT added). Null, or the
+/// line saying why not.
 ///
 /// # Safety
 ///

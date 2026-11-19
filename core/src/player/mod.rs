@@ -78,7 +78,7 @@ pub use change::{CROSSFADE, END_FADE, Handover, Moment};
 pub use events::{Event, Kind};
 use events::Events;
 use crate::generator::load::Load;
-pub use track::Track;
+pub use track::{Fades, Track};
 use host::Host;
 use crate::generator::list::{Biased, Maybe};
 use crate::generator::rng::Rng;
@@ -96,6 +96,21 @@ pub const LOOKAHEAD: f64 = 0.25;
 /// When a loop's first step falls after the block it starts on, in
 /// seconds (the measure harness's 0.05).
 pub const START: f64 = 0.05;
+
+/// How long the track's gain takes back to 1 where a fade left it under
+/// (session 30c): a new loop after a track that faded out (with no fade in
+/// of its own), or a time set again while it fades. Long enough not to
+/// click, short enough to be heard as the loop's own start.
+pub const GAIN_RETURN: f64 = 0.25;
+
+/// How long a fade in's dip to silence takes where the gain stood above it
+/// (a loop that fades in after one playing at its level, at Next): a dip,
+/// not a click.
+pub const GAIN_DIP: f64 = 0.02;
+
+/// The most points the track's gain plans at once: what is left of one
+/// track's fade, and the next's fade in and fade out.
+const GAIN_POINTS: usize = 8;
 
 /// How long a jump's old notes take to fall to nothing, in seconds (session
 /// 17): a short fade, from the jump's first step, under the place it lands.
@@ -129,7 +144,7 @@ pub struct Place {
     /// The time played from the piece's start, in seconds at the tempo
     /// playing.
     pub played: f64,
-    /// The time left: to the track's end where the length slider ends it
+    /// The time left: to the track's end where its track length ends it
     /// sooner, else to the round's end; none for Endless played on.
     pub left: Option<f64>,
     /// The section heard (a loop's pass), from the piece's first.
@@ -246,6 +261,19 @@ pub struct Player {
     track: Track,
     count_from: u64,
     ended: bool,
+    /// The track's fades (session 30c, `set_track_with`), the second on the
+    /// core's clock a time's track ends on (0 until its loop starts), and
+    /// the track's gain as planned (`TRACK_GAIN`): its points (a time and a
+    /// value, ramped between), how many, whether it ever moved from 1, and
+    /// whether it is written again before the next block. And the time the
+    /// last block decided was at, playing (a resume shifts what came after).
+    fades: Fades,
+    track_at: f64,
+    gain: [(f64, f64); GAIN_POINTS],
+    gain_len: usize,
+    gain_moved: bool,
+    replan: bool,
+    played_to: f64,
     /// Whether the load being made is a loop resumed on a new core
     /// (`load_resumed`): it doesn't wait out its lateFloor a second time.
     resumed: bool,
@@ -311,6 +339,13 @@ impl Player {
             track: Track::Always,
             count_from: 0,
             ended: false,
+            fades: Fades::NONE,
+            track_at: 0.0,
+            gain: [(0.0, 0.0); GAIN_POINTS],
+            gain_len: 0,
+            gain_moved: false,
+            replan: false,
+            played_to: 0.0,
             resumed: false,
             picks: Request::new(),
             picks_tag: 0,
@@ -448,6 +483,11 @@ impl Player {
     /// this way, with that loop's own length, so a page asleep at the
     /// boundary leaves the core playing what it would have set.
     pub fn change_with_track(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<Track>) {
+        self.change_with(seed, request, moment, handover, track.map(|t| (t, Fades::NONE)));
+    }
+
+    /// `change_with_track`, the track with its fades (session 30c).
+    pub fn change_with(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<(Track, Fades)>) {
         let change = Change {
             seed,
             request: *request,
@@ -456,7 +496,8 @@ impl Player {
             target: None,
             own: false,
             sets_track: track.is_some(),
-            track: track.unwrap_or(Track::Always),
+            track: track.map_or(Track::Always, |t| t.0),
+            fades: track.map_or(Fades::NONE, |t| t.1),
         };
         self.ask(change, moment);
     }
@@ -508,6 +549,7 @@ impl Player {
         self.own_tag = self.picks_tag;
         if change.sets_track {
             self.track = change.track;
+            self.fades = change.fades;
             self.ended = false;
         }
     }
@@ -542,6 +584,7 @@ impl Player {
             own: true,
             sets_track: true,
             track: Track::Always,
+            fades: Fades::NONE,
         }
     }
 
@@ -618,16 +661,38 @@ impl Player {
         }
     }
 
-    /// How long the track plays (queue item 94a; the app's length slider):
-    /// whole passes or bars, counted from the step heard now (the pass
+    /// How long the track plays (queue item 94a; the app's track length):
+    /// whole passes or bars (a time: `set_track_with`), counted from the step heard now (the pass
     /// playing as the first), or from a new loop's first step. It holds
     /// across loads until set again. When it has run, the player tells the
     /// host (`Kind::End`) and starts the change waiting for it
     /// (`Moment::End`), if one does.
     pub fn set_track<H: Host>(&mut self, host: &H, track: Track) {
+        self.set_track_with(host, track, Fades::NONE);
+    }
+
+    /// `set_track`, with its fades (session 30c, queue item 111; the app's
+    /// Track length view). A time (`Track::Seconds`) counts on the core's
+    /// clock from the block the core renders next (or from a new loop's
+    /// first step), so a tempo change doesn't move it; its music is done on
+    /// that second. With the fade out, the notes and the mix fall to
+    /// silence over its last `track::FADE_OUT` (a long piece lands its close
+    /// there first, `Heard::stop_at`); without it, nothing is decided from
+    /// that second on and what sounds rings out. The fade in brings a loop
+    /// up from silence as it starts (a track set as it plays has started).
+    /// The track's gain is written before the next block.
+    pub fn set_track_with<H: Host>(&mut self, host: &H, track: Track, fades: Fades) {
         self.track = track;
+        self.fades = fades;
         self.ended = false;
         let now = self.now(host);
+        self.track_at = match track {
+            Track::Seconds(n) if self.state == State::Playing => now + f64::from(n),
+            _ => 0.0,
+        };
+        if self.state == State::Playing {
+            self.plan_track(now, false);
+        }
         let sd = self.seq.step_dur();
         let ahead = if self.state == State::Playing && sd.is_finite() && sd > 0.0 {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a few steps
@@ -656,12 +721,144 @@ impl Player {
         self.track
     }
 
+    /// The track's fades (`set_track_with`).
+    #[must_use]
+    pub fn fades(&self) -> Fades {
+        self.fades
+    }
+
+    /// The second a time's track ends on, on the core's clock, as it stands
+    /// (session 30c); none for a count of passes or bars, on and on, or
+    /// before its loop starts.
+    #[must_use]
+    pub fn track_at(&self) -> Option<f64> {
+        (matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 && self.state == State::Playing).then_some(self.track_at)
+    }
+
+    /// The first step (from the load) at or after `time` on the core's
+    /// clock, at the tempo playing.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
+    fn step_at(&self, time: f64) -> u64 {
+        let sd = self.seq.step_dur();
+        if !(sd.is_finite() && sd > 0.0) {
+            return self.seq.abs_step;
+        }
+        let ahead = js::ceil((time - self.seq.next_step_time) / sd - 1e-9).max(0.0);
+        self.seq.abs_step + ahead as u64
+    }
+
+    /// The track's gain at `time` as planned: 1 with nothing planned.
+    fn gain_at(&self, time: f64) -> f64 {
+        let points = &self.gain[..self.gain_len];
+        let Some(&(t0, v0)) = points.first() else { return 1.0 };
+        if time <= t0 {
+            return v0;
+        }
+        for w in points.windows(2) {
+            let [(a, va), (b, vb)] = [w[0], w[1]];
+            if time < b {
+                return if b > a { va + (vb - va) * (time - a) / (b - a) } else { vb };
+            }
+        }
+        points[points.len() - 1].1
+    }
+
+    /// Add a point to the gain's plan (none past `GAIN_POINTS`).
+    fn gain_push(&mut self, time: f64, value: f64) {
+        if let Some(p) = self.gain.get_mut(self.gain_len) {
+            *p = (time, value);
+            self.gain_len += 1;
+        }
+    }
+
+    /// The gain's plan from `from` on (session 30c): what it holds then
+    /// kept, and the track's own fades after it. `fresh` is a loop starting
+    /// at `from` (its fade in plays); else the track was set as it plays.
+    fn plan_track(&mut self, from: f64, fresh: bool) {
+        let (fade_in, fade_out) = self.track.fade_lengths(self.fades);
+        let rises = fresh && fade_in > 0.0;
+        // A fade in where the gain stands above silence dips there first,
+        // to be at silence on the loop's first step.
+        let dip = if rises && self.gain_at(from) > 0.0 { GAIN_DIP } else { 0.0 };
+        let cut = from - dip;
+        let at = self.gain_at(cut);
+        let keep = self.gain[..self.gain_len].iter().take_while(|p| p.0 < cut).count();
+        self.gain_len = keep;
+        self.gain_push(cut, at);
+        let mut up = from;
+        if rises {
+            if dip > 0.0 {
+                self.gain_push(from, 0.0);
+            }
+            up = from + fade_in;
+            self.gain_push(up, 1.0);
+        } else if at < 1.0 {
+            up = from + GAIN_RETURN;
+            self.gain_push(up, 1.0);
+        }
+        if fade_out > 0.0 && self.track_at > 0.0 && matches!(self.track, Track::Seconds(_)) {
+            let end = self.track_at;
+            let down = (end - fade_out).max(up);
+            if end > down {
+                self.gain_push(down, 1.0);
+            }
+            self.gain_push(end, 0.0);
+        }
+        self.replan = true;
+    }
+
+    /// Write the gain's plan to the core from `now` (`TRACK_GAIN`): nothing
+    /// while it never moved from 1, so a loop with no fade renders as it
+    /// always did.
+    fn write_gain<H: Host>(&mut self, host: &mut H, now: f64) {
+        self.replan = false;
+        while self.gain_len >= 2 && self.gain[1].0 <= now {
+            self.gain.copy_within(1..self.gain_len, 0);
+            self.gain_len -= 1;
+        }
+        if !self.gain_moved {
+            if self.gain[..self.gain_len].iter().all(|p| p.1 == 1.0) {
+                self.gain_len = 0;
+                return;
+            }
+            self.gain_moved = true;
+        }
+        let g = crate::TRACK_GAIN;
+        host.param(g, crate::mix::CANCEL, 0.0, now, 0.0);
+        host.param(g, crate::mix::SET, self.gain_at(now), now, 0.0);
+        let mut last = now;
+        for &(t, v) in &self.gain[..self.gain_len] {
+            if t > now {
+                // Two points at one time: a step (a fade in from a loop
+                // that played at its level dips first, so it never is).
+                let op = if t > last { crate::mix::LINEAR } else { crate::mix::SET };
+                host.param(g, op, v, t, 0.0);
+                last = t;
+            }
+        }
+    }
+
+    /// A time's fade out under way (session 30c): every note sounding or
+    /// waiting falls to nothing on the track's last second, the notes
+    /// decided since the last block among them (each fades from where the
+    /// fade has reached), so the room and the echo fall with them.
+    fn fade_notes<H: Host>(&self, host: &mut H, now: f64, last: bool) {
+        let Some(end) = self.track_at() else { return };
+        let (_, fade_out) = self.track.fade_lengths(self.fades);
+        if fade_out > 0.0 && (last || (now + LOOKAHEAD >= end - fade_out && now < end)) {
+            host.fade_all(end - fade_out, end);
+        }
+    }
+
     /// The step from the loop's load the track ends at, as it stands; none
     /// while it plays on (or nothing plays).
     #[must_use]
     pub fn track_end(&self) -> Option<u64> {
         if self.state != State::Playing {
             return None;
+        }
+        if let Some(t) = self.track_at() {
+            return Some(self.step_at(t));
         }
         self.track.end_step(self.generator.spec(), self.count_from)
     }
@@ -929,11 +1126,23 @@ impl Player {
             (None, Some(r)) => Some(r - into),
             (None, None) => None,
         };
+        // A time's track: the seconds to its end, or the round's, sooner.
+        let left = left.map(|l| l as f64 * sd);
+        let left = match self.track_at() {
+            Some(t) => {
+                let to = (t - self.now(host)).max(0.0);
+                Some(match round {
+                    Some(r) => to.min((r - into) as f64 * sd),
+                    None => to,
+                })
+            }
+            None => left,
+        };
         Some(Place {
             bar: into as f64 / spb,
             bars: round.map(|r| r as f64 / spb),
             played: into as f64 * sd,
-            left: left.map(|l| l as f64 * sd),
+            left,
             section: n,
         })
     }
@@ -1103,7 +1312,27 @@ impl Player {
         }
         // A load's first section: the track counts from its first step.
         let fresh = self.state == State::Wandering && self.asked_by != Asked::InPlace;
-        let end = self.track.end_step(self.generator.spec(), if fresh { 0 } else { self.count_from })?;
+        let end = match self.track {
+            // A time lands its close on the phrase line at or before its
+            // second, and only with its fade out (session 30c): without,
+            // the piece stops on the second as it stands.
+            Track::Seconds(n) => {
+                if !self.fades.fade_out {
+                    return None;
+                }
+                let spec = self.generator.spec();
+                let at = if fresh {
+                    let sd = 60.0 / self.tempo.unwrap_or(spec.bpm) / 4.0;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
+                    let n = js::floor(f64::from(n) / sd).max(0.0) as u64;
+                    n
+                } else {
+                    self.step_at(self.track_at().unwrap_or(0.0))
+                };
+                track::phrase_before(spec, at)
+            }
+            _ => self.track.end_step(self.generator.spec(), if fresh { 0 } else { self.count_from })?,
+        };
         let here = self.seq.abs_step.saturating_sub(self.seq.step);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a section's steps
         let (start, decided) = if fresh {
@@ -1204,9 +1433,16 @@ impl Player {
         for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
             c.target = None;
         }
-        // The track counts from the new loop's first step.
+        // The track counts from the new loop's first step: a time's to its
+        // second, and its fades planned from there (session 30c).
         self.count_from = 0;
         self.ended = false;
+        self.track_at = match self.track {
+            Track::Seconds(n) => start + f64::from(n),
+            _ => 0.0,
+        };
+        self.plan_track(start, true);
+        self.write_gain(host, now);
         if self.own {
             self.own = false;
             self.events.push(Event { time: start, kind: Kind::Own, number: u64::from(self.own_tag), step: 0 });
@@ -1308,6 +1544,11 @@ impl Player {
             let need = js::ceil((now + self.lead() - self.seq.next_step_time) / sd).max(0.0);
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
             let first = self.seq.abs_step + need as u64;
+            // A time's: the first step on or after its second (the next
+            // loop starts on the second itself, `arm`).
+            if let Some(t) = self.track_at() {
+                return Some(self.step_at(t).max(first));
+            }
             return self.track.next_end(g.spec(), self.count_from, first);
         }
         let spb = g.spec().steps_per_bar;
@@ -1368,6 +1609,14 @@ impl Player {
                 *p = Maybe::some(c);
             }
         }
+        // A time's end falls on a step the tempo moves (session 30c): it is
+        // worked out again each block, until it is the lead away.
+        let far = |t: u64| self.time_of(t) - now > self.lead();
+        if self.track_at().is_some() && self.pending.get(END_SLOT).and_then(Maybe::get).and_then(|c| c.target).is_some_and(far)
+            && let Some(c) = self.pending.get_mut(END_SLOT).and_then(Maybe::as_mut)
+        {
+            c.target = None;
+        }
         for slot in 0..self.pending.len() {
             if self.pending[slot].get().is_some_and(|c| c.target.is_none()) {
                 let t = self.resolve(slot, now);
@@ -1398,18 +1647,26 @@ impl Player {
                 *c = Maybe::NONE;
             }
         }
-        let start = self.seq.next_step_time;
+        let mut start = self.seq.next_step_time;
         // At the track's end the old loop hands over as the app's does: its
         // notes ring out at a pass's end, and fall over the crossfade asked
         // at a phrase line inside one.
         let mut handover = change.handover;
+        // A time's track (session 30c): the next loop starts on its second,
+        // the old one's notes left to ring (or, with the fade out, ended
+        // there, the last decided among them).
+        let timed = if slot == END_SLOT { self.track_at() } else { None };
+        if let Some(t) = timed {
+            self.fade_notes(host, now, true);
+            start = js::max(t, now);
+        }
         if slot == END_SLOT {
             if !self.ended {
                 self.ended = true;
                 self.events.push(Event { time: start, kind: Kind::End, number: 0, step: target });
             }
             // (And where a long piece's close landed there: session 15.)
-            if track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) || self.passes.iter().any(|p| p.heard.stops) {
+            if timed.is_some() || track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) || self.passes.iter().any(|p| p.heard.stops) {
                 handover = Handover::RingOut;
             }
         }
@@ -1424,6 +1681,7 @@ impl Player {
         self.own_tag = self.picks_tag;
         if change.sets_track {
             self.track = change.track;
+            self.fades = change.fades;
         }
         Some(n)
     }
@@ -1502,11 +1760,32 @@ impl Player {
         }
         let now = self.now(host);
         if let Some(at) = self.resume_at.take() {
+            let was = self.seq.next_step_time;
             self.seq.next_step_time = if at > now { at } else { now + START };
             self.state = State::Playing;
+            // A time's track waits out the pause (session 30c): its second,
+            // and the fades planned after the pause began, move with the
+            // music.
+            let shift = self.seq.next_step_time - was;
+            if shift.is_finite() && shift > 0.0 {
+                if self.track_at > 0.0 {
+                    self.track_at += shift;
+                }
+                let from = self.played_to;
+                for p in self.gain.iter_mut().take(self.gain_len).filter(|p| p.0 >= from) {
+                    p.0 += shift;
+                }
+            }
+            // Written again whatever moved: a host's stop may have cancelled
+            // what was scheduled.
+            self.replan = self.gain_moved;
         }
         if self.state != State::Playing {
             return Work::None;
+        }
+        self.played_to = now;
+        if self.replan {
+            self.write_gain(host, now);
         }
         // A jump under way: a stage a block; the place it leaves decides
         // nothing more (what it handed over plays out, and falls).
@@ -1517,9 +1796,14 @@ impl Player {
         if let Some(n) = self.arm(host, now) {
             return Work::Steps(n);
         }
+        self.fade_notes(host, now, false);
         // Never past a change's boundary: the step it starts on is the next
-        // loop's.
-        let last = self.soonest().map_or(u64::MAX, |(_, t)| t);
+        // loop's; nor past a time's second (session 30c).
+        let mut last = self.soonest().map_or(u64::MAX, |(_, t)| t);
+        let end = self.track_at();
+        if let Some(t) = end {
+            last = last.min(self.step_at(t));
+        }
         let due = |seq: &Sequencer| seq.next_step_time < now + LOOKAHEAD && seq.abs_step < last;
         if self.wandering && !self.next_drawn && !due(&self.seq) {
             let n = self.seq.loop_count.wrapping_add(1);
@@ -1552,6 +1836,20 @@ impl Player {
         while due(&self.seq) && guard < 4096 {
             guard += 1;
             self.step_once(host, now, u64::MAX);
+        }
+        // A time's track has run with nothing to follow it (no change waits
+        // for its end: the host gave no seed to draw from): the host hears
+        // of its end on the second, and the loop is done, what it started
+        // ringing out.
+        if let Some(t) = end
+            && !self.ended
+            && self.seq.next_step_time >= t - 1e-9
+            && self.pending.get(END_SLOT).is_none_or(|p| p.get().is_none())
+        {
+            self.fade_notes(host, now, true);
+            self.ended = true;
+            self.events.push(Event { time: t, kind: Kind::End, number: 0, step: self.seq.abs_step });
+            self.stop();
         }
         if guard == 0 { Work::None } else { Work::Steps(guard) }
     }
@@ -1648,6 +1946,14 @@ impl Player {
             let now = self.now(host);
             self.seq.bpm = bpm;
             Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats.get(), now);
+            // A time's second stays where it is, and the step it falls on
+            // moves: a long piece's close lands on it again (session 30c).
+            if self.track_at().is_some() && self.fades.fade_out && self.journeyed && self.wandering {
+                self.hear_pass(self.current, self.seq.loop_count);
+                if self.next_drawn {
+                    self.hear_pass(1 - self.current, self.seq.loop_count.wrapping_add(1));
+                }
+            }
         }
     }
 

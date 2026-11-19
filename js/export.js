@@ -21,7 +21,8 @@
 // Worker says the browser can encode Opus (never a fallback that could fail
 // on a weak phone); a browser with AAC and not Opus has it hidden too.
 
-import { askOf, trackOf } from './player.js';
+import { askOf } from './player.js';
+import { coreTrack, trackOfSpec } from './tracklen.js';
 import { LAYERS, pieceOf, loopBars } from './request.js';
 import { fetchCore } from './core.js';
 import { newSpec } from './gen.js';
@@ -30,12 +31,9 @@ import { TAIL_MAX } from './export-render.js';
 import { appLink } from './app.js';
 import { moduleWorkerUrl } from './worker-blob.js';
 
-// The lengths the sheet offers for a loop that plays on and on and for
-// Endless, in seconds; the default; and the most a browser with no file to
-// write to may keep in memory (`MEMORY_SECONDS`, with the bytes it takes
-// stated as `MEMORY_BYTES`, its hard stop).
-export const LENGTHS = [60, 300, 600, 1800, 3600, 7200, 10800];
-const DEFAULT_LENGTH = 600;
+// The most a browser with no file to write to may keep in memory
+// (`MEMORY_SECONDS`, with the bytes it takes stated as `MEMORY_BYTES`, its
+// hard stop).
 const MEMORY_SECONDS = 600;
 const MEMORY_BYTES = 160 * 1024 * 1024;
 // The bytes a second of FLAC takes, for the size shown and the space
@@ -59,6 +57,9 @@ export const WORDS = {
   lossless: 'Lossless: full quality, as a FLAC file.',
   small: 'Small: much smaller, as an Opus file, for sharing and for phones.',
   whole: (t) => `The whole piece, ${t}.`,
+  track: (t) => `As long as the track: ${t}.`,
+  ask: 'This plays on and on, so you set how long first.',
+  memoryLong: (t) => `This browser can keep ${t} at most: set a shorter track length.`,
   gentle: 'Lighter on processor is on, so it goes gently: slower, and the music never stutters.',
   fast: 'It goes as fast as this device safely can.',
   picker: 'You choose where it goes.',
@@ -98,31 +99,20 @@ export function size(bytes) {
 
 const bar = (spec) => (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
 
-// What the sheet offers for `spec`: [{ key, label, seconds, track }], the
-// track as the core takes it ([kind, count]: 1 whole passes, 2 bars to the
-// next phrase line). A finite piece is exported whole; a loop that plays on
-// and on, and Endless, ask how much; and where the length slider is set, "as
-// it plays" is first.
-export function choices(spec) {
-  const out = [];
+// What an export of `spec` is (session 30c: the export is the track
+// length; Mikey, 2026-11-18): { key, seconds, track }, the track as the core
+// takes it ([kind, count]). The time the Track length view set, with its
+// fades; with none, a finite piece whole (its fade in, if set); else null:
+// a loop that plays on and on, or Endless, asks how long first (the export
+// key opens the Track length view).
+export function planOf(spec) {
+  const t = trackOfSpec(spec);
+  if (t.secs != null) return { key: 'track', seconds: t.secs, track: coreTrack(spec) };
   const piece = pieceOf(spec);
-  const slider = trackOf(spec);
-  if (slider[0] === 1) {
-    const secs = slider[1] * (Number.isFinite(loopBars(spec)) ? loopBars(spec) : spec.bars) * bar(spec);
-    out.push({ key: 'slider', label: `as it plays, ${words(secs)}`, seconds: secs, track: slider });
-  } else if (slider[0] === 2) {
-    const secs = slider[1] * bar(spec);
-    out.push({ key: 'slider', label: `as it plays, ${words(secs)}`, seconds: secs, track: slider });
-  }
   if (piece && Number.isFinite(piece.sections)) {
-    const secs = loopBars(spec) * bar(spec);
-    out.unshift({ key: 'whole', label: `the whole piece, ${words(secs)}`, seconds: secs, track: [1, 1] });
-    return out;
+    return { key: 'whole', seconds: loopBars(spec) * bar(spec), track: [1 | (t.fadeIn ? 4 : 0), 1] };
   }
-  for (const secs of LENGTHS) {
-    out.push({ key: String(secs), label: words(secs), seconds: secs, track: [2, Math.max(1, Math.ceil(secs / bar(spec) - 1e-9))] });
-  }
-  return out;
+  return null;
 }
 
 // The loop's name for the file: its own, or (a loop with none of its own)
@@ -160,7 +150,6 @@ export class AudioExport {
     // make Small (the Worker says: false until it has).
     this.format = 'lossless';
     this.opus = false;
-    this.choice = null;
     this.running = null;
     this.result = null;
     this.timer = null;
@@ -271,7 +260,6 @@ export class AudioExport {
     if (this.mode === false || !spec) {
       about.textContent = this.mode === false ? WORDS.cant : '';
       go.disabled = true;
-      el('exportLengths').replaceChildren();
       return;
     }
     // Small shows only where it works; chosen where it doesn't, Lossless.
@@ -283,48 +271,22 @@ export class AudioExport {
       b.disabled = !!this.running;
     }
     el('exportFormat').textContent = this.format === 'small' ? WORDS.small : WORDS.lossless;
-    const list = choices(spec);
+    const plan = planOf(spec);
     const memory = this.mode === 'memory';
-    if (!this.choice || !list.some((c) => c.key === this.choice)) {
-      const dflt = list.find((c) => c.key === 'slider' || c.key === 'whole') || list.find((c) => c.seconds === DEFAULT_LENGTH);
-      this.choice = dflt.key;
-    }
-    let chosen = list.find((c) => c.key === this.choice);
-    if (memory && chosen.seconds > MEMORY_SECONDS) {
-      chosen = list.filter((c) => c.seconds <= MEMORY_SECONDS).pop() || null;
-      this.choice = chosen && chosen.key;
-    }
-    // The lengths, as keys: the one chosen pressed. A finite piece with no
-    // slider set has one choice, said in words instead.
-    const keys = el('exportLengths');
-    const signature = `${spec.seed}|${list.map((c) => `${c.key}:${c.label}`).join(',')}|${memory}`;
-    if (keys.dataset.signature !== signature) {
-      keys.dataset.signature = signature;
-      keys.replaceChildren();
-      if (list.length > 1) {
-        for (const c of list) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'vkey';
-          b.setAttribute('role', 'radio');
-          b.dataset.length = c.key;
-          b.textContent = c.label;
-          b.disabled = memory && c.seconds > MEMORY_SECONDS;
-          b.addEventListener('click', () => { this.choice = c.key; this.refresh(); });
-          keys.appendChild(b);
-        }
-      }
-    }
-    for (const b of keys.children) b.setAttribute('aria-checked', String(b.dataset.length === this.choice));
-    el('exportLengthRow').hidden = list.length < 2;
+    const tooLong = memory && plan && plan.seconds > MEMORY_SECONDS;
     const lanes = this.host.mono() ? 1 : 2;
     const lines = [];
-    if (list.length === 1) lines.push(WORDS.whole(words(list[0].seconds)));
-    if (chosen) lines.push(`About ${size((chosen.seconds + TAIL_MAX) * FORMATS[this.format].bytes[lanes])}.`);
-    lines.push(this.mode === 'picker' || this.mode === 'app' ? WORDS.picker : this.mode === 'private' ? WORDS.private : this.mode === 'memory' ? WORDS.memory(words(MEMORY_SECONDS)) : '');
+    if (!plan) lines.push(WORDS.ask);
+    else if (plan.key === 'whole') lines.push(WORDS.whole(words(plan.seconds)));
+    else lines.push(WORDS.track(words(plan.seconds)));
+    if (tooLong) lines.push(WORDS.memoryLong(words(MEMORY_SECONDS)));
+    else if (plan) lines.push(`About ${size((plan.seconds + TAIL_MAX) * FORMATS[this.format].bytes[lanes])}.`);
+    lines.push(this.mode === 'picker' || this.mode === 'app' ? WORDS.picker : this.mode === 'private' ? WORDS.private : this.mode === 'memory' && !tooLong ? WORDS.memory(words(MEMORY_SECONDS)) : '');
     lines.push(this.pace() === 'gentle' ? WORDS.gentle : WORDS.fast);
     about.textContent = lines.filter(Boolean).join(' ');
-    go.disabled = !chosen || this.mode == null || !!this.running;
+    // With no end, or too long to keep, the key opens the Track length view.
+    go.disabled = this.mode == null || !!this.running;
+    go.dataset.asks = !plan || tooLong ? 'length' : '';
   }
 
   // "Lighter on processor" on: gentle. Off: as fast as is safe, which on a
@@ -357,8 +319,13 @@ export class AudioExport {
     const spec = this.host.spec();
     const engine = this.host.engine();
     if (!spec) return;
-    const chosen = choices(spec).find((c) => c.key === this.choice);
-    if (!chosen) return;
+    const chosen = planOf(spec);
+    // Nothing would end it, or it is longer than this browser can keep: how
+    // long, first (the Track length view, which exports on done).
+    if (!chosen || (this.mode === 'memory' && chosen.seconds > MEMORY_SECONDS)) {
+      this.host.openTrack();
+      return;
+    }
     const lanes = this.host.mono() ? 1 : 2;
     const format = this.format === 'small' && this.opus ? 'small' : 'lossless';
     const need = (chosen.seconds + TAIL_MAX) * FORMATS[format].bytes[lanes] * MARGIN;

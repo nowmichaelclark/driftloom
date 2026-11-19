@@ -320,6 +320,23 @@ const PHASES = [
     await sleep(2000);
   } },
   { view: 'vibes', run: async (tab) => { await go(tab, 'vibes'); await sleep(1500); await scroll(tab, 500); await sleep(4000); } },
+  // The Track length view (session 30c, queue item 111): opened from the
+  // Vibe panel's pace line, its keys, slider and fades pressed as a listener
+  // would, then cancel (the loop playing keeps what it had).
+  { view: 'track length', run: async (tab) => {
+    await go(tab, 'now');
+    await click(tab, '#vibesBtn');
+    await click(tab, '#picksList .pk-track');
+    if (!(await view(tab, 'track'))) throw new Error('could not reach track');
+    await sleep(1500);
+    for (const id of ['#trkSecUp', '#trkSecUp', '#trkMinUp', '#trkSecDown', '#trkFadeIn', '#trkFadeOut', '#trkOn', '#trkOn', '#trkMinDown', '#trkFadeIn']) {
+      await click(tab, id);
+      await sleep(400);
+    }
+    await sleep(3000);
+    await click(tab, '#trkCancel');
+    await sleep(1000);
+  } },
   { view: 'library: albums', run: async (tab) => {
     await go(tab, 'library');
     await click(tab, '[data-tab="albums"]');

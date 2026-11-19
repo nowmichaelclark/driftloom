@@ -10,7 +10,7 @@
 // The picks (queue item 95) are the core's too: the New loops panel's
 // request is sent as a command (`setPicks`) and held there, and every new
 // loop is one the core makes itself with them, at Next (`next`) and when the
-// length slider's time runs out with nothing of the page's armed: the page
+// track length's time runs out with nothing of the page's armed: the page
 // learns its seed from the core's events (`onOwn`) and draws nothing.
 //
 // It is the only engine since queue item 97 (the page's own, which decided
@@ -27,6 +27,7 @@
 
 import { render } from './gen.js';
 import { HeardSteps } from './heard.js';
+import { coreTrack } from './tracklen.js';
 import { LAYERS, askOf, picksAsk, pieceOf, loopBars } from './request.js';
 
 // The core's numbers for a record and for the picks, for the modules that
@@ -63,22 +64,18 @@ export const JUMP = { section: 0, bar: 1, time: 2 };
 // picked while one plays, in seconds: the core's own crossfade for a change
 // (`player::change::CROSSFADE`). For Mikey's ears.
 export const CHANGE_FADE = 1.0;
-// And when the length slider ends a track inside a pass, at a phrase line
-// (queue item 88b's END_FADE; at a pass's end the old loop rings out).
+// And when a track's count of passes or bars ends it inside a pass, at a
+// phrase line (queue item 88b's END_FADE; at a pass's end the old loop rings
+// out; a time's end rings out on its second, or falls by its fade out).
 export const END_FADE = 1.0;
 
 // The cursor's and the grids' queues, at most.
 const QUEUE_MOST = 512;
 const GRIDS_MOST = 16;
 
-// The length slider's track as the core takes it (`Player::set_track`):
-// [kind, count], 0 on and on, 1 whole passes (`spec.playFor`), 2 bars to the
-// next phrase line (`spec.playBars`).
-export function trackOf(spec) {
-  if (spec && spec.playFor) return [1, spec.playFor];
-  if (spec && spec.playBars) return [2, spec.playBars];
-  return [0, 0];
-}
+// The track as the core takes it (`Player::set_track_with`): [kind, count]
+// from the Track length view's time and fades (js/tracklen.js, session 30c).
+export const trackOf = coreTrack;
 
 export class PlayerEngine {
   constructor(ctx, output) {
@@ -290,7 +287,7 @@ export class PlayerEngine {
   }
 
   // The armed loop as the core takes it, with the track it plays (its own
-  // length slider's), or null.
+  // track length and fades), or null.
   _arm() {
     const s = this.armed;
     return s ? { seed: s.seed >>> 0, ask: askOf(s), fade: END_FADE, track: trackOf(s) } : null;
@@ -396,8 +393,8 @@ export class PlayerEngine {
     if (core) core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
   }
 
-  // The length slider moved (the spec holds it): the core counts from the
-  // step heard now, and the loop armed for its end goes with it.
+  // The track length set (the spec holds it; the Track length view's done):
+  // the core counts from now, and the loop armed for its end goes with it.
   trackChanged(next = this.armed) {
     this.armed = next || null;
     this.countFrom = this.heard ? this.heard.abs : 0;

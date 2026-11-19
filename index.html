@@ -140,9 +140,9 @@
       </div>
 
       <!-- Bars (queue item 88b: was Length): how many bars new loops are, 1
-           to 32,768, or endless; when a loop ends is the Sound panel's
-           length slider. Cancel keeps what it had before; done keeps what
-           is shown. -->
+           to 32,768, or endless; when a loop ends is the Track length
+           view's. Cancel keeps what it had before; done keeps what is
+           shown. -->
       <div id="viewLength" class="view v-length" data-view="length" role="region" aria-label="Bars" hidden>
         <div class="ln-head">
           <button id="lenCancel" type="button" class="vkey">cancel</button>
@@ -179,6 +179,45 @@
         </div>
       </div>
 
+      <!-- Track length (session 30c, queue item 111; js/tracklen.js): how
+           long the loop playing plays before the next, to the second, and
+           its fade in and fade out; built like Bars. It opens from the Vibe
+           panel's pace line, and from the export when nothing would end it.
+           Cancel keeps what it had; done sets what is shown. -->
+      <div id="viewTrack" class="view v-length v-track" data-view="track" role="region" aria-label="Track length" hidden>
+        <div class="ln-head">
+          <button id="trkCancel" type="button" class="vkey">cancel</button>
+          <h2 class="page-title ln-title" tabindex="-1">Track length</h2>
+          <button id="trkDone" type="button" class="vkey ln-done">done</button>
+        </div>
+        <div class="ln-body">
+          <div class="ln-num tk-num">
+            <input id="trkNum" class="ln-input" type="text" inputmode="numeric" autocomplete="off"
+                   spellcheck="false" aria-label="Track length" aria-describedby="trkWords">
+            <span id="trkWords" class="ln-time"></span>
+          </div>
+          <div class="tk-steps">
+            <button id="trkMinDown" type="button" class="vkey ln-step" aria-label="A minute less">−1 min</button>
+            <button id="trkSecDown" type="button" class="vkey ln-step" aria-label="A second less">−1 s</button>
+            <button id="trkSecUp" type="button" class="vkey ln-step" aria-label="A second more">+1 s</button>
+            <button id="trkMinUp" type="button" class="vkey ln-step" aria-label="A minute more">+1 min</button>
+          </div>
+          <div class="ln-slide">
+            <input id="trkSlide" type="range" min="0" max="15" step="1" value="3" aria-label="Track length, coarse">
+            <div id="trkTicks" class="ln-ticks" aria-hidden="true"><span data-stop="0">1m</span><span data-stop="4">15m</span><span data-stop="8">1h</span><span data-stop="12">4h</span><span data-stop="15">1d</span></div>
+          </div>
+          <!-- On and on (no end: the Length slider at its start), then the
+               two fades, each pressed on or off like the Bars view's keys. -->
+          <div class="ln-keys">
+            <button id="trkOn" type="button" class="vkey word tk-on" aria-pressed="false">on and on</button>
+            <div class="ln-journey tk-fades" role="group" aria-label="Fades">
+              <button id="trkFadeIn" type="button" class="vkey word" aria-pressed="false">fade in</button>
+              <button id="trkFadeOut" type="button" class="vkey word" aria-pressed="true">fade out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="viewSounds" class="view v-sounds" data-view="sounds" role="region" aria-label="Sound" hidden>
         <label class="srow"><span>Tempo <b id="bpmVal">—</b></span>
           <input type="range" id="bpm" min="32" max="190" step="1" value="74"></label>
@@ -190,8 +229,6 @@
           <input type="range" id="wobble" min="0" max="1" step="0.01" value="0.4"></label>
         <label class="srow"><span>Volume</span>
           <input type="range" id="volume" min="0" max="1" step="0.01" value="0.85"></label>
-        <label class="srow"><span>Length <b id="lenVal">off</b></span>
-          <input type="range" id="trackLen" min="0" max="18" step="1" value="0"></label>
         <label class="srow" id="wanderRow"><span>Wander</span>
           <input type="range" id="driftAmount" min="0" max="2.4" step="0.05" value="1"></label>
       </div>
@@ -231,10 +268,6 @@
                   <button type="button" class="vkey" role="radio" aria-checked="false" data-format="small" hidden>small</button>
                 </div>
                 <p class="hint" id="exportFormat"></p>
-                <div id="exportLengthRow" hidden>
-                  <span class="setrow-name" id="exportLengthName">How much</span>
-                  <div id="exportLengths" class="keys3 export-lengths" role="radiogroup" aria-labelledby="exportLengthName"></div>
-                </div>
                 <p class="hint" id="exportAbout"></p>
                 <div class="keys2">
                   <button id="exportAudio" type="button" class="vkey">export audio</button>

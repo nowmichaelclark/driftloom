@@ -100,7 +100,9 @@ an export must never crash or break anything, even on an old phone.
 
 - **The export sheet.** Choose the format each time: **Lossless** (full
   quality, larger) or **Small** (much smaller, for sharing).
-- **Length for Endless pieces.** How much of an endless piece to export.
+- **Its length is the track's** (session 30c): the Track length view's time
+  and fades; with none, a finite piece exports whole, and a loop that plays
+  on (or Endless) opens the Track length view first.
 - **Not enough space.** A clear message before anything starts.
 - **Progress.** Calm progress with Cancel; a note that it keeps going
   if the app goes to the background.

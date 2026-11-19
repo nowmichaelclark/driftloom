@@ -130,7 +130,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { decodeSong, encodeSong, encodeAlbum, decodeAlbum, linkOf } from '../js/share.js';
 import { newSpec } from '../js/gen.js';
-import { passSeconds, barSeconds } from '../js/ui.js';
+import { passSeconds } from '../js/ui.js';
+import { setTrack, trackOfSpec } from '../js/tracklen.js';
 import { LOOPS } from './stalls.mjs';
 import { pages } from './ogg-read.mjs';
 
@@ -148,7 +149,7 @@ const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
 const APP = argv.includes('--app');
 const CDP = flag('--cdp', '');
-// `--only previous`: just that group's rows, for working on one.
+// `--only previous` (or `track`): just that group's rows, for working on one.
 const ONLY = flag('--only', '');
 
 function loadPlaywright() {
@@ -425,7 +426,35 @@ function oggFacts(bytes) {
   };
 }
 
-// The audio export's rows (queue item 104b), on the page playing.
+// The Track length view (session 30c) set to `secs` seconds (null: on and
+// on) with its fades, as a listener sets it: the Vibe panel's pace key, the
+// time typed, the fade keys, done (back on the Vibe panel). `evf` evaluates
+// in the page; returns what the pace key then shows.
+const trackTo = (evf, secs, fades = {}) => evf(([t, fadeIn, fadeOut]) => {
+  document.getElementById('vibesBtn').click();
+  document.querySelector('#picksList .pk-track').click();
+  const on = document.getElementById('trkOn');
+  if (t == null) {
+    if (on.getAttribute('aria-pressed') !== 'true') on.click();
+  } else {
+    const n = document.getElementById('trkNum');
+    const two = (x) => String(x).padStart(2, '0');
+    n.value = `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}`;
+    n.dispatchEvent(new Event('blur'));
+  }
+  const press = (id, want) => {
+    const b = document.getElementById(id);
+    if (!b.disabled && (b.getAttribute('aria-pressed') === 'true') !== want) b.click();
+  };
+  press('trkFadeIn', !!fadeIn);
+  press('trkFadeOut', fadeOut !== false);
+  document.getElementById('trkDone').click();
+  return document.querySelector('#picksList .pk-track').textContent;
+}, [secs, fades.fadeIn, fades.fadeOut]);
+
+// The audio export's rows (queue item 104b), on the page playing. Since
+// session 30c an export is as long as the track length (`trackTo`); a loop
+// that plays on asks how long first.
 async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const origin = `http://127.0.0.1:${PORT}`;
   const cdp = await page.context().newCDPSession(page);
@@ -441,7 +470,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     why: document.getElementById('exportWhy').textContent,
     saved: document.getElementById('exportSaved').textContent,
     about: document.getElementById('exportAbout').textContent,
-    lengths: [...document.querySelectorAll('#exportLengths .vkey')].map((b) => `${b.dataset.length}${b.getAttribute('aria-checked') === 'true' ? '*' : ''}`),
+    asks: document.getElementById('exportAudio').dataset.asks || '',
     lossless: !document.querySelector('[data-format="lossless"]').hidden,
     small: !document.querySelector('[data-format="small"]').hidden,
   }));
@@ -471,18 +500,35 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     }
   };
 
-  console.log('\n  export audio (queue items 104b and 104c)');
+  console.log('\n  export audio (queue items 104b and 104c; its length the track\'s, session 30c)');
+  // On and on: the export asks how long first.
+  await trackTo(ev, null);
   await share();
   await sleep(1200);
   let s = await sheet();
-  row('export audio: the sheet offers Lossless and Small (this browser can encode Opus), and the lengths for a loop that plays on', s.choose && s.lossless && s.small && s.lengths.length === 7 && s.lengths.includes('600*') && /^About \d+ MB\./.test(s.about), `${s.lengths.join(' ')}; ${s.about}`);
+  const exportsBefore = await count();
+  await clickId('exportAudio');
+  await sleep(400);
+  const asked = await ev(() => !document.getElementById('viewTrack').hidden);
+  await clickId('trkCancel');
+  await sleep(400);
+  const back = await ev(() => !document.getElementById('viewSave').hidden && !document.getElementById('exportChoose').hidden);
+  row('export audio: the sheet offers Lossless and Small (this browser can encode Opus); a loop that plays on asks how long first, its key opening the Track length view, cancel back to the sheet with nothing started',
+    s.choose && s.lossless && s.small && s.asks === 'length' && /set how long first/.test(s.about) && asked && back && (await count()) === exportsBefore, `${s.about}; asked ${asked}, back ${back}`);
+  // A minute: the sheet says it, and done in the view from the export goes
+  // on to export it (the rows below set it from the Vibe panel).
+  await trackTo(ev, 60);
+  await share();
+  await sleep(600);
+  s = await sheet();
+  row('export audio: with a track length set, the export is as long as the track, and says so', s.asks === '' && /^As long as the track: 1 min\. About \d+ MB\./.test(s.about), s.about);
 
   // A minute, both speeds.
   const speeds = {};
   for (const lite of [false, true]) {
     await setLite(lite);
+    await trackTo(ev, 60);
     await share();
-    await ev(() => document.querySelector('#exportLengths [data-length="60"]').click());
     const from = await count();
     const progress = await ev(() => window.__rows.exportProgress);
     await clickId('exportAudio');
@@ -509,8 +555,8 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await setLite(false);
 
   // Cancel.
+  await trackTo(ev, 600);
   await share();
-  await ev(() => document.querySelector('#exportLengths [data-length="600"]').click());
   let from = await count();
   await clickId('exportAudio');
   await sleep(1500);
@@ -525,7 +571,8 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   // The free space checked first.
   const usage = await ev(async () => (await navigator.storage.estimate()).usage);
   await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: usage + 1e6 });
-  await ev(() => document.querySelector('#exportLengths [data-length="3600"]').click());
+  await trackTo(ev, 3600);
+  await share();
   from = await count();
   const before = await ev(() => window.__rows.exportStart);
   await clickId('exportAudio');
@@ -539,9 +586,9 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await probe();
 
   // Small (104c): a minute to the file chosen, then Cancel.
+  await trackTo(ev, 60);
   await share();
   await ev(() => document.querySelector('[data-format="small"]').click());
-  await ev(() => document.querySelector('#exportLengths [data-length="60"]').click());
   s = await sheet();
   const smallAbout = s.about;
   from = await count();
@@ -573,8 +620,8 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
   row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /^About \d+ MB\./.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
   await clickId('exportDoneBtn');
+  await trackTo(ev, 600);
   await share();
-  await ev(() => document.querySelector('#exportLengths [data-length="600"]').click());
   from = await count();
   await clickId('exportAudio');
   await sleep(1500);
@@ -599,15 +646,24 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
   await sleep(1500);
   const tev = (fn, arg) => tab.evaluate(fn, arg);
-  await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
-  await tev(() => document.getElementById('pasteCode').click());
-  await sleep(3000);
-  await tev(() => {
+  const tshare = () => tev(() => {
     if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
     document.querySelector('[data-stab="share"]').click();
   });
+  // A finite piece with no track length set exports whole (session 30c).
+  await tev((code) => { window.__rows.clip = code; }, LOOPS.piece.code);
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await tshare();
+  await sleep(1500);
+  const whole = await tev(() => ({ about: document.getElementById('exportAbout').textContent, asks: document.getElementById('exportAudio').dataset.asks || '' }));
+  row('export audio: a finite piece with no track length set exports whole, and says so', whole.asks === '' && /^The whole piece, \d+ h/.test(whole.about), whole.about);
+  await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await trackTo(tev, 60);
+  await tshare();
   await sleep(1200);
-  await tev(() => document.querySelector('#exportLengths [data-length="60"]').click());
   const blobs = await tev(() => window.__rows.blobs.length);
   await tev(() => document.getElementById('exportAudio').click());
   let t0 = Date.now();
@@ -628,7 +684,8 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
 
   // A disk that fills mid-export: the quota made small once it is writing.
   const tcdp = await tab.context().newCDPSession(tab);
-  await tev(() => document.querySelector('#exportLengths [data-length="1800"]').click());
+  await trackTo(tev, 1800);
+  await tshare();
   const n0 = (await tev(() => window.__rows.exports)).length;
   await tev(() => document.getElementById('exportAudio').click());
   t0 = Date.now();
@@ -651,8 +708,9 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await tev(() => document.getElementById('exportOk').click());
 
   // Small in the same tab: the private file, and a disk that fills.
+  await trackTo(tev, 60);
+  await tshare();
   await tev(() => document.querySelector('[data-format="small"]').click());
-  await tev(() => document.querySelector('#exportLengths [data-length="60"]').click());
   const blobs2 = await tev(() => window.__rows.blobs.length);
   const n1 = (await tev(() => window.__rows.exports)).length;
   await tev(() => document.getElementById('exportAudio').click());
@@ -676,7 +734,8 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   row('export audio (small), with no save picker: written to the private file as it went, an Ogg Opus file downloaded at the end', done2 && done2.type === 'done' && done2.format === 'opus' && start2.sink === 'private' && got2 && got2.size === done2.bytes && ogg2 && ogg2.end && ogg2.ordered && ogg2.frames === done2.frames,
     `${done2 && done2.type} ${done2 && done2.why || ''}, ${got2 && got2.size} bytes, ${ogg2 ? ogg2.frames : '?'} frames`);
   await tev(() => document.getElementById('exportDoneBtn').click());
-  await tev(() => document.querySelector('#exportLengths [data-length="3600"]').click());
+  await trackTo(tev, 3600);
+  await tshare();
   const n2 = (await tev(() => window.__rows.exports)).length;
   await tev(() => document.getElementById('exportAudio').click());
   t0 = Date.now();
@@ -697,6 +756,10 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     `${end2 && end2.type} ${end2 && end2.why || ''}; ${why2}; files ${files.join(',') || 'none'}`);
   row('export audio: no page errors in the tab with no save picker', bad.length === 0, bad.join('; '));
   await tab.close();
+  // The loop playing back on and on, so no track ends under the rows after.
+  await trackTo(ev, null);
+  await share();
+  await sleep(500);
 
   // A browser with no Opus encoder (the Worker's taken away: the sheet's
   // choice is the Worker's word; what the page posts before the Worker's
@@ -1112,6 +1175,11 @@ async function main() {
       report();
       return;
     }
+    if (ONLY === 'track') {
+      await trackRows(browser);
+      report();
+      return;
+    }
     const page = APP ? await openApp() : await browser.newPage({ viewport: { width: 412, height: 915 } });
     page.on('pageerror', (e) => errors.push(e.message));
     const ready = async () => {
@@ -1385,11 +1453,10 @@ async function main() {
     }
     if (APP) await appRows({ ev, diag, clickId, level, probe });
 
-    // The length slider: the shortest stop, a minute.
+    // The track length (the Track length view, session 30c): a minute.
     if (LONG) {
+      await trackTo(ev, 60);
       await ev(() => document.getElementById('nowBtn').click());
-      await sleep(500);
-      await setRange('trackLen', 1);
       await sleep(800);
       p = await probe();
       const track = await ev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').pop());
@@ -1443,6 +1510,7 @@ async function main() {
     if (!APP) await linkRows(browser);
     if (!APP) await paceRows(browser);
     if (!APP) await previousRows(browser);
+    if (!APP) await trackRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -1763,20 +1831,14 @@ async function paceRows(browser) {
     await sleep(1800);
     return tab;
   };
-  // Three short tracks, each its own length as its maker's slider set it:
-  // two whole passes of a 2-bar loop; 4 bars of a 16-bar loop (shorter than
-  // its pass, so it ends on the phrase line 4 bars in); one pass of a 4-bar
-  // loop. Each takes a few seconds.
-  const made = [[101, 'bars=2,bpm=160', 1, 2], [202, 'bars=16,bpm=150', 2, 4], [303, 'bars=4,bpm=130', 1, 1]];
-  const specs = made.map(([seed, request, kind, n]) => {
-    const s = newSpec(seed, request);
-    if (kind === 1) s.playFor = n;
-    else s.playBars = n;
-    return s;
-  });
-  // How long each plays: whole passes, or the bars to the phrase line (a
-  // 16-bar loop's lines are 4 bars apart).
-  const want = specs.map((s) => (s.playFor ? s.playFor * passSeconds(s) : s.playBars * barSeconds(s)));
+  // Three short tracks, each its own time as its maker's Track length view
+  // set it (session 30c), with fades of their own: 5 s of a 2-bar loop
+  // fading out; 4 s of a 16-bar loop, nothing faded; 6 s of a 4-bar loop
+  // fading in and out.
+  const made = [[101, 'bars=2,bpm=160', 5, false, true], [202, 'bars=16,bpm=150', 4, false, false], [303, 'bars=4,bpm=130', 6, true, true]];
+  const specs = made.map(([seed, request, secs, fadeIn, fadeOut]) => setTrack(newSpec(seed, request), { secs, fadeIn, fadeOut }));
+  // How long each plays: its time.
+  const want = specs.map((s) => s.track.secs);
 
   // The maker's Library: the three saved in an album, shared from it.
   let tab = await fresh(`${ORIGIN}/`);
@@ -1811,8 +1873,8 @@ async function paceRows(browser) {
   await tab.close();
   let back = null;
   try { back = code && decodeAlbum(code); } catch (err) { back = { error: err.message }; }
-  const paced = (s) => (s.playFor ? `p${s.playFor}` : s.playBars ? `b${s.playBars}` : '-');
-  row('album pacing: shared from the Library, the album\'s code carries each track\'s length', back && back.specs && back.specs.map(paced).join(' ') === specs.map(paced).join(' '), `${code} ${back && back.specs ? back.specs.map(paced).join(' ') : JSON.stringify(back)}`);
+  const paced = (s) => { const t = trackOfSpec(s); return t.secs == null ? '-' : `${t.secs}${t.fadeIn ? 'i' : ''}${t.fadeOut ? 'o' : ''}`; };
+  row('album pacing: shared from the Library, the album\'s code carries each track\'s length and fades', back && back.specs && back.specs.map(paced).join(' ') === specs.map(paced).join(' '), `${code} ${back && back.specs ? back.specs.map(paced).join(' ') : JSON.stringify(back)}`);
 
   // A fresh profile opens it by its link and plays: when does each track
   // hand over? The core's loop (its seed) and the card, read every tenth of
@@ -1848,7 +1910,7 @@ async function paceRows(browser) {
   const follows = seen.length >= 3 && seen.slice(0, 3).every((x, i) => x.cards.filter((c) => c === specs[order[i]]?.name).length > x.cards.length * 0.8);
   row('album pacing: opened by its link in a fresh profile, ready at its first track, not playing', ready.card === specs[0].name && !ready.playing, JSON.stringify(ready));
   row('album pacing: played, each track hands over to the next in order, round to the first', order.slice(0, 4).join(',') === '0,1,2,0', `${order.join(',')}`);
-  row(`album pacing: each plays as long as its maker set it (2 passes ${want[0].toFixed(1)} s, from Play and round again; 4 bars ${want[1].toFixed(1)} s; 1 pass ${want[2].toFixed(1)} s)`,
+  row(`album pacing: each plays as long as its maker set it (${want[0]} s, from Play and round again; ${want[1]} s; ${want[2]} s)`,
     lasted.length >= 4 && Math.abs(lasted[0] - want[0]) < 1.5 && near(1) && near(2) && Math.abs(lasted[3] - want[0]) < 0.75, `${lasted.map((x) => x.toFixed(2)).join(' s, ')} s`);
   row('album pacing: the card follows the track playing', follows, seen.map((x) => `${x.cards[0]}..${x.cards[x.cards.length - 1]}`).join(' | '));
   row('album pacing: no page errors in its tabs', !bad.length, bad.join('; '));
@@ -1885,7 +1947,8 @@ async function previousRows(browser) {
   // at 160 beats a minute, played once: a few seconds each) that hand over.
   const mk = (seed, bpm, short) => {
     const s = newSpec(seed, `bars=2,bpm=${bpm}`);
-    if (short) s.playFor = 1;
+    // Played once: its pass, to the second (session 30c).
+    if (short) setTrack(s, { secs: Math.max(1, Math.round(passSeconds(s))) });
     return s;
   };
   const specs = [mk(4101, 160), mk(4202, 150), mk(4303, 140)];
@@ -2066,3 +2129,189 @@ function report() {
 }
 
 await main();
+
+// Track length (session 30c, queue item 111): its own view, opened from the
+// Vibe panel's pace line beside "any tempo" and "any bars": the time typed
+// to the second, the keys a second and a minute either way, the coarse
+// slider, on and on, the two fades, cancel and done; the core's track a time
+// on its own clock (a tempo change doesn't move it); a short track ending on
+// its second with the next loop there, with and without its fade out; and
+// the Sound view's Length slider gone.
+async function trackRows(browser) {
+  console.log('\n  track length, its own view (session 30c)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tab.goto(`${ORIGIN}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  await tab.click('#playBtn');
+  await sleep(3000);
+  const probe = () => tev(() => window.__rows.probe());
+  const shown = () => tev(() => ({
+    view: [...document.querySelectorAll('.view')].find((v) => !v.hidden)?.dataset.view,
+    num: document.getElementById('trkNum').value,
+    words: document.getElementById('trkWords').textContent,
+    on: document.getElementById('trkOn').getAttribute('aria-pressed') === 'true',
+    fadeIn: document.getElementById('trkFadeIn').getAttribute('aria-pressed') === 'true',
+    fadeOut: document.getElementById('trkFadeOut').getAttribute('aria-pressed') === 'true',
+    outDimmed: document.getElementById('trkFadeOut').disabled,
+    slide: document.getElementById('trkSlide').value,
+    lit: [...document.querySelectorAll('#trkTicks .on')].map((t) => t.textContent).join(','),
+    upOff: document.getElementById('trkSecUp').disabled,
+    key: document.querySelector('#picksList .pk-track')?.textContent || null,
+    keyLabel: document.querySelector('#picksList .pk-track')?.getAttribute('aria-label') || null,
+  }));
+  const lastTrack = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').pop() || null);
+  const tracks = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').length);
+  const click = (id) => tab.click(`#${id}`);
+  // The events of the latest node: [time, kind, number, step].
+  const events = () => tev(() => {
+    const R = window.__rows;
+    const last = R.nodes.length - 1;
+    const out = [];
+    for (const b of R.events) if (b.node === last) for (let i = 0; i < b.events.length; i += 4) out.push(b.events.slice(i, i + 4));
+    return out;
+  });
+  const END = 6;
+  const LOOP = 4;
+
+  // The Sound view has no Length slider now.
+  const sound = await tev(() => ({ slider: !!document.getElementById('trackLen'), rows: [...document.querySelectorAll('#viewSounds .srow')].map((r) => r.textContent.trim().split(/\s/)[0]) }));
+  row('track length: the Sound view\'s Length slider is gone', !sound.slider && !sound.rows.includes('Length'), sound.rows.join(', '));
+
+  // Its key on the pace line, then the view.
+  await tab.click('#vibesBtn');
+  await sleep(300);
+  const line = await tev(() => document.querySelector('#picksList .pk-line-pace').innerText.replace(/\s+/g, ' ').trim());
+  let v = await shown();
+  row('track length: its key on the Vibe panel\'s pace line, beside "any tempo" and "any bars", says the loop plays on', /any tempo · any bars · plays on/.test(line) && v.keyLabel === 'Track length: plays on', line);
+  const before = await tracks();
+  await tab.click('#picksList .pk-track');
+  await sleep(300);
+  v = await shown();
+  row('track length: open, on and on lit, fade in off and fade out on (dimmed while it plays on)', v.view === 'track' && v.num === 'on and on' && v.on && !v.fadeIn && v.fadeOut && v.outDimmed, JSON.stringify(v));
+
+  // Typed: h:mm:ss, m:ss, and digits a timer's way.
+  const type = async (text) => {
+    await tab.click('#trkNum');
+    await tab.fill('#trkNum', text);
+    await tab.press('#trkNum', 'Enter');
+    await sleep(150);
+    return shown();
+  };
+  const a = await type('1:23:45');
+  const b2 = await type('12345');
+  const c = await type('90');
+  const d = await type('4:07');
+  row('track length: typed to the second: 1:23:45, 12345 (a timer\'s way), 90 seconds as 1:30, 4:07; on and on unlit, the fade out ready',
+    a.num === '1:23:45' && a.words === '1 hour 23 minutes 45 seconds' && !a.on && !a.outDimmed && b2.num === '1:23:45' && c.num === '1:30' && d.num === '4:07',
+    [a.num, a.words, b2.num, c.num, d.num].join(' | '));
+  // Keys a second and a minute either way.
+  await type('1:23:45');
+  await click('trkSecUp');
+  const k1 = (await shown()).num;
+  await click('trkMinDown');
+  const k2 = (await shown()).num;
+  await click('trkMinUp');
+  await click('trkSecDown');
+  const k3 = (await shown()).num;
+  await type('0:01');
+  await click('trkSecDown');
+  const k4 = await shown();
+  row('track length: the keys a second and a minute either way, never under a second', k1 === '1:23:46' && k2 === '1:22:46' && k3 === '1:23:45' && k4.num === '0:01', [k1, k2, k3, k4.num].join(' | '));
+  // The coarse slider: its stops, to a whole day.
+  const slideTo = (i) => tev((x) => { const r = document.getElementById('trkSlide'); r.value = String(x); r.dispatchEvent(new Event('input', { bubbles: true })); }, i);
+  await slideTo(8);
+  const s8 = await shown();
+  await slideTo(15);
+  const s15 = await shown();
+  await tab.focus('#trkSlide');
+  await tab.keyboard.press('ArrowLeft');
+  const s14 = await shown();
+  row('track length: the coarse slider: an hour at its middle tick, a whole day at its end (+1 s off there), the arrows a stop at a time',
+    s8.num === '1:00:00' && s8.lit === '1h' && s15.num === '24:00:00' && s15.lit === '1d' && s15.upOff && s14.num === '12:00:00', [s8.num, s8.lit, s15.num, s15.lit, s14.num].join(' | '));
+  // On and on, and back to the time it showed.
+  await click('trkOn');
+  const on = await shown();
+  await click('trkOn');
+  const off = await shown();
+  row('track length: on and on lit (the fade out dimmed), pressed again the time it showed', on.on && on.num === 'on and on' && on.outDimmed && !off.on && off.num === '12:00:00' && !off.outDimmed, `${on.num} | ${off.num}`);
+  // The fades, each pressed on or off.
+  await click('trkFadeIn');
+  const f1 = await shown();
+  await click('trkFadeOut');
+  const f2 = await shown();
+  await click('trkFadeIn');
+  await click('trkFadeOut');
+  const f3 = await shown();
+  row('track length: the fade in and fade out keys each turn over, pressed again back', f1.fadeIn && f1.fadeOut && f2.fadeIn && !f2.fadeOut && !f3.fadeIn && f3.fadeOut, `${f1.fadeIn}/${f1.fadeOut} ${f2.fadeIn}/${f2.fadeOut} ${f3.fadeIn}/${f3.fadeOut}`);
+  // Cancel: nothing changed.
+  await click('trkCancel');
+  await sleep(300);
+  v = await shown();
+  let p = await probe();
+  row('track length: cancel goes back to the Vibe panel, nothing sent, the loop still on and on', v.view === 'vibe' && v.key === 'plays on' && (await tracks()) === before && p.trackAt < 0, `${v.view} ${v.key}, trackAt ${p.trackAt}`);
+
+  // Done: 1:23:45 with its fade in, on the core to the second.
+  await tab.click('#picksList .pk-track');
+  await sleep(200);
+  await type('1:23:45');
+  await click('trkFadeIn');
+  await click('trkDone');
+  await sleep(600);
+  v = await shown();
+  p = await probe();
+  let t = await lastTrack();
+  const left = p.trackAt - p.player.time;
+  row('track length: done sets it on the loop playing: the key says 1:23:45, the core holds a time of 5025 s with both fades, counted from now',
+    v.view === 'vibe' && v.key === '1:23:45' && v.keyLabel === 'Track length: 1 hour 23 minutes 45 seconds' && t && t.kind === (3 | 4 | 8) && t.count === 5025 && left > 5024 && left <= 5025,
+    `${v.key}; kind ${t && t.kind}, count ${t && t.count}; ${left.toFixed(3)} s left`);
+  // A tempo change doesn't move its second.
+  const at = p.trackAt;
+  await tev(() => { const r = document.getElementById('bpm'); r.value = String(Math.min(190, Number(r.value) + 30)); r.dispatchEvent(new Event('input', { bubbles: true })); });
+  await sleep(1500);
+  p = await probe();
+  row('track length: a tempo change doesn\'t move its second', p.trackAt === at, `${at} then ${p.trackAt}`);
+
+  // A short track ends on its second, the next loop starting there: with
+  // the fade out, quiet as it reaches it; without, playing to it.
+  for (const fadeOut of [false, true]) {
+    const secs = fadeOut ? 10 : 6;
+    await trackTo(tev, secs, { fadeIn: false, fadeOut });
+    await sleep(200);
+    p = await probe();
+    const set = p.player.time;
+    const end = p.trackAt;
+    const levels = [];
+    const t0 = Date.now();
+    let got = null;
+    while (Date.now() - t0 < (secs + 6) * 1000 && !got) {
+      levels.push({ at: (Date.now() - t0) / 1000, level: await tev(() => window.__rows.level()) });
+      const e = await events();
+      const ended = e.find((x) => x[1] === END && Math.abs(x[0] - end) < 0.5);
+      const next = ended && e.find((x) => x[1] === LOOP && Math.abs(x[0] - end) < 1e-6);
+      got = ended && next ? { ended, next } : null;
+      await sleep(50);
+    }
+    const near = (from, to) => Math.max(0, ...levels.filter((l) => l.at >= from && l.at < to).map((l) => l.level));
+    const late = near(secs - 0.6, secs - 0.15);
+    const early = near(1, secs - 3);
+    // (The output's level, read every 50 ms: the fade out's last half second
+    // is under a third of the loop's; without it, within 26 dB of it.)
+    const quiet = fadeOut ? late < early * 0.3 : late > early * 0.05;
+    row(`track length: a track of ${secs} s ${fadeOut ? 'with' : 'without'} its fade out ends on its second, to the sample, the next loop starting there; ${fadeOut ? 'quiet as it reaches it' : 'playing to it'}`,
+      got && Math.abs(end - set - secs) < 0.5 && Math.abs(got.ended[0] - end) < 1e-6 && quiet,
+      got ? `set at ${set.toFixed(3)}, end ${end.toFixed(6)} (${(end - set).toFixed(3)} s), told ${got.ended[0].toFixed(6)}, next ${got.next[0].toFixed(6)}; level ${early.toFixed(4)} then ${late.toFixed(4)}` : 'no end seen');
+  }
+  await sleep(1500);
+  v = await tev(() => { document.getElementById('vibesBtn').click(); return document.querySelector('#picksList .pk-track').textContent; });
+  row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === 'plays on', v);
+  const line2 = (await tev(() => document.getElementById('diagRefresh').click() || document.getElementById('diagOut').textContent)).split('\n').find((l) => l.startsWith('engine:')) || '';
+  row('track length: nothing late across it', /late: 0\s+missed: 0\s+dropped: 0/.test(line2), line2);
+  row('track length: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
+}

@@ -13,7 +13,7 @@
 // a part of the tone or the tempo only where the listener changed it. A
 // name only where the loop was renamed.
 //
-// What a loop's code does not carry: the length slider's setting (the
+// What a loop's code does not carry: its track length (the
 // listener's, not the loop's, as #412 decided: one loop sounds the same
 // however long it plays). An album's code does (session 24b; Mikey,
 // 2026-11-18: "an album's code should carry track lengths"): each track
@@ -25,6 +25,7 @@
 import { newSpec, playedSpec, loopCode, readLoopCode, albumCode, seedAlbumCode, albumTracks, codeKind as kindOf, nameRefusal, CodeError } from './gen.js';
 import { LAYERS, readRequest, requestOf, askFor } from './request.js';
 import { randomSeed } from './rng.js';
+import { setTrack, trackOfCore, trackOfSpec } from './tracklen.js';
 
 export { CodeError };
 
@@ -159,19 +160,14 @@ export function decodeSong(code) {
 
 // ---------------------------------------------------------------- albums
 
-// The most passes or bars a track's pace counts (core/src/code.rs,
-// PACE_MOST).
-const PACE_MOST = 2 ** 31 - 1;
-const isCount = (n) => Number.isInteger(n) && n >= 1 && n <= PACE_MOST;
-
 // How long `spec` plays before the next, as a code writes it after the
-// track's code: whole passes (`spec.playFor`), bars to a phrase line
-// (`spec.playBars`, a time shorter than a pass), or nothing, on and on (as
-// js/player.js's trackOf tells the core).
+// track's code (core/src/code.rs's `paced`; session 30c): `:t` and its
+// seconds, `i` and `o` after them for its fades (`:t5025o`), `:i` for on and
+// on fading in, or nothing, on and on.
 function paceOf(spec) {
-  if (isCount(spec.playFor)) return `:p${spec.playFor}`;
-  if (isCount(spec.playBars)) return `:b${spec.playBars}`;
-  return '';
+  const t = trackOfSpec(spec);
+  if (t.secs != null) return `:t${t.secs}${t.fadeIn ? 'i' : ''}${t.fadeOut ? 'o' : ''}`;
+  return t.fadeIn ? ':i' : '';
 }
 
 export function encodeAlbum(title, specs) {
@@ -183,8 +179,8 @@ export function decodeAlbum(code) {
   const specs = tracks.map((t, i) => {
     const spec = decodeSong(t);
     const [kind, n] = paces[i];
-    if (kind === 1) spec.playFor = n;
-    else if (kind === 2) spec.playBars = n;
+    const track = trackOfCore(kind, n);
+    if (track) setTrack(spec, track);
     return spec;
   });
   return { title: name || 'Untitled', specs };

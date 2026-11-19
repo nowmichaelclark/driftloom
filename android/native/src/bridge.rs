@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use dlcore::generator::LAYERS;
 use dlcore::generator::data::VIBE_COUNT;
 use dlcore::generator::request::{LayerAsk, Length, NO_SUCH_VIBE};
-use dlcore::player::{Handover, Jump, Moment, Request, Track};
+use dlcore::player::{Fades, Handover, Jump, Moment, Request, Track};
 
 use crate::engine::{Arm, ArmEnd, Command, Engine, GridView, Out, Position, ProbeAnswer, Tally, at};
 use crate::json::{self, Value, number, string};
@@ -162,14 +162,10 @@ pub fn ask(a: &Value) -> Asked {
     Asked { request: r, refused, why }
 }
 
-/// The track `kind` and `count` say (`dl_play_track`'s numbers), or none.
-fn track_of(kind: u32, count: u32) -> Option<Track> {
-    match kind {
-        0 => Some(Track::Always),
-        1 => Some(Track::Passes(count.max(1))),
-        2 => Some(Track::Bars(count.max(1))),
-        _ => None,
-    }
+/// The track `kind` and `count` say (`dl_play_track`'s numbers, the core's
+/// `Track::of`: a time and its fades among them, session 30c), or none.
+fn track_of(kind: u32, count: u32) -> Option<(Track, Fades)> {
+    Track::of(kind, count)
 }
 
 /// A crossfade's seconds as the core takes them: a negative one rings out.
@@ -523,6 +519,8 @@ fn probe_of(id: f64, a: &ProbeAnswer, refused: u32) -> String {
     player_of(&mut s, &a.position);
     s.push_str(",\"trackEnd\":");
     number(&mut s, a.track_end);
+    s.push_str(",\"trackAt\":");
+    number(&mut s, a.track_at);
     s.push_str(",\"nextChange\":");
     number(&mut s, a.next_change);
     let _ = write!(s, ",\"lost\":{},\"refused\":{refused},\"picksTag\":{}", a.lost, a.picks_tag);

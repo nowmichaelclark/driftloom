@@ -168,9 +168,6 @@ function record(asked) {
     swing: Number(d.swing),
     layerSeeds: Object.fromEntries(LAYERS.map((l, i) => [l, seeds[i] >>> 0])),
     mutes: Object.fromEntries(LAYERS.map((l) => [l, false])),
-    // How many times round before moving on. Null means it never moves on,
-    // which is the default: a loop machine should loop until you say stop.
-    playFor: null,
     tone: Object.fromEntries(TONE.map((k, i) => [k, tone[i]])),
   };
   // The layers a code's edits re-rolled, played whatever their chances draw.
@@ -352,9 +349,9 @@ export function readLoopCode(code) {
 }
 
 // An album's code: the loops' codes in their order, each with how long it
-// plays before the next after it where it has one (`CODE:p2` two whole
-// passes, `CODE:b8` eight bars: core/src/code.rs's `paced`), named `name`
-// ('' for none).
+// plays before the next after it where it has one (`CODE:t5025` 1:23:45,
+// `i` and `o` after the seconds for its fades, `CODE:i` on and on fading in:
+// core/src/code.rs's `paced`), named `name` ('' for none).
 export function albumCode(codes, name = '') {
   need();
   const head = utf8.encode(name);
@@ -384,7 +381,8 @@ export function seedAlbumCode(seed, count, a, name = '') {
 
 // An album's { name, tracks, paces }: each track a loop's code, and how long
 // it plays before the next as [kind, count], as the player takes it
-// (js/player.js's trackOf: 0 on and on, 1 whole passes, 2 bars).
+// (js/tracklen.js's coreTrack: 0 on and on, 3 a time in seconds, with the
+// fades' bits).
 export function albumTracks(code) {
   need();
   const len = input(utf8.encode(String(code)));

@@ -23,7 +23,10 @@
 //! - **master**: a gain at 0.85 that `setVolume` and `setCharacterLevel`
 //!   glide; **kill**: a gain at 1 that `silence` ramps to 0 in 60 ms and
 //!   `unsilence` back in 20 ms (`HOLD` first holds it where it is, as
-//!   `setValueAtTime(g.value, when)` does).
+//!   `setValueAtTime(g.value, when)` does); **track**: a gain at 1 the
+//!   player moves for a track's fade in and fade out (session 30c,
+//!   `player::Player::set_track_with`), at 1 (and so the same to the bit)
+//!   wherever no fade is asked.
 //! - **ceiling**: a second compressor, the limiter: -3 dB, no knee, 20:1,
 //!   attack 1 ms, release 80 ms.
 //!
@@ -201,6 +204,8 @@ pub struct Master {
     comp2: Compressor<2>,
     volume: Timeline<VOLUME_EVENTS>,
     kill: Timeline<EVENTS>,
+    /// The track's fades (`TRACK_GAIN`).
+    track: Timeline<EVENTS>,
     ceiling: Compressor<1>,
     ceiling2: Compressor<2>,
     /// The width ceiling, stereo only.
@@ -236,6 +241,7 @@ impl Master {
             comp2: Compressor::new(),
             volume: Timeline::new(0.0, 0.0, 0.0),
             kill: Timeline::new(0.0, 0.0, 0.0),
+            track: Timeline::new(0.0, 0.0, 0.0),
             ceiling: Compressor::new(),
             ceiling2: Compressor::new(),
             width: Width::new(),
@@ -283,6 +289,7 @@ impl Master {
         self.comp2.settle();
         self.volume.configure(f(MASTER), any.0, any.1);
         self.kill.configure(1.0, any.0, any.1);
+        self.track.configure(1.0, 0.0, 1.0);
         self.ceiling.init(rate, CEILING);
         self.ceiling.settle();
         self.ceiling2.init(rate, CEILING);
@@ -414,6 +421,11 @@ impl Master {
     /// The kill gain (`silence`, `unsilence`).
     pub fn kill(&mut self) -> &mut Timeline<EVENTS> {
         &mut self.kill
+    }
+
+    /// The track's gain (`TRACK_GAIN`: a track's fade in and fade out).
+    pub fn track(&mut self) -> &mut Timeline<EVENTS> {
+        &mut self.track
     }
 
     /// Route around both compressors, or not.
@@ -588,6 +600,18 @@ impl Master {
         for lane in pressed.iter_mut().take(n) {
             for (y, &k) in lane.iter_mut().zip(g.iter()) {
                 *y *= k;
+            }
+        }
+        // The track's fades: nothing to do while it rests at 1 (exactly the
+        // value it was configured at, so the comparison is exact).
+        #[allow(clippy::float_cmp)]
+        let resting = self.track.idle() && self.track.value() == 1.0;
+        if !resting {
+            self.track.fill(block, rate, &mut g);
+            for lane in pressed.iter_mut().take(n) {
+                for (y, &k) in lane.iter_mut().zip(g.iter()) {
+                    *y *= k;
+                }
             }
         }
         if self.bypass {

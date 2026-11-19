@@ -349,8 +349,6 @@ impl Spec {
             w.key("pins");
             self.pins.write(w);
         }
-        w.key("playFor");
-        w.null();
         w.key("root");
         w.num(self.root);
         w.key("scale");

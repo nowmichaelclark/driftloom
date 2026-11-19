@@ -281,10 +281,13 @@ void dl_player_tone(dl_player *player, double warmth, double space, double wobbl
 
 /* How long the track plays, counted from now (or a new loop's first step),
    holding across loads: DL_ALWAYS (on and on), `count` whole passes
-   (DL_PASSES) or `count` bars to the next phrase line (DL_BARS). 1 if it is
-   a kind there is. And the step from the loop's load it ends at (-1 while
-   it plays on); a change for DL_END starts its loop there. */
-enum { DL_ALWAYS = 0, DL_PASSES = 1, DL_BARS = 2 };
+   (DL_PASSES), `count` bars to the next phrase line (DL_BARS) or `count`
+   seconds on the core's clock, 1 to a day (DL_SECONDS); with DL_FADE_IN
+   added for a fade in from silence at its start and DL_FADE_OUT for a fade
+   to silence on a time's last second. 1 if it is a kind there is. And the
+   step from the loop's load it ends at (-1 while it plays on); a change for
+   DL_END starts its loop there (a time's, on its second). */
+enum { DL_ALWAYS = 0, DL_PASSES = 1, DL_BARS = 2, DL_SECONDS = 3, DL_FADE_IN = 4, DL_FADE_OUT = 8 };
 int dl_player_track(dl_player *player, uint32_t kind, uint32_t count);
 int64_t dl_player_track_end(dl_player *player);
 
@@ -445,12 +448,14 @@ const char *dl_album_read(const char *code, size_t *count, uint32_t *seed, int *
    it, if it has one). */
 const char *dl_album_track(const char *code, size_t index, char *out, size_t room);
 /* How long track `index` plays before the next, as the album's maker set it:
-   `kind` 0 on and on, 1 whole passes, 2 bars to a phrase line, and `count`
-   of them (either pointer may be NULL). */
+   `kind` and `count` as dl_player_track takes them (DL_ALWAYS, or
+   DL_SECONDS and `count` seconds, with DL_FADE_IN and DL_FADE_OUT added;
+   either pointer may be NULL). */
 const char *dl_album_pace(const char *code, size_t index, int *kind, uint32_t *count);
 /* The album of `count` loops' codes, in order, named (`name` may be NULL).
-   A code may carry its track's pace after it: ":p2" two whole passes,
-   ":b8" eight bars; nothing, on and on. */
+   A code may carry its track's pace after it: ":t5025" 1:23:45, with "i"
+   and "o" after the seconds for its fades (":t120o"), ":i" on and on
+   fading in; nothing, on and on. */
 const char *dl_album_write(const char *const *codes, size_t count, const char *name, char *out, size_t room);
 /* The album of `count` tracks drawn from `seed`, each asked what the next
    load asks for (its edits left out), named (`name` may be NULL). */

@@ -102,7 +102,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | | | **Mikey's seven, before the polish** (2026-11-18) | | | | |
 | 30a | `30a-album-previous.md` | 109: Previous works in an album | Sonnet 5.5, high | 24 | 21, 24c, 28, 29, 30b, 30c, 30d | yes, 2026-11-18 (#442) |
 | 30b | `30b-layers-heard.md` | 110: the layers show what is heard, in time with it | Opus 5.5, high | 27 | 21, 23, 24, 24c, 29, 30a | yes, 2026-11-18 (#440) |
-| 30c | `30c-track-length.md` | 111: Track length, its own view, to the second; out of the sliders and the export | Opus 5.5, high | 21, 24, 28 | 29, 30a, 30d | |
+| 30c | `30c-track-length.md` | 111: Track length, its own view, to the second; out of the sliders and the export | Opus 5.5, high | 21, 24, 28 | 29, 30a, 30d | yes, 2026-11-19 (#448) |
 | 30d | `30d-info-card.md` | 112: the info card: clean lines, the rest a tap away, a round playhead | Sonnet 5.5, high | 23 | 21, 24, 24c, 28, 29, 30a, 30c | |
 | 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | |
 | 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | |

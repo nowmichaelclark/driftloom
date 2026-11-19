@@ -13,9 +13,10 @@
 //   node tools/codes.mjs album [--name T] CODE...
 //                                   an album of loops' codes, in order, each
 //                                   with how long it plays before the next
-//                                   after it where it has one (session 24b:
-//                                   CODE:p2 two whole passes, CODE:b8 eight
-//                                   bars to a phrase line)
+//                                   after it where it has one (session 24b,
+//                                   a time since 30c: CODE:t5025 1:23:45, i
+//                                   and o after it for its fades, CODE:i on
+//                                   and on fading in)
 //   node tools/codes.mjs seed-album SEED COUNT [REQUEST] [--name T]
 //                                   an album of COUNT tracks drawn from SEED,
 //                                   sharing REQUEST's picks
@@ -81,7 +82,7 @@ export function nameRefusal(name) {
   return core().dl_code_name_ok(put(enc.encode(name))) ? null : refused().message;
 }
 
-/** The album of loops' `codes` (each with its pace after it where it has one: `CODE:p2`), named `name` (or none). */
+/** The album of loops' `codes` (each with its pace after it where it has one: `CODE:t5025o`), named `name` (or none). */
 export function albumCode(codes, name = '') {
   const t = enc.encode(name);
   const n = core().dl_code_album_write(put(new Uint8Array([...t, ...enc.encode(codes.join('.'))])), t.length);
@@ -97,14 +98,15 @@ export function seedAlbumCode(seed, count, request = '', name = '') {
   return text(n);
 }
 
-/** A pace, [kind, count] as the player takes it (0 on and on, 1 passes, 2 bars), as text: '', 'p2', 'b8'. */
+/** A pace, [kind, count] as the player takes it (0 on and on, 3 a time, each with its fades' bits), as text: '', 'i', 't5025', 't120o'. */
 export function paceText([kind, count]) {
-  return kind === 1 ? `p${count}` : kind === 2 ? `b${count}` : '';
+  if ((kind & 3) === 3) return `t${count}${kind & 4 ? 'i' : ''}${kind & 8 ? 'o' : ''}`;
+  return kind & 4 ? 'i' : '';
 }
 
 /**
  * An album's { name, tracks, paces, paced }: each track a loop's code, its
- * pace ([kind, count]), and the two as text (`CODE:p2`, or the code alone
+ * pace ([kind, count]), and the two as text (`CODE:t5025o`, or the code alone
  * where it plays on and on), as `albumCode` takes them.
  */
 export function albumTracks(code) {

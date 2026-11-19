@@ -182,6 +182,18 @@ async function main() {
       const n = (k) => Number((new RegExp(`${k}: (\\d+)`).exec(line) || [])[1] ?? NaN);
       return { line, late: n('late'), missed: n('missed'), dropped: n('dropped') };
     };
+    // The export is as long as the track (session 30c): set in the Track
+    // length view, to the second, as a listener sets it.
+    const set = await ev((t) => {
+      document.getElementById('vibesBtn').click();
+      document.querySelector('#picksList .pk-track').click();
+      const n = document.getElementById('trkNum');
+      const two = (x) => String(x).padStart(2, '0');
+      n.value = `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}`;
+      n.dispatchEvent(new Event('blur'));
+      document.getElementById('trkDone').click();
+      return document.querySelector('#picksList .pk-track').textContent;
+    }, LENGTH);
     await ev(() => {
       if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
       document.querySelector('[data-stab="share"]').click();
@@ -191,8 +203,7 @@ async function main() {
       const small = await ev(() => { const b = document.querySelector('[data-format="small"]'); if (b && !b.hidden) b.click(); return !!b && !b.hidden; });
       if (!small) throw new Error('the sheet does not offer Small in this browser');
     }
-    const lengthKey = await ev((len) => { const b = document.querySelector(`#exportLengths [data-length="${len}"]`); if (b) b.click(); return !!b; }, String(LENGTH));
-    if (!lengthKey) throw new Error(`the sheet has no length of ${LENGTH} s`);
+    if (set === 'plays on') throw new Error(`no track length of ${LENGTH} s`);
     const before = await engine();
     const fills0 = await ev(() => window.__long.fills());
     const behind0 = await ev(() => window.__long.behind);

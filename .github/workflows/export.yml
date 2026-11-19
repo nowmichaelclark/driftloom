@@ -18,8 +18,8 @@
 #          (lossless) or decodes clean, whole and aligned (small)
 #
 # By hand: `jobs` (rows, views, long or all), `repeat` (the rows, that many
-# times in a row, all must pass), `length` (seconds, one of the sheet's
-# lengths), `burn` and `format` (lossless or small) for the long job.
+# times in a row, all must pass), `length` (seconds, the track length the
+# export takes, session 30c), `burn` and `format` (lossless or small) for the long job.
 name: export
 
 on:
@@ -30,6 +30,10 @@ on:
       - 'js/main.js'
       - 'js/piece.js'
       - 'js/picks.js'
+      - 'js/tracklen.js'
+      - 'js/player.js'
+      - 'js/share.js'
+      - 'js/storage.js'
       - 'js/library.js'
       - 'js/ui.js'
       - 'js/request.js'
@@ -51,7 +55,7 @@ on:
         description: 'The rows, this many times in a row'
         default: '1'
       length:
-        description: 'The long export, in seconds (one of the sheet lengths)'
+        description: 'The long export, in seconds (its track length)'
         default: '10800'
       burn:
         description: 'Microseconds added to each block the playing core renders'

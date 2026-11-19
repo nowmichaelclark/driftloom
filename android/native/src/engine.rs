@@ -26,7 +26,7 @@ use std::time::Instant;
 use dlcore::Core;
 use dlcore::generator::Layer;
 use dlcore::player::about::GRID_MAX;
-use dlcore::player::{CROSSFADE, Handover, Jump, Kind, Moment, Player, Request, State, Track};
+use dlcore::player::{CROSSFADE, Fades, Handover, Jump, Kind, Moment, Player, Request, State, Track};
 
 use crate::ring::Ring;
 
@@ -85,7 +85,7 @@ pub struct Arm {
     pub request: Request,
     /// The old loop's fall to nothing, in seconds; negative, it rings out.
     pub fade: f64,
-    pub track: Option<Track>,
+    pub track: Option<(Track, Fades)>,
 }
 
 /// What the app asks of the player, as the worklet's messages do. A load
@@ -143,7 +143,7 @@ pub enum Command {
     /// `playTrack`: how long the track plays (none for a kind there is no
     /// such number for), and the loop that follows, in one command so that
     /// no block falls between them.
-    Track { track: Option<Track>, arm: ArmEnd },
+    Track { track: Option<(Track, Fades)>, arm: ArmEnd },
     /// `playArm`: the loop that follows the track's end, or none.
     Arm(ArmEnd),
     /// `playPicks`: the New loops panel's request, held for every loop the
@@ -223,6 +223,9 @@ pub struct ProbeAnswer {
     pub lanes: u32,
     pub position: Position,
     pub track_end: f64,
+    /// A time's track: the second it ends on, on the core's clock, or -1
+    /// (session 30c; the worklet's `trackAt`).
+    pub track_at: f64,
     pub next_change: f64,
     pub lost: u32,
     pub picks_tag: u32,
@@ -819,6 +822,7 @@ impl Engine {
         {
             a.track_end = player.track_end().map_or(-1.0, |s| s as f64);
         }
+        a.track_at = player.track_at().unwrap_or(-1.0);
         a.next_change = player.next_change().unwrap_or(-1.0);
         a.lost = player.events_lost();
         a.picks_tag = player.picks().1;
@@ -939,8 +943,8 @@ impl Engine {
             Command::Change { seed, ref request, moment, handover } => player.change(seed, request, moment, handover),
             Command::Revise { seed, ref request } => player.revise(seed, request),
             Command::Track { track, ref arm } => {
-                if let Some(t) = track {
-                    player.set_track(core, t);
+                if let Some((t, fades)) = track {
+                    player.set_track_with(core, t, fades);
                 }
                 arm_end(player, arm);
             }
@@ -1024,7 +1028,7 @@ fn arm_end(player: &mut Player, arm: &ArmEnd) {
         ArmEnd::Set(a) => {
             let handover = if a.fade < 0.0 { Handover::RingOut } else { Handover::Crossfade(a.fade) };
             match a.track {
-                Some(t) => player.change_with_track(a.seed, &a.request, Moment::End, handover, Some(t)),
+                Some(t) => player.change_with(a.seed, &a.request, Moment::End, handover, Some(t)),
                 None => player.change(a.seed, &a.request, Moment::End, handover),
             }
         }
@@ -1254,11 +1258,11 @@ mod tests {
         assert!(engine.send(&Command::Load { seed: 2_693_262_067, request }));
         // The page's commands too (session 27): a probe, a ping, the track
         // with the loop armed for its end, the picks, a jump, the controls.
-        let arm = super::ArmEnd::Set(super::Arm { seed: 99, request, fade: 1.0, track: Some(dlcore::player::Track::Bars(8)) });
+        let arm = super::ArmEnd::Set(super::Arm { seed: 99, request, fade: 1.0, track: Some((dlcore::player::Track::Bars(8), dlcore::player::Fades::NONE)) });
         let page = vec![
             Command::Probe(1.0),
             Command::Ping(2.0),
-            Command::Track { track: Some(dlcore::player::Track::Bars(16)), arm },
+            Command::Track { track: Some((dlcore::player::Track::Bars(16), dlcore::player::Fades::NONE)), arm },
             Command::Picks { request, tag: 3 },
             Command::Jump(Some(dlcore::player::Jump::Bar(4.0))),
             Command::Tone([0.2, 0.7, 0.3]),
