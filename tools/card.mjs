@@ -217,7 +217,8 @@ async function open(browser, c, size, scale, dark) {
     });
     await sleep(300);
     await page.evaluate(() => {
-      const r = [...document.querySelectorAll('.lrow.album')][0];
+      const rows = [...document.querySelectorAll('.lrow.album')];
+      const r = rows.find((x) => /Rainy/.test(x.textContent)) || rows[0];
       if (r) r.querySelector('.lrow-main').click();
     });
     await sleep(500);
