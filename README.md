@@ -6,5 +6,6 @@ Screenshots only, never merged.
   (light and dark, 39 screens); the others from tools/a11y.mjs (every theme
   at 360x780; a tablet, 360x640 and a phone on its side in Dawn and
   Nocturne).
-- `after/`: the same sheets from tools/a11y.mjs on v198 (54b9fb8, run 45025577401,
-  the check passing: 0 failed).
+- `after/`: the same sheets from tools/a11y.mjs on v200, the whole of 30f
+  (6ef8adb, run 45049967313, the check passing: 0 failed). v198's are in
+  this branch's history (ddd801d).
