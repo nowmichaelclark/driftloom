@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="64 136 400 400">
+<defs>
+  <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="512"><stop offset="0" stop-color="#2c1a4a"/><stop offset="0.43" stop-color="#5a3060"/><stop offset="0.79" stop-color="#e08a5a"/></linearGradient>
+  <linearGradient id="lake" gradientUnits="userSpaceOnUse" x1="0" y1="404" x2="0" y2="512"><stop offset="0" stop-color="#4a2a58"/><stop offset="1" stop-color="#1c0e2c"/></linearGradient>
+  <linearGradient id="rock" gradientUnits="userSpaceOnUse" x1="0" y1="200" x2="0" y2="404"><stop offset="0" stop-color="#2a1740"/><stop offset="1" stop-color="#150a20"/></linearGradient>
+  <linearGradient id="water" gradientUnits="userSpaceOnUse" x1="512" y1="188" x2="256" y2="404"><stop offset="0" stop-color="#fff4dc"/><stop offset="1" stop-color="#ffd4a0"/></linearGradient>
+  <radialGradient id="sun" cx="0.42" cy="0.38" r="0.7"><stop offset="0" stop-color="#fff2c8"/><stop offset="0.6" stop-color="#ffd890"/><stop offset="1" stop-color="#ffc47a"/></radialGradient>
+  <radialGradient id="glow"><stop offset="0.45" stop-color="#ffd890" stop-opacity="0.32"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
+  <radialGradient id="mist"><stop offset="0" stop-color="#fff4dc" stop-opacity="0.6"/><stop offset="1" stop-color="#fff4dc" stop-opacity="0"/></radialGradient>
+  <radialGradient id="spray"><stop offset="0" stop-color="#ffc89a" stop-opacity="0.28"/><stop offset="1" stop-color="#ffc89a" stop-opacity="0"/></radialGradient>
+  <linearGradient id="refl" gradientUnits="userSpaceOnUse" x1="0" y1="408" x2="0" y2="490"><stop offset="0" stop-color="#ffe2b8" stop-opacity="0.5"/><stop offset="1" stop-color="#ffe2b8" stop-opacity="0"/></linearGradient>
+  <linearGradient id="sunrefl" gradientUnits="userSpaceOnUse" x1="0" y1="406" x2="0" y2="500"><stop offset="0" stop-color="#ffc878" stop-opacity="0.35"/><stop offset="1" stop-color="#ffc878" stop-opacity="0"/></linearGradient>
+  <clipPath id="w">
+    <path d="M576 187 L512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H512 Z"/>
+  </clipPath>
+  <radialGradient id="sunglow"><stop offset="0" stop-color="#ffc878" stop-opacity="0.32"/><stop offset="1" stop-color="#ffc878" stop-opacity="0"/></radialGradient>
+  <radialGradient id="fallglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.3"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="-64" y="-64" width="640" height="640" fill="url(#sky)"/>
+<circle cx="160" cy="272" r="132" fill="url(#glow)"/>
+<circle cx="160" cy="272" r="70" fill="url(#sun)"/>
+<path d="M-64 404 V370 L-20 362 L30 352 L70 364 L112 350 L160 366 L206 356 L250 370 L300 362 V404 Z" fill="#b06468"/>
+<path d="M-64 404 V390 Q0 380 60 388 Q130 374 200 390 Q250 382 300 392 V404 Z" fill="#7e4064"/>
+<rect x="-64" y="404" width="640" height="172" fill="url(#lake)"/>
+<rect x="-64" y="403" width="364" height="3" fill="#f0a070" opacity="0.6"/>
+<g transform="translate(160 430) scale(0.62 1) translate(-160 -430)"><circle cx="160" cy="430" r="80" fill="url(#sunglow)"/></g>
+<g fill="#ffd890">
+  <rect x="104" y="414" width="112" height="7" rx="3.5"/>
+  <rect x="118" y="430" width="84" height="6" rx="3" fill="#f6bc7c"/>
+  <rect x="130" y="445" width="60" height="6" rx="3" fill="#e2a070"/>
+  <rect x="140" y="460" width="40" height="5" rx="2.5" fill="#bc7c6c"/>
+  <rect x="148" y="474" width="24" height="5" rx="2.5" fill="#94606a"/>
+</g>
+<!-- the cliff: a body, a lit ledge, the spray's glow on its face -->
+<path d="M576 404 V204 Q540 202 512 206 Q446 200 384 206 L356 206 C334 206 322 226 318 256 L300 404 Z" fill="url(#rock)"/>
+<path d="M356 209 H576" stroke="#4a2f5e" stroke-width="4"/>
+<g fill="none" stroke="#24123a" stroke-width="5" stroke-linecap="round"><path d="M372 252 L440 248"/><path d="M412 302 L500 296"/><path d="M350 354 L420 350"/></g>
+<ellipse cx="330" cy="380" rx="90" ry="70" fill="url(#spray)"/>
+<g fill="#1c0e2c">
+  <path d="M424 190 L436 158 L448 190 Z"/><path d="M444 190 L460 146 L476 190 Z"/><path d="M470 190 L482 164 L494 190 Z"/><path d="M490 190 L506 150 L522 190 Z"/><path d="M516 190 L530 160 L544 190 Z"/>
+</g>
+<!-- the falls -->
+<path d="M576 187 L512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H576 Z" fill="url(#water)"/>
+<g fill="none" stroke-linecap="round" clip-path="url(#w)">
+  <path d="M512 210 H356 C330 210 318 236 316 274 Q314 340 320 406" stroke="#e8986a" stroke-width="16" opacity="0.45"/>
+  <path d="M512 187 H384 C330 189 291 213 277 261 C267 299 261 349 255 404" stroke="#ffffff" stroke-width="8"/>
+  <path d="M500 196 H382 C338 197 304 220 292 264 C284 300 280 340 277 386" stroke="#f0b480" stroke-width="4" opacity="0.6"/>
+  <path d="M470 199 H378 C342 200 314 226 304 270 C298 302 296 322 294 352" stroke="#fffaf0" stroke-width="5" opacity="0.9"/>
+  <path d="M440 202 H372 C350 203 328 232 320 276" stroke="#e8a060" stroke-width="4" opacity="0.45"/>
+  <path d="M300 300 Q296 340 296 396" stroke="#f6c08a" stroke-width="3.5" opacity="0.6"/>
+</g>
+<!-- the foot: a plume of mist, ripples, its light on the water -->
+<g transform="translate(290 430) scale(0.5 1) translate(-290 -430)"><circle cx="290" cy="430" r="70" fill="url(#fallglow)"/></g>
+<g transform="translate(290 394) scale(1 0.62) translate(-290 -394)"><circle cx="290" cy="394" r="78" fill="url(#mist)"/></g>
+<g fill="none" stroke-linecap="round">
+  <path d="M234 412 Q290 424 346 412" stroke="#fff0d4" stroke-width="6"/>
+  <path d="M220 428 Q290 443 360 428" stroke="#eab088" stroke-width="4.5"/>
+  <path d="M210 445 Q290 463 370 445" stroke="#c88070" stroke-width="3.5"/>
+</g>
+<g fill="#fff4dc" opacity="0.7"><circle cx="248" cy="390" r="3"/><circle cx="334" cy="386" r="2.5"/><circle cx="240" cy="372" r="2"/><circle cx="342" cy="368" r="2"/></g>
+</svg>
