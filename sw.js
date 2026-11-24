@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v215';
+const CACHE = 'driftloom-v216';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -90,6 +90,8 @@ const FILES = [
   // The Android app's transport to its native core (session 27).
   './js/native.js',
   './manifest.webmanifest',
+  './icons/icon.svg',
+  './icons/favicon-32.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/maskable-512.png',

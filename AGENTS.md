@@ -90,6 +90,8 @@ that changes how it sounds.
 - Accessibility (item 114): `node tools/a11y.mjs` (Playwright's Chromium;
   CI's `a11y` job in the export workflow runs it). Not the gate: it takes
   minutes and a browser.
+- Icons (item 120): every size from `icons/icon.svg` by `node tools/icons.mjs`
+  (`--check` the safe zones; ImageMagick 7 with librsvg).
 - Docs: `node tools/check-docs.mjs`.
 - Android (item 107): `cd android && ./gradlew assembleDebug` (needs the NDK
   `android/gradle.properties` pins and rustup; the core is built native by

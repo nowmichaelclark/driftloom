@@ -216,10 +216,13 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   reached the page). `AppWebView` tells the WebView it is shown while the app
   plays or saves; the page then runs as in front, the emulator's CPU for the
   app being 0% with the screen off.
-- **The icon** (session 29): the adaptive icon is the web app's own orbit
-  (`icons/maskable-512.png`) in vectors, with its monochrome layer for themed
-  icons, and the notification's small icon is the same orbit in one color. A
-  Painter may replace them (`docs/PAINTER.md`, "Platforms").
+- **The icon** (item 120): made from the one source, `icons/icon.svg`, by
+  `node tools/icons.mjs` (with the web app's icons and the listing's), as
+  vector drawables (text, as android/ must be): the adaptive icon's
+  background, foreground and monochrome layers (the 108 dp layer, its 72 dp
+  middle the icon itself) and the notification's small icon, the monochrome
+  drawing at 24 dp (`drawable/ic_stat_driftloom.xml`). The script checks the
+  safe zones, and that each drawable draws what the SVG draws.
 - **Not yet:** the system bars' color following the page's theme (a Painter's
   choice).
 
