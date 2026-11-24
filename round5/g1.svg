@@ -14,7 +14,7 @@
     <path d="M512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H512 Z"/>
   </clipPath>
   <radialGradient id="sunglow"><stop offset="0" stop-color="#ffc878" stop-opacity="0.32"/><stop offset="1" stop-color="#ffc878" stop-opacity="0"/></radialGradient>
-  <radialGradient id="fallglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.3"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
+  <radialGradient id="streamglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.3"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
 </defs>
 <rect width="512" height="512" fill="url(#sky)"/>
 <circle cx="160" cy="272" r="132" fill="url(#glow)"/>
@@ -34,7 +34,7 @@
 <path d="M356 209 H512" stroke="#4a2f5e" stroke-width="4"/>
 <g fill="none" stroke="#24123a" stroke-width="5" stroke-linecap="round"><path d="M372 252 L440 248"/><path d="M412 302 L500 296"/><path d="M350 354 L420 350"/></g>
 <ellipse cx="330" cy="380" rx="90" ry="70" fill="url(#spray)"/>
-<!-- the falls -->
+<!-- the stream -->
 <path d="M512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H512 Z" fill="url(#water)"/>
 <g fill="none" stroke-linecap="round" clip-path="url(#w)">
   <path d="M512 210 H356 C330 210 318 236 316 274 Q314 340 320 406" stroke="#e8986a" stroke-width="16" opacity="0.45"/>
@@ -45,7 +45,7 @@
   <path d="M300 300 Q296 340 296 396" stroke="#f6c08a" stroke-width="3.5" opacity="0.6"/>
 </g>
 <!-- the foot: a plume of mist, ripples, its light on the water -->
-<g transform="translate(290 430) scale(0.5 1) translate(-290 -430)"><circle cx="290" cy="430" r="70" fill="url(#fallglow)"/></g>
+<g transform="translate(290 430) scale(0.5 1) translate(-290 -430)"><circle cx="290" cy="430" r="70" fill="url(#streamglow)"/></g>
 <g transform="translate(290 394) scale(1 0.62) translate(-290 -394)"><circle cx="290" cy="394" r="78" fill="url(#mist)"/></g>
 <g fill="none" stroke-linecap="round">
   <path d="M234 412 Q290 424 346 412" stroke="#fff0d4" stroke-width="6"/>

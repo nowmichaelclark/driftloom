@@ -13,7 +13,7 @@
   <radialGradient id="spray"><stop offset="0" stop-color="#ffc89a" stop-opacity="0.22"/><stop offset="1" stop-color="#ffc89a" stop-opacity="0"/></radialGradient>
   <radialGradient id="moonglow"><stop offset="0" stop-color="#ffd890" stop-opacity="0.22"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
   <radialGradient id="moonglow2"><stop offset="0" stop-color="#ffd890" stop-opacity="0.4"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
-  <radialGradient id="fallglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.32"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
+  <radialGradient id="streamglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.32"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
   
   <radialGradient id="mfade"><stop offset="0" stop-color="#ffdc98" stop-opacity="0.5"/><stop offset="0.65" stop-color="#ffd08a" stop-opacity="0.32"/><stop offset="1" stop-color="#ffd08a" stop-opacity="0"/></radialGradient>
   <linearGradient id="ffade" gradientUnits="userSpaceOnUse" x1="0" y1="404" x2="0" y2="300"><stop offset="0" stop-color="#ffe6c4" stop-opacity="0.5"/><stop offset="1" stop-color="#ffe6c4" stop-opacity="0"/></linearGradient>

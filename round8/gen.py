@@ -140,7 +140,7 @@ for x1,x2,y,t,o in slivers:
     if o < 0.04: continue
     mrefl.append(f'<path d="M{f(x1)} {f(y)} H{f(x2)}" stroke="#ffe0a4" stroke-width="{f(t)}" opacity="{o:.2f}"/>')
 mrefl.append('</g>')
-# the falls in the water: a short broken pale column under its foot
+# the stream in the water: a short broken pale column under its foot
 frefl=['<g stroke="#ffe8c8" stroke-linecap="round">']
 y=414
 while y < 480:
@@ -168,7 +168,7 @@ def lens(x1, x2, y, t):
     return f"M{f(x1)},{f(y)} Q{f(xm)},{f(y-t)} {f(x2)},{f(y)} Q{f(xm)},{f(y+t)} {f(x1)},{f(y)} Z"
 MOONDISC = ''.join(moon[1:]) if True else ''
 DROPD = "M392 189.8 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H392 Z"
-FALLD = "M576 187 L512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H576 Z"
+STREAMD = "M576 187 L512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H576 Z"
 def mirrored(content, squash, opacity):
     return f'<g clip-path="url(#lakeclip)" opacity="{opacity}"><g transform="translate(0 404) scale(1 {-squash}) translate(0 -404)">{content}</g></g>'
 RM=[]; RF=[]
@@ -188,7 +188,7 @@ elif REFL == 'glow':
     RM=[f'<g transform="translate({MX} 456) scale(0.42 1.25) translate(-{MX} -456)"><circle cx="{MX}" cy="456" r="80" fill="url(#moonglow2)"/></g>']
     for x1,x2,y,t,o in [(118,204,409,1.6,.8),(134,186,414,1.3,.6),(126,170,420,1.1,.45)]:
         RM.append(f'<path d="{lens(x1,x2,y,t)}" fill="#ffe8b8" opacity="{o}"/>')
-    RF=[f'<g transform="translate(290 440) scale(0.4 1) translate(-290 -440)"><circle cx="290" cy="440" r="60" fill="url(#fallglow)"/></g>']
+    RF=[f'<g transform="translate(290 440) scale(0.4 1) translate(-290 -440)"><circle cx="290" cy="440" r="60" fill="url(#streamglow)"/></g>']
 elif REFL == 'glints':
     RM=[glowM]
     y=410
@@ -262,13 +262,13 @@ streaks=[]
 # the glassy part: long, faint, smooth
 for u,a,b,c,w,o in [(0.07,0.28,0.62,'#ffffff',5,0.95),(0.3,0.1,0.66,'#ffe8c4',2.5,0.55),(0.55,0.2,0.62,'#ffe8c4',2,0.45),(0.8,0.3,0.6,'#e8a070',3,0.35)]:
     streaks.append(f'<path d="{flow(u,a,b)}" stroke="{c}" stroke-width="{w}" opacity="{o}"/>')
-# the falling part: many short streaks, white and peach, longer lower down
+# the dropping part: many short streaks, white and peach, longer lower down
 for i in range(26):
     u=FR.uniform(0.05,0.95); a=FR.uniform(0.56,0.86); b=min(1.0, a+FR.uniform(0.08,0.3))
     if FR.random()<0.62: c,w,o='#fffaf2',FR.uniform(2,4.5),FR.uniform(0.6,1)
     else: c,w,o='#e6a072',FR.uniform(1.5,3),FR.uniform(0.3,0.5)
     streaks.append(f'<path d="{flow(u,a,b,12)}" stroke="{c}" stroke-width="{f(w)}" opacity="{o:.2f}"/>')
-FALL_STREAKS=''.join(streaks)
+STREAM_STREAKS=''.join(streaks)
 # spray: drops off the edges near the foot
 drops=[]
 for i in range(7):
@@ -276,9 +276,9 @@ for i in range(7):
     x = (o[0]-FR.uniform(2,6)) if side==0 else (q[0]+FR.uniform(2,6)); y=o[1]
     L=FR.uniform(3,5.5)
     drops.append(f'<path d="M{f(x)},{f(y-L)} Q{f(x+1.2)},{f(y)} {f(x)},{f(y+L*0.3)} Q{f(x-1.2)},{f(y)} {f(x)},{f(y-L)} Z" opacity="{FR.uniform(0.45,0.85):.2f}"/>')
-FALL_SPRAY=''.join(drops)
+STREAM_SPRAY=''.join(drops)
 
-def fall_glints(rng, strength=0.55):
+def stream_glints(rng, strength=0.55):
     out=[]; y=414
     while y < 478:
         t=(y-414)/64; half=rng.uniform(7,20)*(1-t*0.4); cx=290+rng.uniform(-9,9)
@@ -289,7 +289,7 @@ def sparkle(x, y, r, o):
     return f'<path d="M{f(x)},{f(y-r)} Q{f(x+r*0.18)},{f(y-r*0.18)} {f(x+r)},{f(y)} Q{f(x+r*0.18)},{f(y+r*0.18)} {f(x)},{f(y+r)} Q{f(x-r*0.18)},{f(y+r*0.18)} {f(x-r)},{f(y)} Q{f(x-r*0.18)},{f(y-r*0.18)} {f(x)},{f(y-r)} Z" fill="#fff8e8" opacity="{o:.2f}"/>'
 GR = random.Random(5)
 if REFL.startswith('v'):
-    RM=[]; RF=fall_glints(GR)
+    RM=[]; RF=stream_glints(GR)
     soft = f'<g transform="translate({MX} 456) scale(0.42 1.25) translate(-{MX} -456)"><circle cx="{MX}" cy="456" r="80" fill="url(#moonglow2)"/></g>'
     glints=[]
     if REFL == 'v1':   # dense shimmer
@@ -347,7 +347,7 @@ svg=f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{CROP}">
   <radialGradient id="spray"><stop offset="0" stop-color="#ffc89a" stop-opacity="0.22"/><stop offset="1" stop-color="#ffc89a" stop-opacity="0"/></radialGradient>
   <radialGradient id="moonglow"><stop offset="0" stop-color="#ffd890" stop-opacity="0.22"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
   <radialGradient id="moonglow2"><stop offset="0" stop-color="#ffd890" stop-opacity="0.4"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
-  <radialGradient id="fallglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.32"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
+  <radialGradient id="streamglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.32"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
   {''.join(EXTRA_DEFS)}
   <radialGradient id="mfade"><stop offset="0" stop-color="#ffdc98" stop-opacity="0.5"/><stop offset="0.65" stop-color="#ffd08a" stop-opacity="0.32"/><stop offset="1" stop-color="#ffd08a" stop-opacity="0"/></radialGradient>
   <linearGradient id="ffade" gradientUnits="userSpaceOnUse" x1="0" y1="404" x2="0" y2="300"><stop offset="0" stop-color="#ffe6c4" stop-opacity="0.5"/><stop offset="1" stop-color="#ffe6c4" stop-opacity="0"/></linearGradient>
@@ -377,9 +377,9 @@ svg=f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{CROP}">
 <path d="M576 187 L512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H576 Z" fill="url(#water)"/>
 <g fill="none" stroke-linecap="round" clip-path="url(#w)">
   <path d="M512 210 H356 C330 210 318 236 316 274 Q314 340 320 406" stroke="#e8986a" stroke-width="16" opacity="0.45"/>
-  {FALL_STREAKS}
+  {STREAM_STREAKS}
 </g>
-<g fill="#fff4e4">{FALL_SPRAY}</g>
+<g fill="#fff4e4">{STREAM_SPRAY}</g>
 {''.join(RF)}
 {''.join(rip)}
 <g transform="translate(290 396) scale(1 0.55) translate(-290 -396)"><circle cx="290" cy="396" r="70" fill="url(#mist)"/></g>

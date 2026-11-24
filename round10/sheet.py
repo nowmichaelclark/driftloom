@@ -16,7 +16,7 @@ name, svg, vb = items[0]
 sheet.paste(render(svg, 520, vb or None, '/tmp/_big.png'), (10, 10)); d.text((200, 536), f'10{name}', fill='#333', font=font)
 bb = bimg.crop((10, 10, 770, 770)).resize((290, 290), Image.LANCZOS)
 sheet.paste(bb, (560, 10)); d.text((630, 304), 'before (round 9)', fill='#333', font=font)
-for (px, py, vb_, cap) in [(870, 10, '300 150 150 150', 'the falls, close'), (560, 340, '0 250 150 150', 'the far shore, close'), (870, 340, '300 280 150 150', 'the foot, close')]:
+for (px, py, vb_, cap) in [(870, 10, '300 150 150 150', 'the middle, close'), (560, 340, '0 250 150 150', 'the far shore, close'), (870, 340, '300 280 150 150', 'the foot, close')]:
     sheet.paste(render(svg, 290, vb_, '/tmp/_z.png'), (px, py)); d.text((px + 50, py + 294), cap, fill='#333', font=font)
 if len(items) > 1:
     name2, svg2, vb2 = items[1]

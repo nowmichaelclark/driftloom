@@ -13,7 +13,7 @@
   <radialGradient id="spray"><stop offset="0" stop-color="#ffc89a" stop-opacity="0.22"/><stop offset="1" stop-color="#ffc89a" stop-opacity="0"/></radialGradient>
   <radialGradient id="moonglow"><stop offset="0" stop-color="#ffd890" stop-opacity="0.22"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
   <radialGradient id="moonglow2"><stop offset="0" stop-color="#ffd890" stop-opacity="0.4"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
-  <radialGradient id="fallglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.32"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
+  <radialGradient id="streamglow"><stop offset="0" stop-color="#ffe6c0" stop-opacity="0.32"/><stop offset="1" stop-color="#ffe6c0" stop-opacity="0"/></radialGradient>
   
   <radialGradient id="mfade"><stop offset="0" stop-color="#ffdc98" stop-opacity="0.5"/><stop offset="0.65" stop-color="#ffd08a" stop-opacity="0.32"/><stop offset="1" stop-color="#ffd08a" stop-opacity="0"/></radialGradient>
   <linearGradient id="ffade" gradientUnits="userSpaceOnUse" x1="0" y1="404" x2="0" y2="300"><stop offset="0" stop-color="#ffe6c4" stop-opacity="0.5"/><stop offset="1" stop-color="#ffe6c4" stop-opacity="0"/></linearGradient>
@@ -50,7 +50,7 @@
   <path d="M440 202 H372 C350 203 328 232 320 276" stroke="#e8a060" stroke-width="4" opacity="0.45"/>
   <path d="M300 300 Q296 340 296 396" stroke="#f6c08a" stroke-width="3.5" opacity="0.6"/>
 </g>
-<g transform="translate(290 440) scale(0.4 1) translate(-290 -440)"><circle cx="290" cy="440" r="60" fill="url(#fallglow)"/></g>
+<g transform="translate(290 440) scale(0.4 1) translate(-290 -440)"><circle cx="290" cy="440" r="60" fill="url(#streamglow)"/></g>
 <g fill="none" stroke-linecap="round" clip-path="url(#lakeclip)"><ellipse cx="290" cy="405" rx="40" ry="6" stroke="#fff0d4" stroke-width="3.5" opacity="0.9"/><ellipse cx="290" cy="405" rx="62" ry="9.5" stroke="#f4c898" stroke-width="3" opacity="0.6"/><ellipse cx="290" cy="405" rx="88" ry="13.5" stroke="#e8b088" stroke-width="2.4" opacity="0.4"/><ellipse cx="290" cy="405" rx="118" ry="18" stroke="#d89a80" stroke-width="1.8" opacity="0.25"/></g>
 <g transform="translate(290 396) scale(1 0.55) translate(-290 -396)"><circle cx="290" cy="396" r="70" fill="url(#mist)"/></g>
 </svg>

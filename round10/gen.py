@@ -42,7 +42,7 @@ if VAR == 'c':       # the drop closer, larger
 
 defs = []; body = []
 WR = random.Random(101); wn = Noise(55, 3)
-def hw(s): return 23 + 17*s**0.85            # half-width, widening as it falls
+def hw(s): return 23 + 17*s**0.85            # half-width, widening as it drops
 def cx_(s): return FX + 3*wn(s*2.2) + 2*s   # its center line, wandering a little
 def fy(s): return LIPY + (Y0 - LIPY)*s
 def grad_v(id_, y1, y2, stops):
@@ -156,7 +156,7 @@ def mountain(pts, base, fill, lit, shade, seed, rim=1.6, rimo=0.55):
         poly = line + [(foot_x + d*2, base), (side[-1][0], base)] + side[::-1]
         shadows.append(P(poly))
     if shadows: path(' '.join(shadows), shade, 0.38)
-    # gullies: tapered dark lines falling from the high points
+    # gullies: tapered dark lines dropping from the high points
     gl = []
     for i in range(2, len(pts)-2, 1):
         x, y = pts[i]
@@ -392,10 +392,10 @@ path(' '.join(back), '#2c1640')
 path(' '.join(front), '#140a20')
 
 # ------------------------------------------------------------------ the drop
-grad_v('fall', LIPY, Y0, [(0, '#b8706a', 1), (0.06, '#e8a474', 1), (0.18, '#f8cc98', 1), (0.5, '#fde4c4', 1), (1, '#fff2e0', 1)])
+grad_v('stream', LIPY, Y0, [(0, '#b8706a', 1), (0.06, '#e8a474', 1), (0.18, '#f8cc98', 1), (0.5, '#fde4c4', 1), (1, '#fff2e0', 1)])
 # the body: three nested shapes so its edges fade
-grad_v('fallmist', LIPY, Y0, [(0, '#e8b8a0', 0), (0.3, '#f8dcc8', 0.5), (1, '#fff0e4', 0.8)])
-for k_, o, fill_ in ((1.22, 0.35, 'url(#fallmist)'), (1.1, 0.5, 'url(#fallmist)'), (0.96, 0.9, 'url(#fall)')):
+grad_v('streammist', LIPY, Y0, [(0, '#e8b8a0', 0), (0.3, '#f8dcc8', 0.5), (1, '#fff0e4', 0.8)])
+for k_, o, fill_ in ((1.22, 0.35, 'url(#streammist)'), (1.1, 0.5, 'url(#streammist)'), (0.96, 0.9, 'url(#stream)')):
     L_ = []; R_ = []
     for i in range(41):
         s = i/40; e = 2.5*wn(s*7 + 11)*(0.4 + s)
